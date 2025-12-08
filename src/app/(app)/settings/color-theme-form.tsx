@@ -5,11 +5,22 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { hexToHsl } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 
 type ThemeColors = {
   background: string;
   primary: string;
   accent: string;
+};
+
+type SidebarThemeColors = {
+  'sidebar-background': string;
+  'sidebar-foreground': string;
+  'sidebar-primary': string;
+  'sidebar-primary-foreground': string;
+  'sidebar-accent': string;
+  'sidebar-accent-foreground': string;
+  'sidebar-border': string;
 };
 
 // Helper to get CSS variable in HSL string format
@@ -62,10 +73,22 @@ export function ColorThemeForm() {
     primary: '#7cc4f7',
     accent: '#63b2a7',
   });
+  const [sidebarColors, setSidebarColors] = useState<SidebarThemeColors>({
+    'sidebar-background': '#dbeafb',
+    'sidebar-foreground': '#1e293b',
+    'sidebar-primary': '#bfdbfe',
+    'sidebar-primary-foreground': '#1e293b',
+    'sidebar-accent': '#f1f5f9',
+    'sidebar-accent-foreground': '#1e293b',
+    'sidebar-border': '#94a3b8',
+  });
+
 
   useEffect(() => {
     // Load colors from localStorage or initial CSS
     const savedColors = localStorage.getItem('safeviate-theme');
+    const savedSidebarColors = localStorage.getItem('safeviate-sidebar-theme');
+
     if (savedColors) {
       const parsedColors = JSON.parse(savedColors);
       setColors(parsedColors);
@@ -74,11 +97,29 @@ export function ColorThemeForm() {
         document.documentElement.style.setProperty(`--${key}`, hslValue);
       });
     } else {
-        // If no saved theme, read from CSS variables
         setColors({
             background: hslToHex(getCssVar('--background')),
             primary: hslToHex(getCssVar('--primary')),
             accent: hslToHex(getCssVar('--accent')),
+        })
+    }
+
+    if (savedSidebarColors) {
+      const parsedColors = JSON.parse(savedSidebarColors);
+      setSidebarColors(parsedColors);
+       Object.entries(parsedColors).forEach(([key, value]) => {
+        const hslValue = hexToHsl(value as string);
+        document.documentElement.style.setProperty(`--${key}`, hslValue);
+      });
+    } else {
+        setSidebarColors({
+            'sidebar-background': hslToHex(getCssVar('--sidebar-background')),
+            'sidebar-foreground': hslToHex(getCssVar('--sidebar-foreground')),
+            'sidebar-primary': hslToHex(getCssVar('--sidebar-primary')),
+            'sidebar-primary-foreground': hslToHex(getCssVar('--sidebar-primary-foreground')),
+            'sidebar-accent': hslToHex(getCssVar('--sidebar-accent')),
+            'sidebar-accent-foreground': hslToHex(getCssVar('--sidebar-accent-foreground')),
+            'sidebar-border': hslToHex(getCssVar('--sidebar-border')),
         })
     }
   }, []);
@@ -87,23 +128,23 @@ export function ColorThemeForm() {
     const newColors = { ...colors, [name]: value };
     setColors(newColors);
 
-    // Update CSS variable
     const hslValue = hexToHsl(value);
     document.documentElement.style.setProperty(`--${name}`, hslValue);
-
-    // Save to localStorage
     localStorage.setItem('safeviate-theme', JSON.stringify(newColors));
   };
   
+  const handleSidebarColorChange = (name: keyof SidebarThemeColors, value: string) => {
+    const newColors = { ...sidebarColors, [name]: value };
+    setSidebarColors(newColors);
+
+    const hslValue = hexToHsl(value);
+    document.documentElement.style.setProperty(`--${name}`, hslValue);
+    localStorage.setItem('safeviate-sidebar-theme', JSON.stringify(newColors));
+  };
+
   const resetColors = () => {
-    const defaultColors = {
-        background: '#ebf5fb',
-        primary: '#7cc4f7',
-        accent: '#63b2a7',
-    };
-    setColors(defaultColors);
     localStorage.removeItem('safeviate-theme');
-    // Reload to apply CSS file styles
+    localStorage.removeItem('safeviate-sidebar-theme');
     window.location.reload();
   }
 
@@ -113,23 +154,51 @@ export function ColorThemeForm() {
         <CardTitle>Appearance</CardTitle>
         <CardDescription>Customize the look and feel of the application.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {Object.entries(colors).map(([name, value]) => (
-            <div key={name} className="space-y-2">
-              <Label htmlFor={name} className="capitalize">{name}</Label>
-              <div className='relative'>
-                <Input
-                  id={name}
-                  type="color"
-                  value={value}
-                  onChange={(e) => handleColorChange(name as keyof ThemeColors, e.target.value)}
-                  className="p-1 h-10"
-                />
+      <CardContent className="space-y-6">
+        <div>
+          <h3 className="text-lg font-medium mb-4">Main Theme</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Object.entries(colors).map(([name, value]) => (
+              <div key={name} className="space-y-2">
+                <Label htmlFor={name} className="capitalize">{name}</Label>
+                <div className='relative'>
+                  <Input
+                    id={name}
+                    type="color"
+                    value={value}
+                    onChange={(e) => handleColorChange(name as keyof ThemeColors, e.target.value)}
+                    className="p-1 h-10"
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+        
+        <Separator />
+
+        <div>
+          <h3 className="text-lg font-medium mb-4">Sidebar Theme</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Object.entries(sidebarColors).map(([name, value]) => (
+              <div key={name} className="space-y-2">
+                <Label htmlFor={name} className="capitalize">{name.replace('sidebar-', '')}</Label>
+                <div className='relative'>
+                  <Input
+                    id={name}
+                    type="color"
+                    value={value}
+                    onChange={(e) => handleSidebarColorChange(name as keyof SidebarThemeColors, e.target.value)}
+                    className="p-1 h-10"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <Separator />
+        
         <Button onClick={resetColors} variant="outline">Reset to Defaults</Button>
       </CardContent>
     </Card>
