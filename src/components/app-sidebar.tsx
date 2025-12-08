@@ -7,7 +7,6 @@ import {
   SidebarMenuButton,
   SidebarFooter,
   SidebarContent,
-  SidebarTrigger,
   SidebarGroup,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
@@ -118,8 +117,4 @@ export function AppSidebar() {
       </SidebarFooter>
     </Sidebar>
   );
-}
-
-export function AppSidebarTrigger() {
-  return <SidebarTrigger className="fixed bottom-4 left-4 z-20 md:hidden" />;
 }

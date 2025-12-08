@@ -1,4 +1,5 @@
-import { AppSidebar, AppSidebarTrigger } from '@/components/app-sidebar';
+import { AppSidebar } from '@/components/app-sidebar';
+import { AppHeader } from '@/components/app-header';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 
 export default function AppLayout({
@@ -8,11 +9,13 @@ export default function AppLayout({
 }>) {
   return (
     <SidebarProvider>
-      <AppSidebarTrigger />
       <AppSidebar />
-      <SidebarInset className="p-4 lg:p-6">
-        {children}
-      </SidebarInset>
+      <div className="flex flex-col flex-1">
+        <AppHeader />
+        <SidebarInset className="p-4 lg:p-6 flex-1">
+          {children}
+        </SidebarInset>
+      </div>
     </SidebarProvider>
   );
 }
