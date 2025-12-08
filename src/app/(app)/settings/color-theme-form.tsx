@@ -13,6 +13,11 @@ type ThemeColors = {
   accent: string;
 };
 
+type CardThemeColors = {
+    card: string;
+    'card-foreground': string;
+}
+
 type SidebarThemeColors = {
   'sidebar-background': string;
   'sidebar-foreground': string;
@@ -73,6 +78,10 @@ export function ColorThemeForm() {
     primary: '#7cc4f7',
     accent: '#63b2a7',
   });
+  const [cardColors, setCardColors] = useState<CardThemeColors>({
+    card: '#ebf5fb',
+    'card-foreground': '#1e293b',
+  });
   const [sidebarColors, setSidebarColors] = useState<SidebarThemeColors>({
     'sidebar-background': '#dbeafb',
     'sidebar-foreground': '#1e293b',
@@ -87,6 +96,7 @@ export function ColorThemeForm() {
   useEffect(() => {
     // Load colors from localStorage or initial CSS
     const savedColors = localStorage.getItem('safeviate-theme');
+    const savedCardColors = localStorage.getItem('safeviate-card-theme');
     const savedSidebarColors = localStorage.getItem('safeviate-sidebar-theme');
 
     if (savedColors) {
@@ -103,6 +113,20 @@ export function ColorThemeForm() {
             accent: hslToHex(getCssVar('--accent')),
         })
     }
+
+    if (savedCardColors) {
+        const parsedColors = JSON.parse(savedCardColors);
+        setCardColors(parsedColors);
+        Object.entries(parsedColors).forEach(([key, value]) => {
+          const hslValue = hexToHsl(value as string);
+          document.documentElement.style.setProperty(`--${key}`, hslValue);
+        });
+      } else {
+          setCardColors({
+              'card': hslToHex(getCssVar('--card')),
+              'card-foreground': hslToHex(getCssVar('--card-foreground')),
+          })
+      }
 
     if (savedSidebarColors) {
       const parsedColors = JSON.parse(savedSidebarColors);
@@ -133,6 +157,15 @@ export function ColorThemeForm() {
     localStorage.setItem('safeviate-theme', JSON.stringify(newColors));
   };
   
+  const handleCardColorChange = (name: keyof CardThemeColors, value: string) => {
+    const newColors = { ...cardColors, [name]: value };
+    setCardColors(newColors);
+
+    const hslValue = hexToHsl(value);
+    document.documentElement.style.setProperty(`--${name}`, hslValue);
+    localStorage.setItem('safeviate-card-theme', JSON.stringify(newColors));
+  };
+
   const handleSidebarColorChange = (name: keyof SidebarThemeColors, value: string) => {
     const newColors = { ...sidebarColors, [name]: value };
     setSidebarColors(newColors);
@@ -144,6 +177,7 @@ export function ColorThemeForm() {
 
   const resetColors = () => {
     localStorage.removeItem('safeviate-theme');
+    localStorage.removeItem('safeviate-card-theme');
     localStorage.removeItem('safeviate-sidebar-theme');
     window.location.reload();
   }
@@ -167,6 +201,28 @@ export function ColorThemeForm() {
                     type="color"
                     value={value}
                     onChange={(e) => handleColorChange(name as keyof ThemeColors, e.target.value)}
+                    className="p-1 h-10"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <Separator />
+
+        <div>
+          <h3 className="text-lg font-medium mb-4">Card Theme</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Object.entries(cardColors).map(([name, value]) => (
+              <div key={name} className="space-y-2">
+                <Label htmlFor={name} className="capitalize">{name.replace('card-', '')}</Label>
+                <div className='relative'>
+                  <Input
+                    id={name}
+                    type="color"
+                    value={value}
+                    onChange={(e) => handleCardColorChange(name as keyof CardThemeColors, e.target.value)}
                     className="p-1 h-10"
                   />
                 </div>
