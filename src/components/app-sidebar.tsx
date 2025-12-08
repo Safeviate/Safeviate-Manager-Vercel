@@ -75,16 +75,60 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {renderMenuItems(menuItems)}
+          <SidebarMenuItem>
+            <Link href="/dashboard" className="w-full">
+              <SidebarMenuButton
+                isActive={pathname === '/dashboard'}
+                tooltip="Dashboard"
+              >
+                <LayoutDashboard />
+                <span>Dashboard</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
         </SidebarMenu>
         <SidebarSeparator className="my-1" />
-        <SidebarMenu>
-          {renderMenuItems(managementMenuItems)}
-        </SidebarMenu>
+        <SidebarGroup>
+          <SidebarMenu>
+            {managementMenuItems.map((item, index) => (
+              <React.Fragment key={item.href}>
+                <SidebarMenuItem>
+                  <Link href={item.href} className="w-full">
+                    <SidebarMenuButton
+                      isActive={pathname.startsWith(item.href)}
+                      tooltip={item.label}
+                    >
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+                {index < managementMenuItems.length - 1 && <SidebarSeparator className="my-1 mx-2" />}
+              </React.Fragment>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
         <SidebarSeparator className="my-1" />
-        <SidebarMenu>
-          {renderMenuItems(operationsMenuItems)}
-        </SidebarMenu>
+        <SidebarGroup>
+          <SidebarMenu>
+            {operationsMenuItems.map((item, index) => (
+              <React.Fragment key={item.href}>
+                <SidebarMenuItem>
+                  <Link href={item.href} className="w-full">
+                    <SidebarMenuButton
+                      isActive={pathname.startsWith(item.href)}
+                      tooltip={item.label}
+                    >
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+                {index < operationsMenuItems.length - 1 && <SidebarSeparator className="my-1 mx-2" />}
+              </React.Fragment>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
         <SidebarGroup>
@@ -115,5 +159,5 @@ export function AppSidebar() {
 }
 
 export function AppSidebarTrigger() {
-  return <SidebarTrigger className="fixed bottom-4 left-4 z-20 md:hidden" />;
+  return <SidebarTrigger className="fixed bottom-4 left-4 z-20" />;
 }
