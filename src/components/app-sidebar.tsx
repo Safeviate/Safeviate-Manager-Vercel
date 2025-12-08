@@ -24,6 +24,7 @@ import {
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import React from 'react';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -43,6 +44,25 @@ const operationsMenuItems = [
 export function AppSidebar() {
   const pathname = usePathname();
 
+  const renderMenuItems = (items: typeof menuItems) => {
+    return items.map((item, index) => (
+      <React.Fragment key={item.href}>
+        <SidebarMenuItem>
+          <Link href={item.href} className="w-full">
+            <SidebarMenuButton
+              isActive={pathname === item.href}
+              tooltip={item.label}
+            >
+              <item.icon />
+              <span>{item.label}</span>
+            </SidebarMenuButton>
+          </Link>
+        </SidebarMenuItem>
+        {index < items.length - 1 && <SidebarSeparator className="my-1 mx-2" />}
+      </React.Fragment>
+    ));
+  }
+
   return (
     <Sidebar>
       <SidebarHeader>
@@ -55,51 +75,15 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {menuItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <Link href={item.href} className="w-full">
-                <SidebarMenuButton
-                  isActive={pathname === item.href}
-                  tooltip={item.label}
-                >
-                  <item.icon />
-                  <span>{item.label}</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          ))}
+          {renderMenuItems(menuItems)}
         </SidebarMenu>
         <SidebarSeparator className="my-1" />
         <SidebarMenu>
-          {managementMenuItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <Link href={item.href} className="w-full">
-                <SidebarMenuButton
-                  isActive={pathname === item.href}
-                  tooltip={item.label}
-                >
-                  <item.icon />
-                  <span>{item.label}</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          ))}
+          {renderMenuItems(managementMenuItems)}
         </SidebarMenu>
         <SidebarSeparator className="my-1" />
         <SidebarMenu>
-          {operationsMenuItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <Link href={item.href} className="w-full">
-                <SidebarMenuButton
-                  isActive={pathname === item.href}
-                  tooltip={item.label}
-                >
-                  <item.icon />
-                  <span>{item.label}</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          ))}
+          {renderMenuItems(operationsMenuItems)}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
@@ -113,6 +97,7 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
+            <SidebarSeparator className="my-1 mx-2" />
             <SidebarMenuItem>
               <SidebarMenuButton tooltip="Guest User">
                 <Avatar className="h-6 w-6">
