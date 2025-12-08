@@ -9,6 +9,7 @@ import {
   SidebarContent,
   SidebarTrigger,
   SidebarGroup,
+  SidebarSeparator,
 } from '@/components/ui/sidebar';
 import {
   LayoutDashboard,
@@ -26,12 +27,18 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+];
+
+const managementMenuItems = [
   { href: '/students', label: 'Students', icon: Users },
   { href: '/instructors', label: 'Instructors', icon: Calendar },
-  { href: '/maintenance', label: 'Maintenance', icon: Wrench },
   { href: '/personnel', label: 'Personnel', icon: User },
+]
+
+const operationsMenuItems = [
+  { href: '/maintenance', label: 'Maintenance', icon: Wrench },
   { href: '/safety', label: 'Safety & Quality', icon: Shield },
-];
+]
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -49,6 +56,38 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarMenu>
           {menuItems.map((item) => (
+            <SidebarMenuItem key={item.href}>
+              <Link href={item.href} className="w-full">
+                <SidebarMenuButton
+                  isActive={pathname === item.href}
+                  tooltip={item.label}
+                >
+                  <item.icon />
+                  <span>{item.label}</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+        <SidebarSeparator className="my-1" />
+        <SidebarMenu>
+          {managementMenuItems.map((item) => (
+            <SidebarMenuItem key={item.href}>
+              <Link href={item.href} className="w-full">
+                <SidebarMenuButton
+                  isActive={pathname === item.href}
+                  tooltip={item.label}
+                >
+                  <item.icon />
+                  <span>{item.label}</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+        <SidebarSeparator className="my-1" />
+        <SidebarMenu>
+          {operationsMenuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <Link href={item.href} className="w-full">
                 <SidebarMenuButton
