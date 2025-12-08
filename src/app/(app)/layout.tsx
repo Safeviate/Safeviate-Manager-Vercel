@@ -8,9 +8,7 @@ export default function AppLayout({
 }>) {
   return (
     <SidebarProvider>
-      <div className="md:hidden">
-        <AppSidebarTrigger />
-      </div>
+      <AppSidebarTrigger />
       <AppSidebar />
       <SidebarInset className="p-4 lg:p-6">
         {children}

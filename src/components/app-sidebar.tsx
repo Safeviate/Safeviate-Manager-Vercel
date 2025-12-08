@@ -121,5 +121,5 @@ export function AppSidebar() {
 }
 
 export function AppSidebarTrigger() {
-  return <SidebarTrigger className="fixed bottom-4 left-4 z-20" />;
+  return <SidebarTrigger className="fixed bottom-4 left-4 z-20 md:hidden" />;
 }
