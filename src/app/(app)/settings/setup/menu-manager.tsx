@@ -18,7 +18,7 @@ export function MenuManager() {
       <CardContent>
         <div className="space-y-4">
           <div className="flex justify-end">
-            <Button disabled>
+            <Button>
               <Plus className="mr-2 h-4 w-4" /> Add Main Menu
             </Button>
           </div>
@@ -33,10 +33,10 @@ export function MenuManager() {
                     <div className="font-semibold">{item.label}</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" disabled>
+                    <Button variant="ghost" size="icon">
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" disabled>
+                    <Button variant="ghost" size="icon">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -47,7 +47,7 @@ export function MenuManager() {
                   <div className="pl-10 space-y-3">
                     <div className="flex justify-between items-center">
                         <h4 className="text-sm font-medium text-muted-foreground">Sub-menus</h4>
-                        <Button variant="outline" size="sm" disabled>
+                        <Button variant="outline" size="sm">
                             <Plus className="mr-2 h-4 w-4" /> Add Sub-menu
                         </Button>
                     </div>
@@ -58,10 +58,10 @@ export function MenuManager() {
                           <p className="text-sm text-muted-foreground">{subItem.description}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="icon" disabled>
+                          <Button variant="ghost" size="icon">
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" disabled>
+                          <Button variant="ghost" size="icon">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
