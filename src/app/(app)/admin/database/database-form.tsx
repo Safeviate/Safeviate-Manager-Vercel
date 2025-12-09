@@ -1,3 +1,4 @@
+
 'use client';
 
 import { collection, doc } from 'firebase/firestore';
@@ -9,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useFirestore } from '@/firebase/hooks';
+import { useFirestore } from '@/firebase';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { menuConfig, settingsMenuItem } from '@/lib/menu-config';
