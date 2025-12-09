@@ -27,6 +27,18 @@ export type Personnel = {
   department?: string; // department ID
   role: string; // role ID
   permissions: string[];
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+  };
+  emergencyContact?: {
+    name?: string;
+    relationship?: string;
+    phone?: string;
+  };
 };
 
 export default function PersonnelPage() {

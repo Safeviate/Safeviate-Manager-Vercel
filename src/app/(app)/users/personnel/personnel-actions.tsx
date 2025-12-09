@@ -62,6 +62,8 @@ export function PersonnelActions({ tenantId, personnel, roles, departments }: Pe
   const [lastName, setLastName] = useState(personnel.lastName);
   const [email, setEmail] = useState(personnel.email);
   const [contactNumber, setContactNumber] = useState(personnel.contactNumber);
+  const [address, setAddress] = useState(personnel.address);
+  const [emergencyContact, setEmergencyContact] = useState(personnel.emergencyContact);
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(personnel.permissions || []);
@@ -78,12 +80,13 @@ export function PersonnelActions({ tenantId, personnel, roles, departments }: Pe
   );
   
   useEffect(() => {
-    // Only reset state when the dialog is opened, not on every re-render of the parent
     if (isEditDialogOpen) {
         setFirstName(personnel.firstName);
         setLastName(personnel.lastName);
         setEmail(personnel.email);
         setContactNumber(personnel.contactNumber);
+        setAddress(personnel.address);
+        setEmergencyContact(personnel.emergencyContact);
         setSelectedPermissions(personnel.permissions || []);
         const currentRole = roles.find(r => r.id === personnel.role) || null;
         setSelectedRole(currentRole);
@@ -92,7 +95,6 @@ export function PersonnelActions({ tenantId, personnel, roles, departments }: Pe
     }
   }, [personnel, roles, departments, isEditDialogOpen]);
 
-  // When a role is selected, update the permissions
   useEffect(() => {
     if (selectedRole) {
       setSelectedPermissions(selectedRole.permissions || []);
@@ -125,6 +127,8 @@ export function PersonnelActions({ tenantId, personnel, roles, departments }: Pe
         lastName, 
         email, 
         contactNumber,
+        address,
+        emergencyContact,
         department: selectedDepartment?.id || null,
         role: selectedRole.id, 
         permissions: selectedPermissions 
@@ -257,6 +261,48 @@ export function PersonnelActions({ tenantId, personnel, roles, departments }: Pe
                                     ))}
                                 </SelectContent>
                             </Select>
+                        </div>
+                    </div>
+
+                    <Separator />
+                    <h4 className="text-md font-medium">Address</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2 col-span-3">
+                            <Label htmlFor="street">Street</Label>
+                            <Input id="street" value={address?.street} onChange={(e) => setAddress({...address, street: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="city">City</Label>
+                            <Input id="city" value={address?.city} onChange={(e) => setAddress({...address, city: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="state">State / Province</Label>
+                            <Input id="state" value={address?.state} onChange={(e) => setAddress({...address, state: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="postalCode">Postal Code</Label>
+                            <Input id="postalCode" value={address?.postalCode} onChange={(e) => setAddress({...address, postalCode: e.target.value})} />
+                        </div>
+                         <div className="space-y-2 col-span-3">
+                            <Label htmlFor="country">Country</Label>
+                            <Input id="country" value={address?.country} onChange={(e) => setAddress({...address, country: e.target.value})} />
+                        </div>
+                    </div>
+
+                    <Separator />
+                    <h4 className="text-md font-medium">Emergency Contact</h4>
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="emergencyName">Full Name</Label>
+                            <Input id="emergencyName" value={emergencyContact?.name} onChange={(e) => setEmergencyContact({...emergencyContact, name: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="emergencyRelationship">Relationship</Label>
+                            <Input id="emergencyRelationship" value={emergencyContact?.relationship} onChange={(e) => setEmergencyContact({...emergencyContact, relationship: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="emergencyPhone">Phone Number</Label>
+                            <Input id="emergencyPhone" value={emergencyContact?.phone} onChange={(e) => setEmergencyContact({...emergencyContact, phone: e.target.value})} />
                         </div>
                     </div>
 
