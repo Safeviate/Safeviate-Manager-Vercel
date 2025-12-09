@@ -79,7 +79,7 @@ export const menuConfig: MenuItem[] = [
       {
         href: '/users/private',
         label: 'Private',
-        description: 'Manage instructor profiles and schedules.',
+        description: 'Manage private user profiles.',
       },
       {
         href: '/users/personnel',
