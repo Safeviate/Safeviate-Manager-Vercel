@@ -16,10 +16,11 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 
-type Role = {
+export type Role = {
   id: string;
   name: string;
   permissions: string[];
+  requiredDocuments?: string[];
 };
 
 export default function RolesPage() {
@@ -59,20 +60,21 @@ export default function RolesPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Permissions</TableHead>
+                <TableHead>Required Docs</TableHead>
                 <TableHead className='text-right'>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center">
+                  <TableCell colSpan={4} className="text-center">
                     Loading roles...
                   </TableCell>
                 </TableRow>
               )}
               {!isLoading && error && (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center text-destructive">
+                  <TableCell colSpan={4} className="text-center text-destructive">
                     Error: {error.message}
                   </TableCell>
                 </TableRow>
@@ -84,6 +86,9 @@ export default function RolesPage() {
                     <TableCell>
                       <Badge variant="secondary">{role.permissions?.length || 0} assigned</Badge>
                     </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{role.requiredDocuments?.length || 0} required</Badge>
+                    </TableCell>
                     <TableCell className="text-right">
                        <RoleActions tenantId={tenantId} role={role} />
                     </TableCell>
@@ -92,7 +97,7 @@ export default function RolesPage() {
               )}
               {!isLoading && !error && (!roles || roles.length === 0) && (
                  <TableRow>
-                    <TableCell colSpan={3} className="text-center h-24">
+                    <TableCell colSpan={4} className="text-center h-24">
                         No roles found.
                     </TableCell>
                  </TableRow>
