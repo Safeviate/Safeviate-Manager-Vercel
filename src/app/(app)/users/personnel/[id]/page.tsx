@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, use } from 'react';
+import { useState, useMemo } from 'react';
 import { collection, doc } from 'firebase/firestore';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Personnel } from '../page';
