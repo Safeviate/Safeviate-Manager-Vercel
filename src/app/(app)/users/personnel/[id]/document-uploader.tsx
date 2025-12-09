@@ -15,8 +15,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
+import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -39,7 +38,6 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
     if (selectedFile) {
         setFile(selectedFile);
         if (!defaultFileName) {
-            // Set file name from the selected file if no default is provided
             setFileName(selectedFile.name);
         }
     }
@@ -63,7 +61,6 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
         return;
       }
 
-    // --- In a real app, this is where you would upload to Firebase Storage ---
     console.log(`Simulating upload for file: ${file.name} as "${fileName}"`);
     const simulatedDownloadURL = `https://example.com/docs/${Date.now()}-${file.name}`;
     const uploadDate = new Date().toISOString();
@@ -98,52 +95,42 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
         setIsOpen(open);
     }}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-4xl grid-rows-[auto,1fr,auto]">
         <DialogHeader>
           <DialogTitle>Upload Document</DialogTitle>
           <DialogDescription>
-            Select a file and give it a name. This will be added to the user's records.
+            Select a file, give it a name, and optionally set an expiration date.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="file-name">Document Name</Label>
-            <Input
-              id="file-name"
-              value={fileName}
-              onChange={(e) => setFileName(e.target.value)}
-              placeholder="e.g., Passport Scan"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="file-upload">File</Label>
-            <Input id="file-upload" type="file" onChange={handleFileChange} />
-             {file && <p className="text-sm text-muted-foreground">Selected: {file.name}</p>}
-          </div>
-          <div className="space-y-2">
-              <Label>Expiration Date (Optional)</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !expirationDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {expirationDate ? format(expirationDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={expirationDate}
-                    onSelect={setExpirationDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+        <div className="grid md:grid-cols-2 gap-8 py-4 overflow-y-auto">
+            <div className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="file-name">Document Name</Label>
+                    <Input
+                    id="file-name"
+                    value={fileName}
+                    onChange={(e) => setFileName(e.target.value)}
+                    placeholder="e.g., Passport Scan"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="file-upload">File</Label>
+                    <Input id="file-upload" type="file" onChange={handleFileChange} />
+                    {file && <p className="text-sm text-muted-foreground">Selected: {file.name}</p>}
+                </div>
+                 {expirationDate && (
+                    <div className='text-sm'>
+                        Selected Expiration: <span className='font-semibold'>{format(expirationDate, "PPP")}</span>
+                    </div>
+                 )}
+            </div>
+            <div className="flex justify-center items-start">
+                 {/* 
+                    NOTE: The custom calendar is for display and does not currently support date selection.
+                    This is a placeholder to show where the selected date would be managed.
+                    A fully functional implementation would require modifying CustomCalendar to handle date clicks.
+                 */}
+                <CustomCalendar />
             </div>
         </div>
         <DialogFooter>
