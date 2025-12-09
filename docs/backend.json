@@ -183,6 +183,31 @@
           "type": "string",
           "description": "The contact phone number of the personnel."
         },
+        "dateOfBirth": {
+          "type": "string",
+          "description": "The personnel's date of birth.",
+          "format": "date"
+        },
+        "nationality": {
+            "type": "string",
+            "description": "The personnel's nationality."
+        },
+        "passport": {
+          "type": "object",
+          "description": "Passport details.",
+          "properties": {
+            "number": { "type": "string" },
+            "expirationDate": { "type": "string", "format": "date" }
+          }
+        },
+        "visa": {
+            "type": "object",
+            "description": "Visa details.",
+            "properties": {
+                "number": { "type": "string" },
+                "expirationDate": { "type": "string", "format": "date" }
+            }
+        },
         "address": {
           "type": "object",
           "description": "The personnel's physical address.",
@@ -202,6 +227,31 @@
             "relationship": { "type": "string" },
             "phone": { "type": "string" }
           }
+        },
+        "licenses": {
+            "type": "array",
+            "description": "A list of licenses held by the personnel.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string" },
+                    "number": { "type": "string" },
+                    "issueDate": { "type": "string", "format": "date" },
+                    "expirationDate": { "type": "string", "format": "date" }
+                }
+            }
+        },
+        "documents": {
+            "type": "array",
+            "description": "A list of documents associated with the personnel.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string" },
+                    "url": { "type": "string", "format": "uri" },
+                    "uploadDate": { "type": "string", "format": "date-time" }
+                }
+            }
         }
       },
       "required": [

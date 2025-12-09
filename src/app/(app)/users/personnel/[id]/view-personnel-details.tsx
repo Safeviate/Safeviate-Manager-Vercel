@@ -1,15 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { permissionsConfig } from '@/lib/permissions-config';
 import type { Personnel } from '../page';
-import type { Role } from '../../roles/page';
+import type { Role } from '../../../roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { ChevronsUpDown } from 'lucide-react';
+import { ChevronsUpDown, FileText, License } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface ViewPersonnelDetailsProps {
   personnel: Personnel;
@@ -29,9 +30,10 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
 
   return (
     <div className="space-y-6">
+       {/* --- Contact & Role --- */}
       <Card>
         <CardHeader>
-          <CardTitle>Contact Information</CardTitle>
+          <CardTitle>Contact & Role</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <DetailItem label="First Name" value={personnel.firstName} />
@@ -44,6 +46,22 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
       </Card>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* --- Identification --- */}
+        <Card>
+            <CardHeader>
+                <CardTitle>Identification</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <DetailItem label="Date of Birth" value={personnel.dateOfBirth ? format(new Date(personnel.dateOfBirth), 'PPP') : 'N/A'} />
+                <DetailItem label="Nationality" value={personnel.nationality} />
+                <DetailItem label="Passport Number" value={personnel.passport?.number} />
+                <DetailItem label="Passport Expiration" value={personnel.passport?.expirationDate ? format(new Date(personnel.passport.expirationDate), 'PPP') : 'N/A'} />
+                <DetailItem label="Visa Number" value={personnel.visa?.number} />
+                <DetailItem label="Visa Expiration" value={personnel.visa?.expirationDate ? format(new Date(personnel.visa.expirationDate), 'PPP') : 'N/A'} />
+            </CardContent>
+        </Card>
+
+        {/* --- Address --- */}
         <Card>
           <CardHeader>
             <CardTitle>Address</CardTitle>
@@ -57,6 +75,7 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
           </CardContent>
         </Card>
 
+        {/* --- Emergency Contact --- */}
         <Card>
           <CardHeader>
             <CardTitle>Emergency Contact</CardTitle>
@@ -69,6 +88,43 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
         </Card>
       </div>
 
+       {/* --- Licenses --- */}
+      <Card>
+        <CardHeader>
+            <CardTitle>Licenses</CardTitle>
+        </CardHeader>
+        <CardContent>
+            {personnel.licenses && personnel.licenses.length > 0 ? (
+                 <div className="space-y-4">
+                    {personnel.licenses.map((license, index) => (
+                        <div key={index} className="flex items-start gap-4 p-4 border rounded-lg">
+                           <License className="h-6 w-6 text-muted-foreground mt-1"/>
+                           <div className='grid grid-cols-2 gap-x-8 gap-y-2 flex-1'>
+                             <DetailItem label="License Name" value={license.name} />
+                             <DetailItem label="License Number" value={license.number} />
+                             <DetailItem label="Issue Date" value={license.issueDate ? format(new Date(license.issueDate), 'PPP') : 'N/A'} />
+                             <DetailItem label="Expiration Date" value={license.expirationDate ? format(new Date(license.expirationDate), 'PPP') : 'N/A'} />
+                           </div>
+                        </div>
+                    ))}
+                 </div>
+            ) : (
+                <p className="text-muted-foreground">No licenses on file.</p>
+            )}
+        </CardContent>
+      </Card>
+      
+      {/* --- Documents --- */}
+      <Card>
+        <CardHeader>
+            <CardTitle>Documents</CardTitle>
+        </CardHeader>
+        <CardContent>
+             <p className="text-muted-foreground">No documents uploaded.</p>
+        </CardContent>
+      </Card>
+
+      {/* --- Permissions --- */}
       <Card>
         <Collapsible open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
             <CardHeader className="flex flex-row items-center justify-between">

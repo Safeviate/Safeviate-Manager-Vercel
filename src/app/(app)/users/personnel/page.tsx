@@ -27,6 +27,16 @@ export type Personnel = {
   department?: string; // department ID
   role: string; // role ID
   permissions: string[];
+  dateOfBirth?: string;
+  nationality?: string;
+  passport?: {
+    number?: string;
+    expirationDate?: string;
+  };
+  visa?: {
+    number?: string;
+    expirationDate?: string;
+  };
   address?: {
     street?: string;
     city?: string;
@@ -39,6 +49,17 @@ export type Personnel = {
     relationship?: string;
     phone?: string;
   };
+  licenses?: {
+    name: string;
+    number: string;
+    issueDate: string;
+    expirationDate: string;
+  }[];
+  documents?: {
+    name: string;
+    url: string;
+    uploadDate: string;
+  }[];
 };
 
 export default function PersonnelPage() {
@@ -141,7 +162,7 @@ export default function PersonnelPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                       <PersonnelActions tenantId={tenantId} personnel={person} roles={roles || []} departments={departments || []} />
+                       <PersonnelActions tenantId={tenantId} personnel={person} />
                     </TableCell>
                   </TableRow>
                 ))
