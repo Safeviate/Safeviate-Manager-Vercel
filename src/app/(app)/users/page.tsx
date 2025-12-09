@@ -1,29 +1,127 @@
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import Link from 'next/link';
-import { menuConfig } from '@/lib/menu-config';
+'use client';
+
+import { useMemo } from 'react';
+import { collection, query, where } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { PersonnelForm } from './personnel/personnel-form';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import type { Role } from '../admin/roles/page';
+import type { Department } from '../admin/department/page';
+import type { Personnel, PilotProfile } from './personnel/page';
+import { PersonnelTable } from './personnel/personnel-table';
+import { PilotsTable } from './pilots/pilots-table';
 
 export default function UsersPage() {
-  const usersMenu = menuConfig.find(item => item.href === '/users');
+  const firestore = useFirestore();
+  const tenantId = 'safeviate'; // Hardcoded for now
 
-  if (!usersMenu || !usersMenu.subItems) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Users section not configured.</p>
-      </div>
-    );
-  }
+  // --- Data Fetching ---
+  const personnelQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'personnel')) : null),
+    [firestore, tenantId]
+  );
+  const pilotsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'pilots')) : null),
+    [firestore, tenantId]
+  );
+  const rolesQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'roles')) : null),
+    [firestore, tenantId]
+  );
+  const departmentsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'departments')) : null),
+    [firestore, tenantId]
+  );
+
+  const { data: personnel, isLoading: isLoadingPersonnel, error: personnelError } = useCollection<Personnel>(personnelQuery);
+  const { data: pilots, isLoading: isLoadingPilots, error: pilotsError } = useCollection<PilotProfile>(pilotsQuery);
+  const { data: roles, isLoading: isLoadingRoles, error: rolesError } = useCollection<Role>(rolesQuery);
+  const { data: departments, isLoading: isLoadingDepts, error: deptsError } = useCollection<Department>(departmentsQuery);
+
+  const isLoading = isLoadingPersonnel || isLoadingPilots || isLoadingRoles || isLoadingDepts;
+  const error = personnelError || pilotsError || rolesError || deptsError;
+
+  // --- Data Filtering ---
+  const students = useMemo(() => pilots?.filter(p => p.userType === 'Student') || [], [pilots]);
+  const privatePilots = useMemo(() => pilots?.filter(p => p.userType === 'Private Pilot') || [], [pilots]);
+  const instructors = useMemo(() => pilots?.filter(p => p.userType === 'Instructor') || [], [pilots]);
+  
+  // --- Mappers ---
+  const rolesMap = useMemo(() => {
+    if (!roles) return new Map<string, string>();
+    return new Map(roles.map(role => [role.id, role.name]));
+  }, [roles]);
+
+  const departmentsMap = useMemo(() => {
+    if (!departments) return new Map<string, string>();
+    return new Map(departments.map(dept => [dept.id, dept.name]));
+  }, [departments]);
+  
+  const sections = [
+    { 
+      title: "Personnel", 
+      data: personnel, 
+      component: <PersonnelTable data={personnel || []} rolesMap={rolesMap} departmentsMap={departmentsMap} tenantId={tenantId} /> 
+    },
+    { 
+      title: "Instructors", 
+      data: instructors, 
+      component: <PilotsTable data={instructors} tenantId={tenantId} /> 
+    },
+    { 
+      title: "Private Pilots", 
+      data: privatePilots, 
+      component: <PilotsTable data={privatePilots} tenantId={tenantId} /> 
+    },
+    { 
+      title: "Students", 
+      data: students, 
+      component: <PilotsTable data={students} tenantId={tenantId} /> 
+    },
+  ];
+
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {usersMenu.subItems.map((item) => (
-        <Link href={item.href} key={item.href}>
-          <Card className="hover:bg-muted/50 transition-colors">
-            <CardHeader>
-              <CardTitle>{item.label}</CardTitle>
-            </CardHeader>
-          </Card>
-        </Link>
-      ))}
+    <div className="flex flex-col gap-6 h-full">
+        <div className="flex justify-between items-center">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+                <p className="text-muted-foreground">Add, view, and manage all users across your organization.</p>
+            </div>
+            <PersonnelForm tenantId={tenantId} roles={roles || []} departments={departments || []} />
+        </div>
+
+        <Card>
+            <CardContent className="p-0">
+                 <Accordion type="multiple" className="w-full">
+                    {sections.map(section => (
+                        <AccordionItem value={section.title} key={section.title}>
+                            <AccordionTrigger className="px-6 text-lg font-medium hover:no-underline">
+                                <div className="flex items-center gap-4">
+                                  {section.title}
+                                  <span className="text-sm font-normal text-muted-foreground">({section.data?.length || 0} users)</span>
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                                {isLoading && <p className='px-6'>Loading...</p>}
+                                {!isLoading && error && <p className='px-6 text-destructive'>Error: {error.message}</p>}
+                                {!isLoading && !error && (
+                                    <div className="border-t">
+                                        {section.component}
+                                    </div>
+                                )}
+                            </AccordionContent>
+                        </AccordionItem>
+                    ))}
+                </Accordion>
+            </CardContent>
+        </Card>
     </div>
   );
 }

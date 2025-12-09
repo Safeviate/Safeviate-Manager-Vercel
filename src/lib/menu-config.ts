@@ -1,4 +1,3 @@
-
 import {
   LayoutDashboard,
   Users,
@@ -147,5 +146,3 @@ export const settingsMenuItem: MenuItem = {
     },
   ],
 };
-
-    
