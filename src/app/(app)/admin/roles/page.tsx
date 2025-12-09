@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { RoleForm } from './role-form';
-// import { RoleActions } from './role-actions'; // To be used later
+import { RoleActions } from './role-actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table,
@@ -15,8 +15,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 type Role = {
   id: string;
@@ -87,11 +85,7 @@ export default function RolesPage() {
                       <Badge variant="secondary">{role.permissions?.length || 0} assigned</Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                       {/* <RoleActions tenantId={tenantId} role={role} /> */}
-                       <Button variant="ghost" className="h-8 w-8 p-0" disabled>
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
+                       <RoleActions tenantId={tenantId} role={role} />
                     </TableCell>
                   </TableRow>
                 ))
