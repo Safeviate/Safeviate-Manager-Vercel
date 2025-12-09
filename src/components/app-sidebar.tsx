@@ -67,7 +67,6 @@ export function AppSidebar() {
         <SidebarMenu>
           {visibleMenuConfig.map((item, index) => (
              <React.Fragment key={item.href}>
-              {item.label === 'My Dashboard' && <SidebarSeparator className="my-1 mx-2" />}
               <SidebarMenuItem>
                 <Link href={item.href} className="w-full" onClick={handleLinkClick}>
                   <SidebarMenuButton
@@ -79,7 +78,7 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
-              {index < visibleMenuConfig.length -1 && item.label !== 'My Dashboard' && <SidebarSeparator className="my-1 mx-2" />}
+              {index < visibleMenuConfig.length - 1 && <SidebarSeparator className="my-1 mx-2" />}
             </React.Fragment>
           ))}
         </SidebarMenu>
