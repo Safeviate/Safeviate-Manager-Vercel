@@ -84,6 +84,11 @@ export const menuConfig: MenuItem[] = [
       },
     ],
   },
+  {
+    href: '/admin',
+    label: 'Admin',
+    icon: Shield,
+  },
 ];
 
 export const settingsMenuItem: MenuItem = {
