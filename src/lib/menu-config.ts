@@ -77,9 +77,9 @@ export const menuConfig: MenuItem[] = [
         description: 'Manage student records and progress.',
       },
       {
-        href: '/users/private',
-        label: 'Private',
-        description: 'Manage private user profiles.',
+        href: '/users/private-pilots',
+        label: 'Private Pilots',
+        description: 'Manage private pilot profiles.',
       },
       {
         href: '/users/personnel',

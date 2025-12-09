@@ -51,8 +51,8 @@ export const permissionsConfig: PermissionResource[] = [
     actions: ['view', 'create', 'edit', 'delete'],
   },
   {
-    id: 'users-private',
-    name: 'Private',
+    id: 'users-private-pilots',
+    name: 'Private Pilots',
     actions: ['view', 'create', 'edit', 'delete'],
   },
   {
