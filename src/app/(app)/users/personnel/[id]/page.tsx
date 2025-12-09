@@ -18,9 +18,10 @@ interface UserProfilePageProps {
 }
 
 export default function UserProfilePage({ params }: UserProfilePageProps) {
+    const resolvedParams = use(params);
     const firestore = useFirestore();
     const tenantId = 'safeviate'; // Hardcoded for now
-    const userId = params.id;
+    const userId = resolvedParams.id;
     const [isEditing, setIsEditing] = useState(false);
 
     const personnelDocRef = useMemoFirebase(
