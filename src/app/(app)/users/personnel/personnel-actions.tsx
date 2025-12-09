@@ -1,0 +1,305 @@
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import { doc } from 'firebase/firestore';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+  } from "@/components/ui/dropdown-menu"
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
+import { permissionsConfig } from '@/lib/permissions-config';
+import type { Personnel } from './page';
+import type { Role } from '../roles/page';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+interface PersonnelActionsProps {
+  tenantId: string;
+  personnel: Personnel;
+  roles: Role[];
+}
+
+export function PersonnelActions({ tenantId, personnel, roles }: PersonnelActionsProps) {
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  // Form state
+  const [firstName, setFirstName] = useState(personnel.firstName);
+  const [lastName, setLastName] = useState(personnel.lastName);
+  const [email, setEmail] = useState(personnel.email);
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(personnel.permissions || []);
+  
+  const allPermissionIds = useMemo(() => 
+    permissionsConfig.flatMap(resource => 
+      resource.actions.map(action => `${resource.id}-${action}`)
+    ),
+  []);
+
+  const areAllSelected = useMemo(() => 
+    allPermissionIds.length > 0 && selectedPermissions.length === allPermissionIds.length,
+    [selectedPermissions, allPermissionIds]
+  );
+  
+  useEffect(() => {
+    // Only reset state when the dialog is opened, not on every re-render of the parent
+    if (isEditDialogOpen) {
+        setFirstName(personnel.firstName);
+        setLastName(personnel.lastName);
+        setEmail(personnel.email);
+        setSelectedPermissions(personnel.permissions || []);
+        const currentRole = roles.find(r => r.id === personnel.role) || null;
+        setSelectedRole(currentRole);
+    }
+  }, [personnel, roles, isEditDialogOpen]);
+
+  // When a role is selected, update the permissions
+  useEffect(() => {
+    if (selectedRole) {
+      setSelectedPermissions(selectedRole.permissions || []);
+    }
+  }, [selectedRole]);
+
+
+  const handleUpdatePersonnel = () => {
+     if (!firstName.trim() || !lastName.trim() || !email.trim() || !selectedRole) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Fields',
+        description: 'Please fill out all required fields.',
+      });
+      return;
+    }
+
+    if (!firestore || !tenantId) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not connect to the database.',
+          });
+        return;
+    }
+
+    const personnelRef = doc(firestore, 'tenants', tenantId, 'personnel', personnel.id);
+    updateDocumentNonBlocking(personnelRef, { 
+        firstName, 
+        lastName, 
+        email, 
+        role: selectedRole.id, 
+        permissions: selectedPermissions 
+    });
+
+    toast({
+        title: 'Personnel Updated',
+        description: `User ${firstName} ${lastName} is being updated.`,
+    });
+    
+    setIsEditDialogOpen(false);
+  };
+
+  const handleDeletePersonnel = () => {
+    if (!firestore || !tenantId) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not connect to the database.',
+          });
+        return;
+    }
+
+    const personnelRef = doc(firestore, 'tenants', tenantId, 'personnel', personnel.id);
+    deleteDocumentNonBlocking(personnelRef);
+
+    toast({
+        title: 'Personnel Deleted',
+        description: `The user "${personnel.firstName} ${personnel.lastName}" is being deleted.`,
+    });
+  }
+
+  const handlePermissionToggle = (permissionId: string, checked: boolean) => {
+    setSelectedPermissions((prev) =>
+      checked ? [...prev, permissionId] : prev.filter((id) => id !== permissionId)
+    );
+  };
+
+  const handleSelectAllToggle = () => {
+    if (areAllSelected) {
+      setSelectedPermissions([]);
+    } else {
+      setSelectedPermissions(allPermissionIds);
+    }
+  };
+  
+  const handleRoleChange = (roleId: string) => {
+    const role = roles.find(r => r.id === roleId);
+    setSelectedRole(role || null);
+  }
+
+  return (
+    <>
+    <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <AlertDialog>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => setIsEditDialogOpen(true)}>
+                        <Pencil className='mr-2' /> Edit
+                    </DropdownMenuItem>
+                    <AlertDialogTrigger asChild>
+                        <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                            <Trash2 className='mr-2' /> Delete
+                        </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Edit Dialog Content */}
+            <DialogContent className="sm:max-w-3xl">
+                <DialogHeader>
+                    <DialogTitle>Edit Personnel</DialogTitle>
+                    <DialogDescription>
+                        Update details for {personnel.firstName} {personnel.lastName}.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="flex flex-col gap-6 py-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="firstName">First Name</Label>
+                            <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="lastName">Last Name</Label>
+                            <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="role">Role</Label>
+                             <Select onValueChange={handleRoleChange} value={selectedRole?.id}>
+                                <SelectTrigger id="role">
+                                    <SelectValue placeholder="Select a role" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {roles.map(role => (
+                                        <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className='space-y-2'>
+                        <div className="flex items-center justify-between">
+                            <Label>Permissions</Label>
+                             <Button variant="link" onClick={handleSelectAllToggle} className="p-0 h-auto">
+                                {areAllSelected ? 'Deselect All' : 'Select All'}
+                            </Button>
+                        </div>
+                        <ScrollArea className="h-72 w-full rounded-md border">
+                            <div className="p-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                                {permissionsConfig.map((resource) => (
+                                    <div key={resource.id} className='space-y-2 break-inside-avoid'>
+                                        <h4 className='font-medium border-b pb-1'>{resource.name}</h4>
+                                        <div className="flex flex-col gap-2 pt-1">
+                                        {resource.actions.map((action) => {
+                                            const permissionId = `${resource.id}-${action}`;
+                                            return (
+                                                <div
+                                                    key={permissionId}
+                                                    className="flex items-center space-x-2"
+                                                >
+                                                    <Checkbox
+                                                        id={`edit-${permissionId}`}
+                                                        checked={selectedPermissions.includes(permissionId)}
+                                                        onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)}
+                                                    />
+                                                    <label
+                                                        htmlFor={`edit-${permissionId}`}
+                                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer capitalize"
+                                                    >
+                                                        {action}
+                                                    </label>
+                                                </div>
+                                            );
+                                        })}
+                                        </div>
+                                    </div>
+                                ))}
+                                </div>
+                            </div>
+                        </ScrollArea>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button onClick={handleUpdatePersonnel}>Save Changes</Button>
+                </DialogFooter>
+            </DialogContent>
+
+             {/* Delete Alert Dialog Content */}
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the user
+                        &quot;{personnel.firstName} {personnel.lastName}&quot;.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeletePersonnel} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                        Delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    </Dialog>
+    </>
+  );
+}

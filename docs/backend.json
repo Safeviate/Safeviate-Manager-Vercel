@@ -161,19 +161,27 @@
         },
         "role": {
           "type": "string",
-          "description": "Personnel's role within the academy."
+          "description": "The ID of the role assigned to the personnel."
         },
         "email": {
           "type": "string",
           "description": "Personnel's email address.",
           "format": "email"
+        },
+        "permissions": {
+          "type": "array",
+          "description": "An array of permission IDs (strings) associated with this person, potentially overriding the role.",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [
         "id",
         "firstName",
         "lastName",
-        "role"
+        "role",
+        "email"
       ]
     },
     "SafetyProtocol": {
