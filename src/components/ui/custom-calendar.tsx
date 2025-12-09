@@ -31,6 +31,10 @@ export function CustomCalendar() {
   const handleYearSelect = (year: number) => {
     setCurrentDate(new Date(year, currentDate.getMonth(), 1));
   };
+  
+  const handleMonthSelect = (monthIndex: number) => {
+    setCurrentDate(new Date(currentDate.getFullYear(), monthIndex, 1));
+  };
 
   const calendarDays = [];
   // Add padding for days from the previous month
@@ -65,16 +69,32 @@ export function CustomCalendar() {
   }
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = Array.from({ length: 12 }, (_, i) => 
+    new Date(0, i).toLocaleString('default', { month: 'long' })
+  );
   const currentYear = currentDate.getFullYear();
   const years = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
 
   return (
     <div className="w-full max-w-sm rounded-lg border bg-card p-3 text-card-foreground">
       <div className="flex items-center justify-between pb-2">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-medium">
-            {currentDate.toLocaleString('default', { month: 'long' })}
-          </h2>
+        <div className="flex items-center gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+               <Button variant="ghost" className="flex items-center gap-1 text-lg font-medium">
+                {currentDate.toLocaleString('default', { month: 'long' })}
+                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+                 {months.map((month, index) => (
+                  <DropdownMenuItem key={month} onSelect={() => handleMonthSelect(index)}>
+                    {month}
+                  </DropdownMenuItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-1 text-lg font-medium">
