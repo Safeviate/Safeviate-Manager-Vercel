@@ -81,7 +81,7 @@ export const settingsMenuItem: MenuItem = {
     {
       href: '/settings/setup',
       label: 'Setup',
-      description: 'Configure application settings and integrations.',
+      description: '',
     },
   ],
 };
