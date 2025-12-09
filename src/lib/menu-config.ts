@@ -76,7 +76,7 @@ export const settingsMenuItem: MenuItem = {
     {
       href: '/settings/appearance',
       label: 'Appearance',
-      description: 'Customize the look and feel of the application.',
+      description: '',
     },
     {
       href: '/settings/setup',
