@@ -247,19 +247,19 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Permission",
       "type": "object",
-      "description": "Represents a permission within the application.",
+      "description": "Represents a permission within the application, typically generated from the menu structure.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the Permission entity."
+          "description": "Unique identifier for the Permission entity, often derived from the menu href."
         },
         "name": {
           "type": "string",
-          "description": "Name of the permission."
+          "description": "The human-readable name of the permission (e.g., 'Users')."
         },
         "description": {
           "type": "string",
-          "description": "Description of what the permission allows."
+          "description": "A description of what the permission grants."
         }
       },
       "required": [
@@ -283,7 +283,7 @@
         },
         "permissions": {
           "type": "array",
-          "description": "References to Permissions. (Relationship: Role N:N Permission)",
+          "description": "An array of permission IDs (strings) associated with this role.",
           "items": {
             "type": "string"
           }
@@ -569,6 +569,26 @@
             {
               "name": "roleId",
               "description": "Unique identifier for the role."
+            }
+          ]
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/permissions/{permissionId}",
+        "definition": {
+          "entityName": "Permission",
+          "schema": {
+            "$ref": "#/backend/entities/Permission"
+          },
+          "description": "Stores all available application permissions, scoped to a specific tenant.",
+          "params": [
+            {
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
+            },
+            {
+              "name": "permissionId",
+              "description": "Unique identifier for the permission."
             }
           ]
         }
