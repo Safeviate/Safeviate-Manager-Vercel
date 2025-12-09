@@ -34,6 +34,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
+          <SidebarSeparator className="my-1 mx-2" />
           {menuConfig.map((item, index) => (
              <React.Fragment key={item.href}>
               <SidebarMenuItem>
