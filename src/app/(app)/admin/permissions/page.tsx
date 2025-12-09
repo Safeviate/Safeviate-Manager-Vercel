@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 export default function PermissionsPage() {
   // We don't need permissions for settings, dashboard, or development tools
   const filteredMenuConfig = menuConfig.filter(
-    (item) => !['/settings', '/dashboard', '/my-dashboard', '/development', '/admin'].includes(item.href)
+    (item) => !['/settings', '/dashboard', '/my-dashboard', '/development'].includes(item.href)
   );
 
   return (
