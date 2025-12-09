@@ -44,7 +44,7 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
   const requiredDocuments = role?.requiredDocuments || [];
   const uploadedDocuments = personnel?.documents || [];
 
-  const handleDocumentUploaded = (document: {name: string, url: string, uploadDate: string, expirationDate?: string}) => {
+  const handleDocumentUploaded = (document: {name: string, url: string, uploadDate: string, expirationDate?: string | null}) => {
     if (!firestore) return;
     const personnelRef = doc(firestore, 'tenants', 'safeviate', 'personnel', personnel.id);
     const newDocuments = [...uploadedDocuments, document];
@@ -63,7 +63,8 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
   }
 
   const isImage = (url: string) => {
-    return /\.(jpg|jpeg|png|webp|gif)$/i.test(url);
+    // Check if the data URI starts with "data:image/"
+    return url.startsWith('data:image/');
   };
 
   return (
