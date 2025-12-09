@@ -90,6 +90,13 @@ export const menuConfig: MenuItem[] = [
     href: '/admin',
     label: 'Admin',
     icon: Shield,
+    subItems: [
+      {
+        href: '/admin/permissions',
+        label: 'Permissions',
+        description: 'Define roles and access levels for your organization.',
+      },
+    ],
   },
   {
     href: '/development',
