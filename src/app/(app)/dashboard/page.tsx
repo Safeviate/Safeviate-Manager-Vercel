@@ -1,12 +1,8 @@
-import PageHeader from '@/components/page-header';
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Dashboard"
-        description="This page is under construction."
-      />
+    <div className="flex items-center justify-center h-full">
+      <p className="text-muted-foreground">This page is under construction.</p>
     </div>
   );
 }
