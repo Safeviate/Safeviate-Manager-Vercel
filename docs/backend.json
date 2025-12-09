@@ -294,19 +294,19 @@
         "name"
       ]
     },
-    "Company": {
+    "Tenant": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Company",
+      "title": "Tenant",
       "type": "object",
-      "description": "Represents a Company on the system.",
+      "description": "Represents a Tenant on the system.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the Company."
+          "description": "Unique identifier for the Tenant."
         },
         "name": {
           "type": "string",
-          "description": "Name of the company"
+          "description": "Name of the tenant"
         }
       },
       "required": [
@@ -318,15 +318,15 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Settings",
       "type": "object",
-      "description": "Represents the application Settings for a company.",
+      "description": "Represents the application Settings for a tenant.",
       "properties": {
         "id": {
           "type": "string",
           "description": "Unique identifier for the Settings."
         },
-        "companyId": {
+        "tenantId": {
           "type": "string",
-          "description": "The company this setting belongs to."
+          "description": "The tenant this setting belongs to."
         },
         "primaryColour": {
           "type": "string",
@@ -343,7 +343,7 @@
       },
       "required": [
         "id",
-        "companyId"
+        "tenantId"
       ]
     }
   },
@@ -356,17 +356,17 @@
   "firestore": {
     "structure": [
       {
-        "path": "companies/{companyId}",
+        "path": "tenants/{tenantId}",
         "definition": {
-          "entityName": "Company",
+          "entityName": "Tenant",
           "schema": {
-            "$ref": "#/backend/entities/Company"
+            "$ref": "#/backend/entities/Tenant"
           },
-          "description": "Stores company information. All other collections except users are company specific.",
+          "description": "Stores tenant information. All other collections except users are tenant specific.",
           "params": [
             {
-              "name": "companyId",
-              "description": "Unique identifier for the company."
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
             }
           ]
         }
@@ -378,7 +378,7 @@
           "schema": {
             "$ref": "#/backend/entities/Personnel"
           },
-          "description": "Stores user profile information. All other user specific data is stored under the company id.",
+          "description": "Stores user profile information. All other user specific data is stored under the tenant id.",
           "params": [
             {
               "name": "userId",
@@ -388,17 +388,17 @@
         }
       },
       {
-        "path": "companies/{companyId}/studentProfiles/{studentProfileId}",
+        "path": "tenants/{tenantId}/studentProfiles/{studentProfileId}",
         "definition": {
           "entityName": "StudentProfile",
           "schema": {
             "$ref": "#/backend/entities/StudentProfile"
           },
-          "description": "Stores student profile information, scoped to a specific company.",
+          "description": "Stores student profile information, scoped to a specific tenant.",
           "params": [
             {
-              "name": "companyId",
-              "description": "Unique identifier for the company."
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
             },
             {
               "name": "studentProfileId",
@@ -408,17 +408,17 @@
         }
       },
       {
-        "path": "companies/{companyId}/instructors/{instructorId}",
+        "path": "tenants/{tenantId}/instructors/{instructorId}",
         "definition": {
           "entityName": "Instructor",
           "schema": {
             "$ref": "#/backend/entities/Instructor"
           },
-          "description": "Stores instructor information, scoped to a specific company.",
+          "description": "Stores instructor information, scoped to a specific tenant.",
           "params": [
             {
-              "name": "companyId",
-              "description": "Unique identifier for the company."
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
             },
             {
               "name": "instructorId",
@@ -428,17 +428,17 @@
         }
       },
       {
-        "path": "companies/{companyId}/aircrafts/{aircraftId}",
+        "path": "tenants/{tenantId}/aircrafts/{aircraftId}",
         "definition": {
           "entityName": "Aircraft",
           "schema": {
             "$ref": "#/backend/entities/Aircraft"
           },
-          "description": "Stores aircraft information, scoped to a specific company.",
+          "description": "Stores aircraft information, scoped to a specific tenant.",
           "params": [
             {
-              "name": "companyId",
-              "description": "Unique identifier for the company."
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
             },
             {
               "name": "aircraftId",
@@ -448,17 +448,17 @@
         }
       },
       {
-        "path": "companies/{companyId}/aircrafts/{aircraftId}/maintenanceLogs/{maintenanceLogId}",
+        "path": "tenants/{tenantId}/aircrafts/{aircraftId}/maintenanceLogs/{maintenanceLogId}",
         "definition": {
           "entityName": "MaintenanceLog",
           "schema": {
             "$ref": "#/backend/entities/MaintenanceLog"
           },
-          "description": "Stores maintenance log entries for a specific aircraft, scoped to a specific company.",
+          "description": "Stores maintenance log entries for a specific aircraft, scoped to a specific tenant.",
           "params": [
             {
-              "name": "companyId",
-              "description": "Unique identifier for the company."
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
             },
             {
               "name": "aircraftId",
@@ -472,17 +472,17 @@
         }
       },
       {
-        "path": "companies/{companyId}/personnel/{personnelId}",
+        "path": "tenants/{tenantId}/personnel/{personnelId}",
         "definition": {
           "entityName": "Personnel",
           "schema": {
             "$ref": "#/backend/entities/Personnel"
           },
-          "description": "Stores personnel information, scoped to a specific company.",
+          "description": "Stores personnel information, scoped to a specific tenant.",
           "params": [
             {
-              "name": "companyId",
-              "description": "Unique identifier for the company."
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
             },
             {
               "name": "personnelId",
@@ -492,17 +492,17 @@
         }
       },
       {
-        "path": "companies/{companyId}/safetyProtocols/{safetyProtocolId}",
+        "path": "tenants/{tenantId}/safetyProtocols/{safetyProtocolId}",
         "definition": {
           "entityName": "SafetyProtocol",
           "schema": {
             "$ref": "#/backend/entities/SafetyProtocol"
           },
-          "description": "Stores safety protocols, scoped to a specific company.",
+          "description": "Stores safety protocols, scoped to a specific tenant.",
           "params": [
             {
-              "name": "companyId",
-              "description": "Unique identifier for the company."
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
             },
             {
               "name": "safetyProtocolId",
@@ -512,17 +512,17 @@
         }
       },
       {
-        "path": "companies/{companyId}/safetyProtocols/{safetyProtocolId}/complianceChecks/{complianceCheckId}",
+        "path": "tenants/{tenantId}/safetyProtocols/{safetyProtocolId}/complianceChecks/{complianceCheckId}",
         "definition": {
           "entityName": "ComplianceCheck",
           "schema": {
             "$ref": "#/backend/entities/ComplianceCheck"
           },
-          "description": "Stores compliance checks for a specific safety protocol, scoped to a specific company.",
+          "description": "Stores compliance checks for a specific safety protocol, scoped to a specific tenant.",
           "params": [
             {
-              "name": "companyId",
-              "description": "Unique identifier for the company."
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
             },
             {
               "name": "safetyProtocolId",
@@ -536,17 +536,17 @@
         }
       },
       {
-        "path": "companies/{companyId}/roles/{roleId}",
+        "path": "tenants/{tenantId}/roles/{roleId}",
         "definition": {
           "entityName": "Role",
           "schema": {
             "$ref": "#/backend/entities/Role"
           },
-          "description": "Stores roles, scoped to a specific company.",
+          "description": "Stores roles, scoped to a specific tenant.",
           "params": [
             {
-              "name": "companyId",
-              "description": "Unique identifier for the company."
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
             },
             {
               "name": "roleId",
@@ -556,17 +556,17 @@
         }
       },
       {
-        "path": "companies/{companyId}/settings/{settingsId}",
+        "path": "tenants/{tenantId}/settings/{settingsId}",
         "definition": {
           "entityName": "Settings",
           "schema": {
             "$ref": "#/backend/entities/Settings"
           },
-          "description": "Stores the application settings for a company.",
+          "description": "Stores the application settings for a tenant.",
           "params": [
             {
-              "name": "companyId",
-              "description": "Unique identifier for the company."
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
             },
             {
               "name": "settingsId",
@@ -576,6 +576,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support a multi-company aviation academy management application, focusing on security, scalability, and ease of debugging. Authorization Independence is achieved through denormalization where needed, especially for collaborative data. Structural Segregation ensures that each collection has a homogeneous security posture. Access Modeling follows consistent patterns, utilizing path-based ownership for user-specific data and membership maps for collaborative entities.  The structure is multi-company, where companies are isolated from each other. The structure uses the companies collection to keep a list of companies and provides a company id for all other collections in the database. This strategy allows the application to manage multiple academies within the same system, each with its own set of data and settings.\n\n*   **Companies:** The root level collection `companies` stores individual company documents. Each company has its own unique ID and associated settings.\n*   **Users:** User data is stored in a top-level collection called `users` and is independent from the company id. It contains basic authentication information.\n*   **User Profiles:** The `StudentProfile` and `Instructor` entities are stored as subcollections under each `company`. This isolates data between companies. A similar strategy is used for other entities.\n\nQAPs (Rules are not Filters) is addressed by:\n\n*   Segregating data into collections with homogeneous security requirements.\n*   Using path-based ownership for private data.\n*   Employing membership maps for collaborative data, and storing these maps directly within the documents to avoid `get()` calls in security rules.\n\nSpecifically, the following denormalization strategies are used:\n\n*   Authorization context (e.g., members, ownerId) is copied into subcollection documents to avoid hierarchical dependencies.\n*   Company ID is included in all documents except for users to support multi-tenancy access control.\n\nThis design enables robust security rules that are simple to write, easy to understand, and highly performant."
+    "reasoning": "The Firestore structure is designed to support a multi-tenant aviation academy management application, focusing on security, scalability, and ease of debugging. Authorization Independence is achieved through denormalization where needed, especially for collaborative data. Structural Segregation ensures that each collection has a homogeneous security posture. Access Modeling follows consistent patterns, utilizing path-based ownership for user-specific data and membership maps for collaborative entities. The structure is multi-tenant, where tenants are isolated from each other. The structure uses the tenants collection to keep a list of tenants and provides a tenant id for all other collections in the database. This strategy allows the application to manage multiple academies within the same system, each with its own set of data and settings.\n\n*   **Tenants:** The root level collection `tenants` stores individual tenant documents. Each tenant has its own unique ID and associated settings.\n*   **Users:** User data is stored in a top-level collection called `users` and is independent from the tenant id. It contains basic authentication information.\n*   **User Profiles:** The `StudentProfile` and `Instructor` entities are stored as subcollections under each `tenant`. This isolates data between tenants. A similar strategy is used for other entities.\n\nQAPs (Rules are not Filters) is addressed by:\n\n*   Segregating data into collections with homogeneous security requirements.\n*   Using path-based ownership for private data.\n*   Employing membership maps for collaborative data, and storing these maps directly within the documents to avoid `get()` calls in security rules.\n\nSpecifically, the following denormalization strategies are used:\n\n*   Authorization context (e.g., members, ownerId) is copied into subcollection documents to avoid hierarchical dependencies.\n*   Tenant ID is included in all documents except for users to support multi-tenancy access control.\n\nThis design enables robust security rules that are simple to write, easy to understand, and highly performant."
   }
 }
