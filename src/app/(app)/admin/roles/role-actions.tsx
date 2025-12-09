@@ -39,7 +39,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { menuConfig } from '@/lib/menu-config';
+import { menuConfig, settingsMenuItem } from '@/lib/menu-config';
 
 interface Role {
     id: string;
@@ -82,29 +82,31 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
     if (!permissions) return [];
 
     const permissionMap = new Map<string, Permission[]>();
+    const allMenuItems = [...menuConfig, settingsMenuItem];
 
-    // First, group permissions by their top-level menu item
-    menuConfig.forEach(mainItem => {
-        if (!['/dashboard', '/my-dashboard'].includes(mainItem.href)) { // Exclude some items if needed
-            permissionMap.set(mainItem.label, []);
-        }
+    // Initialize map with all potential top-level groups
+    allMenuItems.forEach(mainItem => {
+        permissionMap.set(mainItem.label, []);
     });
 
+    // Group permissions from Firestore
     permissions.forEach(p => {
-        const mainItem = menuConfig.find(item => p.id.startsWith(item.href));
+        // Find which top-level menu item this permission belongs to
+        const mainItem = allMenuItems.find(item => p.id.startsWith(item.href));
         if (mainItem && permissionMap.has(mainItem.label)) {
             permissionMap.get(mainItem.label)?.push(p);
         }
     });
 
-    // Convert map to array and sort permissions within groups
+    // Convert map to array, filtering out empty groups
     const result: GroupedPermission[] = [];
     permissionMap.forEach((perms, groupLabel) => {
         if (perms.length > 0) {
             // Sort by main item first, then sub-items
             const sortedPerms = perms.sort((a, b) => {
-                const aIsMain = a.id.split('/').length === 2;
-                const bIsMain = b.id.split('/').length === 2;
+                const aIsMain = !allMenuItems.find(item => item.href === a.id)?.subItems;
+                const bIsMain = !allMenuItems.find(item => item.href === b.id)?.subItems;
+                
                 if (aIsMain && !bIsMain) return -1;
                 if (!aIsMain && bIsMain) return 1;
                 return a.name.localeCompare(b.name);
@@ -113,14 +115,18 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
         }
     });
     
+    // Sort the groups alphabetically by label
     return result.sort((a, b) => a.groupLabel.localeCompare(b.groupLabel));
 
   }, [permissions]);
 
 
   useEffect(() => {
-    setRoleName(role.name);
-    setSelectedPermissions(role.permissions || []);
+    // Only reset state when the dialog is opened, not on every re-render of the parent
+    if (isEditDialogOpen) {
+        setRoleName(role.name);
+        setSelectedPermissions(role.permissions || []);
+    }
   }, [role, isEditDialogOpen]);
 
   const handleUpdateRole = () => {
@@ -231,10 +237,11 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
                         <ScrollArea className="h-72 w-full rounded-md border">
                             <div className="p-4">
                                 {isLoadingPermissions && <p className='text-center'>Loading permissions...</p>}
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
                                 {groupedPermissions.map((group) => (
-                                    <div key={group.groupLabel} className='space-y-2'>
+                                    <div key={group.groupLabel} className='space-y-2 break-inside-avoid'>
                                         <h4 className='font-medium border-b pb-1'>{group.groupLabel}</h4>
+                                        <div className="flex flex-col gap-2">
                                         {group.permissions.map((permission) => (
                                             <div
                                                 key={permission.id}
@@ -253,6 +260,7 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
                                                 </label>
                                             </div>
                                         ))}
+                                        </div>
                                     </div>
                                 ))}
                                 </div>
