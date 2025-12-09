@@ -12,8 +12,20 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from './scroll-area';
 
-export function CustomCalendar() {
-  const [currentDate, setCurrentDate] = React.useState(new Date());
+interface CustomCalendarProps {
+    selectedDate?: Date;
+    onDateSelect?: (date: Date) => void;
+}
+
+export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarProps) {
+  const [currentDate, setCurrentDate] = React.useState(selectedDate || new Date());
+
+  React.useEffect(() => {
+    // If the selectedDate prop changes, update the calendar's view
+    if (selectedDate) {
+        setCurrentDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+    }
+  }, [selectedDate]);
 
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
@@ -36,6 +48,11 @@ export function CustomCalendar() {
     setCurrentDate(new Date(currentDate.getFullYear(), monthIndex, 1));
   };
 
+  const handleDayClick = (day: number) => {
+    const newSelectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    onDateSelect?.(newSelectedDate);
+  };
+
   const calendarDays = [];
   // Add padding for days from the previous month
   for (let i = 0; i < startingDayOfWeek; i++) {
@@ -44,21 +61,30 @@ export function CustomCalendar() {
 
   // Add days of the current month
   for (let day = 1; day <= daysInMonth; day++) {
+    const today = new Date();
     const isToday =
-      day === new Date().getDate() &&
-      currentDate.getMonth() === new Date().getMonth() &&
-      currentDate.getFullYear() === new Date().getFullYear();
+      day === today.getDate() &&
+      currentDate.getMonth() === today.getMonth() &&
+      currentDate.getFullYear() === today.getFullYear();
+    
+    const isSelected = selectedDate &&
+      day === selectedDate.getDate() &&
+      currentDate.getMonth() === selectedDate.getMonth() &&
+      currentDate.getFullYear() === selectedDate.getFullYear();
 
     calendarDays.push(
-      <div
+      <button
         key={`day-${day}`}
+        onClick={() => handleDayClick(day)}
         className={cn(
-          'flex h-9 w-9 items-center justify-center rounded-md text-sm',
-          isToday && 'bg-accent text-accent-foreground'
+          'flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors',
+          'hover:bg-accent hover:text-accent-foreground',
+          isToday && !isSelected && 'bg-muted text-muted-foreground',
+          isSelected && 'bg-primary text-primary-foreground hover:bg-primary/90'
         )}
       >
         {day}
-      </div>
+      </button>
     );
   }
 

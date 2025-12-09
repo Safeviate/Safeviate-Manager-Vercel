@@ -125,12 +125,10 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
                  )}
             </div>
             <div className="flex justify-center items-start">
-                 {/* 
-                    NOTE: The custom calendar is for display and does not currently support date selection.
-                    This is a placeholder to show where the selected date would be managed.
-                    A fully functional implementation would require modifying CustomCalendar to handle date clicks.
-                 */}
-                <CustomCalendar />
+                <CustomCalendar 
+                    selectedDate={expirationDate}
+                    onDateSelect={setExpirationDate}
+                />
             </div>
         </div>
         <DialogFooter>
