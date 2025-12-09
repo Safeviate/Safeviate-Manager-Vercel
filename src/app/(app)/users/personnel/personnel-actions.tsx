@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,7 +12,6 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { MoreHorizontal, Eye, Trash2 } from 'lucide-react';
 import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
@@ -36,6 +36,8 @@ interface PersonnelActionsProps {
 export function PersonnelActions({ tenantId, personnel }: PersonnelActionsProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
 
   const handleDeletePersonnel = () => {
     if (!firestore || !tenantId) {
@@ -54,35 +56,34 @@ export function PersonnelActions({ tenantId, personnel }: PersonnelActionsProps)
         title: 'Personnel Deleted',
         description: `The user "${personnel.firstName} ${personnel.lastName}" is being deleted.`,
     });
+    setIsDeleteDialogOpen(false);
   }
 
 
   return (
-    <AlertDialog>
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
-                    <span className="sr-only">Open menu</span>
-                    <MoreHorizontal className="h-4 w-4" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                    <Link href={`/users/personnel/${personnel.id}`}>
-                        <Eye className='mr-2' /> View Profile
-                    </Link>
-                </DropdownMenuItem>
-                <AlertDialogTrigger asChild>
-                    <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                        <Trash2 className='mr-2' /> Delete
-                    </DropdownMenuItem>
-                </AlertDialogTrigger>
-            </DropdownMenuContent>
-        </DropdownMenu>
+    <>
+      <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+              </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                  <Link href={`/users/personnel/${personnel.id}`}>
+                      <Eye className='mr-2' /> View Profile
+                  </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                  <Trash2 className='mr-2' /> Delete
+              </DropdownMenuItem>
+          </DropdownMenuContent>
+      </DropdownMenu>
 
-        {/* Delete Alert Dialog Content */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -99,5 +100,6 @@ export function PersonnelActions({ tenantId, personnel }: PersonnelActionsProps)
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
+  </>
   );
 }
