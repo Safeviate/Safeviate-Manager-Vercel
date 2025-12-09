@@ -1,0 +1,581 @@
+{
+  "entities": {
+    "StudentProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StudentProfile",
+      "type": "object",
+      "description": "Represents a student's profile within the aviation academy.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the StudentProfile entity."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "Student's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Student's last name."
+        },
+        "email": {
+          "type": "string",
+          "description": "Student's email address.",
+          "format": "email"
+        },
+        "trainingProgress": {
+          "type": "number",
+          "description": "Current training progress as a percentage or other numerical representation."
+        },
+        "flightHours": {
+          "type": "number",
+          "description": "Total flight hours accumulated by the student."
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email"
+      ]
+    },
+    "Instructor": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Instructor",
+      "type": "object",
+      "description": "Represents an instructor at the aviation academy.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Instructor entity."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "Instructor's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Instructor's last name."
+        },
+        "email": {
+          "type": "string",
+          "description": "Instructor's email address.",
+          "format": "email"
+        },
+        "availability": {
+          "type": "string",
+          "description": "Instructor's availability schedule or notes."
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email"
+      ]
+    },
+    "Aircraft": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Aircraft",
+      "type": "object",
+      "description": "Represents an aircraft used for training.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Aircraft entity."
+        },
+        "tailNumber": {
+          "type": "string",
+          "description": "Aircraft's tail number."
+        },
+        "model": {
+          "type": "string",
+          "description": "Aircraft's model."
+        },
+        "maintenanceLogs": {
+          "type": "array",
+          "description": "References to MaintenanceLog entries. (Relationship: Aircraft 1:N MaintenanceLog)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "tailNumber",
+        "model"
+      ]
+    },
+    "MaintenanceLog": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MaintenanceLog",
+      "type": "object",
+      "description": "Represents a maintenance log entry for an aircraft.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the MaintenanceLog entity."
+        },
+        "aircraftId": {
+          "type": "string",
+          "description": "Reference to Aircraft. (Relationship: Aircraft 1:N MaintenanceLog)"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the maintenance.",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the maintenance performed."
+        },
+        "procedure": {
+          "type": "string",
+          "description": "Details of the maintenance procedure followed."
+        }
+      },
+      "required": [
+        "id",
+        "aircraftId",
+        "date",
+        "description"
+      ]
+    },
+    "Personnel": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Personnel",
+      "type": "object",
+      "description": "Represents a person working at the aviation academy.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Personnel entity."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "Personnel's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Personnel's last name."
+        },
+        "role": {
+          "type": "string",
+          "description": "Personnel's role within the academy."
+        },
+        "email": {
+          "type": "string",
+          "description": "Personnel's email address.",
+          "format": "email"
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "role"
+      ]
+    },
+    "SafetyProtocol": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SafetyProtocol",
+      "type": "object",
+      "description": "Represents a safety protocol.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the SafetyProtocol entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the safety protocol."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the safety protocol."
+        },
+        "complianceChecks": {
+          "type": "array",
+          "description": "References to ComplianceCheck entries. (Relationship: SafetyProtocol 1:N ComplianceCheck)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description"
+      ]
+    },
+    "ComplianceCheck": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ComplianceCheck",
+      "type": "object",
+      "description": "Represents a compliance check performed.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ComplianceCheck entity."
+        },
+        "safetyProtocolId": {
+          "type": "string",
+          "description": "Reference to SafetyProtocol. (Relationship: SafetyProtocol 1:N ComplianceCheck)"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date when the compliance check was performed.",
+          "format": "date-time"
+        },
+        "result": {
+          "type": "boolean",
+          "description": "Result of the compliance check (true for pass, false for fail)."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes or observations from the compliance check."
+        }
+      },
+      "required": [
+        "id",
+        "safetyProtocolId",
+        "date",
+        "result"
+      ]
+    },
+    "Permission": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Permission",
+      "type": "object",
+      "description": "Represents a permission within the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Permission entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the permission."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of what the permission allows."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "Role": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Role",
+      "type": "object",
+      "description": "Represents a role within the application, defining a set of permissions.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Role entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the role."
+        },
+        "permissions": {
+          "type": "array",
+          "description": "References to Permissions. (Relationship: Role N:N Permission)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "Tenant": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Tenant",
+      "type": "object",
+      "description": "Represents a Tenant on the system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Tenant."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the tenant"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "Settings": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Settings",
+      "type": "object",
+      "description": "Represents the application Settings for a tenant.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Settings."
+        },
+        "tenantId": {
+          "type": "string",
+          "description": "The tenant this setting belongs to."
+        },
+        "primaryColour": {
+          "type": "string",
+          "description": "The primary colour to use"
+        },
+        "backgroundColour": {
+          "type": "string",
+          "description": "The background colour to use"
+        },
+        "accentColour": {
+          "type": "string",
+          "description": "The accent colour to use"
+        }
+      },
+      "required": [
+        "id",
+        "tenantId"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "tenants/{tenantId}",
+        "definition": {
+          "entityName": "Tenant",
+          "schema": {
+            "$ref": "#/backend/entities/Tenant"
+          },
+          "description": "Stores tenant information. All other collections except users are tenant specific.",
+          "params": [
+            {
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
+            }
+          ]
+        }
+      },
+      {
+        "path": "users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/Personnel"
+          },
+          "description": "Stores user profile information. All other user specific data is stored under the tenant id.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "Unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/studentProfiles/{studentProfileId}",
+        "definition": {
+          "entityName": "StudentProfile",
+          "schema": {
+            "$ref": "#/backend/entities/StudentProfile"
+          },
+          "description": "Stores student profile information, scoped to a specific tenant.",
+          "params": [
+            {
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
+            },
+            {
+              "name": "studentProfileId",
+              "description": "Unique identifier for the student profile."
+            }
+          ]
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/instructors/{instructorId}",
+        "definition": {
+          "entityName": "Instructor",
+          "schema": {
+            "$ref": "#/backend/entities/Instructor"
+          },
+          "description": "Stores instructor information, scoped to a specific tenant.",
+          "params": [
+            {
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
+            },
+            {
+              "name": "instructorId",
+              "description": "Unique identifier for the instructor."
+            }
+          ]
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/aircrafts/{aircraftId}",
+        "definition": {
+          "entityName": "Aircraft",
+          "schema": {
+            "$ref": "#/backend/entities/Aircraft"
+          },
+          "description": "Stores aircraft information, scoped to a specific tenant.",
+          "params": [
+            {
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
+            },
+            {
+              "name": "aircraftId",
+              "description": "Unique identifier for the aircraft."
+            }
+          ]
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/aircrafts/{aircraftId}/maintenanceLogs/{maintenanceLogId}",
+        "definition": {
+          "entityName": "MaintenanceLog",
+          "schema": {
+            "$ref": "#/backend/entities/MaintenanceLog"
+          },
+          "description": "Stores maintenance log entries for a specific aircraft, scoped to a specific tenant.",
+          "params": [
+            {
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
+            },
+            {
+              "name": "aircraftId",
+              "description": "Unique identifier for the aircraft."
+            },
+            {
+              "name": "maintenanceLogId",
+              "description": "Unique identifier for the maintenance log entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/personnel/{personnelId}",
+        "definition": {
+          "entityName": "Personnel",
+          "schema": {
+            "$ref": "#/backend/entities/Personnel"
+          },
+          "description": "Stores personnel information, scoped to a specific tenant.",
+          "params": [
+            {
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
+            },
+            {
+              "name": "personnelId",
+              "description": "Unique identifier for the personnel."
+            }
+          ]
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/safetyProtocols/{safetyProtocolId}",
+        "definition": {
+          "entityName": "SafetyProtocol",
+          "schema": {
+            "$ref": "#/backend/entities/SafetyProtocol"
+          },
+          "description": "Stores safety protocols, scoped to a specific tenant.",
+          "params": [
+            {
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
+            },
+            {
+              "name": "safetyProtocolId",
+              "description": "Unique identifier for the safety protocol."
+            }
+          ]
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/safetyProtocols/{safetyProtocolId}/complianceChecks/{complianceCheckId}",
+        "definition": {
+          "entityName": "ComplianceCheck",
+          "schema": {
+            "$ref": "#/backend/entities/ComplianceCheck"
+          },
+          "description": "Stores compliance checks for a specific safety protocol, scoped to a specific tenant.",
+          "params": [
+            {
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
+            },
+            {
+              "name": "safetyProtocolId",
+              "description": "Unique identifier for the safety protocol."
+            },
+            {
+              "name": "complianceCheckId",
+              "description": "Unique identifier for the compliance check."
+            }
+          ]
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/roles/{roleId}",
+        "definition": {
+          "entityName": "Role",
+          "schema": {
+            "$ref": "#/backend/entities/Role"
+          },
+          "description": "Stores roles, scoped to a specific tenant.",
+          "params": [
+            {
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
+            },
+            {
+              "name": "roleId",
+              "description": "Unique identifier for the role."
+            }
+          ]
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/settings/{settingsId}",
+        "definition": {
+          "entityName": "Settings",
+          "schema": {
+            "$ref": "#/backend/entities/Settings"
+          },
+          "description": "Stores the application settings for a tenant.",
+          "params": [
+            {
+              "name": "tenantId",
+              "description": "Unique identifier for the tenant."
+            },
+            {
+              "name": "settingsId",
+              "description": "Unique identifier for the settings document."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to support a multi-tenant aviation academy management application, focusing on security, scalability, and ease of debugging. Authorization Independence is achieved through denormalization where needed, especially for collaborative data. Structural Segregation ensures that each collection has a homogeneous security posture. Access Modeling follows consistent patterns, utilizing path-based ownership for user-specific data and membership maps for collaborative entities.  The structure is multi-tenant, where tenants are isolated from each other. The structure uses the tenants collection to keep a list of tenants and provides a tenant id for all other collections in the database. This strategy allows the application to manage multiple academies within the same system, each with its own set of data and settings.\n\n*   **Tenants:** The root level collection `tenants` stores individual tenant documents. Each tenant has its own unique ID and associated settings.\n*   **Users:** User data is stored in a top-level collection called `users` and is independent from the tenant id. It contains basic authentication information.\n*   **User Profiles:** The `StudentProfile` and `Instructor` entities are stored as subcollections under each `tenant`. This isolates data between tenants. A similar strategy is used for other entities.\n\nQAPs (Rules are not Filters) is addressed by:\n\n*   Segregating data into collections with homogeneous security requirements.\n*   Using path-based ownership for private data.\n*   Employing membership maps for collaborative data, and storing these maps directly within the documents to avoid `get()` calls in security rules.\n\nSpecifically, the following denormalization strategies are used:\n\n*   Authorization context (e.g., members, ownerId) is copied into subcollection documents to avoid hierarchical dependencies.\n*   Tenant ID is included in all documents except for users to support multi-tenancy access control.\n\nThis design enables robust security rules that are simple to write, easy to understand, and highly performant."
+  }
+}
