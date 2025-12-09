@@ -56,11 +56,11 @@ type ThemeContextType = {
 };
 
 // --- Constants ---
-const THEME_KEY = 'safeviate-theme';
-const CARD_THEME_KEY = 'safeviate-card-theme';
-const SIDEBAR_THEME_KEY = 'safeviate-sidebar-theme';
-const HEADER_THEME_KEY = 'safeviate-header-theme';
-const SAVED_THEMES_KEY = 'safeviate-saved-themes';
+export const THEME_KEY = 'safeviate-theme';
+export const CARD_THEME_KEY = 'safeviate-card-theme';
+export const SIDEBAR_THEME_KEY = 'safeviate-sidebar-theme';
+export const HEADER_THEME_KEY = 'safeviate-header-theme';
+export const SAVED_THEMES_KEY = 'safeviate-saved-themes';
 
 // --- Default Values ---
 const defaultColors: ThemeColors = {
@@ -130,37 +130,7 @@ export const useTheme = () => {
   return context;
 };
 
-// This script is injected into the head to prevent flickering
-const ThemeLoaderScript = () => {
-    const script = `
-    (function() {
-      function applyTheme(key, defaults) {
-        try {
-          const saved = localStorage.getItem(key);
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            Object.keys(parsed).forEach(k => {
-              document.documentElement.style.setProperty('--' + k, '${hexToHsl.toString().replace(/\\s+/g, ' ')}'.replace('hexToHsl','(' + ${hexToHsl.toString()} + ')')(parsed[k]));
-            });
-          }
-        } catch (e) {
-          console.error('Failed to apply theme from localStorage', e);
-        }
-      }
-      applyTheme('${THEME_KEY}');
-      applyTheme('${CARD_THEME_KEY}');
-      applyTheme('${SIDEBAR_THEME_KEY}');
-      applyTheme('${HEADER_THEME_KEY}');
-    })();
-  `;
-  
-  return <script dangerouslySetInnerHTML={{ __html: script }} />;
-};
-
-
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [isMounted, setIsMounted] = useState(false);
-
   const [theme, setTheme] = useState<ThemeColors>(() => defaultColors);
   const [cardTheme, setCardTheme] = useState<CardThemeColors>(() => defaultCardColors);
   const [sidebarTheme, setSidebarTheme] = useState<SidebarThemeColors>(() => defaultSidebarColors);
@@ -219,7 +189,6 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       console.error('Failed to parse theme from localStorage', e);
       loadFromDOM(); // Fallback to DOM if localStorage is corrupt
     }
-    setIsMounted(true);
   }, []);
 
   const updateTheme = <T extends object>(
@@ -317,8 +286,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <ThemeContext.Provider value={value}>
-        <ThemeLoaderScript />
-        {isMounted ? children : null}
+        {children}
     </ThemeContext.Provider>
   );
 };
