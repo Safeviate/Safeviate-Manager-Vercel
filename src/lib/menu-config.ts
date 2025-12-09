@@ -1,3 +1,4 @@
+
 import {
   LayoutDashboard,
   Users,
@@ -84,7 +85,7 @@ export const menuConfig: MenuItem[] = [
       {
         href: '/users/personnel',
         label: 'Personnel',
-        description: 'Manage all other personnel records.',
+        description: 'Manage all other non-flying staff.',
       },
     ],
   },
@@ -102,11 +103,6 @@ export const menuConfig: MenuItem[] = [
         href: '/admin/permissions',
         label: 'Permissions',
         description: 'View all available application permissions.',
-      },
-      {
-        href: '/users/personnel',
-        label: 'Users',
-        description: 'Manage all personnel records.',
       },
       {
         href: '/admin/department',
@@ -151,3 +147,5 @@ export const settingsMenuItem: MenuItem = {
     },
   ],
 };
+
+    

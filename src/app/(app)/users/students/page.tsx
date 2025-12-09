@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -15,18 +16,18 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import type { Role } from '../roles/page';
+import type { Role } from '../../admin/roles/page';
 import type { Department } from '../../admin/department/page';
-import type { Personnel } from '../personnel/page';
+import type { PilotProfile } from '../personnel/page';
 
 export default function StudentsPage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate'; // Hardcoded for now
 
-  const personnelQuery = useMemoFirebase(
+  const pilotsQuery = useMemoFirebase(
     () =>
       firestore
-        ? query(collection(firestore, 'tenants', tenantId, 'personnel'), where('userType', '==', 'Student'))
+        ? query(collection(firestore, 'tenants', tenantId, 'pilots'), where('userType', '==', 'Student'))
         : null,
     [firestore]
   );
@@ -47,22 +48,13 @@ export default function StudentsPage() {
     [firestore]
   );
 
-  const { data: personnel, isLoading: isLoadingPersonnel, error: personnelError } = useCollection<Personnel>(personnelQuery);
+  const { data: pilots, isLoading: isLoadingPilots, error: pilotsError } = useCollection<PilotProfile>(pilotsQuery);
   const { data: roles, isLoading: isLoadingRoles, error: rolesError } = useCollection<Role>(rolesQuery);
   const { data: departments, isLoading: isLoadingDepts, error: deptsError } = useCollection<Department>(departmentsQuery);
 
-  const rolesMap = useMemo(() => {
-    if (!roles) return new Map<string, string>();
-    return new Map(roles.map(role => [role.id, role.name]));
-  }, [roles]);
 
-  const departmentsMap = useMemo(() => {
-    if (!departments) return new Map<string, string>();
-    return new Map(departments.map(dept => [dept.id, dept.name]));
-  }, [departments]);
-
-  const isLoading = isLoadingPersonnel || isLoadingRoles || isLoadingDepts;
-  const error = personnelError || rolesError || deptsError;
+  const isLoading = isLoadingPilots || isLoadingRoles || isLoadingDepts;
+  const error = pilotsError || rolesError || deptsError;
 
   return (
     <div className="flex flex-col gap-6 h-full">
@@ -84,49 +76,41 @@ export default function StudentsPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Contact Number</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Custom Permissions</TableHead>
+                <TableHead>License No.</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">
+                  <TableCell colSpan={5} className="text-center">
                     Loading students...
                   </TableCell>
                 </TableRow>
               )}
               {!isLoading && error && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-destructive">
+                  <TableCell colSpan={5} className="text-center text-destructive">
                     Error: {error.message}
                   </TableCell>
                 </TableRow>
               )}
-              {!isLoading && !error && personnel && personnel.length > 0 && (
-                personnel.map((person) => (
-                  <TableRow key={person.id}>
-                    <TableCell className="font-medium">{person.firstName} {person.lastName}</TableCell>
-                    <TableCell>{person.email}</TableCell>
-                    <TableCell>{person.contactNumber || 'N/A'}</TableCell>
-                    <TableCell>{departmentsMap.get(person.department || '') || 'N/A'}</TableCell>
-                    <TableCell>{rolesMap.get(person.role) || person.role}</TableCell>
-                    <TableCell>
-                      <Badge variant={person.permissions?.length > 0 ? "secondary" : "outline"}>
-                        {person.permissions?.length || 0} assigned
-                      </Badge>
-                    </TableCell>
+              {!isLoading && !error && pilots && pilots.length > 0 && (
+                pilots.map((pilot) => (
+                  <TableRow key={pilot.id}>
+                    <TableCell className="font-medium">{pilot.firstName} {pilot.lastName}</TableCell>
+                    <TableCell>{pilot.email}</TableCell>
+                    <TableCell>{pilot.contactNumber || 'N/A'}</TableCell>
+                    <TableCell>{pilot.pilotLicense?.licenseNumber || 'N/A'}</TableCell>
                     <TableCell className="text-right">
-                       <PersonnelActions tenantId={tenantId} personnel={person} />
+                       <PersonnelActions tenantId={tenantId} user={pilot} />
                     </TableCell>
                   </TableRow>
                 ))
               )}
-              {!isLoading && !error && (!personnel || personnel.length === 0) && (
+              {!isLoading && !error && (!pilots || pilots.length === 0) && (
                  <TableRow>
-                    <TableCell colSpan={7} className="text-center h-24">
+                    <TableCell colSpan={5} className="text-center h-24">
                         No students found.
                     </TableCell>
                  </TableRow>
@@ -138,3 +122,5 @@ export default function StudentsPage() {
     </div>
   );
 }
+
+    

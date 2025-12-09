@@ -5,12 +5,12 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { permissionsConfig } from '@/lib/permissions-config';
-import type { Personnel } from '../page';
+import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { ChevronsUpDown, Award, FileText, Upload, Trash2, Link as LinkIcon, CalendarDays, ExternalLink, X } from 'lucide-react';
+import { ChevronsUpDown, Award, FileText, Upload, Trash2, Link as LinkIcon, CalendarDays, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { DocumentUploader } from './document-uploader';
@@ -20,42 +20,49 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Image from 'next/image';
 
+type UserProfile = Personnel | PilotProfile;
+
 interface ViewPersonnelDetailsProps {
-  personnel: Personnel;
+  user: UserProfile;
   role: Role | null;
   department: Department | null;
 }
 
-type Document = NonNullable<Personnel['documents']>[0];
+type Document = NonNullable<UserProfile['documents']>[0];
 
-const DetailItem = ({ label, value }: { label: string; value?: string | null }) => (
+const DetailItem = ({ label, value, children }: { label: string; value?: string | null, children?: React.ReactNode }) => (
     <div>
       <p className="text-sm font-medium text-muted-foreground">{label}</p>
-      <p className="text-base">{value || 'N/A'}</p>
+      {children ? children : <p className="text-base">{value || 'N/A'}</p>}
     </div>
 );
 
-export function ViewPersonnelDetails({ personnel, role, department }: ViewPersonnelDetailsProps) {
+const isPilotProfile = (user: UserProfile): user is PilotProfile => {
+    return user.userType === 'Student' || user.userType === 'Private Pilot' || user.userType === 'Instructor';
+}
+
+export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDetailsProps) {
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
   const [viewingDocument, setViewingDocument] = useState<Document | null>(null);
   const firestore = useFirestore();
   const { toast } = useToast();
+  
+  const uploadedDocuments = user?.documents || [];
 
-  const requiredDocuments = role?.requiredDocuments || [];
-  const uploadedDocuments = personnel?.documents || [];
-
-  const handleDocumentUploaded = (document: {name: string, url: string, uploadDate: string, expirationDate?: string | null}) => {
+  const handleDocumentUploaded = (document: {name: string, url: string, uploadDate: string, expirationDate: string | null}) => {
     if (!firestore) return;
-    const personnelRef = doc(firestore, 'tenants', 'safeviate', 'personnel', personnel.id);
+    const collectionName = isPilotProfile(user) ? 'pilots' : 'personnel';
+    const userRef = doc(firestore, 'tenants', 'safeviate', collectionName, user.id);
     const newDocuments = [...uploadedDocuments, document];
-    updateDocumentNonBlocking(personnelRef, { documents: newDocuments });
+    updateDocumentNonBlocking(userRef, { documents: newDocuments });
   };
 
   const handleDeleteDocument = (urlToDelete: string) => {
      if (!firestore) return;
-    const personnelRef = doc(firestore, 'tenants', 'safeviate', 'personnel', personnel.id);
+    const collectionName = isPilotProfile(user) ? 'pilots' : 'personnel';
+    const userRef = doc(firestore, 'tenants', 'safeviate', collectionName, user.id);
     const newDocuments = uploadedDocuments.filter(doc => doc.url !== urlToDelete);
-    updateDocumentNonBlocking(personnelRef, { documents: newDocuments });
+    updateDocumentNonBlocking(userRef, { documents: newDocuments });
     toast({
       title: "Document Deleted",
       description: "The document reference has been removed.",
@@ -63,7 +70,6 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
   }
 
   const isImage = (url: string) => {
-    // Check if the data URI starts with "data:image/"
     return url.startsWith('data:image/');
   };
 
@@ -76,46 +82,31 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
             <div>
               <CardTitle>Contact & Role</CardTitle>
             </div>
-            <Badge>{personnel.userType}</Badge>
+            <Badge>{user.userType}</Badge>
           </div>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <DetailItem label="First Name" value={personnel.firstName} />
-          <DetailItem label="Last Name" value={personnel.lastName} />
-          <DetailItem label="Email" value={personnel.email} />
-          <DetailItem label="Contact Number" value={personnel.contactNumber} />
-          <DetailItem label="Department" value={department?.name} />
-          <DetailItem label="Role" value={role?.name} />
+          <DetailItem label="First Name" value={user.firstName} />
+          <DetailItem label="Last Name" value={user.lastName} />
+          <DetailItem label="Email" value={user.email} />
+          <DetailItem label="Contact Number" value={user.contactNumber} />
+          {!isPilotProfile(user) && <DetailItem label="Department" value={department?.name} />}
+          {!isPilotProfile(user) && <DetailItem label="Role" value={role?.name} />}
         </CardContent>
       </Card>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* --- Identification --- */}
-        <Card>
-            <CardHeader>
-                <CardTitle>Identification</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <DetailItem label="Date of Birth" value={personnel.dateOfBirth ? format(new Date(personnel.dateOfBirth), 'PPP') : 'N/A'} />
-                <DetailItem label="Nationality" value={personnel.nationality} />
-                <DetailItem label="Passport Number" value={personnel.passport?.number} />
-                <DetailItem label="Passport Expiration" value={personnel.passport?.expirationDate ? format(new Date(personnel.passport.expirationDate), 'PPP') : 'N/A'} />
-                <DetailItem label="Visa Number" value={personnel.visa?.number} />
-                <DetailItem label="Visa Expiration" value={personnel.visa?.expirationDate ? format(new Date(personnel.visa.expirationDate), 'PPP') : 'N/A'} />
-            </CardContent>
-        </Card>
-
         {/* --- Address --- */}
         <Card>
           <CardHeader>
             <CardTitle>Address</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <DetailItem label="Street" value={personnel.address?.street} />
-            <DetailItem label="City" value={personnel.address?.city} />
-            <DetailItem label="State / Province" value={personnel.address?.state} />
-            <DetailItem label="Postal Code" value={personnel.address?.postalCode} />
-            <DetailItem label="Country" value={personnel.address?.country} />
+            <DetailItem label="Street" value={user.address?.street} />
+            <DetailItem label="City" value={user.address?.city} />
+            <DetailItem label="State / Province" value={user.address?.state} />
+            <DetailItem label="Postal Code" value={user.address?.postalCode} />
+            <DetailItem label="Country" value={user.address?.country} />
           </CardContent>
         </Card>
 
@@ -125,38 +116,41 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
             <CardTitle>Emergency Contact</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <DetailItem label="Name" value={personnel.emergencyContact?.name} />
-            <DetailItem label="Relationship" value={personnel.emergencyContact?.relationship} />
-            <DetailItem label="Phone" value={personnel.emergencyContact?.phone} />
+            <DetailItem label="Name" value={user.emergencyContact?.name} />
+            <DetailItem label="Relationship" value={user.emergencyContact?.relationship} />
+            <DetailItem label="Phone" value={user.emergencyContact?.phone} />
           </CardContent>
         </Card>
       </div>
 
-       {/* --- Licenses --- */}
-      <Card>
-        <CardHeader>
-            <CardTitle>Licenses</CardTitle>
-        </CardHeader>
-        <CardContent>
-            {personnel.licenses && personnel.licenses.length > 0 ? (
-                 <div className="space-y-4">
-                    {personnel.licenses.map((license, index) => (
-                        <div key={index} className="flex items-start gap-4 p-4 border rounded-lg">
-                           <Award className="h-6 w-6 text-muted-foreground mt-1"/>
-                           <div className='grid grid-cols-2 gap-x-8 gap-y-2 flex-1'>
-                             <DetailItem label="License Name" value={license.name} />
-                             <DetailItem label="License Number" value={license.number} />
-                             <DetailItem label="Issue Date" value={license.issueDate ? format(new Date(license.issueDate), 'PPP') : 'N/A'} />
-                             <DetailItem label="Expiration Date" value={license.expirationDate ? format(new Date(license.expirationDate), 'PPP') : 'N/A'} />
-                           </div>
-                        </div>
-                    ))}
-                 </div>
-            ) : (
-                <p className="text-muted-foreground">No licenses on file.</p>
-            )}
-        </CardContent>
-      </Card>
+       {/* --- Pilot License --- */}
+      {isPilotProfile(user) && user.pilotLicense && (
+        <Card>
+          <CardHeader>
+              <CardTitle>Pilot License</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <DetailItem label="License Number" value={user.pilotLicense.licenseNumber} />
+                <DetailItem label="Issue Date" value={user.pilotLicense.issueDate ? format(new Date(user.pilotLicense.issueDate), 'PPP') : 'N/A'} />
+                <DetailItem label="Expiration Date" value={user.pilotLicense.expirationDate ? format(new Date(user.pilotLicense.expirationDate), 'PPP') : 'N/A'} />
+                <DetailItem label="Ratings">
+                    <div className="flex flex-wrap gap-2 mt-1">
+                        {(user.pilotLicense.ratings || []).map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
+                        {(user.pilotLicense.ratings || []).length === 0 && <p className="text-base">N/A</p>}
+                    </div>
+                </DetailItem>
+                <DetailItem label="Endorsements" >
+                    <div className="flex flex-wrap gap-2 mt-1">
+                        {(user.pilotLicense.endorsements || []).map(e => <Badge key={e} variant="secondary">{e}</Badge>)}
+                        {(user.pilotLicense.endorsements || []).length === 0 && <p className="text-base">N/A</p>}
+                    </div>
+                </DetailItem>
+              </div>
+          </CardContent>
+        </Card>
+      )}
+
       
       {/* --- Documents --- */}
       <Card>
@@ -173,38 +167,36 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
             />
         </CardHeader>
         <CardContent className="space-y-4">
+           {role && role.requiredDocuments && role.requiredDocuments.length > 0 && (
             <div>
                 <h4 className="text-md font-medium mb-2 text-muted-foreground">Required Documents</h4>
-                {requiredDocuments.length > 0 ? (
-                    <div className="space-y-2">
-                        {requiredDocuments.map(docName => {
-                            const isUploaded = uploadedDocuments.some(d => d.name === docName);
-                            return (
-                                <div key={docName} className="flex items-center justify-between p-3 border rounded-lg bg-secondary/30">
-                                    <div className="flex items-center gap-3">
-                                        <FileText className="h-5 w-5"/>
-                                        <span className="font-medium">{docName}</span>
-                                    </div>
-                                    <DocumentUploader 
-                                        onDocumentUploaded={handleDocumentUploaded}
-                                        defaultFileName={docName}
-                                        trigger={
-                                            <Button size="sm" disabled={isUploaded}>
-                                                <Upload className="mr-2 h-4 w-4" />
-                                                {isUploaded ? "Uploaded" : "Upload"}
-                                            </Button>
-                                        }
-                                    />
+                <div className="space-y-2">
+                    {role.requiredDocuments.map(docName => {
+                        const isUploaded = uploadedDocuments.some(d => d.name === docName);
+                        return (
+                            <div key={docName} className="flex items-center justify-between p-3 border rounded-lg bg-secondary/30">
+                                <div className="flex items-center gap-3">
+                                    <FileText className="h-5 w-5"/>
+                                    <span className="font-medium">{docName}</span>
                                 </div>
-                            )
-                        })}
-                    </div>
-                ) : (
-                    <p className="text-sm text-muted-foreground">No specific documents are required by the assigned role.</p>
-                )}
+                                <DocumentUploader 
+                                    onDocumentUploaded={handleDocumentUploaded}
+                                    defaultFileName={docName}
+                                    trigger={
+                                        <Button size="sm" disabled={isUploaded}>
+                                            <Upload className="mr-2 h-4 w-4" />
+                                            {isUploaded ? "Uploaded" : "Upload"}
+                                        </Button>
+                                    }
+                                />
+                            </div>
+                        )
+                    })}
+                </div>
             </div>
+           )}
             
-            <Separator />
+            {role && role.requiredDocuments && role.requiredDocuments.length > 0 && <Separator />}
             
             <div>
                 <h4 className="text-md font-medium mb-2 text-muted-foreground">Uploaded Documents</h4>
@@ -240,27 +232,28 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
       </Card>
 
       {/* --- Permissions --- */}
-      <Card>
-        <Collapsible open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <CardTitle>Assigned Permissions</CardTitle>
-                     <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="sm" className="w-9 p-0">
-                            <ChevronsUpDown className="h-4 w-4" />
-                            <span className="sr-only">Toggle</span>
-                        </Button>
-                    </CollapsibleTrigger>
-                </div>
-                 <Badge variant="secondary">{personnel.permissions?.length || 0} assigned</Badge>
-            </CardHeader>
-            <CollapsibleContent>
-                <CardContent>
-                    {personnel.permissions && personnel.permissions.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                           {permissionsConfig.map((resource) => {
+      {!isPilotProfile(user) && (
+        <Card>
+            <Collapsible open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <CardTitle>Assigned Permissions</CardTitle>
+                        <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="sm" className="w-9 p-0">
+                                <ChevronsUpDown className="h-4 w-4" />
+                                <span className="sr-only">Toggle</span>
+                            </Button>
+                        </CollapsibleTrigger>
+                    </div>
+                    <Badge variant="secondary">{user.permissions?.length || 0} assigned</Badge>
+                </CardHeader>
+                <CollapsibleContent>
+                    <CardContent>
+                        {user.permissions && user.permissions.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                            {permissionsConfig.map((resource) => {
                                 const assignedActions = resource.actions.filter(action => 
-                                    personnel.permissions.includes(`${resource.id}-${action}`)
+                                    user.permissions.includes(`${resource.id}-${action}`)
                                 );
 
                                 if (assignedActions.length === 0) return null;
@@ -277,15 +270,16 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
                                         </div>
                                     </div>
                                 );
-                           })}
-                        </div>
-                    ) : (
-                        <p className="text-muted-foreground">No custom permissions assigned. Inherits all permissions from the role.</p>
-                    )}
-                </CardContent>
-            </CollapsibleContent>
-        </Collapsible>
-      </Card>
+                            })}
+                            </div>
+                        ) : (
+                            <p className="text-muted-foreground">No custom permissions assigned. Inherits all permissions from the role.</p>
+                        )}
+                    </CardContent>
+                </CollapsibleContent>
+            </Collapsible>
+        </Card>
+      )}
 
       {/* Document Viewer Dialog */}
         <Dialog open={!!viewingDocument} onOpenChange={(open) => !open && setViewingDocument(null)}>
@@ -321,3 +315,5 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
     </div>
   );
 }
+
+    

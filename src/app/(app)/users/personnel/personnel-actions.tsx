@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -24,22 +25,28 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu"
-import type { Personnel } from './page';
+import type { Personnel, PilotProfile } from './page';
 import Link from 'next/link';
 
+type UserProfile = Personnel | PilotProfile;
 
 interface PersonnelActionsProps {
   tenantId: string;
-  personnel: Personnel;
+  user: UserProfile;
 }
 
-export function PersonnelActions({ tenantId, personnel }: PersonnelActionsProps) {
+const isPilotProfile = (user: UserProfile): user is PilotProfile => {
+    return user.userType === 'Student' || user.userType === 'Private Pilot' || user.userType === 'Instructor';
+}
+
+
+export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
 
-  const handleDeletePersonnel = () => {
+  const handleDeleteUser = () => {
     if (!firestore || !tenantId) {
         toast({
             variant: 'destructive',
@@ -48,13 +55,14 @@ export function PersonnelActions({ tenantId, personnel }: PersonnelActionsProps)
           });
         return;
     }
-
-    const personnelRef = doc(firestore, 'tenants', tenantId, 'personnel', personnel.id);
-    deleteDocumentNonBlocking(personnelRef);
+    
+    const collectionName = isPilotProfile(user) ? 'pilots' : 'personnel';
+    const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
+    deleteDocumentNonBlocking(userRef);
 
     toast({
-        title: 'Personnel Deleted',
-        description: `The user "${personnel.firstName} ${personnel.lastName}" is being deleted.`,
+        title: 'User Deleted',
+        description: `The user "${user.firstName} ${user.lastName}" is being deleted.`,
     });
     setIsDeleteDialogOpen(false);
   }
@@ -73,7 +81,7 @@ export function PersonnelActions({ tenantId, personnel }: PersonnelActionsProps)
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                  <Link href={`/users/personnel/${personnel.id}`}>
+                  <Link href={`/users/personnel/${user.id}`}>
                       <Eye className='mr-2' /> View Profile
                   </Link>
               </DropdownMenuItem>
@@ -89,12 +97,12 @@ export function PersonnelActions({ tenantId, personnel }: PersonnelActionsProps)
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
                     This action cannot be undone. This will permanently delete the user
-                    &quot;{personnel.firstName} {personnel.lastName}&quot;.
+                    &quot;{user.firstName} {user.lastName}&quot;.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeletePersonnel} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                <AlertDialogAction onClick={handleDeleteUser} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
                     Delete
                 </AlertDialogAction>
             </AlertDialogFooter>
@@ -103,3 +111,5 @@ export function PersonnelActions({ tenantId, personnel }: PersonnelActionsProps)
   </>
   );
 }
+
+    

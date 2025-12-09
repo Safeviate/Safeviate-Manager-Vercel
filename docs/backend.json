@@ -1,78 +1,146 @@
 {
   "entities": {
-    "StudentProfile": {
+    "PilotProfile": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "StudentProfile",
+      "title": "PilotProfile",
       "type": "object",
-      "description": "Represents a student's profile within the aviation academy.",
+      "description": "Represents a pilot's profile, including students, private pilots, and instructors.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the StudentProfile entity."
+          "description": "Unique identifier for the PilotProfile entity."
+        },
+        "userType": {
+          "type": "string",
+          "description": "The category of the user.",
+          "enum": ["Student", "Private Pilot", "Instructor"]
         },
         "firstName": {
           "type": "string",
-          "description": "Student's first name."
+          "description": "Pilot's first name."
         },
         "lastName": {
           "type": "string",
-          "description": "Student's last name."
+          "description": "Pilot's last name."
         },
         "email": {
           "type": "string",
-          "description": "Student's email address.",
+          "description": "Pilot's email address.",
           "format": "email"
         },
-        "trainingProgress": {
-          "type": "number",
-          "description": "Current training progress as a percentage or other numerical representation."
-        },
-        "flightHours": {
-          "type": "number",
-          "description": "Total flight hours accumulated by the student."
-        }
+        "contactNumber": { "type": "string", "description": "The contact phone number of the pilot." },
+        "dateOfBirth": { "type": "string", "description": "The pilot's date of birth.", "format": "date" },
+        "address": { "$ref": "#/backend/entities/Address" },
+        "emergencyContact": { "$ref": "#/backend/entities/EmergencyContact" },
+        "documents": { "$ref": "#/backend/entities/Documents" },
+        "pilotLicense": { "$ref": "#/backend/entities/PilotLicense" }
       },
-      "required": [
-        "id",
-        "firstName",
-        "lastName",
-        "email"
-      ]
+      "required": ["id", "userType", "firstName", "lastName", "email"]
     },
-    "Instructor": {
+    "Personnel": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Instructor",
+      "title": "Personnel",
       "type": "object",
-      "description": "Represents an instructor at the aviation academy.",
+      "description": "Represents a non-flying staff member at the aviation academy.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the Instructor entity."
+          "description": "Unique identifier for the Personnel entity."
+        },
+        "userType": {
+          "type": "string",
+          "description": "The category of the user, fixed to 'Personnel'.",
+          "enum": ["Personnel"]
         },
         "firstName": {
           "type": "string",
-          "description": "Instructor's first name."
+          "description": "Personnel's first name."
         },
         "lastName": {
           "type": "string",
-          "description": "Instructor's last name."
+          "description": "Personnel's last name."
+        },
+        "role": {
+          "type": "string",
+          "description": "The ID of the role assigned to the personnel."
         },
         "email": {
           "type": "string",
-          "description": "Instructor's email address.",
+          "description": "Personnel's email address.",
           "format": "email"
         },
-        "availability": {
+        "permissions": {
+          "type": "array",
+          "description": "An array of permission IDs (strings) associated with this person, potentially overriding the role.",
+          "items": { "type": "string" }
+        },
+        "department": {
           "type": "string",
-          "description": "Instructor's availability schedule or notes."
-        }
+          "description": "The ID of the department the personnel belongs to."
+        },
+        "contactNumber": { "type": "string", "description": "The contact phone number of the personnel." },
+        "dateOfBirth": { "type": "string", "description": "The personnel's date of birth.", "format": "date" },
+        "address": { "$ref": "#/backend/entities/Address" },
+        "emergencyContact": { "$ref": "#/backend/entities/EmergencyContact" },
+        "documents": { "$ref": "#/backend/entities/Documents" }
       },
-      "required": [
-        "id",
-        "firstName",
-        "lastName",
-        "email"
-      ]
+      "required": ["id", "userType", "firstName", "lastName", "role", "email"]
+    },
+    "PilotLicense": {
+        "title": "PilotLicense",
+        "type": "object",
+        "description": "Represents a pilot's license details.",
+        "properties": {
+            "licenseNumber": { "type": "string", "description": "The pilot's license number." },
+            "issueDate": { "type": "string", "format": "date", "description": "The date the license was issued." },
+            "expirationDate": { "type": "string", "format": "date", "description": "The date the license expires." },
+            "ratings": { 
+                "type": "array", 
+                "description": "List of ratings held by the pilot.",
+                "items": { "type": "string" }
+            },
+            "endorsements": { 
+                "type": "array", 
+                "description": "List of endorsements held by the pilot.",
+                "items": { "type": "string" }
+            }
+        }
+    },
+    "Address": {
+        "title": "Address",
+        "type": "object",
+        "description": "Represents a physical address.",
+        "properties": {
+            "street": { "type": "string" },
+            "city": { "type": "string" },
+            "state": { "type": "string" },
+            "postalCode": { "type": "string" },
+            "country": { "type": "string" }
+        }
+    },
+    "EmergencyContact": {
+        "title": "EmergencyContact",
+        "type": "object",
+        "description": "Represents an emergency contact.",
+        "properties": {
+            "name": { "type": "string" },
+            "relationship": { "type": "string" },
+            "phone": { "type": "string" }
+        }
+    },
+    "Documents": {
+        "title": "Documents",
+        "type": "array",
+        "description": "A list of documents associated with a user.",
+        "items": {
+            "type": "object",
+            "properties": {
+                "name": { "type": "string" },
+                "url": { "type": "string", "format": "uri" },
+                "uploadDate": { "type": "string", "format": "date-time" },
+                "expirationDate": { "type": "string", "format": "date" }
+            }
+        }
     },
     "Aircraft": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -139,134 +207,6 @@
         "aircraftId",
         "date",
         "description"
-      ]
-    },
-    "Personnel": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Personnel",
-      "type": "object",
-      "description": "Represents a person working at the aviation academy.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Personnel entity."
-        },
-        "userType": {
-          "type": "string",
-          "description": "The category of the user.",
-          "enum": ["Student", "Private Pilot", "Personnel"]
-        },
-        "firstName": {
-          "type": "string",
-          "description": "Personnel's first name."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "Personnel's last name."
-        },
-        "role": {
-          "type": "string",
-          "description": "The ID of the role assigned to the personnel."
-        },
-        "email": {
-          "type": "string",
-          "description": "Personnel's email address.",
-          "format": "email"
-        },
-        "permissions": {
-          "type": "array",
-          "description": "An array of permission IDs (strings) associated with this person, potentially overriding the role.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "department": {
-          "type": "string",
-          "description": "The ID of the department the personnel belongs to."
-        },
-        "contactNumber": {
-          "type": "string",
-          "description": "The contact phone number of the personnel."
-        },
-        "dateOfBirth": {
-          "type": "string",
-          "description": "The personnel's date of birth.",
-          "format": "date"
-        },
-        "nationality": {
-            "type": "string",
-            "description": "The personnel's nationality."
-        },
-        "passport": {
-          "type": "object",
-          "description": "Passport details.",
-          "properties": {
-            "number": { "type": "string" },
-            "expirationDate": { "type": "string", "format": "date" }
-          }
-        },
-        "visa": {
-            "type": "object",
-            "description": "Visa details.",
-            "properties": {
-                "number": { "type": "string" },
-                "expirationDate": { "type": "string", "format": "date" }
-            }
-        },
-        "address": {
-          "type": "object",
-          "description": "The personnel's physical address.",
-          "properties": {
-            "street": { "type": "string" },
-            "city": { "type": "string" },
-            "state": { "type": "string" },
-            "postalCode": { "type": "string" },
-            "country": { "type": "string" }
-          }
-        },
-        "emergencyContact": {
-          "type": "object",
-          "description": "Emergency contact information for the personnel.",
-          "properties": {
-            "name": { "type": "string" },
-            "relationship": { "type": "string" },
-            "phone": { "type": "string" }
-          }
-        },
-        "licenses": {
-            "type": "array",
-            "description": "A list of licenses held by the personnel.",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "name": { "type": "string" },
-                    "number": { "type": "string" },
-                    "issueDate": { "type": "string", "format": "date" },
-                    "expirationDate": { "type": "string", "format": "date" }
-                }
-            }
-        },
-        "documents": {
-            "type": "array",
-            "description": "A list of documents associated with the personnel.",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "name": { "type": "string" },
-                    "url": { "type": "string", "format": "uri" },
-                    "uploadDate": { "type": "string", "format": "date-time" },
-                    "expirationDate": { "type": "string", "format": "date" }
-                }
-            }
-        }
-      },
-      "required": [
-        "id",
-        "userType",
-        "firstName",
-        "lastName",
-        "role",
-        "email"
       ]
     },
     "SafetyProtocol": {
@@ -510,57 +450,41 @@
         }
       },
       {
-        "path": "users/{userId}",
+        "path": "tenants/{tenantId}/personnel/{personnelId}",
         "definition": {
-          "entityName": "User",
+          "entityName": "Personnel",
           "schema": {
             "$ref": "#/backend/entities/Personnel"
           },
-          "description": "Stores user profile information. All other user specific data is stored under the tenant id.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "Unique identifier for the user."
-            }
-          ]
-        }
-      },
-      {
-        "path": "tenants/{tenantId}/studentProfiles/{studentProfileId}",
-        "definition": {
-          "entityName": "StudentProfile",
-          "schema": {
-            "$ref": "#/backend/entities/StudentProfile"
-          },
-          "description": "Stores student profile information, scoped to a specific tenant.",
+          "description": "Stores non-flying staff information, scoped to a specific tenant.",
           "params": [
             {
               "name": "tenantId",
               "description": "Unique identifier for the tenant."
             },
             {
-              "name": "studentProfileId",
-              "description": "Unique identifier for the student profile."
+              "name": "personnelId",
+              "description": "Unique identifier for the personnel."
             }
           ]
         }
       },
-      {
-        "path": "tenants/{tenantId}/instructors/{instructorId}",
+       {
+        "path": "tenants/{tenantId}/pilots/{pilotId}",
         "definition": {
-          "entityName": "Instructor",
+          "entityName": "PilotProfile",
           "schema": {
-            "$ref": "#/backend/entities/Instructor"
+            "$ref": "#/backend/entities/PilotProfile"
           },
-          "description": "Stores instructor information, scoped to a specific tenant.",
+          "description": "Stores pilot profile information (students, instructors, private pilots), scoped to a specific tenant.",
           "params": [
             {
               "name": "tenantId",
               "description": "Unique identifier for the tenant."
             },
             {
-              "name": "instructorId",
-              "description": "Unique identifier for the instructor."
+              "name": "pilotId",
+              "description": "Unique identifier for the pilot profile."
             }
           ]
         }
@@ -605,26 +529,6 @@
             {
               "name": "maintenanceLogId",
               "description": "Unique identifier for the maintenance log entry."
-            }
-          ]
-        }
-      },
-      {
-        "path": "tenants/{tenantId}/personnel/{personnelId}",
-        "definition": {
-          "entityName": "Personnel",
-          "schema": {
-            "$ref": "#/backend/entities/Personnel"
-          },
-          "description": "Stores personnel information, scoped to a specific tenant.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "Unique identifier for the tenant."
-            },
-            {
-              "name": "personnelId",
-              "description": "Unique identifier for the personnel."
             }
           ]
         }
@@ -754,6 +658,8 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support a multi-tenant aviation academy management application, focusing on security, scalability, and ease of debugging. Authorization Independence is achieved through denormalization where needed, especially for collaborative data. Structural Segregation ensures that each collection has a homogeneous security posture. Access Modeling follows consistent patterns, utilizing path-based ownership for user-specific data and membership maps for collaborative entities. The structure is multi-tenant, where tenants are isolated from each other. The structure uses the tenants collection to keep a list of tenants and provides a tenant id for all other collections in the database. This strategy allows the application to manage multiple academies within the same system, each with its own set of data and settings.\n\n*   **Tenants:** The root level collection `tenants` stores individual tenant documents. Each tenant has its own unique ID and associated settings.\n*   **Users:** User data is stored in a top-level collection called `users` and is independent from the tenant id. It contains basic authentication information.\n*   **User Profiles:** The `StudentProfile` and `Instructor` entities are stored as subcollections under each `tenant`. This isolates data between tenants. A similar strategy is used for other entities.\n\nQAPs (Rules are not Filters) is addressed by:\n\n*   Segregating data into collections with homogeneous security requirements.\n*   Using path-based ownership for private data.\n*   Employing membership maps for collaborative data, and storing these maps directly within the documents to avoid `get()` calls in security rules.\n\nSpecifically, the following denormalization strategies are used:\n\n*   Authorization context (e.g., members, ownerId) is copied into subcollection documents to avoid hierarchical dependencies.\n*   Tenant ID is included in all documents except for users to support multi-tenancy access control.\n\nThis design enables robust security rules that are simple to write, easy to understand, and highly performant."
+    "reasoning": "The Firestore structure is designed to support a multi-tenant aviation academy management application, focusing on security, scalability, and ease of debugging. Authorization Independence is achieved through denormalization where needed, especially for collaborative data. Structural Segregation ensures that each collection has a homogeneous security posture. Access Modeling follows consistent patterns, utilizing path-based ownership for user-specific data and membership maps for collaborative entities. The structure is multi-tenant, where tenants are isolated from each other. The structure uses the tenants collection to keep a list of tenants and provides a tenant id for all other collections in the database. This strategy allows the application to manage multiple academies within the same system, each with its own set of data and settings.\n\n*   **Tenants:** The root level collection `tenants` stores individual tenant documents. Each tenant has its own unique ID and associated settings.\n*   **Users:** User data is now split into `personnel` (non-flying staff) and `pilots` (students, instructors, private pilots) under each tenant to better segregate data models and security rules.\n\nQAPs (Rules are not Filters) is addressed by:\n\n*   Segregating data into collections with homogeneous security requirements.\n*   Using path-based ownership for private data.\n*   Employing membership maps for collaborative data, and storing these maps directly within the documents to avoid `get()` calls in security rules.\n\nSpecifically, the following denormalization strategies are used:\n\n*   Authorization context (e.g., members, ownerId) is copied into subcollection documents to avoid hierarchical dependencies.\n*   Tenant ID is included in all documents to support multi-tenancy access control.\n\nThis design enables robust security rules that are simple to write, easy to understand, and highly performant."
   }
 }
+
+    

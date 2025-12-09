@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useMemo } from 'react';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { PersonnelForm } from './personnel-form';
 import { PersonnelActions } from './personnel-actions';
@@ -18,26 +19,14 @@ import { Badge } from '@/components/ui/badge';
 import type { Role } from '../../admin/roles/page';
 import type { Department } from '../../admin/department/page';
 
-export type Personnel = {
+export type PilotProfile = {
   id: string;
-  userType: 'Student' | 'Private Pilot' | 'Personnel';
+  userType: 'Student' | 'Private Pilot' | 'Instructor';
   firstName: string;
   lastName: string;
   email: string;
   contactNumber?: string;
-  department?: string; // department ID
-  role: string; // role ID
-  permissions: string[];
   dateOfBirth?: string;
-  nationality?: string;
-  passport?: {
-    number?: string;
-    expirationDate?: string;
-  };
-  visa?: {
-    number?: string;
-    expirationDate?: string;
-  };
   address?: {
     street?: string;
     city?: string;
@@ -50,12 +39,44 @@ export type Personnel = {
     relationship?: string;
     phone?: string;
   };
-  licenses?: {
+  documents?: {
     name: string;
-    number: string;
-    issueDate: string;
-    expirationDate: string;
+    url: string;
+    uploadDate: string;
+    expirationDate?: string;
   }[];
+  pilotLicense?: {
+    licenseNumber?: string;
+    issueDate?: string;
+    expirationDate?: string;
+    ratings?: string[];
+    endorsements?: string[];
+  }
+};
+
+export type Personnel = {
+  id: string;
+  userType: 'Personnel';
+  firstName: string;
+  lastName: string;
+  email: string;
+  contactNumber?: string;
+  department?: string; // department ID
+  role: string; // role ID
+  permissions: string[];
+  dateOfBirth?: string;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+  };
+  emergencyContact?: {
+    name?: string;
+    relationship?: string;
+    phone?: string;
+  };
   documents?: {
     name: string;
     url: string;
@@ -71,7 +92,7 @@ export default function PersonnelPage() {
   const personnelQuery = useMemoFirebase(
     () =>
       firestore
-        ? query(collection(firestore, 'tenants', tenantId, 'personnel'), where('userType', '==', 'Personnel'))
+        ? query(collection(firestore, 'tenants', tenantId, 'personnel'))
         : null,
     [firestore]
   );
@@ -119,7 +140,7 @@ export default function PersonnelPage() {
         <CardHeader>
           <CardTitle>Personnel</CardTitle>
           <CardDescription>
-            A list of all personnel within your organization.
+            A list of all non-flying staff within your organization.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -164,7 +185,7 @@ export default function PersonnelPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                       <PersonnelActions tenantId={tenantId} personnel={person} />
+                       <PersonnelActions tenantId={tenantId} user={person} />
                     </TableCell>
                   </TableRow>
                 ))

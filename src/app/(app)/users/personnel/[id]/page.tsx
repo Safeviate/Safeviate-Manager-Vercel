@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useMemo, use } from 'react';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, query, where } from 'firebase/firestore';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Personnel } from '../page';
+import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../roles/page';
 import type { Department } from '../../../admin/department/page';
 import { EditPersonnelForm } from './edit-personnel-form';
@@ -17,6 +17,8 @@ interface UserProfilePageProps {
     params: { id: string };
 }
 
+type UserProfile = Personnel | PilotProfile;
+
 export default function UserProfilePage({ params }: UserProfilePageProps) {
     const resolvedParams = use(params);
     const firestore = useFirestore();
@@ -24,8 +26,13 @@ export default function UserProfilePage({ params }: UserProfilePageProps) {
     const userId = resolvedParams.id;
     const [isEditing, setIsEditing] = useState(false);
 
+    // We fetch from both collections. Only one will return data.
     const personnelDocRef = useMemoFirebase(
         () => (firestore ? doc(firestore, 'tenants', tenantId, 'personnel', userId) : null),
+        [firestore, tenantId, userId]
+    );
+     const pilotDocRef = useMemoFirebase(
+        () => (firestore ? doc(firestore, 'tenants', tenantId, 'pilots', userId) : null),
         [firestore, tenantId, userId]
     );
 
@@ -40,14 +47,29 @@ export default function UserProfilePage({ params }: UserProfilePageProps) {
     );
 
     const { data: personnel, isLoading: isLoadingPersonnel, error: personnelError } = useDoc<Personnel>(personnelDocRef);
+    const { data: pilot, isLoading: isLoadingPilot, error: pilotError } = useDoc<PilotProfile>(pilotDocRef);
+
     const { data: roles, isLoading: isLoadingRoles, error: rolesError } = useCollection<Role>(rolesQuery);
     const { data: departments, isLoading: isLoadingDepts, error: deptsError } = useCollection<Department>(departmentsQuery);
 
-    const isLoading = isLoadingPersonnel || isLoadingRoles || isLoadingDepts;
-    const error = personnelError || rolesError || deptsError;
+    const user = personnel || pilot;
+    const isLoading = isLoadingPersonnel || isLoadingPilot || isLoadingRoles || isLoadingDepts;
+    const error = personnelError || pilotError || rolesError || deptsError;
 
-    const currentRole = useMemo(() => roles?.find(r => r.id === personnel?.role) || null, [roles, personnel]);
-    const currentDepartment = useMemo(() => departments?.find(d => d.id === personnel?.department) || null, [departments, personnel]);
+    const currentRole = useMemo(() => {
+        if (user && 'role' in user) {
+            return roles?.find(r => r.id === user.role) || null;
+        }
+        return null;
+    }, [roles, user]);
+
+    const currentDepartment = useMemo(() => {
+        if (user && 'department' in user) {
+            return departments?.find(d => d.id === user.department) || null;
+        }
+        return null;
+    }, [departments, user]);
+
 
     if (isLoading) {
         return (
@@ -65,7 +87,7 @@ export default function UserProfilePage({ params }: UserProfilePageProps) {
         return <div className="text-destructive">Error: {error.message}</div>;
     }
 
-    if (!personnel) {
+    if (!user) {
         return <div>User not found.</div>;
     }
 
@@ -83,14 +105,14 @@ export default function UserProfilePage({ params }: UserProfilePageProps) {
             {isEditing ? (
                  <EditPersonnelForm
                     tenantId={tenantId}
-                    personnel={personnel}
+                    user={user}
                     roles={roles || []}
                     departments={departments || []}
                     onCancel={() => setIsEditing(false)}
                 />
             ) : (
                 <ViewPersonnelDetails 
-                    personnel={personnel} 
+                    user={user} 
                     role={currentRole} 
                     department={currentDepartment}
                 />
@@ -99,3 +121,5 @@ export default function UserProfilePage({ params }: UserProfilePageProps) {
         </div>
     );
 }
+
+    
