@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, type ReactNode, useEffect } from 'react';
+import { useState, type ReactNode, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -28,19 +27,25 @@ interface DocumentUploaderProps {
 export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUploaded }: DocumentUploaderProps) {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+
+  // State for the form fields
   const [fileName, setFileName] = useState(defaultFileName);
   const [file, setFile] = useState<File | null>(null);
   const [expirationDate, setExpirationDate] = useState<Date | undefined>();
 
-  useEffect(() => {
-    // When the dialog opens, reset the state based on the props
-    if (isOpen) {
-      setFileName(defaultFileName);
-      setFile(null);
-      setExpirationDate(undefined);
-    }
-  }, [isOpen, defaultFileName]);
+  const resetForm = useCallback(() => {
+    setFileName(defaultFileName);
+    setFile(null);
+    setExpirationDate(undefined);
+  }, [defaultFileName]);
 
+  const onOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (open) {
+      // When the dialog is opened, reset the form state based on props
+      resetForm();
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -88,13 +93,13 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
         description: `"${fileName}" has been added to the user's profile.`,
       });
       
-      setIsOpen(false);
+      setIsOpen(false); // Close the dialog
     };
     reader.readAsDataURL(file);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-4xl grid-rows-[auto,1fr,auto]">
         <DialogHeader>

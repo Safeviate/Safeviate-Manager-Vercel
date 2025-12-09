@@ -61,8 +61,16 @@ export function DepartmentForm({ tenantId }: DepartmentFormProps) {
     setIsOpen(false);
   };
 
+  const onOpenChange = (open: boolean) => {
+    if (!open) {
+        // Reset form state when dialog closes
+        setDepartmentName('');
+    }
+    setIsOpen(open);
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
