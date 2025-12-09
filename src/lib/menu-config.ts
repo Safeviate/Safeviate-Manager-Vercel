@@ -78,10 +78,5 @@ export const settingsMenuItem: MenuItem = {
       label: 'Appearance',
       description: 'Customize the look and feel of the application.',
     },
-    {
-      href: '/settings/permissions',
-      label: 'Permissions',
-      description: 'Control user access and roles within the application.',
-    },
   ],
 };
