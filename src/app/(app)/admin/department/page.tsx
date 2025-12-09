@@ -4,7 +4,8 @@ import { useMemo } from 'react';
 import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { DepartmentForm } from './department-form';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DepartmentActions } from './department-actions';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -43,53 +44,57 @@ export default function DepartmentPage() {
         <DepartmentForm tenantId={tenantId} />
       </div>
 
-      {isLoading && (
-         <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
-            <p>Loading departments...</p>
-         </div>
-      )}
-
-      {!isLoading && !error && departments && departments.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Departments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
+      <Card>
+        <CardHeader>
+          <CardTitle>Departments</CardTitle>
+          <CardDescription>
+            A list of all departments within your organization.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead className='text-right'>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading && (
                 <TableRow>
-                  <TableHead>Name</TableHead>
+                  <TableCell colSpan={2} className="text-center">
+                    Loading departments...
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {departments.map((dept) => (
+              )}
+              {!isLoading && error && (
+                <TableRow>
+                  <TableCell colSpan={2} className="text-center text-destructive">
+                    Error: {error.message}
+                  </TableCell>
+                </TableRow>
+              )}
+              {!isLoading && !error && departments && departments.length > 0 && (
+                departments.map((dept) => (
                   <TableRow key={dept.id}>
                     <TableCell className="font-medium">{dept.name}</TableCell>
+                    <TableCell className="text-right">
+                       <DepartmentActions tenantId={tenantId} department={dept} />
+                    </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {!isLoading && !error && (!departments || departments.length === 0) && (
-        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
-          <div className="flex flex-col items-center gap-1 text-center">
-            <h3 className="text-2xl font-bold tracking-tight">
-              You have no departments
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              You can start by adding a new department.
-            </p>
-          </div>
-        </div>
-      )}
-       {error && (
-         <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-destructive shadow-sm">
-            <p className='text-destructive'>Error loading departments: {error.message}</p>
-         </div>
-       )}
+                ))
+              )}
+              {!isLoading && !error && (!departments || departments.length === 0) && (
+                 <TableRow>
+                    <TableCell colSpan={2} className="text-center h-24">
+                        No departments found.
+                    </TableCell>
+                 </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
