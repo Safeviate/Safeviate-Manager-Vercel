@@ -9,7 +9,7 @@ import type { Role } from '../../../roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { ChevronsUpDown, FileText, License } from 'lucide-react';
+import { ChevronsUpDown, Award } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ViewPersonnelDetailsProps {
@@ -98,7 +98,7 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
                  <div className="space-y-4">
                     {personnel.licenses.map((license, index) => (
                         <div key={index} className="flex items-start gap-4 p-4 border rounded-lg">
-                           <License className="h-6 w-6 text-muted-foreground mt-1"/>
+                           <Award className="h-6 w-6 text-muted-foreground mt-1"/>
                            <div className='grid grid-cols-2 gap-x-8 gap-y-2 flex-1'>
                              <DetailItem label="License Name" value={license.name} />
                              <DetailItem label="License Number" value={license.number} />
