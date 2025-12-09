@@ -130,7 +130,7 @@ export const useTheme = () => {
   return context;
 };
 
-export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
+export const ThemeProvider = ({ children }: { children: React.Node }) => {
   const [theme, setTheme] = useState<ThemeColors>(() => defaultColors);
   const [cardTheme, setCardTheme] = useState<CardThemeColors>(() => defaultCardColors);
   const [sidebarTheme, setSidebarTheme] = useState<SidebarThemeColors>(() => defaultSidebarColors);
@@ -164,7 +164,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // This effect runs once on mount to sync state with localStorage
+    // This effect runs once on mount to sync state with localStorage and CSS vars
     try {
       const savedTheme = localStorage.getItem(THEME_KEY);
       const savedCardTheme = localStorage.getItem(CARD_THEME_KEY);
