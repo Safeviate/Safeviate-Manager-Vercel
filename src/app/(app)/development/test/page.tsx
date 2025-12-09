@@ -1,8 +1,19 @@
 
+'use client'
+
+import * as React from 'react'
+import { Calendar } from '@/components/ui/calendar'
+
 export default function TestPage() {
+  const [date, setDate] = React.useState<Date | undefined>(new Date())
   return (
-    <div className="flex items-center justify-center h-full">
-      <p className="text-muted-foreground">This is a test page for development.</p>
+    <div>
+      <Calendar
+        mode="single"
+        selected={date}
+        onSelect={setDate}
+        className="rounded-md border w-min"
+      />
     </div>
-  );
+  )
 }
