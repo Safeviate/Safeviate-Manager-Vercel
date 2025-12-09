@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Sidebar,
@@ -9,6 +10,7 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarSeparator,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import {
   Plane,
@@ -34,6 +36,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const auth = useAuth();
   const router = useRouter();
+  const { setOpenMobile } = useSidebar();
 
   const handleSignOut = () => {
     if (auth) {
@@ -41,6 +44,10 @@ export function AppSidebar() {
     }
     router.push('/login');
   };
+
+  const handleLinkClick = () => {
+    setOpenMobile(false);
+  }
 
   const visibleMenuConfig = menuConfig.filter(
     (item) => item.label !== 'Development' || process.env.NODE_ENV === 'development'
@@ -62,7 +69,7 @@ export function AppSidebar() {
              <React.Fragment key={item.href}>
               {item.label === 'My Dashboard' && <SidebarSeparator className="my-1 mx-2" />}
               <SidebarMenuItem>
-                <Link href={item.href} className="w-full">
+                <Link href={item.href} className="w-full" onClick={handleLinkClick}>
                   <SidebarMenuButton
                     isActive={pathname.startsWith(item.href)}
                     tooltip={item.label}
@@ -81,7 +88,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarMenu>
             <SidebarMenuItem>
-              <Link href={settingsMenuItem.href} className="w-full">
+              <Link href={settingsMenuItem.href} className="w-full" onClick={handleLinkClick}>
                 <SidebarMenuButton isActive={pathname.startsWith(settingsMenuItem.href)} tooltip={settingsMenuItem.label}>
                   <settingsMenuItem.icon />
                   <span>{settingsMenuItem.label}</span>
