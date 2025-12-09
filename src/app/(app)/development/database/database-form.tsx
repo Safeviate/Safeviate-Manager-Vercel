@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,38 +10,54 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 export function DatabaseForm() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [tenantId, setTenantId] = useState('');
+  const [tenantName, setTenantName] = useState('');
 
-  const handleSeedDatabase = () => {
+  const handleAddTenant = () => {
+    if (!tenantId || !tenantName) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Information',
+        description: 'Please provide both a Tenant ID and a Tenant Name.',
+      });
+      return;
+    }
+
     try {
-      const tenantId = 'safeviate';
       const tenantRef = doc(firestore, 'tenants', tenantId);
 
       setDocumentNonBlocking(
         tenantRef,
         {
           id: tenantId,
-          name: 'Safeviate',
+          name: tenantName,
         },
         { merge: true }
       );
 
       toast({
-        title: 'Database Seeding Initiated',
-        description: 'The "Safeviate" tenant document is being created.',
+        title: 'Tenant Creation Initiated',
+        description: `The "${tenantName}" tenant document is being created.`,
       });
+      
+      setTenantId('');
+      setTenantName('');
+
     } catch (e: any) {
       console.error(e);
       toast({
         variant: 'destructive',
         title: 'Uh oh! Something went wrong.',
         description:
-          e.message || 'There was a problem seeding the database.',
+          e.message || 'There was a problem creating the tenant.',
       });
     }
   };
@@ -48,14 +65,34 @@ export function DatabaseForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Database Setup</CardTitle>
+        <CardTitle>Tenant Management</CardTitle>
         <CardDescription>
-          Create the initial tenant document required for the application to
-          function correctly.
+          Add new tenants to the Firestore database.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <Button onClick={handleSeedDatabase}>Create "Safeviate" Tenant</Button>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="tenant-id">Tenant ID</Label>
+          <Input
+            id="tenant-id"
+            placeholder="e.g., safeviate"
+            value={tenantId}
+            onChange={(e) => setTenantId(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+          />
+           <p className="text-sm text-muted-foreground">
+            A unique identifier for the tenant. Will be converted to lowercase and spaces to dashes.
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="tenant-name">Tenant Name</Label>
+          <Input
+            id="tenant-name"
+            placeholder="e.g., Safeviate Inc."
+            value={tenantName}
+            onChange={(e) => setTenantName(e.target.value)}
+          />
+        </div>
+        <Button onClick={handleAddTenant}>Add Tenant</Button>
       </CardContent>
     </Card>
   );
