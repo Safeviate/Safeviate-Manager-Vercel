@@ -13,8 +13,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Check } from 'lucide-react';
 
 export default function PermissionsPage() {
   // We don't need permissions for settings, dashboard, or development tools
@@ -39,13 +39,12 @@ export default function PermissionsPage() {
                 {mainItem.label}
               </AccordionTrigger>
               <AccordionContent className="space-y-4 pt-2">
-                <div className="flex items-center space-x-2 rounded-md border p-4">
-                  <Checkbox id={`${mainItem.href}-access`} disabled />
+                <div className="flex items-center space-x-3 rounded-md border p-4">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-sm bg-primary text-primary-foreground">
+                    <Check className="h-4 w-4" />
+                  </div>
                   <div className="grid gap-1.5 leading-none">
-                    <Label
-                      htmlFor={`${mainItem.href}-access`}
-                      className="cursor-pointer"
-                    >
+                    <Label>
                       Access to {mainItem.label} Section
                     </Label>
                     <p className="text-sm text-muted-foreground">
@@ -63,11 +62,13 @@ export default function PermissionsPage() {
                     {mainItem.subItems.map((subItem) => (
                       <div
                         key={subItem.href}
-                        className="flex items-center space-x-2"
+                        className="flex items-center space-x-3"
                       >
-                        <Checkbox id={subItem.href} disabled />
+                        <div className="flex h-5 w-5 items-center justify-center rounded-sm bg-primary text-primary-foreground">
+                            <Check className="h-4 w-4" />
+                        </div>
                         <div className="grid gap-1.5 leading-none">
-                          <Label htmlFor={subItem.href} className="cursor-pointer">
+                          <Label>
                             {subItem.label}
                           </Label>
                           <p className="text-sm text-muted-foreground">
