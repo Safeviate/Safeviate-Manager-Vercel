@@ -14,24 +14,23 @@ export const metadata: Metadata = {
 
 const themeLoaderScript = `
   (function() {
-    function applyTheme(key) {
-      try {
+    try {
+      const hexToHsl = ${hexToHsl.toString()};
+      
+      const themeKeys = ['${THEME_KEY}', '${CARD_THEME_KEY}', '${SIDEBAR_THEME_KEY}', '${HEADER_THEME_KEY}'];
+      
+      themeKeys.forEach(key => {
         const saved = localStorage.getItem(key);
         if (saved) {
           const parsed = JSON.parse(saved);
-          const hexToHsl = ${hexToHsl.toString()};
           Object.keys(parsed).forEach(k => {
             document.documentElement.style.setProperty('--' + k, hexToHsl(parsed[k]));
           });
         }
-      } catch (e) {
-        console.error('Failed to apply theme from localStorage', e);
-      }
+      });
+    } catch (e) {
+      console.error('Failed to apply theme from localStorage', e);
     }
-    applyTheme('${THEME_KEY}');
-    applyTheme('${CARD_THEME_KEY}');
-    applyTheme('${SIDEBAR_THEME_KEY}');
-    applyTheme('${HEADER_THEME_KEY}');
   })();
 `;
 

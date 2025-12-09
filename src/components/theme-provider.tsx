@@ -88,36 +88,24 @@ const defaultHeaderColors: HeaderThemeColors = {
 };
 
 // --- Helper Functions ---
-const getCssVar = (name: string) => {
-  if (typeof window === 'undefined') return '';
-  const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return `hsl(${val.replace(/ /g, ', ')})`;
-};
-
-function hslToHex(hsl: string) {
-    if (!hsl) return '#000000';
-    let [h, s, l] = hsl.match(/\d+/g)!.map(Number);
-    s /= 100;
-    l /= 100;
-    let c = (1 - Math.abs(2 * l - 1)) * s,
-        x = c * (1 - Math.abs(((h / 60) % 2) - 1)),
-        m = l - c / 2,
-        r = 0, g = 0, b = 0;
-    if (0 <= h && h < 60) { [r,g,b] = [c,x,0] } 
-    else if (60 <= h && h < 120) { [r,g,b] = [x,c,0] }
-    else if (120 <= h && h < 180) { [r,g,b] = [0,c,x] } 
-    else if (180 <= h && h < 240) { [r,g,b] = [0,x,c] } 
-    else if (240 <= h && h < 300) { [r,g,b] = [x,0,c] } 
-    else if (300 <= h && h < 360) { [r,g,b] = [c,0,x] }
-    const toHex = (c: number) => ('0' + Math.round((c + m) * 255).toString(16)).slice(-2);
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-
 const applyColorsToDOM = (colors: Record<string, string>) => {
+  if (typeof window === 'undefined') return;
   Object.entries(colors).forEach(([key, value]) => {
     document.documentElement.style.setProperty(`--${key}`, hexToHsl(value as string));
   });
+};
+
+const getInitialState = <T>(key: string, defaultValue: T): T => {
+    if (typeof window === 'undefined') {
+        return defaultValue;
+    }
+    try {
+        const item = window.localStorage.getItem(key);
+        return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+        console.warn(`Error reading localStorage key “${key}”:`, error);
+        return defaultValue;
+    }
 };
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
@@ -130,66 +118,20 @@ export const useTheme = () => {
   return context;
 };
 
-export const ThemeProvider = ({ children }: { children: React.Node }) => {
-  const [theme, setTheme] = useState<ThemeColors>(() => defaultColors);
-  const [cardTheme, setCardTheme] = useState<CardThemeColors>(() => defaultCardColors);
-  const [sidebarTheme, setSidebarTheme] = useState<SidebarThemeColors>(() => defaultSidebarColors);
-  const [headerTheme, setHeaderTheme] = useState<HeaderThemeColors>(() => defaultHeaderColors);
-  const [savedThemes, setSavedThemes] = useState<SavedTheme[]>([]);
-
-  const loadFromDOM = () => {
-    setTheme({
-      background: hslToHex(getCssVar('--background')),
-      primary: hslToHex(getCssVar('--primary')),
-      accent: hslToHex(getCssVar('--accent')),
-    });
-    setCardTheme({
-      'card': hslToHex(getCssVar('--card')),
-      'card-foreground': hslToHex(getCssVar('--card-foreground')),
-    });
-    setSidebarTheme({
-      'sidebar-background': hslToHex(getCssVar('--sidebar-background')),
-      'sidebar-foreground': hslToHex(getCssVar('--sidebar-foreground')),
-      'sidebar-primary': hslToHex(getCssVar('--sidebar-primary')),
-      'sidebar-primary-foreground': hslToHex(getCssVar('--sidebar-primary-foreground')),
-      'sidebar-accent': hslToHex(getCssVar('--sidebar-accent')),
-      'sidebar-accent-foreground': hslToHex(getCssVar('--sidebar-accent-foreground')),
-      'sidebar-border': hslToHex(getCssVar('--sidebar-border')),
-    });
-    setHeaderTheme({
-      'header-background': hslToHex(getCssVar('--header-background')),
-      'header-foreground': hslToHex(getCssVar('--header-foreground')),
-      'header-border': hslToHex(getCssVar('--header-border')),
-    });
-  };
+export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
+  const [theme, setTheme] = useState<ThemeColors>(() => getInitialState(THEME_KEY, defaultColors));
+  const [cardTheme, setCardTheme] = useState<CardThemeColors>(() => getInitialState(CARD_THEME_KEY, defaultCardColors));
+  const [sidebarTheme, setSidebarTheme] = useState<SidebarThemeColors>(() => getInitialState(SIDEBAR_THEME_KEY, defaultSidebarColors));
+  const [headerTheme, setHeaderTheme] = useState<HeaderThemeColors>(() => getInitialState(HEADER_THEME_KEY, defaultHeaderColors));
+  const [savedThemes, setSavedThemes] = useState<SavedTheme[]>(() => getInitialState(SAVED_THEMES_KEY, []));
 
   useEffect(() => {
-    // This effect runs once on mount to sync state with localStorage and CSS vars
-    try {
-      const savedTheme = localStorage.getItem(THEME_KEY);
-      const savedCardTheme = localStorage.getItem(CARD_THEME_KEY);
-      const savedSidebarTheme = localStorage.getItem(SIDEBAR_THEME_KEY);
-      const savedHeaderTheme = localStorage.getItem(HEADER_THEME_KEY);
-      const allSavedThemes = localStorage.getItem(SAVED_THEMES_KEY);
-
-      if (savedTheme || savedCardTheme || savedSidebarTheme || savedHeaderTheme) {
-        if(savedTheme) setTheme(JSON.parse(savedTheme));
-        if(savedCardTheme) setCardTheme(JSON.parse(savedCardTheme));
-        if(savedSidebarTheme) setSidebarTheme(JSON.parse(savedSidebarTheme));
-        if(savedHeaderTheme) setHeaderTheme(JSON.parse(savedHeaderTheme));
-      } else {
-        // If nothing is in local storage, load the defaults from the DOM (CSS variables)
-        loadFromDOM();
-      }
-
-      if (allSavedThemes) {
-        setSavedThemes(JSON.parse(allSavedThemes));
-      }
-    } catch (e) {
-      console.error('Failed to parse theme from localStorage', e);
-      loadFromDOM(); // Fallback to DOM if localStorage is corrupt
-    }
-  }, []);
+    applyColorsToDOM(theme);
+    applyColorsToDOM(cardTheme);
+    applyColorsToDOM(sidebarTheme);
+    applyColorsToDOM(headerTheme);
+  }, [theme, cardTheme, sidebarTheme, headerTheme]);
+  
 
   const updateTheme = <T extends object>(
     key: string,
@@ -252,7 +194,6 @@ export const ThemeProvider = ({ children }: { children: React.Node }) => {
     localStorage.removeItem(SIDEBAR_THEME_KEY);
     localStorage.removeItem(HEADER_THEME_KEY);
     
-    // We can't just reload, we need to reset the state and apply defaults
     setTheme(defaultColors);
     setCardTheme(defaultCardColors);
     setSidebarTheme(defaultSidebarColors);
@@ -263,8 +204,6 @@ export const ThemeProvider = ({ children }: { children: React.Node }) => {
     applyColorsToDOM(defaultSidebarColors);
     applyColorsToDOM(defaultHeaderColors);
 
-    // After reset, we might want to manually clear the styles to let CSS take over
-    // or reload. For now, explicitly setting to defaults is safer.
     window.location.reload();
   };
 
