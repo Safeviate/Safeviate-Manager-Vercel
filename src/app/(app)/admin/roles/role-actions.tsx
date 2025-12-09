@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -39,7 +40,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { menuConfig, settingsMenuItem } from '@/lib/menu-config';
+import { menuConfig, settingsMenuItem, type MenuItem } from '@/lib/menu-config';
 
 interface Role {
     id: string;
@@ -81,43 +82,40 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
   const groupedPermissions = useMemo(() => {
     if (!permissions) return [];
 
-    const permissionMap = new Map<string, Permission[]>();
     const allMenuItems = [...menuConfig, settingsMenuItem];
+    const permissionMap = new Map(permissions.map(p => [p.id, p]));
 
-    // Initialize map with all potential top-level groups
-    allMenuItems.forEach(mainItem => {
-        permissionMap.set(mainItem.label, []);
-    });
+    const result: GroupedPermission[] = allMenuItems
+        .filter(mainItem => {
+            // Include group if the main permission exists OR any sub-item permission exists
+            const mainPermissionExists = permissionMap.has(mainItem.href);
+            const subPermissionsExist = mainItem.subItems?.some(sub => permissionMap.has(sub.href)) ?? false;
+            return mainPermissionExists || subPermissionsExist;
+        })
+        .map(mainItem => {
+            const groupPermissions: Permission[] = [];
+            
+            // Add the main permission if it exists
+            const mainPermission = permissionMap.get(mainItem.href);
+            if (mainPermission) {
+                groupPermissions.push(mainPermission);
+            }
 
-    // Group permissions from Firestore
-    permissions.forEach(p => {
-        // Find which top-level menu item this permission belongs to
-        const mainItem = allMenuItems.find(item => p.id.startsWith(item.href));
-        if (mainItem && permissionMap.has(mainItem.label)) {
-            permissionMap.get(mainItem.label)?.push(p);
-        }
-    });
-
-    // Convert map to array, filtering out empty groups
-    const result: GroupedPermission[] = [];
-    permissionMap.forEach((perms, groupLabel) => {
-        if (perms.length > 0) {
-            // Sort by main item first, then sub-items
-            const sortedPerms = perms.sort((a, b) => {
-                const aIsMain = !allMenuItems.find(item => item.href === a.id)?.subItems;
-                const bIsMain = !allMenuItems.find(item => item.href === b.id)?.subItems;
-                
-                if (aIsMain && !bIsMain) return -1;
-                if (!aIsMain && bIsMain) return 1;
-                return a.name.localeCompare(b.name);
+            // Add all existing sub-item permissions
+            mainItem.subItems?.forEach(subItem => {
+                const subPermission = permissionMap.get(subItem.href);
+                if (subPermission) {
+                    groupPermissions.push(subPermission);
+                }
             });
-            result.push({ groupLabel, permissions: sortedPerms });
-        }
-    });
-    
-    // Sort the groups alphabetically by label
-    return result.sort((a, b) => a.groupLabel.localeCompare(b.groupLabel));
 
+            return {
+                groupLabel: mainItem.label,
+                permissions: groupPermissions,
+            };
+        });
+
+    return result.sort((a, b) => a.groupLabel.localeCompare(b.groupLabel));
   }, [permissions]);
 
 
@@ -297,3 +295,4 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
     </>
   );
 }
+
