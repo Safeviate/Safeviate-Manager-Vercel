@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -53,6 +54,7 @@ export function DepartmentActions({ tenantId, department }: DepartmentActionsPro
   const { toast } = useToast();
   const [departmentName, setDepartmentName] = useState(department.name);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   const handleUpdateDepartment = () => {
     if (!departmentName.trim()) {
@@ -101,80 +103,79 @@ export function DepartmentActions({ tenantId, department }: DepartmentActionsPro
         title: 'Department Deleted',
         description: `The "${department.name}" department is being deleted.`,
     });
+    setIsDeleteOpen(false);
   }
 
   return (
     <>
-    <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <AlertDialog>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
-                        <Pencil className='mr-2' /> Edit
-                    </DropdownMenuItem>
-                    <AlertDialogTrigger asChild>
-                        <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                            <Trash2 className='mr-2' /> Delete
-                        </DropdownMenuItem>
-                    </AlertDialogTrigger>
-                </DropdownMenuContent>
-            </DropdownMenu>
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
+                <Pencil className='mr-2 h-4 w-4' /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setIsDeleteOpen(true)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                 <Trash2 className='mr-2 h-4 w-4' /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-            {/* Edit Dialog Content is outside Dropdown but controlled by same state */}
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>Edit Department</DialogTitle>
-                    <DialogDescription>
-                        Update the name for the &quot;{department.name}&quot; department.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">
-                        Name
-                    </Label>
-                    <Input
-                        id="name"
-                        value={departmentName}
-                        onChange={(e) => setDepartmentName(e.target.value)}
-                        className="col-span-3"
-                    />
-                    </div>
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button onClick={handleUpdateDepartment}>Save Changes</Button>
-                </DialogFooter>
-            </DialogContent>
-
-             {/* Delete Alert Dialog Content */}
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the 
-                        &quot;{department.name}&quot; department.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteDepartment} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-                        Delete
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
+          {/* Delete Alert Dialog Content */}
+          <AlertDialogContent>
+              <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the 
+                      &quot;{department.name}&quot; department.
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteDepartment} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                      Delete
+                  </AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
         </AlertDialog>
-    </Dialog>
+        
+        {/* Edit Dialog Content */}
+        <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+                <DialogTitle>Edit Department</DialogTitle>
+                <DialogDescription>
+                    Update the name for the &quot;{department.name}&quot; department.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                    Name
+                </Label>
+                <Input
+                    id="name"
+                    value={departmentName}
+                    onChange={(e) => setDepartmentName(e.target.value)}
+                    className="col-span-3"
+                />
+                </div>
+            </div>
+            <DialogFooter>
+                <DialogClose asChild>
+                    <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button onClick={handleUpdateDepartment}>Save Changes</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
