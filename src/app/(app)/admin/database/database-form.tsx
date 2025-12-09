@@ -18,13 +18,13 @@ export function DatabaseForm() {
 
   const handleSeedDatabase = () => {
     try {
-      const tenantId = 'safeviate';
-      const tenantRef = doc(firestore, 'tenants', tenantId);
+      const companyId = 'safeviate';
+      const companyRef = doc(firestore, 'companies', companyId);
 
       setDocumentNonBlocking(
-        tenantRef,
+        companyRef,
         {
-          id: tenantId,
+          id: companyId,
           name: 'Safeviate',
         },
         { merge: true }
@@ -32,7 +32,7 @@ export function DatabaseForm() {
 
       toast({
         title: 'Database Seeding Initiated',
-        description: 'The "Safeviate" tenant document is being created.',
+        description: 'The "Safeviate" company document is being created.',
       });
     } catch (e: any) {
       console.error(e);
