@@ -8,6 +8,7 @@ import {
   Shield,
   User,
   GraduationCap,
+  Package,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -55,6 +56,11 @@ export const menuConfig: MenuItem[] = [
     href: '/training',
     label: 'Training',
     icon: GraduationCap,
+  },
+  {
+    href: '/assets',
+    label: 'Assets',
+    icon: Package,
   },
   {
     href: '/management',
