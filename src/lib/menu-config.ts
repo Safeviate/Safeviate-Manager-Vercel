@@ -4,6 +4,8 @@ import {
   Wrench,
   Settings,
   LucideIcon,
+  Palette,
+  Shield,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -70,4 +72,16 @@ export const settingsMenuItem: MenuItem = {
   href: '/settings',
   label: 'Settings',
   icon: Settings,
+  subItems: [
+    {
+      href: '/settings/appearance',
+      label: 'Appearance',
+      description: 'Customize the look and feel of the application.',
+    },
+    {
+      href: '/settings/permissions',
+      label: 'Permissions',
+      description: 'Control user access and roles within the application.',
+    },
+  ],
 };

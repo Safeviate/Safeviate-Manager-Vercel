@@ -1,35 +1,28 @@
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ColorThemeForm } from './color-theme-form';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import Link from 'next/link';
+import { settingsMenuItem } from '@/lib/menu-config';
 
 export default function SettingsPage() {
-  return (
-    <div className="space-y-6">
-      <ColorThemeForm />
+  if (!settingsMenuItem || !settingsMenuItem.subItems) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground">Settings section not configured.</p>
+      </div>
+    );
+  }
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Permissions Management</CardTitle>
-          <CardDescription>Control user access and roles within the application.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                  <p className="font-medium">Administrator</p>
-                  <p className="text-sm text-muted-foreground">Full access to all features.</p>
-              </div>
-              <Skeleton className="h-8 w-20" />
-          </div>
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                  <p className="font-medium">Instructor</p>
-                  <p className="text-sm text-muted-foreground">Access to scheduling and student progress.</p>
-              </div>
-              <Skeleton className="h-8 w-20" />
-          </div>
-        </CardContent>
-      </Card>
+  return (
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {settingsMenuItem.subItems.map((item) => (
+        <Link href={item.href} key={item.href}>
+          <Card className="hover:bg-muted/50 transition-colors">
+            <CardHeader>
+              <CardTitle>{item.label}</CardTitle>
+              <CardDescription>{item.description}</CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+      ))}
     </div>
   );
 }

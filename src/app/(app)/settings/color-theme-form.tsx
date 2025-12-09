@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Trash2 } from 'lucide-react';
-import PageHeader from '@/components/page-header';
 
 type ThemeColors = {
   background: string;
@@ -303,8 +302,6 @@ export function ColorThemeForm() {
 
 
   return (
-    <div className='space-y-6'>
-    <PageHeader title="Settings" description="Manage application settings, permissions, and appearance." />
     <Card>
       <CardHeader>
         <CardTitle>Appearance</CardTitle>
@@ -437,6 +434,5 @@ export function ColorThemeForm() {
         <Button onClick={resetColors} variant="outline">Reset to Defaults</Button>
       </CardContent>
     </Card>
-    </div>
   );
 }
