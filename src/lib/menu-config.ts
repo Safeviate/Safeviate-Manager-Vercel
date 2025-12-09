@@ -63,22 +63,22 @@ export const menuConfig: MenuItem[] = [
     icon: Package,
   },
   {
-    href: '/management',
-    label: 'Management',
+    href: '/admin',
+    label: 'Admin',
     icon: Users,
     subItems: [
       {
-        href: '/management/students',
+        href: '/admin/students',
         label: 'Students',
         description: 'Manage student records and progress.',
       },
       {
-        href: '/management/instructors',
+        href: '/admin/instructors',
         label: 'Instructors',
         description: 'Manage instructor profiles and schedules.',
       },
       {
-        href: '/management/personnel',
+        href: '/admin/personnel',
         label: 'Personnel',
         description: 'Manage all other personnel records.',
       },
