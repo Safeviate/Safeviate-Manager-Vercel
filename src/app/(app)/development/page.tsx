@@ -13,9 +13,12 @@ export default function DevelopmentPage() {
     );
   }
 
+  // We filter out the database page since we moved it
+  const devSubItems = developmentMenu.subItems.filter(item => item.href !== '/development/database');
+
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {developmentMenu.subItems.map((item) => (
+      {devSubItems.map((item) => (
         <Link href={item.href} key={item.href}>
           <Card className="hover:bg-muted/50 transition-colors">
             <CardHeader>

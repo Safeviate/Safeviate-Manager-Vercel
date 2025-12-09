@@ -107,7 +107,12 @@ export const menuConfig: MenuItem[] = [
         href: '/admin/department',
         label: 'Department',
         description: 'Manage company departments.',
-      }
+      },
+      {
+        href: '/admin/database',
+        label: 'Database',
+        description: 'Manage database seeding and setup.',
+      },
     ],
   },
   {
@@ -117,12 +122,12 @@ export const menuConfig: MenuItem[] = [
     subItems: [
         {
             href: '/development/database',
-            label: 'Database',
-            description: 'Manage database seeding and setup.',
+            label: 'Tenant Creator',
+            description: 'Create new tenants with custom branding.',
         },
         {
           href: '/development/test',
-          label: 'Test',
+          label: 'Test Page',
           description: 'A test page for development purposes.'
         }
     ]
