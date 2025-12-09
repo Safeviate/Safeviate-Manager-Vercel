@@ -19,7 +19,6 @@ import { Separator } from '@/components/ui/separator';
 export function DatabaseForm() {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [tenantId, setTenantId] = useState('');
   const [tenantName, setTenantName] = useState('');
   const [logo, setLogo] = useState<File | null>(null);
   const [primaryColour, setPrimaryColour] = useState('#7cc4f7');
@@ -33,14 +32,16 @@ export function DatabaseForm() {
   };
 
   const handleAddTenant = () => {
-    if (!tenantId || !tenantName) {
+    if (!tenantName) {
       toast({
         variant: 'destructive',
         title: 'Missing Information',
-        description: 'Please provide both a Tenant ID and a Tenant Name.',
+        description: 'Please provide a Tenant Name.',
       });
       return;
     }
+    
+    const tenantId = tenantName.toLowerCase().replace(/\s+/g, '-');
 
     try {
       const tenantRef = doc(firestore, 'tenants', tenantId);
@@ -66,11 +67,10 @@ export function DatabaseForm() {
 
       toast({
         title: 'Tenant Creation Initiated',
-        description: `The "${tenantName}" tenant document is being created.`,
+        description: `The "${tenantName}" tenant document is being created with ID "${tenantId}".`,
       });
 
       // Reset form
-      setTenantId('');
       setTenantName('');
       setLogo(null);
       setPrimaryColour('#7cc4f7');
@@ -96,23 +96,11 @@ export function DatabaseForm() {
       <CardHeader>
         <CardTitle>Tenant Management</CardTitle>
         <CardDescription>
-          Add new tenants to the Firestore database with their branding.
+          Add new tenants to the Firestore database with their branding. The Tenant ID will be auto-generated from the name.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="tenant-id">Tenant ID</Label>
-            <Input
-              id="tenant-id"
-              placeholder="e.g., safeviate"
-              value={tenantId}
-              onChange={(e) => setTenantId(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
-            />
-            <p className="text-sm text-muted-foreground">
-              A unique identifier for the tenant. Will be converted to lowercase and spaces to dashes.
-            </p>
-          </div>
           <div className="space-y-2">
             <Label htmlFor="tenant-name">Tenant Name</Label>
             <Input
@@ -121,6 +109,9 @@ export function DatabaseForm() {
               value={tenantName}
               onChange={(e) => setTenantName(e.target.value)}
             />
+             <p className="text-sm text-muted-foreground">
+              The ID will be: {tenantName ? tenantName.toLowerCase().replace(/\s+/g, '-') : '...'}
+            </p>
           </div>
         </div>
 
@@ -156,5 +147,3 @@ export function DatabaseForm() {
     </Card>
   );
 }
-
-    
