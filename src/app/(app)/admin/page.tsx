@@ -28,7 +28,6 @@ export default function AdminPage() {
           <Card className="hover:bg-muted/50 transition-colors">
             <CardHeader>
               <CardTitle>{item.label}</CardTitle>
-              <CardDescription>{item.description}</CardDescription>
             </CardHeader>
           </Card>
         </Link>
