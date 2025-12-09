@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -61,6 +61,16 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(role.permissions || []);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
+  const allPermissionIds = useMemo(() => 
+    permissionsConfig.flatMap(resource => 
+      resource.actions.map(action => `${resource.id}-${action}`)
+    ),
+  []);
+
+  const areAllSelected = useMemo(() => 
+    allPermissionIds.length > 0 && selectedPermissions.length === allPermissionIds.length,
+    [selectedPermissions, allPermissionIds]
+  );
 
   useEffect(() => {
     // Only reset state when the dialog is opened, not on every re-render of the parent
@@ -125,6 +135,14 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
     );
   };
 
+  const handleSelectAllToggle = () => {
+    if (areAllSelected) {
+      setSelectedPermissions([]);
+    } else {
+      setSelectedPermissions(allPermissionIds);
+    }
+  };
+
 
   return (
     <>
@@ -171,8 +189,13 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
 
                     <Separator />
 
-                    <div className='space-y-4'>
-                        <Label>Permissions</Label>
+                    <div className='space-y-2'>
+                        <div className="flex items-center justify-between">
+                            <Label>Permissions</Label>
+                             <Button variant="link" onClick={handleSelectAllToggle} className="p-0 h-auto">
+                                {areAllSelected ? 'Deselect All' : 'Select All'}
+                            </Button>
+                        </div>
                         <ScrollArea className="h-72 w-full rounded-md border">
                             <div className="p-4">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">

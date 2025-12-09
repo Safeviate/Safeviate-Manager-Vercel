@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { collection } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,6 +34,17 @@ export function RoleForm({ tenantId }: RoleFormProps) {
   const [roleName, setRoleName] = useState('');
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+
+  const allPermissionIds = useMemo(() => 
+    permissionsConfig.flatMap(resource => 
+      resource.actions.map(action => `${resource.id}-${action}`)
+    ),
+  []);
+
+  const areAllSelected = useMemo(() => 
+    allPermissionIds.length > 0 && selectedPermissions.length === allPermissionIds.length,
+    [selectedPermissions, allPermissionIds]
+  );
 
   const handleAddRole = () => {
     if (!roleName.trim()) {
@@ -76,6 +87,14 @@ export function RoleForm({ tenantId }: RoleFormProps) {
       checked ? [...prev, permissionId] : prev.filter((id) => id !== permissionId)
     );
   };
+  
+  const handleSelectAllToggle = () => {
+    if (areAllSelected) {
+      setSelectedPermissions([]);
+    } else {
+      setSelectedPermissions(allPermissionIds);
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -110,8 +129,13 @@ export function RoleForm({ tenantId }: RoleFormProps) {
 
             <Separator />
 
-            <div className='space-y-4'>
-                <Label>Permissions</Label>
+            <div className='space-y-2'>
+                <div className="flex items-center justify-between">
+                    <Label>Permissions</Label>
+                    <Button variant="link" onClick={handleSelectAllToggle} className="p-0 h-auto">
+                        {areAllSelected ? 'Deselect All' : 'Select All'}
+                    </Button>
+                </div>
                 <ScrollArea className="h-72 w-full rounded-md border">
                     <div className="p-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
