@@ -1,5 +1,6 @@
+
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,12 @@ export function ColorThemeForm() {
   } = useTheme();
   
   const [themeName, setThemeName] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
 
   const handleSaveTheme = () => {
     if (!themeName.trim()) {
@@ -178,9 +185,9 @@ export function ColorThemeForm() {
             </div>
         </div>
 
-        {savedThemes.length > 0 && <Separator />}
+        {isMounted && savedThemes.length > 0 && <Separator />}
 
-        {savedThemes.length > 0 && (
+        {isMounted && savedThemes.length > 0 && (
             <div>
                 <h3 className="text-lg font-medium mb-4">Saved Themes</h3>
                 <div className="space-y-2">
