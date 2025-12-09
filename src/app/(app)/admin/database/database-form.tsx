@@ -12,7 +12,7 @@ import {
 import { useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 
-export function SeedDatabaseForm() {
+export function DatabaseForm() {
   const firestore = useFirestore();
   const { toast } = useToast();
 

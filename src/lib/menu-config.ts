@@ -9,6 +9,7 @@ import {
   User,
   GraduationCap,
   Package,
+  Database,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -88,6 +89,13 @@ export const menuConfig: MenuItem[] = [
     href: '/admin',
     label: 'Admin',
     icon: Shield,
+    subItems: [
+      {
+        href: '/admin/database',
+        label: 'Database',
+        description: 'Manage database seeding and setup.',
+      },
+    ]
   },
 ];
 
