@@ -9,9 +9,13 @@ import type { Role } from '../../../roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { ChevronsUpDown, Award, FileText, Upload } from 'lucide-react';
+import { ChevronsUpDown, Award, FileText, Upload, Trash2, Link as LinkIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
+import { DocumentUploader } from './document-uploader';
+import { doc } from 'firebase/firestore';
+import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 interface ViewPersonnelDetailsProps {
   personnel: Personnel;
@@ -28,9 +32,29 @@ const DetailItem = ({ label, value }: { label: string; value?: string | null }) 
 
 export function ViewPersonnelDetails({ personnel, role, department }: ViewPersonnelDetailsProps) {
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
+  const firestore = useFirestore();
+  const { toast } = useToast();
 
   const requiredDocuments = role?.requiredDocuments || [];
   const uploadedDocuments = personnel?.documents || [];
+
+  const handleDocumentUploaded = (document: {name: string, url: string, uploadDate: string}) => {
+    if (!firestore) return;
+    const personnelRef = doc(firestore, 'tenants', 'safeviate', 'personnel', personnel.id);
+    const newDocuments = [...uploadedDocuments, document];
+    updateDocumentNonBlocking(personnelRef, { documents: newDocuments });
+  };
+
+  const handleDeleteDocument = (urlToDelete: string) => {
+     if (!firestore) return;
+    const personnelRef = doc(firestore, 'tenants', 'safeviate', 'personnel', personnel.id);
+    const newDocuments = uploadedDocuments.filter(doc => doc.url !== urlToDelete);
+    updateDocumentNonBlocking(personnelRef, { documents: newDocuments });
+    toast({
+      title: "Document Deleted",
+      description: "The document reference has been removed.",
+    })
+  }
 
   return (
     <div className="space-y-6">
@@ -125,8 +149,17 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
       
       {/* --- Documents --- */}
       <Card>
-        <CardHeader>
+        <CardHeader className='flex-row justify-between items-center'>
             <CardTitle>Documents</CardTitle>
+             <DocumentUploader 
+                onDocumentUploaded={handleDocumentUploaded}
+                trigger={
+                    <Button variant="outline">
+                        <Upload className="mr-2 h-4 w-4"/>
+                        Upload Ad-hoc Document
+                    </Button>
+                }
+            />
         </CardHeader>
         <CardContent className="space-y-4">
             <div>
@@ -141,10 +174,16 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
                                         <FileText className="h-5 w-5"/>
                                         <span className="font-medium">{docName}</span>
                                     </div>
-                                    <Button size="sm" disabled>
-                                        <Upload className="mr-2 h-4 w-4" />
-                                        Upload
-                                    </Button>
+                                    <DocumentUploader 
+                                        onDocumentUploaded={handleDocumentUploaded}
+                                        defaultFileName={docName}
+                                        trigger={
+                                            <Button size="sm" disabled={isUploaded}>
+                                                <Upload className="mr-2 h-4 w-4" />
+                                                {isUploaded ? "Uploaded" : "Upload"}
+                                            </Button>
+                                        }
+                                    />
                                 </div>
                             )
                         })}
@@ -159,9 +198,24 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
             <div>
                 <h4 className="text-md font-medium mb-2 text-muted-foreground">Uploaded Documents</h4>
                 {uploadedDocuments.length > 0 ? (
-                    <p className="text-sm text-muted-foreground">Document list would appear here.</p>
+                     <div className="space-y-2">
+                        {uploadedDocuments.map(doc => (
+                            <div key={doc.url} className="flex items-center justify-between p-3 border rounded-lg">
+                                <div className='flex items-center gap-3'>
+                                     <LinkIcon className="h-5 w-5 text-muted-foreground"/>
+                                     <div>
+                                        <p className="font-medium">{doc.name}</p>
+                                        <p className="text-xs text-muted-foreground">Uploaded on {format(new Date(doc.uploadDate), 'PPP')}</p>
+                                     </div>
+                                </div>
+                                <Button variant="ghost" size="icon" className='text-destructive' onClick={() => handleDeleteDocument(doc.url)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
                 ) : (
-                     <p className="text-sm text-muted-foreground">No additional documents have been uploaded.</p>
+                     <p className="text-sm text-muted-foreground">No documents have been uploaded.</p>
                 )}
             </div>
 
