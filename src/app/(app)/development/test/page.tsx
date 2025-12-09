@@ -1,13 +1,14 @@
-'use client'
+'use client';
 
-import * as React from 'react'
-import { cn } from '@/lib/utils'
-import { buttonVariants } from '@/components/ui/button'
+import * as React from 'react';
+import { CustomCalendar } from '@/components/ui/custom-calendar';
 
 export default function TestPage() {
   return (
-    <div className="flex flex-col gap-4">
-      
+    <div className="p-4">
+      <div className="flex justify-center">
+        <CustomCalendar />
+      </div>
     </div>
-  )
+  );
 }
