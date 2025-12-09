@@ -7,6 +7,7 @@ import {
   Palette,
   Shield,
   User,
+  GraduationCap,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -49,6 +50,11 @@ export const menuConfig: MenuItem[] = [
         description: 'Oversee safety protocols and quality assurance.',
       },
     ],
+  },
+  {
+    href: '/training',
+    label: 'Training',
+    icon: GraduationCap,
   },
   {
     href: '/management',
