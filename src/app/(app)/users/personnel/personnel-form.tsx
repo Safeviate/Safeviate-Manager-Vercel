@@ -23,14 +23,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { permissionsConfig } from '@/lib/permissions-config';
 import type { Role } from '../roles/page';
+import type { Department } from '../../admin/department/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PersonnelFormProps {
   tenantId: string;
   roles: Role[];
+  departments: Department[];
 }
 
-export function PersonnelForm({ tenantId, roles }: PersonnelFormProps) {
+export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -39,6 +41,8 @@ export function PersonnelForm({ tenantId, roles }: PersonnelFormProps) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   
@@ -68,7 +72,7 @@ export function PersonnelForm({ tenantId, roles }: PersonnelFormProps) {
       toast({
         variant: 'destructive',
         title: 'Missing Fields',
-        description: 'Please fill out all required fields.',
+        description: 'First Name, Last Name, Email, and Role are required.',
       });
       return;
     }
@@ -86,7 +90,9 @@ export function PersonnelForm({ tenantId, roles }: PersonnelFormProps) {
     addDocumentNonBlocking(personnelRef, { 
         firstName, 
         lastName, 
-        email, 
+        email,
+        contactNumber,
+        department: selectedDepartment?.id || null,
         role: selectedRole.id, 
         permissions: selectedPermissions 
     });
@@ -103,6 +109,8 @@ export function PersonnelForm({ tenantId, roles }: PersonnelFormProps) {
     setFirstName('');
     setLastName('');
     setEmail('');
+    setContactNumber('');
+    setSelectedDepartment(null);
     setSelectedRole(null);
     setSelectedPermissions([]);
     setIsOpen(false);
@@ -127,6 +135,12 @@ export function PersonnelForm({ tenantId, roles }: PersonnelFormProps) {
     setSelectedRole(role || null);
   }
 
+  const handleDepartmentChange = (deptId: string) => {
+    const dept = departments.find(d => d.id === deptId);
+    setSelectedDepartment(dept || null);
+  }
+
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
         if (!open) {
@@ -140,7 +154,7 @@ export function PersonnelForm({ tenantId, roles }: PersonnelFormProps) {
           Add Personnel
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Add New Personnel</DialogTitle>
           <DialogDescription>
@@ -148,7 +162,7 @@ export function PersonnelForm({ tenantId, roles }: PersonnelFormProps) {
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-6 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                  <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
                     <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
@@ -160,6 +174,23 @@ export function PersonnelForm({ tenantId, roles }: PersonnelFormProps) {
                  <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="contactNumber">Contact Number</Label>
+                    <Input id="contactNumber" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="department">Department</Label>
+                    <Select onValueChange={handleDepartmentChange} value={selectedDepartment?.id}>
+                        <SelectTrigger id="department">
+                            <SelectValue placeholder="Select a department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {departments.map(dept => (
+                                <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="role">Role</Label>
@@ -234,3 +265,5 @@ export function PersonnelForm({ tenantId, roles }: PersonnelFormProps) {
     </Dialog>
   );
 }
+
+    

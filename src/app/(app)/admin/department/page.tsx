@@ -15,7 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-type Department = {
+export type Department = {
   id: string;
   name: string;
 };
@@ -98,3 +98,5 @@ export default function DepartmentPage() {
     </div>
   );
 }
+
+    

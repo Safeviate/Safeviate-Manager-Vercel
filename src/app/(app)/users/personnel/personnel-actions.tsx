@@ -42,15 +42,17 @@ import { Separator } from '@/components/ui/separator';
 import { permissionsConfig } from '@/lib/permissions-config';
 import type { Personnel } from './page';
 import type { Role } from '../roles/page';
+import type { Department } from '../../admin/department/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PersonnelActionsProps {
   tenantId: string;
   personnel: Personnel;
   roles: Role[];
+  departments: Department[];
 }
 
-export function PersonnelActions({ tenantId, personnel, roles }: PersonnelActionsProps) {
+export function PersonnelActions({ tenantId, personnel, roles, departments }: PersonnelActionsProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -59,6 +61,8 @@ export function PersonnelActions({ tenantId, personnel, roles }: PersonnelAction
   const [firstName, setFirstName] = useState(personnel.firstName);
   const [lastName, setLastName] = useState(personnel.lastName);
   const [email, setEmail] = useState(personnel.email);
+  const [contactNumber, setContactNumber] = useState(personnel.contactNumber);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(personnel.permissions || []);
   
@@ -79,11 +83,14 @@ export function PersonnelActions({ tenantId, personnel, roles }: PersonnelAction
         setFirstName(personnel.firstName);
         setLastName(personnel.lastName);
         setEmail(personnel.email);
+        setContactNumber(personnel.contactNumber);
         setSelectedPermissions(personnel.permissions || []);
         const currentRole = roles.find(r => r.id === personnel.role) || null;
         setSelectedRole(currentRole);
+        const currentDept = departments.find(d => d.id === personnel.department) || null;
+        setSelectedDepartment(currentDept);
     }
-  }, [personnel, roles, isEditDialogOpen]);
+  }, [personnel, roles, departments, isEditDialogOpen]);
 
   // When a role is selected, update the permissions
   useEffect(() => {
@@ -117,6 +124,8 @@ export function PersonnelActions({ tenantId, personnel, roles }: PersonnelAction
         firstName, 
         lastName, 
         email, 
+        contactNumber,
+        department: selectedDepartment?.id || null,
         role: selectedRole.id, 
         permissions: selectedPermissions 
     });
@@ -167,6 +176,11 @@ export function PersonnelActions({ tenantId, personnel, roles }: PersonnelAction
     setSelectedRole(role || null);
   }
 
+  const handleDepartmentChange = (deptId: string) => {
+    const dept = departments.find(d => d.id === deptId);
+    setSelectedDepartment(dept || null);
+  }
+
   return (
     <>
     <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -193,7 +207,7 @@ export function PersonnelActions({ tenantId, personnel, roles }: PersonnelAction
             </DropdownMenu>
 
             {/* Edit Dialog Content */}
-            <DialogContent className="sm:max-w-3xl">
+            <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
                     <DialogTitle>Edit Personnel</DialogTitle>
                     <DialogDescription>
@@ -201,7 +215,7 @@ export function PersonnelActions({ tenantId, personnel, roles }: PersonnelAction
                     </DialogDescription>
                 </DialogHeader>
                 <div className="flex flex-col gap-6 py-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="firstName">First Name</Label>
                             <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
@@ -213,6 +227,23 @@ export function PersonnelActions({ tenantId, personnel, roles }: PersonnelAction
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
                             <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="contactNumber">Contact Number</Label>
+                            <Input id="contactNumber" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="department">Department</Label>
+                             <Select onValueChange={handleDepartmentChange} value={selectedDepartment?.id}>
+                                <SelectTrigger id="department">
+                                    <SelectValue placeholder="Select a department" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {departments.map(dept => (
+                                        <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="role">Role</Label>
@@ -303,3 +334,5 @@ export function PersonnelActions({ tenantId, personnel, roles }: PersonnelAction
     </>
   );
 }
+
+    

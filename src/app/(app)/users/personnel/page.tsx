@@ -16,12 +16,15 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { Role } from '../roles/page';
+import type { Department } from '../../admin/department/page';
 
 export type Personnel = {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
+  contactNumber?: string;
+  department?: string; // department ID
   role: string; // role ID
   permissions: string[];
 };
@@ -46,21 +49,35 @@ export default function PersonnelPage() {
     [firestore]
   );
 
+  const departmentsQuery = useMemoFirebase(
+    () =>
+      firestore
+        ? query(collection(firestore, 'tenants', tenantId, 'departments'))
+        : null,
+    [firestore]
+  );
+
   const { data: personnel, isLoading: isLoadingPersonnel, error: personnelError } = useCollection<Personnel>(personnelQuery);
   const { data: roles, isLoading: isLoadingRoles, error: rolesError } = useCollection<Role>(rolesQuery);
+  const { data: departments, isLoading: isLoadingDepts, error: deptsError } = useCollection<Department>(departmentsQuery);
 
   const rolesMap = useMemo(() => {
     if (!roles) return new Map<string, string>();
     return new Map(roles.map(role => [role.id, role.name]));
   }, [roles]);
 
-  const isLoading = isLoadingPersonnel || isLoadingRoles;
-  const error = personnelError || rolesError;
+  const departmentsMap = useMemo(() => {
+    if (!departments) return new Map<string, string>();
+    return new Map(departments.map(dept => [dept.id, dept.name]));
+  }, [departments]);
+
+  const isLoading = isLoadingPersonnel || isLoadingRoles || isLoadingDepts;
+  const error = personnelError || rolesError || deptsError;
 
   return (
     <div className="flex flex-col gap-6 h-full">
       <div className="flex justify-end">
-        <PersonnelForm tenantId={tenantId} roles={roles || []} />
+        <PersonnelForm tenantId={tenantId} roles={roles || []} departments={departments || []} />
       </div>
 
       <Card>
@@ -76,6 +93,8 @@ export default function PersonnelPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Contact Number</TableHead>
+                <TableHead>Department</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Custom Permissions</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -84,14 +103,14 @@ export default function PersonnelPage() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center">
+                  <TableCell colSpan={7} className="text-center">
                     Loading personnel...
                   </TableCell>
                 </TableRow>
               )}
               {!isLoading && error && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-destructive">
+                  <TableCell colSpan={7} className="text-center text-destructive">
                     Error: {error.message}
                   </TableCell>
                 </TableRow>
@@ -101,6 +120,8 @@ export default function PersonnelPage() {
                   <TableRow key={person.id}>
                     <TableCell className="font-medium">{person.firstName} {person.lastName}</TableCell>
                     <TableCell>{person.email}</TableCell>
+                    <TableCell>{person.contactNumber || 'N/A'}</TableCell>
+                    <TableCell>{departmentsMap.get(person.department || '') || 'N/A'}</TableCell>
                     <TableCell>{rolesMap.get(person.role) || person.role}</TableCell>
                     <TableCell>
                       <Badge variant={person.permissions?.length > 0 ? "secondary" : "outline"}>
@@ -108,14 +129,14 @@ export default function PersonnelPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                       <PersonnelActions tenantId={tenantId} personnel={person} roles={roles || []} />
+                       <PersonnelActions tenantId={tenantId} personnel={person} roles={roles || []} departments={departments || []} />
                     </TableCell>
                   </TableRow>
                 ))
               )}
               {!isLoading && !error && (!personnel || personnel.length === 0) && (
                  <TableRow>
-                    <TableCell colSpan={5} className="text-center h-24">
+                    <TableCell colSpan={7} className="text-center h-24">
                         No personnel found.
                     </TableCell>
                  </TableRow>
@@ -127,3 +148,5 @@ export default function PersonnelPage() {
     </div>
   );
 }
+
+    
