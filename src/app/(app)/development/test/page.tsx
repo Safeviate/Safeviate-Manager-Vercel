@@ -11,7 +11,7 @@ export default function TestPage() {
 
   const calendarClassNames = {
     months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-    month: "space-y-4 h-[280px]", // Applied fixed height here
+    month: "space-y-4 h-[280px]",
     caption: "flex justify-center pt-1 relative items-center",
     caption_label: "text-sm font-medium",
     nav: "space-x-1 flex items-center",
@@ -44,21 +44,23 @@ export default function TestPage() {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <Calendar
-        mode="single"
-        selected={date}
-        onSelect={setDate}
-        className="rounded-md border w-[350px]"
-        classNames={calendarClassNames}
-      />
-      <Calendar
-        mode="single"
-        selected={date2}
-        onSelect={setDate2}
-        className="rounded-md border w-[350px]"
-        classNames={calendarClassNames}
-      />
+    <div className="flex flex-col gap-4">
+      <div>
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={setDate}
+          className="rounded-md border w-[350px] inline-block"
+          classNames={calendarClassNames}
+        />
+        <Calendar
+          mode="single"
+          selected={date2}
+          onSelect={setDate2}
+          className="rounded-md border w-[350px] inline-block ml-4"
+          classNames={calendarClassNames}
+        />
+      </div>
     </div>
   )
 }
