@@ -88,15 +88,10 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
         description: `"${fileName}" has been added to the user's profile.`,
       });
       
-      resetAndClose();
+      setIsOpen(false);
     };
     reader.readAsDataURL(file);
   };
-
-  const resetAndClose = () => {
-    setIsOpen(false);
-    // State is reset via useEffect when isOpen changes
-  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
