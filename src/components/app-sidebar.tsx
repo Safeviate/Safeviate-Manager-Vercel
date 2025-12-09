@@ -36,9 +36,15 @@ export function AppSidebar() {
   const router = useRouter();
 
   const handleSignOut = () => {
-    signOut(auth);
+    if (auth) {
+      signOut(auth);
+    }
     router.push('/login');
   };
+
+  const visibleMenuConfig = menuConfig.filter(
+    (item) => item.label !== 'Development' || process.env.NODE_ENV === 'development'
+  );
 
   return (
     <Sidebar>
@@ -52,8 +58,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          <SidebarSeparator className="my-1 mx-2" />
-          {menuConfig.map((item, index) => (
+          {visibleMenuConfig.map((item, index) => (
              <React.Fragment key={item.href}>
               {item.label === 'Dashboard' && <SidebarSeparator className="my-1 mx-2" />}
               <SidebarMenuItem>
@@ -67,7 +72,7 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
-              {index < menuConfig.length -1 && <SidebarSeparator className="my-1 mx-2" />}
+              {index < visibleMenuConfig.length -1 && <SidebarSeparator className="my-1 mx-2" />}
             </React.Fragment>
           ))}
         </SidebarMenu>
@@ -77,7 +82,7 @@ export function AppSidebar() {
           <SidebarMenu>
             <SidebarMenuItem>
               <Link href={settingsMenuItem.href} className="w-full">
-                <SidebarMenuButton isActive={pathname === settingsMenuItem.href} tooltip={settingsMenuItem.label}>
+                <SidebarMenuButton isActive={pathname.startsWith(settingsMenuItem.href)} tooltip={settingsMenuItem.label}>
                   <settingsMenuItem.icon />
                   <span>{settingsMenuItem.label}</span>
                 </SidebarMenuButton>
