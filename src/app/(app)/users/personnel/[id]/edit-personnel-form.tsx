@@ -157,7 +157,7 @@ export function EditPersonnelForm({ tenantId, personnel, roles, departments, onC
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="max-h-[calc(100vh-25rem)] pr-6">
+        <ScrollArea className="h-[calc(100vh-25rem)] pr-6">
             <div className="flex flex-col gap-6 py-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
