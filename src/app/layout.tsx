@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider, THEME_KEY, CARD_THEME_KEY, SIDEBAR_THEME_KEY, HEADER_THEME_KEY } from '@/components/theme-provider';
 import { hexToHsl } from '@/lib/utils';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -46,10 +47,12 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeLoaderScript }} />
       </head>
       <body className={`${inter.variable} font-body antialiased`}>
-        <ThemeProvider>
-          {children}
-          <Toaster />
-        </ThemeProvider>
+        <FirebaseClientProvider>
+          <ThemeProvider>
+            {children}
+            <Toaster />
+          </ThemeProvider>
+        </FirebaseClientProvider>
       </body>
     </html>
   );

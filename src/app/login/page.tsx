@@ -1,3 +1,4 @@
+'use client';
 import Image from 'next/image';
 import Link from 'next/link';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -5,9 +6,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useAuth, initiateEmailSignIn, initiateAnonymousSignIn } from '@/firebase';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const bgImage = PlaceHolderImages.find((img) => img.id === 'login-background');
+  const auth = useAuth();
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSignIn = () => {
+    initiateEmailSignIn(auth, email, password);
+    router.push('/dashboard');
+  };
+
+  const handleGuestSignIn = () => {
+    initiateAnonymousSignIn(auth);
+    router.push('/dashboard');
+  };
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4">
@@ -29,17 +47,30 @@ export default function LoginPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="manager@safeviate.com" required />
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="manager@safeviate.com" 
+                required 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" required />
+              <Input 
+                id="password" 
+                type="password" 
+                required 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
-            <Button type="submit" className="w-full">
+            <Button onClick={handleSignIn} className="w-full">
               Sign In
             </Button>
-            <Button variant="secondary" className="w-full" asChild>
-              <Link href="/dashboard">Continue as Guest</Link>
+            <Button variant="secondary" className="w-full" onClick={handleGuestSignIn}>
+              Continue as Guest
             </Button>
           </div>
         </CardContent>
