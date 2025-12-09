@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -9,19 +10,23 @@ import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { ChevronsUpDown, Award, FileText, Upload, Trash2, Link as LinkIcon, CalendarDays } from 'lucide-react';
+import { ChevronsUpDown, Award, FileText, Upload, Trash2, Link as LinkIcon, CalendarDays, ExternalLink, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { DocumentUploader } from './document-uploader';
 import { doc } from 'firebase/firestore';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import Image from 'next/image';
 
 interface ViewPersonnelDetailsProps {
   personnel: Personnel;
   role: Role | null;
   department: Department | null;
 }
+
+type Document = NonNullable<Personnel['documents']>[0];
 
 const DetailItem = ({ label, value }: { label: string; value?: string | null }) => (
     <div>
@@ -32,6 +37,7 @@ const DetailItem = ({ label, value }: { label: string; value?: string | null }) 
 
 export function ViewPersonnelDetails({ personnel, role, department }: ViewPersonnelDetailsProps) {
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
+  const [viewingDocument, setViewingDocument] = useState<Document | null>(null);
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -55,6 +61,10 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
       description: "The document reference has been removed.",
     })
   }
+
+  const isImage = (url: string) => {
+    return /\.(jpg|jpeg|png|webp|gif)$/i.test(url);
+  };
 
   return (
     <div className="space-y-6">
@@ -201,7 +211,7 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
                      <div className="space-y-2">
                         {uploadedDocuments.map(doc => (
                             <div key={doc.url} className="flex items-center justify-between p-3 border rounded-lg">
-                                <div className='flex items-center gap-3'>
+                                <button onClick={() => setViewingDocument(doc)} className='flex items-center gap-3 text-left hover:underline'>
                                      <LinkIcon className="h-5 w-5 text-muted-foreground"/>
                                      <div>
                                         <p className="font-medium">{doc.name}</p>
@@ -213,7 +223,7 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
                                           </p>
                                         )}
                                      </div>
-                                </div>
+                                </button>
                                 <Button variant="ghost" size="icon" className='text-destructive' onClick={() => handleDeleteDocument(doc.url)}>
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -275,6 +285,38 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
             </CollapsibleContent>
         </Collapsible>
       </Card>
+
+      {/* Document Viewer Dialog */}
+        <Dialog open={!!viewingDocument} onOpenChange={(open) => !open && setViewingDocument(null)}>
+            <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+                <DialogHeader>
+                    <DialogTitle>{viewingDocument?.name || 'Document'}</DialogTitle>
+                </DialogHeader>
+                <div className="flex-1 border rounded-lg bg-muted/50 flex items-center justify-center relative">
+                     {viewingDocument && isImage(viewingDocument.url) ? (
+                        <Image 
+                            src={viewingDocument.url} 
+                            alt={viewingDocument.name}
+                            fill
+                            className="object-contain"
+                        />
+                     ) : viewingDocument ? (
+                        <div className="text-center p-8">
+                            <p className='text-lg font-semibold mb-2'>Cannot preview this file type.</p>
+                            <p className="text-muted-foreground mb-4">You can download it to view it locally.</p>
+                            <Button asChild>
+                                <a href={viewingDocument.url} download={viewingDocument.name} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className='mr-2' />
+                                    Download &quot;{viewingDocument.name}&quot;
+                                </a>
+                            </Button>
+                        </div>
+                    ) : (
+                        <p>No document selected</p>
+                    )}
+                </div>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
