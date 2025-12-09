@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { ChevronsUpDown, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -41,6 +41,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { permissionsConfig } from '@/lib/permissions-config';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface Role {
     id: string;
@@ -60,6 +61,7 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
   const [roleName, setRoleName] = useState(role.name);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(role.permissions || []);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
 
   const allPermissionIds = useMemo(() => 
     permissionsConfig.flatMap(resource => 
@@ -189,48 +191,58 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
 
                     <Separator />
 
-                    <div className='space-y-2'>
+                    <Collapsible open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen} className='space-y-2'>
                         <div className="flex items-center justify-between">
-                            <Label>Permissions</Label>
+                             <div className="flex items-center gap-2">
+                                <h4 className="text-md font-medium">Permissions</h4>
+                                <CollapsibleTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="w-9 p-0">
+                                        <ChevronsUpDown className="h-4 w-4" />
+                                        <span className="sr-only">Toggle</span>
+                                    </Button>
+                                </CollapsibleTrigger>
+                            </div>
                              <Button variant="link" onClick={handleSelectAllToggle} className="p-0 h-auto">
                                 {areAllSelected ? 'Deselect All' : 'Select All'}
                             </Button>
                         </div>
-                        <ScrollArea className="h-72 w-full rounded-md border">
-                            <div className="p-4">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                                {permissionsConfig.map((resource) => (
-                                    <div key={resource.id} className='space-y-2 break-inside-avoid'>
-                                        <h4 className='font-medium border-b pb-1'>{resource.name}</h4>
-                                        <div className="flex flex-col gap-2 pt-1">
-                                        {resource.actions.map((action) => {
-                                            const permissionId = `${resource.id}-${action}`;
-                                            return (
-                                                <div
-                                                    key={permissionId}
-                                                    className="flex items-center space-x-2"
-                                                >
-                                                    <Checkbox
-                                                        id={`edit-${permissionId}`}
-                                                        checked={selectedPermissions.includes(permissionId)}
-                                                        onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)}
-                                                    />
-                                                    <label
-                                                        htmlFor={`edit-${permissionId}`}
-                                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer capitalize"
+                        <CollapsibleContent>
+                            <ScrollArea className="h-72 w-full rounded-md border">
+                                <div className="p-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                                    {permissionsConfig.map((resource) => (
+                                        <div key={resource.id} className='space-y-2 break-inside-avoid'>
+                                            <h4 className='font-medium border-b pb-1'>{resource.name}</h4>
+                                            <div className="flex flex-col gap-2 pt-1">
+                                            {resource.actions.map((action) => {
+                                                const permissionId = `${resource.id}-${action}`;
+                                                return (
+                                                    <div
+                                                        key={permissionId}
+                                                        className="flex items-center space-x-2"
                                                     >
-                                                        {action}
-                                                    </label>
-                                                </div>
-                                            );
-                                        })}
+                                                        <Checkbox
+                                                            id={`edit-${permissionId}`}
+                                                            checked={selectedPermissions.includes(permissionId)}
+                                                            onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)}
+                                                        />
+                                                        <label
+                                                            htmlFor={`edit-${permissionId}`}
+                                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer capitalize"
+                                                        >
+                                                            {action}
+                                                        </label>
+                                                    </div>
+                                                );
+                                            })}
+                                            </div>
                                         </div>
+                                    ))}
                                     </div>
-                                ))}
                                 </div>
-                            </div>
-                        </ScrollArea>
-                    </div>
+                            </ScrollArea>
+                        </CollapsibleContent>
+                    </Collapsible>
                 </div>
                 <DialogFooter>
                     <DialogClose asChild>
