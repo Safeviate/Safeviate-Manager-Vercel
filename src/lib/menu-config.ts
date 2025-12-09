@@ -6,6 +6,7 @@ import {
   LucideIcon,
   Palette,
   Shield,
+  User,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -26,6 +27,11 @@ export const menuConfig: MenuItem[] = [
     href: '/dashboard',
     label: 'Dashboard',
     icon: LayoutDashboard,
+  },
+  {
+    href: '/my-dashboard',
+    label: 'My Dashboard',
+    icon: User,
   },
   {
     href: '/management',
