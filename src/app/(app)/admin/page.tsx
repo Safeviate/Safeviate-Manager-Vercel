@@ -1,8 +1,9 @@
+import { SeedDatabaseForm } from './seed-database-form';
 
 export default function AdminPage() {
   return (
-    <div className="flex items-center justify-center h-full">
-      <p className="text-muted-foreground">This page is under construction.</p>
+    <div className="container mx-auto py-10">
+      <SeedDatabaseForm />
     </div>
   );
 }
