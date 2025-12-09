@@ -54,35 +54,37 @@ export function RoleForm({ tenantId }: RoleFormProps) {
 
   const groupedPermissions = useMemo(() => {
     if (!permissions) return [];
-  
+
     const permissionMap = new Map(permissions.map(p => [p.id, p]));
     const allMenuItems = [...menuConfig, settingsMenuItem];
-  
+
     return allMenuItems.map(mainItem => {
-      const group: GroupedPermission = {
-        groupLabel: mainItem.label,
-        permissions: [],
-      };
-  
-      // Add main permission if it exists
-      const mainPermission = permissionMap.get(mainItem.href);
-      if (mainPermission) {
-        group.permissions.push(mainPermission);
-      }
-  
-      // Add sub-permissions if they exist
-      if (mainItem.subItems) {
-        mainItem.subItems.forEach(subItem => {
-          const subPermission = permissionMap.get(subItem.href);
-          if (subPermission) {
-            group.permissions.push(subPermission);
-          }
-        });
-      }
-  
-      return group;
-    }).filter(group => group.permissions.length > 0); // Filter out empty groups
-  
+        const group: GroupedPermission = {
+            groupLabel: mainItem.label,
+            permissions: [],
+        };
+        
+        // The ID for main items is just the href, but we need to handle the leading slash
+        const mainPermId = mainItem.href.replace('/', '');
+        const mainPermission = permissionMap.get(mainPermId);
+        if (mainPermission) {
+            group.permissions.push(mainPermission);
+        }
+
+        if (mainItem.subItems) {
+            mainItem.subItems.forEach(subItem => {
+                // The ID for sub-items has slashes replaced with hyphens
+                const subPermId = subItem.href.replace(/\//g, '-').substring(1);
+                const subPermission = permissionMap.get(subPermId);
+                if (subPermission) {
+                    group.permissions.push(subPermission);
+                }
+            });
+        }
+
+        return group;
+    }).filter(group => group.permissions.length > 0);
+
   }, [permissions]);
 
   const handleAddRole = () => {
@@ -171,7 +173,7 @@ export function RoleForm({ tenantId }: RoleFormProps) {
                         {groupedPermissions.map((group) => (
                             <div key={group.groupLabel} className='space-y-2 break-inside-avoid'>
                                 <h4 className='font-medium border-b pb-1'>{group.groupLabel}</h4>
-                                <div className="flex flex-col gap-2">
+                                <div className="flex flex-col gap-2 pt-1">
                                 {group.permissions.map((permission) => (
                                     <div
                                         key={permission.id}
