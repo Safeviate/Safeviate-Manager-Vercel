@@ -14,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { permissionsConfig } from '@/lib/permissions-config';
 import type { Personnel, PilotProfile } from '../page';
-import type { Role } from '../../../roles/page';
+import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -38,7 +38,7 @@ interface EditPersonnelFormProps {
 
 const userTypes: UserProfile['userType'][] = ["Student", "Private Pilot", "Personnel", "Instructor"];
 
-const isPilotProfile = (user: UserProfile): user is PilotProfile => {
+const isPilotProfile = (user: Partial<UserProfile>): user is PilotProfile => {
     return user.userType === 'Student' || user.userType === 'Private Pilot' || user.userType === 'Instructor';
 }
 
@@ -92,11 +92,11 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, onCancel
         return;
     }
 
-    if (!isPilotProfile(formData) && !formData.role) {
+    if (!formData.role) {
         toast({
             variant: 'destructive',
             title: 'Missing Fields',
-            description: 'Role is required for Personnel.',
+            description: 'Role is required for all users.',
         });
         return;
     }
@@ -112,7 +112,19 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, onCancel
     
     const collectionName = isPilotProfile(formData) ? 'pilots' : 'personnel';
     const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
-    updateDocumentNonBlocking(userRef, formData);
+    
+    let dataToUpdate: Partial<UserProfile> = { ...formData };
+    if (!isPilotProfile(formData)) {
+        // Ensure pilot-specific fields are not on personnel
+        delete (dataToUpdate as Partial<PilotProfile>).pilotLicense;
+    } else {
+        // Ensure personnel-specific fields are not on pilots, except role
+        delete (dataToUpdate as Partial<Personnel>).department;
+        delete (dataToUpdate as Partial<Personnel>).permissions;
+    }
+
+    updateDocumentNonBlocking(userRef, dataToUpdate);
+
 
     toast({
         title: 'User Updated',
@@ -155,14 +167,20 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, onCancel
   };
   
   const handleRoleChange = (roleId: string) => {
-    if (isPilotProfile(formData)) return;
     const role = roles.find(r => r.id === roleId);
     if (role) {
-      setFormData(prev => ({
-        ...prev,
-        role: role.id,
-        permissions: role.permissions || []
-      }));
+      if (isPilotProfile(formData)) {
+        setFormData(prev => ({
+          ...prev,
+          role: role.id,
+        }));
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          role: role.id,
+          permissions: role.permissions || []
+        }));
+      }
     }
   }
 
@@ -218,35 +236,33 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, onCancel
                       <Label htmlFor="contactNumber">Contact Number</Label>
                       <Input id="contactNumber" value={formData.contactNumber || ''} onChange={(e) => handleInputChange('contactNumber', e.target.value)} />
                   </div>
+                  <div className="space-y-2">
+                      <Label htmlFor="role">Role</Label>
+                      <Select onValueChange={handleRoleChange} value={formData.role}>
+                          <SelectTrigger id="role">
+                              <SelectValue placeholder="Select a role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              {roles.map(role => (
+                                  <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
+                              ))}
+                          </SelectContent>
+                      </Select>
+                  </div>
                   {!isPilotProfile(formData) && (
-                    <>
-                        <div className="space-y-2">
-                            <Label htmlFor="department">Department</Label>
-                            <Select onValueChange={(value) => handleInputChange('department', value)} value={personnelData.department}>
-                                <SelectTrigger id="department">
-                                    <SelectValue placeholder="Select a department" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {departments.map(dept => (
-                                        <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="role">Role</Label>
-                            <Select onValueChange={handleRoleChange} value={personnelData.role}>
-                                <SelectTrigger id="role">
-                                    <SelectValue placeholder="Select a role" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {roles.map(role => (
-                                        <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </>
+                      <div className="space-y-2">
+                          <Label htmlFor="department">Department</Label>
+                          <Select onValueChange={(value) => handleInputChange('department', value)} value={personnelData.department}>
+                              <SelectTrigger id="department">
+                                  <SelectValue placeholder="Select a department" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  {departments.map(dept => (
+                                      <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                      </div>
                   )}
                 </CollapsibleContent>
               </Collapsible>

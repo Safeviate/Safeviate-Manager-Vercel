@@ -61,11 +61,11 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
       return;
     }
 
-    if (!isPilotUserType(userType) && !selectedRole) {
+    if (!selectedRole) {
         toast({
             variant: 'destructive',
             title: 'Missing Fields',
-            description: 'Role is required for Personnel.',
+            description: 'Role is required for all users.',
         });
         return;
     }
@@ -79,7 +79,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
       return;
     }
 
-    let newUser: Omit<Personnel, 'id'> | Omit<PilotProfile, 'id'>;
+    let newUser: Omit<Personnel, 'id' | 'permissions'> | Omit<PilotProfile, 'id'>;
     let collectionName: 'personnel' | 'pilots';
 
     if (isPilotUserType(userType)) {
@@ -89,6 +89,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
             firstName,
             lastName,
             email,
+            role: selectedRole!.id,
         };
     } else {
         collectionName = 'personnel';
@@ -99,11 +100,15 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
             email,
             department: selectedDepartment?.id || undefined,
             role: selectedRole!.id, 
-            permissions: selectedRole!.permissions || [],
         };
     }
 
     const collectionRef = collection(firestore, 'tenants', tenantId, collectionName);
+    
+    if (collectionName === 'personnel') {
+        (newUser as Omit<Personnel, 'id'>).permissions = selectedRole?.permissions || [];
+    }
+    
     addDocumentNonBlocking(collectionRef, newUser);
 
     toast({
@@ -181,35 +186,37 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
                     <Label htmlFor="email">Email</Label>
                     <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
+                
+                {userType && (
+                    <div className="space-y-2">
+                        <Label htmlFor="role">Role</Label>
+                        <Select onValueChange={handleRoleChange} value={selectedRole?.id}>
+                            <SelectTrigger id="role">
+                                <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {roles.map(role => (
+                                    <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
+
                 {!isPilotUserType(userType) && userType !== '' && (
-                    <>
-                        <div className="space-y-2">
-                            <Label htmlFor="department">Department</Label>
-                            <Select onValueChange={handleDepartmentChange} value={selectedDepartment?.id}>
-                                <SelectTrigger id="department">
-                                    <SelectValue placeholder="Select a department" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {departments.map(dept => (
-                                        <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="role">Role</Label>
-                            <Select onValueChange={handleRoleChange} value={selectedRole?.id}>
-                                <SelectTrigger id="role">
-                                    <SelectValue placeholder="Select a role" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {roles.map(role => (
-                                        <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </>
+                    <div className="space-y-2">
+                        <Label htmlFor="department">Department</Label>
+                        <Select onValueChange={handleDepartmentChange} value={selectedDepartment?.id}>
+                            <SelectTrigger id="department">
+                                <SelectValue placeholder="Select a department" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {departments.map(dept => (
+                                    <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 )}
             </div>
         </div>

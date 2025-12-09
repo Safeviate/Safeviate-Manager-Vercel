@@ -90,8 +90,13 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
           <DetailItem label="Last Name" value={user.lastName} />
           <DetailItem label="Email" value={user.email} />
           <DetailItem label="Contact Number" value={user.contactNumber} />
-          {!isPilotProfile(user) && <DetailItem label="Department" value={department?.name} />}
-          {!isPilotProfile(user) && <DetailItem label="Role" value={role?.name} />}
+          {!isPilotProfile(user) && (
+            <>
+              <DetailItem label="Department" value={department?.name} />
+              <DetailItem label="Role" value={role?.name} />
+            </>
+          )}
+           {isPilotProfile(user) && role && <DetailItem label="Role" value={role?.name} />}
         </CardContent>
       </Card>
       
