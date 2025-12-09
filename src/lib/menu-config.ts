@@ -104,6 +104,11 @@ export const menuConfig: MenuItem[] = [
         description: 'View all available application permissions.',
       },
       {
+        href: '/users/personnel',
+        label: 'Users',
+        description: 'Manage all personnel records.',
+      },
+      {
         href: '/admin/department',
         label: 'Department',
         description: 'Manage company departments.',
