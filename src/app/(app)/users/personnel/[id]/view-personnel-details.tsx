@@ -1,12 +1,15 @@
 'use client';
 
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { permissionsConfig } from '@/lib/permissions-config';
 import type { Personnel } from '../page';
 import type { Role } from '../../roles/page';
 import type { Department } from '../../../admin/department/page';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
+import { ChevronsUpDown } from 'lucide-react';
 
 interface ViewPersonnelDetailsProps {
   personnel: Personnel;
@@ -22,12 +25,7 @@ const DetailItem = ({ label, value }: { label: string; value?: string | null }) 
 );
 
 export function ViewPersonnelDetails({ personnel, role, department }: ViewPersonnelDetailsProps) {
-
-  const getPermissionName = (permissionId: string) => {
-    const [resourceId, action] = permissionId.split('-');
-    const resource = permissionsConfig.find(p => p.id === resourceId);
-    return resource ? `${resource.name}: ${action}` : permissionId;
-  };
+  const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -72,22 +70,50 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
       </div>
 
       <Card>
-        <CardHeader>
-            <CardTitle>Assigned Permissions</CardTitle>
-        </CardHeader>
-        <CardContent>
-            {personnel.permissions && personnel.permissions.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                    {personnel.permissions.map(permissionId => (
-                        <Badge key={permissionId} variant="secondary">
-                            {getPermissionName(permissionId)}
-                        </Badge>
-                    ))}
+        <Collapsible open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <CardTitle>Assigned Permissions</CardTitle>
+                     <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm" className="w-9 p-0">
+                            <ChevronsUpDown className="h-4 w-4" />
+                            <span className="sr-only">Toggle</span>
+                        </Button>
+                    </CollapsibleTrigger>
                 </div>
-            ) : (
-                <p className="text-muted-foreground">No custom permissions assigned. Inherits all permissions from the role.</p>
-            )}
-        </CardContent>
+                 <Badge variant="secondary">{personnel.permissions?.length || 0} assigned</Badge>
+            </CardHeader>
+            <CollapsibleContent>
+                <CardContent>
+                    {personnel.permissions && personnel.permissions.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                           {permissionsConfig.map((resource) => {
+                                const assignedActions = resource.actions.filter(action => 
+                                    personnel.permissions.includes(`${resource.id}-${action}`)
+                                );
+
+                                if (assignedActions.length === 0) return null;
+
+                                return (
+                                    <div key={resource.id} className='space-y-2 break-inside-avoid'>
+                                        <h4 className='font-medium border-b pb-1'>{resource.name}</h4>
+                                        <div className="flex flex-col gap-2 pt-1">
+                                            {assignedActions.map(action => (
+                                                <Badge key={action} variant="outline" className="capitalize w-fit">
+                                                    {action}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                           })}
+                        </div>
+                    ) : (
+                        <p className="text-muted-foreground">No custom permissions assigned. Inherits all permissions from the role.</p>
+                    )}
+                </CardContent>
+            </CollapsibleContent>
+        </Collapsible>
       </Card>
     </div>
   );
