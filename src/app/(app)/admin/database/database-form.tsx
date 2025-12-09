@@ -13,7 +13,7 @@ import {
 import { useFirestore } from '@/firebase';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
-import { menuConfig, settingsMenuItem } from '@/lib/menu-config';
+import { permissionsConfig } from '@/lib/permissions-config';
 
 export function DatabaseForm() {
   const firestore = useFirestore();
@@ -42,32 +42,22 @@ export function DatabaseForm() {
       );
 
       const permissionsRef = collection(firestore, 'tenants', tenantId, 'permissions');
-      const allMenuItems = [...menuConfig, settingsMenuItem];
 
-      allMenuItems.forEach(item => {
-        if (!item.href) return;
-        // Add main menu item permission
-        const mainPermRef = doc(permissionsRef, item.href.replace('/', ''));
-        setDocumentNonBlocking(mainPermRef, {
-            id: item.href,
-            name: item.label,
-            description: `Access to ${item.label} section`,
-        }, { merge: true });
+      permissionsConfig.forEach(resource => {
+        resource.actions.forEach(action => {
+            const permissionId = `${resource.id}-${action}`;
+            const permissionDocRef = doc(permissionsRef, permissionId);
+            const permissionName = `${action.charAt(0).toUpperCase() + action.slice(1)} ${resource.name}`;
 
-        // Add sub-menu items permissions
-        if (item.subItems) {
-            item.subItems.forEach(subItem => {
-                if (!subItem.href) return;
-                const subPermRef = doc(permissionsRef, subItem.href.replace(/\//g, '-').substring(1));
-                 setDocumentNonBlocking(subPermRef, {
-                    id: subItem.href,
-                    name: subItem.label,
-                    description: subItem.description,
-                }, { merge: true });
-            });
-        }
+            setDocumentNonBlocking(permissionDocRef, {
+                id: permissionId,
+                name: permissionName,
+                description: `Allows users to ${action} ${resource.name.toLowerCase()}.`,
+                resource: resource.id,
+                action: action,
+            }, { merge: true });
+        });
       });
-
 
       toast({
         title: 'Database Seeding Initiated',
@@ -89,12 +79,11 @@ export function DatabaseForm() {
       <CardHeader>
         <CardTitle>Database Setup</CardTitle>
         <CardDescription>
-          Create the initial tenant document and its associated permissions required for the application to
-          function correctly.
+          Create the initial tenant document and seed the granular, action-based permissions required for role assignment.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Button onClick={handleSeedDatabase}>Create "Safeviate" Tenant & Permissions</Button>
+        <Button onClick={handleSeedDatabase}>Create "Safeviate" Tenant & Seed Permissions</Button>
       </CardContent>
     </Card>
   );

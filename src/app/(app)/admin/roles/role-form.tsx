@@ -22,7 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { menuConfig, settingsMenuItem } from '@/lib/menu-config';
+import { permissionsConfig, type PermissionResource } from '@/lib/permissions-config';
 
 interface RoleFormProps {
   tenantId: string;
@@ -32,10 +32,12 @@ type Permission = {
     id: string;
     name: string;
     description: string;
+    resource: string;
+    action: string;
 };
 
 type GroupedPermission = {
-    groupLabel: string;
+    resource: PermissionResource;
     permissions: Permission[];
 };
 
@@ -50,42 +52,31 @@ export function RoleForm({ tenantId }: RoleFormProps) {
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'permissions')) : null),
     [firestore, tenantId]
   );
-  const { data: permissions, isLoading } = useCollection<Permission>(permissionsQuery);
+  const { data: allPermissions, isLoading } = useCollection<Permission>(permissionsQuery);
 
   const groupedPermissions = useMemo(() => {
-    if (!permissions) return [];
+    if (!allPermissions) return [];
 
-    const permissionMap = new Map(permissions.map(p => [p.id, p]));
-    const allMenuItems = [...menuConfig, settingsMenuItem];
-
-    return allMenuItems.map(mainItem => {
+    const permissionMap = new Map(allPermissions.map(p => [p.id, p]));
+    
+    return permissionsConfig.map(resource => {
         const group: GroupedPermission = {
-            groupLabel: mainItem.label,
+            resource: resource,
             permissions: [],
         };
+
+        resource.actions.forEach(action => {
+            const permId = `${resource.id}-${action}`;
+            const permission = permissionMap.get(permId);
+            if (permission) {
+                group.permissions.push(permission);
+            }
+        });
         
-        // The ID for main items is just the href, but we need to handle the leading slash
-        const mainPermId = mainItem.href.replace('/', '');
-        const mainPermission = permissionMap.get(mainPermId);
-        if (mainPermission) {
-            group.permissions.push(mainPermission);
-        }
-
-        if (mainItem.subItems) {
-            mainItem.subItems.forEach(subItem => {
-                // The ID for sub-items has slashes replaced with hyphens
-                const subPermId = subItem.href.replace(/\//g, '-').substring(1);
-                const subPermission = permissionMap.get(subPermId);
-                if (subPermission) {
-                    group.permissions.push(subPermission);
-                }
-            });
-        }
-
         return group;
     }).filter(group => group.permissions.length > 0);
 
-  }, [permissions]);
+  }, [allPermissions]);
 
   const handleAddRole = () => {
     if (!roleName.trim()) {
@@ -171,8 +162,8 @@ export function RoleForm({ tenantId }: RoleFormProps) {
                         {isLoading && <p className='text-center'>Loading permissions...</p>}
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
                         {groupedPermissions.map((group) => (
-                            <div key={group.groupLabel} className='space-y-2 break-inside-avoid'>
-                                <h4 className='font-medium border-b pb-1'>{group.groupLabel}</h4>
+                            <div key={group.resource.id} className='space-y-2 break-inside-avoid'>
+                                <h4 className='font-medium border-b pb-1'>{group.resource.name}</h4>
                                 <div className="flex flex-col gap-2 pt-1">
                                 {group.permissions.map((permission) => (
                                     <div
@@ -186,9 +177,9 @@ export function RoleForm({ tenantId }: RoleFormProps) {
                                         />
                                         <label
                                             htmlFor={permission.id}
-                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer capitalize"
                                         >
-                                            {permission.name}
+                                            {permission.action}
                                         </label>
                                     </div>
                                 ))}
@@ -196,6 +187,11 @@ export function RoleForm({ tenantId }: RoleFormProps) {
                             </div>
                         ))}
                         </div>
+                         {!isLoading && groupedPermissions.length === 0 && (
+                            <p className="text-center text-muted-foreground">
+                                No permissions found. Please seed the database from the Admin/Database page.
+                            </p>
+                        )}
                     </div>
                 </ScrollArea>
             </div>
