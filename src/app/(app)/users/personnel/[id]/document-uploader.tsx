@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, type ReactNode } from 'react';
@@ -23,7 +24,7 @@ import { format } from 'date-fns';
 interface DocumentUploaderProps {
   trigger: ReactNode;
   defaultFileName?: string;
-  onDocumentUploaded: (document: { name: string; url: string; uploadDate: string; expirationDate?: string }) => void;
+  onDocumentUploaded: (document: { name: string; url: string; uploadDate: string; expirationDate?: string | null }) => void;
 }
 
 export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUploaded }: DocumentUploaderProps) {
@@ -60,24 +61,27 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
         });
         return;
       }
-
-    console.log(`Simulating upload for file: ${file.name} as "${fileName}"`);
-    const simulatedDownloadURL = `https://example.com/docs/${Date.now()}-${file.name}`;
-    const uploadDate = new Date().toISOString();
-
-    onDocumentUploaded({
-      name: fileName,
-      url: simulatedDownloadURL,
-      uploadDate: uploadDate,
-      expirationDate: expirationDate?.toISOString(),
-    });
-
-    toast({
-      title: 'Document "Uploaded"',
-      description: `"${fileName}" has been added to the user's profile. (Simulated)`,
-    });
     
-    resetAndClose();
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+      const uploadDate = new Date().toISOString();
+
+      onDocumentUploaded({
+        name: fileName,
+        url: dataUrl,
+        uploadDate: uploadDate,
+        expirationDate: expirationDate ? expirationDate.toISOString() : null,
+      });
+
+      toast({
+        title: 'Document Uploaded',
+        description: `"${fileName}" has been added to the user's profile.`,
+      });
+      
+      resetAndClose();
+    };
+    reader.readAsDataURL(file);
   };
 
   const resetAndClose = () => {
