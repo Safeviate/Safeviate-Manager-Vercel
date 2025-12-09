@@ -78,10 +78,5 @@ export const settingsMenuItem: MenuItem = {
       label: 'Appearance',
       description: '',
     },
-    {
-      href: '/settings/setup',
-      label: 'Setup',
-      description: '',
-    },
   ],
 };
