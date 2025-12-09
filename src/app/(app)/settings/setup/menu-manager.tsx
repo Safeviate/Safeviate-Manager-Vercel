@@ -5,10 +5,20 @@ import type { MenuItem, SubMenuItem } from '@/lib/menu-config';
 import { Button } from '@/components/ui/button';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 
 const allMenuItems = [...menuConfig, settingsMenuItem];
 
 export function MenuManager() {
+  const { toast } = useToast();
+
+  const handleActionClick = () => {
+    toast({
+      title: 'Coming Soon',
+      description: 'This feature is not yet implemented.',
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -18,7 +28,7 @@ export function MenuManager() {
       <CardContent>
         <div className="space-y-4">
           <div className="flex justify-end">
-            <Button>
+            <Button onClick={handleActionClick}>
               <Plus className="mr-2 h-4 w-4" /> Add Main Menu
             </Button>
           </div>
@@ -33,10 +43,10 @@ export function MenuManager() {
                     <div className="font-semibold">{item.label}</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" onClick={handleActionClick}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" onClick={handleActionClick}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -47,7 +57,7 @@ export function MenuManager() {
                   <div className="pl-10 space-y-3">
                     <div className="flex justify-between items-center">
                         <h4 className="text-sm font-medium text-muted-foreground">Sub-menus</h4>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={handleActionClick}>
                             <Plus className="mr-2 h-4 w-4" /> Add Sub-menu
                         </Button>
                     </div>
@@ -58,10 +68,10 @@ export function MenuManager() {
                           <p className="text-sm text-muted-foreground">{subItem.description}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onClick={handleActionClick}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onClick={handleActionClick}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
