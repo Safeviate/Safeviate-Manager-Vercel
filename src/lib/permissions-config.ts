@@ -7,6 +7,13 @@ export type PermissionResource = {
   actions: PermissionAction[];
 };
 
+/**
+ * Defines all the granular permissions available in the application.
+ * This is the single source of truth for what actions can be performed.
+ * The `id` is used to construct the permission string (e.g., 'dashboard-view').
+ * The `name` is the user-friendly label for the UI.
+ * The `actions` are the specific operations available for that resource.
+ */
 export const permissionsConfig: PermissionResource[] = [
   {
     id: 'dashboard',

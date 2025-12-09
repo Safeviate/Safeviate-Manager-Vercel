@@ -1,6 +1,7 @@
+
 'use client';
 
-import { collection, doc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -12,13 +13,12 @@ import {
 import { useFirestore } from '@/firebase';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
-import { permissionsConfig } from '@/lib/permissions-config';
 
 export function DatabaseForm() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const handleSeedDatabase = () => {
+  const handleCreateTenant = () => {
     if (!firestore) {
       toast({
         variant: 'destructive',
@@ -40,27 +40,9 @@ export function DatabaseForm() {
         { merge: true }
       );
 
-      const permissionsRef = collection(firestore, 'tenants', tenantId, 'permissions');
-
-      permissionsConfig.forEach(resource => {
-        resource.actions.forEach(action => {
-            const permissionId = `${resource.id}-${action}`;
-            const permissionDocRef = doc(permissionsRef, permissionId);
-            const permissionName = `${action.charAt(0).toUpperCase() + action.slice(1)} ${resource.name}`;
-
-            setDocumentNonBlocking(permissionDocRef, {
-                id: permissionId,
-                name: permissionName,
-                description: `Allows users to ${action} ${resource.name.toLowerCase()}.`,
-                resource: resource.id,
-                action: action,
-            }, { merge: true });
-        });
-      });
-
       toast({
-        title: 'Database Seeding Initiated',
-        description: 'The "Safeviate" tenant and its permissions are being created.',
+        title: 'Database Action Initiated',
+        description: 'The "Safeviate" tenant document is being created or updated.',
       });
     } catch (e: any) {
       console.error(e);
@@ -68,7 +50,7 @@ export function DatabaseForm() {
         variant: 'destructive',
         title: 'Uh oh! Something went wrong.',
         description:
-          e.message || 'There was a problem seeding the database.',
+          e.message || 'There was a problem with the database operation.',
       });
     }
   };
@@ -78,11 +60,11 @@ export function DatabaseForm() {
       <CardHeader>
         <CardTitle>Database Setup</CardTitle>
         <CardDescription>
-          Create the initial tenant document and seed the granular, action-based permissions required for role assignment.
+          Create the initial "Safeviate" tenant document in Firestore. Permissions are now managed in the code and do not need to be seeded.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Button onClick={handleSeedDatabase}>Create "Safeviate" Tenant & Seed Permissions</Button>
+        <Button onClick={handleCreateTenant}>Create "Safeviate" Tenant</Button>
       </CardContent>
     </Card>
   );

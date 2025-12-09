@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { doc, collection, query } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -27,7 +27,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
-import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import {
     DropdownMenu,
@@ -40,7 +40,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { permissionsConfig, type PermissionResource } from '@/lib/permissions-config';
+import { permissionsConfig } from '@/lib/permissions-config';
 
 interface Role {
     id: string;
@@ -53,19 +53,6 @@ interface RoleActionsProps {
   role: Role;
 }
 
-type Permission = {
-    id: string;
-    name: string;
-    description: string;
-    resource: string;
-    action: string;
-};
-
-type GroupedPermission = {
-    resource: PermissionResource;
-    permissions: Permission[];
-};
-
 export function RoleActions({ tenantId, role }: RoleActionsProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -73,36 +60,6 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
   const [roleName, setRoleName] = useState(role.name);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(role.permissions || []);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-
-  const permissionsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'permissions')) : null),
-    [firestore, tenantId]
-  );
-  const { data: allPermissions, isLoading: isLoadingPermissions } = useCollection<Permission>(permissionsQuery);
-
-  const groupedPermissions = useMemo(() => {
-    if (!allPermissions) return [];
-
-    const permissionMap = new Map(allPermissions.map(p => [p.id, p]));
-    
-    return permissionsConfig.map(resource => {
-        const group: GroupedPermission = {
-            resource: resource,
-            permissions: [],
-        };
-
-        resource.actions.forEach(action => {
-            const permId = `${resource.id}-${action}`;
-            const permission = permissionMap.get(permId);
-            if (permission) {
-                group.permissions.push(permission);
-            }
-        });
-        
-        return group;
-    }).filter(group => group.permissions.length > 0);
-
-  }, [allPermissions]);
 
 
   useEffect(() => {
@@ -162,11 +119,9 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
     });
   }
 
-  const handlePermissionToggle = (permissionId: string) => {
+  const handlePermissionToggle = (permissionId: string, checked: boolean) => {
     setSelectedPermissions((prev) =>
-      prev.includes(permissionId)
-        ? prev.filter((id) => id !== permissionId)
-        : [...prev, permissionId]
+      checked ? [...prev, permissionId] : prev.filter((id) => id !== permissionId)
     );
   };
 
@@ -220,39 +175,36 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
                         <Label>Permissions</Label>
                         <ScrollArea className="h-72 w-full rounded-md border">
                             <div className="p-4">
-                                {isLoadingPermissions && <p className='text-center'>Loading permissions...</p>}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                                {groupedPermissions.map((group) => (
-                                    <div key={group.resource.id} className='space-y-2 break-inside-avoid'>
-                                        <h4 className='font-medium border-b pb-1'>{group.resource.name}</h4>
+                                {permissionsConfig.map((resource) => (
+                                    <div key={resource.id} className='space-y-2 break-inside-avoid'>
+                                        <h4 className='font-medium border-b pb-1'>{resource.name}</h4>
                                         <div className="flex flex-col gap-2 pt-1">
-                                        {group.permissions.map((permission) => (
-                                            <div
-                                                key={permission.id}
-                                                className="flex items-center space-x-2"
-                                            >
-                                                <Checkbox
-                                                    id={`edit-${permission.id}`}
-                                                    checked={selectedPermissions.includes(permission.id)}
-                                                    onCheckedChange={() => handlePermissionToggle(permission.id)}
-                                                />
-                                                <label
-                                                    htmlFor={`edit-${permission.id}`}
-                                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer capitalize"
+                                        {resource.actions.map((action) => {
+                                            const permissionId = `${resource.id}-${action}`;
+                                            return (
+                                                <div
+                                                    key={permissionId}
+                                                    className="flex items-center space-x-2"
                                                 >
-                                                    {permission.action}
-                                                </label>
-                                            </div>
-                                        ))}
+                                                    <Checkbox
+                                                        id={`edit-${permissionId}`}
+                                                        checked={selectedPermissions.includes(permissionId)}
+                                                        onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)}
+                                                    />
+                                                    <label
+                                                        htmlFor={`edit-${permissionId}`}
+                                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer capitalize"
+                                                    >
+                                                        {action}
+                                                    </label>
+                                                </div>
+                                            );
+                                        })}
                                         </div>
                                     </div>
                                 ))}
                                 </div>
-                                {!isLoadingPermissions && groupedPermissions.length === 0 && (
-                                    <p className="text-center text-muted-foreground">
-                                        No permissions found. Please seed the database from the Admin/Database page.
-                                    </p>
-                                )}
                             </div>
                         </ScrollArea>
                     </div>
