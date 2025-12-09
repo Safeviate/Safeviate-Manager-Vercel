@@ -28,7 +28,7 @@ export default function PermissionsPage() {
         <CardTitle>Application Permissions</CardTitle>
         <CardDescription>
           Review permissions generated from the application menu structure. These
-          can be assigned to roles.
+          are for reference and can be assigned to roles.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -40,7 +40,7 @@ export default function PermissionsPage() {
               </AccordionTrigger>
               <AccordionContent className="space-y-4 pt-2">
                 <div className="flex items-center space-x-2 rounded-md border p-4">
-                  <Checkbox id={`${mainItem.href}-access`} />
+                  <Checkbox id={`${mainItem.href}-access`} disabled />
                   <div className="grid gap-1.5 leading-none">
                     <Label
                       htmlFor={`${mainItem.href}-access`}
@@ -65,7 +65,7 @@ export default function PermissionsPage() {
                         key={subItem.href}
                         className="flex items-center space-x-2"
                       >
-                        <Checkbox id={subItem.href} />
+                        <Checkbox id={subItem.href} disabled />
                         <div className="grid gap-1.5 leading-none">
                           <Label htmlFor={subItem.href} className="cursor-pointer">
                             {subItem.label}

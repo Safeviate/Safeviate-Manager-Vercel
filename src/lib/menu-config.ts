@@ -12,6 +12,7 @@ import {
   Database,
   Code,
   Building2,
+  UserPlus,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -93,9 +94,14 @@ export const menuConfig: MenuItem[] = [
     icon: Shield,
     subItems: [
       {
+        href: '/admin/roles',
+        label: 'Roles',
+        description: 'Create and manage user roles.',
+      },
+      {
         href: '/admin/permissions',
         label: 'Permissions',
-        description: 'Define roles and access levels for your organization.',
+        description: 'View all available application permissions.',
       },
       {
         href: '/admin/department',
