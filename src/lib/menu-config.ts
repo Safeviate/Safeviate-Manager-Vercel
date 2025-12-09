@@ -119,6 +119,11 @@ export const menuConfig: MenuItem[] = [
             href: '/development/database',
             label: 'Database',
             description: 'Manage database seeding and setup.',
+        },
+        {
+          href: '/development/test',
+          label: 'Test',
+          description: 'A test page for development purposes.'
         }
     ]
   }
