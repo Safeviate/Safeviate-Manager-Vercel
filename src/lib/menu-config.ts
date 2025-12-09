@@ -77,8 +77,8 @@ export const menuConfig: MenuItem[] = [
         description: 'Manage student records and progress.',
       },
       {
-        href: '/users/instructors',
-        label: 'Instructors',
+        href: '/users/private',
+        label: 'Private',
         description: 'Manage instructor profiles and schedules.',
       },
       {
