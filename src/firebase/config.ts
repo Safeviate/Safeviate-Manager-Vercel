@@ -4,5 +4,5 @@ export const firebaseConfig = {
   "projectId": "safeviate-aviation-management",
   "storageBucket": "safeviate-aviation-management.firebasestorage.app",
   "messagingSenderId": "590769121002",
-  "appId": "1:590769121002:web:74a488f15e0798d91fd993"
+  "appId": "1:590769121002:web:59bd3368721013d01fd993"
 };
