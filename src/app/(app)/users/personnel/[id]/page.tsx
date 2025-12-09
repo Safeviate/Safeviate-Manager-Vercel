@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -17,9 +16,10 @@ interface UserProfilePageProps {
     params: { id: string };
 }
 
-export default function UserProfilePage({ params: { id: userId } }: UserProfilePageProps) {
+export default function UserProfilePage({ params }: UserProfilePageProps) {
     const firestore = useFirestore();
     const tenantId = 'safeviate'; // Hardcoded for now
+    const userId = params.id;
     const [isEditing, setIsEditing] = useState(false);
 
     const personnelDocRef = useMemoFirebase(
