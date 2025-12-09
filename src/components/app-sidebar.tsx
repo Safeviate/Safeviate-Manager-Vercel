@@ -37,8 +37,7 @@ export function AppSidebar() {
   const auth = useAuth();
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
-  const dropdownId = React.useId();
-
+  
   const handleSignOut = () => {
     if (auth) {
       signOut(auth);
@@ -107,7 +106,7 @@ export function AppSidebar() {
                   <span className='group-data-[collapsible=icon]:hidden'>Guest User</span>
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="right" align="end" className="w-56" id={dropdownId}>
+              <DropdownMenuContent side="right" align="end" className="w-56" id="user-profile-dropdown">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
