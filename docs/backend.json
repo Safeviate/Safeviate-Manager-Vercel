@@ -151,6 +151,11 @@
           "type": "string",
           "description": "Unique identifier for the Personnel entity."
         },
+        "userType": {
+          "type": "string",
+          "description": "The category of the user.",
+          "enum": ["Student", "Private Pilot", "Personnel"]
+        },
         "firstName": {
           "type": "string",
           "description": "Personnel's first name."
@@ -256,6 +261,7 @@
       },
       "required": [
         "id",
+        "userType",
         "firstName",
         "lastName",
         "role",

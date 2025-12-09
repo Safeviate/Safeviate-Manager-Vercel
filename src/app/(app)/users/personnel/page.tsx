@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { PersonnelForm } from './personnel-form';
 import { PersonnelActions } from './personnel-actions';
@@ -20,6 +20,7 @@ import type { Department } from '../../admin/department/page';
 
 export type Personnel = {
   id: string;
+  userType: 'Student' | 'Private Pilot' | 'Personnel';
   firstName: string;
   lastName: string;
   email: string;
@@ -69,7 +70,7 @@ export default function PersonnelPage() {
   const personnelQuery = useMemoFirebase(
     () =>
       firestore
-        ? query(collection(firestore, 'tenants', tenantId, 'personnel'))
+        ? query(collection(firestore, 'tenants', tenantId, 'personnel'), where('userType', '==', 'Personnel'))
         : null,
     [firestore]
   );

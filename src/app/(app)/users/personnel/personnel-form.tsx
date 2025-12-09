@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState } from 'react';
 import { collection } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,10 +18,10 @@ import { Label } from '@/components/ui/label';
 import { PlusCircle } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Role } from '../roles/page';
 import type { Department } from '../../admin/department/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { Personnel } from './page';
 
 interface PersonnelFormProps {
   tenantId: string;
@@ -29,12 +29,15 @@ interface PersonnelFormProps {
   departments: Department[];
 }
 
+const userTypes: Personnel['userType'][] = ["Student", "Private Pilot", "Personnel"];
+
 export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Simplified form state
+  // Form state
+  const [userType, setUserType] = useState<Personnel['userType'] | ''>('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -42,11 +45,11 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   
   const handleAddPersonnel = () => {
-    if (!firstName.trim() || !lastName.trim() || !email.trim() || !selectedRole) {
+    if (!userType || !firstName.trim() || !lastName.trim() || !email.trim() || !selectedRole) {
       toast({
         variant: 'destructive',
         title: 'Missing Fields',
-        description: 'First Name, Last Name, Email, and Role are required.',
+        description: 'User Type, First Name, Last Name, Email, and Role are required.',
       });
       return;
     }
@@ -62,13 +65,13 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
 
     const personnelRef = collection(firestore, 'tenants', tenantId, 'personnel');
     addDocumentNonBlocking(personnelRef, { 
+        userType,
         firstName, 
         lastName, 
         email,
         department: selectedDepartment?.id || null,
         role: selectedRole.id, 
         permissions: selectedRole.permissions || [], // Default to role's permissions
-        // Other fields are intentionally omitted for simplicity
     });
 
     toast({
@@ -80,6 +83,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
   };
 
   const resetForm = () => {
+    setUserType('');
     setFirstName('');
     setLastName('');
     setEmail('');
@@ -120,6 +124,19 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
         </DialogHeader>
         <div className="flex flex-col gap-6 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="space-y-2 col-span-2">
+                    <Label htmlFor="userType">User Type</Label>
+                    <Select onValueChange={(value) => setUserType(value as Personnel['userType'])} value={userType}>
+                        <SelectTrigger id="userType">
+                            <SelectValue placeholder="Select a user type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {userTypes.map(type => (
+                                <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
                 <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
                     <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} />

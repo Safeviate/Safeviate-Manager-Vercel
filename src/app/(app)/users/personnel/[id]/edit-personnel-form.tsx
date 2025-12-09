@@ -34,6 +34,7 @@ interface EditPersonnelFormProps {
 }
 
 type License = NonNullable<Personnel['licenses']>[0];
+const userTypes: Personnel['userType'][] = ["Student", "Private Pilot", "Personnel"];
 
 export function EditPersonnelForm({ tenantId, personnel, roles, departments, onCancel }: EditPersonnelFormProps) {
   const firestore = useFirestore();
@@ -71,11 +72,11 @@ export function EditPersonnelForm({ tenantId, personnel, roles, departments, onC
   };
 
   const handleUpdatePersonnel = () => {
-     if (!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.email?.trim() || !formData.role) {
+     if (!formData.userType || !formData.firstName?.trim() || !formData.lastName?.trim() || !formData.email?.trim() || !formData.role) {
       toast({
         variant: 'destructive',
         title: 'Missing Fields',
-        description: 'First Name, Last Name, Email, and Role are required.',
+        description: 'User Type, First Name, Last Name, Email, and Role are required.',
       });
       return;
     }
@@ -180,6 +181,19 @@ export function EditPersonnelForm({ tenantId, personnel, roles, departments, onC
                   </div>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                      <Label htmlFor="userType">User Type</Label>
+                      <Select onValueChange={(value) => handleInputChange('userType', value)} value={formData.userType}>
+                          <SelectTrigger id="userType">
+                              <SelectValue placeholder="Select a user type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              {userTypes.map(type => (
+                                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                              ))}
+                          </SelectContent>
+                      </Select>
+                  </div>
                   <div className="space-y-2">
                       <Label htmlFor="firstName">First Name</Label>
                       <Input id="firstName" value={formData.firstName || ''} onChange={(e) => handleInputChange('firstName', e.target.value)} />

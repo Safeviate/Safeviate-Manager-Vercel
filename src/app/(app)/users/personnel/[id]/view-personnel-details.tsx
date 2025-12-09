@@ -33,7 +33,12 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
        {/* --- Contact & Role --- */}
       <Card>
         <CardHeader>
-          <CardTitle>Contact & Role</CardTitle>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle>Contact & Role</CardTitle>
+            </div>
+            <Badge>{personnel.userType}</Badge>
+          </div>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <DetailItem label="First Name" value={personnel.firstName} />
