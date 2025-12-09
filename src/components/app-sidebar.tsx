@@ -60,7 +60,7 @@ export function AppSidebar() {
         <SidebarMenu>
           {visibleMenuConfig.map((item, index) => (
              <React.Fragment key={item.href}>
-              {item.label === 'Dashboard' && <SidebarSeparator className="my-1 mx-2" />}
+              {item.label === 'My Dashboard' && <SidebarSeparator className="my-1 mx-2" />}
               <SidebarMenuItem>
                 <Link href={item.href} className="w-full">
                   <SidebarMenuButton
@@ -72,7 +72,7 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
-              {index < visibleMenuConfig.length -1 && <SidebarSeparator className="my-1 mx-2" />}
+              {index < visibleMenuConfig.length -1 && item.label !== 'My Dashboard' && <SidebarSeparator className="my-1 mx-2" />}
             </React.Fragment>
           ))}
         </SidebarMenu>
@@ -91,15 +91,13 @@ export function AppSidebar() {
             <SidebarSeparator className="my-1 mx-2" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuItem>
-                  <SidebarMenuButton tooltip="Guest User" className="w-full justify-start">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src="https://picsum.photos/seed/guest-user/100/100" />
-                      <AvatarFallback>G</AvatarFallback>
-                    </Avatar>
-                    <span className='group-data-[collapsible=icon]:hidden'>Guest User</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                <SidebarMenuButton tooltip="Guest User" className="w-full justify-start">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src="https://picsum.photos/seed/guest-user/100/100" />
+                    <AvatarFallback>G</AvatarFallback>
+                  </Avatar>
+                  <span className='group-data-[collapsible=icon]:hidden'>Guest User</span>
+                </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="right" align="end" className="w-56">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
