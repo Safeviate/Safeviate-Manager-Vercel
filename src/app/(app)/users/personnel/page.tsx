@@ -15,7 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import type { Role } from '../roles/page';
+import type { Role } from '../../admin/roles/page';
 import type { Department } from '../../admin/department/page';
 
 export type Personnel = {
@@ -60,6 +60,7 @@ export type Personnel = {
     name: string;
     url: string;
     uploadDate: string;
+    expirationDate?: string;
   }[];
 };
 

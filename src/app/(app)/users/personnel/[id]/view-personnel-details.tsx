@@ -5,11 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { permissionsConfig } from '@/lib/permissions-config';
 import type { Personnel } from '../page';
-import type { Role } from '../../../roles/page';
+import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { ChevronsUpDown, Award, FileText, Upload, Trash2, Link as LinkIcon } from 'lucide-react';
+import { ChevronsUpDown, Award, FileText, Upload, Trash2, Link as LinkIcon, CalendarDays } from 'lucide-react';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { DocumentUploader } from './document-uploader';
@@ -38,7 +38,7 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
   const requiredDocuments = role?.requiredDocuments || [];
   const uploadedDocuments = personnel?.documents || [];
 
-  const handleDocumentUploaded = (document: {name: string, url: string, uploadDate: string}) => {
+  const handleDocumentUploaded = (document: {name: string, url: string, uploadDate: string, expirationDate?: string}) => {
     if (!firestore) return;
     const personnelRef = doc(firestore, 'tenants', 'safeviate', 'personnel', personnel.id);
     const newDocuments = [...uploadedDocuments, document];
@@ -206,6 +206,12 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
                                      <div>
                                         <p className="font-medium">{doc.name}</p>
                                         <p className="text-xs text-muted-foreground">Uploaded on {format(new Date(doc.uploadDate), 'PPP')}</p>
+                                        {doc.expirationDate && (
+                                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                            <CalendarDays className="h-3 w-3" />
+                                            Expires on {format(new Date(doc.expirationDate), 'PPP')}
+                                          </p>
+                                        )}
                                      </div>
                                 </div>
                                 <Button variant="ghost" size="icon" className='text-destructive' onClick={() => handleDeleteDocument(doc.url)}>
