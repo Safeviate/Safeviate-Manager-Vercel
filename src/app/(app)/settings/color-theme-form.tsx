@@ -28,6 +28,12 @@ type SidebarThemeColors = {
   'sidebar-border': string;
 };
 
+type HeaderThemeColors = {
+  'header-background': string;
+  'header-foreground': string;
+  'header-border': string;
+};
+
 // Helper to get CSS variable in HSL string format
 const getCssVar = (name: string) => {
     if (typeof window === 'undefined') return '';
@@ -91,6 +97,11 @@ export function ColorThemeForm() {
     'sidebar-accent-foreground': '#1e293b',
     'sidebar-border': '#94a3b8',
   });
+  const [headerColors, setHeaderColors] = useState<HeaderThemeColors>({
+    'header-background': '#ebf5fb',
+    'header-foreground': '#1e293b',
+    'header-border': '#e2e8f0',
+  });
 
 
   useEffect(() => {
@@ -98,6 +109,7 @@ export function ColorThemeForm() {
     const savedColors = localStorage.getItem('safeviate-theme');
     const savedCardColors = localStorage.getItem('safeviate-card-theme');
     const savedSidebarColors = localStorage.getItem('safeviate-sidebar-theme');
+    const savedHeaderColors = localStorage.getItem('safeviate-header-theme');
 
     if (savedColors) {
       const parsedColors = JSON.parse(savedColors);
@@ -146,6 +158,20 @@ export function ColorThemeForm() {
             'sidebar-border': hslToHex(getCssVar('--sidebar-border')),
         })
     }
+     if (savedHeaderColors) {
+      const parsedColors = JSON.parse(savedHeaderColors);
+      setHeaderColors(parsedColors);
+       Object.entries(parsedColors).forEach(([key, value]) => {
+        const hslValue = hexToHsl(value as string);
+        document.documentElement.style.setProperty(`--${key}`, hslValue);
+      });
+    } else {
+        setHeaderColors({
+            'header-background': hslToHex(getCssVar('--header-background')),
+            'header-foreground': hslToHex(getCssVar('--header-foreground')),
+            'header-border': hslToHex(getCssVar('--header-border')),
+        })
+    }
   }, []);
 
   const handleColorChange = (name: keyof ThemeColors, value: string) => {
@@ -175,10 +201,20 @@ export function ColorThemeForm() {
     localStorage.setItem('safeviate-sidebar-theme', JSON.stringify(newColors));
   };
 
+  const handleHeaderColorChange = (name: keyof HeaderThemeColors, value: string) => {
+    const newColors = { ...headerColors, [name]: value };
+    setHeaderColors(newColors);
+
+    const hslValue = hexToHsl(value);
+    document.documentElement.style.setProperty(`--${name}`, hslValue);
+    localStorage.setItem('safeviate-header-theme', JSON.stringify(newColors));
+  };
+
   const resetColors = () => {
     localStorage.removeItem('safeviate-theme');
     localStorage.removeItem('safeviate-card-theme');
     localStorage.removeItem('safeviate-sidebar-theme');
+    localStorage.removeItem('safeviate-header-theme');
     window.location.reload();
   }
 
@@ -209,6 +245,28 @@ export function ColorThemeForm() {
           </div>
         </div>
 
+        <Separator />
+
+        <div>
+          <h3 className="text-lg font-medium mb-4">Header Theme</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Object.entries(headerColors).map(([name, value]) => (
+              <div key={name} className="space-y-2">
+                <Label htmlFor={name} className="capitalize">{name.replace('header-', '')}</Label>
+                <div className='relative'>
+                  <Input
+                    id={name}
+                    type="color"
+                    value={value}
+                    onChange={(e) => handleHeaderColorChange(name as keyof HeaderThemeColors, e.target.value)}
+                    className="p-1 h-10"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        
         <Separator />
 
         <div>

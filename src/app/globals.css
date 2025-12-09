@@ -37,6 +37,9 @@
     --sidebar-accent-foreground: 215 28% 17%;
     --sidebar-border: 205 30% 85%;
     --sidebar-ring: 205 85% 65%;
+    --header-background: 205 67% 95%;
+    --header-foreground: 215 28% 17%;
+    --header-border: 205 30% 85%;
   }
   .dark {
     --background: 215 28% 17%;
@@ -71,6 +74,9 @@
     --sidebar-accent-foreground: 205 67% 95%;
     --sidebar-border: 215 20% 25%;
     --sidebar-ring: 205 85% 65%;
+    --header-background: 215 28% 17%;
+    --header-foreground: 205 67% 95%;
+    --header-border: 215 20% 25%;
   }
 }
 
@@ -80,5 +86,8 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  .border-b {
+    border-bottom-color: hsl(var(--header-border));
   }
 }
