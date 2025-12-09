@@ -34,6 +34,23 @@ export const menuConfig: MenuItem[] = [
     icon: User,
   },
   {
+    href: '/operations',
+    label: 'Operations',
+    icon: Wrench,
+    subItems: [
+      {
+        href: '/operations/maintenance',
+        label: 'Maintenance',
+        description: 'Track and manage aircraft maintenance.',
+      },
+      {
+        href: '/operations/safety',
+        label: 'Safety & Quality',
+        description: 'Oversee safety protocols and quality assurance.',
+      },
+    ],
+  },
+  {
     href: '/management',
     label: 'Management',
     icon: Users,
@@ -52,23 +69,6 @@ export const menuConfig: MenuItem[] = [
         href: '/management/personnel',
         label: 'Personnel',
         description: 'Manage all other personnel records.',
-      },
-    ],
-  },
-  {
-    href: '/operations',
-    label: 'Operations',
-    icon: Wrench,
-    subItems: [
-      {
-        href: '/operations/maintenance',
-        label: 'Maintenance',
-        description: 'Track and manage aircraft maintenance.',
-      },
-      {
-        href: '/operations/safety',
-        label: 'Safety & Quality',
-        description: 'Oversee safety protocols and quality assurance.',
       },
     ],
   },
