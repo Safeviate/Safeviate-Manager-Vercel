@@ -11,22 +11,13 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 import {
-  LayoutDashboard,
-  Users,
-  Wrench,
-  Settings,
   Plane,
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React from 'react';
-
-const mainMenuItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/management', label: 'Management', icon: Users },
-  { href: '/operations', label: 'Operations', icon: Wrench },
-]
+import { menuConfig, settingsMenuItem } from '@/lib/menu-config';
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -43,7 +34,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {mainMenuItems.map((item, index) => (
+          {menuConfig.map((item, index) => (
              <React.Fragment key={item.href}>
               <SidebarMenuItem>
                 <Link href={item.href} className="w-full">
@@ -56,7 +47,7 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
-              {index < mainMenuItems.length -1 && <SidebarSeparator className="my-1 mx-2" />}
+              {index < menuConfig.length -1 && <SidebarSeparator className="my-1 mx-2" />}
             </React.Fragment>
           ))}
         </SidebarMenu>
@@ -65,10 +56,10 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarMenu>
             <SidebarMenuItem>
-              <Link href="/settings" className="w-full">
-                <SidebarMenuButton isActive={pathname === '/settings'} tooltip="Settings">
-                  <Settings />
-                  <span>Settings</span>
+              <Link href={settingsMenuItem.href} className="w-full">
+                <SidebarMenuButton isActive={pathname === settingsMenuItem.href} tooltip={settingsMenuItem.label}>
+                  <settingsMenuItem.icon />
+                  <span>{settingsMenuItem.label}</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
