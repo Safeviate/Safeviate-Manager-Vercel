@@ -22,7 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { menuConfig, settingsMenuItem, type MenuItem } from '@/lib/menu-config';
+import { menuConfig, settingsMenuItem } from '@/lib/menu-config';
 
 interface RoleFormProps {
   tenantId: string;
@@ -54,41 +54,35 @@ export function RoleForm({ tenantId }: RoleFormProps) {
 
   const groupedPermissions = useMemo(() => {
     if (!permissions) return [];
-
-    const allMenuItems = [...menuConfig, settingsMenuItem];
+  
     const permissionMap = new Map(permissions.map(p => [p.id, p]));
-
-    const result: GroupedPermission[] = allMenuItems
-        .filter(mainItem => {
-            // Include group if the main permission exists OR any sub-item permission exists
-            const mainPermissionExists = permissionMap.has(mainItem.href);
-            const subPermissionsExist = mainItem.subItems?.some(sub => permissionMap.has(sub.href)) ?? false;
-            return mainPermissionExists || subPermissionsExist;
-        })
-        .map(mainItem => {
-            const groupPermissions: Permission[] = [];
-            
-            // Add the main permission if it exists
-            const mainPermission = permissionMap.get(mainItem.href);
-            if (mainPermission) {
-                groupPermissions.push(mainPermission);
-            }
-
-            // Add all existing sub-item permissions
-            mainItem.subItems?.forEach(subItem => {
-                const subPermission = permissionMap.get(subItem.href);
-                if (subPermission) {
-                    groupPermissions.push(subPermission);
-                }
-            });
-
-            return {
-                groupLabel: mainItem.label,
-                permissions: groupPermissions,
-            };
+    const allMenuItems = [...menuConfig, settingsMenuItem];
+  
+    return allMenuItems.map(mainItem => {
+      const group: GroupedPermission = {
+        groupLabel: mainItem.label,
+        permissions: [],
+      };
+  
+      // Add main permission if it exists
+      const mainPermission = permissionMap.get(mainItem.href);
+      if (mainPermission) {
+        group.permissions.push(mainPermission);
+      }
+  
+      // Add sub-permissions if they exist
+      if (mainItem.subItems) {
+        mainItem.subItems.forEach(subItem => {
+          const subPermission = permissionMap.get(subItem.href);
+          if (subPermission) {
+            group.permissions.push(subPermission);
+          }
         });
-
-    return result.sort((a, b) => a.groupLabel.localeCompare(b.groupLabel));
+      }
+  
+      return group;
+    }).filter(group => group.permissions.length > 0); // Filter out empty groups
+  
   }, [permissions]);
 
   const handleAddRole = () => {
