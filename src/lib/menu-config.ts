@@ -11,6 +11,7 @@ import {
   Package,
   Database,
   Code,
+  Building2,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -96,6 +97,11 @@ export const menuConfig: MenuItem[] = [
         label: 'Permissions',
         description: 'Define roles and access levels for your organization.',
       },
+      {
+        href: '/admin/department',
+        label: 'Department',
+        description: 'Manage company departments.',
+      }
     ],
   },
   {

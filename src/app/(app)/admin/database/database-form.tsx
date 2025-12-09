@@ -9,7 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore } from '@/firebase/hooks';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { menuConfig, settingsMenuItem } from '@/lib/menu-config';
 
@@ -18,6 +19,14 @@ export function DatabaseForm() {
   const { toast } = useToast();
 
   const handleSeedDatabase = () => {
+    if (!firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Firestore is not initialized.',
+      });
+      return;
+    }
     try {
       const tenantId = 'safeviate';
       const tenantRef = doc(firestore, 'tenants', tenantId);
@@ -35,6 +44,7 @@ export function DatabaseForm() {
       const allMenuItems = [...menuConfig, settingsMenuItem];
 
       allMenuItems.forEach(item => {
+        if (!item.href) return;
         // Add main menu item permission
         const mainPermRef = doc(permissionsRef, item.href.replace('/', ''));
         setDocumentNonBlocking(mainPermRef, {
@@ -46,7 +56,8 @@ export function DatabaseForm() {
         // Add sub-menu items permissions
         if (item.subItems) {
             item.subItems.forEach(subItem => {
-                const subPermRef = doc(permissionsRef, subItem.href.replace('/', '-'));
+                if (!subItem.href) return;
+                const subPermRef = doc(permissionsRef, subItem.href.replace(/\//g, '-').substring(1));
                  setDocumentNonBlocking(subPermRef, {
                     id: subItem.href,
                     name: subItem.label,
@@ -87,5 +98,3 @@ export function DatabaseForm() {
     </Card>
   );
 }
-
-    
