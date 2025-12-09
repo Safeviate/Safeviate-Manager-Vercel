@@ -16,6 +16,7 @@ export default function TestPage() {
         onSelect={setDate}
         className="rounded-md border w-[350px]"
         classNames={{
+            month: 'h-[280px]', // This forces the month view to a fixed height
             day_selected: "bg-orange-500 text-white hover:bg-orange-600 focus:bg-orange-600 rounded-md",
         }}
       />
@@ -25,6 +26,7 @@ export default function TestPage() {
         onSelect={setDate2}
         className="rounded-md border w-[350px]"
         classNames={{
+            month: 'h-[280px]', // This forces the month view to a fixed height
             day_selected: "bg-orange-500 text-white hover:bg-orange-600 focus:bg-orange-600 rounded-md",
         }}
       />
