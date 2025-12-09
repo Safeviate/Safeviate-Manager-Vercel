@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,14 +17,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { CalendarIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
 interface DocumentUploaderProps {
   trigger: ReactNode;
   defaultFileName?: string;
-  onDocumentUploaded: (document: { name: string; url: string; uploadDate: string; expirationDate?: string | null }) => void;
+  onDocumentUploaded: (document: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => void;
 }
 
 export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUploaded }: DocumentUploaderProps) {
@@ -34,10 +32,21 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
   const [file, setFile] = useState<File | null>(null);
   const [expirationDate, setExpirationDate] = useState<Date | undefined>();
 
+  useEffect(() => {
+    // When the dialog opens, reset the state based on the props
+    if (isOpen) {
+      setFileName(defaultFileName);
+      setFile(null);
+      setExpirationDate(undefined);
+    }
+  }, [isOpen, defaultFileName]);
+
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
         setFile(selectedFile);
+        // Only set the file name from the file if a default name isn't provided
         if (!defaultFileName) {
             setFileName(selectedFile.name);
         }
@@ -85,19 +94,12 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
   };
 
   const resetAndClose = () => {
-    setFile(null);
-    setFileName(defaultFileName);
-    setExpirationDate(undefined);
     setIsOpen(false);
+    // State is reset via useEffect when isOpen changes
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!open) {
-            resetAndClose();
-        }
-        setIsOpen(open);
-    }}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-4xl grid-rows-[auto,1fr,auto]">
         <DialogHeader>
@@ -115,6 +117,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
                     value={fileName}
                     onChange={(e) => setFileName(e.target.value)}
                     placeholder="e.g., Passport Scan"
+                    readOnly={!!defaultFileName} // Prevent editing if it's a required doc
                     />
                 </div>
                 <div className="space-y-2">
