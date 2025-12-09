@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { permissionsConfig } from '@/lib/permissions-config';
 import type { Personnel } from '../page';
@@ -9,8 +9,9 @@ import type { Role } from '../../../roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { ChevronsUpDown, Award } from 'lucide-react';
+import { ChevronsUpDown, Award, FileText, Upload } from 'lucide-react';
 import { format } from 'date-fns';
+import { Separator } from '@/components/ui/separator';
 
 interface ViewPersonnelDetailsProps {
   personnel: Personnel;
@@ -27,6 +28,9 @@ const DetailItem = ({ label, value }: { label: string; value?: string | null }) 
 
 export function ViewPersonnelDetails({ personnel, role, department }: ViewPersonnelDetailsProps) {
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
+
+  const requiredDocuments = role?.requiredDocuments || [];
+  const uploadedDocuments = personnel?.documents || [];
 
   return (
     <div className="space-y-6">
@@ -124,8 +128,43 @@ export function ViewPersonnelDetails({ personnel, role, department }: ViewPerson
         <CardHeader>
             <CardTitle>Documents</CardTitle>
         </CardHeader>
-        <CardContent>
-             <p className="text-muted-foreground">No documents uploaded.</p>
+        <CardContent className="space-y-4">
+            <div>
+                <h4 className="text-md font-medium mb-2 text-muted-foreground">Required Documents</h4>
+                {requiredDocuments.length > 0 ? (
+                    <div className="space-y-2">
+                        {requiredDocuments.map(docName => {
+                            const isUploaded = uploadedDocuments.some(d => d.name === docName);
+                            return (
+                                <div key={docName} className="flex items-center justify-between p-3 border rounded-lg bg-secondary/30">
+                                    <div className="flex items-center gap-3">
+                                        <FileText className="h-5 w-5"/>
+                                        <span className="font-medium">{docName}</span>
+                                    </div>
+                                    <Button size="sm" disabled>
+                                        <Upload className="mr-2 h-4 w-4" />
+                                        Upload
+                                    </Button>
+                                </div>
+                            )
+                        })}
+                    </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground">No specific documents are required by the assigned role.</p>
+                )}
+            </div>
+            
+            <Separator />
+            
+            <div>
+                <h4 className="text-md font-medium mb-2 text-muted-foreground">Uploaded Documents</h4>
+                {uploadedDocuments.length > 0 ? (
+                    <p className="text-sm text-muted-foreground">Document list would appear here.</p>
+                ) : (
+                     <p className="text-sm text-muted-foreground">No additional documents have been uploaded.</p>
+                )}
+            </div>
+
         </CardContent>
       </Card>
 
