@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { doc, collection, query } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,6 +39,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { menuConfig } from '@/lib/menu-config';
 
 interface Role {
     id: string;
@@ -57,6 +58,11 @@ type Permission = {
     description: string;
 };
 
+type GroupedPermission = {
+    groupLabel: string;
+    permissions: Permission[];
+};
+
 
 export function RoleActions({ tenantId, role }: RoleActionsProps) {
   const firestore = useFirestore();
@@ -72,10 +78,50 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
   );
   const { data: permissions, isLoading: isLoadingPermissions } = useCollection<Permission>(permissionsQuery);
 
+  const groupedPermissions = useMemo(() => {
+    if (!permissions) return [];
+
+    const permissionMap = new Map<string, Permission[]>();
+
+    // First, group permissions by their top-level menu item
+    menuConfig.forEach(mainItem => {
+        if (!['/dashboard', '/my-dashboard'].includes(mainItem.href)) { // Exclude some items if needed
+            permissionMap.set(mainItem.label, []);
+        }
+    });
+
+    permissions.forEach(p => {
+        const mainItem = menuConfig.find(item => p.id.startsWith(item.href));
+        if (mainItem && permissionMap.has(mainItem.label)) {
+            permissionMap.get(mainItem.label)?.push(p);
+        }
+    });
+
+    // Convert map to array and sort permissions within groups
+    const result: GroupedPermission[] = [];
+    permissionMap.forEach((perms, groupLabel) => {
+        if (perms.length > 0) {
+            // Sort by main item first, then sub-items
+            const sortedPerms = perms.sort((a, b) => {
+                const aIsMain = a.id.split('/').length === 2;
+                const bIsMain = b.id.split('/').length === 2;
+                if (aIsMain && !bIsMain) return -1;
+                if (!aIsMain && bIsMain) return 1;
+                return a.name.localeCompare(b.name);
+            });
+            result.push({ groupLabel, permissions: sortedPerms });
+        }
+    });
+    
+    return result.sort((a, b) => a.groupLabel.localeCompare(b.groupLabel));
+
+  }, [permissions]);
+
+
   useEffect(() => {
     setRoleName(role.name);
     setSelectedPermissions(role.permissions || []);
-  }, [role]);
+  }, [role, isEditDialogOpen]);
 
   const handleUpdateRole = () => {
     if (!roleName.trim()) {
@@ -161,14 +207,14 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
             </DropdownMenu>
 
             {/* Edit Dialog Content */}
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
                     <DialogTitle>Edit Role</DialogTitle>
                     <DialogDescription>
                         Update the details for the &quot;{role.name}&quot; role.
                     </DialogDescription>
                 </DialogHeader>
-                 <div className="flex flex-col gap-4 py-4">
+                 <div className="flex flex-col gap-6 py-4">
                     <div className="space-y-2">
                         <Label htmlFor="name">Role Name</Label>
                         <Input
@@ -180,34 +226,36 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
 
                     <Separator />
 
-                    <div className='space-y-2'>
+                    <div className='space-y-4'>
                         <Label>Permissions</Label>
                         <ScrollArea className="h-72 w-full rounded-md border">
                             <div className="p-4">
-                                {isLoadingPermissions && <p>Loading permissions...</p>}
-                                {permissions?.map((permission) => (
-                                <div
-                                    key={permission.id}
-                                    className="flex items-center space-x-2 mb-2"
-                                >
-                                    <Checkbox
-                                        id={`edit-${permission.id}`}
-                                        checked={selectedPermissions.includes(permission.id)}
-                                        onCheckedChange={() => handlePermissionToggle(permission.id)}
-                                    />
-                                    <div className="grid gap-1.5 leading-none">
-                                        <label
-                                            htmlFor={`edit-${permission.id}`}
-                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                                        >
-                                            {permission.name}
-                                        </label>
-                                        <p className="text-sm text-muted-foreground">
-                                            {permission.description}
-                                        </p>
+                                {isLoadingPermissions && <p className='text-center'>Loading permissions...</p>}
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                                {groupedPermissions.map((group) => (
+                                    <div key={group.groupLabel} className='space-y-2'>
+                                        <h4 className='font-medium border-b pb-1'>{group.groupLabel}</h4>
+                                        {group.permissions.map((permission) => (
+                                            <div
+                                                key={permission.id}
+                                                className="flex items-center space-x-2"
+                                            >
+                                                <Checkbox
+                                                    id={`edit-${permission.id}`}
+                                                    checked={selectedPermissions.includes(permission.id)}
+                                                    onCheckedChange={() => handlePermissionToggle(permission.id)}
+                                                />
+                                                <label
+                                                    htmlFor={`edit-${permission.id}`}
+                                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                                >
+                                                    {permission.name}
+                                                </label>
+                                            </div>
+                                        ))}
                                     </div>
-                                </div>
                                 ))}
+                                </div>
                             </div>
                         </ScrollArea>
                     </div>
