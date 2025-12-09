@@ -14,7 +14,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Eye, Trash2 } from 'lucide-react';
 import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -72,7 +72,7 @@ export function PersonnelActions({ tenantId, personnel }: PersonnelActionsProps)
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                     <Link href={`/users/personnel/${personnel.id}`}>
-                        <Pencil className='mr-2' /> Edit
+                        <Eye className='mr-2' /> View Profile
                     </Link>
                 </DropdownMenuItem>
                 <AlertDialogTrigger asChild>

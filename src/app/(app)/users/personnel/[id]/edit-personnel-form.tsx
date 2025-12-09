@@ -25,9 +25,10 @@ interface EditPersonnelFormProps {
   personnel: Personnel;
   roles: Role[];
   departments: Department[];
+  onCancel: () => void;
 }
 
-export function EditPersonnelForm({ tenantId, personnel, roles, departments }: EditPersonnelFormProps) {
+export function EditPersonnelForm({ tenantId, personnel, roles, departments, onCancel }: EditPersonnelFormProps) {
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
@@ -119,7 +120,7 @@ export function EditPersonnelForm({ tenantId, personnel, roles, departments }: E
         description: `User ${firstName} ${lastName} is being updated.`,
     });
     
-    router.push('/users/personnel');
+    onCancel(); // Go back to view mode after saving
   };
 
 
@@ -156,7 +157,7 @@ export function EditPersonnelForm({ tenantId, personnel, roles, departments }: E
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="max-h-[calc(100vh-22rem)] pr-6">
+        <ScrollArea className="max-h-[calc(100vh-25rem)] pr-6">
             <div className="flex flex-col gap-6 py-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
@@ -301,7 +302,8 @@ export function EditPersonnelForm({ tenantId, personnel, roles, departments }: E
             </div>
         </ScrollArea>
       </CardContent>
-      <CardFooter className="border-t pt-6">
+      <CardFooter className="border-t pt-6 flex justify-end gap-2">
+          <Button variant="outline" onClick={onCancel}>Cancel</Button>
           <Button onClick={handleUpdatePersonnel}>Save Changes</Button>
       </CardFooter>
     </Card>
