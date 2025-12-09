@@ -1,8 +1,9 @@
+import { MenuManager } from "./menu-manager";
 
 export default function SetupPage() {
   return (
-    <div className="flex items-center justify-center h-full">
-      <p className="text-muted-foreground">This page is under construction.</p>
+    <div className="space-y-6">
+      <MenuManager />
     </div>
   );
 }
