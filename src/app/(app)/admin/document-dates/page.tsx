@@ -23,11 +23,13 @@ export type WarningPeriod = {
 export type DocumentExpirySettings = {
   id: string;
   defaultColor: string;
+  expiredColor: string;
   warningPeriods: WarningPeriod[];
 };
 
 const defaultPeriodColor = '#facc15'; // yellow-400
 const defaultSafeColor = '#22c55e'; // green-500
+const defaultExpiredColor = '#ef4444'; // red-500
 
 export default function DocumentDatesPage() {
   const firestore = useFirestore();
@@ -47,14 +49,17 @@ export default function DocumentDatesPage() {
 
   // States for debouncing
   const [defaultColorState, setDefaultColorState] = useState(expirySettings?.defaultColor || defaultSafeColor);
+  const [expiredColorState, setExpiredColorState] = useState(expirySettings?.expiredColor || defaultExpiredColor);
   const [periodColors, setPeriodColors] = useState<Record<number, string>>({});
 
   const debouncedDefaultColor = useDebounce(defaultColorState, 500);
+  const debouncedExpiredColor = useDebounce(expiredColorState, 500);
   const debouncedPeriodColors = useDebounce(periodColors, 500);
 
   useEffect(() => {
     if (expirySettings) {
       setDefaultColorState(expirySettings.defaultColor || defaultSafeColor);
+      setExpiredColorState(expirySettings.expiredColor || defaultExpiredColor);
       const initialColors = (expirySettings.warningPeriods || []).reduce((acc, p) => {
         acc[p.period] = p.color;
         return acc;
@@ -70,6 +75,14 @@ export default function DocumentDatesPage() {
       setDocumentNonBlocking(expirySettingsRef, { defaultColor: debouncedDefaultColor }, { merge: true });
 
   }, [debouncedDefaultColor, expirySettingsRef, expirySettings?.defaultColor, isLoading]);
+
+  // Effect for saving debounced expired color
+  useEffect(() => {
+    if (!expirySettingsRef || debouncedExpiredColor === expirySettings?.expiredColor || isLoading) return;
+    
+    setDocumentNonBlocking(expirySettingsRef, { expiredColor: debouncedExpiredColor }, { merge: true });
+
+  }, [debouncedExpiredColor, expirySettingsRef, expirySettings?.expiredColor, isLoading]);
 
   // Effect for saving debounced period colors
   useEffect(() => {
@@ -144,6 +157,10 @@ export default function DocumentDatesPage() {
     setDefaultColorState(color);
   };
 
+  const handleExpiredColorChange = (color: string) => {
+    setExpiredColorState(color);
+  };
+
   if (isLoading) {
     return (
       <Card className="w-full max-w-2xl mx-auto">
@@ -188,6 +205,20 @@ export default function DocumentDatesPage() {
                     <p className="text-sm text-muted-foreground">Color for documents not within any warning period.</p>
                 </div>
             </div>
+            <div className="space-y-2">
+                <Label>Expired Color</Label>
+                <div className='flex items-center gap-4 p-2 border rounded-lg'>
+                   <div className="relative h-8 w-8 rounded-full border cursor-pointer" style={{ backgroundColor: expiredColorState }}>
+                       <Input 
+                            type="color" 
+                            value={expiredColorState}
+                            onChange={(e) => handleExpiredColorChange(e.target.value)}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0"
+                        />
+                    </div>
+                    <p className="text-sm text-muted-foreground">Color for documents that have passed their expiration date.</p>
+                </div>
+            </div>
         </div>
 
         <Separator />
@@ -221,7 +252,7 @@ export default function DocumentDatesPage() {
           </h4>
           <div className="flex flex-col gap-2 p-4 border rounded-lg min-h-16">
             {(expirySettings?.warningPeriods || []).length > 0 ? (
-              expirySettings?.warningPeriods.map(({ period, color }) => (
+              (expirySettings?.warningPeriods || []).map(({ period, color }) => (
                 <div key={period} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
                     <div className="flex items-center gap-3">
                         <div className="relative h-6 w-6 rounded-full border cursor-pointer" style={{ backgroundColor: periodColors[period] || color }}>

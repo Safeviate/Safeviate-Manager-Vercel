@@ -435,6 +435,10 @@
                 "type": "string",
                 "description": "The hex color code for documents not within any warning period."
             },
+            "expiredColor": {
+                "type": "string",
+                "description": "The hex color code for documents that have expired."
+            },
             "warningPeriods": {
                 "type": "array",
                 "description": "An array of warning period objects.",

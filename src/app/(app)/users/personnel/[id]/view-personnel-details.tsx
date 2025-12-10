@@ -46,8 +46,6 @@ const isPilotProfile = (user: UserProfile): user is PilotProfile => {
     return user.userType === 'Student' || user.userType === 'Private Pilot' || user.userType === 'Instructor';
 }
 
-const expiredColor = '#ef4444'; // red-500
-
 export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDetailsProps) {
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
@@ -71,7 +69,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     const daysUntilExpiry = differenceInDays(expiry, today);
 
     if (daysUntilExpiry < 0) {
-      return expiredColor; // Expired
+      return expirySettings.expiredColor || '#ef4444'; // Expired
     }
 
     // Find the tightest warning period that applies
