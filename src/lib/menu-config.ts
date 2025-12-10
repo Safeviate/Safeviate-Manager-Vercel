@@ -62,6 +62,11 @@ export const menuConfig: MenuItem[] = [
         label: 'Bookings (Swimlane)',
         description: 'View bookings in a vertical timeline.',
       },
+      {
+        href: '/operations/bookings-agenda',
+        label: 'Agenda/List View',
+        description: 'View daily bookings as a list.',
+      },
     ],
   },
   {
