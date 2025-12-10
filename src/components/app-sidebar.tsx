@@ -68,6 +68,7 @@ export function AppSidebar() {
           <span className="font-headline text-lg">Safeviate</span>
         </div>
       </SidebarHeader>
+      <SidebarSeparator className="my-1" />
       <SidebarContent>
         <SidebarMenu>
           {visibleMenuConfig.map((item, index) => (
