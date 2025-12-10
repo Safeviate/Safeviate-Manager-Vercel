@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,13 +15,14 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
 import { add, format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import type { Booking } from '@/types/booking';
 
 
 interface BookingFormProps {
@@ -31,6 +32,7 @@ interface BookingFormProps {
   aircraft: Aircraft;
   pilots: PilotProfile[];
   initialStartTime: Date;
+  booking?: Booking | null; // Make booking optional for editing
 }
 
 export function BookingForm({
@@ -40,9 +42,11 @@ export function BookingForm({
   aircraft,
   pilots,
   initialStartTime,
+  booking = null, // Default to null
 }: BookingFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const isEditing = !!booking;
 
   // Form State
   const [pilotId, setPilotId] = useState('');
@@ -55,9 +59,18 @@ export function BookingForm({
   }, [pilots]);
 
   useEffect(() => {
-    setStartTime(format(initialStartTime, "HH:mm"));
-    setEndTime(format(add(initialStartTime, { hours: 1 }), "HH:mm"));
-  }, [initialStartTime]);
+    if (isEditing && booking) {
+        // Pre-fill form if editing
+        setPilotId(booking.pilotId);
+        setBookingType(booking.type);
+        setStartTime(format(booking.startTime.toDate(), "HH:mm"));
+        setEndTime(format(booking.endTime.toDate(), "HH:mm"));
+    } else {
+        // Set for new booking
+        setStartTime(format(initialStartTime, "HH:mm"));
+        setEndTime(format(add(initialStartTime, { hours: 1 }), "HH:mm"));
+    }
+  }, [initialStartTime, booking, isEditing, isOpen]);
 
   const resetForm = () => {
     setPilotId('');
@@ -71,7 +84,7 @@ export function BookingForm({
     onOpenChange(open);
   };
   
-  const handleAddBooking = () => {
+  const handleSaveBooking = () => {
     if (!pilotId || !bookingType || !startTime || !endTime) {
         toast({ variant: 'destructive', title: 'Missing Fields', description: 'Please fill out all required fields.' });
         return;
@@ -81,10 +94,12 @@ export function BookingForm({
     const [startHour, startMinute] = startTime.split(':').map(Number);
     const [endHour, endMinute] = endTime.split(':').map(Number);
 
-    const finalStartTime = new Date(initialStartTime);
+    const dateBase = booking ? booking.startTime.toDate() : initialStartTime;
+    
+    const finalStartTime = new Date(dateBase);
     finalStartTime.setHours(startHour, startMinute, 0, 0);
 
-    const finalEndTime = new Date(initialStartTime);
+    const finalEndTime = new Date(dateBase);
     finalEndTime.setHours(endHour, endMinute, 0, 0);
     
     if (finalEndTime <= finalStartTime) {
@@ -92,17 +107,25 @@ export function BookingForm({
         return;
     }
 
-    const bookingsRef = collection(firestore, 'tenants', tenantId, 'bookings');
-    addDocumentNonBlocking(bookingsRef, {
+    const bookingData = {
         aircraftId: aircraft.id,
         pilotId,
         type: bookingType,
         startTime: finalStartTime,
         endTime: finalEndTime,
         status: 'Confirmed'
-    });
+    };
 
-    toast({ title: 'Booking Created', description: `Aircraft ${aircraft.tailNumber} has been booked.` });
+    if (isEditing && booking) {
+        const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', booking.id);
+        updateDocumentNonBlocking(bookingRef, bookingData);
+        toast({ title: 'Booking Updated', description: 'The booking has been successfully updated.' });
+    } else {
+        const bookingsRef = collection(firestore, 'tenants', tenantId, 'bookings');
+        addDocumentNonBlocking(bookingsRef, bookingData);
+        toast({ title: 'Booking Created', description: `Aircraft ${aircraft.tailNumber} has been booked.` });
+    }
+    
     onOpenChange(false);
   }
 
@@ -110,9 +133,9 @@ export function BookingForm({
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create Booking for {aircraft.tailNumber}</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit' : 'Create'} Booking for {aircraft.tailNumber}</DialogTitle>
           <DialogDescription>
-            Schedule a new flight for {format(initialStartTime, 'PPP')}.
+            {isEditing ? `Modify the booking details.` : `Schedule a new flight for ${format(initialStartTime, 'PPP')}.`}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">
@@ -159,7 +182,7 @@ export function BookingForm({
           <DialogClose asChild>
             <Button variant="outline">Cancel</Button>
           </DialogClose>
-          <Button onClick={handleAddBooking}>Create Booking</Button>
+          <Button onClick={handleSaveBooking}>{isEditing ? 'Save Changes' : 'Create Booking'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

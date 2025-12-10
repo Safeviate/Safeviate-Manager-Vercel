@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import type { Aircraft } from '../../assets/page';
 import type { Booking } from '@/types/booking';
 import { cn } from '@/lib/utils';
@@ -26,10 +26,12 @@ import { useToast } from '@/hooks/use-toast';
 
 interface BookingItemProps {
     booking: Booking;
+    aircraft: Aircraft;
     tenantId: string;
+    onEdit: (booking: Booking, aircraft: Aircraft) => void;
 }
 
-const BookingItem = ({ booking, tenantId }: BookingItemProps) => {
+const BookingItem = ({ booking, aircraft, tenantId, onEdit }: BookingItemProps) => {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
@@ -64,6 +66,11 @@ const BookingItem = ({ booking, tenantId }: BookingItemProps) => {
         setIsPopoverOpen(false);
     };
 
+    const handleEditClick = () => {
+        onEdit(booking, aircraft);
+        setIsPopoverOpen(false);
+    }
+
     return (
         <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
             <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
@@ -85,6 +92,9 @@ const BookingItem = ({ booking, tenantId }: BookingItemProps) => {
                 <PopoverContent className="w-56 p-2">
                     <div className="flex flex-col gap-2">
                          <p className="text-sm font-semibold p-2">{booking.type}</p>
+                         <Button variant="outline" size="sm" onClick={handleEditClick}>
+                            Edit Booking
+                         </Button>
                          {booking.status !== 'Cancelled' && (
                             <Button variant="outline" size="sm" onClick={handleCancelBooking}>
                                 Cancel Booking
@@ -137,7 +147,7 @@ export function BookingCalendar({
 
   // State for the booking form dialog
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formInitialData, setFormInitialData] = useState<{ aircraft: Aircraft, startTime: Date } | null>(null);
+  const [formInitialData, setFormInitialData] = useState<{ aircraft: Aircraft, startTime: Date, booking?: Booking | null } | null>(null);
 
   const timeSlots = useMemo(() => {
     return Array.from({ length: HOURS_IN_DAY }, (_, i) => {
@@ -196,9 +206,18 @@ export function BookingCalendar({
 
     const clickedTime = setMilliseconds(setSeconds(setMinutes(setHours(startOfDay(selectedDate), hour), minute), 0), 0);
 
-    setFormInitialData({ aircraft: ac, startTime: clickedTime });
+    setFormInitialData({ aircraft: ac, startTime: clickedTime, booking: null });
     setIsFormOpen(true);
   };
+
+  const handleEditBooking = useCallback((booking: Booking, aircraft: Aircraft) => {
+    setFormInitialData({
+      aircraft,
+      startTime: booking.startTime.toDate(),
+      booking,
+    });
+    setIsFormOpen(true);
+  }, []);
 
 
   return (
@@ -253,7 +272,13 @@ export function BookingCalendar({
                             {bookings
                                 .filter(b => b.aircraftId === ac.id)
                                 .map(booking => (
-                                    <BookingItem key={booking.id} booking={booking} tenantId={tenantId} />
+                                    <BookingItem 
+                                        key={booking.id} 
+                                        booking={booking} 
+                                        aircraft={ac}
+                                        tenantId={tenantId}
+                                        onEdit={handleEditBooking}
+                                    />
                             ))}
                         </div>
                     ))}
@@ -275,6 +300,7 @@ export function BookingCalendar({
             aircraft={formInitialData.aircraft}
             pilots={pilots}
             initialStartTime={formInitialData.startTime}
+            booking={formInitialData.booking}
         />
     )}
     </>
