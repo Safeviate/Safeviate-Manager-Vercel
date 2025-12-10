@@ -21,6 +21,7 @@ import type { DocumentExpirySettings } from '../../admin/document-dates/page';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Input } from '@/components/ui/input';
 import { SetServiceForm } from './set-service-form';
+import { ServiceCountdown } from './service-countdown';
 
 interface ViewAircraftDetailsProps {
   aircraft: Aircraft;
@@ -182,8 +183,8 @@ export function ViewAircraftDetails({ aircraft }: ViewAircraftDetailsProps) {
                 <DetailItem label="Current Hobbs" value={aircraft.currentHobbs} />
                 <DetailItem label="Initial Tacho" value={aircraft.initialTacho} />
                 <DetailItem label="Current Tacho" value={aircraft.currentTacho} />
-                <DetailItem label="Hours to Next 50 Insp." value={aircraft.hoursToNext50Inspection} />
-                <DetailItem label="Hours to Next 100 Insp." value={aircraft.hoursToNext100Inspection} />
+                <ServiceCountdown label="Next 50hr Inspection" hoursRemaining={aircraft.hoursToNext50Inspection} totalHours={50} />
+                <ServiceCountdown label="Next 100hr Inspection" hoursRemaining={aircraft.hoursToNext100Inspection} totalHours={100} />
             </CardContent>
         </Card>
         
@@ -309,7 +310,3 @@ export function ViewAircraftDetails({ aircraft }: ViewAircraftDetailsProps) {
     </div>
   );
 }
-
-    
-
-    
