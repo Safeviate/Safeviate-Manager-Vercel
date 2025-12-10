@@ -327,10 +327,9 @@ export default function BookingsPage() {
           )}
           {error && <p className="p-6 text-destructive">Error loading data: {error.message}</p>}
           {!isLoading && !error && (
-            <div className='overflow-x-auto h-full'>
-              <div className="min-w-max flex flex-col h-full">
+            <div className='relative overflow-auto h-full'>
                 {/* Header */}
-                <div className="flex bg-swimlane-header text-swimlane-header-foreground flex-shrink-0 sticky top-0 z-20">
+                <div className="sticky top-0 z-30 flex bg-swimlane-header text-swimlane-header-foreground flex-shrink-0">
                   {(aircraft || []).map((ac) => (
                     <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px]">
                       {ac.tailNumber}
@@ -345,7 +344,7 @@ export default function BookingsPage() {
                 </div>
 
                 {/* Body */}
-                <div className="flex flex-grow" style={{height: `${TOTAL_HOURS * HOUR_HEIGHT_PX}px`}}>
+                <div className="flex min-w-max" style={{height: `${TOTAL_HOURS * HOUR_HEIGHT_PX}px`}}>
                   {(aircraft || []).map((ac) => (
                     <AircraftColumn
                       key={ac.id}
@@ -375,7 +374,6 @@ export default function BookingsPage() {
                   ))}
                   {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-4 text-center text-muted-foreground">Please add aircraft to see the schedule.</div>}
                 </div>
-              </div>
             </div>
           )}
         </CardContent>
