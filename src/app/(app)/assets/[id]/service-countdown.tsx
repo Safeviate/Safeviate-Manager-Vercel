@@ -2,6 +2,7 @@
 'use client';
 
 import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 
 interface ServiceCountdownProps {
   label: string;
@@ -20,7 +21,7 @@ export function ServiceCountdown({
   const next = tachoAtNextInspection ?? 0;
 
   const hoursRemaining = Math.max(0, next - current);
-  const progressPercentage = (hoursRemaining / inspectionInterval) * 100;
+  const progressPercentage = Math.max(0, (hoursRemaining / inspectionInterval) * 100);
 
   let progressColorClass = 'bg-primary'; // Default color
   if (progressPercentage <= 20) {
@@ -35,9 +36,7 @@ export function ServiceCountdown({
         <p className="text-sm font-medium text-muted-foreground">{label}</p>
         <p className="text-base font-semibold">{hoursRemaining.toFixed(1)} hrs left</p>
       </div>
-      <Progress value={progressPercentage} className="h-2 [&>div]:bg-primary" />
+      <Progress value={progressPercentage} className="h-2" indicatorClassName={progressColorClass} />
     </div>
   );
 }
-
-    
