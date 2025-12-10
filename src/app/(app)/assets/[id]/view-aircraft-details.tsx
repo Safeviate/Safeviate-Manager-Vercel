@@ -47,10 +47,6 @@ export function ViewAircraftDetails({ aircraft }: ViewAircraftDetailsProps) {
   const firestore = useFirestore();
   const tenantId = 'safeviate'; // Hardcoded
 
-  // State for document abbreviations
-  const [abbreviations, setAbbreviations] = useState<Record<string, string>>({});
-  const debouncedAbbreviations = useDebounce(abbreviations, 500);
-  
   const expirySettingsRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
     [firestore, tenantId]
@@ -61,40 +57,6 @@ export function ViewAircraftDetails({ aircraft }: ViewAircraftDetailsProps) {
       () => (firestore ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraft.id) : null),
       [firestore, tenantId, aircraft.id]
   );
-  
-  useEffect(() => {
-    if (aircraft.documents) {
-      const initialAbbrs = aircraft.documents.reduce((acc, doc) => {
-        if (doc.name) {
-          acc[doc.name] = doc.abbreviation || '';
-        }
-        return acc;
-      }, {} as Record<string, string>);
-      setAbbreviations(initialAbbrs);
-    }
-  }, [aircraft]);
-
-  // Effect to save debounced abbreviations
-  useEffect(() => {
-    if (!aircraftDocRef || !aircraft || !aircraft.documents || Object.keys(debouncedAbbreviations).length === 0) return;
-
-    const hasChanged = aircraft.documents.some(
-        (doc) => (debouncedAbbreviations[doc.name] || '') !== (doc.abbreviation || '')
-    );
-
-    if (hasChanged) {
-        const updatedDocuments = aircraft.documents.map(doc => ({
-            ...doc,
-            abbreviation: debouncedAbbreviations[doc.name] || '',
-        }));
-        handleDocumentUpdate(updatedDocuments);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedAbbreviations, aircraft, aircraftDocRef]);
-
-  const handleAbbreviationChange = (docName: string, value: string) => {
-    setAbbreviations(prev => ({ ...prev, [docName]: value }));
-  };
 
   const getStatusColor = (expirationDate: string | null | undefined): string | null => {
     if (!expirationDate || !expirySettings) return null;
@@ -236,13 +198,7 @@ export function ViewAircraftDetails({ aircraft }: ViewAircraftDetailsProps) {
                                 <TableRow key={doc.name}>
                                     <TableCell className="font-medium">{doc.name}</TableCell>
                                     <TableCell>
-                                      <Input
-                                          value={abbreviations[doc.name] || ''}
-                                          onChange={(e) => handleAbbreviationChange(doc.name, e.target.value)}
-                                          maxLength={5}
-                                          className="h-8 w-20"
-                                          placeholder="e.g., C172"
-                                      />
+                                      {doc.abbreviation || 'N/A'}
                                     </TableCell>
                                     <TableCell className="min-w-[150px] whitespace-nowrap">
                                         <div className="flex items-center gap-2">
