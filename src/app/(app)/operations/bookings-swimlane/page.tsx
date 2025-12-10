@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -100,7 +99,7 @@ export default function BookingsSwimlanePage() {
   const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingPilots;
   const error = aircraftError || bookingsError || pilotsError;
 
-  const extraLanes = ['', '', '']; // Add 3 empty lanes
+  const extraLanes = ['', '', '', '', '']; // Add 5 empty lanes
 
   return (
     <div className="flex flex-col gap-6 h-full">
