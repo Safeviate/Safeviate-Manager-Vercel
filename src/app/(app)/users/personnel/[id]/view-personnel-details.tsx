@@ -224,11 +224,11 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                             return (
                                 <TableRow key={doc.name}>
                                     <TableCell className="font-medium">{doc.name}</TableCell>
-                                    <TableCell>
+                                    <TableCell className="min-w-[150px] whitespace-nowrap">
                                         <div className="flex items-center gap-2">
                                             {statusColor && (
                                                 <span 
-                                                    className="h-2.5 w-2.5 rounded-full"
+                                                    className="h-2.5 w-2.5 rounded-full flex-shrink-0"
                                                     style={{ backgroundColor: statusColor }}
                                                 />
                                             )}
@@ -400,3 +400,5 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     </div>
   );
 }
+
+    
