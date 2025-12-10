@@ -14,6 +14,8 @@ import {
   Building2,
   UserPlus,
   CalendarClock,
+  Heart,
+  CheckCircle,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -50,12 +52,17 @@ export const menuConfig: MenuItem[] = [
         label: 'Maintenance',
         description: 'Track and manage aircraft maintenance.',
       },
-      {
-        href: '/operations/safety',
-        label: 'Safety & Quality',
-        description: 'Oversee safety protocols and quality assurance.',
-      },
     ],
+  },
+  {
+    href: '/safety',
+    label: 'Safety',
+    icon: Shield,
+  },
+  {
+    href: '/quality',
+    label: 'Quality',
+    icon: CheckCircle,
   },
   {
     href: '/training',
