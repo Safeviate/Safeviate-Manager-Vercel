@@ -15,6 +15,11 @@ type CardThemeColors = {
   'card-foreground': string;
 };
 
+type PopoverThemeColors = {
+  popover: string;
+  'popover-foreground': string;
+};
+
 type SidebarThemeColors = {
   'sidebar-background': string;
   'sidebar-foreground': string;
@@ -37,6 +42,7 @@ export type SavedTheme = {
   cardColors: CardThemeColors;
   sidebarColors: SidebarThemeColors;
   headerColors: HeaderThemeColors;
+  popoverColors: PopoverThemeColors;
 };
 
 type ThemeContextType = {
@@ -44,6 +50,8 @@ type ThemeContextType = {
   setThemeValue: (key: keyof ThemeColors, value: string) => void;
   cardTheme: CardThemeColors;
   setCardThemeValue: (key: keyof CardThemeColors, value: string) => void;
+  popoverTheme: PopoverThemeColors;
+  setPopoverThemeValue: (key: keyof PopoverThemeColors, value: string) => void;
   sidebarTheme: SidebarThemeColors;
   setSidebarThemeValue: (key: keyof SidebarThemeColors, value: string) => void;
   headerTheme: HeaderThemeColors;
@@ -58,6 +66,7 @@ type ThemeContextType = {
 // --- Constants ---
 export const THEME_KEY = 'safeviate-theme';
 export const CARD_THEME_KEY = 'safeviate-card-theme';
+export const POPOVER_THEME_KEY = 'safeviate-popover-theme';
 export const SIDEBAR_THEME_KEY = 'safeviate-sidebar-theme';
 export const HEADER_THEME_KEY = 'safeviate-header-theme';
 export const SAVED_THEMES_KEY = 'safeviate-saved-themes';
@@ -71,6 +80,10 @@ const defaultColors: ThemeColors = {
 const defaultCardColors: CardThemeColors = {
   card: '#ebf5fb',
   'card-foreground': '#1e293b',
+};
+const defaultPopoverColors: PopoverThemeColors = {
+    popover: '#ebf5fb',
+    'popover-foreground': '#1e293b',
 };
 const defaultSidebarColors: SidebarThemeColors = {
   'sidebar-background': '#dbeafb',
@@ -121,6 +134,7 @@ export const useTheme = () => {
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [theme, setTheme] = useState<ThemeColors>(() => getInitialState(THEME_KEY, defaultColors));
   const [cardTheme, setCardTheme] = useState<CardThemeColors>(() => getInitialState(CARD_THEME_KEY, defaultCardColors));
+  const [popoverTheme, setPopoverTheme] = useState<PopoverThemeColors>(() => getInitialState(POPOVER_THEME_KEY, defaultPopoverColors));
   const [sidebarTheme, setSidebarTheme] = useState<SidebarThemeColors>(() => getInitialState(SIDEBAR_THEME_KEY, defaultSidebarColors));
   const [headerTheme, setHeaderTheme] = useState<HeaderThemeColors>(() => getInitialState(HEADER_THEME_KEY, defaultHeaderColors));
   const [savedThemes, setSavedThemes] = useState<SavedTheme[]>(() => getInitialState(SAVED_THEMES_KEY, []));
@@ -128,9 +142,10 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     applyColorsToDOM(theme);
     applyColorsToDOM(cardTheme);
+    applyColorsToDOM(popoverTheme);
     applyColorsToDOM(sidebarTheme);
     applyColorsToDOM(headerTheme);
-  }, [theme, cardTheme, sidebarTheme, headerTheme]);
+  }, [theme, cardTheme, popoverTheme, sidebarTheme, headerTheme]);
   
 
   const updateTheme = <T extends object>(
@@ -148,6 +163,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   
   const setThemeValue = (prop: keyof ThemeColors, value: string) => updateTheme(THEME_KEY, theme, setTheme, prop, value);
   const setCardThemeValue = (prop: keyof CardThemeColors, value: string) => updateTheme(CARD_THEME_KEY, cardTheme, setCardTheme, prop, value);
+  const setPopoverThemeValue = (prop: keyof PopoverThemeColors, value: string) => updateTheme(POPOVER_THEME_KEY, popoverTheme, setPopoverTheme, prop, value);
   const setSidebarThemeValue = (prop: keyof SidebarThemeColors, value: string) => updateTheme(SIDEBAR_THEME_KEY, sidebarTheme, setSidebarTheme, prop, value);
   const setHeaderThemeValue = (prop: keyof HeaderThemeColors, value: string) => updateTheme(HEADER_THEME_KEY, headerTheme, setHeaderTheme, prop, value);
 
@@ -155,16 +171,19 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const applySavedTheme = (themeToApply: SavedTheme) => {
     setTheme(themeToApply.colors);
     setCardTheme(themeToApply.cardColors);
+    setPopoverTheme(themeToApply.popoverColors);
     setSidebarTheme(themeToApply.sidebarColors);
     setHeaderTheme(themeToApply.headerColors);
     
     applyColorsToDOM(themeToApply.colors);
     applyColorsToDOM(themeToApply.cardColors);
+    applyColorsToDOM(themeToApply.popoverColors);
     applyColorsToDOM(themeToApply.sidebarColors);
     applyColorsToDOM(themeToApply.headerColors);
 
     localStorage.setItem(THEME_KEY, JSON.stringify(themeToApply.colors));
     localStorage.setItem(CARD_THEME_KEY, JSON.stringify(themeToApply.cardColors));
+    localStorage.setItem(POPOVER_THEME_KEY, JSON.stringify(themeToApply.popoverColors));
     localStorage.setItem(SIDEBAR_THEME_KEY, JSON.stringify(themeToApply.sidebarColors));
     localStorage.setItem(HEADER_THEME_KEY, JSON.stringify(themeToApply.headerColors));
   };
@@ -174,6 +193,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       name,
       colors: theme,
       cardColors: cardTheme,
+      popoverColors: popoverTheme,
       sidebarColors: sidebarTheme,
       headerColors: headerTheme,
     };
@@ -191,16 +211,19 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const resetToDefaults = () => {
     localStorage.removeItem(THEME_KEY);
     localStorage.removeItem(CARD_THEME_KEY);
+    localStorage.removeItem(POPOVER_THEME_KEY);
     localStorage.removeItem(SIDEBAR_THEME_KEY);
     localStorage.removeItem(HEADER_THEME_KEY);
     
     setTheme(defaultColors);
     setCardTheme(defaultCardColors);
+    setPopoverTheme(defaultPopoverColors);
     setSidebarTheme(defaultSidebarColors);
     setHeaderTheme(defaultHeaderColors);
 
     applyColorsToDOM(defaultColors);
     applyColorsToDOM(defaultCardColors);
+    applyColorsToDOM(defaultPopoverColors);
     applyColorsToDOM(defaultSidebarColors);
     applyColorsToDOM(defaultHeaderColors);
 
@@ -212,6 +235,8 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setThemeValue,
     cardTheme,
     setCardThemeValue,
+    popoverTheme,
+    setPopoverThemeValue,
     sidebarTheme,
     setSidebarThemeValue,
     headerTheme,

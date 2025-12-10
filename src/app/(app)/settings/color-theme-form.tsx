@@ -16,7 +16,9 @@ export function ColorThemeForm() {
     theme, 
     setThemeValue, 
     cardTheme, 
-    setCardThemeValue, 
+    setCardThemeValue,
+    popoverTheme,
+    setPopoverThemeValue, 
     sidebarTheme, 
     setSidebarThemeValue, 
     headerTheme, 
@@ -141,6 +143,28 @@ export function ColorThemeForm() {
                     type="color"
                     value={value}
                     onChange={(e) => setCardThemeValue(name as keyof typeof cardTheme, e.target.value)}
+                    className="p-1 h-10"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <Separator />
+        
+        <div>
+          <h3 className="text-lg font-medium mb-4">Popover & Dropdown Theme</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Object.entries(popoverTheme).map(([name, value]) => (
+              <div key={name} className="space-y-2">
+                <Label htmlFor={name} className="capitalize">{name.replace('popover-', '')}</Label>
+                <div className='relative'>
+                  <Input
+                    id={name}
+                    type="color"
+                    value={value}
+                    onChange={(e) => setPopoverThemeValue(name as keyof typeof popoverTheme, e.target.value)}
                     className="p-1 h-10"
                   />
                 </div>
