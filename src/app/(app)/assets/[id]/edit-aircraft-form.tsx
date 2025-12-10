@@ -36,8 +36,8 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
   const [type, setType] = useState(aircraft.type || '');
   const [frameHours, setFrameHours] = useState(aircraft.frameHours?.toString() || '');
   const [engineHours, setEngineHours] = useState(aircraft.engineHours?.toString() || '');
-  const [hobbs, setHobbs] = useState(aircraft.hobbs?.toString() || '');
-  const [tacho, setTacho] = useState(aircraft.tacho?.toString() || '');
+  const [initialHobbs, setInitialHobbs] = useState(aircraft.initialHobbs?.toString() || '');
+  const [initialTacho, setInitialTacho] = useState(aircraft.initialTacho?.toString() || '');
   
   const handleUpdateAircraft = () => {
     if (!tailNumber.trim() || !model.trim() || !type.trim()) {
@@ -66,8 +66,8 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
       type,
       frameHours: Number(frameHours) || 0,
       engineHours: Number(engineHours) || 0,
-      hobbs: Number(hobbs) || 0,
-      tacho: Number(tacho) || 0,
+      initialHobbs: Number(initialHobbs) || 0,
+      initialTacho: Number(initialTacho) || 0,
     });
 
     toast({
@@ -109,12 +109,12 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
                 <Input id="engineHours" type="number" value={engineHours} onChange={(e) => setEngineHours(e.target.value)} />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="hobbs">Hobbs</Label>
-                <Input id="hobbs" type="number" value={hobbs} onChange={(e) => setHobbs(e.target.value)} />
+                <Label htmlFor="initialHobbs">Initial Hobbs</Label>
+                <Input id="initialHobbs" type="number" value={initialHobbs} onChange={(e) => setInitialHobbs(e.target.value)} />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="tacho">Tacho</Label>
-                <Input id="tacho" type="number" value={tacho} onChange={(e) => setTacho(e.target.value)} />
+                <Label htmlFor="initialTacho">Initial Tacho</Label>
+                <Input id="initialTacho" type="number" value={initialTacho} onChange={(e) => setInitialTacho(e.target.value)} />
             </div>
         </div>
       </CardContent>
@@ -125,3 +125,5 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
     </Card>
   );
 }
+
+    

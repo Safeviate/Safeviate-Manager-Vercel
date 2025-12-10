@@ -178,13 +178,13 @@
           "type": "number",
           "description": "Total hours on the engine."
         },
-        "hobbs": {
+        "initialHobbs": {
           "type": "number",
-          "description": "Hobbs meter reading."
+          "description": "Initial Hobbs meter reading."
         },
-        "tacho": {
+        "initialTacho": {
           "type": "number",
-          "description": "Tachometer reading."
+          "description": "Initial Tachometer reading."
         },
         "maintenanceLogs": {
           "type": "array",
