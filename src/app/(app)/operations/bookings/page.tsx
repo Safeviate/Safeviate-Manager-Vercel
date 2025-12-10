@@ -290,7 +290,7 @@ export default function BookingsPage() {
     <>
     <div className="flex flex-col gap-6 h-full">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Bookings</h1>
+        <h1 className="text-3xl tracking-tight">Bookings</h1>
         <Popover>
             <PopoverTrigger asChild>
                 <Button variant="outline">
@@ -309,7 +309,7 @@ export default function BookingsPage() {
 
       <Card className="flex-grow flex flex-col overflow-hidden">
         <CardHeader>
-          <CardTitle>Daily Schedule</CardTitle>
+          <CardTitle className='font-normal'>Daily Schedule</CardTitle>
           <CardDescription>
             A vertical timeline of all bookings for {format(selectedDate, 'PPP')}.
           </CardDescription>
