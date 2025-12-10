@@ -16,12 +16,14 @@ import Image from 'next/image';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { DocumentUploader } from './document-uploader';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import type { DocumentExpirySettings } from '../../../admin/document-dates/page';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -44,6 +46,8 @@ const isPilotProfile = (user: UserProfile): user is PilotProfile => {
     return user.userType === 'Student' || user.userType === 'Private Pilot' || user.userType === 'Instructor';
 }
 
+const expiredColor = '#ef4444'; // red-500
+
 export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDetailsProps) {
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
@@ -51,6 +55,35 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   const { toast } = useToast();
   const firestore = useFirestore();
   const tenantId = 'safeviate'; // Hardcoded
+
+  const expirySettingsRef = useMemoFirebase(
+    () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
+    [firestore, tenantId]
+  );
+  const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
+
+
+  const getStatusColor = (expirationDate: string | null | undefined): string | null => {
+    if (!expirationDate || !expirySettings) return null;
+
+    const today = new Date();
+    const expiry = new Date(expirationDate);
+    const daysUntilExpiry = differenceInDays(expiry, today);
+
+    if (daysUntilExpiry < 0) {
+      return expiredColor; // Expired
+    }
+
+    // Find the tightest warning period that applies
+    const sortedPeriods = expirySettings.warningPeriods.sort((a, b) => a.period - b.period);
+    for (const warning of sortedPeriods) {
+      if (daysUntilExpiry <= warning.period) {
+        return warning.color;
+      }
+    }
+
+    return expirySettings.defaultColor || null; // Safe color
+  };
 
   const handleViewImage = (url: string) => {
     setViewingImageUrl(url);
@@ -186,65 +219,76 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {combinedDocuments.map((doc) => (
-                        <TableRow key={doc.name}>
-                            <TableCell className="font-medium">{doc.name}</TableCell>
-                            <TableCell>
-                                {doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'N/A'}
-                            </TableCell>
-                            <TableCell className='text-center'>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" size="icon" className='h-8 w-8'>
-                                            <CalendarIcon className="h-4 w-4" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                        <CustomCalendar
-                                            selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined}
-                                            onDateSelect={(date) => handleExpirationDateChange(doc.name, date)}
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                            </TableCell>
-                            <TableCell className="text-right">
-                                {doc.isUploaded ? (
-                                    <div className="flex gap-2 justify-end">
-                                      <Button variant="outline" size="sm" onClick={() => handleViewImage(doc.url!)}>
-                                          <View className="mr-2 h-4 w-4" /> View
-                                      </Button>
-                                      <Button variant="destructive" size="icon" onClick={() => handleDocumentDelete(doc.name)}>
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                ) : (
-                                    <DocumentUploader
-                                        defaultFileName={doc.name}
-                                        onDocumentUploaded={onDocumentUploaded}
-                                        trigger={(openDialog) => (
-                                          <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                              <Button size="sm">
-                                                <Upload className="mr-2 h-4 w-4" /> Upload
+                        {combinedDocuments.map((doc) => {
+                            const statusColor = getStatusColor(doc.expirationDate);
+                            return (
+                                <TableRow key={doc.name}>
+                                    <TableCell className="font-medium">{doc.name}</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-2">
+                                            {statusColor && (
+                                                <span 
+                                                    className="h-2.5 w-2.5 rounded-full"
+                                                    style={{ backgroundColor: statusColor }}
+                                                />
+                                            )}
+                                            {doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'N/A'}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className='text-center'>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="outline" size="icon" className='h-8 w-8'>
+                                                    <CalendarIcon className="h-4 w-4" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0">
+                                                <CustomCalendar
+                                                    selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined}
+                                                    onDateSelect={(date) => handleExpirationDateChange(doc.name, date)}
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        {doc.isUploaded ? (
+                                            <div className="flex gap-2 justify-end">
+                                              <Button variant="outline" size="sm" onClick={() => handleViewImage(doc.url!)}>
+                                                  <View className="mr-2 h-4 w-4" /> View
                                               </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent>
-                                              <DropdownMenuItem onSelect={() => openDialog('file')}>
-                                                <FileUp className="mr-2 h-4 w-4" />
-                                                Upload File
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem onSelect={() => openDialog('camera')}>
-                                                <Camera className="mr-2 h-4 w-4" />
-                                                Take Photo
-                                              </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                          </DropdownMenu>
+                                              <Button variant="destructive" size="icon" onClick={() => handleDocumentDelete(doc.name)}>
+                                                <Trash2 className="h-4 w-4" />
+                                              </Button>
+                                            </div>
+                                        ) : (
+                                            <DocumentUploader
+                                                defaultFileName={doc.name}
+                                                onDocumentUploaded={onDocumentUploaded}
+                                                trigger={(openDialog) => (
+                                                  <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                      <Button size="sm">
+                                                        <Upload className="mr-2 h-4 w-4" /> Upload
+                                                      </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent>
+                                                      <DropdownMenuItem onSelect={() => openDialog('file')}>
+                                                        <FileUp className="mr-2 h-4 w-4" />
+                                                        Upload File
+                                                      </DropdownMenuItem>
+                                                      <DropdownMenuItem onSelect={() => openDialog('camera')}>
+                                                        <Camera className="mr-2 h-4 w-4" />
+                                                        Take Photo
+                                                      </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                  </DropdownMenu>
+                                                )}
+                                            />
                                         )}
-                                    />
-                                )}
-                            </TableCell>
-                        </TableRow>
-                        ))}
+                                    </TableCell>
+                                </TableRow>
+                            )
+                        })}
                     </TableBody>
                 </Table>
                 ) : (

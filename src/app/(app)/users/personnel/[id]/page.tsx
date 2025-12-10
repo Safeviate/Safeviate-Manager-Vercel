@@ -5,7 +5,7 @@ import { useState, useMemo, use } from 'react';
 import { collection, doc, query, where } from 'firebase/firestore';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Personnel, PilotProfile } from '../page';
-import type { Role } from '../../../roles/page';
+import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { EditPersonnelForm } from './edit-personnel-form';
 import { ViewPersonnelDetails } from './view-personnel-details';
