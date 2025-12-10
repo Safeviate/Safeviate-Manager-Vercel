@@ -19,7 +19,7 @@ import {
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { menuConfig, settingsMenuItem } from '@/lib/menu-config';
 import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -37,6 +37,11 @@ export function AppSidebar() {
   const auth = useAuth();
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
   
   const handleSignOut = () => {
     if (auth) {
@@ -95,25 +100,27 @@ export function AppSidebar() {
               </Link>
             </SidebarMenuItem>
             <SidebarSeparator className="my-1 mx-2" />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton tooltip="Guest User" className="w-full justify-start">
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src="https://picsum.photos/seed/guest-user/100/100" />
-                    <AvatarFallback>G</AvatarFallback>
-                  </Avatar>
-                  <span className='group-data-[collapsible=icon]:hidden'>Guest User</span>
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="right" align="end" className="w-56" id="user-profile-dropdown">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {isClient && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton tooltip="Guest User" className="w-full justify-start">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src="https://picsum.photos/seed/guest-user/100/100" />
+                      <AvatarFallback>G</AvatarFallback>
+                    </Avatar>
+                    <span className='group-data-[collapsible=icon]:hidden'>Guest User</span>
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="right" align="end" className="w-56" id="user-profile-dropdown">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarFooter>
