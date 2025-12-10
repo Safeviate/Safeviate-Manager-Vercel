@@ -299,14 +299,6 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, onCancel
                                 </div>
                            </div>
                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label>Issue Date</Label>
-                                    {formData.pilotLicense?.issueDate && <p className="text-sm text-muted-foreground">Selected: {format(new Date(formData.pilotLicense.issueDate), "PPP")}</p>}
-                                    <CustomCalendar 
-                                        selectedDate={formData.pilotLicense?.issueDate ? new Date(formData.pilotLicense.issueDate) : undefined}
-                                        onDateSelect={(date) => handleNestedInputChange('pilotLicense', 'issueDate', date?.toISOString().split('T')[0])}
-                                    />
-                                </div>
                                  <div className="space-y-2">
                                     <Label>Expiration Date</Label>
                                     {formData.pilotLicense?.expirationDate && <p className="text-sm text-muted-foreground">Selected: {format(new Date(formData.pilotLicense.expirationDate), "PPP")}</p>}
