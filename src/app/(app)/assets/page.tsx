@@ -17,6 +17,12 @@ export type Aircraft = {
   engineHours?: number;
   hobbs?: number;
   tacho?: number;
+  documents?: {
+    name: string;
+    url: string;
+    uploadDate: string;
+    expirationDate?: string | null;
+  }[];
 };
 
 export default function AssetsPage() {

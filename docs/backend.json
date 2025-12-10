@@ -132,7 +132,7 @@
     "Documents": {
         "title": "Documents",
         "type": "array",
-        "description": "A list of documents associated with a user.",
+        "description": "A list of documents associated with a user or aircraft.",
         "items": {
             "type": "object",
             "properties": {
@@ -187,6 +187,9 @@
           "items": {
             "type": "string"
           }
+        },
+        "documents": {
+           "$ref": "#/backend/entities/Documents"
         }
       },
       "required": [
