@@ -23,6 +23,7 @@ export function BookingCalendar({
   const [nowLine, setNowLine] = useState<number | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const dataRef = useRef<HTMLDivElement>(null);
+  const resourceColRef = useRef<HTMLDivElement>(null);
 
 
   const timeSlots = useMemo(() => {
@@ -50,9 +51,12 @@ export function BookingCalendar({
 
   }, [selectedDate]);
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  const handleGridScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (timelineRef.current) {
         timelineRef.current.scrollLeft = e.currentTarget.scrollLeft;
+    }
+    if (resourceColRef.current) {
+        resourceColRef.current.scrollTop = e.currentTarget.scrollTop;
     }
   };
   
@@ -86,7 +90,7 @@ export function BookingCalendar({
         {/* Body */}
         <div className="flex flex-grow overflow-hidden">
              {/* Resources Column (Sticky) */}
-             <div className="w-48 flex-shrink-0 border-r overflow-y-auto" onScroll={handleResourceScroll}>
+             <div ref={resourceColRef} className="w-48 flex-shrink-0 border-r overflow-y-hidden" onScroll={handleResourceScroll}>
                 {aircraft.map((ac) => (
                     <div key={ac.id} className="flex items-center h-16 p-2 border-b">
                         <span className="font-medium">{ac.tailNumber}</span>
@@ -95,7 +99,7 @@ export function BookingCalendar({
              </div>
              
             {/* Gantt Area */}
-            <div className="flex-grow overflow-auto" onScroll={handleScroll} ref={dataRef}>
+            <div className="flex-grow overflow-auto" onScroll={handleGridScroll} ref={dataRef}>
                 <div className="relative" style={{ width: `${HOURS_IN_DAY * HOUR_WIDTH_PX}px` }}>
                     {/* Grid Lines */}
                     <div className="absolute inset-0 flex">
