@@ -17,14 +17,16 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Camera } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import type { AircraftDocument } from '../page';
 
-type UploadMode = 'file' | 'camera';
 
 interface DocumentUploaderProps {
   trigger: (open: (mode: UploadMode) => void) => ReactNode;
   defaultFileName?: string;
-  onDocumentUploaded: (document: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => void;
+  onDocumentUploaded: (document: Omit<AircraftDocument, 'expirationDate' | 'abbreviation'> & { expirationDate: string | null }) => void;
 }
+
+type UploadMode = 'file' | 'camera';
 
 export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUploaded }: DocumentUploaderProps) {
   const { toast } = useToast();

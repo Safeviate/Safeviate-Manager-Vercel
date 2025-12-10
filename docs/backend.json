@@ -139,7 +139,8 @@
                 "name": { "type": "string" },
                 "url": { "type": "string", "format": "uri" },
                 "uploadDate": { "type": "string", "format": "date-time" },
-                "expirationDate": { "type": "string", "format": "date" }
+                "expirationDate": { "type": "string", "format": "date" },
+                "abbreviation": { "type": "string", "description": "A 5-character abbreviation for the document." }
             }
         }
     },

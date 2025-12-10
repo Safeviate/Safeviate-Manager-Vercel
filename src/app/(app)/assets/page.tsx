@@ -8,6 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { AircraftForm } from './aircraft-form';
 import { AircraftTable } from './aircraft-table';
 
+export type AircraftDocument = {
+  name: string;
+  url: string;
+  uploadDate: string;
+  expirationDate?: string | null;
+  abbreviation?: string;
+};
+
 export type Aircraft = {
   id: string;
   tailNumber: string;
@@ -18,12 +26,7 @@ export type Aircraft = {
   engineHours?: number;
   hobbs?: number;
   tacho?: number;
-  documents?: {
-    name: string;
-    url: string;
-    uploadDate: string;
-    expirationDate?: string | null;
-  }[];
+  documents?: AircraftDocument[];
 };
 
 export default function AssetsPage() {

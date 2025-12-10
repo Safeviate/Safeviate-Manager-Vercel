@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useState, use, useMemo } from 'react';
+import { useState, use, useMemo, useEffect, useCallback } from 'react';
 import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import type { Aircraft } from '../page';
+import type { Aircraft, AircraftDocument } from '../page';
 import { EditAircraftForm } from './edit-aircraft-form';
 import { ViewAircraftDetails } from './view-aircraft-details';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,12 +21,12 @@ import { format, differenceInDays } from 'date-fns';
 import Image from 'next/image';
 import type { DocumentExpirySettings } from '../../admin/document-dates/page';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { useDebounce } from '@/hooks/use-debounce';
 
 interface AircraftProfilePageProps {
     params: { id: string };
 }
-
-type Document = NonNullable<Aircraft['documents']>[0];
 
 const requiredAircraftDocuments = [
     'Certificate of Release to service',
@@ -47,6 +47,11 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
     const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
     const { toast } = useToast();
 
+    // State for document abbreviations
+    const [abbreviations, setAbbreviations] = useState<Record<string, string>>({});
+
+    const debouncedAbbreviations = useDebounce(abbreviations, 500);
+
     const aircraftDocRef = useMemoFirebase(
         () => (firestore ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId) : null),
         [firestore, tenantId, aircraftId]
@@ -60,6 +65,40 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
     const { data: aircraft, isLoading, error } = useDoc<Aircraft>(aircraftDocRef);
     const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
 
+    useEffect(() => {
+        if (aircraft?.documents) {
+          const initialAbbrs = aircraft.documents.reduce((acc, doc) => {
+            if (doc.name) {
+              acc[doc.name] = doc.abbreviation || '';
+            }
+            return acc;
+          }, {} as Record<string, string>);
+          setAbbreviations(initialAbbrs);
+        }
+      }, [aircraft]);
+
+    // Effect to save debounced abbreviations
+    useEffect(() => {
+    if (!aircraftDocRef || !aircraft || !aircraft.documents || Object.keys(debouncedAbbreviations).length === 0) return;
+
+    const hasChanged = aircraft.documents.some(
+        (doc) => (debouncedAbbreviations[doc.name] || '') !== (doc.abbreviation || '')
+    );
+
+    if (hasChanged) {
+        const updatedDocuments = aircraft.documents.map(doc => ({
+            ...doc,
+            abbreviation: debouncedAbbreviations[doc.name] || '',
+        }));
+        handleDocumentUpdate(updatedDocuments);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [debouncedAbbreviations, aircraft, aircraftDocRef]);
+
+
+    const handleAbbreviationChange = (docName: string, value: string) => {
+        setAbbreviations(prev => ({ ...prev, [docName]: value }));
+    };
 
     const getStatusColor = (expirationDate: string | null | undefined): string | null => {
       if (!expirationDate || !expirySettings) return null;
@@ -87,8 +126,8 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
       setIsImageViewerOpen(true);
     };
 
-    const handleDocumentUpdate = (updatedDocuments: Document[]) => {
-      if (!firestore || !tenantId) {
+    const handleDocumentUpdate = (updatedDocuments: AircraftDocument[]) => {
+      if (!aircraftDocRef) {
           toast({
               variant: "destructive",
               title: "Error",
@@ -96,7 +135,7 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
           });
           return;
       }
-      updateDocumentNonBlocking(aircraftDocRef!, { documents: updatedDocuments });
+      updateDocumentNonBlocking(aircraftDocRef, { documents: updatedDocuments });
     };
   
     const onDocumentUploaded = (docDetails: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => {
@@ -107,8 +146,8 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
       let updatedDocs;
       if (existingDocIndex > -1) {
           updatedDocs = [...currentDocs];
-          const expirationDate = updatedDocs[existingDocIndex].expirationDate;
-          updatedDocs[existingDocIndex] = { ...docDetails, expirationDate };
+          const existingDoc = updatedDocs[existingDocIndex];
+          updatedDocs[existingDocIndex] = { ...existingDoc, ...docDetails };
       } else {
           updatedDocs = [...currentDocs, docDetails];
       }
@@ -151,6 +190,7 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
               isUploaded: !!uploadedDoc?.url,
               url: uploadedDoc?.url,
               expirationDate: uploadedDoc?.expirationDate,
+              abbreviation: uploadedDoc?.abbreviation,
               isRequired: isRequired,
           };
       });
@@ -183,6 +223,7 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
               <TableHeader>
                   <TableRow>
                       <TableHead>Document Name</TableHead>
+                      <TableHead>Abbr.</TableHead>
                       <TableHead>Expiry</TableHead>
                       <TableHead className='text-center'>Set Expiry</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -194,6 +235,15 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
                       return (
                           <TableRow key={doc.name}>
                               <TableCell className="font-medium">{doc.name}</TableCell>
+                              <TableCell>
+                                <Input
+                                    value={abbreviations[doc.name] || ''}
+                                    onChange={(e) => handleAbbreviationChange(doc.name, e.target.value)}
+                                    maxLength={5}
+                                    className="h-8 w-20"
+                                    placeholder="e.g., C172"
+                                />
+                               </TableCell>
                               <TableCell className="min-w-[150px] whitespace-nowrap">
                                   <div className="flex items-center gap-2">
                                       {statusColor && (
