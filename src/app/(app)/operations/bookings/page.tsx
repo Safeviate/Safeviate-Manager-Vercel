@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
@@ -88,7 +89,7 @@ const BookingItem = ({ booking, pilots, tenantId, onEdit, selectedDate }: { book
                      <div
                         className={cn(
                         'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity z-10 min-h-[40px]',
-                        booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80',
+                        booking.status === 'Cancelled' ? 'bg-destructive' : 'bg-primary',
                         hasContinuationTop ? 'rounded-t-none' : 'rounded-lg',
                         hasContinuationBottom ? 'rounded-b-none' : 'rounded-lg',
                         )}
@@ -329,7 +330,7 @@ export default function BookingsPage() {
             <div className='overflow-x-auto h-full'>
               <div className="min-w-max flex flex-col h-full">
                 {/* Header */}
-                <div className="flex bg-muted/50 flex-shrink-0 sticky top-0 z-20">
+                <div className="flex bg-muted flex-shrink-0 sticky top-0 z-20">
                   {(aircraft || []).map((ac) => (
                     <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px]">
                       {ac.tailNumber}
