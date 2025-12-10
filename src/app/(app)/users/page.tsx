@@ -90,11 +90,7 @@ export default function UsersPage() {
 
   return (
     <div className="flex flex-col gap-6 h-full">
-        <div className="flex justify-between items-center">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
-                <p className="text-muted-foreground">Add, view, and manage all users across your organization.</p>
-            </div>
+        <div className="flex justify-end">
             <PersonnelForm tenantId={tenantId} roles={roles || []} departments={departments || []} />
         </div>
 
