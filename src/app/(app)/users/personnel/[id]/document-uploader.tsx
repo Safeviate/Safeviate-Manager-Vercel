@@ -10,11 +10,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Camera, FileUp } from 'lucide-react';
+import { Camera } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 type UploadMode = 'file' | 'camera';
@@ -58,9 +59,10 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
   const onOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (open) {
-      resetForm();
+      setFileName(defaultFileName);
     } else {
       cleanupCamera();
+      resetForm();
     }
   };
 
@@ -70,10 +72,11 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
   };
   
   useEffect(() => {
-    if (isOpen && uploadMode === 'camera') {
+    let stream: MediaStream | null = null;
+    if (isOpen && uploadMode === 'camera' && !capturedImage) {
       const getCameraPermission = async () => {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
           setHasCameraPermission(true);
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
@@ -90,13 +93,13 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
       };
       getCameraPermission();
     }
-    // Cleanup function
+    
     return () => {
-        if (isOpen) {
-            cleanupCamera();
-        }
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
     };
-  }, [isOpen, uploadMode, toast, cleanupCamera]);
+  }, [isOpen, uploadMode, capturedImage, toast]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -126,7 +129,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
 
   const handleRetake = () => {
     setCapturedImage(null);
-    // This will trigger the useEffect to request camera again
+    // The useEffect will re-request camera access
   };
 
   const handleUpload = () => {
@@ -222,14 +225,16 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
                        )}
                     </div>
                     <canvas ref={canvasRef} className="hidden" />
-                    {capturedImage ? (
-                        <Button variant="outline" onClick={handleRetake}>Retake Photo</Button>
-                    ) : (
-                        <Button onClick={handleCapture} disabled={!hasCameraPermission}>
-                            <Camera className='mr-2' />
-                            Capture
-                        </Button>
-                    )}
+                    <div className='flex gap-2'>
+                        {capturedImage ? (
+                            <Button variant="outline" onClick={handleRetake}>Retake Photo</Button>
+                        ) : (
+                            <Button onClick={handleCapture} disabled={hasCameraPermission === false}>
+                                <Camera className='mr-2' />
+                                Capture
+                            </Button>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
