@@ -10,6 +10,7 @@ import { ViewAircraftDetails } from './view-aircraft-details';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 interface AircraftProfilePageProps {
     params: { id: string };
@@ -61,11 +62,22 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
             )}
             
             {isEditing ? (
-                 <EditAircraftForm
-                    tenantId={tenantId}
-                    aircraft={aircraft}
-                    onCancel={() => setIsEditing(false)}
-                />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <EditAircraftForm
+                        tenantId={tenantId}
+                        aircraft={aircraft}
+                        onCancel={() => setIsEditing(false)}
+                    />
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Documents</CardTitle>
+                            <CardDescription>Manage documents for {aircraft.tailNumber}.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-sm text-muted-foreground text-center py-4">Document management coming soon.</p>
+                        </CardContent>
+                    </Card>
+                </div>
             ) : (
                 <ViewAircraftDetails 
                     aircraft={aircraft}
