@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import type { Aircraft } from '../../assets/page';
 import type { Booking } from '@/types/booking';
 import { cn } from '@/lib/utils';
-import { addHours, format, startOfDay } from 'date-fns';
+import { addHours, format, startOfDay, getMinutes, getHours, differenceInMinutes } from 'date-fns';
 
 interface BookingCalendarProps {
   aircraft: Aircraft[];
@@ -14,6 +15,33 @@ interface BookingCalendarProps {
 
 const HOURS_IN_DAY = 24;
 const HOUR_WIDTH_PX = 80;
+
+const BookingItem = ({ booking }: { booking: Booking }) => {
+    const startTime = booking.startTime.toDate();
+    const endTime = booking.endTime.toDate();
+
+    const startMinutes = getHours(startTime) * 60 + getMinutes(startTime);
+    const durationMinutes = differenceInMinutes(endTime, startTime);
+
+    const totalMinutesInDay = HOURS_IN_DAY * 60;
+    const totalWidth = HOURS_IN_DAY * HOUR_WIDTH_PX;
+
+    const left = (startMinutes / totalMinutesInDay) * totalWidth;
+    const width = (durationMinutes / totalMinutesInDay) * totalWidth;
+
+    return (
+        <div
+            className="absolute top-1/2 -translate-y-1/2 h-12 flex items-center justify-center rounded-lg bg-primary/80 text-primary-foreground p-2 shadow z-20"
+            style={{ left: `${left}px`, width: `${width}px` }}
+        >
+            <div className="flex flex-col text-xs text-center truncate">
+                <span className="font-bold truncate">{booking.type}</span>
+                <span className="truncate">{booking.pilotId}</span>
+            </div>
+        </div>
+    );
+};
+
 
 export function BookingCalendar({
   aircraft,
@@ -90,7 +118,7 @@ export function BookingCalendar({
         {/* Body */}
         <div className="flex flex-grow relative overflow-hidden">
              {/* Resources Column (Sticky) */}
-             <div ref={resourceColRef} className="w-48 flex-shrink-0 border-r overflow-y-hidden bg-muted/20" onScroll={handleResourceScroll}>
+             <div ref={resourceColRef} className="w-48 flex-shrink-0 border-r overflow-y-scroll bg-muted/20" onScroll={handleResourceScroll}>
                 {aircraft.map((ac) => (
                     <div key={ac.id} className="flex items-center h-16 p-2 border-b">
                         <span className="font-medium">{ac.tailNumber}</span>
@@ -108,15 +136,19 @@ export function BookingCalendar({
                             <div key={index} style={{ left: `${index * HOUR_WIDTH_PX}px` }} className="absolute top-0 bottom-0 w-px bg-border" />
                         ))}
                     </div>
-                    {/* Aircraft Rows */}
-                    {aircraft.map((ac) => (
+                    {/* Aircraft Rows and Bookings */}
+                    {aircraft.map((ac, index) => (
                         <div key={ac.id} className="relative h-16 border-b">
-                            {/* Booking items would go here */}
+                            {bookings
+                                .filter(b => b.aircraftId === ac.id)
+                                .map(booking => (
+                                    <BookingItem key={booking.id} booking={booking} />
+                            ))}
                         </div>
                     ))}
                     {/* "Now" Line */}
                     {nowLine !== null && (
-                        <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10" style={{ left: `${nowLine}px` }}>
+                        <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-30" style={{ left: `${nowLine}px` }}>
                              <div className="absolute -top-1.5 -translate-x-1/2 w-3 h-3 bg-red-500 rounded-full" />
                         </div>
                     )}
