@@ -27,15 +27,18 @@ import { useToast } from '@/hooks/use-toast';
 interface BookingItemProps {
     booking: Booking;
     aircraft: Aircraft;
+    pilots: PilotProfile[];
     tenantId: string;
     onEdit: (booking: Booking, aircraft: Aircraft) => void;
 }
 
-const BookingItem = ({ booking, aircraft, tenantId, onEdit }: BookingItemProps) => {
+const BookingItem = ({ booking, aircraft, pilots, tenantId, onEdit }: BookingItemProps) => {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+
+    const pilot = useMemo(() => pilots.find(p => p.id === booking.pilotId), [pilots, booking.pilotId]);
 
     const startTime = booking.startTime.toDate();
     const endTime = booking.endTime.toDate();
@@ -84,7 +87,7 @@ const BookingItem = ({ booking, aircraft, tenantId, onEdit }: BookingItemProps) 
                     >
                         <div className="flex flex-col text-xs text-center truncate">
                             <span className="font-bold truncate">{booking.type}</span>
-                            <span className="truncate">{booking.pilotId}</span>
+                            <span className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : booking.pilotId}</span>
                             {booking.status === 'Cancelled' && <span className="font-bold uppercase text-[9px] mt-0.5">Cancelled</span>}
                         </div>
                     </div>
@@ -276,6 +279,7 @@ export function BookingCalendar({
                                         key={booking.id} 
                                         booking={booking} 
                                         aircraft={ac}
+                                        pilots={pilots}
                                         tenantId={tenantId}
                                         onEdit={handleEditBooking}
                                     />
