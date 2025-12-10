@@ -29,7 +29,7 @@ const TimeRuler = () => (
   </div>
 );
 
-const AircraftColumn = ({ aircraft, bookings, pilots }: { aircraft: Aircraft; bookings: Booking[]; pilots: PilotProfile[] }) => {
+const AircraftColumn = ({ aircraft, bookings, pilots }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[] }) => {
   return (
     <div className="flex-1 relative border-r min-w-[150px]">
       {/* Hour lines for this column */}
@@ -100,6 +100,8 @@ export default function BookingsSwimlanePage() {
   const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingPilots;
   const error = aircraftError || bookingsError || pilotsError;
 
+  const extraLanes = ['', '', '']; // Add 3 empty lanes
+
   return (
     <div className="flex flex-col gap-6 h-full">
       <h1 className="text-3xl font-bold tracking-tight">Bookings Swimlane</h1>
@@ -135,7 +137,12 @@ export default function BookingsSwimlanePage() {
                       {ac.tailNumber}
                     </div>
                   ))}
-                   {(aircraft || []).length === 0 && <div className="flex-1 p-2 text-center">No Aircraft Found</div>}
+                  {extraLanes.map((_, index) => (
+                    <div key={`extra-header-${index}`} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px] text-muted-foreground">
+                      (Empty Lane)
+                    </div>
+                  ))}
+                   {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-2 text-center">No Aircraft Found</div>}
                 </div>
 
                 {/* Body */}
@@ -149,7 +156,14 @@ export default function BookingsSwimlanePage() {
                       pilots={pilots || []}
                     />
                   ))}
-                  {(aircraft || []).length === 0 && <div className="flex-1 p-4 text-center text-muted-foreground">Please add aircraft to see the schedule.</div>}
+                  {extraLanes.map((_, index) => (
+                     <AircraftColumn
+                        key={`extra-lane-${index}`}
+                        bookings={[]}
+                        pilots={[]}
+                    />
+                  ))}
+                  {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-4 text-center text-muted-foreground">Please add aircraft to see the schedule.</div>}
                 </div>
               </div>
             </div>
