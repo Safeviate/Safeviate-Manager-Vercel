@@ -105,7 +105,6 @@ export default function UsersPage() {
                             <AccordionTrigger className="px-6 text-lg font-medium hover:no-underline">
                                 <div className="flex items-center gap-4">
                                   {section.title}
-                                  <span className="text-sm font-normal text-muted-foreground">({section.data?.length || 0} users)</span>
                                 </div>
                             </AccordionTrigger>
                             <AccordionContent>
