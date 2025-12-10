@@ -24,6 +24,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { CalendarIcon } from 'lucide-react';
+import { CustomCalendar } from '@/components/ui/custom-calendar';
 
 
 const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
@@ -225,12 +227,28 @@ export default function BookingsSwimlanePage() {
   }, []);
 
 
-  const extraLanes = ['', '', '', '', '']; // Add 5 empty lanes
+  const extraLanes = ['', '', '', '', '','','']; // Add 7 empty lanes
 
   return (
     <>
     <div className="flex flex-col gap-6 h-full">
-      <h1 className="text-3xl font-bold tracking-tight">Bookings Swimlane</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold tracking-tight">Bookings Swimlane</h1>
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="outline">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(selectedDate, 'PPP')}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+                <CustomCalendar 
+                    selectedDate={selectedDate}
+                    onDateSelect={(date) => date && setSelectedDate(date)}
+                />
+            </PopoverContent>
+        </Popover>
+      </div>
 
       <Card className="flex-grow flex flex-col overflow-hidden">
         <CardHeader>
