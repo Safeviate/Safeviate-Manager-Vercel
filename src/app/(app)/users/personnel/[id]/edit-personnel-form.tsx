@@ -23,6 +23,7 @@ import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
+import { TagInput } from '@/components/ui/tag-input';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -71,13 +72,6 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, onCancel
         }
     }));
   };
-
-  const handleArrayInputChange = (field: keyof PilotProfile, subField: string, value: string) => {
-    if (!isPilotProfile(formData)) return;
-    const values = value.split(',').map(item => item.trim()).filter(Boolean);
-    handleNestedInputChange(field, subField, values);
-  };
-
 
   const handleUpdateUser = () => {
     if (!formData.userType || !formData.firstName?.trim() || !formData.lastName?.trim() || !formData.email?.trim()) {
@@ -267,22 +261,30 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, onCancel
                         <Label htmlFor="licenseNumber">License Number</Label>
                         <Input id="licenseNumber" value={formData.pilotLicense?.licenseNumber || ''} onChange={(e) => handleNestedInputChange('pilotLicense', 'licenseNumber', e.target.value)} />
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-2 col-span-1 md:col-span-2 lg:col-span-3">
                           <Label htmlFor="ratings">Ratings</Label>
-                          <Input id="ratings" value={(formData.pilotLicense?.ratings || []).join(', ')} onChange={(e) => handleArrayInputChange('pilotLicense', 'ratings', e.target.value)} placeholder="e.g., IFR, ME" />
-                          <p className="text-xs text-muted-foreground">Enter values separated by commas.</p>
+                          <TagInput
+                            id="ratings"
+                            value={formData.pilotLicense?.ratings || []}
+                            onChange={(newTags) => handleNestedInputChange('pilotLicense', 'ratings', newTags)}
+                            placeholder="Add a rating (e.g., IFR) and press Enter..."
+                          />
                       </div>
-                      <div className="space-y-2">
+                       <div className="space-y-2 col-span-1 md:col-span-2 lg:col-span-3">
                           <Label htmlFor="endorsements">Endorsements</Label>
-                          <Input id="endorsements" value={(formData.pilotLicense?.endorsements || []).join(', ')} onChange={(e) => handleArrayInputChange('pilotLicense', 'endorsements', e.target.value)} placeholder="e.g., High Performance, Complex" />
-                          <p className="text-xs text-muted-foreground">Enter values separated by commas.</p>
+                          <TagInput
+                            id="endorsements"
+                            value={formData.pilotLicense?.endorsements || []}
+                            onChange={(newTags) => handleNestedInputChange('pilotLicense', 'endorsements', newTags)}
+                            placeholder="Add an endorsement (e.g., High Performance) and press Enter..."
+                          />
                       </div>
                       <div className="space-y-2">
                           <Label>Expiration Date</Label>
                           {formData.pilotLicense?.expirationDate && <p className="text-sm text-muted-foreground">Selected: {format(new Date(formData.pilotLicense.expirationDate), "PPP")}</p>}
                           <CustomCalendar 
                               selectedDate={formData.pilotLicense?.expirationDate ? new Date(formData.pilotLicense.expirationDate) : undefined}
-                              onDateSelect={(date) => handleNestedInputChange('pilotLicense', 'expirationDate', date?.toISOString().split('T')[0])}
+                              onDateSelect={(date) => handleNestedInputChange('pilotLicense', 'expirationDate', date ? date.toISOString().split('T')[0] : null)}
                           />
                       </div>
                     </>
