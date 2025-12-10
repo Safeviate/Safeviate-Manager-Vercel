@@ -37,6 +37,9 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
   const [currentHobbs, setCurrentHobbs] = useState('');
   const [initialTacho, setInitialTacho] = useState('');
   const [currentTacho, setCurrentTacho] = useState('');
+  const [hoursToNext50Inspection, setHoursToNext50Inspection] = useState('');
+  const [hoursToNext100Inspection, setHoursToNext100Inspection] = useState('');
+
 
   const [isOpen, setIsOpen] = useState(false);
 
@@ -75,6 +78,8 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
         currentHobbs: initialHobbsValue,
         initialTacho: initialTachoValue,
         currentTacho: initialTachoValue,
+        hoursToNext50Inspection: Number(hoursToNext50Inspection) || 0,
+        hoursToNext100Inspection: Number(hoursToNext100Inspection) || 0,
     });
 
     toast({
@@ -96,6 +101,8 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
     setCurrentHobbs('');
     setInitialTacho('');
     setCurrentTacho('');
+    setHoursToNext50Inspection('');
+    setHoursToNext100Inspection('');
     setIsOpen(false);
   }
 
@@ -161,6 +168,14 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
            <div className="space-y-2">
             <Label htmlFor="currentTacho" className="text-muted-foreground">Current Tacho</Label>
             <Input id="currentTacho" type="number" value={initialTacho} disabled readOnly />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="hoursToNext50Inspection">Hours to Next 50 Insp.</Label>
+            <Input id="hoursToNext50Inspection" type="number" value={hoursToNext50Inspection} onChange={(e) => setHoursToNext50Inspection(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="hoursToNext100Inspection">Hours to Next 100 Insp.</Label>
+            <Input id="hoursToNext100Inspection" type="number" value={hoursToNext100Inspection} onChange={(e) => setHoursToNext100Inspection(e.target.value)} />
           </div>
         </div>
         <DialogFooter>

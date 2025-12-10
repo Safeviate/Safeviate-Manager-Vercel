@@ -173,6 +173,8 @@ export function ViewAircraftDetails({ aircraft }: ViewAircraftDetailsProps) {
                 <DetailItem label="Current Hobbs" value={aircraft.currentHobbs} />
                 <DetailItem label="Initial Tacho" value={aircraft.initialTacho} />
                 <DetailItem label="Current Tacho" value={aircraft.currentTacho} />
+                <DetailItem label="Hours to Next 50 Insp." value={aircraft.hoursToNext50Inspection} />
+                <DetailItem label="Hours to Next 100 Insp." value={aircraft.hoursToNext100Inspection} />
             </CardContent>
         </Card>
         

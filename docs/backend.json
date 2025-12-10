@@ -194,6 +194,14 @@
           "type": "number",
           "description": "Current Tachometer reading."
         },
+        "hoursToNext50Inspection": {
+          "type": "number",
+          "description": "Hours remaining until the next 50-hour inspection."
+        },
+        "hoursToNext100Inspection": {
+          "type": "number",
+          "description": "Hours remaining until the next 100-hour inspection."
+        },
         "maintenanceLogs": {
           "type": "array",
           "description": "References to MaintenanceLog entries. (Relationship: Aircraft 1:N MaintenanceLog)",

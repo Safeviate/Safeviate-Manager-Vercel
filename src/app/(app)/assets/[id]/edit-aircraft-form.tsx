@@ -33,7 +33,6 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
   
   const [tailNumber, setTailNumber] = useState(aircraft.tailNumber);
   const [model, setModel] = useState(aircraft.model);
-  const [abbreviation, setAbbreviation] = useState(aircraft.abbreviation || '');
   const [type, setType] = useState(aircraft.type || '');
   const [frameHours, setFrameHours] = useState(aircraft.frameHours?.toString() || '');
   const [engineHours, setEngineHours] = useState(aircraft.engineHours?.toString() || '');
@@ -41,6 +40,8 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
   const [currentHobbs, setCurrentHobbs] = useState(aircraft.currentHobbs?.toString() || '');
   const [initialTacho, setInitialTacho] = useState(aircraft.initialTacho?.toString() || '');
   const [currentTacho, setCurrentTacho] = useState(aircraft.currentTacho?.toString() || '');
+  const [hoursToNext50Inspection, setHoursToNext50Inspection] = useState(aircraft.hoursToNext50Inspection?.toString() || '');
+  const [hoursToNext100Inspection, setHoursToNext100Inspection] = useState(aircraft.hoursToNext100Inspection?.toString() || '');
   
   const handleUpdateAircraft = () => {
     if (!tailNumber.trim() || !model.trim() || !type.trim()) {
@@ -66,7 +67,6 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
     updateDocumentNonBlocking(aircraftRef, { 
       tailNumber, 
       model,
-      abbreviation,
       type,
       frameHours: Number(frameHours) || 0,
       engineHours: Number(engineHours) || 0,
@@ -74,6 +74,8 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
       currentHobbs: Number(currentHobbs) || 0,
       initialTacho: Number(initialTacho) || 0,
       currentTacho: Number(currentTacho) || 0,
+      hoursToNext50Inspection: Number(hoursToNext50Inspection) || 0,
+      hoursToNext100Inspection: Number(hoursToNext100Inspection) || 0,
     });
 
     toast({
@@ -103,10 +105,6 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
                 <Input id="model" value={model} onChange={(e) => setModel(e.target.value)} />
             </div>
              <div className="space-y-2">
-                <Label htmlFor="abbreviation">Abbreviation</Label>
-                <Input id="abbreviation" value={abbreviation} onChange={(e) => setAbbreviation(e.target.value)} maxLength={5} />
-            </div>
-             <div className="space-y-2">
                 <Label htmlFor="type">Type</Label>
                 <Input id="type" value={type} onChange={(e) => setType(e.target.value)} />
             </div>
@@ -133,6 +131,14 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
             <div className="space-y-2">
                 <Label htmlFor="currentTacho">Current Tacho</Label>
                 <Input id="currentTacho" type="number" value={currentTacho} onChange={(e) => setCurrentTacho(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="hoursToNext50Inspection">Hours to Next 50 Insp.</Label>
+              <Input id="hoursToNext50Inspection" type="number" value={hoursToNext50Inspection} onChange={(e) => setHoursToNext50Inspection(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="hoursToNext100Inspection">Hours to Next 100 Insp.</Label>
+              <Input id="hoursToNext100Inspection" type="number" value={hoursToNext100Inspection} onChange={(e) => setHoursToNext100Inspection(e.target.value)} />
             </div>
         </div>
       </CardContent>

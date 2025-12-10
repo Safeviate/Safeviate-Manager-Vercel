@@ -28,6 +28,8 @@ export type Aircraft = {
   currentHobbs?: number;
   initialTacho?: number;
   currentTacho?: number;
+  hoursToNext50Inspection?: number;
+  hoursToNext100Inspection?: number;
   documents?: AircraftDocument[];
 };
 
