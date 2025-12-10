@@ -126,7 +126,7 @@ const AircraftColumn = ({ aircraft, bookings, pilots, tenantId, onGridClick, onB
       {/* Hour lines and labels for this column */}
       {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
         <div key={hour} className="relative border-t" style={{ height: `${HOUR_HEIGHT_PX}px` }}>
-            <span className="absolute -top-2 left-1 text-xs text-muted-foreground">
+            <span className="absolute top-1 left-1 text-xs text-muted-foreground">
                 {format(new Date(0, 0, 0, hour), 'HH:mm')}
             </span>
         </div>
