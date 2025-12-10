@@ -25,7 +25,9 @@ export type Aircraft = {
   frameHours?: number;
   engineHours?: number;
   initialHobbs?: number;
+  currentHobbs?: number;
   initialTacho?: number;
+  currentTacho?: number;
   documents?: AircraftDocument[];
 };
 
@@ -75,8 +77,5 @@ export default function AssetsPage() {
     </div>
   );
 }
-
-    
-    
 
     

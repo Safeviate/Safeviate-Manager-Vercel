@@ -170,7 +170,9 @@ export function ViewAircraftDetails({ aircraft }: ViewAircraftDetailsProps) {
                 <DetailItem label="Frame Hours" value={aircraft.frameHours} />
                 <DetailItem label="Engine Hours" value={aircraft.engineHours} />
                 <DetailItem label="Initial Hobbs" value={aircraft.initialHobbs} />
+                <DetailItem label="Current Hobbs" value={aircraft.currentHobbs} />
                 <DetailItem label="Initial Tacho" value={aircraft.initialTacho} />
+                <DetailItem label="Current Tacho" value={aircraft.currentTacho} />
             </CardContent>
         </Card>
         
@@ -296,7 +298,5 @@ export function ViewAircraftDetails({ aircraft }: ViewAircraftDetailsProps) {
     </div>
   );
 }
-
-    
 
     

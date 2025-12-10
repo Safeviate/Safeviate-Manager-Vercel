@@ -37,7 +37,9 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
   const [frameHours, setFrameHours] = useState(aircraft.frameHours?.toString() || '');
   const [engineHours, setEngineHours] = useState(aircraft.engineHours?.toString() || '');
   const [initialHobbs, setInitialHobbs] = useState(aircraft.initialHobbs?.toString() || '');
+  const [currentHobbs, setCurrentHobbs] = useState(aircraft.currentHobbs?.toString() || '');
   const [initialTacho, setInitialTacho] = useState(aircraft.initialTacho?.toString() || '');
+  const [currentTacho, setCurrentTacho] = useState(aircraft.currentTacho?.toString() || '');
   
   const handleUpdateAircraft = () => {
     if (!tailNumber.trim() || !model.trim() || !type.trim()) {
@@ -67,7 +69,9 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
       frameHours: Number(frameHours) || 0,
       engineHours: Number(engineHours) || 0,
       initialHobbs: Number(initialHobbs) || 0,
+      currentHobbs: Number(currentHobbs) || 0,
       initialTacho: Number(initialTacho) || 0,
+      currentTacho: Number(currentTacho) || 0,
     });
 
     toast({
@@ -113,8 +117,16 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
                 <Input id="initialHobbs" type="number" value={initialHobbs} onChange={(e) => setInitialHobbs(e.target.value)} />
             </div>
             <div className="space-y-2">
+                <Label htmlFor="currentHobbs">Current Hobbs</Label>
+                <Input id="currentHobbs" type="number" value={currentHobbs} onChange={(e) => setCurrentHobbs(e.target.value)} />
+            </div>
+            <div className="space-y-2">
                 <Label htmlFor="initialTacho">Initial Tacho</Label>
                 <Input id="initialTacho" type="number" value={initialTacho} onChange={(e) => setInitialTacho(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="currentTacho">Current Tacho</Label>
+                <Input id="currentTacho" type="number" value={currentTacho} onChange={(e) => setCurrentTacho(e.target.value)} />
             </div>
         </div>
       </CardContent>

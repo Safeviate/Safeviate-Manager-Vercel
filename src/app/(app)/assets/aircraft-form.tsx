@@ -34,7 +34,9 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
   const [frameHours, setFrameHours] = useState('');
   const [engineHours, setEngineHours] = useState('');
   const [initialHobbs, setInitialHobbs] = useState('');
+  const [currentHobbs, setCurrentHobbs] = useState('');
   const [initialTacho, setInitialTacho] = useState('');
+  const [currentTacho, setCurrentTacho] = useState('');
 
   const [isOpen, setIsOpen] = useState(false);
 
@@ -67,7 +69,9 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
         frameHours: Number(frameHours) || 0,
         engineHours: Number(engineHours) || 0,
         initialHobbs: Number(initialHobbs) || 0,
+        currentHobbs: Number(currentHobbs) || 0,
         initialTacho: Number(initialTacho) || 0,
+        currentTacho: Number(currentTacho) || 0,
     });
 
     toast({
@@ -86,7 +90,9 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
     setFrameHours('');
     setEngineHours('');
     setInitialHobbs('');
+    setCurrentHobbs('');
     setInitialTacho('');
+    setCurrentTacho('');
     setIsOpen(false);
   }
 
@@ -141,9 +147,17 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
             <Label htmlFor="initialHobbs">Initial Hobbs</Label>
             <Input id="initialHobbs" type="number" value={initialHobbs} onChange={(e) => setInitialHobbs(e.target.value)} />
           </div>
+           <div className="space-y-2">
+            <Label htmlFor="currentHobbs">Current Hobbs</Label>
+            <Input id="currentHobbs" type="number" value={currentHobbs} onChange={(e) => setCurrentHobbs(e.target.value)} />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="initialTacho">Initial Tacho</Label>
             <Input id="initialTacho" type="number" value={initialTacho} onChange={(e) => setInitialTacho(e.target.value)} />
+          </div>
+           <div className="space-y-2">
+            <Label htmlFor="currentTacho">Current Tacho</Label>
+            <Input id="currentTacho" type="number" value={currentTacho} onChange={(e) => setCurrentTacho(e.target.value)} />
           </div>
         </div>
         <DialogFooter>
@@ -156,8 +170,5 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
     </Dialog>
   );
 }
-
-    
-    
 
     

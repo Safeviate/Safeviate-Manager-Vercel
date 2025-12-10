@@ -182,9 +182,17 @@
           "type": "number",
           "description": "Initial Hobbs meter reading."
         },
+        "currentHobbs": {
+          "type": "number",
+          "description": "Current Hobbs meter reading."
+        },
         "initialTacho": {
           "type": "number",
           "description": "Initial Tachometer reading."
+        },
+        "currentTacho": {
+          "type": "number",
+          "description": "Current Tachometer reading."
         },
         "maintenanceLogs": {
           "type": "array",
