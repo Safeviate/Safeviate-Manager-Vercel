@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -57,7 +57,7 @@ export default function DocumentDatesPage() {
     }
 
     const newPeriods = [...currentPeriods, period].sort((a, b) => a - b);
-    updateDocumentNonBlocking(expirySettingsRef, { warningPeriods: newPeriods });
+    setDocumentNonBlocking(expirySettingsRef, { warningPeriods: newPeriods }, { merge: true });
 
     toast({
       title: 'Warning Period Added',
@@ -71,7 +71,7 @@ export default function DocumentDatesPage() {
 
     const currentPeriods = expirySettings?.warningPeriods || [];
     const newPeriods = currentPeriods.filter((p) => p !== periodToRemove);
-    updateDocumentNonBlocking(expirySettingsRef, { warningPeriods: newPeriods });
+    setDocumentNonBlocking(expirySettingsRef, { warningPeriods: newPeriods }, { merge: true });
 
      toast({
       title: 'Warning Period Removed',
