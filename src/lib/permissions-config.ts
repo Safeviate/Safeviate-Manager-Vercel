@@ -15,7 +15,7 @@ export type PermissionResource = {
  * The `actions` are the specific operations available for that resource.
  */
 export const permissionsConfig: PermissionResource[] = [
-  // --- General App Sections ---
+  // --- General Sections ---
   {
     id: 'dashboard',
     name: 'Dashboard',
@@ -39,41 +39,41 @@ export const permissionsConfig: PermissionResource[] = [
     actions: ['view', 'create', 'edit', 'delete'],
   },
 
-  // --- Admin ---
+  // --- Admin Section ---
   {
     id: 'admin-roles',
-    name: 'Roles',
+    name: 'Admin: Roles',
     actions: ['view', 'create', 'edit', 'delete'],
   },
   {
     id: 'admin-permissions',
-    name: 'Permissions',
+    name: 'Admin: Permissions',
     actions: ['view'],
   },
   {
     id: 'admin-department',
-    name: 'Departments',
+    name: 'Admin: Departments',
     actions: ['view', 'create', 'edit', 'delete'],
   },
   {
     id: 'admin-document-dates',
-    name: 'Document Dates',
+    name: 'Admin: Document Dates',
     actions: ['view', 'manage'],
   },
   {
     id: 'admin-database',
-    name: 'Database Seeding',
+    name: 'Admin: Database Seeding',
     actions: ['manage'],
   },
 
-  // --- Settings ---
+  // --- Settings Section ---
   {
     id: 'settings-appearance',
-    name: 'Appearance Settings',
-    actions: ['edit'],
+    name: 'Settings: Appearance',
+    actions: ['manage'],
   },
 
-  // --- Development (Only for dev environment) ---
+  // --- Development Section (for dev environment) ---
   {
     id: 'development',
     name: 'Development Tools',
