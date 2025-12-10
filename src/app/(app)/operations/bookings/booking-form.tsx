@@ -19,7 +19,7 @@ import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from 
 import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
-import { add, format } from 'date-fns';
+import { add, format, isBefore } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import type { Booking } from '@/types/booking';
@@ -106,6 +106,18 @@ export function BookingForm({
         toast({ variant: 'destructive', title: 'Invalid Time', description: 'End time must be after start time.' });
         return;
     }
+
+    // For new bookings, prevent saving if the start time is in the past.
+    // For edited bookings, this check is more complex, but a simple check is a good start.
+    if (!isEditing && isBefore(finalStartTime, new Date())) {
+        toast({
+            variant: 'destructive',
+            title: 'Cannot Book in the Past',
+            description: 'The selected start time has already passed.',
+        });
+        return;
+    }
+
 
     const bookingData = {
         aircraftId: aircraft.id,

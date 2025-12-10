@@ -32,7 +32,7 @@ interface BookingItemProps {
     onEdit: (booking: Booking, aircraft: Aircraft) => void;
 }
 
-const BookingItem = ({ booking, aircraft, pilots, tenantId, onEdit }: BookingItemProps) => {
+const BookingItem = ({ booking, pilots, tenantId, onEdit, aircraft }: BookingItemProps) => {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
@@ -80,13 +80,13 @@ const BookingItem = ({ booking, aircraft, pilots, tenantId, onEdit }: BookingIte
                 <PopoverTrigger asChild>
                      <div
                         className={cn(
-                            "absolute top-1/2 -translate-y-1/2 h-10 flex items-center justify-center rounded-lg text-primary-foreground p-2 shadow z-20 cursor-pointer hover:opacity-90 transition-opacity",
+                            "absolute top-1/2 -translate-y-1/2 flex items-center justify-center rounded-lg text-primary-foreground p-2 shadow z-20 cursor-pointer hover:opacity-90 transition-opacity h-10",
                             booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80'
                         )}
                         style={{ left: `${left}px`, width: `${width}px` }}
                     >
                         <div className="flex flex-col text-xs text-center truncate">
-                            <span className="font-bold truncate">{booking.type}</span>
+                            <span className="truncate">{booking.type}</span>
                             <span className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : booking.pilotId}</span>
                             {booking.status === 'Cancelled' && <span className="font-bold uppercase text-[9px] mt-0.5">Cancelled</span>}
                         </div>
@@ -147,6 +147,7 @@ export function BookingCalendar({
   const timelineRef = useRef<HTMLDivElement>(null);
   const dataRef = useRef<HTMLDivElement>(null);
   const resourceColRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   // State for the booking form dialog
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -208,6 +209,16 @@ export function BookingCalendar({
     const minute = Math.floor(minutesFromStart % 60);
 
     const clickedTime = setMilliseconds(setSeconds(setMinutes(setHours(startOfDay(selectedDate), hour), minute), 0), 0);
+    
+    // Prevent booking in the past
+    if (clickedTime < new Date()) {
+        toast({
+            variant: 'destructive',
+            title: 'Cannot Book in the Past',
+            description: 'Please select a future time slot for the booking.',
+        });
+        return;
+    }
 
     setFormInitialData({ aircraft: ac, startTime: clickedTime, booking: null });
     setIsFormOpen(true);
@@ -266,10 +277,11 @@ export function BookingCalendar({
                         ))}
                     </div>
                     {/* Aircraft Rows and Bookings */}
-                    {aircraft.map((ac) => (
+                    {aircraft.map((ac, index) => (
                         <div 
                             key={ac.id} 
                             className="relative h-12 border-b"
+                            style={{ top: `${index * 48}px` }}
                             onClick={(e) => handleGridClick(e, ac)}
                         >
                             {bookings
