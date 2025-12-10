@@ -26,16 +26,22 @@ export const permissionsConfig: PermissionResource[] = [
     name: 'My Dashboard',
     actions: ['view'],
   },
+  
+  // --- Assets ---
   {
     id: 'assets',
     name: 'Assets',
     actions: ['view', 'create', 'edit', 'delete'],
   },
+  
+  // --- Users ---
   {
     id: 'users',
     name: 'Users',
     actions: ['view', 'create', 'edit', 'delete'],
   },
+
+  // --- Training ---
   {
     id: 'training',
     name: 'Training',
