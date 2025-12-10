@@ -16,10 +16,11 @@ import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Trash2, Upload, View, FileUp, Camera } from 'lucide-react';
+import { CalendarIcon, Trash2, Upload, View, FileUp, Camera, Wrench } from 'lucide-react';
 import type { DocumentExpirySettings } from '../../admin/document-dates/page';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Input } from '@/components/ui/input';
+import { SetServiceForm } from './set-service-form';
 
 interface ViewAircraftDetailsProps {
   aircraft: Aircraft;
@@ -158,9 +159,17 @@ export function ViewAircraftDetails({ aircraft }: ViewAircraftDetailsProps) {
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-            <CardHeader>
-                <CardTitle>Aircraft Information</CardTitle>
-                <CardDescription>Details for aircraft {aircraft.tailNumber}.</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle>Aircraft Information</CardTitle>
+                    <CardDescription>Details for aircraft {aircraft.tailNumber}.</CardDescription>
+                </div>
+                <SetServiceForm tenantId={tenantId} aircraft={aircraft}>
+                    <Button variant="outline">
+                        <Wrench className="mr-2 h-4 w-4" />
+                        Set Service
+                    </Button>
+                </SetServiceForm>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <DetailItem label="Tail Number" value={aircraft.tailNumber} />
@@ -300,5 +309,7 @@ export function ViewAircraftDetails({ aircraft }: ViewAircraftDetailsProps) {
     </div>
   );
 }
+
+    
 
     
