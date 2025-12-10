@@ -90,6 +90,22 @@ export default function DocumentDatesPage() {
     });
   };
 
+  const handleColorChange = (periodToUpdate: number, newColor: string) => {
+    if (!expirySettingsRef) return;
+    
+    const currentPeriods = expirySettings?.warningPeriods || [];
+    const newPeriods = currentPeriods.map(p => 
+        p.period === periodToUpdate ? { ...p, color: newColor } : p
+    );
+
+    setDocumentNonBlocking(expirySettingsRef, { warningPeriods: newPeriods }, { merge: true });
+    
+    toast({
+        title: 'Color Updated',
+        description: `The color for the ${periodToUpdate}-day warning has been updated.`,
+    });
+  };
+
   if (isLoading) {
     return (
       <Card className="w-full max-w-2xl mx-auto">
@@ -151,7 +167,14 @@ export default function DocumentDatesPage() {
               expirySettings?.warningPeriods.map(({ period, color }) => (
                 <div key={period} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
                     <div className="flex items-center gap-3">
-                        <div className="h-6 w-6 rounded-full border" style={{ backgroundColor: color }} />
+                        <div className="relative h-6 w-6 rounded-full border cursor-pointer" style={{ backgroundColor: color }}>
+                           <Input 
+                                type="color" 
+                                value={color}
+                                onChange={(e) => handleColorChange(period, e.target.value)}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0"
+                            />
+                        </div>
                         <Badge variant="secondary" className="flex items-center gap-2 text-base py-1">
                             {period} days
                         </Badge>
