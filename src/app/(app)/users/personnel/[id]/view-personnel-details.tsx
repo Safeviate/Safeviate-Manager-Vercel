@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { permissionsConfig } from '@/lib/permissions-config';
@@ -10,7 +10,7 @@ import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { ChevronsUpDown, FileText, Upload, Trash2, Link as LinkIcon, CalendarDays, ExternalLink, View } from 'lucide-react';
+import { ChevronsUpDown, FileText, Upload, Trash2, CalendarDays, ExternalLink, View } from 'lucide-react';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { DocumentUploader } from './document-uploader';
@@ -47,31 +47,62 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const uploadedDocuments = user?.documents || [];
-  const uploadedDocumentNames = uploadedDocuments.map(doc => doc.name);
+  const allDocuments = useMemo(() => {
+    const combinedDocs = new Map<string, Document & { isRequired: boolean }>();
 
-  // Filter for ad-hoc documents (uploaded but not in the required list)
-  const adHocDocuments = uploadedDocuments.filter(
-    doc => !(role?.requiredDocuments || []).includes(doc.name)
-  );
+    // Add required documents first to establish order
+    if (role?.requiredDocuments) {
+      for (const docName of role.requiredDocuments) {
+        const uploadedDoc = user.documents?.find(d => d.name === docName);
+        if (uploadedDoc) {
+          combinedDocs.set(docName, { ...uploadedDoc, isRequired: true });
+        } else {
+          combinedDocs.set(docName, { name: docName, url: '', uploadDate: '', expirationDate: null, isRequired: true });
+        }
+      }
+    }
+
+    // Add any other uploaded (ad-hoc) documents
+    if (user.documents) {
+      for (const doc of user.documents) {
+        if (!combinedDocs.has(doc.name)) {
+          combinedDocs.set(doc.name, { ...doc, isRequired: false });
+        }
+      }
+    }
+
+    return Array.from(combinedDocs.values());
+  }, [user.documents, role?.requiredDocuments]);
+
 
   const handleDocumentUploaded = (document: {name: string, url: string, uploadDate: string, expirationDate: string | null}) => {
     if (!firestore) return;
     const collectionName = isPilotProfile(user) ? 'pilots' : 'personnel';
     const userRef = doc(firestore, 'tenants', 'safeviate', collectionName, user.id);
-    const newDocuments = [...uploadedDocuments, document];
+    
+    // Check if a document with the same name already exists and replace it, otherwise add it.
+    const existingDocIndex = (user.documents || []).findIndex(d => d.name === document.name);
+    let newDocuments: Document[];
+
+    if (existingDocIndex > -1) {
+        newDocuments = [...(user.documents || [])];
+        newDocuments[existingDocIndex] = document;
+    } else {
+        newDocuments = [...(user.documents || []), document];
+    }
+
     updateDocumentNonBlocking(userRef, { documents: newDocuments });
   };
 
-  const handleDeleteDocument = (urlToDelete: string) => {
+  const handleDeleteDocument = (docNameToDelete: string) => {
      if (!firestore) return;
     const collectionName = isPilotProfile(user) ? 'pilots' : 'personnel';
     const userRef = doc(firestore, 'tenants', 'safeviate', collectionName, user.id);
-    const newDocuments = uploadedDocuments.filter(doc => doc.url !== urlToDelete);
+    const newDocuments = (user.documents || []).filter(doc => doc.name !== docNameToDelete);
     updateDocumentNonBlocking(userRef, { documents: newDocuments });
     toast({
       title: "Document Deleted",
-      description: "The document reference has been removed.",
+      description: `The document "${docNameToDelete}" has been removed.`,
     })
   }
 
@@ -163,55 +194,49 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
             />
         </CardHeader>
         <CardContent className="space-y-4">
-            {isPilotProfile(user) && user.pilotLicense && (
-                <>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <DetailItem label="License Issue Date" value={user.pilotLicense.issueDate ? format(new Date(user.pilotLicense.issueDate), 'PPP') : 'N/A'} />
-                        <DetailItem label="License Expiration Date" value={user.pilotLicense.expirationDate ? format(new Date(user.pilotLicense.expirationDate), 'PPP') : 'N/A'} />
-                    </div>
-                    <Separator />
-                </>
+            {isPilotProfile(user) && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <DetailItem label="License Issue Date" value={user.pilotLicense?.issueDate ? format(new Date(user.pilotLicense.issueDate), 'PPP') : 'N/A'} />
+                    <DetailItem label="License Expiration Date" value={user.pilotLicense?.expirationDate ? format(new Date(user.pilotLicense.expirationDate), 'PPP') : 'N/A'} />
+                </div>
+                <Separator />
+              </>
             )}
 
-           {role && role.requiredDocuments && role.requiredDocuments.length > 0 && (
-            <div>
-                <h4 className="text-md font-medium mb-2 text-muted-foreground">Required Documents</h4>
-                <div className="space-y-2">
-                    {role.requiredDocuments.map(docName => {
-                        const uploadedFile = uploadedDocuments.find(d => d.name === docName);
-                        return (
-                            <div key={docName} className="flex items-center justify-between p-3 border rounded-lg bg-secondary/30">
-                                <div className="flex items-center gap-3">
-                                    <FileText className="h-5 w-5"/>
-                                    <div>
-                                        <span className="font-medium">{docName}</span>
-                                         {uploadedFile && (
-                                            <div className="text-xs text-muted-foreground">
-                                                <p>Uploaded on {format(new Date(uploadedFile.uploadDate), 'PPP')}</p>
-                                                {uploadedFile.expirationDate && (
-                                                    <p className="flex items-center gap-1">
-                                                        <CalendarDays className="h-3 w-3" />
-                                                        Expires on {format(new Date(uploadedFile.expirationDate), 'PPP')}
-                                                    </p>
-                                                )}
-                                            </div>
-                                         )}
-                                    </div>
+            <div className="space-y-2">
+                {allDocuments.map((doc) => {
+                    const isUploaded = !!doc.url;
+                    return (
+                        <div key={doc.name} className="flex items-center justify-between p-3 border rounded-lg bg-secondary/20">
+                            <div className="flex items-center gap-4">
+                                <FileText className="h-5 w-5 text-muted-foreground"/>
+                                <div>
+                                    <span className="font-medium">{doc.name}</span>
+                                    {doc.isRequired && <Badge variant="outline" className="ml-2 text-xs">Required</Badge>}
+                                    {isUploaded && (
+                                        <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
+                                            {doc.uploadDate && <span>Uploaded: {format(new Date(doc.uploadDate), 'PPP')}</span>}
+                                            {doc.expirationDate && (
+                                                <span className="flex items-center gap-1">
+                                                    <CalendarDays className="h-3 w-3" />
+                                                    Expires: {format(new Date(doc.expirationDate), 'PPP')}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
-                                {uploadedFile ? (
-                                    <div className="flex items-center gap-2">
-                                        <Button size="sm" variant="outline" onClick={() => setViewingDocument(uploadedFile)}>
-                                            <View className="mr-2 h-4 w-4" />
-                                            View
-                                        </Button>
-                                        <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => handleDeleteDocument(uploadedFile.url)}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {isUploaded ? (
+                                    <Button size="sm" variant="outline" onClick={() => setViewingDocument(doc)}>
+                                        <View className="mr-2 h-4 w-4" />
+                                        View
+                                    </Button>
                                 ) : (
                                     <DocumentUploader 
                                         onDocumentUploaded={handleDocumentUploaded}
-                                        defaultFileName={docName}
+                                        defaultFileName={doc.name}
                                         trigger={
                                             <Button size="sm">
                                                 <Upload className="mr-2 h-4 w-4" />
@@ -220,43 +245,21 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                                         }
                                     />
                                 )}
+                                {isUploaded && (
+                                  <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => handleDeleteDocument(doc.name)}>
+                                      <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
                             </div>
-                        )
-                    })}
-                </div>
+                        </div>
+                    );
+                })}
+                 {allDocuments.length === 0 && (
+                    <div className="text-center p-4 text-muted-foreground">
+                        No documents required or uploaded for this user.
+                    </div>
+                 )}
             </div>
-           )}
-            
-            {adHocDocuments.length > 0 && <Separator />}
-            
-            {adHocDocuments.length > 0 && (
-              <div>
-                  <h4 className="text-md font-medium mb-2 text-muted-foreground">Ad-hoc Documents</h4>
-                  <div className="space-y-2">
-                      {adHocDocuments.map(doc => (
-                          <div key={doc.url} className="flex items-center justify-between p-3 border rounded-lg">
-                              <button onClick={() => setViewingDocument(doc)} className='flex items-center gap-3 text-left hover:underline'>
-                                   <LinkIcon className="h-5 w-5 text-muted-foreground"/>
-                                   <div>
-                                      <p className="font-medium">{doc.name}</p>
-                                      <p className="text-xs text-muted-foreground">Uploaded on {format(new Date(doc.uploadDate), 'PPP')}</p>
-                                      {doc.expirationDate && (
-                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                          <CalendarDays className="h-3 w-3" />
-                                          Expires on {format(new Date(doc.expirationDate), 'PPP')}
-                                        </p>
-                                      )}
-                                   </div>
-                              </button>
-                              <Button variant="ghost" size="icon" className='text-destructive' onClick={() => handleDeleteDocument(doc.url)}>
-                                  <Trash2 className="h-4 w-4" />
-                              </Button>
-                          </div>
-                      ))}
-                  </div>
-              </div>
-            )}
-
         </CardContent>
       </Card>
 
