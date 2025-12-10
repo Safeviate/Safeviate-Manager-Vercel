@@ -45,6 +45,8 @@ export function DatabaseForm() {
 
     try {
       const tenantRef = doc(firestore, 'tenants', tenantId);
+      const settingsRef = doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry');
+
 
       // In a real app, you would upload the logo to Firebase Storage
       // and get a download URL. For now, we'll use a placeholder.
@@ -64,6 +66,17 @@ export function DatabaseForm() {
         },
         { merge: true }
       );
+      
+      // Also create the initial settings document
+      setDocumentNonBlocking(
+        settingsRef,
+        {
+          id: 'document-expiry',
+          warningPeriods: [30, 60, 90], // Default values
+        },
+        { merge: true }
+      );
+
 
       toast({
         title: 'Tenant Creation Initiated',
