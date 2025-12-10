@@ -260,7 +260,7 @@ export function BookingCalendar({
              {/* Resources Column (Sticky) */}
              <div ref={resourceColRef} className="w-48 flex-shrink-0 border-r overflow-y-scroll bg-muted/20" onScroll={handleResourceScroll}>
                 {aircraft.map((ac) => (
-                    <div key={ac.id} className="flex items-center h-12 p-2 border-b">
+                    <div key={ac.id} className="flex items-center h-10 p-2 border-b">
                         <span className="font-medium">{ac.tailNumber}</span>
                     </div>
                 ))}
@@ -269,7 +269,7 @@ export function BookingCalendar({
              
             {/* Gantt Area */}
             <div className="flex-grow overflow-auto" onScroll={handleGridScroll} ref={dataRef}>
-                <div className="relative" style={{ width: `${HOURS_IN_DAY * HOUR_WIDTH_PX}px`, height: `${aircraft.length * 48}px` }}>
+                <div className="relative" style={{ width: `${HOURS_IN_DAY * HOUR_WIDTH_PX}px`, height: `${aircraft.length * 40}px` }}>
                     {/* Grid Lines */}
                     <div className="absolute inset-0 flex">
                         {timeSlots.map((_, index) => (
@@ -280,8 +280,8 @@ export function BookingCalendar({
                     {aircraft.map((ac, index) => (
                         <div 
                             key={ac.id} 
-                            className="relative h-12 border-b"
-                            style={{ top: `${index * 48}px` }}
+                            className="relative h-10 border-b"
+                            style={{ top: `${index * 40}px` }}
                             onClick={(e) => handleGridClick(e, ac)}
                         >
                             {bookings
@@ -298,6 +298,13 @@ export function BookingCalendar({
                             ))}
                         </div>
                     ))}
+                    {/* "Past" Shadow */}
+                    {nowLine !== null && (
+                        <div
+                            className="absolute top-0 bottom-0 left-0 bg-secondary/30 z-10 pointer-events-none"
+                            style={{ width: `${nowLine}px` }}
+                        />
+                    )}
                     {/* "Now" Line */}
                     {nowLine !== null && (
                         <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-30" style={{ left: `${nowLine}px` }}>
