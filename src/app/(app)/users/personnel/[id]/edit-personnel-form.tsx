@@ -279,14 +279,6 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, onCancel
                             placeholder="Add an endorsement (e.g., High Performance) and press Enter..."
                           />
                       </div>
-                      <div className="space-y-2">
-                          <Label>Expiration Date</Label>
-                          {formData.pilotLicense?.expirationDate && <p className="text-sm text-muted-foreground">Selected: {format(new Date(formData.pilotLicense.expirationDate), "PPP")}</p>}
-                          <CustomCalendar 
-                              selectedDate={formData.pilotLicense?.expirationDate ? new Date(formData.pilotLicense.expirationDate) : undefined}
-                              onDateSelect={(date) => handleNestedInputChange('pilotLicense', 'expirationDate', date ? date.toISOString().split('T')[0] : null)}
-                          />
-                      </div>
                     </>
                   )}
                 </CollapsibleContent>
