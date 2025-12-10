@@ -21,6 +21,7 @@ import { format, startOfDay, endOfDay } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { AddBookingForm } from './add-booking-form';
 
 type BookingsByAircraft = {
   [aircraftId: string]: {
@@ -125,25 +126,35 @@ export default function BookingsAgendaPage() {
                 <h1 className="text-3xl font-bold tracking-tight">Agenda / List View</h1>
                 <p className="text-muted-foreground">Daily bookings displayed as a list.</p>
             </div>
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button
-                        variant={"outline"}
-                        className="w-[280px] justify-start text-left font-normal"
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {format(selectedDate, "PPP")}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                    <CustomCalendar
-                        selectedDate={selectedDate}
-                        onDateSelect={(date) => {
-                            if (date) setSelectedDate(date);
-                        }}
-                    />
-                </PopoverContent>
-            </Popover>
+            <div className='flex items-center gap-2'>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant={"outline"}
+                            className="w-[280px] justify-start text-left font-normal"
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {format(selectedDate, "PPP")}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <CustomCalendar
+                            selectedDate={selectedDate}
+                            onDateSelect={(date) => {
+                                if (date) setSelectedDate(date);
+                            }}
+                        />
+                    </PopoverContent>
+                </Popover>
+                {!isLoading && (
+                  <AddBookingForm 
+                    tenantId={tenantId}
+                    aircraftList={aircraft || []}
+                    pilots={pilots || []}
+                    selectedDate={selectedDate}
+                  />
+                )}
+            </div>
         </div>
 
         <Card className="flex-grow overflow-y-auto">
