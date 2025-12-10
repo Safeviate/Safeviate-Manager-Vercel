@@ -12,6 +12,11 @@ export type Aircraft = {
   id: string;
   tailNumber: string;
   model: string;
+  type?: string;
+  frameHours?: number;
+  engineHours?: number;
+  hobbs?: number;
+  tacho?: number;
 };
 
 export default function AssetsPage() {
@@ -60,3 +65,5 @@ export default function AssetsPage() {
     </div>
   );
 }
+
+    

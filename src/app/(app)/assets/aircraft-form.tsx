@@ -29,14 +29,20 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
   const { toast } = useToast();
   const [tailNumber, setTailNumber] = useState('');
   const [model, setModel] = useState('');
+  const [type, setType] = useState('');
+  const [frameHours, setFrameHours] = useState('');
+  const [engineHours, setEngineHours] = useState('');
+  const [hobbs, setHobbs] = useState('');
+  const [tacho, setTacho] = useState('');
+
   const [isOpen, setIsOpen] = useState(false);
 
   const handleAddAircraft = () => {
-    if (!tailNumber.trim() || !model.trim()) {
+    if (!tailNumber.trim() || !model.trim() || !type.trim()) {
       toast({
         variant: 'destructive',
         title: 'Missing Fields',
-        description: 'Please provide both a tail number and a model.',
+        description: 'Please provide Tail Number, Model, and Type.',
       });
       return;
     }
@@ -52,7 +58,15 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
 
     const aircraftRef = collection(firestore, 'tenants', tenantId, 'aircrafts');
     
-    addDocumentNonBlocking(aircraftRef, { tailNumber, model });
+    addDocumentNonBlocking(aircraftRef, { 
+        tailNumber, 
+        model,
+        type,
+        frameHours: Number(frameHours) || 0,
+        engineHours: Number(engineHours) || 0,
+        hobbs: Number(hobbs) || 0,
+        tacho: Number(tacho) || 0,
+    });
 
     toast({
       title: 'Aircraft Added',
@@ -65,6 +79,11 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
   const resetForm = () => {
     setTailNumber('');
     setModel('');
+    setType('');
+    setFrameHours('');
+    setEngineHours('');
+    setHobbs('');
+    setTacho('');
     setIsOpen(false);
   }
 
@@ -83,37 +102,41 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
           Add Aircraft
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Add New Aircraft</DialogTitle>
           <DialogDescription>
             Enter the details for the new aircraft below.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="tailNumber" className="text-right">
-              Tail Number
-            </Label>
-            <Input
-              id="tailNumber"
-              value={tailNumber}
-              onChange={(e) => setTailNumber(e.target.value)}
-              className="col-span-3"
-              placeholder="e.g., N12345"
-            />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="tailNumber">Tail Number</Label>
+            <Input id="tailNumber" value={tailNumber} onChange={(e) => setTailNumber(e.target.value)} placeholder="e.g., N12345" />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="model" className="text-right">
-              Model
-            </Label>
-            <Input
-              id="model"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="col-span-3"
-              placeholder="e.g., Cessna 172"
-            />
+          <div className="space-y-2">
+            <Label htmlFor="model">Model</Label>
+            <Input id="model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="e.g., Cessna 172" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="type">Type</Label>
+            <Input id="type" value={type} onChange={(e) => setType(e.target.value)} placeholder="e.g., Single-Engine" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="frameHours">Frame Hours</Label>
+            <Input id="frameHours" type="number" value={frameHours} onChange={(e) => setFrameHours(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="engineHours">Engine Hours</Label>
+            <Input id="engineHours" type="number" value={engineHours} onChange={(e) => setEngineHours(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="hobbs">Hobbs</Label>
+            <Input id="hobbs" type="number" value={hobbs} onChange={(e) => setHobbs(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="tacho">Tacho</Label>
+            <Input id="tacho" type="number" value={tacho} onChange={(e) => setTacho(e.target.value)} />
           </div>
         </div>
         <DialogFooter>
@@ -126,3 +149,5 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
     </Dialog>
   );
 }
+
+    

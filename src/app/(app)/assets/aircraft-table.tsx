@@ -35,6 +35,7 @@ export function AircraftTable({ aircraft, tenantId }: AircraftTableProps) {
         <TableRow>
           <TableHead>Tail Number</TableHead>
           <TableHead>Model</TableHead>
+          <TableHead>Type</TableHead>
           <TableHead>View Details</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
@@ -44,6 +45,7 @@ export function AircraftTable({ aircraft, tenantId }: AircraftTableProps) {
           <TableRow key={item.id}>
             <TableCell className="font-medium">{item.tailNumber}</TableCell>
             <TableCell>{item.model}</TableCell>
+            <TableCell>{item.type || 'N/A'}</TableCell>
             <TableCell>
                 <Button asChild variant="outline" size="sm">
                     <Link href={`/assets/${item.id}`}>
@@ -61,3 +63,5 @@ export function AircraftTable({ aircraft, tenantId }: AircraftTableProps) {
     </Table>
   );
 }
+
+    

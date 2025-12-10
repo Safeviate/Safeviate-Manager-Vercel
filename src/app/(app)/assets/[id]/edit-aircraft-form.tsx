@@ -23,13 +23,18 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
   
   const [tailNumber, setTailNumber] = useState(aircraft.tailNumber);
   const [model, setModel] = useState(aircraft.model);
+  const [type, setType] = useState(aircraft.type || '');
+  const [frameHours, setFrameHours] = useState(aircraft.frameHours?.toString() || '');
+  const [engineHours, setEngineHours] = useState(aircraft.engineHours?.toString() || '');
+  const [hobbs, setHobbs] = useState(aircraft.hobbs?.toString() || '');
+  const [tacho, setTacho] = useState(aircraft.tacho?.toString() || '');
   
   const handleUpdateAircraft = () => {
-    if (!tailNumber.trim() || !model.trim()) {
+    if (!tailNumber.trim() || !model.trim() || !type.trim()) {
         toast({
             variant: 'destructive',
             title: 'Missing Fields',
-            description: 'Tail Number and Model are required.',
+            description: 'Tail Number, Model, and Type are required.',
         });
         return;
     }
@@ -45,7 +50,15 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
     
     const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraft.id);
     
-    updateDocumentNonBlocking(aircraftRef, { tailNumber, model });
+    updateDocumentNonBlocking(aircraftRef, { 
+      tailNumber, 
+      model,
+      type,
+      frameHours: Number(frameHours) || 0,
+      engineHours: Number(engineHours) || 0,
+      hobbs: Number(hobbs) || 0,
+      tacho: Number(tacho) || 0,
+    });
 
     toast({
         title: 'Aircraft Updated',
@@ -64,7 +77,7 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 py-4">
             <div className="space-y-2">
                 <Label htmlFor="tailNumber">Tail Number</Label>
                 <Input id="tailNumber" value={tailNumber} onChange={(e) => setTailNumber(e.target.value)} />
@@ -72,6 +85,26 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
             <div className="space-y-2">
                 <Label htmlFor="model">Model</Label>
                 <Input id="model" value={model} onChange={(e) => setModel(e.target.value)} />
+            </div>
+             <div className="space-y-2">
+                <Label htmlFor="type">Type</Label>
+                <Input id="type" value={type} onChange={(e) => setType(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="frameHours">Frame Hours</Label>
+                <Input id="frameHours" type="number" value={frameHours} onChange={(e) => setFrameHours(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="engineHours">Engine Hours</Label>
+                <Input id="engineHours" type="number" value={engineHours} onChange={(e) => setEngineHours(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="hobbs">Hobbs</Label>
+                <Input id="hobbs" type="number" value={hobbs} onChange={(e) => setHobbs(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="tacho">Tacho</Label>
+                <Input id="tacho" type="number" value={tacho} onChange={(e) => setTacho(e.target.value)} />
             </div>
         </div>
       </CardContent>
@@ -82,3 +115,5 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
     </Card>
   );
 }
+
+    
