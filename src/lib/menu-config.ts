@@ -57,6 +57,11 @@ export const menuConfig: MenuItem[] = [
         label: 'Bookings',
         description: 'Schedule and manage aircraft bookings.',
       },
+      {
+        href: '/operations/bookings-swimlane',
+        label: 'Bookings (Swimlane)',
+        description: 'View bookings in a vertical timeline.',
+      },
     ],
   },
   {
