@@ -70,15 +70,15 @@ const BookingItem = ({ booking, tenantId }: BookingItemProps) => {
                 <PopoverTrigger asChild>
                      <div
                         className={cn(
-                            "absolute top-1/2 -translate-y-1/2 h-12 flex items-center justify-center rounded-lg text-primary-foreground p-2 shadow z-20 cursor-pointer hover:opacity-90 transition-opacity",
+                            "absolute top-1/2 -translate-y-1/2 h-8 flex items-center justify-center rounded-lg text-primary-foreground p-2 shadow z-20 cursor-pointer hover:opacity-90 transition-opacity",
                             booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80'
                         )}
                         style={{ left: `${left}px`, width: `${width}px` }}
                     >
-                        <div className="flex flex-col text-xs text-center truncate">
+                        <div className="flex flex-col text-[10px] text-center truncate">
                             <span className="font-bold truncate">{booking.type}</span>
                             <span className="truncate">{booking.pilotId}</span>
-                            {booking.status === 'Cancelled' && <span className="font-bold uppercase text-xs mt-1">Cancelled</span>}
+                            {booking.status === 'Cancelled' && <span className="font-bold uppercase text-[9px] mt-0.5">Cancelled</span>}
                         </div>
                     </div>
                 </PopoverTrigger>
@@ -227,7 +227,7 @@ export function BookingCalendar({
              {/* Resources Column (Sticky) */}
              <div ref={resourceColRef} className="w-48 flex-shrink-0 border-r overflow-y-scroll bg-muted/20" onScroll={handleResourceScroll}>
                 {aircraft.map((ac) => (
-                    <div key={ac.id} className="flex items-center h-16 p-2 border-b">
+                    <div key={ac.id} className="flex items-center h-10 p-2 border-b">
                         <span className="font-medium">{ac.tailNumber}</span>
                     </div>
                 ))}
@@ -236,7 +236,7 @@ export function BookingCalendar({
              
             {/* Gantt Area */}
             <div className="flex-grow overflow-auto" onScroll={handleGridScroll} ref={dataRef}>
-                <div className="relative" style={{ width: `${HOURS_IN_DAY * HOUR_WIDTH_PX}px`, height: `${aircraft.length * 64}px` }}>
+                <div className="relative" style={{ width: `${HOURS_IN_DAY * HOUR_WIDTH_PX}px`, height: `${aircraft.length * 40}px` }}>
                     {/* Grid Lines */}
                     <div className="absolute inset-0 flex">
                         {timeSlots.map((_, index) => (
@@ -247,7 +247,7 @@ export function BookingCalendar({
                     {aircraft.map((ac) => (
                         <div 
                             key={ac.id} 
-                            className="relative h-16 border-b"
+                            className="relative h-10 border-b"
                             onClick={(e) => handleGridClick(e, ac)}
                         >
                             {bookings
