@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, type ReactNode, useEffect, useCallback } from 'react';
+import { useState, type ReactNode, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -9,17 +10,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-  DialogClose,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { format } from 'date-fns';
+import { Camera, FileUp } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+type UploadMode = 'file' | 'camera';
 
 interface DocumentUploaderProps {
-  trigger: ReactNode;
+  trigger: (open: (mode: UploadMode) => void) => ReactNode;
   defaultFileName?: string;
   onDocumentUploaded: (document: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => void;
 }
@@ -27,46 +28,108 @@ interface DocumentUploaderProps {
 export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUploaded }: DocumentUploaderProps) {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const [uploadMode, setUploadMode] = useState<UploadMode>('file');
 
-  // State for the form fields
+  // Form state
   const [fileName, setFileName] = useState(defaultFileName);
   const [file, setFile] = useState<File | null>(null);
-  const [expirationDate, setExpirationDate] = useState<Date | undefined>();
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+
+  // Camera state
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
 
   const resetForm = useCallback(() => {
     setFileName(defaultFileName);
     setFile(null);
-    setExpirationDate(undefined);
+    setCapturedImage(null);
+    setHasCameraPermission(null);
   }, [defaultFileName]);
+
+  const cleanupCamera = useCallback(() => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+  }, []);
 
   const onOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (open) {
-      // When the dialog is opened, reset the form state based on props
       resetForm();
+    } else {
+      cleanupCamera();
     }
   };
+
+  const openDialog = (mode: UploadMode) => {
+    setUploadMode(mode);
+    setIsOpen(true);
+  };
+  
+  useEffect(() => {
+    if (isOpen && uploadMode === 'camera') {
+      const getCameraPermission = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          setHasCameraPermission(true);
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+        } catch (error) {
+          console.error('Error accessing camera:', error);
+          setHasCameraPermission(false);
+          toast({
+            variant: 'destructive',
+            title: 'Camera Access Denied',
+            description: 'Please enable camera permissions in your browser settings.',
+          });
+        }
+      };
+      getCameraPermission();
+    }
+    // Cleanup function
+    return () => {
+        if (isOpen) {
+            cleanupCamera();
+        }
+    };
+  }, [isOpen, uploadMode, toast, cleanupCamera]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
         setFile(selectedFile);
-        // Only set the file name from the file if a default name isn't provided
         if (!defaultFileName) {
             setFileName(selectedFile.name);
         }
     }
   };
 
-  const handleUpload = () => {
-    if (!file) {
-      toast({
-        variant: 'destructive',
-        title: 'No File Selected',
-        description: 'Please select a file to upload.',
-      });
-      return;
+  const handleCapture = () => {
+    if (videoRef.current && canvasRef.current) {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const context = canvas.getContext('2d');
+        if (context) {
+            context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+            const dataUrl = canvas.toDataURL('image/png');
+            setCapturedImage(dataUrl);
+            cleanupCamera(); // Turn off camera after capture
+        }
     }
+  };
+
+  const handleRetake = () => {
+    setCapturedImage(null);
+    // This will trigger the useEffect to request camera again
+  };
+
+  const handleUpload = () => {
     if (!fileName.trim()) {
         toast({
           variant: 'destructive',
@@ -74,69 +137,101 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
           description: 'Please provide a name for the document.',
         });
         return;
-      }
-    
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = reader.result as string;
-      const uploadDate = new Date().toISOString();
+    }
 
-      onDocumentUploaded({
+    if (uploadMode === 'file') {
+        if (!file) {
+            toast({ variant: 'destructive', title: 'No File Selected', description: 'Please select a file to upload.' });
+            return;
+        }
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            finishUpload(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    } else if (uploadMode === 'camera') {
+        if (!capturedImage) {
+            toast({ variant: 'destructive', title: 'No Photo Taken', description: 'Please take a photo to upload.' });
+            return;
+        }
+        finishUpload(capturedImage);
+    }
+  };
+  
+  const finishUpload = (dataUrl: string) => {
+    const uploadDate = new Date().toISOString();
+    onDocumentUploaded({
         name: fileName,
         url: dataUrl,
         uploadDate: uploadDate,
-        expirationDate: expirationDate ? expirationDate.toISOString() : null,
-      });
+        expirationDate: null,
+    });
 
-      toast({
+    toast({
         title: 'Document Uploaded',
-        description: `"${fileName}" has been added to the user's profile.`,
-      });
-      
-      setIsOpen(false); // Close the dialog
-    };
-    reader.readAsDataURL(file);
-  };
+        description: `"${fileName}" has been prepared for saving.`,
+    });
+    
+    setIsOpen(false);
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-4xl grid-rows-[auto,1fr,auto]">
+      {trigger(openDialog)}
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Upload Document</DialogTitle>
+          <DialogTitle>{uploadMode === 'camera' ? 'Take Photo' : 'Upload Document'}</DialogTitle>
           <DialogDescription>
-            Select a file, give it a name, and optionally set an expiration date.
+            {uploadMode === 'camera' ? 'Capture a photo of the document.' : 'Select a file, give it a name, and optionally set an expiration date.'}
           </DialogDescription>
         </DialogHeader>
-        <div className="grid md:grid-cols-2 gap-8 py-4 overflow-y-auto">
-            <div className="space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="file-name">Document Name</Label>
-                    <Input
+        <div className="grid gap-6 py-4">
+            <div className="space-y-2">
+                <Label htmlFor="file-name">Document Name</Label>
+                <Input
                     id="file-name"
                     value={fileName}
                     onChange={(e) => setFileName(e.target.value)}
                     placeholder="e.g., Passport Scan"
-                    readOnly={!!defaultFileName} // Prevent editing if it's a required doc
-                    />
-                </div>
+                    readOnly={!!defaultFileName}
+                />
+            </div>
+            {uploadMode === 'file' ? (
                 <div className="space-y-2">
                     <Label htmlFor="file-upload">File</Label>
                     <Input id="file-upload" type="file" onChange={handleFileChange} />
                     {file && <p className="text-sm text-muted-foreground">Selected: {file.name}</p>}
                 </div>
-                 {expirationDate && (
-                    <div className='text-sm'>
-                        Selected Expiration: <span className='font-semibold'>{format(expirationDate, "PPP")}</span>
+            ) : (
+                <div className="space-y-4">
+                    <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-muted">
+                       {capturedImage ? (
+                           <img src={capturedImage} alt="Captured document" className="h-full w-full object-contain" />
+                       ) : (
+                           <video ref={videoRef} className="h-full w-full object-cover" autoPlay playsInline muted />
+                       )}
+                       {hasCameraPermission === false && (
+                           <div className='absolute inset-0 flex items-center justify-center p-4'>
+                                <Alert variant="destructive">
+                                    <AlertTitle>Camera Access Required</AlertTitle>
+                                    <AlertDescription>
+                                        Please allow camera access to use this feature.
+                                    </AlertDescription>
+                                </Alert>
+                           </div>
+                       )}
                     </div>
-                 )}
-            </div>
-            <div className="flex justify-center items-start">
-                <CustomCalendar 
-                    selectedDate={expirationDate}
-                    onDateSelect={setExpirationDate}
-                />
-            </div>
+                    <canvas ref={canvasRef} className="hidden" />
+                    {capturedImage ? (
+                        <Button variant="outline" onClick={handleRetake}>Retake Photo</Button>
+                    ) : (
+                        <Button onClick={handleCapture} disabled={!hasCameraPermission}>
+                            <Camera className='mr-2' />
+                            Capture
+                        </Button>
+                    )}
+                </div>
+            )}
         </div>
         <DialogFooter>
           <DialogClose asChild>

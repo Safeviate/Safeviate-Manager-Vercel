@@ -10,7 +10,7 @@ import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, ChevronsUpDown, Trash2, Upload, View } from 'lucide-react';
+import { CalendarIcon, ChevronsUpDown, Trash2, Upload, View, FileUp, Camera } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Image from 'next/image';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -21,6 +21,7 @@ import { DocumentUploader } from './document-uploader';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -78,7 +79,8 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     if (existingDocIndex > -1) {
         // Update existing document
         updatedDocs = [...currentDocs];
-        updatedDocs[existingDocIndex] = { ...updatedDocs[existingDocIndex], ...docDetails };
+        const expirationDate = updatedDocs[existingDocIndex].expirationDate; // Preserve existing expiry
+        updatedDocs[existingDocIndex] = { ...docDetails, expirationDate };
     } else {
         // Add new document
         updatedDocs = [...currentDocs, docDetails];
@@ -90,21 +92,15 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     const currentDocs = user.documents || [];
     const docIndex = currentDocs.findIndex(d => d.name === docName);
     
-    let updatedDocs;
     if (docIndex > -1) {
-        updatedDocs = [...currentDocs];
+        const updatedDocs = [...currentDocs];
         updatedDocs[docIndex].expirationDate = date ? date.toISOString() : null;
-    } else {
-        // If document doesn't exist, create a placeholder to hold the date
-        updatedDocs = [...currentDocs, { name: docName, url: '', uploadDate: '', expirationDate: date ? date.toISOString() : null }];
+        handleDocumentUpdate(updatedDocs);
     }
-    handleDocumentUpdate(updatedDocs);
   };
 
   const handleDocumentDelete = (docNameToDelete: string) => {
     const currentDocs = user.documents || [];
-    // We filter out the document by name. In a real-world scenario with file storage,
-    // you would also delete the file from storage here.
     const updatedDocs = currentDocs.filter(doc => doc.name !== docNameToDelete);
     handleDocumentUpdate(updatedDocs);
     toast({
@@ -124,7 +120,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
         const isRequired = required.includes(docName);
         return {
             name: docName,
-            isUploaded: !!uploadedDoc,
+            isUploaded: !!uploadedDoc?.url,
             url: uploadedDoc?.url,
             expirationDate: uploadedDoc?.expirationDate,
             isRequired: isRequired,
@@ -136,7 +132,6 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   return (
     <div className="space-y-6">
        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* --- Contact & Role --- */}
         <Card>
             <CardHeader>
             <div className="flex justify-between items-start">
@@ -175,7 +170,6 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
             </CardContent>
         </Card>
         
-        {/* --- Documents --- */}
         <Card>
           <CardHeader>
             <CardTitle>Documents</CardTitle>
@@ -227,11 +221,25 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                                     <DocumentUploader
                                         defaultFileName={doc.name}
                                         onDocumentUploaded={onDocumentUploaded}
-                                        trigger={
-                                            <Button size="sm">
+                                        trigger={(openDialog) => (
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <Button size="sm">
                                                 <Upload className="mr-2 h-4 w-4" /> Upload
-                                            </Button>
-                                        }
+                                              </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                              <DropdownMenuItem onSelect={() => openDialog('file')}>
+                                                <FileUp className="mr-2 h-4 w-4" />
+                                                Upload File
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem onSelect={() => openDialog('camera')}>
+                                                <Camera className="mr-2 h-4 w-4" />
+                                                Take Photo
+                                              </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                        )}
                                     />
                                 )}
                             </TableCell>
@@ -244,7 +252,6 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                 )}
           </CardContent>
         </Card>
-
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
