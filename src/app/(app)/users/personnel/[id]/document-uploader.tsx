@@ -41,13 +41,6 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
 
-  const resetForm = useCallback(() => {
-    setFileName(defaultFileName);
-    setFile(null);
-    setCapturedImage(null);
-    setHasCameraPermission(null);
-  }, [defaultFileName]);
-
   const cleanupCamera = useCallback(() => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
@@ -56,13 +49,20 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
     }
   }, []);
 
+  const resetForm = useCallback(() => {
+    setFileName(defaultFileName);
+    setFile(null);
+    setCapturedImage(null);
+    setHasCameraPermission(null);
+  }, [defaultFileName]);
+
   const onOpenChange = (open: boolean) => {
     setIsOpen(open);
-    if (open) {
-      setFileName(defaultFileName);
-    } else {
+    if (!open) {
       cleanupCamera();
       resetForm();
+    } else {
+      setFileName(defaultFileName);
     }
   };
 
