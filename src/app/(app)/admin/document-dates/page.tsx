@@ -55,7 +55,7 @@ export default function DocumentDatesPage() {
   useEffect(() => {
     if (expirySettings) {
       setDefaultColorState(expirySettings.defaultColor || defaultSafeColor);
-      const initialColors = expirySettings.warningPeriods.reduce((acc, p) => {
+      const initialColors = (expirySettings.warningPeriods || []).reduce((acc, p) => {
         acc[p.period] = p.color;
         return acc;
       }, {} as Record<number, string>);
@@ -73,9 +73,9 @@ export default function DocumentDatesPage() {
 
   // Effect for saving debounced period colors
   useEffect(() => {
-      if (!expirySettingsRef || !expirySettings || Object.keys(debouncedPeriodColors).length === 0 || isLoading) return;
+      if (!expirySettingsRef || !expirySettings || !expirySettings.warningPeriods || Object.keys(debouncedPeriodColors).length === 0 || isLoading) return;
 
-      const hasChanged = expirySettings.warningPeriods.some(p => p.color !== debouncedPeriodColors[p.period]);
+      const hasChanged = expirySettings.warningPeriods.some(p => p.color !== debouncedPeriodColors[p.period] && debouncedPeriodColors[p.period]);
 
       if (hasChanged) {
         const newPeriods = expirySettings.warningPeriods.map(p => ({
