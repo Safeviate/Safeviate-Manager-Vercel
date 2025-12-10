@@ -68,10 +68,10 @@ export function BookingCalendar({
 
 
   return (
-    <div className="flex flex-col h-[calc(100vh-12rem)] border rounded-lg overflow-hidden">
+    <div className="flex flex-col h-full border rounded-lg overflow-hidden">
         {/* Header */}
-        <div className="flex border-b">
-            <div className="w-48 flex-shrink-0 p-2 border-r bg-muted/50">
+        <div className="flex border-b bg-muted/50">
+            <div className="w-48 flex-shrink-0 p-2 border-r">
                 <h3 className="font-semibold text-center">Aircraft</h3>
             </div>
             <div className="flex-grow overflow-hidden">
@@ -90,7 +90,7 @@ export function BookingCalendar({
         {/* Body */}
         <div className="flex flex-grow overflow-hidden">
              {/* Resources Column (Sticky) */}
-             <div ref={resourceColRef} className="w-48 flex-shrink-0 border-r overflow-y-hidden" onScroll={handleResourceScroll}>
+             <div ref={resourceColRef} className="w-48 flex-shrink-0 border-r overflow-y-hidden bg-muted/20" onScroll={handleResourceScroll}>
                 {aircraft.map((ac) => (
                     <div key={ac.id} className="flex items-center h-16 p-2 border-b">
                         <span className="font-medium">{ac.tailNumber}</span>

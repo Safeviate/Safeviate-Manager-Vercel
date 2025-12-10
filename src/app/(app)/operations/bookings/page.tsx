@@ -70,8 +70,8 @@ export default function BookingsPage() {
             </Popover>
         </div>
 
-      <Card className="flex-grow">
-        <CardContent className="p-0 h-full">
+      <Card className="flex-grow flex flex-col">
+        <CardContent className="p-0 flex-grow overflow-auto">
           {isLoading && <div className="p-4 text-center">Loading calendar...</div>}
           {error && <div className="p-4 text-center text-destructive">Error: {error.message}</div>}
           {!isLoading && !error && (
