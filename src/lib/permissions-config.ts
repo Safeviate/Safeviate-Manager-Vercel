@@ -41,6 +41,7 @@ export const permissionsConfig: PermissionResource[] = [
     name: 'Training',
     actions: ['view', 'create', 'edit', 'delete'],
   },
+
   // --- Operations ---
   {
     id: 'operations-maintenance',
