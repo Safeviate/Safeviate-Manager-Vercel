@@ -10,9 +10,17 @@ import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { ChevronsUpDown, View } from 'lucide-react';
+import { CalendarIcon, ChevronsUpDown, Trash2, Upload, View } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Image from 'next/image';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CustomCalendar } from '@/components/ui/custom-calendar';
+import { format } from 'date-fns';
+import { DocumentUploader } from './document-uploader';
+import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -37,10 +45,81 @@ const isPilotProfile = (user: UserProfile): user is PilotProfile => {
 
 export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDetailsProps) {
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+  const { toast } = useToast();
+  const firestore = useFirestore();
+  const tenantId = 'safeviate'; // Hardcoded
+
+  const handleViewImage = (url: string) => {
+    setViewingImageUrl(url);
+    setIsImageViewerOpen(true);
+  };
   
+  const handleDocumentUpdate = (updatedDocuments: Document[]) => {
+    if (!firestore || !tenantId) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not connect to the database.",
+        });
+        return;
+    }
+    const collectionName = isPilotProfile(user) ? 'pilots' : 'personnel';
+    const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
+    updateDocumentNonBlocking(userRef, { documents: updatedDocuments });
+  };
+
+  const onDocumentUploaded = (docDetails: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => {
+    const currentDocs = user.documents || [];
+    const existingDocIndex = currentDocs.findIndex(d => d.name === docDetails.name);
+
+    let updatedDocs;
+    if (existingDocIndex > -1) {
+        // Update existing document
+        updatedDocs = [...currentDocs];
+        updatedDocs[existingDocIndex] = { ...updatedDocs[existingDocIndex], ...docDetails };
+    } else {
+        // Add new document
+        updatedDocs = [...currentDocs, docDetails];
+    }
+    handleDocumentUpdate(updatedDocs);
+  };
+
+  const handleExpirationDateChange = (docName: string, date: Date | undefined) => {
+    const currentDocs = user.documents || [];
+    const docIndex = currentDocs.findIndex(d => d.name === docName);
+    
+    let updatedDocs;
+    if (docIndex > -1) {
+        updatedDocs = [...currentDocs];
+        updatedDocs[docIndex].expirationDate = date ? date.toISOString() : null;
+    } else {
+        // If document doesn't exist, create a placeholder to hold the date
+        updatedDocs = [...currentDocs, { name: docName, url: '', uploadDate: '', expirationDate: date ? date.toISOString() : null }];
+    }
+    handleDocumentUpdate(updatedDocs);
+  };
+
+  const combinedDocuments = useMemo(() => {
+    const required = role?.requiredDocuments || [];
+    const uploaded = user.documents || [];
+
+    return required.map(reqDocName => {
+        const uploadedDoc = uploaded.find(upDoc => upDoc.name === reqDocName);
+        return {
+            name: reqDocName,
+            isUploaded: !!uploadedDoc,
+            url: uploadedDoc?.url,
+            expirationDate: uploadedDoc?.expirationDate,
+        };
+    });
+  }, [role, user.documents]);
+
+
   return (
     <div className="space-y-6">
-       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* --- Contact & Role --- */}
         <Card>
             <CardHeader>
@@ -61,21 +140,21 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                 <DetailItem label="Department" value={department?.name} />
             )}
             {isPilotProfile(user) && (
-                <>
-                    <DetailItem label="License Number" value={user.pilotLicense?.licenseNumber} />
-                    <DetailItem label="Ratings">
-                        <div className="flex flex-wrap gap-2 mt-1">
-                            {(user.pilotLicense?.ratings || []).map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
-                            {(user.pilotLicense?.ratings || []).length === 0 && <p className="text-base">N/A</p>}
-                        </div>
-                    </DetailItem>
-                    <DetailItem label="Endorsements" >
-                        <div className="flex flex-wrap gap-2 mt-1">
-                            {(user.pilotLicense?.endorsements || []).map(e => <Badge key={e} variant="secondary">{e}</Badge>)}
-                            {(user.pilotLicense?.endorsements || []).length === 0 && <p className="text-base">N/A</p>}
-                        </div>
-                    </DetailItem>
-                </>
+              <>
+                <DetailItem label="License Number" value={user.pilotLicense?.licenseNumber} />
+                <DetailItem label="Ratings">
+                    <div className="flex flex-wrap gap-2 mt-1">
+                        {(user.pilotLicense?.ratings || []).map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
+                        {(user.pilotLicense?.ratings || []).length === 0 && <p className="text-base">N/A</p>}
+                    </div>
+                </DetailItem>
+                <DetailItem label="Endorsements" >
+                    <div className="flex flex-wrap gap-2 mt-1">
+                        {(user.pilotLicense?.endorsements || []).map(e => <Badge key={e} variant="secondary">{e}</Badge>)}
+                        {(user.pilotLicense?.endorsements || []).length === 0 && <p className="text-base">N/A</p>}
+                    </div>
+                </DetailItem>
+              </>
             )}
             </CardContent>
         </Card>
@@ -86,7 +165,62 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                 <CardTitle>Documents</CardTitle>
             </CardHeader>
             <CardContent>
-                {/* This card is intentionally left empty for now */}
+                {combinedDocuments.length > 0 ? (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Document Name</TableHead>
+                            <TableHead>Expiry</TableHead>
+                            <TableHead className='text-center'>Set Expiry</TableHead>
+                            <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {combinedDocuments.map((doc) => (
+                        <TableRow key={doc.name}>
+                            <TableCell className="font-medium">{doc.name}</TableCell>
+                            <TableCell>
+                                {doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'N/A'}
+                            </TableCell>
+                            <TableCell className='text-center'>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon" className='h-8 w-8'>
+                                            <CalendarIcon className="h-4 w-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                        <CustomCalendar
+                                            selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined}
+                                            onDateSelect={(date) => handleExpirationDateChange(doc.name, date)}
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            </TableCell>
+                            <TableCell className="text-right">
+                                {doc.isUploaded ? (
+                                    <Button variant="outline" size="sm" onClick={() => handleViewImage(doc.url!)}>
+                                        <View className="mr-2 h-4 w-4" /> View
+                                    </Button>
+                                ) : (
+                                    <DocumentUploader
+                                        defaultFileName={doc.name}
+                                        onDocumentUploaded={onDocumentUploaded}
+                                        trigger={
+                                            <Button size="sm">
+                                                <Upload className="mr-2 h-4 w-4" /> Upload
+                                            </Button>
+                                        }
+                                    />
+                                )}
+                            </TableCell>
+                        </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+                ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">No documents required for this role.</p>
+                )}
             </CardContent>
         </Card>
       </div>
@@ -168,6 +302,25 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
             </Collapsible>
         </Card>
       )}
+
+      {/* --- Image Viewer Dialog --- */}
+      <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
+          <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                  <DialogTitle>Document Viewer</DialogTitle>
+              </DialogHeader>
+              {viewingImageUrl && (
+                  <div className="relative h-[80vh]">
+                      <Image 
+                          src={viewingImageUrl}
+                          alt="Document" 
+                          fill
+                          style={{ objectFit: 'contain' }}
+                      />
+                  </div>
+              )}
+          </DialogContent>
+      </Dialog>
     </div>
   );
 }
