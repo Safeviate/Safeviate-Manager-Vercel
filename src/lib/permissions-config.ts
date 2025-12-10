@@ -15,6 +15,7 @@ export type PermissionResource = {
  * The `actions` are the specific operations available for that resource.
  */
 export const permissionsConfig: PermissionResource[] = [
+  // --- General App Sections ---
   {
     id: 'dashboard',
     name: 'Dashboard',
@@ -26,21 +27,6 @@ export const permissionsConfig: PermissionResource[] = [
     actions: ['view'],
   },
   {
-    id: 'operations-maintenance',
-    name: 'Maintenance',
-    actions: ['view', 'create', 'edit', 'delete'],
-  },
-  {
-    id: 'operations-safety',
-    name: 'Safety & Quality',
-    actions: ['view', 'create', 'edit', 'delete'],
-  },
-  {
-    id: 'training',
-    name: 'Training',
-    actions: ['view', 'create', 'edit', 'delete'],
-  },
-  {
     id: 'assets',
     name: 'Assets',
     actions: ['view', 'create', 'edit', 'delete'],
@@ -50,6 +36,24 @@ export const permissionsConfig: PermissionResource[] = [
     name: 'Users',
     actions: ['view', 'create', 'edit', 'delete'],
   },
+  {
+    id: 'training',
+    name: 'Training',
+    actions: ['view', 'create', 'edit', 'delete'],
+  },
+  // --- Operations ---
+  {
+    id: 'operations-maintenance',
+    name: 'Maintenance',
+    actions: ['view', 'create', 'edit', 'delete'],
+  },
+  {
+    id: 'operations-safety',
+    name: 'Safety & Quality',
+    actions: ['view', 'create', 'edit', 'delete'],
+  },
+
+  // --- Admin ---
   {
     id: 'admin-roles',
     name: 'Roles',
@@ -65,7 +69,7 @@ export const permissionsConfig: PermissionResource[] = [
     name: 'Departments',
     actions: ['view', 'create', 'edit', 'delete'],
   },
-   {
+  {
     id: 'admin-document-dates',
     name: 'Document Dates',
     actions: ['view', 'manage'],
@@ -75,11 +79,15 @@ export const permissionsConfig: PermissionResource[] = [
     name: 'Database Seeding',
     actions: ['manage'],
   },
+
+  // --- Settings ---
   {
     id: 'settings-appearance',
     name: 'Appearance Settings',
     actions: ['edit'],
   },
+
+  // --- Development (Only for dev environment) ---
   {
     id: 'development',
     name: 'Development Tools',
