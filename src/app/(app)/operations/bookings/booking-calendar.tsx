@@ -301,7 +301,7 @@ export function BookingCalendar({
                     {/* "Past" Shadow */}
                     {nowLine !== null && (
                         <div
-                            className="absolute top-0 bottom-0 left-0 bg-secondary/30 z-10 pointer-events-none"
+                            className="absolute top-0 bottom-0 left-0 bg-destructive/20 z-10 pointer-events-none"
                             style={{ width: `${nowLine}px` }}
                         />
                     )}
