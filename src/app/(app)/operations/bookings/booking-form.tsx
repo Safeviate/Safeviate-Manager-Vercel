@@ -19,10 +19,14 @@ import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from 
 import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
-import { add, format, isBefore } from 'date-fns';
+import { add, format, isBefore, isSameDay, startOfDay } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import type { Booking } from '@/types/booking';
+import { Switch } from '@/components/ui/switch';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { CustomCalendar } from '@/components/ui/custom-calendar';
 
 
 interface BookingFormProps {
@@ -51,30 +55,55 @@ export function BookingForm({
   // Form State
   const [pilotId, setPilotId] = useState('');
   const [bookingType, setBookingType] = useState<'Student Training' | 'Hire and Fly'>('Hire and Fly');
+  const [startDate, setStartDate] = useState(initialStartTime);
   const [startTime, setStartTime] = useState(format(initialStartTime, "HH:mm"));
+  const [endDate, setEndDate] = useState(initialStartTime);
   const [endTime, setEndTime] = useState(format(add(initialStartTime, { hours: 1 }), "HH:mm"));
+  const [isOvernight, setIsOvernight] = useState(false);
   
   const pilotOptions = useMemo(() => {
     return pilots.filter(p => p.userType === 'Private Pilot' || p.userType === 'Instructor' || p.userType === 'Student');
   }, [pilots]);
 
   useEffect(() => {
-    if (isEditing && booking) {
-        // Pre-fill form if editing
-        setPilotId(booking.pilotId);
-        setBookingType(booking.type);
-        setStartTime(format(booking.startTime.toDate(), "HH:mm"));
-        setEndTime(format(booking.endTime.toDate(), "HH:mm"));
-    } else {
-        // Set for new booking
-        setStartTime(format(initialStartTime, "HH:mm"));
-        setEndTime(format(add(initialStartTime, { hours: 1 }), "HH:mm"));
+    if (isOpen) {
+        if (isEditing && booking) {
+            const bookingStartDate = booking.startTime.toDate();
+            const bookingEndDate = booking.endTime.toDate();
+            // Pre-fill form if editing
+            setPilotId(booking.pilotId);
+            setBookingType(booking.type);
+            setStartDate(bookingStartDate);
+            setStartTime(format(bookingStartDate, "HH:mm"));
+            setEndDate(bookingEndDate);
+            setEndTime(format(bookingEndDate, "HH:mm"));
+            setIsOvernight(!isSameDay(bookingStartDate, bookingEndDate));
+        } else {
+            // Set for new booking
+            const newEndDate = add(initialStartTime, {days: isOvernight ? 1 : 0});
+            setStartDate(initialStartTime);
+            setStartTime(format(initialStartTime, "HH:mm"));
+            setEndDate(newEndDate);
+            setEndTime(format(add(initialStartTime, { hours: 1 }), "HH:mm"));
+        }
     }
-  }, [initialStartTime, booking, isEditing, isOpen]);
+  }, [initialStartTime, booking, isEditing, isOpen, isOvernight]);
+
+  const handleOvernightChange = (checked: boolean) => {
+    setIsOvernight(checked);
+    if (checked) {
+        // When toggling on, set end date to the next day
+        setEndDate(add(startDate, { days: 1 }));
+    } else {
+        // When toggling off, set end date to the same day
+        setEndDate(startDate);
+    }
+  };
 
   const resetForm = () => {
     setPilotId('');
     setBookingType('Hire and Fly');
+    setIsOvernight(false);
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -92,14 +121,11 @@ export function BookingForm({
     if (!firestore) return;
 
     const [startHour, startMinute] = startTime.split(':').map(Number);
-    const [endHour, endMinute] = endTime.split(':').map(Number);
-
-    const dateBase = booking ? booking.startTime.toDate() : initialStartTime;
-    
-    const finalStartTime = new Date(dateBase);
+    const finalStartTime = new Date(startDate);
     finalStartTime.setHours(startHour, startMinute, 0, 0);
 
-    const finalEndTime = new Date(dateBase);
+    const [endHour, endMinute] = endTime.split(':').map(Number);
+    const finalEndTime = new Date(endDate);
     finalEndTime.setHours(endHour, endMinute, 0, 0);
     
     if (finalEndTime <= finalStartTime) {
@@ -107,8 +133,6 @@ export function BookingForm({
         return;
     }
 
-    // For new bookings, prevent saving if the start time is in the past.
-    // For edited bookings, this check is more complex, but a simple check is a good start.
     if (!isEditing && isBefore(finalStartTime, new Date())) {
         toast({
             variant: 'destructive',
@@ -117,7 +141,6 @@ export function BookingForm({
         });
         return;
     }
-
 
     const bookingData = {
         aircraftId: aircraft.id,
@@ -179,12 +202,47 @@ export function BookingForm({
                     </div>
                 </RadioGroup>
             </div>
+
+            <div className="flex items-center space-x-2">
+                <Switch id="overnight-mode" checked={isOvernight} onCheckedChange={handleOvernightChange} />
+                <Label htmlFor="overnight-mode">Overnight Booking</Label>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                    <Label htmlFor="start-date">Start Date</Label>
+                     <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className='w-full justify-start font-normal'>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {format(startDate, 'PPP')}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                           <CustomCalendar selectedDate={startDate} onDateSelect={(d) => d && setStartDate(d)} />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+                 <div className="space-y-2">
                     <Label htmlFor="start-time">Start Time</Label>
                     <Input id="start-time" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
                 </div>
+
                 <div className="space-y-2">
+                    <Label htmlFor="end-date">End Date</Label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className='w-full justify-start font-normal' disabled={!isOvernight}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {format(endDate, 'PPP')}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                           <CustomCalendar selectedDate={endDate} onDateSelect={(d) => d && setEndDate(d)} />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+                 <div className="space-y-2">
                     <Label htmlFor="end-time">End Time</Label>
                     <Input id="end-time" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
                 </div>
