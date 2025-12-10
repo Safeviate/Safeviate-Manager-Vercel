@@ -100,7 +100,10 @@ export default function UsersPage() {
                     {sections.map(section => (
                         <AccordionItem value={section.title} key={section.title}>
                             <AccordionTrigger className="px-6 text-lg font-medium hover:no-underline">
-                                {section.title}
+                                <div className="flex items-center gap-2">
+                                  {section.title}
+                                  <span className="text-sm font-normal text-muted-foreground">({section.data?.length || 0})</span>
+                                </div>
                             </AccordionTrigger>
                             <AccordionContent>
                                 {isLoading && <p className='px-6'>Loading...</p>}
