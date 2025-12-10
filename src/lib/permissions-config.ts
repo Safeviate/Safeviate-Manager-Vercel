@@ -1,5 +1,5 @@
 
-export type PermissionAction = 'view' | 'create' | 'edit' | 'delete';
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage';
 
 export type PermissionResource = {
   id: string;
@@ -46,18 +46,8 @@ export const permissionsConfig: PermissionResource[] = [
     actions: ['view', 'create', 'edit', 'delete'],
   },
   {
-    id: 'users-students',
-    name: 'Students',
-    actions: ['view', 'create', 'edit', 'delete'],
-  },
-  {
-    id: 'users-private-pilots',
-    name: 'Private Pilots',
-    actions: ['view', 'create', 'edit', 'delete'],
-  },
-  {
-    id: 'users-personnel',
-    name: 'Personnel',
+    id: 'users',
+    name: 'Users',
     actions: ['view', 'create', 'edit', 'delete'],
   },
   {
@@ -75,9 +65,24 @@ export const permissionsConfig: PermissionResource[] = [
     name: 'Departments',
     actions: ['view', 'create', 'edit', 'delete'],
   },
+   {
+    id: 'admin-document-dates',
+    name: 'Document Dates',
+    actions: ['view', 'manage'],
+  },
+  {
+    id: 'admin-database',
+    name: 'Database Seeding',
+    actions: ['manage'],
+  },
   {
     id: 'settings-appearance',
     name: 'Appearance Settings',
     actions: ['edit'],
-  }
+  },
+  {
+    id: 'development',
+    name: 'Development Tools',
+    actions: ['view'],
+  },
 ];

@@ -71,23 +71,6 @@ export const menuConfig: MenuItem[] = [
     href: '/users',
     label: 'Users',
     icon: Users,
-    subItems: [
-      {
-        href: '/users/students',
-        label: 'Students',
-        description: 'Manage student records and progress.',
-      },
-      {
-        href: '/users/private-pilots',
-        label: 'Private Pilots',
-        description: 'Manage private pilot profiles.',
-      },
-      {
-        href: '/users/personnel',
-        label: 'Personnel',
-        description: 'Manage all other non-flying staff.',
-      },
-    ],
   },
   {
     href: '/admin',
