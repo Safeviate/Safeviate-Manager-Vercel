@@ -23,6 +23,7 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
   
   const [tailNumber, setTailNumber] = useState(aircraft.tailNumber);
   const [model, setModel] = useState(aircraft.model);
+  const [abbreviation, setAbbreviation] = useState(aircraft.abbreviation || '');
   const [type, setType] = useState(aircraft.type || '');
   const [frameHours, setFrameHours] = useState(aircraft.frameHours?.toString() || '');
   const [engineHours, setEngineHours] = useState(aircraft.engineHours?.toString() || '');
@@ -57,6 +58,7 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
     updateDocumentNonBlocking(aircraftRef, { 
       tailNumber, 
       model,
+      abbreviation,
       type,
       frameHours: Number(frameHours) || 0,
       engineHours: Number(engineHours) || 0,
@@ -79,13 +81,13 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Edit Aircraft</CardTitle>
+        <CardTitle>Aircraft Information</CardTitle>
         <CardDescription>
-            Update details for {aircraft.tailNumber}.
+            Update the core details for this aircraft.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 py-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
             <div className="space-y-2">
                 <Label htmlFor="tailNumber">Tail Number</Label>
                 <Input id="tailNumber" value={tailNumber} onChange={(e) => setTailNumber(e.target.value)} />
@@ -97,6 +99,10 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
              <div className="space-y-2">
                 <Label htmlFor="type">Type</Label>
                 <Input id="type" value={type} onChange={(e) => setType(e.target.value)} />
+            </div>
+             <div className="space-y-2">
+                <Label htmlFor="abbreviation">Abbreviation</Label>
+                <Input id="abbreviation" value={abbreviation} onChange={(e) => setAbbreviation(e.target.value)} />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="frameHours">Frame Hours</Label>
@@ -132,12 +138,6 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
             </div>
         </div>
       </CardContent>
-      <CardFooter className="border-t pt-6 flex justify-end gap-2">
-          <Button variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button onClick={handleUpdateAircraft}>Save Changes</Button>
-      </CardFooter>
     </Card>
   );
 }
-    
-    

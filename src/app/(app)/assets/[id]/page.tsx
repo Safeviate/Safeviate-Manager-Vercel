@@ -79,7 +79,7 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
 
     // Effect to save debounced abbreviations
     useEffect(() => {
-    if (!aircraftDocRef || !aircraft || !aircraft.documents || Object.keys(debouncedAbbreviations).length === 0) return;
+    if (!isEditing || !aircraftDocRef || !aircraft || !aircraft.documents || Object.keys(debouncedAbbreviations).length === 0) return;
 
     const hasChanged = aircraft.documents.some(
         (doc) => (debouncedAbbreviations[doc.name] || '') !== (doc.abbreviation || '')
@@ -93,7 +93,7 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
         handleDocumentUpdate(updatedDocuments);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [debouncedAbbreviations, aircraft, aircraftDocRef]);
+    }, [debouncedAbbreviations, aircraft, aircraftDocRef, isEditing]);
 
 
     const handleAbbreviationChange = (docName: string, value: string) => {
@@ -138,7 +138,7 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
       updateDocumentNonBlocking(aircraftDocRef, { documents: updatedDocuments });
     };
   
-    const onDocumentUploaded = (docDetails: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => {
+    const onDocumentUploaded = (docDetails: Omit<AircraftDocument, 'expirationDate' | 'abbreviation'> & { expirationDate: string | null }) => {
       if (!aircraft) return;
       const currentDocs = aircraft.documents || [];
       const existingDocIndex = currentDocs.findIndex(d => d.name === docDetails.name);
@@ -225,7 +225,7 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
                       <TableHead>Document Name</TableHead>
                       <TableHead>Abbr.</TableHead>
                       <TableHead>Expiry</TableHead>
-                      <TableHead className='text-center'>Set Expiry</TableHead>
+                      {isEditing && <TableHead className='text-center'>Set Expiry</TableHead>}
                       <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
               </TableHeader>
@@ -236,13 +236,17 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
                           <TableRow key={doc.name}>
                               <TableCell className="font-medium">{doc.name}</TableCell>
                               <TableCell>
-                                <Input
-                                    value={abbreviations[doc.name] || ''}
-                                    onChange={(e) => handleAbbreviationChange(doc.name, e.target.value)}
-                                    maxLength={5}
-                                    className="h-8 w-20"
-                                    placeholder="e.g., C172"
-                                />
+                                {isEditing ? (
+                                    <Input
+                                        value={abbreviations[doc.name] || ''}
+                                        onChange={(e) => handleAbbreviationChange(doc.name, e.target.value)}
+                                        maxLength={5}
+                                        className="h-8 w-20"
+                                        placeholder="e.g., C172"
+                                    />
+                                ) : (
+                                    doc.abbreviation || 'N/A'
+                                )}
                                </TableCell>
                               <TableCell className="min-w-[150px] whitespace-nowrap">
                                   <div className="flex items-center gap-2">
@@ -255,55 +259,63 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
                                       {doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'N/A'}
                                   </div>
                               </TableCell>
-                              <TableCell className='text-center'>
-                                  <Popover>
-                                      <PopoverTrigger asChild>
-                                          <Button variant="outline" size="icon" className='h-8 w-8'>
-                                              <CalendarIcon className="h-4 w-4" />
-                                          </Button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-auto p-0">
-                                          <CustomCalendar
-                                              selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined}
-                                              onDateSelect={(date) => handleExpirationDateChange(doc.name, date)}
-                                          />
-                                      </PopoverContent>
-                                  </Popover>
-                              </TableCell>
+                              {isEditing && (
+                                <TableCell className='text-center'>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="outline" size="icon" className='h-8 w-8'>
+                                                <CalendarIcon className="h-4 w-4" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0">
+                                            <CustomCalendar
+                                                selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined}
+                                                onDateSelect={(date) => handleExpirationDateChange(doc.name, date)}
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                </TableCell>
+                              )}
                               <TableCell className="text-right">
                                   {doc.isUploaded ? (
                                       <div className="flex gap-2 justify-end">
                                         <Button variant="outline" size="sm" onClick={() => handleViewImage(doc.url!)}>
                                             <View className="mr-2 h-4 w-4" /> View
                                         </Button>
-                                        <Button variant="destructive" size="icon" onClick={() => handleDocumentDelete(doc.name)}>
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        {isEditing && (
+                                            <Button variant="destructive" size="icon" onClick={() => handleDocumentDelete(doc.name)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        )}
                                       </div>
                                   ) : (
-                                      <DocumentUploader
-                                          defaultFileName={doc.name}
-                                          onDocumentUploaded={onDocumentUploaded}
-                                          trigger={(openDialog) => (
-                                            <DropdownMenu>
-                                              <DropdownMenuTrigger asChild>
-                                                <Button size="sm">
-                                                  <Upload className="mr-2 h-4 w-4" /> Upload
-                                                </Button>
-                                              </DropdownMenuTrigger>
-                                              <DropdownMenuContent>
-                                                <DropdownMenuItem onSelect={() => openDialog('file')}>
-                                                  <FileUp className="mr-2 h-4 w-4" />
-                                                  Upload File
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => openDialog('camera')}>
-                                                  <Camera className="mr-2 h-4 w-4" />
-                                                  Take Photo
-                                                </DropdownMenuItem>
-                                              </DropdownMenuContent>
-                                            </DropdownMenu>
-                                          )}
-                                      />
+                                    <>
+                                      {isEditing && (
+                                        <DocumentUploader
+                                            defaultFileName={doc.name}
+                                            onDocumentUploaded={onDocumentUploaded}
+                                            trigger={(openDialog) => (
+                                              <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                  <Button size="sm">
+                                                    <Upload className="mr-2 h-4 w-4" /> Upload
+                                                  </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent>
+                                                  <DropdownMenuItem onSelect={() => openDialog('file')}>
+                                                    <FileUp className="mr-2 h-4 w-4" />
+                                                    Upload File
+                                                  </DropdownMenuItem>
+                                                  <DropdownMenuItem onSelect={() => openDialog('camera')}>
+                                                    <Camera className="mr-2 h-4 w-4" />
+                                                    Take Photo
+                                                  </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                              </DropdownMenu>
+                                            )}
+                                        />
+                                      )}
+                                    </>
                                   )}
                               </TableCell>
                           </TableRow>
@@ -319,36 +331,33 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
 
     return (
         <div className='space-y-6'>
-            {!isEditing && (
-                <div className="flex justify-between items-center">
-                    <h1 className="text-3xl font-bold tracking-tight">{aircraft.tailNumber}</h1>
-                    <Button onClick={() => setIsEditing(true)}>
-                        <Pencil className='mr-2 h-4 w-4' />
-                        Edit Aircraft
-                    </Button>
-                </div>
-            )}
+             <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-bold tracking-tight">{isEditing ? `Editing ${aircraft.tailNumber}` : aircraft.tailNumber}</h1>
+                <Button onClick={() => setIsEditing(!isEditing)}>
+                    {isEditing ? 'Cancel' : <><Pencil className='mr-2 h-4 w-4' /> Edit Aircraft</>}
+                </Button>
+            </div>
             
-            {isEditing ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <EditAircraftForm
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {isEditing ? (
+                     <EditAircraftForm
                         tenantId={tenantId}
                         aircraft={aircraft}
                         onCancel={() => setIsEditing(false)}
                     />
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Documents</CardTitle>
-                            <CardDescription>Manage documents for {aircraft.tailNumber}.</CardDescription>
-                        </CardHeader>
-                        {documentsCardContent}
-                    </Card>
-                </div>
-            ) : (
-                <ViewAircraftDetails 
-                    aircraft={aircraft}
-                />
-            )}
+                ) : (
+                     <ViewAircraftDetails 
+                        aircraft={aircraft}
+                    />
+                )}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Documents</CardTitle>
+                        <CardDescription>Manage documents for {aircraft.tailNumber}.</CardDescription>
+                    </CardHeader>
+                    {documentsCardContent}
+                </Card>
+            </div>
 
             <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
               <DialogContent className="max-w-4xl">
