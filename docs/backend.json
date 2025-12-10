@@ -161,6 +161,10 @@
           "type": "string",
           "description": "Aircraft's model."
         },
+        "abbreviation": {
+          "type": "string",
+          "description": "A 5-character abbreviation for the aircraft."
+        },
         "type": {
           "type": "string",
           "description": "The type of aircraft (e.g., Single-Engine, Multi-Engine)."

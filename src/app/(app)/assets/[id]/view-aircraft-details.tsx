@@ -161,6 +161,7 @@ export function ViewAircraftDetails({ aircraft }: ViewAircraftDetailsProps) {
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <DetailItem label="Tail Number" value={aircraft.tailNumber} />
                 <DetailItem label="Model" value={aircraft.model} />
+                <DetailItem label="Abbreviation" value={aircraft.abbreviation} />
                 <DetailItem label="Type" value={aircraft.type} />
                 <DetailItem label="Frame Hours" value={aircraft.frameHours} />
                 <DetailItem label="Engine Hours" value={aircraft.engineHours} />
@@ -287,3 +288,5 @@ export function ViewAircraftDetails({ aircraft }: ViewAircraftDetailsProps) {
     </div>
   );
 }
+
+    

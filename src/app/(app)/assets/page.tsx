@@ -12,6 +12,7 @@ export type Aircraft = {
   id: string;
   tailNumber: string;
   model: string;
+  abbreviation?: string;
   type?: string;
   frameHours?: number;
   engineHours?: number;
@@ -72,4 +73,5 @@ export default function AssetsPage() {
   );
 }
 
+    
     
