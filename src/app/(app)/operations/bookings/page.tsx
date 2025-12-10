@@ -70,17 +70,19 @@ export default function BookingsPage() {
             </Popover>
         </div>
 
-      <Card className="flex-grow flex flex-col">
-        <CardContent className="p-0 flex-grow overflow-auto">
-          {isLoading && <div className="p-4 text-center">Loading calendar...</div>}
-          {error && <div className="p-4 text-center text-destructive">Error: {error.message}</div>}
-          {!isLoading && !error && (
-            <BookingCalendar 
-              aircraft={aircraft || []} 
-              bookings={bookings || []} 
-              selectedDate={selectedDate}
-            />
-          )}
+      <Card className="flex-grow flex flex-col overflow-hidden">
+        <CardContent className="p-0 flex-grow relative">
+          <div className="absolute inset-0">
+            {isLoading && <div className="p-4 text-center">Loading calendar...</div>}
+            {error && <div className="p-4 text-center text-destructive">Error: {error.message}</div>}
+            {!isLoading && !error && (
+              <BookingCalendar 
+                aircraft={aircraft || []} 
+                bookings={bookings || []} 
+                selectedDate={selectedDate}
+              />
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -70,11 +70,11 @@ export function BookingCalendar({
   return (
     <div className="flex flex-col h-full border rounded-lg overflow-hidden">
         {/* Header */}
-        <div className="flex border-b bg-muted/50">
+        <div className="flex border-b bg-muted/50 flex-shrink-0">
             <div className="w-48 flex-shrink-0 p-2 border-r">
                 <h3 className="font-semibold text-center">Aircraft</h3>
             </div>
-            <div className="flex-grow overflow-hidden">
+            <div className="flex-grow overflow-x-hidden">
                 <div ref={timelineRef} className="relative h-full overflow-hidden">
                     <div className="flex" style={{ width: `${HOURS_IN_DAY * HOUR_WIDTH_PX}px` }}>
                         {timeSlots.map((time) => (
@@ -88,7 +88,7 @@ export function BookingCalendar({
         </div>
 
         {/* Body */}
-        <div className="flex flex-grow overflow-hidden">
+        <div className="flex flex-grow relative overflow-hidden">
              {/* Resources Column (Sticky) */}
              <div ref={resourceColRef} className="w-48 flex-shrink-0 border-r overflow-y-hidden bg-muted/20" onScroll={handleResourceScroll}>
                 {aircraft.map((ac) => (
@@ -96,11 +96,12 @@ export function BookingCalendar({
                         <span className="font-medium">{ac.tailNumber}</span>
                     </div>
                 ))}
+                {aircraft.length === 0 && <div className="h-full w-full flex items-center justify-center text-muted-foreground p-4">No aircraft found.</div>}
              </div>
              
             {/* Gantt Area */}
             <div className="flex-grow overflow-auto" onScroll={handleGridScroll} ref={dataRef}>
-                <div className="relative" style={{ width: `${HOURS_IN_DAY * HOUR_WIDTH_PX}px` }}>
+                <div className="relative" style={{ width: `${HOURS_IN_DAY * HOUR_WIDTH_PX}px`, height: `${aircraft.length * 64}px` }}>
                     {/* Grid Lines */}
                     <div className="absolute inset-0 flex">
                         {timeSlots.map((_, index) => (
