@@ -54,7 +54,7 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
                 <div className="flex justify-between items-center">
                     <h1 className="text-3xl font-bold tracking-tight">{aircraft.tailNumber}</h1>
                     <Button onClick={() => setIsEditing(true)}>
-                        <Pencil className='mr-2' />
+                        <Pencil className='mr-2 h-4 w-4' />
                         Edit Aircraft
                     </Button>
                 </div>
