@@ -111,7 +111,7 @@ export function AppSidebar() {
                     <span className='group-data-[collapsible=icon]:hidden'>Guest User</span>
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent side="right" align="end" className="w-56" id="user-profile-dropdown">
+                <DropdownMenuContent side="right" align="end" className="w-56">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>

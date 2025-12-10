@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { permissionsConfig } from '@/lib/permissions-config';
 import type { Personnel, PilotProfile } from '../page';
@@ -11,7 +11,7 @@ import type { Department } from '../../../admin/department/page';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { CalendarIcon, ChevronsUpDown, Trash2, Upload, View, FileUp, Camera } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import Image from 'next/image';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -168,6 +168,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
             <div className="flex justify-between items-start">
                 <div>
                 <CardTitle>Contact & Role</CardTitle>
+                <CardDescription>Primary contact and role information.</CardDescription>
                 </div>
                 <Badge>{user.userType}</Badge>
             </div>
@@ -204,6 +205,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
         <Card>
           <CardHeader>
             <CardTitle>Documents</CardTitle>
+            <CardDescription>Required and uploaded user documents.</CardDescription>
           </CardHeader>
           <CardContent>
             {combinedDocuments.length > 0 ? (
@@ -301,6 +303,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
         <Card>
           <CardHeader>
             <CardTitle>Address</CardTitle>
+            <CardDescription>User's primary address.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <DetailItem label="Street" value={user.address?.street} />
@@ -315,6 +318,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
         <Card>
           <CardHeader>
             <CardTitle>Emergency Contact</CardTitle>
+            <CardDescription>User's emergency contact information.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <DetailItem label="Name" value={user.emergencyContact?.name} />
@@ -328,7 +332,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
       {!isPilotProfile(user) && (
         <Card>
             <Collapsible open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-row items-center justify-between cursor-pointer">
                     <div className="flex items-center gap-2">
                         <CardTitle>Assigned Permissions</CardTitle>
                         <CollapsibleTrigger asChild>
@@ -379,6 +383,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
           <DialogContent className="max-w-4xl">
               <DialogHeader>
                   <DialogTitle>Document Viewer</DialogTitle>
+                  <DialogDescription>Viewing uploaded document.</DialogDescription>
               </DialogHeader>
               {viewingImageUrl && (
                   <div className="relative h-[80vh]">
