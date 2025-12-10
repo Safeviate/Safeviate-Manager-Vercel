@@ -8,19 +8,33 @@ import { cn } from '@/lib/utils';
 import { addHours, format, startOfDay, getMinutes, getHours, differenceInMinutes, setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
 import { BookingForm } from './booking-form';
 import type { PilotProfile } from '../../users/personnel/page';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { doc } from 'firebase/firestore';
+import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 
-interface BookingCalendarProps {
-  tenantId: string;
-  aircraft: Aircraft[];
-  bookings: Booking[];
-  pilots: PilotProfile[];
-  selectedDate: Date;
+interface BookingItemProps {
+    booking: Booking;
+    tenantId: string;
 }
 
-const HOURS_IN_DAY = 24;
-const HOUR_WIDTH_PX = 80;
+const BookingItem = ({ booking, tenantId }: BookingItemProps) => {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+    const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
-const BookingItem = ({ booking }: { booking: Booking }) => {
     const startTime = booking.startTime.toDate();
     const endTime = booking.endTime.toDate();
 
@@ -32,19 +46,75 @@ const BookingItem = ({ booking }: { booking: Booking }) => {
 
     const left = (startMinutes / totalMinutesInDay) * totalWidth;
     const width = (durationMinutes / totalMinutesInDay) * totalWidth;
+    
+    const handleCancelBooking = () => {
+        if (!firestore) return;
+        const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', booking.id);
+        updateDocumentNonBlocking(bookingRef, { status: 'Cancelled' });
+        toast({ title: 'Booking Cancelled', description: 'The booking status has been updated to "Cancelled".' });
+        setIsPopoverOpen(false);
+    };
+
+    const handleDeleteBooking = () => {
+        if (!firestore) return;
+        const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', booking.id);
+        deleteDocumentNonBlocking(bookingRef);
+        toast({ title: 'Booking Deleted', description: 'The booking has been permanently removed.' });
+        setIsDeleteAlertOpen(false);
+        setIsPopoverOpen(false);
+    };
 
     return (
-        <div
-            className="absolute top-1/2 -translate-y-1/2 h-12 flex items-center justify-center rounded-lg bg-primary/80 text-primary-foreground p-2 shadow z-20"
-            style={{ left: `${left}px`, width: `${width}px` }}
-        >
-            <div className="flex flex-col text-xs text-center truncate">
-                <span className="font-bold truncate">{booking.type}</span>
-                <span className="truncate">{booking.pilotId}</span>
-            </div>
-        </div>
+        <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+            <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                <PopoverTrigger asChild>
+                     <div
+                        className={cn(
+                            "absolute top-1/2 -translate-y-1/2 h-12 flex items-center justify-center rounded-lg text-primary-foreground p-2 shadow z-20 cursor-pointer hover:opacity-90 transition-opacity",
+                            booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80'
+                        )}
+                        style={{ left: `${left}px`, width: `${width}px` }}
+                    >
+                        <div className="flex flex-col text-xs text-center truncate">
+                            <span className="font-bold truncate">{booking.type}</span>
+                            <span className="truncate">{booking.pilotId}</span>
+                            {booking.status === 'Cancelled' && <span className="font-bold uppercase text-xs mt-1">Cancelled</span>}
+                        </div>
+                    </div>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2">
+                    <div className="flex flex-col gap-2">
+                         <p className="text-sm font-semibold p-2">{booking.type}</p>
+                         {booking.status !== 'Cancelled' && (
+                            <Button variant="outline" size="sm" onClick={handleCancelBooking}>
+                                Cancel Booking
+                            </Button>
+                         )}
+                        <Button variant="destructive" size="sm" onClick={() => setIsDeleteAlertOpen(true)}>
+                            Delete Booking
+                        </Button>
+                    </div>
+                </PopoverContent>
+            </Popover>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the booking.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteBooking} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     );
 };
+
+
+const HOURS_IN_DAY = 24;
+const HOUR_WIDTH_PX = 80;
 
 
 export function BookingCalendar({
@@ -53,7 +123,13 @@ export function BookingCalendar({
   bookings,
   pilots,
   selectedDate,
-}: BookingCalendarProps) {
+}: {
+  tenantId: string;
+  aircraft: Aircraft[];
+  bookings: Booking[];
+  pilots: PilotProfile[];
+  selectedDate: Date;
+}) {
   const [nowLine, setNowLine] = useState<number | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const dataRef = useRef<HTMLDivElement>(null);
@@ -104,6 +180,11 @@ export function BookingCalendar({
   };
   
   const handleGridClick = (e: React.MouseEvent<HTMLDivElement>, ac: Aircraft) => {
+    // Prevent opening form if clicking on an existing booking
+    if ((e.target as HTMLElement).closest('.cursor-pointer')) {
+        return;
+    }
+
     const gridRect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - gridRect.left;
     
@@ -163,16 +244,16 @@ export function BookingCalendar({
                         ))}
                     </div>
                     {/* Aircraft Rows and Bookings */}
-                    {aircraft.map((ac, index) => (
+                    {aircraft.map((ac) => (
                         <div 
                             key={ac.id} 
-                            className="relative h-16 border-b cursor-pointer"
+                            className="relative h-16 border-b"
                             onClick={(e) => handleGridClick(e, ac)}
                         >
                             {bookings
                                 .filter(b => b.aircraftId === ac.id)
                                 .map(booking => (
-                                    <BookingItem key={booking.id} booking={booking} />
+                                    <BookingItem key={booking.id} booking={booking} tenantId={tenantId} />
                             ))}
                         </div>
                     ))}
