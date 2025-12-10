@@ -48,7 +48,6 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, onCancel
   const [isContactOpen, setIsContactOpen] = useState(true);
   const [isAddressOpen, setIsAddressOpen] = useState(false);
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
-  const [isPilotLicenseOpen, setIsPilotLicenseOpen] = useState(false);
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
 
   // Form state
@@ -204,7 +203,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, onCancel
                     </Button>
                   </div>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <CollapsibleContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="space-y-2">
                       <Label htmlFor="userType">User Type</Label>
                       <Select onValueChange={(value) => handleInputChange('userType', value)} value={formData.userType} disabled>
@@ -263,56 +262,35 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, onCancel
                       </div>
                   )}
                   {isPilotProfile(formData) && (
-                    <div className="space-y-2">
-                      <Label htmlFor="licenseNumber">License Number</Label>
-                      <Input id="licenseNumber" value={formData.pilotLicense?.licenseNumber || ''} onChange={(e) => handleNestedInputChange('pilotLicense', 'licenseNumber', e.target.value)} />
-                    </div>
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="licenseNumber">License Number</Label>
+                        <Input id="licenseNumber" value={formData.pilotLicense?.licenseNumber || ''} onChange={(e) => handleNestedInputChange('pilotLicense', 'licenseNumber', e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                          <Label htmlFor="ratings">Ratings</Label>
+                          <Input id="ratings" value={(formData.pilotLicense?.ratings || []).join(', ')} onChange={(e) => handleArrayInputChange('pilotLicense', 'ratings', e.target.value)} placeholder="e.g., IFR, ME" />
+                          <p className="text-xs text-muted-foreground">Enter values separated by commas.</p>
+                      </div>
+                      <div className="space-y-2">
+                          <Label htmlFor="endorsements">Endorsements</Label>
+                          <Input id="endorsements" value={(formData.pilotLicense?.endorsements || []).join(', ')} onChange={(e) => handleArrayInputChange('pilotLicense', 'endorsements', e.target.value)} placeholder="e.g., High Performance, Complex" />
+                          <p className="text-xs text-muted-foreground">Enter values separated by commas.</p>
+                      </div>
+                      <div className="space-y-2">
+                          <Label>Expiration Date</Label>
+                          {formData.pilotLicense?.expirationDate && <p className="text-sm text-muted-foreground">Selected: {format(new Date(formData.pilotLicense.expirationDate), "PPP")}</p>}
+                          <CustomCalendar 
+                              selectedDate={formData.pilotLicense?.expirationDate ? new Date(formData.pilotLicense.expirationDate) : undefined}
+                              onDateSelect={(date) => handleNestedInputChange('pilotLicense', 'expirationDate', date?.toISOString().split('T')[0])}
+                          />
+                      </div>
+                    </>
                   )}
                 </CollapsibleContent>
               </Collapsible>
 
               <Separator />
-
-              {/* --- Pilot License --- */}
-              {isPilotProfile(formData) && (
-                <>
-                    <Collapsible open={isPilotLicenseOpen} onOpenChange={setIsPilotLicenseOpen}>
-                        <CollapsibleTrigger asChild>
-                        <div className='flex items-center gap-2 mb-4 cursor-pointer'>
-                            <h3 className="text-lg font-semibold">Pilot License Details</h3>
-                            <Button variant="ghost" size="sm" className="w-9 p-0">
-                            <ChevronsUpDown className="h-4 w-4" />
-                            </Button>
-                        </div>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                           <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="ratings">Ratings</Label>
-                                    <Input id="ratings" value={(formData.pilotLicense?.ratings || []).join(', ')} onChange={(e) => handleArrayInputChange('pilotLicense', 'ratings', e.target.value)} placeholder="e.g., IFR, ME" />
-                                    <p className="text-xs text-muted-foreground">Enter values separated by commas.</p>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="endorsements">Endorsements</Label>
-                                    <Input id="endorsements" value={(formData.pilotLicense?.endorsements || []).join(', ')} onChange={(e) => handleArrayInputChange('pilotLicense', 'endorsements', e.target.value)} placeholder="e.g., High Performance, Complex" />
-                                    <p className="text-xs text-muted-foreground">Enter values separated by commas.</p>
-                                </div>
-                           </div>
-                           <div className="space-y-4">
-                                 <div className="space-y-2">
-                                    <Label>Expiration Date</Label>
-                                    {formData.pilotLicense?.expirationDate && <p className="text-sm text-muted-foreground">Selected: {format(new Date(formData.pilotLicense.expirationDate), "PPP")}</p>}
-                                    <CustomCalendar 
-                                        selectedDate={formData.pilotLicense?.expirationDate ? new Date(formData.pilotLicense.expirationDate) : undefined}
-                                        onDateSelect={(date) => handleNestedInputChange('pilotLicense', 'expirationDate', date?.toISOString().split('T')[0])}
-                                    />
-                                </div>
-                           </div>
-                        </CollapsibleContent>
-                    </Collapsible>
-                    <Separator />
-                </>
-              )}
 
               {/* --- Address --- */}
               <Collapsible open={isAddressOpen} onOpenChange={setIsAddressOpen}>
