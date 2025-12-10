@@ -61,6 +61,9 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
 
     const aircraftRef = collection(firestore, 'tenants', tenantId, 'aircrafts');
     
+    const initialHobbsValue = Number(initialHobbs) || 0;
+    const initialTachoValue = Number(initialTacho) || 0;
+
     addDocumentNonBlocking(aircraftRef, { 
         tailNumber, 
         model,
@@ -68,10 +71,10 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
         type,
         frameHours: Number(frameHours) || 0,
         engineHours: Number(engineHours) || 0,
-        initialHobbs: Number(initialHobbs) || 0,
-        currentHobbs: Number(currentHobbs) || 0,
-        initialTacho: Number(initialTacho) || 0,
-        currentTacho: Number(currentTacho) || 0,
+        initialHobbs: initialHobbsValue,
+        currentHobbs: initialHobbsValue,
+        initialTacho: initialTachoValue,
+        currentTacho: initialTachoValue,
     });
 
     toast({
@@ -148,16 +151,16 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
             <Input id="initialHobbs" type="number" value={initialHobbs} onChange={(e) => setInitialHobbs(e.target.value)} />
           </div>
            <div className="space-y-2">
-            <Label htmlFor="currentHobbs">Current Hobbs</Label>
-            <Input id="currentHobbs" type="number" value={currentHobbs} onChange={(e) => setCurrentHobbs(e.target.value)} />
+            <Label htmlFor="currentHobbs" className="text-muted-foreground">Current Hobbs</Label>
+            <Input id="currentHobbs" type="number" value={initialHobbs} disabled readOnly />
           </div>
           <div className="space-y-2">
             <Label htmlFor="initialTacho">Initial Tacho</Label>
             <Input id="initialTacho" type="number" value={initialTacho} onChange={(e) => setInitialTacho(e.target.value)} />
           </div>
            <div className="space-y-2">
-            <Label htmlFor="currentTacho">Current Tacho</Label>
-            <Input id="currentTacho" type="number" value={currentTacho} onChange={(e) => setCurrentTacho(e.target.value)} />
+            <Label htmlFor="currentTacho" className="text-muted-foreground">Current Tacho</Label>
+            <Input id="currentTacho" type="number" value={initialTacho} disabled readOnly />
           </div>
         </div>
         <DialogFooter>
