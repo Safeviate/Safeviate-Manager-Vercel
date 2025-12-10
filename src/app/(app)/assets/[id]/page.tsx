@@ -30,7 +30,7 @@ type Document = NonNullable<Aircraft['documents']>[0];
 
 const requiredAircraftDocuments = [
     'Certificate of Release to service',
-    'COR',
+    'Certificate of Registration',
     'Certificate of Airworthiness',
     'Radio',
     'Insurance',

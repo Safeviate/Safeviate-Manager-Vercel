@@ -34,7 +34,7 @@ const DetailItem = ({ label, value }: { label: string; value?: string | number |
 
 const requiredAircraftDocuments = [
     'Certificate of Release to service',
-    'COR',
+    'Certificate of Registration',
     'Certificate of Airworthiness',
     'Radio',
     'Insurance',
