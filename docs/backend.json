@@ -408,6 +408,23 @@
         "tenantId"
       ]
     },
+    "WarningPeriod": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "WarningPeriod",
+        "type": "object",
+        "description": "Represents a single document expiry warning period with its associated color.",
+        "properties": {
+            "period": {
+                "type": "number",
+                "description": "The number of days before expiration to send a warning."
+            },
+            "color": {
+                "type": "string",
+                "description": "The hex color code associated with this warning period."
+            }
+        },
+        "required": ["period", "color"]
+    },
     "DocumentExpiry": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "title": "DocumentExpiry",
@@ -416,9 +433,9 @@
         "properties": {
             "warningPeriods": {
                 "type": "array",
-                "description": "An array of numbers representing the days before expiration to send a warning.",
+                "description": "An array of warning period objects.",
                 "items": {
-                    "type": "number"
+                    "$ref": "#/backend/entities/WarningPeriod"
                 }
             }
         },

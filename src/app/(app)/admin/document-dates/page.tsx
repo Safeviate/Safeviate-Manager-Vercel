@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -13,10 +13,17 @@ import { Badge } from '@/components/ui/badge';
 import { Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
+export type WarningPeriod = {
+  period: number;
+  color: string;
+};
+
 export type DocumentExpirySettings = {
   id: string;
-  warningPeriods: number[]; // Array of days (e.g., [30, 60, 90])
+  warningPeriods: WarningPeriod[];
 };
+
+const defaultColor = '#facc15'; // yellow-400
 
 export default function DocumentDatesPage() {
   const firestore = useFirestore();
@@ -25,6 +32,7 @@ export default function DocumentDatesPage() {
   const settingsId = 'document-expiry';
 
   const [newPeriod, setNewPeriod] = useState('');
+  const [newColor, setNewColor] = useState(defaultColor);
 
   const expirySettingsRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', settingsId) : null),
@@ -45,18 +53,20 @@ export default function DocumentDatesPage() {
     }
 
     if (!expirySettingsRef) return;
-    
+
     const currentPeriods = expirySettings?.warningPeriods || [];
-    if (currentPeriods.includes(period)) {
-        toast({
-            variant: 'destructive',
-            title: 'Duplicate Period',
-            description: `The warning period for ${period} days already exists.`,
-        });
-        return;
+    if (currentPeriods.some((p) => p.period === period)) {
+      toast({
+        variant: 'destructive',
+        title: 'Duplicate Period',
+        description: `The warning period for ${period} days already exists.`,
+      });
+      return;
     }
 
-    const newPeriods = [...currentPeriods, period].sort((a, b) => a - b);
+    const newWarningPeriod: WarningPeriod = { period, color: newColor };
+    const newPeriods = [...currentPeriods, newWarningPeriod].sort((a, b) => a.period - b.period);
+    
     setDocumentNonBlocking(expirySettingsRef, { warningPeriods: newPeriods }, { merge: true });
 
     toast({
@@ -64,16 +74,17 @@ export default function DocumentDatesPage() {
       description: `${period} days has been added to the warning periods.`,
     });
     setNewPeriod('');
+    setNewColor(defaultColor);
   };
 
   const handleRemovePeriod = (periodToRemove: number) => {
     if (!expirySettingsRef) return;
 
     const currentPeriods = expirySettings?.warningPeriods || [];
-    const newPeriods = currentPeriods.filter((p) => p !== periodToRemove);
+    const newPeriods = currentPeriods.filter((p) => p.period !== periodToRemove);
     setDocumentNonBlocking(expirySettingsRef, { warningPeriods: newPeriods }, { merge: true });
 
-     toast({
+    toast({
       title: 'Warning Period Removed',
       description: `${periodToRemove} days has been removed.`,
     });
@@ -81,21 +92,21 @@ export default function DocumentDatesPage() {
 
   if (isLoading) {
     return (
-        <Card className="w-full max-w-2xl mx-auto">
-            <CardHeader>
-                <Skeleton className="h-8 w-3/4" />
-                <Skeleton className="h-4 w-full mt-2" />
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-12 w-full" />
-            </CardContent>
-        </Card>
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-4 w-full mt-2" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </CardContent>
+      </Card>
     );
   }
 
   if (error) {
-    return <p className="text-destructive">Error loading settings: {error.message}</p>
+    return <p className="text-destructive">Error loading settings: {error.message}</p>;
   }
 
   return (
@@ -104,51 +115,63 @@ export default function DocumentDatesPage() {
         <CardTitle>Document Expiry Warnings</CardTitle>
         <CardDescription>
           Configure automatic warnings for documents that are approaching their expiration date.
-          Notifications will be triggered based on these periods.
+          Notifications will be triggered based on these periods and their assigned colors.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="warning-period">New Warning Period (in days)</Label>
+          <Label htmlFor="warning-period">New Warning Period</Label>
           <div className="flex gap-2">
             <Input
               id="warning-period"
               type="number"
               value={newPeriod}
               onChange={(e) => setNewPeriod(e.target.value)}
-              placeholder="e.g., 30"
+              placeholder="e.g., 30 (days)"
+              className="w-48"
               onKeyDown={(e) => e.key === 'Enter' && handleAddPeriod()}
             />
-            <Button onClick={handleAddPeriod}>Add Period</Button>
+             <Input
+              id="warning-color"
+              type="color"
+              value={newColor}
+              onChange={(e) => setNewColor(e.target.value)}
+              className="p-1 h-10 w-12"
+            />
+            <Button onClick={handleAddPeriod} className="flex-grow">Add Period</Button>
           </div>
         </div>
 
         <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                Current Warning Periods
-            </h4>
-            <div className="flex flex-wrap gap-2 p-4 border rounded-lg min-h-16">
-                {(expirySettings?.warningPeriods || []).length > 0 ? (
-                    expirySettings?.warningPeriods.map((period) => (
-                        <Badge key={period} variant="secondary" className="flex items-center gap-2 text-base py-1">
+          <h4 className="text-sm font-medium text-muted-foreground mb-2">
+            Current Warning Periods
+          </h4>
+          <div className="flex flex-col gap-2 p-4 border rounded-lg min-h-16">
+            {(expirySettings?.warningPeriods || []).length > 0 ? (
+              expirySettings?.warningPeriods.map(({ period, color }) => (
+                <div key={period} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
+                    <div className="flex items-center gap-3">
+                        <div className="h-6 w-6 rounded-full border" style={{ backgroundColor: color }} />
+                        <Badge variant="secondary" className="flex items-center gap-2 text-base py-1">
                             {period} days
-                            <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-5 w-5 rounded-full hover:bg-destructive/20"
-                                onClick={() => handleRemovePeriod(period)}
-                            >
-                                <Trash2 className="h-3 w-3 text-destructive" />
-                                <span className="sr-only">Remove {period} days</span>
-                            </Button>
                         </Badge>
-                    ))
-                ) : (
-                    <p className="text-sm text-muted-foreground w-full text-center">No warning periods configured.</p>
-                )}
-            </div>
+                    </div>
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 rounded-full hover:bg-destructive/20"
+                        onClick={() => handleRemovePeriod(period)}
+                    >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <span className="sr-only">Remove {period} days</span>
+                    </Button>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground w-full text-center">No warning periods configured.</p>
+            )}
+          </div>
         </div>
-
       </CardContent>
     </Card>
   );
