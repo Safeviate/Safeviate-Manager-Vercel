@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -103,9 +104,7 @@ export default function UsersPage() {
                     {sections.map(section => (
                         <AccordionItem value={section.title} key={section.title}>
                             <AccordionTrigger className="px-6 text-lg font-medium hover:no-underline">
-                                <div className="flex items-center gap-4">
-                                  {section.title}
-                                </div>
+                                {section.title}
                             </AccordionTrigger>
                             <AccordionContent>
                                 {isLoading && <p className='px-6'>Loading...</p>}
