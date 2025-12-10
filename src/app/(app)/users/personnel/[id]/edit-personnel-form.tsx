@@ -262,6 +262,12 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, onCancel
                           </Select>
                       </div>
                   )}
+                  {isPilotProfile(formData) && (
+                    <div className="space-y-2">
+                      <Label htmlFor="licenseNumber">License Number</Label>
+                      <Input id="licenseNumber" value={formData.pilotLicense?.licenseNumber || ''} onChange={(e) => handleNestedInputChange('pilotLicense', 'licenseNumber', e.target.value)} />
+                    </div>
+                  )}
                 </CollapsibleContent>
               </Collapsible>
 
@@ -281,10 +287,6 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, onCancel
                         </CollapsibleTrigger>
                         <CollapsibleContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="licenseNumber">License Number</Label>
-                                    <Input id="licenseNumber" value={formData.pilotLicense?.licenseNumber || ''} onChange={(e) => handleNestedInputChange('pilotLicense', 'licenseNumber', e.target.value)} />
-                                </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="ratings">Ratings</Label>
                                     <Input id="ratings" value={(formData.pilotLicense?.ratings || []).join(', ')} onChange={(e) => handleArrayInputChange('pilotLicense', 'ratings', e.target.value)} placeholder="e.g., IFR, ME" />

@@ -96,6 +96,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
           )}
            {isPilotProfile(user) && user.pilotLicense && (
             <>
+                <DetailItem label="License Number" value={user.pilotLicense.licenseNumber} />
                 <DetailItem label="Ratings">
                     <div className="flex flex-wrap gap-2 mt-1">
                         {(user.pilotLicense.ratings || []).map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
@@ -149,7 +150,6 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
           </CardHeader>
           <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <DetailItem label="License Number" value={user.pilotLicense.licenseNumber} />
                 <DetailItem label="Issue Date" value={user.pilotLicense.issueDate ? format(new Date(user.pilotLicense.issueDate), 'PPP') : 'N/A'} />
                 <DetailItem label="Expiration Date" value={user.pilotLicense.expirationDate ? format(new Date(user.pilotLicense.expirationDate), 'PPP') : 'N/A'} />
               </div>
