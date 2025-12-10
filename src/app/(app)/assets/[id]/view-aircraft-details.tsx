@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Aircraft, AircraftDocument } from '../page';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -18,8 +18,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from '@/components/ui/button';
 import { CalendarIcon, Trash2, Upload, View, FileUp, Camera, Wrench } from 'lucide-react';
 import type { DocumentExpirySettings } from '../../admin/document-dates/page';
-import { useDebounce } from '@/hooks/use-debounce';
-import { Input } from '@/components/ui/input';
 import { SetServiceForm } from './set-service-form';
 import { ServiceCountdown } from './service-countdown';
 
@@ -183,8 +181,8 @@ export function ViewAircraftDetails({ aircraft }: ViewAircraftDetailsProps) {
                 <DetailItem label="Current Hobbs" value={aircraft.currentHobbs} />
                 <DetailItem label="Initial Tacho" value={aircraft.initialTacho} />
                 <DetailItem label="Current Tacho" value={aircraft.currentTacho} />
-                <ServiceCountdown label="Next 50hr Inspection" hoursRemaining={aircraft.hoursToNext50Inspection} totalHours={50} />
-                <ServiceCountdown label="Next 100hr Inspection" hoursRemaining={aircraft.hoursToNext100Inspection} totalHours={100} />
+                <ServiceCountdown label="Next 50hr Inspection" currentTacho={aircraft.currentTacho} tachoAtNextInspection={aircraft.tachoAtNext50Inspection} inspectionInterval={50} />
+                <ServiceCountdown label="Next 100hr Inspection" currentTacho={aircraft.currentTacho} tachoAtNextInspection={aircraft.tachoAtNext100Inspection} inspectionInterval={100} />
             </CardContent>
         </Card>
         
@@ -310,3 +308,5 @@ export function ViewAircraftDetails({ aircraft }: ViewAircraftDetailsProps) {
     </div>
   );
 }
+
+    

@@ -34,11 +34,9 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
   const [frameHours, setFrameHours] = useState('');
   const [engineHours, setEngineHours] = useState('');
   const [initialHobbs, setInitialHobbs] = useState('');
-  const [currentHobbs, setCurrentHobbs] = useState('');
   const [initialTacho, setInitialTacho] = useState('');
-  const [currentTacho, setCurrentTacho] = useState('');
-  const [hoursToNext50Inspection, setHoursToNext50Inspection] = useState('');
-  const [hoursToNext100Inspection, setHoursToNext100Inspection] = useState('');
+  const [tachoAtNext50Inspection, setTachoAtNext50Inspection] = useState('');
+  const [tachoAtNext100Inspection, setTachoAtNext100Inspection] = useState('');
 
 
   const [isOpen, setIsOpen] = useState(false);
@@ -78,8 +76,8 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
         currentHobbs: initialHobbsValue,
         initialTacho: initialTachoValue,
         currentTacho: initialTachoValue,
-        hoursToNext50Inspection: Number(hoursToNext50Inspection) || 0,
-        hoursToNext100Inspection: Number(hoursToNext100Inspection) || 0,
+        tachoAtNext50Inspection: Number(tachoAtNext50Inspection) || 0,
+        tachoAtNext100Inspection: Number(tachoAtNext100Inspection) || 0,
     });
 
     toast({
@@ -98,11 +96,9 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
     setFrameHours('');
     setEngineHours('');
     setInitialHobbs('');
-    setCurrentHobbs('');
     setInitialTacho('');
-    setCurrentTacho('');
-    setHoursToNext50Inspection('');
-    setHoursToNext100Inspection('');
+    setTachoAtNext50Inspection('');
+    setTachoAtNext100Inspection('');
     setIsOpen(false);
   }
 
@@ -170,12 +166,12 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
             <Input id="currentTacho" type="number" value={initialTacho} disabled readOnly />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="hoursToNext50Inspection">Hours to Next 50 Insp.</Label>
-            <Input id="hoursToNext50Inspection" type="number" value={hoursToNext50Inspection} onChange={(e) => setHoursToNext50Inspection(e.target.value)} />
+            <Label htmlFor="tachoAtNext50Inspection">Tacho at Next 50 Insp.</Label>
+            <Input id="tachoAtNext50Inspection" type="number" value={tachoAtNext50Inspection} onChange={(e) => setTachoAtNext50Inspection(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="hoursToNext100Inspection">Hours to Next 100 Insp.</Label>
-            <Input id="hoursToNext100Inspection" type="number" value={hoursToNext100Inspection} onChange={(e) => setHoursToNext100Inspection(e.target.value)} />
+            <Label htmlFor="tachoAtNext100Inspection">Tacho at Next 100 Insp.</Label>
+            <Input id="tachoAtNext100Inspection" type="number" value={tachoAtNext100Inspection} onChange={(e) => setTachoAtNext100Inspection(e.target.value)} />
           </div>
         </div>
         <DialogFooter>
@@ -188,5 +184,5 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
     </Dialog>
   );
 }
-
+    
     

@@ -44,7 +44,7 @@
       "type": "object",
       "description": "Represents a non-flying staff member at the aviation academy.",
       "properties": {
-        "id": {
+        "id_": {
           "type": "string",
           "description": "Unique identifier for the Personnel entity."
         },
@@ -194,13 +194,13 @@
           "type": "number",
           "description": "Current Tachometer reading."
         },
-        "hoursToNext50Inspection": {
+        "tachoAtNext50Inspection": {
           "type": "number",
-          "description": "Hours remaining until the next 50-hour inspection."
+          "description": "Tacho reading at which the next 50-hour inspection is due."
         },
-        "hoursToNext100Inspection": {
+        "tachoAtNext100Inspection": {
           "type": "number",
-          "description": "Hours remaining until the next 100-hour inspection."
+          "description": "Tacho reading at which the next 100-hour inspection is due."
         },
         "maintenanceLogs": {
           "type": "array",

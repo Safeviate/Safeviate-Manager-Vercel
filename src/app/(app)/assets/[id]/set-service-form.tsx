@@ -33,8 +33,8 @@ export function SetServiceForm({ tenantId, aircraft, children }: SetServiceFormP
 
   const [currentHobbs, setCurrentHobbs] = useState(aircraft.currentHobbs?.toString() || '');
   const [currentTacho, setCurrentTacho] = useState(aircraft.currentTacho?.toString() || '');
-  const [hoursToNext50Inspection, setHoursToNext50Inspection] = useState(aircraft.hoursToNext50Inspection?.toString() || '');
-  const [hoursToNext100Inspection, setHoursToNext100Inspection] = useState(aircraft.hoursToNext100Inspection?.toString() || '');
+  const [tachoAtNext50Inspection, setTachoAtNext50Inspection] = useState(aircraft.tachoAtNext50Inspection?.toString() || '');
+  const [tachoAtNext100Inspection, setTachoAtNext100Inspection] = useState(aircraft.tachoAtNext100Inspection?.toString() || '');
 
   const handleUpdateService = () => {
     if (!firestore || !tenantId) {
@@ -51,8 +51,8 @@ export function SetServiceForm({ tenantId, aircraft, children }: SetServiceFormP
     updateDocumentNonBlocking(aircraftRef, { 
         currentHobbs: Number(currentHobbs) || 0,
         currentTacho: Number(currentTacho) || 0,
-        hoursToNext50Inspection: Number(hoursToNext50Inspection) || 0,
-        hoursToNext100Inspection: Number(hoursToNext100Inspection) || 0,
+        tachoAtNext50Inspection: Number(tachoAtNext50Inspection) || 0,
+        tachoAtNext100Inspection: Number(tachoAtNext100Inspection) || 0,
     });
 
     toast({
@@ -68,8 +68,8 @@ export function SetServiceForm({ tenantId, aircraft, children }: SetServiceFormP
         // Reset form to current aircraft state when opening
         setCurrentHobbs(aircraft.currentHobbs?.toString() || '');
         setCurrentTacho(aircraft.currentTacho?.toString() || '');
-        setHoursToNext50Inspection(aircraft.hoursToNext50Inspection?.toString() || '');
-        setHoursToNext100Inspection(aircraft.hoursToNext100Inspection?.toString() || '');
+        setTachoAtNext50Inspection(aircraft.tachoAtNext50Inspection?.toString() || '');
+        setTachoAtNext100Inspection(aircraft.tachoAtNext100Inspection?.toString() || '');
     }
     setIsOpen(open);
   }
@@ -96,12 +96,12 @@ export function SetServiceForm({ tenantId, aircraft, children }: SetServiceFormP
             <Input id="currentTacho" type="number" value={currentTacho} onChange={(e) => setCurrentTacho(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="hoursToNext50Inspection">Next 50hr Insp.</Label>
-            <Input id="hoursToNext50Inspection" type="number" value={hoursToNext50Inspection} onChange={(e) => setHoursToNext50Inspection(e.target.value)} />
+            <Label htmlFor="tachoAtNext50Inspection">Tacho at Next 50hr</Label>
+            <Input id="tachoAtNext50Inspection" type="number" value={tachoAtNext50Inspection} onChange={(e) => setTachoAtNext50Inspection(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="hoursToNext100Inspection">Next 100hr Insp.</Label>
-            <Input id="hoursToNext100Inspection" type="number" value={hoursToNext100Inspection} onChange={(e) => setHoursToNext100Inspection(e.target.value)} />
+            <Label htmlFor="tachoAtNext100Inspection">Tacho at Next 100hr</Label>
+            <Input id="tachoAtNext100Inspection" type="number" value={tachoAtNext100Inspection} onChange={(e) => setTachoAtNext100Inspection(e.target.value)} />
           </div>
         </div>
         <DialogFooter>
@@ -114,5 +114,5 @@ export function SetServiceForm({ tenantId, aircraft, children }: SetServiceFormP
     </Dialog>
   );
 }
-
+    
     

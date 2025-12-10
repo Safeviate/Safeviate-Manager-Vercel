@@ -1,23 +1,13 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import type { Aircraft } from '../page';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import Image from 'next/image';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { format, differenceInDays } from 'date-fns';
-import { DocumentUploader } from './document-uploader';
-import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Trash2, Upload, View, FileUp, Camera } from 'lucide-react';
-import type { DocumentExpirySettings } from '../../admin/document-dates/page';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -40,8 +30,8 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
   const [currentHobbs, setCurrentHobbs] = useState(aircraft.currentHobbs?.toString() || '');
   const [initialTacho, setInitialTacho] = useState(aircraft.initialTacho?.toString() || '');
   const [currentTacho, setCurrentTacho] = useState(aircraft.currentTacho?.toString() || '');
-  const [hoursToNext50Inspection, setHoursToNext50Inspection] = useState(aircraft.hoursToNext50Inspection?.toString() || '');
-  const [hoursToNext100Inspection, setHoursToNext100Inspection] = useState(aircraft.hoursToNext100Inspection?.toString() || '');
+  const [tachoAtNext50Inspection, setTachoAtNext50Inspection] = useState(aircraft.tachoAtNext50Inspection?.toString() || '');
+  const [tachoAtNext100Inspection, setTachoAtNext100Inspection] = useState(aircraft.tachoAtNext100Inspection?.toString() || '');
   
   const handleUpdateAircraft = () => {
     if (!tailNumber.trim() || !model.trim() || !type.trim()) {
@@ -74,8 +64,8 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
       currentHobbs: Number(currentHobbs) || 0,
       initialTacho: Number(initialTacho) || 0,
       currentTacho: Number(currentTacho) || 0,
-      hoursToNext50Inspection: Number(hoursToNext50Inspection) || 0,
-      hoursToNext100Inspection: Number(hoursToNext100Inspection) || 0,
+      tachoAtNext50Inspection: Number(tachoAtNext50Inspection) || 0,
+      tachoAtNext100Inspection: Number(tachoAtNext100Inspection) || 0,
     });
 
     toast({
@@ -133,12 +123,12 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
                 <Input id="currentTacho" type="number" value={currentTacho} onChange={(e) => setCurrentTacho(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="hoursToNext50Inspection">Hours to Next 50 Insp.</Label>
-              <Input id="hoursToNext50Inspection" type="number" value={hoursToNext50Inspection} onChange={(e) => setHoursToNext50Inspection(e.target.value)} />
+              <Label htmlFor="tachoAtNext50Inspection">Tacho at Next 50 Insp.</Label>
+              <Input id="tachoAtNext50Inspection" type="number" value={tachoAtNext50Inspection} onChange={(e) => setTachoAtNext50Inspection(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="hoursToNext100Inspection">Hours to Next 100 Insp.</Label>
-              <Input id="hoursToNext100Inspection" type="number" value={hoursToNext100Inspection} onChange={(e) => setHoursToNext100Inspection(e.target.value)} />
+              <Label htmlFor="tachoAtNext100Inspection">Tacho at Next 100 Insp.</Label>
+              <Input id="tachoAtNext100Inspection" type="number" value={tachoAtNext100Inspection} onChange={(e) => setTachoAtNext100Inspection(e.target.value)} />
             </div>
         </div>
       </CardContent>
@@ -149,5 +139,5 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
     </Card>
   );
 }
-
+    
     

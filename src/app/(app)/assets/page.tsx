@@ -28,8 +28,8 @@ export type Aircraft = {
   currentHobbs?: number;
   initialTacho?: number;
   currentTacho?: number;
-  hoursToNext50Inspection?: number;
-  hoursToNext100Inspection?: number;
+  tachoAtNext50Inspection?: number;
+  tachoAtNext100Inspection?: number;
   documents?: AircraftDocument[];
 };
 
@@ -80,4 +80,5 @@ export default function AssetsPage() {
   );
 }
 
+    
     
