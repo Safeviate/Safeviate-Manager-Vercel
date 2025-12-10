@@ -330,7 +330,7 @@ export default function BookingsPage() {
             <div className='overflow-x-auto h-full'>
               <div className="min-w-max flex flex-col h-full">
                 {/* Header */}
-                <div className="flex bg-muted flex-shrink-0 sticky top-0 z-20">
+                <div className="flex bg-swimlane-header text-swimlane-header-foreground flex-shrink-0 sticky top-0 z-20">
                   {(aircraft || []).map((ac) => (
                     <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px]">
                       {ac.tailNumber}
@@ -395,5 +395,3 @@ export default function BookingsPage() {
     </>
   );
 }
-
-    

@@ -38,6 +38,8 @@ export function ColorThemeForm() {
     setSidebarThemeValue, 
     headerTheme, 
     setHeaderThemeValue,
+    swimlaneTheme,
+    setSwimlaneThemeValue,
     savedThemes,
     saveCurrentTheme,
     applySavedTheme,
@@ -84,6 +86,7 @@ export function ColorThemeForm() {
         popoverColors: { popover: tenant.theme.backgroundColour || popoverTheme.popover, 'popover-foreground': popoverTheme['popover-foreground'] },
         sidebarColors: sidebarTheme, // Keep sidebar as is or define in tenant
         headerColors: { 'header-background': tenant.theme.backgroundColour || headerTheme['header-background'], 'header-foreground': headerTheme['header-foreground'], 'header-border': headerTheme['header-border'] },
+        swimlaneColors: swimlaneTheme,
     };
 
     applySavedTheme(themeToApply as SavedTheme);
@@ -196,6 +199,28 @@ export function ColorThemeForm() {
                     type="color"
                     value={value}
                     onChange={(e) => setHeaderThemeValue(name as keyof typeof headerTheme, e.target.value)}
+                    className="p-1 h-10"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        <Separator />
+        
+        <div>
+          <h3 className="text-lg font-medium mb-4">Swimlane Header Theme</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Object.entries(swimlaneTheme).map(([name, value]) => (
+              <div key={name} className="space-y-2">
+                <Label htmlFor={name} className="capitalize">{name.replace('swimlane-header-', '')}</Label>
+                <div className='relative'>
+                  <Input
+                    id={name}
+                    type="color"
+                    value={value}
+                    onChange={(e) => setSwimlaneThemeValue(name as keyof typeof swimlaneTheme, e.target.value)}
                     className="p-1 h-10"
                   />
                 </div>

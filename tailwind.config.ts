@@ -75,6 +75,10 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+        'swimlane-header': {
+            DEFAULT: 'hsl(var(--swimlane-header-background))',
+            foreground: 'hsl(var(--swimlane-header-foreground))',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

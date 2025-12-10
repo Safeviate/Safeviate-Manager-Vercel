@@ -40,6 +40,8 @@
     --header-background: 205 67% 95%;
     --header-foreground: 215 28% 17%;
     --header-border: 205 30% 85%;
+    --swimlane-header-background: 216 12% 84%;
+    --swimlane-header-foreground: 215 28% 17%;
   }
   .dark {
     --background: 215 28% 17%;
@@ -77,6 +79,8 @@
     --header-background: 215 28% 17%;
     --header-foreground: 205 67% 95%;
     --header-border: 215 20% 25%;
+    --swimlane-header-background: 215 20% 25%;
+    --swimlane-header-foreground: 205 67% 95%;
   }
 }
 
