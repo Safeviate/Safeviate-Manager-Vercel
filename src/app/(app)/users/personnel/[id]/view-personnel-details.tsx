@@ -10,7 +10,7 @@ import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { ChevronsUpDown, FileText, Upload, Trash2, Link as LinkIcon, CalendarDays, ExternalLink } from 'lucide-react';
+import { ChevronsUpDown, FileText, Upload, Trash2, Link as LinkIcon, CalendarDays, ExternalLink, View } from 'lucide-react';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { DocumentUploader } from './document-uploader';
@@ -48,6 +48,12 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   const { toast } = useToast();
   
   const uploadedDocuments = user?.documents || [];
+  const uploadedDocumentNames = uploadedDocuments.map(doc => doc.name);
+
+  // Filter for ad-hoc documents (uploaded but not in the required list)
+  const adHocDocuments = uploadedDocuments.filter(
+    doc => !(role?.requiredDocuments || []).includes(doc.name)
+  );
 
   const handleDocumentUploaded = (document: {name: string, url: string, uploadDate: string, expirationDate: string | null}) => {
     if (!firestore) return;
@@ -94,18 +100,18 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
           {!isPilotProfile(user) && department && (
             <DetailItem label="Department" value={department?.name} />
           )}
-           {isPilotProfile(user) && user.pilotLicense && (
+           {isPilotProfile(user) && (
             <>
-                <DetailItem label="License Number" value={user.pilotLicense.licenseNumber} />
+                <DetailItem label="License Number" value={user.pilotLicense?.licenseNumber} />
                 <DetailItem label="Ratings">
                     <div className="flex flex-wrap gap-2 mt-1">
-                        {(user.pilotLicense.ratings || []).map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
-                        {(user.pilotProfile?.ratings || []).length === 0 && <p className="text-base">N/A</p>}
+                        {(user.pilotLicense?.ratings || []).map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
+                        {(user.pilotLicense?.ratings || []).length === 0 && <p className="text-base">N/A</p>}
                     </div>
                 </DetailItem>
                 <DetailItem label="Endorsements" >
                     <div className="flex flex-wrap gap-2 mt-1">
-                        {(user.pilotLicense.endorsements || []).map(e => <Badge key={e} variant="secondary">{e}</Badge>)}
+                        {(user.pilotLicense?.endorsements || []).map(e => <Badge key={e} variant="secondary">{e}</Badge>)}
                         {(user.pilotLicense?.endorsements || []).length === 0 && <p className="text-base">N/A</p>}
                     </div>
                 </DetailItem>
@@ -172,23 +178,48 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                 <h4 className="text-md font-medium mb-2 text-muted-foreground">Required Documents</h4>
                 <div className="space-y-2">
                     {role.requiredDocuments.map(docName => {
-                        const isUploaded = uploadedDocuments.some(d => d.name === docName);
+                        const uploadedFile = uploadedDocuments.find(d => d.name === docName);
                         return (
                             <div key={docName} className="flex items-center justify-between p-3 border rounded-lg bg-secondary/30">
                                 <div className="flex items-center gap-3">
                                     <FileText className="h-5 w-5"/>
-                                    <span className="font-medium">{docName}</span>
+                                    <div>
+                                        <span className="font-medium">{docName}</span>
+                                         {uploadedFile && (
+                                            <div className="text-xs text-muted-foreground">
+                                                <p>Uploaded on {format(new Date(uploadedFile.uploadDate), 'PPP')}</p>
+                                                {uploadedFile.expirationDate && (
+                                                    <p className="flex items-center gap-1">
+                                                        <CalendarDays className="h-3 w-3" />
+                                                        Expires on {format(new Date(uploadedFile.expirationDate), 'PPP')}
+                                                    </p>
+                                                )}
+                                            </div>
+                                         )}
+                                    </div>
                                 </div>
-                                <DocumentUploader 
-                                    onDocumentUploaded={handleDocumentUploaded}
-                                    defaultFileName={docName}
-                                    trigger={
-                                        <Button size="sm" disabled={isUploaded}>
-                                            <Upload className="mr-2 h-4 w-4" />
-                                            {isUploaded ? "Uploaded" : "Upload"}
+                                {uploadedFile ? (
+                                    <div className="flex items-center gap-2">
+                                        <Button size="sm" variant="outline" onClick={() => setViewingDocument(uploadedFile)}>
+                                            <View className="mr-2 h-4 w-4" />
+                                            View
                                         </Button>
-                                    }
-                                />
+                                        <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => handleDeleteDocument(uploadedFile.url)}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <DocumentUploader 
+                                        onDocumentUploaded={handleDocumentUploaded}
+                                        defaultFileName={docName}
+                                        trigger={
+                                            <Button size="sm">
+                                                <Upload className="mr-2 h-4 w-4" />
+                                                Upload
+                                            </Button>
+                                        }
+                                    />
+                                )}
                             </div>
                         )
                     })}
@@ -196,37 +227,35 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
             </div>
            )}
             
-            {role && role.requiredDocuments && role.requiredDocuments.length > 0 && <Separator />}
+            {adHocDocuments.length > 0 && <Separator />}
             
-            <div>
-                <h4 className="text-md font-medium mb-2 text-muted-foreground">Uploaded Documents</h4>
-                {uploadedDocuments.length > 0 ? (
-                     <div className="space-y-2">
-                        {uploadedDocuments.map(doc => (
-                            <div key={doc.url} className="flex items-center justify-between p-3 border rounded-lg">
-                                <button onClick={() => setViewingDocument(doc)} className='flex items-center gap-3 text-left hover:underline'>
-                                     <LinkIcon className="h-5 w-5 text-muted-foreground"/>
-                                     <div>
-                                        <p className="font-medium">{doc.name}</p>
-                                        <p className="text-xs text-muted-foreground">Uploaded on {format(new Date(doc.uploadDate), 'PPP')}</p>
-                                        {doc.expirationDate && (
-                                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                            <CalendarDays className="h-3 w-3" />
-                                            Expires on {format(new Date(doc.expirationDate), 'PPP')}
-                                          </p>
-                                        )}
-                                     </div>
-                                </button>
-                                <Button variant="ghost" size="icon" className='text-destructive' onClick={() => handleDeleteDocument(doc.url)}>
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                     <p className="text-sm text-muted-foreground">No documents have been uploaded.</p>
-                )}
-            </div>
+            {adHocDocuments.length > 0 && (
+              <div>
+                  <h4 className="text-md font-medium mb-2 text-muted-foreground">Ad-hoc Documents</h4>
+                  <div className="space-y-2">
+                      {adHocDocuments.map(doc => (
+                          <div key={doc.url} className="flex items-center justify-between p-3 border rounded-lg">
+                              <button onClick={() => setViewingDocument(doc)} className='flex items-center gap-3 text-left hover:underline'>
+                                   <LinkIcon className="h-5 w-5 text-muted-foreground"/>
+                                   <div>
+                                      <p className="font-medium">{doc.name}</p>
+                                      <p className="text-xs text-muted-foreground">Uploaded on {format(new Date(doc.uploadDate), 'PPP')}</p>
+                                      {doc.expirationDate && (
+                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                          <CalendarDays className="h-3 w-3" />
+                                          Expires on {format(new Date(doc.expirationDate), 'PPP')}
+                                        </p>
+                                      )}
+                                   </div>
+                              </button>
+                              <Button variant="ghost" size="icon" className='text-destructive' onClick={() => handleDeleteDocument(doc.url)}>
+                                  <Trash2 className="h-4 w-4" />
+                              </Button>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+            )}
 
         </CardContent>
       </Card>
@@ -315,5 +344,3 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     </div>
   );
 }
-
-    
