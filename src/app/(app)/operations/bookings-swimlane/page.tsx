@@ -87,7 +87,7 @@ const BookingItem = ({ booking, pilots, tenantId, onEdit }: { booking: Booking, 
                 <PopoverTrigger asChild>
                      <div
                         className={cn(
-                        'absolute w-full p-2 rounded-lg text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity',
+                        'absolute w-full p-2 rounded-lg text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity z-10',
                         booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80'
                         )}
                         style={{ top: `${top}px`, height: `${height}px` }}
@@ -130,16 +130,35 @@ const BookingItem = ({ booking, pilots, tenantId, onEdit }: { booking: Booking, 
     )
 }
 
-const AircraftColumn = ({ aircraft, bookings, pilots, tenantId, onGridClick, onBookingEdit }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; tenantId: string; onGridClick: (e: React.MouseEvent<HTMLDivElement>, ac: Aircraft) => void; onBookingEdit: (booking: Booking, ac: Aircraft) => void; }) => {
+const AircraftColumn = ({ aircraft, bookings, pilots, tenantId, onGridClick, onBookingEdit, showNowLine, nowLinePosition }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; tenantId: string; onGridClick: (e: React.MouseEvent<HTMLDivElement>, ac: Aircraft) => void; onBookingEdit: (booking: Booking, ac: Aircraft) => void; showNowLine: boolean; nowLinePosition: number; }) => {
   return (
     <div 
         className="flex-1 relative border-r min-w-[150px]"
         onClick={(e) => aircraft && onGridClick(e, aircraft)}
     >
-      {/* Hour lines for this column */}
+      {/* Hour lines and labels for this column */}
       {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
-        <div key={hour} className="border-t" style={{ height: `${HOUR_HEIGHT_PX}px` }} />
+        <div key={hour} className="relative border-t" style={{ height: `${HOUR_HEIGHT_PX}px` }}>
+            <span className="absolute -top-2 left-1 text-xs text-muted-foreground">
+                {format(new Date(0, 0, 0, hour), 'HH:mm')}
+            </span>
+        </div>
       ))}
+      
+      {/* "Past" Shadow */}
+      {showNowLine && (
+        <div 
+          className="absolute top-0 left-0 right-0 bg-secondary/30 z-0 pointer-events-none"
+          style={{ height: `${nowLinePosition}px` }}
+        />
+      )}
+
+      {/* "Now" Line */}
+      {showNowLine && (
+        <div className="absolute left-0 right-0 h-0.5 bg-red-500 z-20 pointer-events-none" style={{ top: `${nowLinePosition}px` }}>
+          <div className="absolute -left-1.5 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full" />
+        </div>
+      )}
 
       {/* Booking blocks */}
       {bookings.map((booking) => (
@@ -164,6 +183,9 @@ export default function BookingsSwimlanePage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formInitialData, setFormInitialData] = useState<{ aircraft: Aircraft, startTime: Date, booking?: Booking | null } | null>(null);
+
+  const [nowLinePosition, setNowLinePosition] = useState(0);
+  const [showNowLine, setShowNowLine] = useState(false);
 
   const aircraftQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
@@ -192,6 +214,24 @@ export default function BookingsSwimlanePage() {
 
   const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingPilots;
   const error = aircraftError || bookingsError || pilotsError;
+
+  useEffect(() => {
+    const calculateNowLine = () => {
+        const now = new Date();
+        const isToday = startOfDay(now).getTime() === startOfDay(selectedDate).getTime();
+        setShowNowLine(isToday);
+
+        if (isToday) {
+            const minutes = now.getHours() * 60 + now.getMinutes();
+            const position = minutes * (HOUR_HEIGHT_PX / 60);
+            setNowLinePosition(position);
+        }
+    };
+    
+    calculateNowLine();
+    const interval = setInterval(calculateNowLine, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, [selectedDate]);
   
   const handleGridClick = useCallback((e: React.MouseEvent<HTMLDivElement>, ac: Aircraft) => {
     if ((e.target as HTMLElement).closest('.cursor-pointer')) {
@@ -201,7 +241,8 @@ export default function BookingsSwimlanePage() {
     const gridRect = e.currentTarget.getBoundingClientRect();
     const clickY = e.clientY - gridRect.top;
     
-    const minutesFromStart = (clickY / (TOTAL_HOURS * HOUR_HEIGHT_PX)) * (TOTAL_HOURS * 60);
+    const totalHeight = TOTAL_HOURS * HOUR_HEIGHT_PX;
+    const minutesFromStart = (clickY / totalHeight) * (TOTAL_HOURS * 60);
     
     const hour = Math.floor(minutesFromStart / 60);
     const minute = Math.floor(minutesFromStart % 60);
@@ -227,7 +268,7 @@ export default function BookingsSwimlanePage() {
   }, []);
 
 
-  const extraLanes = ['', '', '', '', '','','']; // Add 7 empty lanes
+  const extraLanes = ['', '', '', ''];
 
   return (
     <>
@@ -257,7 +298,7 @@ export default function BookingsSwimlanePage() {
             A vertical timeline of all bookings for {format(selectedDate, 'PPP')}.
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-0 flex-grow overflow-auto">
+        <CardContent className="p-0 flex-grow overflow-auto" style={{ height: 'calc(100vh - 20rem)' }}>
           {isLoading && (
             <div className="p-6 space-y-4">
               <Skeleton className="h-8 w-1/2" />
@@ -274,7 +315,7 @@ export default function BookingsSwimlanePage() {
             <div className='overflow-x-auto h-full'>
               <div className="min-w-max flex flex-col h-full">
                 {/* Header */}
-                <div className="flex sticky top-0 z-10 bg-muted/50 flex-shrink-0">
+                <div className="flex sticky top-0 z-20 bg-muted/50 flex-shrink-0">
                   <div className="w-16 flex-shrink-0 border-r" />
                   {(aircraft || []).map((ac) => (
                     <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px]">
@@ -301,6 +342,8 @@ export default function BookingsSwimlanePage() {
                       tenantId={tenantId}
                       onGridClick={handleGridClick}
                       onBookingEdit={handleBookingEdit}
+                      showNowLine={showNowLine}
+                      nowLinePosition={nowLinePosition}
                     />
                   ))}
                   {extraLanes.map((_, index) => (
@@ -311,6 +354,8 @@ export default function BookingsSwimlanePage() {
                         tenantId={tenantId}
                         onGridClick={() => {}}
                         onBookingEdit={() => {}}
+                        showNowLine={showNowLine}
+                        nowLinePosition={nowLinePosition}
                     />
                   ))}
                   {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-4 text-center text-muted-foreground">Please add aircraft to see the schedule.</div>}
