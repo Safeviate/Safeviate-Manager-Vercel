@@ -5,11 +5,15 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import type { Aircraft } from '../../assets/page';
 import type { Booking } from '@/types/booking';
 import { cn } from '@/lib/utils';
-import { addHours, format, startOfDay, getMinutes, getHours, differenceInMinutes } from 'date-fns';
+import { addHours, format, startOfDay, getMinutes, getHours, differenceInMinutes, setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
+import { BookingForm } from './booking-form';
+import type { PilotProfile } from '../../users/personnel/page';
 
 interface BookingCalendarProps {
+  tenantId: string;
   aircraft: Aircraft[];
   bookings: Booking[];
+  pilots: PilotProfile[];
   selectedDate: Date;
 }
 
@@ -44,8 +48,10 @@ const BookingItem = ({ booking }: { booking: Booking }) => {
 
 
 export function BookingCalendar({
+  tenantId,
   aircraft,
   bookings,
+  pilots,
   selectedDate,
 }: BookingCalendarProps) {
   const [nowLine, setNowLine] = useState<number | null>(null);
@@ -53,6 +59,9 @@ export function BookingCalendar({
   const dataRef = useRef<HTMLDivElement>(null);
   const resourceColRef = useRef<HTMLDivElement>(null);
 
+  // State for the booking form dialog
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formInitialData, setFormInitialData] = useState<{ aircraft: Aircraft, startTime: Date } | null>(null);
 
   const timeSlots = useMemo(() => {
     return Array.from({ length: HOURS_IN_DAY }, (_, i) => {
@@ -93,9 +102,26 @@ export function BookingCalendar({
         dataRef.current.scrollTop = e.currentTarget.scrollTop;
     }
   };
+  
+  const handleGridClick = (e: React.MouseEvent<HTMLDivElement>, ac: Aircraft) => {
+    const gridRect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - gridRect.left;
+    
+    const totalWidth = HOURS_IN_DAY * HOUR_WIDTH_PX;
+    const minutesFromStart = (clickX / totalWidth) * (HOURS_IN_DAY * 60);
+    
+    const hour = Math.floor(minutesFromStart / 60);
+    const minute = Math.floor(minutesFromStart % 60);
+
+    const clickedTime = setMilliseconds(setSeconds(setMinutes(setHours(startOfDay(selectedDate), hour), minute), 0), 0);
+
+    setFormInitialData({ aircraft: ac, startTime: clickedTime });
+    setIsFormOpen(true);
+  };
 
 
   return (
+    <>
     <div className="flex flex-col h-full border rounded-lg overflow-hidden">
         {/* Header */}
         <div className="flex border-b bg-muted/50 flex-shrink-0">
@@ -138,7 +164,11 @@ export function BookingCalendar({
                     </div>
                     {/* Aircraft Rows and Bookings */}
                     {aircraft.map((ac, index) => (
-                        <div key={ac.id} className="relative h-16 border-b">
+                        <div 
+                            key={ac.id} 
+                            className="relative h-16 border-b cursor-pointer"
+                            onClick={(e) => handleGridClick(e, ac)}
+                        >
                             {bookings
                                 .filter(b => b.aircraftId === ac.id)
                                 .map(booking => (
@@ -156,5 +186,16 @@ export function BookingCalendar({
             </div>
         </div>
     </div>
+    {formInitialData && (
+        <BookingForm
+            isOpen={isFormOpen}
+            onOpenChange={setIsFormOpen}
+            tenantId={tenantId}
+            aircraft={formInitialData.aircraft}
+            pilots={pilots}
+            initialStartTime={formInitialData.startTime}
+        />
+    )}
+    </>
   );
 }

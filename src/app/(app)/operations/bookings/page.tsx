@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
+import type { PilotProfile } from '../../users/personnel/page';
+
 
 export default function BookingsPage() {
   const firestore = useFirestore();
@@ -36,12 +38,21 @@ export default function BookingsPage() {
         where('startTime', '<=', end)
     );
   }, [firestore, tenantId, selectedDate]);
+
+  const pilotsQuery = useMemoFirebase(
+    () =>
+      firestore
+        ? query(collection(firestore, 'tenants', tenantId, 'pilots'))
+        : null,
+    [firestore, tenantId]
+  );
   
   const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
   const { data: bookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
+  const { data: pilots, isLoading: isLoadingPilots, error: pilotsError } = useCollection<PilotProfile>(pilotsQuery);
 
-  const isLoading = isLoadingAircraft || isLoadingBookings;
-  const error = aircraftError || bookingsError;
+  const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingPilots;
+  const error = aircraftError || bookingsError || pilotsError;
 
   return (
     <div className="flex flex-col gap-6 h-full">
@@ -77,8 +88,10 @@ export default function BookingsPage() {
             {error && <div className="p-4 text-center text-destructive">Error: {error.message}</div>}
             {!isLoading && !error && (
               <BookingCalendar 
+                tenantId={tenantId}
                 aircraft={aircraft || []} 
                 bookings={bookings || []} 
+                pilots={pilots || []}
                 selectedDate={selectedDate}
               />
             )}
