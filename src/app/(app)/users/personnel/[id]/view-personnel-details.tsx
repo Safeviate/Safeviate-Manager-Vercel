@@ -37,52 +37,59 @@ const isPilotProfile = (user: UserProfile): user is PilotProfile => {
 
 export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDetailsProps) {
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
-  const [viewingDocument, setViewingDocument] = useState<Document | null>(null);
   
-  const isImage = (url: string) => {
-    return url.startsWith('data:image/');
-  };
-
   return (
     <div className="space-y-6">
-       {/* --- Contact & Role --- */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle>Contact & Role</CardTitle>
+       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* --- Contact & Role --- */}
+        <Card>
+            <CardHeader>
+            <div className="flex justify-between items-start">
+                <div>
+                <CardTitle>Contact & Role</CardTitle>
+                </div>
+                <Badge>{user.userType}</Badge>
             </div>
-            <Badge>{user.userType}</Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <DetailItem label="First Name" value={user.firstName} />
-          <DetailItem label="Last Name" value={user.lastName} />
-          <DetailItem label="Email" value={user.email} />
-          <DetailItem label="Contact Number" value={user.contactNumber} />
-          {role && <DetailItem label="Role" value={role?.name} />}
-          {!isPilotProfile(user) && department && (
-            <DetailItem label="Department" value={department?.name} />
-          )}
-           {isPilotProfile(user) && (
-            <>
-                <DetailItem label="License Number" value={user.pilotLicense?.licenseNumber} />
-                <DetailItem label="Ratings">
-                    <div className="flex flex-wrap gap-2 mt-1">
-                        {(user.pilotLicense?.ratings || []).map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
-                        {(user.pilotLicense?.ratings || []).length === 0 && <p className="text-base">N/A</p>}
-                    </div>
-                </DetailItem>
-                <DetailItem label="Endorsements" >
-                    <div className="flex flex-wrap gap-2 mt-1">
-                        {(user.pilotLicense?.endorsements || []).map(e => <Badge key={e} variant="secondary">{e}</Badge>)}
-                        {(user.pilotLicense?.endorsements || []).length === 0 && <p className="text-base">N/A</p>}
-                    </div>
-                </DetailItem>
-            </>
-           )}
-        </CardContent>
-      </Card>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <DetailItem label="First Name" value={user.firstName} />
+            <DetailItem label="Last Name" value={user.lastName} />
+            <DetailItem label="Email" value={user.email} />
+            <DetailItem label="Contact Number" value={user.contactNumber} />
+            {role && <DetailItem label="Role" value={role?.name} />}
+            {!isPilotProfile(user) && department && (
+                <DetailItem label="Department" value={department?.name} />
+            )}
+            {isPilotProfile(user) && (
+                <>
+                    <DetailItem label="License Number" value={user.pilotLicense?.licenseNumber} />
+                    <DetailItem label="Ratings">
+                        <div className="flex flex-wrap gap-2 mt-1">
+                            {(user.pilotLicense?.ratings || []).map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
+                            {(user.pilotLicense?.ratings || []).length === 0 && <p className="text-base">N/A</p>}
+                        </div>
+                    </DetailItem>
+                    <DetailItem label="Endorsements" >
+                        <div className="flex flex-wrap gap-2 mt-1">
+                            {(user.pilotLicense?.endorsements || []).map(e => <Badge key={e} variant="secondary">{e}</Badge>)}
+                            {(user.pilotLicense?.endorsements || []).length === 0 && <p className="text-base">N/A</p>}
+                        </div>
+                    </DetailItem>
+                </>
+            )}
+            </CardContent>
+        </Card>
+
+        {/* --- Documents --- */}
+        <Card>
+            <CardHeader>
+                <CardTitle>Documents</CardTitle>
+            </CardHeader>
+            <CardContent>
+                {/* This card is intentionally left empty for now */}
+            </CardContent>
+        </Card>
+      </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* --- Address --- */}
@@ -161,37 +168,6 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
             </Collapsible>
         </Card>
       )}
-
-      {/* Document Viewer Dialog */}
-        <Dialog open={!!viewingDocument} onOpenChange={(open) => !open && setViewingDocument(null)}>
-            <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
-                <DialogHeader>
-                    <DialogTitle>{viewingDocument?.name || 'Document'}</DialogTitle>
-                </DialogHeader>
-                <div className="flex-1 border rounded-lg bg-muted/50 flex items-center justify-center relative">
-                     {viewingDocument && isImage(viewingDocument.url) ? (
-                        <Image 
-                            src={viewingDocument.url} 
-                            alt={viewingDocument.name}
-                            fill
-                            className="object-contain"
-                        />
-                     ) : viewingDocument ? (
-                        <div className="text-center p-8">
-                            <p className='text-lg font-semibold mb-2'>Cannot preview this file type.</p>
-                            <p className="text-muted-foreground mb-4">You can download it to view it locally.</p>
-                            <Button asChild>
-                                <a href={viewingDocument.url} download={viewingDocument.name} target="_blank" rel="noopener noreferrer">
-                                    Download &quot;{viewingDocument.name}&quot;
-                                </a>
-                            </Button>
-                        </div>
-                    ) : (
-                        <p>No document selected</p>
-                    )}
-                </div>
-            </DialogContent>
-        </Dialog>
     </div>
   );
 }
