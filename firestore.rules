@@ -3,21 +3,26 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // A user is considered a member of a tenant if they are authenticated.
+    // This is a placeholder for more specific multi-tenancy rules later.
     function isTenantMember(tenantId) {
-      // For now, allow any authenticated user for a given tenant.
-      // In a real multi-tenant app, you'd check for specific tenant membership.
       return request.auth != null;
     }
     
-    // Allow reading of tenant info
+    // Publicly allow reading the list of tenants
     match /tenants/{tenantId} {
       allow read: if true;
+      // Allow any authenticated user to create/update a tenant document.
+      // In production, this would be locked down to specific admin roles.
       allow write: if request.auth != null;
     }
 
-    // This rule covers all documents in all subcollections under a tenant,
-    // like /tenants/{tenantId}/settings/{settingId} or /tenants/{tenantId}/users/{userId}
-    match /tenants/{tenantId}/{document=**} {
+    // This rule is the key fix. It applies to ANY document within ANY subcollection
+    // under a specific tenant.
+    // e.g., /tenants/{tenantId}/settings/{docId}
+    // e.g., /tenants/{tenantId}/users/{userId}
+    // e.g., /tenants/{tenantId}/roles/{roleId}
+    match /tenants/{tenantId}/{subcollection}/{docId=**} {
       allow read, write: if isTenantMember(tenantId);
     }
   }
