@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import type { Aircraft } from '../../assets/page';
 import type { Booking } from '@/types/booking';
 import { cn } from '@/lib/utils';
@@ -129,20 +129,25 @@ const BookingItem = ({ booking, pilots, tenantId, onEdit, aircraft }: BookingIte
 const HOURS_IN_DAY = 24;
 const HOUR_WIDTH_PX = 80;
 
+export interface BookingCalendarRef {
+    scrollToNow: () => void;
+}
 
-export function BookingCalendar({
-  tenantId,
-  aircraft,
-  bookings,
-  pilots,
-  selectedDate,
-}: {
+interface BookingCalendarProps {
   tenantId: string;
   aircraft: Aircraft[];
   bookings: Booking[];
   pilots: PilotProfile[];
   selectedDate: Date;
-}) {
+}
+
+export const BookingCalendar = forwardRef<BookingCalendarRef, BookingCalendarProps>(({
+  tenantId,
+  aircraft,
+  bookings,
+  pilots,
+  selectedDate,
+}, ref) => {
   const [nowLine, setNowLine] = useState<number | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const dataRef = useRef<HTMLDivElement>(null);
@@ -177,6 +182,17 @@ export function BookingCalendar({
     return () => clearInterval(interval);
 
   }, [selectedDate]);
+
+  useImperativeHandle(ref, () => ({
+    scrollToNow: () => {
+        if (nowLine !== null && dataRef.current) {
+            dataRef.current.scrollTo({
+                left: nowLine - dataRef.current.offsetWidth / 2,
+                behavior: 'smooth',
+            });
+        }
+    }
+  }));
 
   const handleGridScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (timelineRef.current) {
@@ -328,4 +344,8 @@ export function BookingCalendar({
     )}
     </>
   );
-}
+});
+
+BookingCalendar.displayName = "BookingCalendar";
+
+    

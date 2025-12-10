@@ -1,12 +1,13 @@
+
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Aircraft } from '../../assets/page';
 import { Booking } from '@/types/booking';
-import { BookingCalendar } from './booking-calendar';
+import { BookingCalendar, type BookingCalendarRef } from './booking-calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
@@ -19,6 +20,7 @@ export default function BookingsPage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate'; // Hardcoded for now
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const calendarRef = useRef<BookingCalendarRef>(null);
   
   const aircraftQuery = useMemoFirebase(
     () =>
@@ -54,30 +56,42 @@ export default function BookingsPage() {
   const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingPilots;
   const error = aircraftError || bookingsError || pilotsError;
 
+  const handleScrollToNow = () => {
+    setSelectedDate(new Date());
+    setTimeout(() => {
+      calendarRef.current?.scrollToNow();
+    }, 100);
+  };
+
   return (
     <div className="flex flex-col gap-6 h-full">
       <div className="flex justify-between items-center">
             <div>
                 <p className="text-muted-foreground">Schedule and manage aircraft usage.</p>
             </div>
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button
-                        variant={"outline"}
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {format(selectedDate, "PPP")}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                    <CustomCalendar
-                        selectedDate={selectedDate}
-                        onDateSelect={(date) => {
-                            if (date) setSelectedDate(date);
-                        }}
-                    />
-                </PopoverContent>
-            </Popover>
+            <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={handleScrollToNow}>
+                    Current Time
+                </Button>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant={"outline"}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {format(selectedDate, "PPP")}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <CustomCalendar
+                            selectedDate={selectedDate}
+                            onDateSelect={(date) => {
+                                if (date) setSelectedDate(date);
+                            }}
+                        />
+                    </PopoverContent>
+                </Popover>
+            </div>
         </div>
 
       <Card className="flex-grow flex flex-col overflow-hidden">
@@ -87,6 +101,7 @@ export default function BookingsPage() {
             {error && <div className="p-4 text-center text-destructive">Error: {error.message}</div>}
             {!isLoading && !error && (
               <BookingCalendar 
+                ref={calendarRef}
                 tenantId={tenantId}
                 aircraft={aircraft || []} 
                 bookings={bookings || []} 
@@ -100,3 +115,5 @@ export default function BookingsPage() {
     </div>
   );
 }
+
+    
