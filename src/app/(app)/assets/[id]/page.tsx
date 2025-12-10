@@ -339,24 +339,50 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {isEditing ? (
-                     <EditAircraftForm
-                        tenantId={tenantId}
-                        aircraft={aircraft}
-                        onCancel={() => setIsEditing(false)}
-                    />
-                ) : (
-                     <ViewAircraftDetails 
-                        aircraft={aircraft}
-                    />
-                )}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Documents</CardTitle>
-                        <CardDescription>Manage documents for {aircraft.tailNumber}.</CardDescription>
-                    </CardHeader>
-                    {documentsCardContent}
-                </Card>
+                <div className="space-y-6">
+                    {isEditing ? (
+                        <EditAircraftForm
+                            tenantId={tenantId}
+                            aircraft={aircraft}
+                            onCancel={() => setIsEditing(false)}
+                        />
+                    ) : (
+                        <ViewAircraftDetails 
+                            aircraft={aircraft}
+                        />
+                    )}
+                    {!isEditing && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Technical History</CardTitle>
+                                <CardDescription>View the technical history of the aircraft.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-sm text-muted-foreground">Technical history details will be displayed here.</p>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+                <div className="space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Documents</CardTitle>
+                            <CardDescription>Manage documents for {aircraft.tailNumber}.</CardDescription>
+                        </CardHeader>
+                        {documentsCardContent}
+                    </Card>
+                    {!isEditing && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Checklist History</CardTitle>
+                                <CardDescription>View the checklist history of the aircraft.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-sm text-muted-foreground">Checklist history details will be displayed here.</p>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
             </div>
 
             <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
