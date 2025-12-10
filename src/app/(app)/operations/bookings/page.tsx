@@ -58,7 +58,6 @@ export default function BookingsPage() {
     <div className="flex flex-col gap-6 h-full">
       <div className="flex justify-between items-center">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Aircraft Bookings</h1>
                 <p className="text-muted-foreground">Schedule and manage aircraft usage.</p>
             </div>
             <Popover>
