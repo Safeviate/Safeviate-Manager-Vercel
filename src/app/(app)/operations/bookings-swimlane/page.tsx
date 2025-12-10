@@ -32,20 +32,6 @@ import { CustomCalendar } from '@/components/ui/custom-calendar';
 const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
 const TOTAL_HOURS = 24;
 
-const TimeRuler = () => (
-  <div className="relative w-16 text-xs text-right text-muted-foreground flex-shrink-0">
-    {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
-      <div
-        key={hour}
-        className="h-[60px] pr-2 border-t border-r flex justify-end items-start"
-        style={{ height: `${HOUR_HEIGHT_PX}px` }}
-      >
-        <span className="-translate-y-1/2">{format(new Date(0, 0, 0, hour), 'HH:mm')}</span>
-      </div>
-    ))}
-  </div>
-);
-
 const BookingItem = ({ booking, pilots, tenantId, onEdit }: { booking: Booking, pilots: PilotProfile[], tenantId: string, onEdit: () => void }) => {
     const firestore = useFirestore();
     const { toast } = useToast();
@@ -316,8 +302,7 @@ export default function BookingsSwimlanePage() {
             <div className='overflow-x-auto h-full'>
               <div className="min-w-max flex flex-col h-full">
                 {/* Header */}
-                <div className="flex sticky top-0 z-20 bg-muted/50 flex-shrink-0">
-                  <div className="w-16 flex-shrink-0 border-r" />
+                <div className="flex bg-muted/50 flex-shrink-0">
                   {(aircraft || []).map((ac) => (
                     <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px]">
                       {ac.tailNumber}
@@ -333,7 +318,6 @@ export default function BookingsSwimlanePage() {
 
                 {/* Body */}
                 <div className="flex flex-grow">
-                  <TimeRuler />
                   {(aircraft || []).map((ac) => (
                     <AircraftColumn
                       key={ac.id}
