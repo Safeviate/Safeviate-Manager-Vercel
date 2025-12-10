@@ -431,6 +431,10 @@
         "type": "object",
         "description": "Represents the document expiry warning settings for a tenant.",
         "properties": {
+            "defaultColor": {
+                "type": "string",
+                "description": "The hex color code for documents not within any warning period."
+            },
             "warningPeriods": {
                 "type": "array",
                 "description": "An array of warning period objects.",

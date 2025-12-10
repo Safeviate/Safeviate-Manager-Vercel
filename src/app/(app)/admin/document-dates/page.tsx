@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
 
 export type WarningPeriod = {
   period: number;
@@ -20,10 +21,12 @@ export type WarningPeriod = {
 
 export type DocumentExpirySettings = {
   id: string;
+  defaultColor: string;
   warningPeriods: WarningPeriod[];
 };
 
-const defaultColor = '#facc15'; // yellow-400
+const defaultPeriodColor = '#facc15'; // yellow-400
+const defaultSafeColor = '#22c55e'; // green-500
 
 export default function DocumentDatesPage() {
   const firestore = useFirestore();
@@ -32,7 +35,7 @@ export default function DocumentDatesPage() {
   const settingsId = 'document-expiry';
 
   const [newPeriod, setNewPeriod] = useState('');
-  const [newColor, setNewColor] = useState(defaultColor);
+  const [newPeriodColor, setNewPeriodColor] = useState(defaultPeriodColor);
 
   const expirySettingsRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', settingsId) : null),
@@ -64,17 +67,17 @@ export default function DocumentDatesPage() {
       return;
     }
 
-    const newWarningPeriod: WarningPeriod = { period, color: newColor };
-    const newPeriods = [...currentPeriods, newWarningPeriod].sort((a, b) => a.period - b.period);
+    const newWarningPeriod: WarningPeriod = { period, color: newPeriodColor };
+    const updatedWarningPeriods = [...currentPeriods, newWarningPeriod].sort((a, b) => a.period - b.period);
     
-    setDocumentNonBlocking(expirySettingsRef, { warningPeriods: newPeriods }, { merge: true });
+    setDocumentNonBlocking(expirySettingsRef, { warningPeriods: updatedWarningPeriods }, { merge: true });
 
     toast({
       title: 'Warning Period Added',
       description: `${period} days has been added to the warning periods.`,
     });
     setNewPeriod('');
-    setNewColor(defaultColor);
+    setNewPeriodColor(defaultPeriodColor);
   };
 
   const handleRemovePeriod = (periodToRemove: number) => {
@@ -106,6 +109,12 @@ export default function DocumentDatesPage() {
     });
   };
 
+  const handleDefaultColorChange = (color: string) => {
+    if (!expirySettingsRef) return;
+    setDocumentNonBlocking(expirySettingsRef, { defaultColor: color }, { merge: true });
+    // No toast here for a smoother experience
+  };
+
   if (isLoading) {
     return (
       <Card className="w-full max-w-2xl mx-auto">
@@ -124,6 +133,8 @@ export default function DocumentDatesPage() {
   if (error) {
     return <p className="text-destructive">Error loading settings: {error.message}</p>;
   }
+  
+  const currentDefaultColor = expirySettings?.defaultColor || defaultSafeColor;
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
@@ -135,6 +146,25 @@ export default function DocumentDatesPage() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="space-y-4">
+            <div className="space-y-2">
+                <Label>Default Safe Color</Label>
+                <div className='flex items-center gap-4 p-2 border rounded-lg'>
+                   <div className="relative h-8 w-8 rounded-full border cursor-pointer" style={{ backgroundColor: currentDefaultColor }}>
+                       <Input 
+                            type="color" 
+                            value={currentDefaultColor}
+                            onChange={(e) => handleDefaultColorChange(e.target.value)}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0"
+                        />
+                    </div>
+                    <p className="text-sm text-muted-foreground">Color for documents not within any warning period.</p>
+                </div>
+            </div>
+        </div>
+
+        <Separator />
+
         <div className="space-y-2">
           <Label htmlFor="warning-period">New Warning Period</Label>
           <div className="flex gap-2">
@@ -150,8 +180,8 @@ export default function DocumentDatesPage() {
              <Input
               id="warning-color"
               type="color"
-              value={newColor}
-              onChange={(e) => setNewColor(e.target.value)}
+              value={newPeriodColor}
+              onChange={(e) => setNewPeriodColor(e.target.value)}
               className="p-1 h-10 w-12"
             />
             <Button onClick={handleAddPeriod} className="flex-grow">Add Period</Button>
@@ -160,7 +190,7 @@ export default function DocumentDatesPage() {
 
         <div>
           <h4 className="text-sm font-medium text-muted-foreground mb-2">
-            Current Warning Periods
+            Current Warning Periods (Closest to expiry takes precedence)
           </h4>
           <div className="flex flex-col gap-2 p-4 border rounded-lg min-h-16">
             {(expirySettings?.warningPeriods || []).length > 0 ? (
