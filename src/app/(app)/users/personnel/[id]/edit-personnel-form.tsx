@@ -19,9 +19,7 @@ import type { Department } from '../../../admin/department/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon } from 'lucide-react';
+import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
@@ -281,49 +279,41 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, onCancel
                             </Button>
                         </div>
                         </CollapsibleTrigger>
-                        <CollapsibleContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="licenseNumber">License Number</Label>
-                                <Input id="licenseNumber" value={formData.pilotLicense?.licenseNumber || ''} onChange={(e) => handleNestedInputChange('pilotLicense', 'licenseNumber', e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Issue Date</Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !formData.pilotLicense?.issueDate && "text-muted-foreground")}>
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {formData.pilotLicense?.issueDate ? format(new Date(formData.pilotLicense.issueDate), "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                        <Calendar mode="single" selected={formData.pilotLicense?.issueDate ? new Date(formData.pilotLicense.issueDate) : undefined} onSelect={(date) => handleNestedInputChange('pilotLicense', 'issueDate', date?.toISOString().split('T')[0])} initialFocus />
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Expiration Date</Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !formData.pilotLicense?.expirationDate && "text-muted-foreground")}>
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {formData.pilotLicense?.expirationDate ? format(new Date(formData.pilotLicense.expirationDate), "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                        <Calendar mode="single" selected={formData.pilotLicense?.expirationDate ? new Date(formData.pilotLicense.expirationDate) : undefined} onSelect={(date) => handleNestedInputChange('pilotLicense', 'expirationDate', date?.toISOString().split('T')[0])} initialFocus />
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="ratings">Ratings</Label>
-                                <Input id="ratings" value={(formData.pilotLicense?.ratings || []).join(', ')} onChange={(e) => handleArrayInputChange('pilotLicense', 'ratings', e.target.value)} placeholder="e.g., IFR, ME" />
-                                <p className="text-xs text-muted-foreground">Enter values separated by commas.</p>
-                            </div>
-                            <div className="space-y-2 md:col-span-2">
-                                <Label htmlFor="endorsements">Endorsements</Label>
-                                <Input id="endorsements" value={(formData.pilotLicense?.endorsements || []).join(', ')} onChange={(e) => handleArrayInputChange('pilotLicense', 'endorsements', e.target.value)} placeholder="e.g., High Performance, Complex" />
-                                 <p className="text-xs text-muted-foreground">Enter values separated by commas.</p>
-                            </div>
+                        <CollapsibleContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                           <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="licenseNumber">License Number</Label>
+                                    <Input id="licenseNumber" value={formData.pilotLicense?.licenseNumber || ''} onChange={(e) => handleNestedInputChange('pilotLicense', 'licenseNumber', e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="ratings">Ratings</Label>
+                                    <Input id="ratings" value={(formData.pilotLicense?.ratings || []).join(', ')} onChange={(e) => handleArrayInputChange('pilotLicense', 'ratings', e.target.value)} placeholder="e.g., IFR, ME" />
+                                    <p className="text-xs text-muted-foreground">Enter values separated by commas.</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="endorsements">Endorsements</Label>
+                                    <Input id="endorsements" value={(formData.pilotLicense?.endorsements || []).join(', ')} onChange={(e) => handleArrayInputChange('pilotLicense', 'endorsements', e.target.value)} placeholder="e.g., High Performance, Complex" />
+                                    <p className="text-xs text-muted-foreground">Enter values separated by commas.</p>
+                                </div>
+                           </div>
+                           <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label>Issue Date</Label>
+                                    {formData.pilotLicense?.issueDate && <p className="text-sm text-muted-foreground">Selected: {format(new Date(formData.pilotLicense.issueDate), "PPP")}</p>}
+                                    <CustomCalendar 
+                                        selectedDate={formData.pilotLicense?.issueDate ? new Date(formData.pilotLicense.issueDate) : undefined}
+                                        onDateSelect={(date) => handleNestedInputChange('pilotLicense', 'issueDate', date?.toISOString().split('T')[0])}
+                                    />
+                                </div>
+                                 <div className="space-y-2">
+                                    <Label>Expiration Date</Label>
+                                    {formData.pilotLicense?.expirationDate && <p className="text-sm text-muted-foreground">Selected: {format(new Date(formData.pilotLicense.expirationDate), "PPP")}</p>}
+                                    <CustomCalendar 
+                                        selectedDate={formData.pilotLicense?.expirationDate ? new Date(formData.pilotLicense.expirationDate) : undefined}
+                                        onDateSelect={(date) => handleNestedInputChange('pilotLicense', 'expirationDate', date?.toISOString().split('T')[0])}
+                                    />
+                                </div>
+                           </div>
                         </CollapsibleContent>
                     </Collapsible>
                     <Separator />
@@ -461,5 +451,3 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, onCancel
     </Card>
   );
 }
-
-    
