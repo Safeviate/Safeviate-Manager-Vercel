@@ -90,13 +90,26 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
           <DetailItem label="Last Name" value={user.lastName} />
           <DetailItem label="Email" value={user.email} />
           <DetailItem label="Contact Number" value={user.contactNumber} />
-          {!isPilotProfile(user) && (
-            <>
-              <DetailItem label="Department" value={department?.name} />
-              <DetailItem label="Role" value={role?.name} />
-            </>
+          {role && <DetailItem label="Role" value={role?.name} />}
+          {!isPilotProfile(user) && department && (
+            <DetailItem label="Department" value={department?.name} />
           )}
-           {isPilotProfile(user) && role && <DetailItem label="Role" value={role?.name} />}
+           {isPilotProfile(user) && user.pilotLicense && (
+            <>
+                <DetailItem label="Ratings">
+                    <div className="flex flex-wrap gap-2 mt-1">
+                        {(user.pilotLicense.ratings || []).map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
+                        {(user.pilotLicense.ratings || []).length === 0 && <p className="text-base">N/A</p>}
+                    </div>
+                </DetailItem>
+                <DetailItem label="Endorsements" >
+                    <div className="flex flex-wrap gap-2 mt-1">
+                        {(user.pilotLicense.endorsements || []).map(e => <Badge key={e} variant="secondary">{e}</Badge>)}
+                        {(user.pilotLicense.endorsements || []).length === 0 && <p className="text-base">N/A</p>}
+                    </div>
+                </DetailItem>
+            </>
+           )}
         </CardContent>
       </Card>
       
@@ -128,29 +141,17 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
         </Card>
       </div>
 
-       {/* --- Pilot License --- */}
+       {/* --- Required Documents (formerly Pilot License) --- */}
       {isPilotProfile(user) && user.pilotLicense && (
         <Card>
           <CardHeader>
-              <CardTitle>Pilot License</CardTitle>
+              <CardTitle>Required Documents</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <DetailItem label="License Number" value={user.pilotLicense.licenseNumber} />
                 <DetailItem label="Issue Date" value={user.pilotLicense.issueDate ? format(new Date(user.pilotLicense.issueDate), 'PPP') : 'N/A'} />
                 <DetailItem label="Expiration Date" value={user.pilotLicense.expirationDate ? format(new Date(user.pilotLicense.expirationDate), 'PPP') : 'N/A'} />
-                <DetailItem label="Ratings">
-                    <div className="flex flex-wrap gap-2 mt-1">
-                        {(user.pilotLicense.ratings || []).map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
-                        {(user.pilotLicense.ratings || []).length === 0 && <p className="text-base">N/A</p>}
-                    </div>
-                </DetailItem>
-                <DetailItem label="Endorsements" >
-                    <div className="flex flex-wrap gap-2 mt-1">
-                        {(user.pilotLicense.endorsements || []).map(e => <Badge key={e} variant="secondary">{e}</Badge>)}
-                        {(user.pilotLicense.endorsements || []).length === 0 && <p className="text-base">N/A</p>}
-                    </div>
-                </DetailItem>
               </div>
           </CardContent>
         </Card>
@@ -320,5 +321,3 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     </div>
   );
 }
-
-    
