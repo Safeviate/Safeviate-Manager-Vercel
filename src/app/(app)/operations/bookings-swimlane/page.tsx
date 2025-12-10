@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
@@ -329,7 +330,7 @@ export default function BookingsSwimlanePage() {
             <div className='overflow-x-auto h-full'>
               <div className="min-w-max flex flex-col h-full">
                 {/* Header */}
-                <div className="flex bg-muted/50 flex-shrink-0">
+                <div className="flex bg-muted/50 flex-shrink-0 sticky top-0 z-20">
                   {(aircraft || []).map((ac) => (
                     <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px]">
                       {ac.tailNumber}
