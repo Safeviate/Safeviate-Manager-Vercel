@@ -33,7 +33,6 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
   
   const [tailNumber, setTailNumber] = useState(aircraft.tailNumber);
   const [model, setModel] = useState(aircraft.model);
-  const [abbreviation, setAbbreviation] = useState(aircraft.abbreviation || '');
   const [type, setType] = useState(aircraft.type || '');
   const [frameHours, setFrameHours] = useState(aircraft.frameHours?.toString() || '');
   const [engineHours, setEngineHours] = useState(aircraft.engineHours?.toString() || '');
@@ -64,7 +63,6 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
     updateDocumentNonBlocking(aircraftRef, { 
       tailNumber, 
       model,
-      abbreviation,
       type,
       frameHours: Number(frameHours) || 0,
       engineHours: Number(engineHours) || 0,
@@ -99,10 +97,6 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
                 <Input id="model" value={model} onChange={(e) => setModel(e.target.value)} />
             </div>
              <div className="space-y-2">
-                <Label htmlFor="abbreviation">Abbreviation</Label>
-                <Input id="abbreviation" value={abbreviation} onChange={(e) => setAbbreviation(e.target.value)} maxLength={5} />
-            </div>
-             <div className="space-y-2">
                 <Label htmlFor="type">Type</Label>
                 <Input id="type" value={type} onChange={(e) => setType(e.target.value)} />
             </div>
@@ -131,6 +125,3 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
     </Card>
   );
 }
-
-    
-    
