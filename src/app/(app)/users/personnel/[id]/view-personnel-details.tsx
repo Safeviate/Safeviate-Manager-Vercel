@@ -101,17 +101,33 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     handleDocumentUpdate(updatedDocs);
   };
 
+  const handleDocumentDelete = (docNameToDelete: string) => {
+    const currentDocs = user.documents || [];
+    // We filter out the document by name. In a real-world scenario with file storage,
+    // you would also delete the file from storage here.
+    const updatedDocs = currentDocs.filter(doc => doc.name !== docNameToDelete);
+    handleDocumentUpdate(updatedDocs);
+    toast({
+        title: "Document Deleted",
+        description: `"${docNameToDelete}" has been removed.`,
+    });
+  };
+
   const combinedDocuments = useMemo(() => {
     const required = role?.requiredDocuments || [];
     const uploaded = user.documents || [];
 
-    return required.map(reqDocName => {
-        const uploadedDoc = uploaded.find(upDoc => upDoc.name === reqDocName);
+    const allDocNames = new Set([...required, ...uploaded.map(d => d.name)]);
+
+    return Array.from(allDocNames).map(docName => {
+        const uploadedDoc = uploaded.find(upDoc => upDoc.name === docName);
+        const isRequired = required.includes(docName);
         return {
-            name: reqDocName,
+            name: docName,
             isUploaded: !!uploadedDoc,
             url: uploadedDoc?.url,
             expirationDate: uploadedDoc?.expirationDate,
+            isRequired: isRequired,
         };
     });
   }, [role, user.documents]);
@@ -119,7 +135,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* --- Contact & Role --- */}
         <Card>
             <CardHeader>
@@ -130,49 +146,49 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                 <Badge>{user.userType}</Badge>
             </div>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <DetailItem label="First Name" value={user.firstName} />
-            <DetailItem label="Last Name" value={user.lastName} />
-            <DetailItem label="Email" value={user.email} />
-            <DetailItem label="Contact Number" value={user.contactNumber} />
-            {role && <DetailItem label="Role" value={role?.name} />}
-            {!isPilotProfile(user) && department && (
-                <DetailItem label="Department" value={department?.name} />
-            )}
-            {isPilotProfile(user) && (
-              <>
-                <DetailItem label="License Number" value={user.pilotLicense?.licenseNumber} />
-                <DetailItem label="Ratings">
-                    <div className="flex flex-wrap gap-2 mt-1">
-                        {(user.pilotLicense?.ratings || []).map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
-                        {(user.pilotLicense?.ratings || []).length === 0 && <p className="text-base">N/A</p>}
-                    </div>
-                </DetailItem>
-                <DetailItem label="Endorsements" >
-                    <div className="flex flex-wrap gap-2 mt-1">
-                        {(user.pilotLicense?.endorsements || []).map(e => <Badge key={e} variant="secondary">{e}</Badge>)}
-                        {(user.pilotLicense?.endorsements || []).length === 0 && <p className="text-base">N/A</p>}
-                    </div>
-                </DetailItem>
-              </>
-            )}
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <DetailItem label="First Name" value={user.firstName} />
+                <DetailItem label="Last Name" value={user.lastName} />
+                <DetailItem label="Email" value={user.email} />
+                <DetailItem label="Contact Number" value={user.contactNumber} />
+                {role && <DetailItem label="Role" value={role?.name} />}
+                {!isPilotProfile(user) && department && (
+                    <DetailItem label="Department" value={department?.name} />
+                )}
+                {isPilotProfile(user) && (
+                <>
+                    <DetailItem label="License Number" value={user.pilotLicense?.licenseNumber} />
+                    <DetailItem label="Ratings">
+                        <div className="flex flex-wrap gap-2 mt-1">
+                            {(user.pilotLicense?.ratings || []).map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
+                            {(user.pilotLicense?.ratings || []).length === 0 && <p className="text-base">N/A</p>}
+                        </div>
+                    </DetailItem>
+                    <DetailItem label="Endorsements" >
+                        <div className="flex flex-wrap gap-2 mt-1">
+                            {(user.pilotLicense?.endorsements || []).map(e => <Badge key={e} variant="secondary">{e}</Badge>)}
+                            {(user.pilotLicense?.endorsements || []).length === 0 && <p className="text-base">N/A</p>}
+                        </div>
+                    </DetailItem>
+                </>
+                )}
             </CardContent>
         </Card>
-
+        
         {/* --- Documents --- */}
         <Card>
-            <CardHeader>
-                <CardTitle>Documents</CardTitle>
-            </CardHeader>
-            <CardContent>
-                {combinedDocuments.length > 0 ? (
+          <CardHeader>
+            <CardTitle>Documents</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {combinedDocuments.length > 0 ? (
                 <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead>Document Name</TableHead>
                             <TableHead>Expiry</TableHead>
                             <TableHead className='text-center'>Set Expiry</TableHead>
-                            <TableHead className="text-right">Action</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -199,9 +215,14 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                             </TableCell>
                             <TableCell className="text-right">
                                 {doc.isUploaded ? (
-                                    <Button variant="outline" size="sm" onClick={() => handleViewImage(doc.url!)}>
-                                        <View className="mr-2 h-4 w-4" /> View
-                                    </Button>
+                                    <div className="flex gap-2 justify-end">
+                                      <Button variant="outline" size="sm" onClick={() => handleViewImage(doc.url!)}>
+                                          <View className="mr-2 h-4 w-4" /> View
+                                      </Button>
+                                      <Button variant="destructive" size="icon" onClick={() => handleDocumentDelete(doc.name)}>
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
                                 ) : (
                                     <DocumentUploader
                                         defaultFileName={doc.name}
@@ -221,8 +242,9 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                 ) : (
                     <p className="text-sm text-muted-foreground text-center py-4">No documents required for this role.</p>
                 )}
-            </CardContent>
+          </CardContent>
         </Card>
+
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
