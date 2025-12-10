@@ -13,6 +13,7 @@ import {
   Code,
   Building2,
   UserPlus,
+  CalendarClock,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -107,6 +108,11 @@ export const menuConfig: MenuItem[] = [
         href: '/admin/department',
         label: 'Department',
         description: 'Manage company departments.',
+      },
+      {
+        href: '/admin/document-dates',
+        label: 'Document Dates',
+        description: 'Manage document expiration dates.',
       },
       {
         href: '/admin/database',
