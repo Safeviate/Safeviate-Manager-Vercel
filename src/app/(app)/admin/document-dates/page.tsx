@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import { useDebounce } from '@/hooks/use-debounce';
 
 export type WarningPeriod = {
   period: number;
@@ -43,6 +44,48 @@ export default function DocumentDatesPage() {
   );
 
   const { data: expirySettings, isLoading, error } = useDoc<DocumentExpirySettings>(expirySettingsRef);
+
+  // States for debouncing
+  const [defaultColorState, setDefaultColorState] = useState(expirySettings?.defaultColor || defaultSafeColor);
+  const [periodColors, setPeriodColors] = useState<Record<number, string>>({});
+
+  const debouncedDefaultColor = useDebounce(defaultColorState, 500);
+  const debouncedPeriodColors = useDebounce(periodColors, 500);
+
+  useEffect(() => {
+    if (expirySettings) {
+      setDefaultColorState(expirySettings.defaultColor || defaultSafeColor);
+      const initialColors = expirySettings.warningPeriods.reduce((acc, p) => {
+        acc[p.period] = p.color;
+        return acc;
+      }, {} as Record<number, string>);
+      setPeriodColors(initialColors);
+    }
+  }, [expirySettings]);
+  
+  // Effect for saving debounced default color
+  useEffect(() => {
+      if (!expirySettingsRef || debouncedDefaultColor === expirySettings?.defaultColor || isLoading) return;
+      
+      setDocumentNonBlocking(expirySettingsRef, { defaultColor: debouncedDefaultColor }, { merge: true });
+
+  }, [debouncedDefaultColor, expirySettingsRef, expirySettings?.defaultColor, isLoading]);
+
+  // Effect for saving debounced period colors
+  useEffect(() => {
+      if (!expirySettingsRef || !expirySettings || Object.keys(debouncedPeriodColors).length === 0 || isLoading) return;
+
+      const hasChanged = expirySettings.warningPeriods.some(p => p.color !== debouncedPeriodColors[p.period]);
+
+      if (hasChanged) {
+        const newPeriods = expirySettings.warningPeriods.map(p => ({
+            ...p,
+            color: debouncedPeriodColors[p.period] || p.color
+        }));
+        setDocumentNonBlocking(expirySettingsRef, { warningPeriods: newPeriods }, { merge: true });
+      }
+  }, [debouncedPeriodColors, expirySettings, expirySettingsRef, isLoading]);
+
 
   const handleAddPeriod = () => {
     const period = parseInt(newPeriod, 10);
@@ -93,26 +136,12 @@ export default function DocumentDatesPage() {
     });
   };
 
-  const handleColorChange = (periodToUpdate: number, newColor: string) => {
-    if (!expirySettingsRef) return;
-    
-    const currentPeriods = expirySettings?.warningPeriods || [];
-    const newPeriods = currentPeriods.map(p => 
-        p.period === periodToUpdate ? { ...p, color: newColor } : p
-    );
-
-    setDocumentNonBlocking(expirySettingsRef, { warningPeriods: newPeriods }, { merge: true });
-    
-    toast({
-        title: 'Color Updated',
-        description: `The color for the ${periodToUpdate}-day warning has been updated.`,
-    });
+  const handlePeriodColorChange = (periodToUpdate: number, newColor: string) => {
+    setPeriodColors(prev => ({ ...prev, [periodToUpdate]: newColor }));
   };
 
   const handleDefaultColorChange = (color: string) => {
-    if (!expirySettingsRef) return;
-    setDocumentNonBlocking(expirySettingsRef, { defaultColor: color }, { merge: true });
-    // No toast here for a smoother experience
+    setDefaultColorState(color);
   };
 
   if (isLoading) {
@@ -134,8 +163,6 @@ export default function DocumentDatesPage() {
     return <p className="text-destructive">Error loading settings: {error.message}</p>;
   }
   
-  const currentDefaultColor = expirySettings?.defaultColor || defaultSafeColor;
-
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -150,10 +177,10 @@ export default function DocumentDatesPage() {
             <div className="space-y-2">
                 <Label>Default Safe Color</Label>
                 <div className='flex items-center gap-4 p-2 border rounded-lg'>
-                   <div className="relative h-8 w-8 rounded-full border cursor-pointer" style={{ backgroundColor: currentDefaultColor }}>
+                   <div className="relative h-8 w-8 rounded-full border cursor-pointer" style={{ backgroundColor: defaultColorState }}>
                        <Input 
                             type="color" 
-                            value={currentDefaultColor}
+                            value={defaultColorState}
                             onChange={(e) => handleDefaultColorChange(e.target.value)}
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0"
                         />
@@ -197,11 +224,11 @@ export default function DocumentDatesPage() {
               expirySettings?.warningPeriods.map(({ period, color }) => (
                 <div key={period} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
                     <div className="flex items-center gap-3">
-                        <div className="relative h-6 w-6 rounded-full border cursor-pointer" style={{ backgroundColor: color }}>
+                        <div className="relative h-6 w-6 rounded-full border cursor-pointer" style={{ backgroundColor: periodColors[period] || color }}>
                            <Input 
                                 type="color" 
-                                value={color}
-                                onChange={(e) => handleColorChange(period, e.target.value)}
+                                value={periodColors[period] || color}
+                                onChange={(e) => handlePeriodColorChange(period, e.target.value)}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0"
                             />
                         </div>
