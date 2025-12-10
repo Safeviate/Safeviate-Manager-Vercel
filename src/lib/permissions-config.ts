@@ -27,36 +27,15 @@ export const permissionsConfig: PermissionResource[] = [
     actions: ['view'],
   },
   
-  // --- Assets ---
+  // --- Core Features ---
   {
     id: 'assets',
     name: 'Assets',
     actions: ['view', 'create', 'edit', 'delete'],
   },
-  
-  // --- Users ---
   {
     id: 'users',
     name: 'Users',
-    actions: ['view', 'create', 'edit', 'delete'],
-  },
-
-  // --- Training ---
-  {
-    id: 'training',
-    name: 'Training',
-    actions: ['view', 'create', 'edit', 'delete'],
-  },
-
-  // --- Operations ---
-  {
-    id: 'operations-maintenance',
-    name: 'Maintenance',
-    actions: ['view', 'create', 'edit', 'delete'],
-  },
-  {
-    id: 'operations-safety',
-    name: 'Safety & Quality',
     actions: ['view', 'create', 'edit', 'delete'],
   },
 
