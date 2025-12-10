@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -20,6 +19,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 type BookingsByAircraft = {
   [aircraftId: string]: {
@@ -29,16 +30,24 @@ type BookingsByAircraft = {
 };
 
 const BookingListItem = ({ booking, pilot }: { booking: Booking; pilot?: PilotProfile }) => (
-    <div className="flex justify-between items-center p-3 border-b last:border-b-0">
-        <div>
+    <div className="flex justify-between items-center p-3 border-b last:border-b-0 bg-secondary/30 hover:bg-secondary/50">
+        <div className="flex flex-col gap-1">
             <p className="font-semibold">{booking.type}</p>
             <p className="text-sm text-muted-foreground">
                 {pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}
             </p>
         </div>
-        <div className="text-sm text-right">
-            <p>{format(booking.startTime.toDate(), 'HH:mm')} - {format(booking.endTime.toDate(), 'HH:mm')}</p>
-            {booking.status === 'Cancelled' && <span className="text-destructive font-bold">Cancelled</span>}
+        <div className="flex flex-col items-end gap-2 text-sm">
+            <p className="font-mono">{format(booking.startTime.toDate(), 'HH:mm')} - {format(booking.endTime.toDate(), 'HH:mm')}</p>
+             <Badge
+                className={cn(
+                    booking.status === 'Cancelled' && 'bg-destructive text-destructive-foreground',
+                    booking.status === 'Confirmed' && 'bg-green-600 text-white',
+                    booking.status === 'Pending' && 'bg-yellow-500 text-black'
+                )}
+            >
+                {booking.status}
+            </Badge>
         </div>
     </div>
 );
@@ -137,7 +146,7 @@ export default function BookingsAgendaPage() {
             </Popover>
         </div>
 
-        <Card className="flex-grow">
+        <Card className="flex-grow overflow-y-auto">
             <CardContent className="p-4 md:p-6">
                  {isLoading && (
                     <div className="space-y-4">
@@ -157,7 +166,7 @@ export default function BookingsAgendaPage() {
                                 </AccordionTrigger>
                                 <AccordionContent>
                                     {bookings.length > 0 ? (
-                                        <div className="border rounded-md">
+                                        <div className="border rounded-md overflow-hidden">
                                           {bookings.map(b => (
                                               <BookingListItem key={b.id} booking={b} pilot={pilotsMap.get(b.pilotId)} />
                                           ))}
