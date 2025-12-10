@@ -31,7 +31,7 @@ const TimeRuler = () => (
 
 const AircraftColumn = ({ aircraft, bookings, pilots }: { aircraft: Aircraft; bookings: Booking[]; pilots: PilotProfile[] }) => {
   return (
-    <div className="flex-1 relative border-r">
+    <div className="flex-1 relative border-r min-w-[150px]">
       {/* Hour lines for this column */}
       {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
         <div key={hour} className="border-t" style={{ height: `${HOUR_HEIGHT_PX}px` }} />
@@ -125,20 +125,21 @@ export default function BookingsSwimlanePage() {
           )}
           {error && <p className="p-6 text-destructive">Error loading data: {error.message}</p>}
           {!isLoading && !error && (
-            <div className='overflow-x-auto'>
-              <div className="min-w-max">
+            <div className='overflow-x-auto h-full'>
+              <div className="min-w-max flex flex-col h-full">
                 {/* Header */}
-                <div className="flex sticky top-0 z-10 bg-muted/50">
+                <div className="flex sticky top-0 z-10 bg-muted/50 flex-shrink-0">
                   <div className="w-16 flex-shrink-0 border-r" />
                   {(aircraft || []).map((ac) => (
-                    <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r">
+                    <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px]">
                       {ac.tailNumber}
                     </div>
                   ))}
+                   {(aircraft || []).length === 0 && <div className="flex-1 p-2 text-center">No Aircraft Found</div>}
                 </div>
 
                 {/* Body */}
-                <div className="flex">
+                <div className="flex flex-grow">
                   <TimeRuler />
                   {(aircraft || []).map((ac) => (
                     <AircraftColumn
@@ -148,6 +149,7 @@ export default function BookingsSwimlanePage() {
                       pilots={pilots || []}
                     />
                   ))}
+                  {(aircraft || []).length === 0 && <div className="flex-1 p-4 text-center text-muted-foreground">Please add aircraft to see the schedule.</div>}
                 </div>
               </div>
             </div>
