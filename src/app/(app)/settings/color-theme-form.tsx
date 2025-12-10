@@ -1,6 +1,6 @@
 
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -9,9 +9,24 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Trash2 } from 'lucide-react';
 import { useTheme, type SavedTheme } from '@/components/theme-provider';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+// Define a type for the tenant's theme from Firestore
+type TenantTheme = {
+    id: string;
+    name: string;
+    theme?: {
+        primaryColour?: string;
+        backgroundColour?: string;
+        accentColour?: string;
+    }
+}
 
 export function ColorThemeForm() {
   const { toast } = useToast();
+  const firestore = useFirestore();
   const { 
     theme, 
     setThemeValue, 
@@ -29,14 +44,55 @@ export function ColorThemeForm() {
     deleteSavedTheme,
     resetToDefaults,
   } = useTheme();
-  
+
   const [themeName, setThemeName] = useState('');
   const [isMounted, setIsMounted] = useState(false);
+
+  // Fetch tenants to use as themes
+  const tenantsQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'tenants') : null),
+    [firestore]
+  );
+  const { data: tenants, isLoading: isLoadingTenants } = useCollection<TenantTheme>(tenantsQuery);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
+  const handleApplyTenantTheme = (tenantId: string) => {
+    const tenant = tenants?.find(t => t.id === tenantId);
+    if (!tenant?.theme) {
+        toast({
+            variant: "destructive",
+            title: "Theme Not Found",
+            description: "The selected tenant does not have a configured theme.",
+        });
+        return;
+    }
+    
+    // Create a theme object that matches the structure `applySavedTheme` expects
+    const themeToApply = {
+        name: tenant.name,
+        colors: {
+            primary: tenant.theme.primaryColour || theme.primary,
+            background: tenant.theme.backgroundColour || theme.background,
+            accent: tenant.theme.accentColour || theme.accent,
+        },
+        // We can either set other colors to default or derive them.
+        // For simplicity, we'll reset them to a base state or keep current.
+        cardColors: { card: tenant.theme.backgroundColour || cardTheme.card, 'card-foreground': cardTheme['card-foreground'] },
+        popoverColors: { popover: tenant.theme.backgroundColour || popoverTheme.popover, 'popover-foreground': popoverTheme['popover-foreground'] },
+        sidebarColors: sidebarTheme, // Keep sidebar as is or define in tenant
+        headerColors: { 'header-background': tenant.theme.backgroundColour || headerTheme['header-background'], 'header-foreground': headerTheme['header-foreground'], 'header-border': headerTheme['header-border'] },
+    };
+
+    applySavedTheme(themeToApply as SavedTheme);
+    
+    toast({
+        title: "Tenant Theme Applied",
+        description: `The theme for "${tenant.name}" has been applied.`,
+    });
+  };
 
   const handleSaveTheme = () => {
     if (!themeName.trim()) {
@@ -87,6 +143,25 @@ export function ColorThemeForm() {
         <CardDescription>Customize the look and feel of the application.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div>
+            <h3 className="text-lg font-medium mb-2">Set Theme from Tenant</h3>
+            <p className='text-sm text-muted-foreground mb-4'>Override the current theme with a saved tenant configuration.</p>
+            <Select onValueChange={handleApplyTenantTheme} disabled={isLoadingTenants}>
+                <SelectTrigger className="w-[280px]">
+                    <SelectValue placeholder={isLoadingTenants ? "Loading themes..." : "Select a tenant theme"} />
+                </SelectTrigger>
+                <SelectContent>
+                    {(tenants || []).map(tenant => (
+                        <SelectItem key={tenant.id} value={tenant.id} disabled={!tenant.theme}>
+                            {tenant.name}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+
+        <Separator />
+      
         <div>
           <h3 className="text-lg font-medium mb-4">Main Theme</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -213,7 +288,7 @@ export function ColorThemeForm() {
 
         {isMounted && savedThemes.length > 0 && (
             <div>
-                <h3 className="text-lg font-medium mb-4">Saved Themes</h3>
+                <h3 className="text-lg font-medium mb-4">Saved Themes (Local)</h3>
                 <div className="space-y-2">
                     {savedThemes.map((theme) => (
                         <div key={theme.name} className="flex items-center justify-between p-2 border rounded-lg">
