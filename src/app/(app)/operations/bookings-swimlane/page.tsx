@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
@@ -88,7 +89,7 @@ const BookingItem = ({ booking, pilots, tenantId, onEdit, selectedDate }: { book
                 <PopoverTrigger asChild>
                      <div
                         className={cn(
-                        'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity z-10',
+                        'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity z-10 min-h-[40px]',
                         booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80',
                         hasContinuationTop ? 'rounded-t-none' : 'rounded-lg',
                         hasContinuationBottom ? 'rounded-b-none' : 'rounded-lg',
