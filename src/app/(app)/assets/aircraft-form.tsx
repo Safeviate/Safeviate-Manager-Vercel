@@ -29,7 +29,6 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
   const { toast } = useToast();
   const [tailNumber, setTailNumber] = useState('');
   const [model, setModel] = useState('');
-  const [abbreviation, setAbbreviation] = useState('');
   const [type, setType] = useState('');
   const [frameHours, setFrameHours] = useState('');
   const [engineHours, setEngineHours] = useState('');
@@ -68,7 +67,6 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
     addDocumentNonBlocking(aircraftRef, { 
         tailNumber, 
         model,
-        abbreviation,
         type,
         frameHours: Number(frameHours) || 0,
         engineHours: Number(engineHours) || 0,
@@ -91,7 +89,6 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
   const resetForm = () => {
     setTailNumber('');
     setModel('');
-    setAbbreviation('');
     setType('');
     setFrameHours('');
     setEngineHours('');
@@ -132,10 +129,6 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
           <div className="space-y-2">
             <Label htmlFor="model">Model</Label>
             <Input id="model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="e.g., Cessna 172" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="abbreviation">Abbreviation</Label>
-            <Input id="abbreviation" value={abbreviation} onChange={(e) => setAbbreviation(e.target.value)} maxLength={5} placeholder="e.g., C172" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="type">Type</Label>
