@@ -135,7 +135,7 @@ const AircraftColumn = ({ aircraft, bookings, pilots, tenantId, onGridClick, onB
       {/* "Past" Shadow */}
       {showNowLine && (
         <div 
-          className="absolute top-0 left-0 right-0 bg-secondary/30 z-0 pointer-events-none"
+          className="absolute top-0 left-0 right-0 bg-destructive/20 z-0 pointer-events-none"
           style={{ height: `${nowLinePosition}px` }}
         />
       )}
@@ -290,7 +290,6 @@ export default function BookingsSwimlanePage() {
             <div className="p-6 space-y-4">
               <Skeleton className="h-8 w-1/2" />
               <div className="flex gap-4 h-96">
-                <Skeleton className="w-16 h-full" />
                 <Skeleton className="flex-1 h-full" />
                 <Skeleton className="flex-1 h-full" />
                 <Skeleton className="flex-1 h-full" />
