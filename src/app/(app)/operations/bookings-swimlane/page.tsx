@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
@@ -8,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import type { Aircraft } from '../../assets/page';
 import type { Booking } from '@/types/booking';
 import type { PilotProfile } from '../../users/personnel/page';
-import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
+import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, setHours, setMinutes, setSeconds, setMilliseconds, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -32,7 +31,7 @@ import { CustomCalendar } from '@/components/ui/custom-calendar';
 const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
 const TOTAL_HOURS = 24;
 
-const BookingItem = ({ booking, pilots, tenantId, onEdit }: { booking: Booking, pilots: PilotProfile[], tenantId: string, onEdit: () => void }) => {
+const BookingItem = ({ booking, pilots, tenantId, onEdit, selectedDate }: { booking: Booking, pilots: PilotProfile[], tenantId: string, onEdit: () => void, selectedDate: Date }) => {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
@@ -41,9 +40,20 @@ const BookingItem = ({ booking, pilots, tenantId, onEdit }: { booking: Booking, 
     const startTime = booking.startTime.toDate();
     const endTime = booking.endTime.toDate();
 
-    const top = (getHours(startTime) * 60 + getMinutes(startTime)) * (HOUR_HEIGHT_PX / 60);
-    const durationMinutes = differenceInMinutes(endTime, startTime);
+    const startsOnSelectedDay = isSameDay(startTime, selectedDate);
+    const endsOnSelectedDay = isSameDay(endTime, selectedDate);
+
+    // Calculate top position based on start time or midnight if it's a continuing booking
+    const top = startsOnSelectedDay 
+        ? (getHours(startTime) * 60 + getMinutes(startTime)) * (HOUR_HEIGHT_PX / 60)
+        : 0;
+
+    // Calculate duration and height
+    const effectiveStartTime = startsOnSelectedDay ? startTime : startOfDay(selectedDate);
+    const effectiveEndTime = endsOnSelectedDay ? endTime : endOfDay(selectedDate);
+    const durationMinutes = differenceInMinutes(effectiveEndTime, effectiveStartTime);
     const height = durationMinutes * (HOUR_HEIGHT_PX / 60);
+
     const pilot = pilots.find(p => p.id === booking.pilotId);
     
     const handleCancelBooking = () => {
@@ -67,6 +77,9 @@ const BookingItem = ({ booking, pilots, tenantId, onEdit }: { booking: Booking, 
         onEdit();
         setIsPopoverOpen(false);
     }
+    
+    const hasContinuationTop = !startsOnSelectedDay;
+    const hasContinuationBottom = !endsOnSelectedDay;
 
     return (
         <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
@@ -74,14 +87,18 @@ const BookingItem = ({ booking, pilots, tenantId, onEdit }: { booking: Booking, 
                 <PopoverTrigger asChild>
                      <div
                         className={cn(
-                        'absolute w-full p-2 rounded-lg text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity z-10',
-                        booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80'
+                        'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity z-10',
+                        booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80',
+                        hasContinuationTop ? 'rounded-t-none' : 'rounded-lg',
+                        hasContinuationBottom ? 'rounded-b-none' : 'rounded-lg',
                         )}
                         style={{ top: `${top}px`, height: `${height}px` }}
                     >
+                        {hasContinuationTop && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-b from-black/20 to-transparent" />}
                         <p className="font-semibold truncate">{booking.type}</p>
                         <p className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}</p>
                         {booking.status === 'Cancelled' && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
+                        {hasContinuationBottom && <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-t from-black/20 to-transparent" />}
                     </div>
                 </PopoverTrigger>
                  <PopoverContent className="w-56 p-2">
@@ -117,7 +134,7 @@ const BookingItem = ({ booking, pilots, tenantId, onEdit }: { booking: Booking, 
     )
 }
 
-const AircraftColumn = ({ aircraft, bookings, pilots, tenantId, onGridClick, onBookingEdit, showNowLine, nowLinePosition }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; tenantId: string; onGridClick: (e: React.MouseEvent<HTMLDivElement>, ac: Aircraft) => void; onBookingEdit: (booking: Booking, ac: Aircraft) => void; showNowLine: boolean; nowLinePosition: number; }) => {
+const AircraftColumn = ({ aircraft, bookings, pilots, tenantId, onGridClick, onBookingEdit, showNowLine, nowLinePosition, selectedDate }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; tenantId: string; onGridClick: (e: React.MouseEvent<HTMLDivElement>, ac: Aircraft) => void; onBookingEdit: (booking: Booking, ac: Aircraft) => void; showNowLine: boolean; nowLinePosition: number; selectedDate: Date; }) => {
   return (
     <div 
         className="flex-1 relative border-r min-w-[150px]"
@@ -155,6 +172,7 @@ const AircraftColumn = ({ aircraft, bookings, pilots, tenantId, onGridClick, onB
             pilots={pilots}
             tenantId={tenantId}
             onEdit={() => aircraft && onBookingEdit(booking, aircraft)}
+            selectedDate={selectedDate}
         />
       ))}
     </div>
@@ -183,10 +201,13 @@ export default function BookingsSwimlanePage() {
     if (!firestore) return null;
     const start = Timestamp.fromDate(startOfDay(selectedDate));
     const end = Timestamp.fromDate(endOfDay(selectedDate));
+    // Query for bookings that START before the end of the day
+    // AND END after the start of the day. This covers all overlapping scenarios.
     return query(
         collection(firestore, 'tenants', tenantId, 'bookings'),
-        where('startTime', '>=', start),
-        where('startTime', '<=', end)
+        where('startTime', '<=', end),
+        // Firestore doesn't allow two range filters on different fields.
+        // We'll filter the endTime on the client side.
     );
   }, [firestore, tenantId, selectedDate]);
 
@@ -196,8 +217,15 @@ export default function BookingsSwimlanePage() {
   );
 
   const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
-  const { data: bookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
+  const { data: allBookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
   const { data: pilots, isLoading: isLoadingPilots, error: pilotsError } = useCollection<PilotProfile>(pilotsQuery);
+
+  const bookings = useMemo(() => {
+    if (!allBookings) return [];
+    const dayStart = startOfDay(selectedDate);
+    return allBookings.filter(b => b.endTime.toDate() > dayStart);
+  }, [allBookings, selectedDate]);
+
 
   const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingPilots;
   const error = aircraftError || bookingsError || pilotsError;
@@ -226,7 +254,7 @@ export default function BookingsSwimlanePage() {
     }
 
     const gridRect = e.currentTarget.getBoundingClientRect();
-    const clickY = e.clientY - gridRect.top;
+    const clickY = e.clientY - gridRect.top + e.currentTarget.scrollTop;
     
     const totalHeight = TOTAL_HOURS * HOUR_HEIGHT_PX;
     const minutesFromStart = (clickY / totalHeight) * (TOTAL_HOURS * 60);
@@ -316,7 +344,7 @@ export default function BookingsSwimlanePage() {
                 </div>
 
                 {/* Body */}
-                <div className="flex flex-grow">
+                <div className="flex flex-grow" style={{height: `${TOTAL_HOURS * HOUR_HEIGHT_PX}px`}}>
                   {(aircraft || []).map((ac) => (
                     <AircraftColumn
                       key={ac.id}
@@ -328,6 +356,7 @@ export default function BookingsSwimlanePage() {
                       onBookingEdit={handleBookingEdit}
                       showNowLine={showNowLine}
                       nowLinePosition={nowLinePosition}
+                      selectedDate={selectedDate}
                     />
                   ))}
                   {extraLanes.map((_, index) => (
@@ -340,6 +369,7 @@ export default function BookingsSwimlanePage() {
                         onBookingEdit={() => {}}
                         showNowLine={showNowLine}
                         nowLinePosition={nowLinePosition}
+                        selectedDate={selectedDate}
                     />
                   ))}
                   {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-4 text-center text-muted-foreground">Please add aircraft to see the schedule.</div>}
