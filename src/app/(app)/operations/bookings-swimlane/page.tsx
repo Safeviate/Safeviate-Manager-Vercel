@@ -290,8 +290,7 @@ export default function BookingsSwimlanePage() {
   return (
     <>
     <div className="flex flex-col gap-6 h-full">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Bookings Swimlane</h1>
+      <div className="flex justify-end items-center">
         <Popover>
             <PopoverTrigger asChild>
                 <Button variant="outline">
