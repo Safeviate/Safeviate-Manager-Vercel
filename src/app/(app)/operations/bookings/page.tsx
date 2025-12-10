@@ -1,32 +1,199 @@
-
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
-import { collection, query, where, Timestamp } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useMemo, useState, useCallback, useEffect } from 'react';
+import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Aircraft } from '../../assets/page';
-import { Booking } from '@/types/booking';
-import { BookingCalendar, type BookingCalendarRef } from './booking-calendar';
+import type { Aircraft } from '../../assets/page';
+import type { Booking } from '@/types/booking';
+import type { PilotProfile } from '../../users/personnel/page';
+import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, setHours, setMinutes, setSeconds, setMilliseconds, isSameDay } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { BookingForm } from './booking-form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { CalendarIcon } from 'lucide-react';
-import { format, startOfDay, endOfDay } from 'date-fns';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import type { PilotProfile } from '../../users/personnel/page';
+
+
+const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
+const TOTAL_HOURS = 24;
+
+const BookingItem = ({ booking, pilots, tenantId, onEdit, selectedDate }: { booking: Booking, pilots: PilotProfile[], tenantId: string, onEdit: () => void, selectedDate: Date }) => {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+    const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+
+    const startTime = booking.startTime.toDate();
+    const endTime = booking.endTime.toDate();
+
+    const startsOnSelectedDay = isSameDay(startTime, selectedDate);
+    const endsOnSelectedDay = isSameDay(endTime, selectedDate);
+
+    // Calculate top position based on start time or midnight if it's a continuing booking
+    const top = startsOnSelectedDay 
+        ? (getHours(startTime) * 60 + getMinutes(startTime)) * (HOUR_HEIGHT_PX / 60)
+        : 0;
+
+    // Calculate duration and height
+    const effectiveStartTime = startsOnSelectedDay ? startTime : startOfDay(selectedDate);
+    const effectiveEndTime = endsOnSelectedDay ? endTime : endOfDay(selectedDate);
+    const durationMinutes = differenceInMinutes(effectiveEndTime, effectiveStartTime);
+    const height = durationMinutes * (HOUR_HEIGHT_PX / 60);
+
+    const pilot = pilots.find(p => p.id === booking.pilotId);
+    
+    const handleCancelBooking = () => {
+        if (!firestore) return;
+        const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', booking.id);
+        updateDocumentNonBlocking(bookingRef, { status: 'Cancelled' });
+        toast({ title: 'Booking Cancelled', description: 'The booking status has been updated to "Cancelled".' });
+        setIsPopoverOpen(false);
+    };
+
+    const handleDeleteBooking = () => {
+        if (!firestore) return;
+        const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', booking.id);
+        deleteDocumentNonBlocking(bookingRef);
+        toast({ title: 'Booking Deleted', description: 'The booking has been permanently removed.' });
+        setIsDeleteAlertOpen(false);
+        setIsPopoverOpen(false);
+    };
+
+    const handleEditClick = () => {
+        onEdit();
+        setIsPopoverOpen(false);
+    }
+    
+    const hasContinuationTop = !startsOnSelectedDay;
+    const hasContinuationBottom = !endsOnSelectedDay;
+
+    return (
+        <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+            <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                <PopoverTrigger asChild>
+                     <div
+                        className={cn(
+                        'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity z-10 min-h-[40px]',
+                        booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80',
+                        hasContinuationTop ? 'rounded-t-none' : 'rounded-lg',
+                        hasContinuationBottom ? 'rounded-b-none' : 'rounded-lg',
+                        )}
+                        style={{ top: `${top}px`, height: `${height}px` }}
+                    >
+                        {hasContinuationTop && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-b from-black/20 to-transparent" />}
+                        <p className="font-semibold truncate">{booking.type}</p>
+                        <p className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}</p>
+                        {booking.status === 'Cancelled' && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
+                        {hasContinuationBottom && <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-t from-black/20 to-transparent" />}
+                    </div>
+                </PopoverTrigger>
+                 <PopoverContent className="w-56 p-2">
+                    <div className="flex flex-col gap-2">
+                         <p className="text-sm font-semibold p-2">{booking.type}</p>
+                         <Button variant="outline" size="sm" onClick={handleEditClick}>
+                            Edit Booking
+                         </Button>
+                         {booking.status !== 'Cancelled' && (
+                            <Button variant="outline" size="sm" onClick={handleCancelBooking}>
+                                Cancel Booking
+                            </Button>
+                         )}
+                        <Button variant="destructive" size="sm" onClick={() => setIsDeleteAlertOpen(true)}>
+                            Delete Booking
+                        </Button>
+                    </div>
+                </PopoverContent>
+            </Popover>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the booking.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteBooking} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    )
+}
+
+const AircraftColumn = ({ aircraft, bookings, pilots, tenantId, onGridClick, onBookingEdit, showNowLine, nowLinePosition, selectedDate }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; tenantId: string; onGridClick: (e: React.MouseEvent<HTMLDivElement>, ac: Aircraft) => void; onBookingEdit: (booking: Booking, ac: Aircraft) => void; showNowLine: boolean; nowLinePosition: number; selectedDate: Date; }) => {
+  return (
+    <div 
+        className="flex-1 relative border-r min-w-[150px]"
+        onClick={(e) => aircraft && onGridClick(e, aircraft)}
+    >
+      {/* Hour lines and labels for this column */}
+      {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
+        <div key={hour} className="relative border-t" style={{ height: `${HOUR_HEIGHT_PX}px` }}>
+            <span className="absolute top-1 left-1 text-xs text-muted-foreground">
+                {format(new Date(0, 0, 0, hour), 'HH:mm')}
+            </span>
+        </div>
+      ))}
+      
+      {/* "Past" Shadow */}
+      {showNowLine && (
+        <div 
+          className="absolute top-0 left-0 right-0 bg-destructive/20 z-0 pointer-events-none"
+          style={{ height: `${nowLinePosition}px` }}
+        />
+      )}
+
+      {/* "Now" Line */}
+      {showNowLine && (
+        <div className="absolute left-0 right-0 h-0.5 bg-red-500 z-20 pointer-events-none" style={{ top: `${nowLinePosition}px` }}>
+          <div className="absolute -left-1.5 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full" />
+        </div>
+      )}
+
+      {/* Booking blocks */}
+      {bookings.map((booking) => (
+        <BookingItem 
+            key={booking.id} 
+            booking={booking}
+            pilots={pilots}
+            tenantId={tenantId}
+            onEdit={() => aircraft && onBookingEdit(booking, aircraft)}
+            selectedDate={selectedDate}
+        />
+      ))}
+    </div>
+  );
+};
 
 
 export default function BookingsPage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate'; // Hardcoded for now
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const calendarRef = useRef<BookingCalendarRef>(null);
-  
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const { toast } = useToast();
+
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formInitialData, setFormInitialData] = useState<{ aircraft: Aircraft, startTime: Date, booking?: Booking | null } | null>(null);
+
+  const [nowLinePosition, setNowLinePosition] = useState(0);
+  const [showNowLine, setShowNowLine] = useState(false);
+
   const aircraftQuery = useMemoFirebase(
-    () =>
-      firestore
-        ? query(collection(firestore, 'tenants', tenantId, 'aircrafts'))
-        : null,
+    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
     [firestore, tenantId]
   );
   
@@ -34,86 +201,196 @@ export default function BookingsPage() {
     if (!firestore) return null;
     const start = Timestamp.fromDate(startOfDay(selectedDate));
     const end = Timestamp.fromDate(endOfDay(selectedDate));
+    // Query for bookings that START before the end of the day
+    // AND END after the start of the day. This covers all overlapping scenarios.
     return query(
         collection(firestore, 'tenants', tenantId, 'bookings'),
-        where('startTime', '>=', start),
-        where('startTime', '<=', end)
+        where('startTime', '<=', end),
+        // Firestore doesn't allow two range filters on different fields.
+        // We'll filter the endTime on the client side.
     );
   }, [firestore, tenantId, selectedDate]);
 
   const pilotsQuery = useMemoFirebase(
-    () =>
-      firestore
-        ? query(collection(firestore, 'tenants', tenantId, 'pilots'))
-        : null,
+    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'pilots')) : null),
     [firestore, tenantId]
   );
-  
+
   const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
-  const { data: bookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
+  const { data: allBookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
   const { data: pilots, isLoading: isLoadingPilots, error: pilotsError } = useCollection<PilotProfile>(pilotsQuery);
+
+  const bookings = useMemo(() => {
+    if (!allBookings) return [];
+    const dayStart = startOfDay(selectedDate);
+    return allBookings.filter(b => b.endTime.toDate() > dayStart);
+  }, [allBookings, selectedDate]);
+
 
   const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingPilots;
   const error = aircraftError || bookingsError || pilotsError;
 
-  const handleScrollToNow = () => {
-    setSelectedDate(new Date());
-    setTimeout(() => {
-      calendarRef.current?.scrollToNow();
-    }, 100);
-  };
+  useEffect(() => {
+    const calculateNowLine = () => {
+        const now = new Date();
+        const isToday = startOfDay(now).getTime() === startOfDay(selectedDate).getTime();
+        setShowNowLine(isToday);
+
+        if (isToday) {
+            const minutes = now.getHours() * 60 + now.getMinutes();
+            const position = minutes * (HOUR_HEIGHT_PX / 60);
+            setNowLinePosition(position);
+        }
+    };
+    
+    calculateNowLine();
+    const interval = setInterval(calculateNowLine, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, [selectedDate]);
+  
+  const handleGridClick = useCallback((e: React.MouseEvent<HTMLDivElement>, ac: Aircraft) => {
+    if ((e.target as HTMLElement).closest('.cursor-pointer')) {
+        return;
+    }
+
+    const gridRect = e.currentTarget.getBoundingClientRect();
+    const clickY = e.clientY - gridRect.top + e.currentTarget.scrollTop;
+    
+    const totalHeight = TOTAL_HOURS * HOUR_HEIGHT_PX;
+    const minutesFromStart = (clickY / totalHeight) * (TOTAL_HOURS * 60);
+    
+    const hour = Math.floor(minutesFromStart / 60);
+    const minute = Math.floor(minutesFromStart % 60);
+
+    const clickedTime = setMilliseconds(setSeconds(setMinutes(setHours(startOfDay(selectedDate), hour), minute), 0), 0);
+
+    if (clickedTime < new Date()) {
+        toast({
+            variant: 'destructive',
+            title: 'Cannot Book in the Past',
+            description: 'Please select a future time slot for the booking.',
+        });
+        return;
+    }
+
+    setFormInitialData({ aircraft: ac, startTime: clickedTime, booking: null });
+    setIsFormOpen(true);
+  }, [selectedDate, toast]);
+  
+  const handleBookingEdit = useCallback((booking: Booking, ac: Aircraft) => {
+    setFormInitialData({ aircraft: ac, startTime: booking.startTime.toDate(), booking });
+    setIsFormOpen(true);
+  }, []);
+
+
+  const extraLanes = ['', '', '', ''];
 
   return (
+    <>
     <div className="flex flex-col gap-6 h-full">
       <div className="flex justify-between items-center">
-            <div>
-                <p className="text-muted-foreground">Schedule and manage aircraft usage.</p>
-            </div>
-            <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={handleScrollToNow}>
-                    Current Time
+        <h1 className="text-3xl font-bold tracking-tight">Bookings</h1>
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="outline">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(selectedDate, 'PPP')}
                 </Button>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                            variant={"outline"}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {format(selectedDate, "PPP")}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                        <CustomCalendar
-                            selectedDate={selectedDate}
-                            onDateSelect={(date) => {
-                                if (date) setSelectedDate(date);
-                            }}
-                        />
-                    </PopoverContent>
-                </Popover>
-            </div>
-        </div>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+                <CustomCalendar 
+                    selectedDate={selectedDate}
+                    onDateSelect={(date) => date && setSelectedDate(date)}
+                />
+            </PopoverContent>
+        </Popover>
+      </div>
 
       <Card className="flex-grow flex flex-col overflow-hidden">
-        <CardContent className="p-0 flex-grow relative">
-          <div className="absolute inset-0">
-            {isLoading && <div className="p-4 text-center">Loading calendar...</div>}
-            {error && <div className="p-4 text-center text-destructive">Error: {error.message}</div>}
-            {!isLoading && !error && (
-              <BookingCalendar 
-                ref={calendarRef}
-                tenantId={tenantId}
-                aircraft={aircraft || []} 
-                bookings={bookings || []} 
-                pilots={pilots || []}
-                selectedDate={selectedDate}
-              />
-            )}
-          </div>
+        <CardHeader>
+          <CardTitle>Daily Schedule</CardTitle>
+          <CardDescription>
+            A vertical timeline of all bookings for {format(selectedDate, 'PPP')}.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0 flex-grow overflow-auto" style={{ height: 'calc(100vh - 20rem)' }}>
+          {isLoading && (
+            <div className="p-6 space-y-4">
+              <Skeleton className="h-8 w-1/2" />
+              <div className="flex gap-4 h-96">
+                <Skeleton className="flex-1 h-full" />
+                <Skeleton className="flex-1 h-full" />
+                <Skeleton className="flex-1 h-full" />
+              </div>
+            </div>
+          )}
+          {error && <p className="p-6 text-destructive">Error loading data: {error.message}</p>}
+          {!isLoading && !error && (
+            <div className='overflow-x-auto h-full'>
+              <div className="min-w-max flex flex-col h-full">
+                {/* Header */}
+                <div className="flex bg-muted/50 flex-shrink-0 sticky top-0 z-20">
+                  {(aircraft || []).map((ac) => (
+                    <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px]">
+                      {ac.tailNumber}
+                    </div>
+                  ))}
+                  {extraLanes.map((_, index) => (
+                    <div key={`extra-header-${index}`} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px] text-muted-foreground">
+                      (Empty Lane)
+                    </div>
+                  ))}
+                   {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-2 text-center">No Aircraft Found</div>}
+                </div>
+
+                {/* Body */}
+                <div className="flex flex-grow" style={{height: `${TOTAL_HOURS * HOUR_HEIGHT_PX}px`}}>
+                  {(aircraft || []).map((ac) => (
+                    <AircraftColumn
+                      key={ac.id}
+                      aircraft={ac}
+                      bookings={(bookings || []).filter(b => b.aircraftId === ac.id)}
+                      pilots={pilots || []}
+                      tenantId={tenantId}
+                      onGridClick={handleGridClick}
+                      onBookingEdit={handleBookingEdit}
+                      showNowLine={showNowLine}
+                      nowLinePosition={nowLinePosition}
+                      selectedDate={selectedDate}
+                    />
+                  ))}
+                  {extraLanes.map((_, index) => (
+                     <AircraftColumn
+                        key={`extra-lane-${index}`}
+                        bookings={[]}
+                        pilots={[]}
+                        tenantId={tenantId}
+                        onGridClick={() => {}}
+                        onBookingEdit={() => {}}
+                        showNowLine={showNowLine}
+                        nowLinePosition={nowLinePosition}
+                        selectedDate={selectedDate}
+                    />
+                  ))}
+                  {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-4 text-center text-muted-foreground">Please add aircraft to see the schedule.</div>}
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
+     {formInitialData && (
+        <BookingForm
+            isOpen={isFormOpen}
+            onOpenChange={setIsFormOpen}
+            tenantId={tenantId}
+            aircraft={formInitialData.aircraft}
+            pilots={pilots || []}
+            initialStartTime={formInitialData.startTime}
+            booking={formInitialData.booking}
+        />
+    )}
+    </>
   );
 }
-
-    
