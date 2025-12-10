@@ -40,11 +40,13 @@ export default function PermissionsPage() {
             </TableHeader>
             <TableBody>
                 {permissionsConfig.map(resource => (
-                    resource.actions.map(action => {
+                    resource.actions.map((action, index) => {
                         const permissionId = `${resource.id}-${action}`;
                         return (
                             <TableRow key={permissionId}>
-                                <TableCell><Badge variant="secondary">{resource.name}</Badge></TableCell>
+                                <TableCell>
+                                    {index === 0 && <Badge variant="secondary">{resource.name}</Badge>}
+                                </TableCell>
                                 <TableCell><Badge variant="outline">{action}</Badge></TableCell>
                                 <TableCell className="font-mono text-xs">{permissionId}</TableCell>
                             </TableRow>
