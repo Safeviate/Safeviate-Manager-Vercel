@@ -217,7 +217,7 @@ export default function BookingsSwimlanePage() {
                                                     key={time} 
                                                     style={{ width: `${HOUR_WIDTH_PX}px` }} 
                                                     className="flex-shrink-0 border-r h-full hover:bg-primary/10 cursor-pointer" 
-                                                    onClick={() => {}}
+                                                    onClick={() => handleSlotClick(ac, time)}
                                                 />
                                             ))}
                                         </div>
