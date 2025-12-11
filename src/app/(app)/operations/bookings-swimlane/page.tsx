@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
@@ -15,6 +16,7 @@ import { CalendarIcon, Clock } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { BookingForm } from '../bookings/booking-form';
+import { Card, CardContent } from '@/components/ui/card';
 
 const HOURS_IN_DAY = 24;
 const HOUR_WIDTH_PX = 80;
@@ -45,7 +47,7 @@ const BookingItem = ({ booking, pilots, onClick }: BookingItemProps) => {
             onClick={onClick}
             className={cn(
                 "absolute top-1/2 -translate-y-1/2 flex items-center justify-center text-primary-foreground p-2 shadow z-20 h-10 cursor-pointer",
-                booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80'
+                booking.status === 'Cancelled' ? 'bg-destructive' : 'bg-primary'
             )}
             style={{ left: `${left}px`, width: `${width}px` }}
         >

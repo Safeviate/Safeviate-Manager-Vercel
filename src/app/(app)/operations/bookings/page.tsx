@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -49,7 +50,7 @@ const BookingItem = ({ booking, pilots, selectedDate, onClick }: { booking: Book
             onClick={onClick}
             className={cn(
             'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground z-10 min-h-[40px] cursor-pointer',
-            booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80',
+            booking.status === 'Cancelled' ? 'bg-destructive' : 'bg-primary',
             hasContinuationTop ? 'rounded-t-none' : '',
             hasContinuationBottom ? 'rounded-b-none' : '',
             )}
@@ -64,7 +65,7 @@ const BookingItem = ({ booking, pilots, selectedDate, onClick }: { booking: Book
     )
 }
 
-const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePosition, selectedDate, onSlotClick }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; showNowLine: boolean; nowLinePosition: number; selectedDate: Date; onSlotClick: (aircraft: Aircraft, time: string) => void; }) => {
+const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePosition, selectedDate, onSlotClick }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; showNowLine: boolean; nowLinePosition: number; selectedDate: Date; onSlotClick: (aircraft: Aircraft, time: string, booking?: Booking) => void; }) => {
   return (
     <div 
         className="flex-1 relative border-r min-w-[150px]"

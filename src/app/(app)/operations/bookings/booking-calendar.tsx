@@ -11,9 +11,10 @@ import type { PilotProfile } from '../../users/personnel/page';
 interface BookingItemProps {
     booking: Booking;
     pilots: PilotProfile[];
+    onClick: () => void;
 }
 
-const BookingItem = ({ booking, pilots }: BookingItemProps) => {
+const BookingItem = ({ booking, pilots, onClick }: BookingItemProps) => {
     const pilot = useMemo(() => pilots.find(p => p.id === booking.pilotId), [pilots, booking.pilotId]);
 
     const startTime = booking.startTime.toDate();
@@ -30,9 +31,10 @@ const BookingItem = ({ booking, pilots }: BookingItemProps) => {
 
     return (
          <div
+            onClick={onClick}
             className={cn(
-                "absolute top-1/2 -translate-y-1/2 flex items-center justify-center rounded-lg text-primary-foreground p-2 shadow z-20 h-10",
-                booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80'
+                "absolute top-1/2 -translate-y-1/2 flex items-center justify-center text-primary-foreground p-2 shadow z-20 h-10 cursor-pointer",
+                booking.status === 'Cancelled' ? 'bg-destructive' : 'bg-primary'
             )}
             style={{ left: `${left}px`, width: `${width}px` }}
         >
@@ -58,6 +60,7 @@ interface BookingCalendarProps {
   bookings: Booking[];
   pilots: PilotProfile[];
   selectedDate: Date;
+  onSlotClick: (aircraft: Aircraft, time: string, booking?: Booking) => void;
 }
 
 export const BookingCalendar = forwardRef<BookingCalendarRef, BookingCalendarProps>(({
@@ -65,6 +68,7 @@ export const BookingCalendar = forwardRef<BookingCalendarRef, BookingCalendarPro
   bookings,
   pilots,
   selectedDate,
+  onSlotClick,
 }, ref) => {
   const [nowLine, setNowLine] = useState<number | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -178,6 +182,7 @@ export const BookingCalendar = forwardRef<BookingCalendarRef, BookingCalendarPro
                                         key={booking.id} 
                                         booking={booking} 
                                         pilots={pilots}
+                                        onClick={() => onSlotClick(ac, format(booking.startTime.toDate(), 'HH:mm'), booking)}
                                     />
                             ))}
                         </div>
