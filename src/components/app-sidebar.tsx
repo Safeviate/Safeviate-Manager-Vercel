@@ -15,18 +15,18 @@ import {
   SidebarCollapsibleTrigger,
   SidebarMenuSub,
   SidebarMenuSubItem,
-  SidebarMenuSubButton
+  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
-import {
-  Plane,
-  LogOut,
-  ChevronDown
-} from 'lucide-react';
+import { Plane, LogOut, ChevronDown } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useState, useEffect } from 'react';
-import { menuConfig, settingsMenuItem, MenuItem as MenuItemType } from '@/lib/menu-config';
+import {
+  menuConfig,
+  settingsMenuItem,
+  MenuItem as MenuItemType,
+} from '@/lib/menu-config';
 import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import {
@@ -36,7 +36,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
 export function AppSidebar() {
@@ -49,7 +49,7 @@ export function AppSidebar() {
   useEffect(() => {
     setIsClient(true);
   }, []);
-  
+
   const handleSignOut = () => {
     if (auth) {
       signOut(auth);
@@ -61,59 +61,64 @@ export function AppSidebar() {
     if (isMobile) {
       setOpenMobile(false);
     }
-  }
+  };
 
   const renderMenuItem = (item: MenuItemType) => {
     const isActive = pathname.startsWith(item.href);
 
     if (item.subItems) {
-        return (
-            <SidebarCollapsible defaultOpen={isActive}>
-                <SidebarCollapsibleTrigger asChild>
-                    <SidebarMenuButton
-                        isActive={isActive}
-                        tooltip={item.label}
-                        className="justify-between"
+      return (
+        <SidebarCollapsible defaultOpen={isActive}>
+          <SidebarCollapsibleTrigger asChild>
+            <SidebarMenuButton
+              isActive={isActive}
+              tooltip={item.label}
+              className="justify-between"
+            >
+              <div className="flex items-center gap-2">
+                <item.icon />
+                <span>{item.label}</span>
+              </div>
+              <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 ease-in-out group-data-[state=open]:-rotate-180" />
+            </SidebarMenuButton>
+          </SidebarCollapsibleTrigger>
+          <SidebarCollapsibleContent>
+            <SidebarMenuSub>
+              {item.subItems.map((subItem) => (
+                <SidebarMenuSubItem key={subItem.href}>
+                  <Link href={subItem.href}>
+                    <SidebarMenuSubButton
+                      asChild
+                      isActive={pathname.startsWith(subItem.href)}
+                      onClick={handleLinkClick}
                     >
-                        <div className="flex items-center gap-2">
-                           <item.icon />
-                           <span>{item.label}</span>
-                        </div>
-                        <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 ease-in-out group-data-[state=open]:-rotate-180" />
-                    </SidebarMenuButton>
-                </SidebarCollapsibleTrigger>
-                <SidebarCollapsibleContent>
-                  <SidebarMenuSub>
-                      {item.subItems.map(subItem => (
-                          <SidebarMenuSubItem key={subItem.href}>
-                              <Link href={subItem.href}>
-                                  <SidebarMenuSubButton asChild isActive={pathname.startsWith(subItem.href)} onClick={handleLinkClick}>
-                                      {subItem.label}
-                                  </SidebarMenuSubButton>
-                              </Link>
-                          </SidebarMenuSubItem>
-                      ))}
-                  </SidebarMenuSub>
-                </SidebarCollapsibleContent>
-            </SidebarCollapsible>
-        )
+                      {subItem.label}
+                    </SidebarMenuSubButton>
+                  </Link>
+                </SidebarMenuSubItem>
+              ))}
+            </SidebarMenuSub>
+          </SidebarCollapsibleContent>
+        </SidebarCollapsible>
+      );
     }
 
     return (
       <Link href={item.href} className="w-full" onClick={handleLinkClick}>
-          <SidebarMenuButton
-            isActive={pathname.startsWith(item.href)}
-            tooltip={item.label}
-          >
-            <item.icon />
-            <span>{item.label}</span>
-          </SidebarMenuButton>
-        </Link>
+        <SidebarMenuButton
+          isActive={pathname.startsWith(item.href)}
+          tooltip={item.label}
+        >
+          <item.icon />
+          <span>{item.label}</span>
+        </SidebarMenuButton>
+      </Link>
     );
-  }
+  };
 
   const visibleMenuConfig = menuConfig.filter(
-    (item) => item.label !== 'Development' || process.env.NODE_ENV === 'development'
+    (item) =>
+      item.label !== 'Development' || process.env.NODE_ENV === 'development'
   );
 
   return (
@@ -130,11 +135,13 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarMenu>
           {visibleMenuConfig.map((item, index) => (
-             <React.Fragment key={item.href}>
-              <SidebarMenuItem>
-                {renderMenuItem(item)}
-              </SidebarMenuItem>
-              {index < visibleMenuConfig.length - 1 && item.href !=='/users' && !pathname.startsWith('/users') && <SidebarSeparator className="my-1 mx-2" />}
+            <React.Fragment key={item.href}>
+              <SidebarMenuItem>{renderMenuItem(item)}</SidebarMenuItem>
+              {index < visibleMenuConfig.length - 1 &&
+                item.href !== '/users' &&
+                !pathname.startsWith('/users') && (
+                  <SidebarSeparator className="my-1 mx-2" />
+                )}
             </React.Fragment>
           ))}
         </SidebarMenu>
@@ -142,22 +149,29 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarGroup>
           <SidebarMenu>
-            <SidebarMenuItem>
-              {renderMenuItem(settingsMenuItem)}
-            </SidebarMenuItem>
+            <SidebarMenuItem>{renderMenuItem(settingsMenuItem)}</SidebarMenuItem>
             <SidebarSeparator className="my-1 mx-2" />
             {isClient && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton tooltip="Guest User" className="w-full justify-start">
+                  <SidebarMenuButton
+                    tooltip="Guest User"
+                    className="w-full justify-start"
+                  >
                     <Avatar className="h-6 w-6">
                       <AvatarImage src="https://picsum.photos/seed/guest-user/100/100" />
                       <AvatarFallback>G</AvatarFallback>
                     </Avatar>
-                    <span className='group-data-[collapsible=icon]:hidden'>Guest User</span>
+                    <span className="group-data-[collapsible=icon]:hidden">
+                      Guest User
+                    </span>
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent side="right" align="end" className="w-56">
+                <DropdownMenuContent
+                  side="right"
+                  align="end"
+                  className="w-56"
+                >
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
