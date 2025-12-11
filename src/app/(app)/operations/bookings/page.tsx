@@ -50,8 +50,8 @@ const BookingItem = ({ booking, pilots, selectedDate, onClick }: { booking: Book
             className={cn(
             'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground z-10 min-h-[40px] cursor-pointer',
             booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80',
-            hasContinuationTop ? 'rounded-t-none' : 'rounded-lg',
-            hasContinuationBottom ? 'rounded-b-none' : 'rounded-lg',
+            hasContinuationTop ? 'rounded-t-none' : '',
+            hasContinuationBottom ? 'rounded-b-none' : '',
             )}
             style={{ top: `${top}px`, height: `${height}px` }}
         >
@@ -74,7 +74,7 @@ const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePositi
         <div 
           key={hour} 
           className="relative border-t" style={{ height: `${HOUR_HEIGHT_PX}px` }}
-          onClick={() => aircraft && onSlotClick(aircraft, `${String(hour).padStart(2, '0')}:00`)}
+          onClick={() => {}}
         >
             <span className="absolute top-1 left-1 text-xs text-muted-foreground pointer-events-none">
                 {format(new Date(0, 0, 0, hour), 'HH:mm')}

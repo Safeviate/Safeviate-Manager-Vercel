@@ -44,7 +44,7 @@ const BookingItem = ({ booking, pilots, onClick }: BookingItemProps) => {
          <div
             onClick={onClick}
             className={cn(
-                "absolute top-1/2 -translate-y-1/2 flex items-center justify-center rounded-lg text-primary-foreground p-2 shadow z-20 h-10 cursor-pointer",
+                "absolute top-1/2 -translate-y-1/2 flex items-center justify-center text-primary-foreground p-2 shadow z-20 h-10 cursor-pointer",
                 booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80'
             )}
             style={{ left: `${left}px`, width: `${width}px` }}
@@ -215,7 +215,7 @@ export default function BookingsSwimlanePage() {
                                                     key={time} 
                                                     style={{ width: `${HOUR_WIDTH_PX}px` }} 
                                                     className="flex-shrink-0 border-r h-full hover:bg-primary/10 cursor-pointer" 
-                                                    onClick={() => handleSlotClick(ac, time)}
+                                                    onClick={() => {}}
                                                 />
                                             ))}
                                         </div>
