@@ -89,7 +89,7 @@ const BookingItem = ({ booking, pilots, tenantId, onEdit, selectedDate }: { book
                      <div
                         className={cn(
                         'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity z-10 min-h-[40px]',
-                        booking.status === 'Cancelled' ? 'bg-destructive' : 'bg-primary',
+                        booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80',
                         hasContinuationTop ? 'rounded-t-none' : 'rounded-lg',
                         hasContinuationBottom ? 'rounded-b-none' : 'rounded-lg',
                         )}
@@ -289,8 +289,7 @@ export default function BookingsPage() {
   return (
     <>
     <div className="flex flex-col gap-6 h-full">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl tracking-tight">Bookings</h1>
+      <div className="flex justify-end items-center">
         <Popover>
             <PopoverTrigger asChild>
                 <Button variant="outline">
@@ -309,7 +308,7 @@ export default function BookingsPage() {
 
       <Card className="flex-grow flex flex-col overflow-hidden">
         <CardHeader>
-          <CardTitle className='font-normal'>Daily Schedule</CardTitle>
+          <CardTitle>Daily Schedule</CardTitle>
           <CardDescription>
             A vertical timeline of all bookings for {format(selectedDate, 'PPP')}.
           </CardDescription>
