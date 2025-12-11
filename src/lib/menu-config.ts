@@ -11,7 +11,7 @@ import {
   AlertTriangle,
   BookUser,
   Plane,
-  FolderCog,
+  CheckSquare,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -63,7 +63,7 @@ export const menuConfig: MenuItem[] = [
   {
     href: '/quality',
     label: 'Quality',
-    icon: FolderCog,
+    icon: CheckSquare,
   },
   {
     href: '/training',
