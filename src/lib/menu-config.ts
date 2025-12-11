@@ -8,7 +8,7 @@ import {
   UserCog,
   GaugeCircle,
   PlaneTakeoff,
-  GitCommit,
+  AlertTriangle,
   BookUser,
   Plane,
   FolderCog,
@@ -58,7 +58,7 @@ export const menuConfig: MenuItem[] = [
   {
     href: '/safety',
     label: 'Safety',
-    icon: GitCommit,
+    icon: AlertTriangle,
   },
   {
     href: '/quality',
