@@ -56,7 +56,7 @@ const bookingSchema = z.object({
   instructorId: z.string().optional(),
   type: z.enum(['Student Training', 'Hire and Fly'], { required_error: 'Booking type is required.' }),
   startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.'),
-  endTime: z.string().regex(/^([01]\d|2[0-5]\d)$/, 'Invalid time format.'),
+  endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.'),
   status: z.enum(['Confirmed', 'Pending', 'Cancelled']),
 }).refine(data => data.startTime < data.endTime, {
   message: 'End time must be after start time.',
@@ -153,7 +153,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
 
       <Form {...form}>
       <ScrollArea className="max-h-[60vh]">
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-1">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
             control={form.control}
             name="aircraftId"
