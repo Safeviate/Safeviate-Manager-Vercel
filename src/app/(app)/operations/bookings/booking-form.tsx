@@ -56,7 +56,7 @@ const bookingSchema = z.object({
   instructorId: z.string().optional(),
   type: z.enum(['Student Training', 'Hire and Fly'], { required_error: 'Booking type is required.' }),
   startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.'),
-  endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.'),
+  endTime: z.string().regex(/^([01]\d|2[0-5]\d)$/, 'Invalid time format.'),
   status: z.enum(['Confirmed', 'Pending', 'Cancelled']),
 }).refine(data => data.startTime < data.endTime, {
   message: 'End time must be after start time.',
@@ -269,14 +269,14 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
               )}
             />
           </div>
-          <DialogFooter className="pt-4 pr-6 flex-col items-stretch gap-2">
-            <Button type="submit">{isEditing ? 'Save' : 'Create Booking'}</Button>
+          <DialogFooter className="pt-4 pr-6 sm:flex-row flex-col-reverse items-stretch gap-2">
+            <Button type="submit" className='flex-1'>{isEditing ? 'Save' : 'Create Booking'}</Button>
              {isEditing && (
                 <>
-                  <Button type="button" variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
+                  <Button type="button" variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} className='flex-1'>
                       Delete
                   </Button>
-                  <Button type="button" variant="outline" className='text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive' onClick={() => setIsCancelDialogOpen(true)} >
+                  <Button type="button" variant="outline" className='text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive flex-1' onClick={() => setIsCancelDialogOpen(true)} >
                       Cancel
                   </Button>
                 </>
