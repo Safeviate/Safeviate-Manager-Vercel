@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import type { Aircraft } from '../../assets/page';
 import type { Booking } from '@/types/booking';
 import type { PilotProfile } from '../../users/personnel/page';
-import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays } from 'date-fns';
+import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, startOfHour } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -183,28 +183,53 @@ export default function BookingsPage() {
 
   const handleSlotClick = useCallback((aircraft: Aircraft, time: string, booking?: Booking) => {
     const [hour, minute] = time.split(':').map(Number);
-    const clickedDateTime = setMinutes(setHours(selectedDate, hour), minute);
+    const clickedSlotStart = setMinutes(setHours(selectedDate, hour), minute);
+    const now = new Date();
+    
+    // An existing booking can always be opened
+    if (booking) {
+        setFormInitialState({
+            aircraft,
+            time: format(booking.startTime.toDate(), 'HH:mm'),
+            date: booking.startTime.toDate(),
+            booking: booking
+        });
+        setIsFormOpen(true);
+        return;
+    }
 
-    // Prevent opening form for past slots on the current day
-    if (isSameDay(selectedDate, new Date()) && isBefore(clickedDateTime, new Date())) {
-      // Don't open the form if the user is not clicking an existing booking
-      if (!booking) {
+    // Check if the selected day is today
+    if (isSameDay(selectedDate, now)) {
+        // If the entire slot is in the past, show an error
+        if (isBefore(addHours(clickedSlotStart, 1), now)) {
+            toast({
+                variant: 'destructive',
+                title: 'Invalid Time',
+                description: 'Bookings cannot be created in the past.',
+            });
+            return;
+        }
+
+        // If the slot is the current hour, use the current time as start
+        if (isBefore(clickedSlotStart, now)) {
+            time = format(now, 'HH:mm');
+        }
+    } else if (isBefore(selectedDate, startOfDay(now))) {
+        // If the selected day is in the past, show an error
         toast({
             variant: 'destructive',
-            title: 'Invalid Time',
-            description: 'Bookings cannot be created in the past.',
+            title: 'Invalid Date',
+            description: 'Bookings cannot be created on a past date.',
         });
         return;
-      }
     }
     
-    // Logic for bookings spanning midnight remains
     const bookingDate = hour < 6 ? addDays(selectedDate, 1) : selectedDate;
 
     setFormInitialState({
         aircraft,
         time,
-        date: booking ? booking.startTime.toDate() : bookingDate, // Use booking start time if editing
+        date: bookingDate,
         booking: booking
     });
     setIsFormOpen(true);
