@@ -164,7 +164,7 @@ export default function BookingsPage() {
   useEffect(() => {
     const calculateNowLine = () => {
         const now = new Date();
-        const isToday = startOfDay(now).getTime() === startOfDay(selectedDate).getTime();
+        const isToday = isSameDay(now, selectedDate);
         setShowNowLine(isToday);
 
         if (isToday) {
@@ -181,12 +181,23 @@ export default function BookingsPage() {
 
   const handleSlotClick = useCallback((aircraft: Aircraft, time: string, booking?: Booking) => {
     const [hour, minute] = time.split(':').map(Number);
+    const clickedDateTime = setMinutes(setHours(selectedDate, hour), minute);
+
+    // Prevent opening form for past slots on the current day
+    if (isSameDay(selectedDate, new Date()) && isBefore(clickedDateTime, new Date())) {
+      // Don't open the form if the user is not clicking an existing booking
+      if (!booking) {
+        return;
+      }
+    }
+    
+    // Logic for bookings spanning midnight remains
     const bookingDate = hour < 6 ? addDays(selectedDate, 1) : selectedDate;
 
     setFormInitialState({
         aircraft,
         time,
-        date: bookingDate,
+        date: booking ? booking.startTime.toDate() : bookingDate, // Use booking start time if editing
         booking: booking
     });
     setIsFormOpen(true);
