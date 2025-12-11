@@ -11,16 +11,23 @@ import {
   SidebarGroup,
   SidebarSeparator,
   useSidebar,
+  SidebarCollapsible,
+  SidebarCollapsibleContent,
+  SidebarCollapsibleTrigger,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton
 } from '@/components/ui/sidebar';
 import {
   Plane,
   LogOut,
+  ChevronDown
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useState, useEffect } from 'react';
-import { menuConfig, settingsMenuItem } from '@/lib/menu-config';
+import { menuConfig, settingsMenuItem, MenuItem as MenuItemType } from '@/lib/menu-config';
 import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import {
@@ -31,12 +38,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { cn } from '@/lib/utils';
 
 export function AppSidebar() {
   const pathname = usePathname();
   const auth = useAuth();
   const router = useRouter();
-  const { setOpenMobile } = useSidebar();
+  const { setOpenMobile, isMobile } = useSidebar();
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -51,7 +59,58 @@ export function AppSidebar() {
   };
 
   const handleLinkClick = () => {
-    setOpenMobile(false);
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }
+
+  const renderMenuItem = (item: MenuItemType) => {
+    const isActive = pathname.startsWith(item.href);
+
+    if (item.subItems) {
+        return (
+            <SidebarCollapsible defaultOpen={isActive}>
+                <SidebarCollapsibleTrigger className="w-full">
+                    <SidebarMenuButton
+                        isActive={isActive}
+                        tooltip={item.label}
+                        className="justify-between"
+                    >
+                        <div className="flex items-center gap-2">
+                           <item.icon />
+                           <span>{item.label}</span>
+                        </div>
+                        <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 ease-in-out group-data-[state=open]:-rotate-180" />
+                    </SidebarMenuButton>
+                </SidebarCollapsibleTrigger>
+                <SidebarCollapsibleContent>
+                  <SidebarMenuSub>
+                      {item.subItems.map(subItem => (
+                          <SidebarMenuSubItem key={subItem.href}>
+                              <Link href={subItem.href} passHref>
+                                  <SidebarMenuSubButton isActive={pathname.startsWith(subItem.href)} onClick={handleLinkClick}>
+                                      {subItem.label}
+                                  </SidebarMenuSubButton>
+                              </Link>
+                          </SidebarMenuSubItem>
+                      ))}
+                  </SidebarMenuSub>
+                </SidebarCollapsibleContent>
+            </SidebarCollapsible>
+        )
+    }
+
+    return (
+      <Link href={item.href} className="w-full" onClick={handleLinkClick}>
+          <SidebarMenuButton
+            isActive={pathname.startsWith(item.href)}
+            tooltip={item.label}
+          >
+            <item.icon />
+            <span>{item.label}</span>
+          </SidebarMenuButton>
+        </Link>
+    );
   }
 
   const visibleMenuConfig = menuConfig.filter(
@@ -74,17 +133,9 @@ export function AppSidebar() {
           {visibleMenuConfig.map((item, index) => (
              <React.Fragment key={item.href}>
               <SidebarMenuItem>
-                <Link href={item.href} className="w-full" onClick={handleLinkClick}>
-                  <SidebarMenuButton
-                    isActive={pathname.startsWith(item.href)}
-                    tooltip={item.label}
-                  >
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </Link>
+                {renderMenuItem(item)}
               </SidebarMenuItem>
-              {index < visibleMenuConfig.length - 1 && <SidebarSeparator className="my-1 mx-2" />}
+              {index < visibleMenuConfig.length - 1 && item.href !=='/users' && !pathname.startsWith('/users') && <SidebarSeparator className="my-1 mx-2" />}
             </React.Fragment>
           ))}
         </SidebarMenu>
@@ -93,12 +144,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarMenu>
             <SidebarMenuItem>
-              <Link href={settingsMenuItem.href} className="w-full" onClick={handleLinkClick}>
-                <SidebarMenuButton isActive={pathname.startsWith(settingsMenuItem.href)} tooltip={settingsMenuItem.label}>
-                  <settingsMenuItem.icon />
-                  <span>{settingsMenuItem.label}</span>
-                </SidebarMenuButton>
-              </Link>
+              {renderMenuItem(settingsMenuItem)}
             </SidebarMenuItem>
             <SidebarSeparator className="my-1 mx-2" />
             {isClient && (

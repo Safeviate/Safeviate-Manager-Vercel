@@ -17,12 +17,13 @@ import {
   Heart,
   CheckCircle,
   Calendar,
+  UserCog,
 } from 'lucide-react';
 
 export type SubMenuItem = {
   href: string;
   label: string;
-  description: string;
+  description?: string; // Made optional as not all sub-items will have it
 };
 
 export type MenuItem = {
@@ -84,11 +85,16 @@ export const menuConfig: MenuItem[] = [
     href: '/users',
     label: 'Users',
     icon: Users,
+    subItems: [
+        { href: '/users/personnel', label: 'Personnel' },
+        { href: '/users/private-pilots', label: 'Private Pilots' },
+        { href: '/users/students', label: 'Students' },
+    ]
   },
   {
     href: '/admin',
     label: 'Admin',
-    icon: Shield,
+    icon: UserCog,
     subItems: [
       {
         href: '/admin/roles',
