@@ -2,23 +2,16 @@
 import {
   LayoutDashboard,
   Users,
-  Wrench,
   Settings,
   LucideIcon,
-  Palette,
-  Shield,
-  User,
-  GraduationCap,
-  Package,
-  Database,
   Code,
-  Building2,
-  UserPlus,
-  CalendarClock,
-  Heart,
-  CheckCircle,
-  Calendar,
   UserCog,
+  GaugeCircle,
+  PlaneTakeoff,
+  GitCommit,
+  BookUser,
+  Plane,
+  FolderCog,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -38,17 +31,17 @@ export const menuConfig: MenuItem[] = [
   {
     href: '/dashboard',
     label: 'Dashboard',
-    icon: LayoutDashboard,
+    icon: GaugeCircle,
   },
   {
     href: '/my-dashboard',
     label: 'My Dashboard',
-    icon: User,
+    icon: LayoutDashboard,
   },
   {
     href: '/operations',
     label: 'Operations',
-    icon: Wrench,
+    icon: PlaneTakeoff,
     subItems: [
       {
         href: '/operations/maintenance',
@@ -65,22 +58,22 @@ export const menuConfig: MenuItem[] = [
   {
     href: '/safety',
     label: 'Safety',
-    icon: Shield,
+    icon: GitCommit,
   },
   {
     href: '/quality',
     label: 'Quality',
-    icon: CheckCircle,
+    icon: FolderCog,
   },
   {
     href: '/training',
     label: 'Training',
-    icon: GraduationCap,
+    icon: BookUser,
   },
   {
     href: '/assets',
     label: 'Assets',
-    icon: Package,
+    icon: Plane,
   },
   {
     href: '/users',
