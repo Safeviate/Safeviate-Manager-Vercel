@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { addHours, format, setHours, setMinutes, addDays, startOfDay } from 'date-fns';
 import { Timestamp, collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
@@ -37,7 +38,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { v4 as uuidv4 } from 'uuid';
-import { getNextBookingNumber } from './booking-functions';
+import { getNextBookingNumber, deleteBookingAndDecrementCounter } from './booking-functions';
 
 
 interface BookingFormProps {
@@ -225,36 +226,30 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
     if (!booking) return;
 
     try {
+        let docsToDelete: any[] = [];
         if (booking.overnightId) {
-            // This is an overnight booking, delete all parts
+            // This is an overnight booking, find all parts to delete
             const bookingsRef = collection(firestore, 'tenants', tenantId, 'bookings');
             const q = query(bookingsRef, where('overnightId', '==', booking.overnightId));
             const querySnapshot = await getDocs(q);
-
-            if (querySnapshot.empty) {
-                // Fallback to deleting just the single document if no others are found
-                await deleteDocumentNonBlocking(doc(firestore, 'tenants', tenantId, 'bookings', booking.id));
-            } else {
-                 const batch = writeBatch(firestore);
-                 querySnapshot.forEach((doc) => {
-                    batch.delete(doc.ref);
-                 });
-                 await batch.commit();
-            }
-            toast({
-                title: 'Overnight Booking Deleted',
-                description: 'All parts of the overnight booking have been deleted.',
+            
+            querySnapshot.forEach((doc) => {
+                docsToDelete.push(doc.ref);
             });
-
         } else {
             // This is a standard booking
-            const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', booking.id);
-            await deleteDocumentNonBlocking(bookingRef);
+            docsToDelete.push(doc(firestore, 'tenants', tenantId, 'bookings', booking.id));
+        }
+
+        if (docsToDelete.length > 0) {
+            // Only decrement counter once per booking number, even for overnight
+            await deleteBookingAndDecrementCounter(firestore, tenantId, docsToDelete);
             toast({
-              title: 'Booking Deleted',
-              description: 'The booking has been permanently deleted.',
+                title: 'Booking Deleted',
+                description: 'The booking has been permanently deleted and the booking number has been updated.',
             });
         }
+        
     } catch (error) {
         console.error("Error deleting booking(s):", error);
         toast({
@@ -489,5 +484,3 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
     </>
   );
 }
-
-    
