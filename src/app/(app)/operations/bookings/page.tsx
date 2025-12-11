@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import type { Aircraft } from '../../assets/page';
 import type { Booking } from '@/types/booking';
 import type { PilotProfile } from '../../users/personnel/page';
-import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addHours, addDays, startOfHour } from 'date-fns';
+import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addHours, addDays, startOfHour, subDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -136,11 +136,12 @@ export default function BookingsPage() {
   
   const bookingsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    const start = Timestamp.fromDate(startOfDay(selectedDate));
-    const end = Timestamp.fromDate(endOfDay(addDays(selectedDate, 1))); // Fetch bookings that could end on the next day
+    const start = Timestamp.fromDate(startOfDay(subDays(selectedDate, 1))); // Fetch from start of previous day
+    const end = Timestamp.fromDate(endOfDay(selectedDate)); // Fetch until end of selected day
     return query(
         collection(firestore, 'tenants', tenantId, 'bookings'),
         where('startTime', '<=', end),
+        where('startTime', '>=', start)
     );
   }, [firestore, tenantId, selectedDate]);
 
@@ -157,7 +158,9 @@ export default function BookingsPage() {
     if (!allBookings) return [];
     const dayStart = startOfDay(selectedDate);
     const dayEnd = endOfDay(selectedDate);
-    return allBookings.filter(b => b.startTime.toDate() <= dayEnd && b.endTime.toDate() >= dayStart);
+    return allBookings.filter(b => 
+        b.startTime.toDate() <= dayEnd && b.endTime.toDate() >= dayStart
+    );
   }, [allBookings, selectedDate]);
 
 
