@@ -365,7 +365,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
         }
 
         if (docsToDelete.length > 0) {
-            await deleteBookings(firestore, docsToDelete);
+            await deleteBookings(firestore, tenantId, docsToDelete);
             toast({
                 title: 'Booking Deleted',
                 description: 'The booking has been permanently deleted.',

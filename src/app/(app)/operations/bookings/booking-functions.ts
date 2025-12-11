@@ -54,26 +54,37 @@ export async function getNextBookingNumber(
 }
 
 /**
- * Deletes one or more booking documents within a single transaction.
+ * Deletes one or more booking documents and decrements the counter within a single transaction.
  * @param firestore The Firestore instance.
+ * @param tenantId The ID of the tenant.
  * @param bookingDocRefs An array of DocumentReferences for the bookings to be deleted.
  */
 export async function deleteBookings(
     firestore: Firestore,
+    tenantId: string,
     bookingDocRefs: DocumentReference[]
 ): Promise<void> {
 
+    const counterRef = doc(firestore, 'tenants', tenantId, 'counters', 'bookings');
+
     try {
-        const batch = writeBatch(firestore);
+        await runTransaction(firestore, async (transaction) => {
+            // Get the counter and check if it exists
+            const counterDoc = await transaction.get(counterRef);
+            if (counterDoc.exists()) {
+                const currentNumber = counterDoc.data().currentNumber || 0;
+                // Decrement the counter, but not below 0
+                const nextNumber = Math.max(0, currentNumber - 1);
+                transaction.update(counterRef, { currentNumber: nextNumber });
+            }
 
-        bookingDocRefs.forEach(docRef => {
-            batch.delete(docRef);
+            // Delete each booking document
+            bookingDocRefs.forEach(docRef => {
+                transaction.delete(docRef);
+            });
         });
-
-        await batch.commit();
-
     } catch (error) {
-        console.error('Error deleting booking(s):', error);
+        console.error('Error deleting booking(s) and decrementing counter:', error);
         throw new Error('Could not delete the booking(s).');
     }
 }
