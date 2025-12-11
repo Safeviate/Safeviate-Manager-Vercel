@@ -224,12 +224,10 @@ export default function BookingsPage() {
         return;
     }
     
-    const bookingDate = hour < 6 ? addDays(selectedDate, 1) : selectedDate;
-
     setFormInitialState({
         aircraft,
         time,
-        date: bookingDate,
+        date: selectedDate,
         booking: booking
     });
     setIsFormOpen(true);
@@ -341,5 +339,3 @@ export default function BookingsPage() {
     </>
   );
 }
-
-    
