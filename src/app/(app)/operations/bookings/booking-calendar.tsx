@@ -33,7 +33,7 @@ const BookingItem = ({ booking, pilots, onClick }: BookingItemProps) => {
          <div
             onClick={onClick}
             className={cn(
-                "absolute top-1/2 -translate-y-1/2 flex items-center justify-center text-primary-foreground p-2 shadow z-20 h-10 cursor-pointer",
+                "absolute top-1/2 -translate-y-1/2 flex items-center justify-center text-primary-foreground p-2 shadow z-20 h-10 cursor-pointer border border-gray-400",
                 booking.status === 'Cancelled' ? 'bg-destructive' : 'bg-primary'
             )}
             style={{ left: `${left}px`, width: `${width}px` }}
@@ -128,7 +128,7 @@ export const BookingCalendar = forwardRef<BookingCalendarRef, BookingCalendarPro
 
   return (
     <>
-    <div className="flex flex-col h-full border rounded-lg overflow-hidden">
+    <div className="flex flex-col h-full border overflow-hidden">
         {/* Header */}
         <div className="flex border-b bg-muted/50 flex-shrink-0">
             <div className="w-48 flex-shrink-0 p-2 border-r">

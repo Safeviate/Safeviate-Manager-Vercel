@@ -49,7 +49,7 @@ const BookingItem = ({ booking, pilots, selectedDate, onClick }: { booking: Book
          <div
             onClick={onClick}
             className={cn(
-            'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground z-10 min-h-[40px] cursor-pointer',
+            'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground z-10 min-h-[40px] cursor-pointer border border-gray-400',
             booking.status === 'Cancelled' ? 'bg-destructive' : 'bg-primary',
             hasContinuationTop ? 'rounded-t-none' : '',
             hasContinuationBottom ? 'rounded-b-none' : '',

@@ -46,7 +46,7 @@ const BookingItem = ({ booking, pilots, onClick }: BookingItemProps) => {
          <div
             onClick={onClick}
             className={cn(
-                "absolute top-1/2 -translate-y-1/2 flex items-center justify-center text-primary-foreground p-2 shadow z-20 h-10 cursor-pointer",
+                "absolute top-1/2 -translate-y-1/2 flex items-center justify-center text-primary-foreground p-2 shadow z-20 h-10 cursor-pointer border border-gray-400",
                 booking.status === 'Cancelled' ? 'bg-destructive' : 'bg-primary'
             )}
             style={{ left: `${left}px`, width: `${width}px` }}
