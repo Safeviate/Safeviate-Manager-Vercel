@@ -194,28 +194,6 @@ export function ColorThemeForm() {
         <Separator />
 
         <div>
-          <h3 className="text-lg font-medium mb-4">Primary Button Theme</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(buttonTheme).map(([name, value]) => (
-              <div key={name} className="space-y-2">
-                <Label htmlFor={name} className="capitalize">{name.replace('button-primary-','')}</Label>
-                <div className='relative'>
-                  <Input
-                    id={name}
-                    type="color"
-                    value={value}
-                    onChange={(e) => setButtonThemeValue(name as keyof typeof buttonTheme, e.target.value)}
-                    className="p-1 h-10"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <Separator />
-
-        <div>
           <h3 className="text-lg font-medium mb-4">Header Theme</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {Object.entries(headerTheme).map(([name, value]) => (
