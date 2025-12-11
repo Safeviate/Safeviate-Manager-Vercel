@@ -139,7 +139,7 @@ const AircraftColumn = ({ aircraft, bookings, pilots, tenantId, onGridClick, onB
   return (
     <div 
         className="flex-1 relative border-r min-w-[150px]"
-        onClick={(e) => aircraft && onGridClick(e, aircraft)}
+        // onClick={(e) => aircraft && onGridClick(e, aircraft)}
     >
       {/* Hour lines and labels for this column */}
       {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
@@ -394,3 +394,5 @@ export default function BookingsSwimlanePage() {
     </>
   );
 }
+
+    

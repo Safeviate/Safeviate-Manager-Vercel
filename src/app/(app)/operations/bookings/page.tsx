@@ -88,10 +88,10 @@ const BookingItem = ({ booking, pilots, tenantId, onEdit, selectedDate }: { book
                 <PopoverTrigger asChild>
                      <div
                         className={cn(
-                        'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity z-10 min-h-[40px] rounded-none',
+                        'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity z-10 min-h-[40px]',
                         booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80',
-                        hasContinuationTop ? 'rounded-t-none' : '',
-                        hasContinuationBottom ? 'rounded-b-none' : '',
+                        hasContinuationTop ? 'rounded-t-none' : 'rounded-lg',
+                        hasContinuationBottom ? 'rounded-b-none' : 'rounded-lg',
                         )}
                         style={{ top: `${top}px`, height: `${height}px` }}
                     >
@@ -139,7 +139,7 @@ const AircraftColumn = ({ aircraft, bookings, pilots, tenantId, onGridClick, onB
   return (
     <div 
         className="flex-1 relative border-r min-w-[150px]"
-        onClick={(e) => aircraft && onGridClick(e, aircraft)}
+        // onClick={(e) => aircraft && onGridClick(e, aircraft)}
     >
       {/* Hour lines and labels for this column */}
       {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
@@ -392,3 +392,5 @@ export default function BookingsPage() {
     </>
   );
 }
+
+    
