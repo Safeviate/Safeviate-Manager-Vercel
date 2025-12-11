@@ -4,7 +4,7 @@ import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
 import { PanelLeft, ChevronDown } from "lucide-react"
-import * as Collapsible from "@radix-ui/react-collapsible"
+import * as CollapsiblePrimitive from "@radix-ui/react-collapsible"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -542,7 +542,6 @@ const SidebarMenuButton = React.forwardRef<
     asChild?: boolean
     isActive?: boolean
     tooltip?: string | React.ComponentProps<typeof TooltipContent>
-    isCollapsible?: boolean
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
@@ -552,22 +551,15 @@ const SidebarMenuButton = React.forwardRef<
       variant = "default",
       size = "default",
       tooltip,
-      isCollapsible,
       className,
-      children,
       ...props
     },
     ref
   ) => {
     const Comp = asChild ? Slot : "button"
     const { isMobile, state } = useSidebar()
-    const triggerWrapper = isCollapsible ? (
-        <Collapsible.Trigger asChild>{children}</Collapsible.Trigger>
-    ) : (
-        children
-    );
-    
-    const buttonContent = (
+
+    const button = (
       <Comp
         ref={ref}
         data-sidebar="menu-button"
@@ -575,13 +567,11 @@ const SidebarMenuButton = React.forwardRef<
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
         {...props}
-      >
-        {triggerWrapper}
-      </Comp>
-    );
+      />
+    )
 
     if (!tooltip) {
-      return buttonContent
+      return button
     }
 
     if (typeof tooltip === "string") {
@@ -592,7 +582,7 @@ const SidebarMenuButton = React.forwardRef<
 
     return (
       <Tooltip>
-        <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
         <TooltipContent
           side="right"
           align="center"
@@ -748,9 +738,22 @@ const SidebarMenuSubButton = React.forwardRef<
 })
 SidebarMenuSubButton.displayName = "SidebarMenuSubButton"
 
-const SidebarCollapsible = Collapsible.Root
-const SidebarCollapsibleTrigger = Collapsible.Trigger
-const SidebarCollapsibleContent = Collapsible.Content
+const SidebarCollapsible = CollapsiblePrimitive.Root
+
+const SidebarCollapsibleTrigger = React.forwardRef<
+  React.ElementRef<typeof CollapsiblePrimitive.Trigger>,
+  React.ComponentProps<typeof CollapsiblePrimitive.Trigger>
+>(({ ...props }, ref) => <CollapsiblePrimitive.Trigger ref={ref} {...props} />)
+SidebarCollapsibleTrigger.displayName = "SidebarCollapsibleTrigger"
+
+
+const SidebarCollapsibleContent = React.forwardRef<
+  React.ElementRef<typeof CollapsiblePrimitive.Content>,
+  React.ComponentProps<typeof CollapsiblePrimitive.Content>
+>(({ ...props }, ref) => (
+  <CollapsiblePrimitive.Content ref={ref} {...props} />
+))
+SidebarCollapsibleContent.displayName = "SidebarCollapsibleContent"
 
 export {
   Sidebar,
