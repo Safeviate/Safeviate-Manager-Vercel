@@ -14,6 +14,8 @@
     --primary-foreground: 215 28% 17%;
     --button-primary-background: 205 85% 73%;
     --button-primary-foreground: 215 28% 17%;
+    --button-primary-accent: 171 26% 54%;
+    --button-primary-accent-foreground: 0 0% 98%;
     --secondary: 205 50% 90%;
     --secondary-foreground: 215 28% 17%;
     --muted: 205 40% 88%;
@@ -56,6 +58,8 @@
     --primary-foreground: 215 28% 17%;
     --button-primary-background: 205 85% 73%;
     --button-primary-foreground: 215 28% 17%;
+    --button-primary-accent: 171 26% 54%;
+    --button-primary-accent-foreground: 0 0% 98%;
     --secondary: 215 20% 25%;
     --secondary-foreground: 205 67% 95%;
     --muted: 215 20% 25%;

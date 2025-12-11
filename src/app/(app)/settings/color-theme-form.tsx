@@ -75,7 +75,7 @@ export function ColorThemeForm() {
     }
     
     // Create a theme object that matches the structure `applySavedTheme` expects
-    const themeToApply = {
+    const themeToApply: Partial<SavedTheme> = {
         name: tenant.name,
         colors: {
             primary: tenant.theme.primaryColour || theme.primary,
@@ -85,6 +85,8 @@ export function ColorThemeForm() {
         buttonColors: {
             'button-primary-background': tenant.theme.primaryColour || buttonTheme['button-primary-background'],
             'button-primary-foreground': buttonTheme['button-primary-foreground'],
+            'button-primary-accent': tenant.theme.accentColour || buttonTheme['button-primary-accent'],
+            'button-primary-accent-foreground': buttonTheme['button-primary-accent-foreground'],
         },
         cardColors: { card: tenant.theme.backgroundColour || cardTheme.card, 'card-foreground': cardTheme['card-foreground'] },
         popoverColors: { popover: tenant.theme.backgroundColour || popoverTheme.popover, 'popover-foreground': popoverTheme['popover-foreground'] },
@@ -193,7 +195,7 @@ export function ColorThemeForm() {
 
         <div>
           <h3 className="text-lg font-medium mb-4">Primary Button Theme</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {Object.entries(buttonTheme).map(([name, value]) => (
               <div key={name} className="space-y-2">
                 <Label htmlFor={name} className="capitalize">{name.replace('button-primary-','')}</Label>

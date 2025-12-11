@@ -14,6 +14,8 @@ type ThemeColors = {
 type ButtonThemeColors = {
   'button-primary-background': string;
   'button-primary-foreground': string;
+  'button-primary-accent': string;
+  'button-primary-accent-foreground': string;
 };
 
 type CardThemeColors = {
@@ -99,6 +101,8 @@ const defaultColors: ThemeColors = {
 const defaultButtonColors: ButtonThemeColors = {
     'button-primary-background': '#7cc4f7',
     'button-primary-foreground': '#1e293b',
+    'button-primary-accent': '#63b2a7',
+    'button-primary-accent-foreground': '#ffffff',
 };
 const defaultCardColors: CardThemeColors = {
   card: '#ebf5fb',

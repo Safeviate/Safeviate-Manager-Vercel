@@ -42,6 +42,8 @@ export default {
         'button-primary': {
           DEFAULT: 'hsl(var(--button-primary-background))',
           foreground: 'hsl(var(--button-primary-foreground))',
+          accent: 'hsl(var(--button-primary-accent))',
+          'accent-foreground': 'hsl(var(--button-primary-accent-foreground))',
         },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
