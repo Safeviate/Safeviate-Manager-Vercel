@@ -561,6 +561,11 @@ const SidebarMenuButton = React.forwardRef<
   ) => {
     const Comp = asChild ? Slot : "button"
     const { isMobile, state } = useSidebar()
+    const triggerWrapper = isCollapsible ? (
+        <Collapsible.Trigger asChild>{children}</Collapsible.Trigger>
+    ) : (
+        children
+    );
     
     const buttonContent = (
       <Comp
@@ -571,7 +576,7 @@ const SidebarMenuButton = React.forwardRef<
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
         {...props}
       >
-        {children}
+        {triggerWrapper}
       </Comp>
     );
 
@@ -776,5 +781,3 @@ export {
   SidebarCollapsibleTrigger,
   SidebarCollapsibleContent,
 }
-
-    
