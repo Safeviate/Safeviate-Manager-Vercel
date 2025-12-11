@@ -16,6 +16,7 @@ import {
   CalendarClock,
   Heart,
   CheckCircle,
+  Calendar,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -54,8 +55,13 @@ export const menuConfig: MenuItem[] = [
       },
       {
         href: '/operations/bookings',
-        label: 'Bookings',
+        label: 'Bookings (Vertical)',
         description: 'Schedule and manage aircraft bookings.',
+      },
+       {
+        href: '/operations/bookings-swimlane',
+        label: 'Bookings (Horizontal)',
+        description: 'Horizontal timeline for bookings.',
       },
     ],
   },

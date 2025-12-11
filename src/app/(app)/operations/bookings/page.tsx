@@ -1,26 +1,27 @@
-
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
-import { collection, query, where, Timestamp } from 'firebase/firestore';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Aircraft } from '../../assets/page';
 import type { Booking } from '@/types/booking';
 import type { PilotProfile } from '../../users/personnel/page';
-import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay } from 'date-fns';
+import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { BookingForm } from './booking-form';
 
 
 const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
 const TOTAL_HOURS = 24;
 
-const BookingItem = ({ booking, pilots, selectedDate }: { booking: Booking, pilots: PilotProfile[], selectedDate: Date }) => {
+const BookingItem = ({ booking, pilots, selectedDate, onClick }: { booking: Booking, pilots: PilotProfile[], selectedDate: Date, onClick: () => void }) => {
     const startTime = booking.startTime.toDate();
     const endTime = booking.endTime.toDate();
 
@@ -45,8 +46,9 @@ const BookingItem = ({ booking, pilots, selectedDate }: { booking: Booking, pilo
 
     return (
          <div
+            onClick={onClick}
             className={cn(
-            'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground z-10 min-h-[40px]',
+            'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground z-10 min-h-[40px] cursor-pointer',
             booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80',
             hasContinuationTop ? 'rounded-t-none' : 'rounded-lg',
             hasContinuationBottom ? 'rounded-b-none' : 'rounded-lg',
@@ -62,15 +64,19 @@ const BookingItem = ({ booking, pilots, selectedDate }: { booking: Booking, pilo
     )
 }
 
-const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePosition, selectedDate }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; showNowLine: boolean; nowLinePosition: number; selectedDate: Date; }) => {
+const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePosition, selectedDate, onSlotClick }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; showNowLine: boolean; nowLinePosition: number; selectedDate: Date; onSlotClick: (aircraft: Aircraft, time: string) => void; }) => {
   return (
     <div 
         className="flex-1 relative border-r min-w-[150px]"
     >
       {/* Hour lines and labels for this column */}
       {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
-        <div key={hour} className="relative border-t" style={{ height: `${HOUR_HEIGHT_PX}px` }}>
-            <span className="absolute top-1 left-1 text-xs text-muted-foreground">
+        <div 
+          key={hour} 
+          className="relative border-t" style={{ height: `${HOUR_HEIGHT_PX}px` }}
+          onClick={() => aircraft && onSlotClick(aircraft, `${String(hour).padStart(2, '0')}:00`)}
+        >
+            <span className="absolute top-1 left-1 text-xs text-muted-foreground pointer-events-none">
                 {format(new Date(0, 0, 0, hour), 'HH:mm')}
             </span>
         </div>
@@ -98,6 +104,7 @@ const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePositi
             booking={booking}
             pilots={pilots}
             selectedDate={selectedDate}
+            onClick={() => onSlotClick(aircraft!, format(booking.startTime.toDate(), 'HH:mm'), booking)}
         />
       ))}
     </div>
@@ -112,6 +119,9 @@ export default function BookingsPage() {
 
   const [nowLinePosition, setNowLinePosition] = useState(0);
   const [showNowLine, setShowNowLine] = useState(false);
+
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formInitialState, setFormInitialState] = useState<{ aircraft: Aircraft; time: string; date: Date; booking?: Booking } | null>(null);
 
   const aircraftQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
@@ -140,7 +150,7 @@ export default function BookingsPage() {
   const bookings = useMemo(() => {
     if (!allBookings) return [];
     const dayStart = startOfDay(selectedDate);
-    return allBookings.filter(b => b.endTime.toDate() > dayStart);
+    return allBookings.filter(b => b.endTime.toDate() >= dayStart);
   }, [allBookings, selectedDate]);
 
 
@@ -163,6 +173,19 @@ export default function BookingsPage() {
     calculateNowLine();
     const interval = setInterval(calculateNowLine, 60000); // Update every minute
     return () => clearInterval(interval);
+  }, [selectedDate]);
+
+  const handleSlotClick = useCallback((aircraft: Aircraft, time: string, booking?: Booking) => {
+    const [hour, minute] = time.split(':').map(Number);
+    const bookingDate = hour < 6 ? addDays(selectedDate, 1) : selectedDate;
+
+    setFormInitialState({
+        aircraft,
+        time,
+        date: bookingDate,
+        booking: booking
+    });
+    setIsFormOpen(true);
   }, [selectedDate]);
   
   const extraLanes = ['', '', '', ''];
@@ -234,6 +257,7 @@ export default function BookingsPage() {
                       showNowLine={showNowLine}
                       nowLinePosition={nowLinePosition}
                       selectedDate={selectedDate}
+                      onSlotClick={handleSlotClick}
                     />
                   ))}
                   {extraLanes.map((_, index) => (
@@ -244,6 +268,7 @@ export default function BookingsPage() {
                         showNowLine={showNowLine}
                         nowLinePosition={nowLinePosition}
                         selectedDate={selectedDate}
+                        onSlotClick={() => {}}
                     />
                   ))}
                   {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-4 text-center text-muted-foreground">Please add aircraft to see the schedule.</div>}
@@ -253,6 +278,19 @@ export default function BookingsPage() {
         </CardContent>
       </Card>
     </div>
+    <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="sm:max-w-md">
+            {formInitialState && (
+                <BookingForm
+                    tenantId={tenantId}
+                    aircraftList={aircraft || []}
+                    pilotList={pilots || []}
+                    initialData={formInitialState}
+                    onClose={() => setIsFormOpen(false)}
+                />
+            )}
+        </DialogContent>
+    </Dialog>
     </>
   );
 }
