@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -8,6 +9,11 @@ type ThemeColors = {
   background: string;
   primary: string;
   accent: string;
+};
+
+type ButtonThemeColors = {
+  'button-primary-background': string;
+  'button-primary-foreground': string;
 };
 
 type CardThemeColors = {
@@ -44,6 +50,7 @@ type SwimlaneThemeColors = {
 export type SavedTheme = {
   name: string;
   colors: ThemeColors;
+  buttonColors: ButtonThemeColors;
   cardColors: CardThemeColors;
   sidebarColors: SidebarThemeColors;
   headerColors: HeaderThemeColors;
@@ -54,6 +61,8 @@ export type SavedTheme = {
 type ThemeContextType = {
   theme: ThemeColors;
   setThemeValue: (key: keyof ThemeColors, value: string) => void;
+  buttonTheme: ButtonThemeColors;
+  setButtonThemeValue: (key: keyof ButtonThemeColors, value: string) => void;
   cardTheme: CardThemeColors;
   setCardThemeValue: (key: keyof CardThemeColors, value: string) => void;
   popoverTheme: PopoverThemeColors;
@@ -73,6 +82,7 @@ type ThemeContextType = {
 
 // --- Constants ---
 export const THEME_KEY = 'safeviate-theme';
+export const BUTTON_THEME_KEY = 'safeviate-button-theme';
 export const CARD_THEME_KEY = 'safeviate-card-theme';
 export const POPOVER_THEME_KEY = 'safeviate-popover-theme';
 export const SIDEBAR_THEME_KEY = 'safeviate-sidebar-theme';
@@ -85,6 +95,10 @@ const defaultColors: ThemeColors = {
   background: '#ebf5fb',
   primary: '#7cc4f7',
   accent: '#63b2a7',
+};
+const defaultButtonColors: ButtonThemeColors = {
+    'button-primary-background': '#7cc4f7',
+    'button-primary-foreground': '#1e293b',
 };
 const defaultCardColors: CardThemeColors = {
   card: '#ebf5fb',
@@ -146,6 +160,7 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [theme, setTheme] = useState<ThemeColors>(() => getInitialState(THEME_KEY, defaultColors));
+  const [buttonTheme, setButtonTheme] = useState<ButtonThemeColors>(() => getInitialState(BUTTON_THEME_KEY, defaultButtonColors));
   const [cardTheme, setCardTheme] = useState<CardThemeColors>(() => getInitialState(CARD_THEME_KEY, defaultCardColors));
   const [popoverTheme, setPopoverTheme] = useState<PopoverThemeColors>(() => getInitialState(POPOVER_THEME_KEY, defaultPopoverColors));
   const [sidebarTheme, setSidebarTheme] = useState<SidebarThemeColors>(() => getInitialState(SIDEBAR_THEME_KEY, defaultSidebarColors));
@@ -155,12 +170,13 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     applyColorsToDOM(theme);
+    applyColorsToDOM(buttonTheme);
     applyColorsToDOM(cardTheme);
     applyColorsToDOM(popoverTheme);
     applyColorsToDOM(sidebarTheme);
     applyColorsToDOM(headerTheme);
     applyColorsToDOM(swimlaneTheme);
-  }, [theme, cardTheme, popoverTheme, sidebarTheme, headerTheme, swimlaneTheme]);
+  }, [theme, buttonTheme, cardTheme, popoverTheme, sidebarTheme, headerTheme, swimlaneTheme]);
   
 
   const updateTheme = <T extends object>(
@@ -177,6 +193,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   };
   
   const setThemeValue = (prop: keyof ThemeColors, value: string) => updateTheme(THEME_KEY, theme, setTheme, prop, value);
+  const setButtonThemeValue = (prop: keyof ButtonThemeColors, value: string) => updateTheme(BUTTON_THEME_KEY, buttonTheme, setButtonTheme, prop, value);
   const setCardThemeValue = (prop: keyof CardThemeColors, value: string) => updateTheme(CARD_THEME_KEY, cardTheme, setCardTheme, prop, value);
   const setPopoverThemeValue = (prop: keyof PopoverThemeColors, value: string) => updateTheme(POPOVER_THEME_KEY, popoverTheme, setPopoverTheme, prop, value);
   const setSidebarThemeValue = (prop: keyof SidebarThemeColors, value: string) => updateTheme(SIDEBAR_THEME_KEY, sidebarTheme, setSidebarTheme, prop, value);
@@ -186,6 +203,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   const applySavedTheme = (themeToApply: SavedTheme) => {
     setTheme(themeToApply.colors);
+    setButtonTheme(themeToApply.buttonColors || defaultButtonColors);
     setCardTheme(themeToApply.cardColors);
     setPopoverTheme(themeToApply.popoverColors);
     setSidebarTheme(themeToApply.sidebarColors);
@@ -193,6 +211,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setSwimlaneTheme(themeToApply.swimlaneColors || defaultSwimlaneColors);
     
     applyColorsToDOM(themeToApply.colors);
+    applyColorsToDOM(themeToApply.buttonColors || defaultButtonColors);
     applyColorsToDOM(themeToApply.cardColors);
     applyColorsToDOM(themeToApply.popoverColors);
     applyColorsToDOM(themeToApply.sidebarColors);
@@ -200,6 +219,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     applyColorsToDOM(themeToApply.swimlaneColors || defaultSwimlaneColors);
 
     localStorage.setItem(THEME_KEY, JSON.stringify(themeToApply.colors));
+    localStorage.setItem(BUTTON_THEME_KEY, JSON.stringify(themeToApply.buttonColors || defaultButtonColors));
     localStorage.setItem(CARD_THEME_KEY, JSON.stringify(themeToApply.cardColors));
     localStorage.setItem(POPOVER_THEME_KEY, JSON.stringify(themeToApply.popoverColors));
     localStorage.setItem(SIDEBAR_THEME_KEY, JSON.stringify(themeToApply.sidebarColors));
@@ -211,6 +231,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     const newTheme: SavedTheme = {
       name,
       colors: theme,
+      buttonColors: buttonTheme,
       cardColors: cardTheme,
       popoverColors: popoverTheme,
       sidebarColors: sidebarTheme,
@@ -230,6 +251,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   const resetToDefaults = () => {
     localStorage.removeItem(THEME_KEY);
+    localStorage.removeItem(BUTTON_THEME_KEY);
     localStorage.removeItem(CARD_THEME_KEY);
     localStorage.removeItem(POPOVER_THEME_KEY);
     localStorage.removeItem(SIDEBAR_THEME_KEY);
@@ -237,6 +259,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.removeItem(SWIMLANE_THEME_KEY);
     
     setTheme(defaultColors);
+    setButtonTheme(defaultButtonColors);
     setCardTheme(defaultCardColors);
     setPopoverTheme(defaultPopoverColors);
     setSidebarTheme(defaultSidebarColors);
@@ -244,6 +267,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setSwimlaneTheme(defaultSwimlaneColors);
 
     applyColorsToDOM(defaultColors);
+    applyColorsToDOM(defaultButtonColors);
     applyColorsToDOM(defaultCardColors);
     applyColorsToDOM(defaultPopoverColors);
     applyColorsToDOM(defaultSidebarColors);
@@ -256,6 +280,8 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const value = {
     theme,
     setThemeValue,
+    buttonTheme,
+    setButtonThemeValue,
     cardTheme,
     setCardThemeValue,
     popoverTheme,

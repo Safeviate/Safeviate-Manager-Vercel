@@ -39,6 +39,10 @@ export default {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
         },
+        'button-primary': {
+          DEFAULT: 'hsl(var(--button-primary-background))',
+          foreground: 'hsl(var(--button-primary-foreground))',
+        },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
           foreground: 'hsl(var(--secondary-foreground))',

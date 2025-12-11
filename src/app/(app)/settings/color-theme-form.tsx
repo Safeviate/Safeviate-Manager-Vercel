@@ -30,6 +30,8 @@ export function ColorThemeForm() {
   const { 
     theme, 
     setThemeValue, 
+    buttonTheme,
+    setButtonThemeValue,
     cardTheme, 
     setCardThemeValue,
     popoverTheme,
@@ -80,8 +82,10 @@ export function ColorThemeForm() {
             background: tenant.theme.backgroundColour || theme.background,
             accent: tenant.theme.accentColour || theme.accent,
         },
-        // We can either set other colors to default or derive them.
-        // For simplicity, we'll reset them to a base state or keep current.
+        buttonColors: {
+            'button-primary-background': tenant.theme.primaryColour || buttonTheme['button-primary-background'],
+            'button-primary-foreground': buttonTheme['button-primary-foreground'],
+        },
         cardColors: { card: tenant.theme.backgroundColour || cardTheme.card, 'card-foreground': cardTheme['card-foreground'] },
         popoverColors: { popover: tenant.theme.backgroundColour || popoverTheme.popover, 'popover-foreground': popoverTheme['popover-foreground'] },
         sidebarColors: sidebarTheme, // Keep sidebar as is or define in tenant
@@ -177,6 +181,28 @@ export function ColorThemeForm() {
                     type="color"
                     value={value}
                     onChange={(e) => setThemeValue(name as keyof typeof theme, e.target.value)}
+                    className="p-1 h-10"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <Separator />
+
+        <div>
+          <h3 className="text-lg font-medium mb-4">Primary Button Theme</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Object.entries(buttonTheme).map(([name, value]) => (
+              <div key={name} className="space-y-2">
+                <Label htmlFor={name} className="capitalize">{name.replace('button-primary-','')}</Label>
+                <div className='relative'>
+                  <Input
+                    id={name}
+                    type="color"
+                    value={value}
+                    onChange={(e) => setButtonThemeValue(name as keyof typeof buttonTheme, e.target.value)}
                     className="p-1 h-10"
                   />
                 </div>

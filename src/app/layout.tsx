@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { ThemeProvider, THEME_KEY, CARD_THEME_KEY, SIDEBAR_THEME_KEY, HEADER_THEME_KEY, POPOVER_THEME_KEY, SWIMLANE_THEME_KEY } from '@/components/theme-provider';
+import { ThemeProvider, THEME_KEY, BUTTON_THEME_KEY, CARD_THEME_KEY, SIDEBAR_THEME_KEY, HEADER_THEME_KEY, POPOVER_THEME_KEY, SWIMLANE_THEME_KEY } from '@/components/theme-provider';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -44,7 +44,7 @@ const themeLoaderScript = `
         return h + " " + s + "% " + l + "%";
       };
       
-      const themeKeys = ['${THEME_KEY}', '${CARD_THEME_KEY}', '${POPOVER_THEME_KEY}', '${SIDEBAR_THEME_KEY}', '${HEADER_THEME_KEY}', '${SWIMLANE_THEME_KEY}'];
+      const themeKeys = ['${THEME_KEY}', '${BUTTON_THEME_KEY}', '${CARD_THEME_KEY}', '${POPOVER_THEME_KEY}', '${SIDEBAR_THEME_KEY}', '${HEADER_THEME_KEY}', '${SWIMLANE_THEME_KEY}'];
       
       themeKeys.forEach(key => {
         const saved = localStorage.getItem(key);
