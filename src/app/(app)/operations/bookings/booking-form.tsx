@@ -269,7 +269,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
               )}
             />
           </div>
-          <DialogFooter className="pt-4 pr-6 sm:flex-row flex-col-reverse items-stretch gap-2">
+          <DialogFooter className="pt-4 pr-6 flex flex-row justify-center items-stretch gap-2">
             <Button type="submit" className='flex-1'>{isEditing ? 'Save' : 'Create Booking'}</Button>
              {isEditing && (
                 <>
