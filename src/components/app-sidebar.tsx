@@ -1,4 +1,3 @@
-
 'use client';
 import {
   Sidebar,
@@ -44,7 +43,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const auth = useAuth();
   const router = useRouter();
-  const { setOpenMobile, isMobile } = useSidebar();
+  const { isMobile } = useSidebar();
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -59,21 +58,19 @@ export function AppSidebar() {
   };
 
   const handleLinkClick = () => {
-    if (isMobile) {
-      setOpenMobile(false);
-    }
+    // This function can be used for any mobile-specific logic if needed in the future
   };
 
   const renderMenuItem = (item: MenuItemType) => {
     const isParentActive = pathname.startsWith(item.href);
-    const isSubItemActive = item.subItems?.some(sub => pathname.startsWith(sub.href));
+    const isDirectParentActive = pathname === item.href;
 
     if (item.subItems) {
       return (
         <SidebarCollapsible defaultOpen={isParentActive}>
           <SidebarCollapsibleTrigger asChild>
             <SidebarMenuButton
-              isActive={isParentActive && !isSubItemActive}
+              isActive={isParentActive && !item.subItems.some(sub => pathname.startsWith(sub.href))}
               tooltip={item.label}
               className="justify-between"
             >
@@ -88,11 +85,9 @@ export function AppSidebar() {
             <SidebarMenuSub>
               {item.subItems.map((subItem) => (
                 <SidebarMenuSubItem key={subItem.href}>
-                  <Link href={subItem.href} onClick={handleLinkClick}>
-                    <SidebarMenuSubButton
-                      isActive={pathname.startsWith(subItem.href)}
-                    >
-                      {subItem.label}
+                  <Link href={subItem.href}>
+                    <SidebarMenuSubButton asChild isActive={pathname.startsWith(subItem.href)}>
+                      <span>{subItem.label}</span>
                     </SidebarMenuSubButton>
                   </Link>
                 </SidebarMenuSubItem>
@@ -134,7 +129,7 @@ export function AppSidebar() {
       <SidebarSeparator className="my-1" />
       <SidebarContent>
         <SidebarMenu>
-          {visibleMenuConfig.map((item, index) => (
+          {visibleMenuConfig.map((item) => (
             <React.Fragment key={item.href}>
               <SidebarMenuItem>{renderMenuItem(item)}</SidebarMenuItem>
             </React.Fragment>
