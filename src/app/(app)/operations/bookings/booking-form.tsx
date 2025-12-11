@@ -39,7 +39,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { v4 as uuidv4 } from 'uuid';
-import { getNextBookingNumber, deleteBookingAndDecrementCounter } from './booking-functions';
+import { getNextBookingNumber, deleteBookings } from './booking-functions';
 
 
 interface BookingFormProps {
@@ -150,8 +150,8 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const onSubmit = async (data: BookingFormValues) => {
     if (!firestore) return;
 
-    if (isEditing) {
-      if (initialData.booking?.overnightId) {
+    if (isEditing && initialData.booking) {
+      if (initialData.booking.overnightId) {
         await handleOvernightUpdate(data, initialData.booking.overnightId);
       } else {
         handleStandardBooking(data, initialData.booking?.bookingNumber);
@@ -316,7 +316,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
 
 
   const handleCancelBooking = () => {
-    if (!isEditing || !firestore) {
+    if (!isEditing || !firestore || !initialData.booking) {
         return;
     }
 
@@ -329,7 +329,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
         return;
     }
 
-    const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', initialData.booking!.id);
+    const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', initialData.booking.id);
     updateDocumentNonBlocking(bookingRef, { status: 'Cancelled with Reason', cancellationReason: cancellationReason });
     
     toast({
@@ -365,11 +365,10 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
         }
 
         if (docsToDelete.length > 0) {
-            // Only decrement counter once per booking number, even for overnight
-            await deleteBookingAndDecrementCounter(firestore, tenantId, docsToDelete);
+            await deleteBookings(firestore, docsToDelete);
             toast({
                 title: 'Booking Deleted',
-                description: 'The booking has been permanently deleted and the booking number has been updated.',
+                description: 'The booking has been permanently deleted.',
             });
         }
         
