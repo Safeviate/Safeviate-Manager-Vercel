@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Sidebar,
@@ -129,9 +130,10 @@ export function AppSidebar() {
       <SidebarSeparator className="my-1" />
       <SidebarContent>
         <SidebarMenu>
-          {visibleMenuConfig.map((item) => (
+          {visibleMenuConfig.map((item, index) => (
             <React.Fragment key={item.href}>
               <SidebarMenuItem>{renderMenuItem(item)}</SidebarMenuItem>
+              {index < visibleMenuConfig.length - 1 && <SidebarSeparator />}
             </React.Fragment>
           ))}
         </SidebarMenu>
