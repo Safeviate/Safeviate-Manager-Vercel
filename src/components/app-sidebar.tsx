@@ -66,13 +66,14 @@ export function AppSidebar() {
 
   const renderMenuItem = (item: MenuItemType) => {
     const isParentActive = pathname.startsWith(item.href);
+    const isSubItemActive = item.subItems?.some(sub => pathname.startsWith(sub.href));
 
     if (item.subItems) {
       return (
         <SidebarCollapsible defaultOpen={isParentActive}>
           <SidebarCollapsibleTrigger asChild>
             <SidebarMenuButton
-              isActive={isParentActive && !item.subItems.some(sub => pathname.startsWith(sub.href))}
+              isActive={isParentActive && !isSubItemActive}
               tooltip={item.label}
               className="justify-between"
             >
@@ -87,11 +88,9 @@ export function AppSidebar() {
             <SidebarMenuSub>
               {item.subItems.map((subItem) => (
                 <SidebarMenuSubItem key={subItem.href}>
-                  <Link href={subItem.href}>
+                  <Link href={subItem.href} onClick={handleLinkClick}>
                     <SidebarMenuSubButton
-                      asChild
                       isActive={pathname.startsWith(subItem.href)}
-                      onClick={handleLinkClick}
                     >
                       {subItem.label}
                     </SidebarMenuSubButton>
@@ -107,7 +106,7 @@ export function AppSidebar() {
     return (
       <Link href={item.href} className="w-full" onClick={handleLinkClick}>
         <SidebarMenuButton
-          isActive={pathname.startsWith(item.href)}
+          isActive={pathname === item.href}
           tooltip={item.label}
         >
           <item.icon />
@@ -138,11 +137,6 @@ export function AppSidebar() {
           {visibleMenuConfig.map((item, index) => (
             <React.Fragment key={item.href}>
               <SidebarMenuItem>{renderMenuItem(item)}</SidebarMenuItem>
-              {index < visibleMenuConfig.length - 1 &&
-                item.href !== '/users' &&
-                !pathname.startsWith('/users') && (
-                  <SidebarSeparator className="my-1 mx-2" />
-                )}
             </React.Fragment>
           ))}
         </SidebarMenu>
