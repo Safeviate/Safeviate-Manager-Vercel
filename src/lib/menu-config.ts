@@ -86,6 +86,24 @@ export const menuConfig: MenuItem[] = [
     href: '/users',
     label: 'Users',
     icon: Users,
+    subItems: [
+        {
+            href: '/users/personnel',
+            label: 'Personnel',
+        },
+        {
+            href: '/users/instructors',
+            label: 'Instructors',
+        },
+        {
+            href: '/users/private-pilots',
+            label: 'Private Pilots',
+        },
+        {
+            href: '/users/students',
+            label: 'Students',
+        }
+    ]
   },
   {
     href: '/admin',
