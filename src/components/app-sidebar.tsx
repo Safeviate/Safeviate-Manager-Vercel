@@ -64,14 +64,14 @@ export function AppSidebar() {
   };
 
   const renderMenuItem = (item: MenuItemType) => {
-    const isActive = pathname.startsWith(item.href);
+    const isParentActive = pathname.startsWith(item.href);
 
     if (item.subItems) {
       return (
-        <SidebarCollapsible defaultOpen={isActive}>
+        <SidebarCollapsible defaultOpen={isParentActive}>
           <SidebarCollapsibleTrigger asChild>
             <SidebarMenuButton
-              isActive={isActive}
+              isActive={isParentActive && !item.subItems.some(sub => pathname.startsWith(sub.href))}
               tooltip={item.label}
               className="justify-between"
             >
@@ -86,7 +86,7 @@ export function AppSidebar() {
             <SidebarMenuSub>
               {item.subItems.map((subItem) => (
                 <SidebarMenuSubItem key={subItem.href}>
-                  <Link href={subItem.href} passHref>
+                  <Link href={subItem.href}>
                     <SidebarMenuSubButton
                       isActive={pathname.startsWith(subItem.href)}
                       onClick={handleLinkClick}
