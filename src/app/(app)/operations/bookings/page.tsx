@@ -17,6 +17,7 @@ import { CalendarIcon } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { BookingForm } from './booking-form';
+import { useToast } from '@/hooks/use-toast';
 
 
 const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
@@ -126,6 +127,7 @@ export default function BookingsPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formInitialState, setFormInitialState] = useState<{ aircraft: Aircraft; time: string; date: Date; booking?: Booking } | null>(null);
+  const { toast } = useToast();
 
   const aircraftQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
@@ -187,6 +189,11 @@ export default function BookingsPage() {
     if (isSameDay(selectedDate, new Date()) && isBefore(clickedDateTime, new Date())) {
       // Don't open the form if the user is not clicking an existing booking
       if (!booking) {
+        toast({
+            variant: 'destructive',
+            title: 'Invalid Time',
+            description: 'Bookings cannot be created in the past.',
+        });
         return;
       }
     }
@@ -201,7 +208,7 @@ export default function BookingsPage() {
         booking: booking
     });
     setIsFormOpen(true);
-  }, [selectedDate]);
+  }, [selectedDate, toast]);
   
   const extraLanes = ['', '', '', ''];
 
