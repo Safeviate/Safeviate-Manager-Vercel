@@ -5,7 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { addHours, format, setHours, setMinutes, addDays, startOfDay } from 'date-fns';
-import { Timestamp, collection, doc } from 'firebase/firestore';
+import { Timestamp, collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '../../assets/page';
@@ -89,7 +89,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
       startTime: initialData.booking ? format(initialData.booking.startTime.toDate(), 'HH:mm') : initialData.time,
       endTime: initialData.booking ? format(initialData.booking.endTime.toDate(), 'HH:mm') : format(addHours(new Date(`1970-01-01T${initialData.time}`), 2), 'HH:mm'),
       status: initialData.booking?.status || 'Confirmed',
-      isOvernight: false,
+      isOvernight: !!initialData.booking?.overnightId,
       overnightEndTime: '02:00',
     },
   });
@@ -105,7 +105,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
   const onSubmit = (data: BookingFormValues) => {
     if (!firestore) return;
 
-    if (data.isOvernight) {
+    if (data.isOvernight && !isEditing) {
         handleOvernightBooking(data);
     } else {
         handleStandardBooking(data);
@@ -195,12 +195,50 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
 
   const handleDeleteBooking = async () => {
     if (!isEditing || !firestore) return;
-    const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', initialData.booking!.id);
-    await deleteDocumentNonBlocking(bookingRef);
-    toast({
-      title: 'Booking Deleted',
-      description: 'The booking has been permanently deleted.',
-    });
+
+    const { booking } = initialData;
+    if (!booking) return;
+
+    try {
+        if (booking.overnightId) {
+            // This is an overnight booking, delete all parts
+            const bookingsRef = collection(firestore, 'tenants', tenantId, 'bookings');
+            const q = query(bookingsRef, where('overnightId', '==', booking.overnightId));
+            const querySnapshot = await getDocs(q);
+
+            if (querySnapshot.empty) {
+                // Fallback to deleting just the single document if no others are found
+                await deleteDocumentNonBlocking(doc(firestore, 'tenants', tenantId, 'bookings', booking.id));
+            } else {
+                 const batch = writeBatch(firestore);
+                 querySnapshot.forEach((doc) => {
+                    batch.delete(doc.ref);
+                 });
+                 await batch.commit();
+            }
+            toast({
+                title: 'Overnight Booking Deleted',
+                description: 'All parts of the overnight booking have been deleted.',
+            });
+
+        } else {
+            // This is a standard booking
+            const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', booking.id);
+            await deleteDocumentNonBlocking(bookingRef);
+            toast({
+              title: 'Booking Deleted',
+              description: 'The booking has been permanently deleted.',
+            });
+        }
+    } catch (error) {
+        console.error("Error deleting booking(s):", error);
+        toast({
+            variant: "destructive",
+            title: "Deletion Failed",
+            description: "Could not delete the booking(s).",
+        });
+    }
+    
     onClose();
   }
 
@@ -344,9 +382,9 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
               name="endTime"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{isOvernight ? 'End Time (Day 1)' : 'End Time'}</FormLabel>
+                  <FormLabel>{isOvernight && !isEditing ? 'End Time (Day 1)' : 'End Time'}</FormLabel>
                   <FormControl>
-                    <Input type="time" {...field} disabled={isOvernight} />
+                    <Input type="time" {...field} disabled={isOvernight && !isEditing} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -354,7 +392,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
             />
           </div>
 
-          {isOvernight && (
+          {isOvernight && !isEditing && (
             <div className="grid grid-cols-2 gap-4">
                  <FormField
                     control={form.control}
@@ -412,7 +450,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
             <AlertDialogHeader>
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the booking from the database.
+                    This action cannot be undone. This will permanently delete the booking from the database. If this is an overnight booking, all parts will be deleted.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
