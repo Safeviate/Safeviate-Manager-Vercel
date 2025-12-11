@@ -96,7 +96,7 @@ export default function UsersPage() {
 
         <Card>
             <CardContent className="p-0">
-                 <Accordion type="multiple" className="w-full">
+                 <Accordion type="multiple" defaultValue={['Personnel', 'Instructors', 'Private Pilots', 'Students']} className="w-full">
                     {sections.map(section => (
                         <AccordionItem value={section.title} key={section.title}>
                             <AccordionTrigger className="px-6 text-lg font-medium hover:no-underline">

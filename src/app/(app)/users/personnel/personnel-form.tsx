@@ -32,7 +32,7 @@ interface PersonnelFormProps {
   departments: Department[];
 }
 
-const userTypes: UserProfile['userType'][] = ["Student", "Private Pilot", "Personnel", "Instructor"];
+const userTypes: UserProfile['userType'][] = ["Personnel", "Instructor", "Private Pilot", "Student"];
 
 const isPilotUserType = (userType: UserProfile['userType'] | ''): userType is PilotProfile['userType'] => {
     return userType === 'Student' || userType === 'Private Pilot' || userType === 'Instructor';
@@ -44,7 +44,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
   const [isOpen, setIsOpen] = useState(false);
 
   // Form state
-  const [userType, setUserType] = useState<UserProfile['userType'] | ''>('Personnel');
+  const [userType, setUserType] = useState<UserProfile['userType'] | ''>('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -112,7 +112,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
     addDocumentNonBlocking(collectionRef, newUser);
 
     toast({
-      title: 'Personnel Added',
+      title: 'User Added',
       description: `User ${firstName} ${lastName} is being created.`,
     });
 
@@ -120,7 +120,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
   };
 
   const resetForm = () => {
-    setUserType('Personnel');
+    setUserType('');
     setFirstName('');
     setLastName('');
     setEmail('');
@@ -149,18 +149,31 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
       <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add Personnel
+          Add User
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add New Personnel</DialogTitle>
+          <DialogTitle>Add New User</DialogTitle>
           <DialogDescription>
-            Create a new personnel user with their basic information. More details can be added after creation.
+            Create a new user with their basic information. More details can be added after creation.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-6 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="space-y-2 col-span-2">
+                    <Label htmlFor="userType">User Type</Label>
+                    <Select onValueChange={(value) => setUserType(value as UserProfile['userType'])} value={userType}>
+                        <SelectTrigger id="userType">
+                            <SelectValue placeholder="Select a user type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {userTypes.map(type => (
+                                <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
                 <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
                     <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
@@ -188,26 +201,28 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
                     </Select>
                 </div>
 
-                <div className="space-y-2">
-                    <Label htmlFor="department">Department</Label>
-                    <Select onValueChange={handleDepartmentChange} value={selectedDepartment?.id}>
-                        <SelectTrigger id="department">
-                            <SelectValue placeholder="Select a department" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {departments.map(dept => (
-                                <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
+                {!isPilotUserType(userType) && userType && (
+                    <div className="space-y-2">
+                        <Label htmlFor="department">Department</Label>
+                        <Select onValueChange={handleDepartmentChange} value={selectedDepartment?.id}>
+                            <SelectTrigger id="department">
+                                <SelectValue placeholder="Select a department" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {departments.map(dept => (
+                                    <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
             </div>
         </div>
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="outline">Cancel</Button>
           </DialogClose>
-          <Button onClick={handleAddUser}>Save Personnel</Button>
+          <Button onClick={handleAddUser}>Save User</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
