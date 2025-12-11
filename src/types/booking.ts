@@ -9,4 +9,5 @@ export type Booking = {
   startTime: Timestamp;
   endTime: Timestamp;
   status: 'Confirmed' | 'Pending' | 'Cancelled';
+  overnightId?: string;
 };

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { addHours, format, setHours, setMinutes } from 'date-fns';
+import { addHours, format, setHours, setMinutes, addDays, startOfDay } from 'date-fns';
 import { Timestamp, collection, doc } from 'firebase/firestore';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -35,6 +35,8 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
+import { v4 as uuidv4 } from 'uuid';
 
 
 interface BookingFormProps {
@@ -58,8 +60,13 @@ const bookingSchema = z.object({
   startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.'),
   endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.'),
   status: z.enum(['Confirmed', 'Pending', 'Cancelled']),
-}).refine(data => data.startTime < data.endTime, {
-  message: 'End time must be after start time.',
+  isOvernight: z.boolean(),
+  overnightEndTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.').optional(),
+}).refine(data => {
+    if (data.isOvernight) return true; // Validation for overnight is handled separately
+    return data.startTime < data.endTime;
+}, {
+  message: 'End time must be after start time for a single-day booking.',
   path: ['endTime'],
 });
 
@@ -82,12 +89,31 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
       startTime: initialData.booking ? format(initialData.booking.startTime.toDate(), 'HH:mm') : initialData.time,
       endTime: initialData.booking ? format(initialData.booking.endTime.toDate(), 'HH:mm') : format(addHours(new Date(`1970-01-01T${initialData.time}`), 2), 'HH:mm'),
       status: initialData.booking?.status || 'Confirmed',
+      isOvernight: false,
+      overnightEndTime: '02:00',
     },
   });
+  
+  const isOvernight = form.watch('isOvernight');
+
+  useEffect(() => {
+    if (isOvernight) {
+        form.setValue('endTime', '23:59');
+    }
+  }, [isOvernight, form]);
 
   const onSubmit = (data: BookingFormValues) => {
     if (!firestore) return;
 
+    if (data.isOvernight) {
+        handleOvernightBooking(data);
+    } else {
+        handleStandardBooking(data);
+    }
+    onClose();
+  };
+
+  const handleStandardBooking = (data: BookingFormValues) => {
     const [startHour, startMinute] = data.startTime.split(':').map(Number);
     const [endHour, endMinute] = data.endTime.split(':').map(Number);
     
@@ -101,24 +127,60 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
     };
 
     if (isEditing) {
-      // Update existing booking
       const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', initialData.booking!.id);
       updateDocumentNonBlocking(bookingRef, bookingData);
-      toast({
-        title: 'Booking Updated',
-        description: 'The booking has been successfully updated.',
-      });
+      toast({ title: 'Booking Updated', description: 'The booking has been successfully updated.' });
     } else {
-      // Create new booking
       const bookingsRef = collection(firestore, 'tenants', tenantId, 'bookings');
       addDocumentNonBlocking(bookingsRef, bookingData);
-      toast({
-        title: 'Booking Created',
-        description: 'The new booking has been added to the schedule.',
-      });
+      toast({ title: 'Booking Created', description: 'The new booking has been added to the schedule.' });
     }
-    onClose();
-  };
+  }
+
+  const handleOvernightBooking = (data: BookingFormValues) => {
+    const overnightId = uuidv4();
+
+    // Part 1: Booking for the current day
+    const [startHour, startMinute] = data.startTime.split(':').map(Number);
+    const startTime = setMinutes(setHours(initialData.date, startHour), startMinute);
+    const endTime = setMinutes(setHours(initialData.date, 23), 59);
+
+    const bookingData1 = {
+        ...data,
+        startTime: Timestamp.fromDate(startTime),
+        endTime: Timestamp.fromDate(endTime),
+        overnightId: overnightId,
+    };
+    delete bookingData1.isOvernight;
+    delete bookingData1.overnightEndTime;
+
+    // Part 2: Booking for the next day
+    const nextDay = addDays(startOfDay(initialData.date), 1);
+    const [overnightEndHour, overnightEndMinute] = (data.overnightEndTime || "00:00").split(':').map(Number);
+    
+    const nextDayStartTime = setMinutes(setHours(nextDay, 0), 0);
+    const nextDayEndTime = setMinutes(setHours(nextDay, overnightEndHour), overnightEndMinute);
+
+    const bookingData2 = {
+        ...data,
+        startTime: Timestamp.fromDate(nextDayStartTime),
+        endTime: Timestamp.fromDate(nextDayEndTime),
+        overnightId: overnightId,
+    };
+    delete bookingData2.isOvernight;
+    delete bookingData2.overnightEndTime;
+
+    // Save both bookings
+    const bookingsRef = collection(firestore, 'tenants', tenantId, 'bookings');
+    addDocumentNonBlocking(bookingsRef, bookingData1);
+    addDocumentNonBlocking(bookingsRef, bookingData2);
+
+    toast({
+        title: 'Overnight Booking Created',
+        description: 'The booking has been split into two parts for the schedule.',
+    });
+  }
+
 
   const handleCancelBooking = () => {
     if (!isEditing || !firestore) return;
@@ -241,6 +303,28 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
             />
           )}
 
+        {!isEditing && (
+            <FormField
+                control={form.control}
+                name="isOvernight"
+                render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                    <div className="space-y-0.5">
+                    <FormLabel>Overnight Booking</FormLabel>
+                    <FormMessage />
+                    </div>
+                    <FormControl>
+                    <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                    />
+                    </FormControl>
+                </FormItem>
+                )}
+            />
+        )}
+
+
           <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
@@ -260,15 +344,33 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
               name="endTime"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>End Time</FormLabel>
+                  <FormLabel>{isOvernight ? 'End Time (Day 1)' : 'End Time'}</FormLabel>
                   <FormControl>
-                    <Input type="time" {...field} />
+                    <Input type="time" {...field} disabled={isOvernight} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
+
+          {isOvernight && (
+            <div className="grid grid-cols-2 gap-4">
+                 <FormField
+                    control={form.control}
+                    name="overnightEndTime"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>End Time (Day 2)</FormLabel>
+                        <FormControl>
+                            <Input type="time" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+            </div>
+          )}
         </form>
         </ScrollArea>
       </Form>
