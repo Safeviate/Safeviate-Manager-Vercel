@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { addHours, format, setHours, setMinutes, addDays, startOfDay, isSameDay } from 'date-fns';
+import { addHours, format, setHours, setMinutes, addDays, startOfDay, isSameDay, endOfDay } from 'date-fns';
 import { Timestamp, collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useCollection } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -82,34 +82,49 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const getOvernightEndTime = () => {
-    if (isEditing && initialData.booking?.overnightId) {
-        // Find the other part of the booking
-        const otherPart = allBookings.find(b => 
-            b.overnightId === initialData.booking!.overnightId && 
-            b.id !== initialData.booking!.id
-        );
-        if (otherPart) {
-           return format(otherPart.endTime.toDate(), 'HH:mm');
-        }
-    }
-    return '08:00'; // Default for new overnight bookings
-  };
-
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
-    defaultValues: {
-      aircraftId: initialData.aircraft.id,
-      pilotId: initialData.booking?.pilotId || '',
-      instructorId: initialData.booking?.instructorId || '',
-      type: initialData.booking?.type || 'Student Training',
-      startTime: initialData.booking ? format(initialData.booking.startTime.toDate(), 'HH:mm') : initialData.time,
-      endTime: initialData.booking ? format(initialData.booking.endTime.toDate(), 'HH:mm') : format(addHours(new Date(`1970-01-01T${initialData.time}`), 2), 'HH:mm'),
-      status: initialData.booking?.status || 'Confirmed',
-      isOvernight: !!initialData.booking?.overnightId,
-      overnightEndTime: getOvernightEndTime(),
-    },
-  });
+    defaultValues: (() => {
+        const isEditMode = !!initialData.booking;
+        const isOvernightBooking = !!initialData.booking?.overnightId;
+
+        if (isEditMode && isOvernightBooking) {
+            const currentPart = initialData.booking!;
+            const otherPart = allBookings.find(b => 
+                b.overnightId === currentPart.overnightId && b.id !== currentPart.id
+            );
+
+            // Determine which part is Day 1 and which is Day 2
+            const day1Part = isSameDay(currentPart.startTime.toDate(), initialData.date) ? currentPart : otherPart;
+            const day2Part = isSameDay(currentPart.startTime.toDate(), initialData.date) ? otherPart : currentPart;
+            
+            return {
+                aircraftId: initialData.aircraft.id,
+                pilotId: currentPart.pilotId,
+                instructorId: currentPart.instructorId || '',
+                type: currentPart.type,
+                startTime: day1Part ? format(day1Part.startTime.toDate(), 'HH:mm') : '00:00',
+                endTime: day1Part ? format(day1Part.endTime.toDate(), 'HH:mm') : '23:59',
+                status: currentPart.status,
+                isOvernight: true,
+                overnightEndTime: day2Part ? format(day2Part.endTime.toDate(), 'HH:mm') : '08:00',
+            };
+        }
+
+        // Default values for new bookings or standard edit
+        return {
+            aircraftId: initialData.aircraft.id,
+            pilotId: initialData.booking?.pilotId || '',
+            instructorId: initialData.booking?.instructorId || '',
+            type: initialData.booking?.type || 'Student Training',
+            startTime: initialData.booking ? format(initialData.booking.startTime.toDate(), 'HH:mm') : initialData.time,
+            endTime: initialData.booking ? format(initialData.booking.endTime.toDate(), 'HH:mm') : format(addHours(new Date(`1970-01-01T${initialData.time}`), 2), 'HH:mm'),
+            status: initialData.booking?.status || 'Confirmed',
+            isOvernight: false,
+            overnightEndTime: '08:00',
+        };
+    })(),
+});
   
   const isOvernight = form.watch('isOvernight');
 
@@ -182,7 +197,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     // Part 1: Booking for the current day
     const [startHour, startMinute] = data.startTime.split(':').map(Number);
     const startTime = setMinutes(setHours(initialData.date, startHour), startMinute);
-    const endTime = setMinutes(setHours(initialData.date, 23), 59);
+    const endTime = endOfDay(initialData.date); // End of the first day
 
     const bookingData1: Partial<Booking> = {
         ...data,
@@ -198,7 +213,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     const nextDay = addDays(startOfDay(initialData.date), 1);
     const [overnightEndHour, overnightEndMinute] = (data.overnightEndTime || "00:00").split(':').map(Number);
     
-    const nextDayStartTime = setMinutes(setHours(nextDay, 0), 0);
+    const nextDayStartTime = startOfDay(nextDay);
     const nextDayEndTime = setMinutes(setHours(nextDay, overnightEndHour), overnightEndMinute);
 
     const bookingData2: Partial<Booking> = {
