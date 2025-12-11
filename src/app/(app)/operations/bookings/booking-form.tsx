@@ -37,6 +37,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { v4 as uuidv4 } from 'uuid';
+import { getNextBookingNumber } from './booking-functions';
 
 
 interface BookingFormProps {
@@ -102,29 +103,51 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
     }
   }, [isOvernight, form]);
 
-  const onSubmit = (data: BookingFormValues) => {
+  const onSubmit = async (data: BookingFormValues) => {
     if (!firestore) return;
-
-    if (data.isOvernight && !isEditing) {
-        handleOvernightBooking(data);
+  
+    if (isEditing) {
+      // Editing doesn't support changing overnight status or booking numbers for simplicity
+      handleStandardBooking(data, initialData.booking?.bookingNumber);
     } else {
-        handleStandardBooking(data);
+      try {
+        const bookingNumber = await getNextBookingNumber(firestore, tenantId, 'bookings');
+        if (data.isOvernight) {
+          handleOvernightBooking(data, bookingNumber);
+        } else {
+          handleStandardBooking(data, bookingNumber);
+        }
+      } catch (error) {
+        console.error(error);
+        toast({
+          variant: 'destructive',
+          title: 'Booking Failed',
+          description: 'Could not generate a booking number. Please try again.',
+        });
+        return; // Stop execution if we can't get a booking number
+      }
     }
     onClose();
   };
+  
 
-  const handleStandardBooking = (data: BookingFormValues) => {
+  const handleStandardBooking = (data: BookingFormValues, bookingNumber?: number) => {
     const [startHour, startMinute] = data.startTime.split(':').map(Number);
     const [endHour, endMinute] = data.endTime.split(':').map(Number);
     
     const startTime = setMinutes(setHours(initialData.date, startHour), startMinute);
     const endTime = setMinutes(setHours(initialData.date, endHour), endMinute);
 
-    const bookingData = {
+    const bookingData: Partial<Booking> = {
         ...data,
         startTime: Timestamp.fromDate(startTime),
         endTime: Timestamp.fromDate(endTime),
     };
+
+    if (bookingNumber) {
+        bookingData.bookingNumber = bookingNumber;
+    }
+
 
     if (isEditing) {
       const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', initialData.booking!.id);
@@ -137,7 +160,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
     }
   }
 
-  const handleOvernightBooking = (data: BookingFormValues) => {
+  const handleOvernightBooking = (data: BookingFormValues, bookingNumber: number) => {
     const overnightId = uuidv4();
 
     // Part 1: Booking for the current day
@@ -145,14 +168,15 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
     const startTime = setMinutes(setHours(initialData.date, startHour), startMinute);
     const endTime = setMinutes(setHours(initialData.date, 23), 59);
 
-    const bookingData1 = {
+    const bookingData1: Partial<Booking> = {
         ...data,
+        bookingNumber,
         startTime: Timestamp.fromDate(startTime),
         endTime: Timestamp.fromDate(endTime),
         overnightId: overnightId,
     };
-    delete bookingData1.isOvernight;
-    delete bookingData1.overnightEndTime;
+    delete (bookingData1 as any).isOvernight;
+    delete (bookingData1 as any).overnightEndTime;
 
     // Part 2: Booking for the next day
     const nextDay = addDays(startOfDay(initialData.date), 1);
@@ -161,14 +185,15 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
     const nextDayStartTime = setMinutes(setHours(nextDay, 0), 0);
     const nextDayEndTime = setMinutes(setHours(nextDay, overnightEndHour), overnightEndMinute);
 
-    const bookingData2 = {
+    const bookingData2: Partial<Booking> = {
         ...data,
+        bookingNumber,
         startTime: Timestamp.fromDate(nextDayStartTime),
         endTime: Timestamp.fromDate(nextDayEndTime),
         overnightId: overnightId,
     };
-    delete bookingData2.isOvernight;
-    delete bookingData2.overnightEndTime;
+    delete (bookingData2 as any).isOvernight;
+    delete (bookingData2 as any).overnightEndTime;
 
     // Save both bookings
     const bookingsRef = collection(firestore, 'tenants', tenantId, 'bookings');
@@ -177,7 +202,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
 
     toast({
         title: 'Overnight Booking Created',
-        description: 'The booking has been split into two parts for the schedule.',
+        description: `Booking #${bookingNumber} has been split for the schedule.`,
     });
   }
 
@@ -464,3 +489,5 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
     </>
   );
 }
+
+    

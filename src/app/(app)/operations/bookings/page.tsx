@@ -56,7 +56,7 @@ const BookingItem = ({ booking, pilots, selectedDate, onClick }: { booking: Book
             style={{ top: `${top}px`, height: `${height}px` }}
         >
             {hasContinuationTop && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-b from-black/20 to-transparent" />}
-            <p className="font-semibold truncate">{booking.type}</p>
+            <p className="font-semibold truncate">{booking.bookingNumber ? `#${booking.bookingNumber} - ` : ''}{booking.type}</p>
             <p className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}</p>
             {booking.status === 'Cancelled' && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
             {hasContinuationBottom && <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-t from-black/20 to-transparent" />}
@@ -341,3 +341,5 @@ export default function BookingsPage() {
     </>
   );
 }
+
+    
