@@ -23,7 +23,7 @@ export function PersonnelTable({ data, rolesMap, departmentsMap, tenantId }: Per
   if (data.length === 0) {
     return (
         <div className="text-center h-24 flex items-center justify-center text-muted-foreground">
-            No personnel found.
+            No personnel found. Add one to get started.
         </div>
     );
   }

@@ -124,27 +124,34 @@ export default function PersonnelPage() {
 
   return (
     <div className="flex flex-col gap-6 h-full">
+      <div className="flex justify-between items-center">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight">Personnel</h1>
+            <p className="text-muted-foreground">Manage all non-flying staff in your organization.</p>
+        </div>
+        <PersonnelForm tenantId={tenantId} roles={roles || []} departments={departments || []} />
+      </div>
+
       <Card>
-        <CardHeader>
-          <CardTitle>Personnel</CardTitle>
-          <CardDescription>
-            A list of all non-flying staff within your organization. This is now managed on the main Users page.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {isLoading && (
-            <div className="text-center p-4">Loading personnel...</div>
+            <div className="text-center p-8">Loading personnel...</div>
           )}
           {!isLoading && error && (
-            <div className="text-center p-4 text-destructive">Error: {error.message}</div>
+            <div className="text-center p-8 text-destructive">
+              Error: {error.message}
+            </div>
           )}
-          {!isLoading && !error && personnel && (
-            <PersonnelTable data={personnel} rolesMap={rolesMap} departmentsMap={departmentsMap} tenantId={tenantId} />
+          {!isLoading && !error && (
+            <PersonnelTable 
+              data={personnel || []} 
+              rolesMap={rolesMap} 
+              departmentsMap={departmentsMap} 
+              tenantId={tenantId} 
+            />
           )}
         </CardContent>
       </Card>
     </div>
   );
 }
-
-    
