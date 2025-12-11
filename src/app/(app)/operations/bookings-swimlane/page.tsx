@@ -1,30 +1,18 @@
 
 'use client';
 
-import { useMemo, useState, useCallback, useEffect } from 'react';
-import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useMemo, useState, useEffect } from 'react';
+import { collection, query, where, Timestamp } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Aircraft } from '../../assets/page';
 import type { Booking } from '@/types/booking';
 import type { PilotProfile } from '../../users/personnel/page';
-import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, setHours, setMinutes, setSeconds, setMilliseconds, isSameDay } from 'date-fns';
+import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
-import { BookingForm } from '../bookings/booking-form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { CalendarIcon } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 
@@ -32,12 +20,7 @@ import { CustomCalendar } from '@/components/ui/custom-calendar';
 const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
 const TOTAL_HOURS = 24;
 
-const BookingItem = ({ booking, pilots, tenantId, onEdit, selectedDate }: { booking: Booking, pilots: PilotProfile[], tenantId: string, onEdit: () => void, selectedDate: Date }) => {
-    const firestore = useFirestore();
-    const { toast } = useToast();
-    const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
-    const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-
+const BookingItem = ({ booking, pilots, selectedDate }: { booking: Booking, pilots: PilotProfile[], selectedDate: Date }) => {
     const startTime = booking.startTime.toDate();
     const endTime = booking.endTime.toDate();
 
@@ -57,89 +40,32 @@ const BookingItem = ({ booking, pilots, tenantId, onEdit, selectedDate }: { book
 
     const pilot = pilots.find(p => p.id === booking.pilotId);
     
-    const handleCancelBooking = () => {
-        if (!firestore) return;
-        const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', booking.id);
-        updateDocumentNonBlocking(bookingRef, { status: 'Cancelled' });
-        toast({ title: 'Booking Cancelled', description: 'The booking status has been updated to "Cancelled".' });
-        setIsPopoverOpen(false);
-    };
-
-    const handleDeleteBooking = () => {
-        if (!firestore) return;
-        const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', booking.id);
-        deleteDocumentNonBlocking(bookingRef);
-        toast({ title: 'Booking Deleted', description: 'The booking has been permanently removed.' });
-        setIsDeleteAlertOpen(false);
-        setIsPopoverOpen(false);
-    };
-
-    const handleEditClick = () => {
-        onEdit();
-        setIsPopoverOpen(false);
-    }
-    
     const hasContinuationTop = !startsOnSelectedDay;
     const hasContinuationBottom = !endsOnSelectedDay;
 
     return (
-        <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-            <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-                <PopoverTrigger asChild>
-                     <div
-                        className={cn(
-                        'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity z-10 min-h-[40px] rounded-none',
-                        booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80',
-                        hasContinuationTop ? 'rounded-t-none' : '',
-                        hasContinuationBottom ? 'rounded-b-none' : '',
-                        )}
-                        style={{ top: `${top}px`, height: `${height}px` }}
-                    >
-                        {hasContinuationTop && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-b from-black/20 to-transparent" />}
-                        <p className="font-semibold truncate">{booking.type}</p>
-                        <p className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}</p>
-                        {booking.status === 'Cancelled' && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
-                        {hasContinuationBottom && <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-t from-black/20 to-transparent" />}
-                    </div>
-                </PopoverTrigger>
-                 <PopoverContent className="w-56 p-2">
-                    <div className="flex flex-col gap-2">
-                         <p className="text-sm font-semibold p-2">{booking.type}</p>
-                         <Button variant="outline" size="sm" onClick={handleEditClick}>
-                            Edit Booking
-                         </Button>
-                         {booking.status !== 'Cancelled' && (
-                            <Button variant="outline" size="sm" onClick={handleCancelBooking}>
-                                Cancel Booking
-                            </Button>
-                         )}
-                        <Button variant="destructive" size="sm" onClick={() => setIsDeleteAlertOpen(true)}>
-                            Delete Booking
-                        </Button>
-                    </div>
-                </PopoverContent>
-            </Popover>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the booking.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteBooking} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+         <div
+            className={cn(
+            'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground z-10 min-h-[40px] rounded-none',
+            booking.status === 'Cancelled' ? 'bg-destructive/80' : 'bg-primary/80',
+            hasContinuationTop ? 'rounded-t-none' : '',
+            hasContinuationBottom ? 'rounded-b-none' : '',
+            )}
+            style={{ top: `${top}px`, height: `${height}px` }}
+        >
+            {hasContinuationTop && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-b from-black/20 to-transparent" />}
+            <p className="font-semibold truncate">{booking.type}</p>
+            <p className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}</p>
+            {booking.status === 'Cancelled' && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
+            {hasContinuationBottom && <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-t from-black/20 to-transparent" />}
+        </div>
     )
 }
 
-const AircraftColumn = ({ aircraft, bookings, pilots, tenantId, onGridClick, onBookingEdit, showNowLine, nowLinePosition, selectedDate }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; tenantId: string; onGridClick: (e: React.MouseEvent<HTMLDivElement>, ac: Aircraft) => void; onBookingEdit: (booking: Booking, ac: Aircraft) => void; showNowLine: boolean; nowLinePosition: number; selectedDate: Date; }) => {
+const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePosition, selectedDate }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; showNowLine: boolean; nowLinePosition: number; selectedDate: Date; }) => {
   return (
     <div 
         className="flex-1 relative border-r min-w-[150px]"
-        // onClick={(e) => aircraft && onGridClick(e, aircraft)}
     >
       {/* Hour lines and labels for this column */}
       {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
@@ -171,8 +97,6 @@ const AircraftColumn = ({ aircraft, bookings, pilots, tenantId, onGridClick, onB
             key={booking.id} 
             booking={booking}
             pilots={pilots}
-            tenantId={tenantId}
-            onEdit={() => aircraft && onBookingEdit(booking, aircraft)}
             selectedDate={selectedDate}
         />
       ))}
@@ -185,10 +109,6 @@ export default function BookingsSwimlanePage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate'; // Hardcoded for now
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const { toast } = useToast();
-
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formInitialData, setFormInitialData] = useState<{ aircraft: Aircraft, startTime: Date, booking?: Booking | null } | null>(null);
 
   const [nowLinePosition, setNowLinePosition] = useState(0);
   const [showNowLine, setShowNowLine] = useState(false);
@@ -202,13 +122,9 @@ export default function BookingsSwimlanePage() {
     if (!firestore) return null;
     const start = Timestamp.fromDate(startOfDay(selectedDate));
     const end = Timestamp.fromDate(endOfDay(selectedDate));
-    // Query for bookings that START before the end of the day
-    // AND END after the start of the day. This covers all overlapping scenarios.
     return query(
         collection(firestore, 'tenants', tenantId, 'bookings'),
         where('startTime', '<=', end),
-        // Firestore doesn't allow two range filters on different fields.
-        // We'll filter the endTime on the client side.
     );
   }, [firestore, tenantId, selectedDate]);
 
@@ -249,41 +165,6 @@ export default function BookingsSwimlanePage() {
     return () => clearInterval(interval);
   }, [selectedDate]);
   
-  const handleGridClick = useCallback((e: React.MouseEvent<HTMLDivElement>, ac: Aircraft) => {
-    if ((e.target as HTMLElement).closest('.cursor-pointer')) {
-        return;
-    }
-
-    const gridRect = e.currentTarget.getBoundingClientRect();
-    const clickY = e.clientY - gridRect.top + e.currentTarget.scrollTop;
-    
-    const totalHeight = TOTAL_HOURS * HOUR_HEIGHT_PX;
-    const minutesFromStart = (clickY / totalHeight) * (TOTAL_HOURS * 60);
-    
-    const hour = Math.floor(minutesFromStart / 60);
-    const minute = Math.floor(minutesFromStart % 60);
-
-    const clickedTime = setMilliseconds(setSeconds(setMinutes(setHours(startOfDay(selectedDate), hour), minute), 0), 0);
-
-    if (clickedTime < new Date()) {
-        toast({
-            variant: 'destructive',
-            title: 'Cannot Book in the Past',
-            description: 'Please select a future time slot for the booking.',
-        });
-        return;
-    }
-
-    setFormInitialData({ aircraft: ac, startTime: clickedTime, booking: null });
-    setIsFormOpen(true);
-  }, [selectedDate, toast]);
-  
-  const handleBookingEdit = useCallback((booking: Booking, ac: Aircraft) => {
-    setFormInitialData({ aircraft: ac, startTime: booking.startTime.toDate(), booking });
-    setIsFormOpen(true);
-  }, []);
-
-
   const extraLanes = ['', '', '', ''];
 
   return (
@@ -351,9 +232,6 @@ export default function BookingsSwimlanePage() {
                       aircraft={ac}
                       bookings={(bookings || []).filter(b => b.aircraftId === ac.id)}
                       pilots={pilots || []}
-                      tenantId={tenantId}
-                      onGridClick={handleGridClick}
-                      onBookingEdit={handleBookingEdit}
                       showNowLine={showNowLine}
                       nowLinePosition={nowLinePosition}
                       selectedDate={selectedDate}
@@ -364,9 +242,6 @@ export default function BookingsSwimlanePage() {
                         key={`extra-lane-${index}`}
                         bookings={[]}
                         pilots={[]}
-                        tenantId={tenantId}
-                        onGridClick={() => {}}
-                        onBookingEdit={() => {}}
                         showNowLine={showNowLine}
                         nowLinePosition={nowLinePosition}
                         selectedDate={selectedDate}
@@ -380,19 +255,6 @@ export default function BookingsSwimlanePage() {
         </CardContent>
       </Card>
     </div>
-     {formInitialData && (
-        <BookingForm
-            isOpen={isFormOpen}
-            onOpenChange={setIsFormOpen}
-            tenantId={tenantId}
-            aircraft={formInitialData.aircraft}
-            pilots={pilots || []}
-            initialStartTime={formInitialData.startTime}
-            booking={formInitialData.booking}
-        />
-    )}
     </>
   );
 }
-
-    
