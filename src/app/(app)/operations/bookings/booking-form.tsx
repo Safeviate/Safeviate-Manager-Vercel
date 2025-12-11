@@ -131,10 +131,10 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
     onClose();
   };
 
-  const handleDeleteBooking = () => {
+  const handleDeleteBooking = async () => {
     if (!isEditing || !firestore) return;
     const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', initialData.booking!.id);
-    deleteDocumentNonBlocking(bookingRef);
+    await deleteDocumentNonBlocking(bookingRef);
     toast({
       title: 'Booking Deleted',
       description: 'The booking has been permanently deleted.',
@@ -153,7 +153,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
 
       <Form {...form}>
       <ScrollArea className="max-h-[60vh]">
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pr-1">
           <FormField
             control={form.control}
             name="aircraftId"
@@ -269,22 +269,22 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
               )}
             />
           </div>
-          <DialogFooter className="pt-4 flex flex-row justify-center items-stretch gap-2">
-            <Button type="submit" className='flex-1'>{isEditing ? 'Save' : 'Create Booking'}</Button>
-             {isEditing && (
-                <>
-                  <Button type="button" variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} className='flex-1'>
-                      Delete
-                  </Button>
-                  <Button type="button" variant="outline" className='text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive flex-1' onClick={() => setIsCancelDialogOpen(true)} >
-                      Cancel
-                  </Button>
-                </>
-            )}
-          </DialogFooter>
         </form>
         </ScrollArea>
       </Form>
+      <DialogFooter className="pt-4 flex flex-row justify-center items-stretch gap-2">
+          <Button type="submit" className='flex-1' onClick={form.handleSubmit(onSubmit)}>{isEditing ? 'Save' : 'Create Booking'}</Button>
+            {isEditing && (
+              <>
+                <Button type="button" variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} className='flex-1'>
+                    Delete
+                </Button>
+                <Button type="button" variant="outline" className='text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive flex-1' onClick={() => setIsCancelDialogOpen(true)} >
+                    Cancel
+                </Button>
+              </>
+          )}
+      </DialogFooter>
       
       {/* Cancel Confirmation */}
       <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
