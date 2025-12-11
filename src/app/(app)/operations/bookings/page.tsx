@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import type { Aircraft } from '../../assets/page';
 import type { Booking } from '@/types/booking';
 import type { PilotProfile } from '../../users/personnel/page';
-import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, startOfHour } from 'date-fns';
+import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addHours, addDays, startOfHour } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
