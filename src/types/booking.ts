@@ -13,5 +13,3 @@ export type Booking = {
   overnightId?: string;
   cancellationReason?: string;
 };
-
-    
