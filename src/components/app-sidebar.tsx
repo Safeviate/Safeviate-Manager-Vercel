@@ -11,8 +11,8 @@ import {
   SidebarSeparator,
   useSidebar,
   SidebarCollapsible,
-  SidebarCollapsibleContent,
   SidebarCollapsibleTrigger,
+  SidebarCollapsibleContent,
   SidebarMenuSub,
   SidebarMenuSubItem,
   SidebarMenuSubButton,
@@ -88,6 +88,7 @@ export function AppSidebar() {
                 <SidebarMenuSubItem key={subItem.href}>
                   <Link href={subItem.href}>
                     <SidebarMenuSubButton
+                      asChild
                       isActive={pathname.startsWith(subItem.href)}
                       onClick={handleLinkClick}
                     >
