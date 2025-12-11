@@ -1,4 +1,3 @@
-
 'use client';
 import {
   Sidebar,
@@ -87,7 +86,7 @@ export function AppSidebar() {
                   <SidebarMenuSub>
                       {item.subItems.map(subItem => (
                           <SidebarMenuSubItem key={subItem.href}>
-                              <Link href={subItem.href} passHref legacyBehavior>
+                              <Link href={subItem.href}>
                                   <SidebarMenuSubButton asChild isActive={pathname.startsWith(subItem.href)} onClick={handleLinkClick}>
                                       {subItem.label}
                                   </SidebarMenuSubButton>
