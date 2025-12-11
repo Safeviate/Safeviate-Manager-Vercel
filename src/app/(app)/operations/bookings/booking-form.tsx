@@ -153,7 +153,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
 
       <Form {...form}>
       <ScrollArea className="max-h-[60vh]">
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 pr-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-1">
           <FormField
             control={form.control}
             name="aircraftId"
