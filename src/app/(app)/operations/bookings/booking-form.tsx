@@ -107,8 +107,8 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
             } else if (otherPart) {
                 day1Part = otherPart;
                 day2Part = currentPart;
-            } else {
-                day1Part = currentPart; // In case the other part is not found
+            } else { // Fallback if only one part is found (e.g. other part is on a different day than fetched)
+                day1Part = currentPart;
             }
             
             return {
@@ -316,7 +316,11 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
 
 
   const handleCancelBooking = () => {
-    if (!isEditing || !firestore || !cancellationReason.trim()) {
+    if (!isEditing || !firestore) {
+        return;
+    }
+
+    if (!cancellationReason.trim()) {
         toast({
             variant: 'destructive',
             title: 'Reason Required',
