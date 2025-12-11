@@ -137,7 +137,7 @@ export default function BookingsPage() {
   const bookingsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     const start = Timestamp.fromDate(startOfDay(selectedDate));
-    const end = Timestamp.fromDate(endOfDay(selectedDate));
+    const end = Timestamp.fromDate(endOfDay(addDays(selectedDate, 1))); // Fetch bookings that could end on the next day
     return query(
         collection(firestore, 'tenants', tenantId, 'bookings'),
         where('startTime', '<=', end),
@@ -156,7 +156,8 @@ export default function BookingsPage() {
   const bookings = useMemo(() => {
     if (!allBookings) return [];
     const dayStart = startOfDay(selectedDate);
-    return allBookings.filter(b => b.endTime.toDate() >= dayStart);
+    const dayEnd = endOfDay(selectedDate);
+    return allBookings.filter(b => b.startTime.toDate() <= dayEnd && b.endTime.toDate() >= dayStart);
   }, [allBookings, selectedDate]);
 
 
@@ -191,7 +192,7 @@ export default function BookingsPage() {
         setFormInitialState({
             aircraft,
             time: format(booking.startTime.toDate(), 'HH:mm'),
-            date: booking.startTime.toDate(),
+            date: startOfDay(booking.startTime.toDate()), // Ensure date is correct, esp for overnight
             booking: booking
         });
         setIsFormOpen(true);
@@ -330,6 +331,7 @@ export default function BookingsPage() {
                     tenantId={tenantId}
                     aircraftList={aircraft || []}
                     pilotList={pilots || []}
+                    allBookings={allBookings || []}
                     initialData={formInitialState}
                     onClose={() => setIsFormOpen(false)}
                 />

@@ -5,9 +5,9 @@ import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { addHours, format, setHours, setMinutes, addDays, startOfDay } from 'date-fns';
+import { addHours, format, setHours, setMinutes, addDays, startOfDay, isSameDay } from 'date-fns';
 import { Timestamp, collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useCollection } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
@@ -45,6 +45,7 @@ interface BookingFormProps {
   tenantId: string;
   aircraftList: Aircraft[];
   pilotList: PilotProfile[];
+  allBookings: Booking[]; // Pass all bookings to find the other part of an overnight booking
   initialData: {
     aircraft: Aircraft;
     time: string;
@@ -74,12 +75,26 @@ const bookingSchema = z.object({
 
 type BookingFormValues = z.infer<typeof bookingSchema>;
 
-export function BookingForm({ tenantId, aircraftList, pilotList, initialData, onClose }: BookingFormProps) {
+export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, initialData, onClose }: BookingFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const isEditing = !!initialData.booking;
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const getOvernightEndTime = () => {
+    if (isEditing && initialData.booking?.overnightId) {
+        // Find the other part of the booking
+        const otherPart = allBookings.find(b => 
+            b.overnightId === initialData.booking!.overnightId && 
+            b.id !== initialData.booking!.id
+        );
+        if (otherPart) {
+           return format(otherPart.endTime.toDate(), 'HH:mm');
+        }
+    }
+    return '08:00'; // Default for new overnight bookings
+  };
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
@@ -92,23 +107,23 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
       endTime: initialData.booking ? format(initialData.booking.endTime.toDate(), 'HH:mm') : format(addHours(new Date(`1970-01-01T${initialData.time}`), 2), 'HH:mm'),
       status: initialData.booking?.status || 'Confirmed',
       isOvernight: !!initialData.booking?.overnightId,
-      overnightEndTime: '02:00',
+      overnightEndTime: getOvernightEndTime(),
     },
   });
   
   const isOvernight = form.watch('isOvernight');
 
   useEffect(() => {
-    if (isOvernight) {
+    if (isOvernight && !isEditing) {
         form.setValue('endTime', '23:59');
     }
-  }, [isOvernight, form]);
+  }, [isOvernight, form, isEditing]);
 
   const onSubmit = async (data: BookingFormValues) => {
     if (!firestore) return;
   
     if (isEditing) {
-      // Editing doesn't support changing overnight status or booking numbers for simplicity
+      // For simplicity, editing overnight bookings only updates details, not structure
       handleStandardBooking(data, initialData.booking?.bookingNumber);
     } else {
       try {
@@ -267,7 +282,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
       <DialogHeader>
         <DialogTitle>{isEditing ? 'Edit Booking' : 'Create Booking'}</DialogTitle>
         <DialogDescription>
-          {isEditing ? `Editing booking for ${initialData.aircraft.tailNumber}` : `New booking for ${initialData.aircraft.tailNumber} on ${format(initialData.date, 'PPP')}`}
+          {isEditing ? `Editing booking #${initialData.booking?.bookingNumber} for ${initialData.aircraft.tailNumber}` : `New booking for ${initialData.aircraft.tailNumber} on ${format(initialData.date, 'PPP')}`}
         </DialogDescription>
       </DialogHeader>
 
@@ -361,26 +376,25 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
             />
           )}
 
-        {!isEditing && (
-            <FormField
-                control={form.control}
-                name="isOvernight"
-                render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                    <div className="space-y-0.5">
-                    <FormLabel>Overnight Booking</FormLabel>
-                    <FormMessage />
-                    </div>
-                    <FormControl>
-                    <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                    />
-                    </FormControl>
-                </FormItem>
-                )}
-            />
-        )}
+          <FormField
+              control={form.control}
+              name="isOvernight"
+              render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                  <FormLabel>Overnight Booking</FormLabel>
+                  <FormMessage />
+                  </div>
+                  <FormControl>
+                  <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isEditing}
+                  />
+                  </FormControl>
+              </FormItem>
+              )}
+          />
 
 
           <div className="grid grid-cols-2 gap-4">
@@ -402,9 +416,9 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
               name="endTime"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{isOvernight && !isEditing ? 'End Time (Day 1)' : 'End Time'}</FormLabel>
+                  <FormLabel>{isOvernight ? 'End Time (Day 1)' : 'End Time'}</FormLabel>
                   <FormControl>
-                    <Input type="time" {...field} disabled={isOvernight && !isEditing} />
+                    <Input type="time" {...field} disabled={isOvernight} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -412,7 +426,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
             />
           </div>
 
-          {isOvernight && !isEditing && (
+          {isOvernight && (
             <div className="grid grid-cols-2 gap-4">
                  <FormField
                     control={form.control}
