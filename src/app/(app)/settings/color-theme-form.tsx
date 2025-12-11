@@ -239,7 +239,7 @@ export function ColorThemeForm() {
         
         <div>
           <h3 className="text-lg font-medium mb-4">Swimlane Header Theme</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {Object.entries(swimlaneTheme).map(([name, value]) => (
               <div key={name} className="space-y-2">
                 <Label htmlFor={name} className="capitalize">{name.replace('swimlane-header-', '')}</Label>
@@ -261,7 +261,7 @@ export function ColorThemeForm() {
 
         <div>
           <h3 className="text-lg font-medium mb-4">Card Theme</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {Object.entries(cardTheme).map(([name, value]) => (
               <div key={name} className="space-y-2">
                 <Label htmlFor={name} className="capitalize">{name.replace('card-', '')}</Label>
@@ -283,7 +283,7 @@ export function ColorThemeForm() {
         
         <div>
           <h3 className="text-lg font-medium mb-4">Popover & Dropdown Theme</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {Object.entries(popoverTheme).map(([name, value]) => (
               <div key={name} className="space-y-2">
                 <Label htmlFor={name} className="capitalize">{name.replace('popover-', '')}</Label>
@@ -305,7 +305,7 @@ export function ColorThemeForm() {
 
         <div>
           <h3 className="text-lg font-medium mb-4">Sidebar Theme</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {Object.entries(sidebarTheme).map(([name, value]) => (
               <div key={name} className="space-y-2">
                 <Label htmlFor={name} className="capitalize">{name.replace('sidebar-', '')}</Label>

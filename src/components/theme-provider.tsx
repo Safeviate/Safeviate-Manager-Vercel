@@ -36,6 +36,7 @@ type SidebarThemeColors = {
   'sidebar-accent': string;
   'sidebar-accent-foreground': string;
   'sidebar-border': string;
+  'sidebar-ring': string;
 };
 
 type HeaderThemeColors = {
@@ -120,6 +121,7 @@ const defaultSidebarColors: SidebarThemeColors = {
   'sidebar-accent': '#f1f5f9',
   'sidebar-accent-foreground': '#1e293b',
   'sidebar-border': '#94a3b8',
+  'sidebar-ring': '#60a5fa',
 };
 const defaultHeaderColors: HeaderThemeColors = {
   'header-background': '#ebf5fb',
