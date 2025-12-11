@@ -39,7 +39,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { v4 as uuidv4 } from 'uuid';
-import { getNextBookingNumber, deleteBookings } from './booking-functions';
+import { deleteBookings, getNextBookingNumber } from './booking-functions';
 
 
 interface BookingFormProps {
@@ -108,7 +108,9 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                 day1Part = otherPart;
                 day2Part = currentPart;
             } else { // Fallback if only one part is found (e.g. other part is on a different day than fetched)
-                day1Part = currentPart;
+                const sortedParts = allBookings.filter(b => b.overnightId === currentPart.overnightId).sort((a,b) => a.startTime.toMillis() - b.startTime.toMillis());
+                day1Part = sortedParts[0];
+                day2Part = sortedParts[1];
             }
             
             return {
@@ -121,6 +123,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                 status: currentPart.status,
                 isOvernight: true,
                 overnightEndTime: day2Part ? format(day2Part.endTime.toDate(), 'HH:mm') : '08:00',
+                cancellationReason: currentPart.cancellationReason || day2Part?.cancellationReason || '',
             };
         }
 
@@ -135,6 +138,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
             status: initialData.booking?.status || 'Confirmed',
             isOvernight: false,
             overnightEndTime: '08:00',
+            cancellationReason: initialData.booking?.cancellationReason || '',
         };
     })(),
 });
@@ -554,14 +558,14 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
         </ScrollArea>
       </Form>
       <DialogFooter className="pt-4 flex flex-row justify-center items-stretch gap-2">
-          <Button type="submit" className='flex-1' onClick={form.handleSubmit(onSubmit)}>{isEditing ? 'Save' : 'Create Booking'}</Button>
+          <Button type="submit" className='flex-1' onClick={form.handleSubmit(onSubmit)}>{isEditing ? 'Save Changes' : 'Create Booking'}</Button>
             {isEditing && (
               <>
                 <Button type="button" variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} className='flex-1'>
                     Delete
                 </Button>
                 <Button type="button" variant="outline" className='text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive flex-1' onClick={() => setIsCancelDialogOpen(true)} >
-                    Cancel
+                    Cancel Booking
                 </Button>
               </>
           )}
