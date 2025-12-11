@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import {
@@ -62,9 +63,10 @@ const bookingSchema = z.object({
   type: z.enum(['Student Training', 'Hire and Fly'], { required_error: 'Booking type is required.' }),
   startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.'),
   endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.'),
-  status: z.enum(['Confirmed', 'Pending', 'Cancelled']),
+  status: z.enum(['Confirmed', 'Pending', 'Cancelled', 'Cancelled with Reason']),
   isOvernight: z.boolean(),
   overnightEndTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.').optional(),
+  cancellationReason: z.string().optional(),
 }).refine(data => {
     if (data.isOvernight) return true; // Validation for overnight is handled separately
     return data.startTime < data.endTime;
@@ -81,6 +83,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const isEditing = !!initialData.booking;
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState('');
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
@@ -313,13 +316,25 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
 
 
   const handleCancelBooking = () => {
-    if (!isEditing || !firestore) return;
+    if (!isEditing || !firestore || !cancellationReason.trim()) {
+        toast({
+            variant: 'destructive',
+            title: 'Reason Required',
+            description: 'Please provide a reason for the cancellation.',
+        });
+        return;
+    }
+
     const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', initialData.booking!.id);
-    updateDocumentNonBlocking(bookingRef, { status: 'Cancelled' });
+    updateDocumentNonBlocking(bookingRef, { status: 'Cancelled with Reason', cancellationReason: cancellationReason });
+    
     toast({
       title: 'Booking Cancelled',
-      description: 'The booking has been marked as cancelled.',
+      description: 'The booking has been marked as cancelled with a reason.',
     });
+
+    setIsCancelDialogOpen(false);
+    setCancellationReason('');
     onClose();
   };
 
@@ -555,11 +570,20 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
             <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure you want to cancel?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This will mark the booking as cancelled but it will remain in the system.
+                    Please provide a reason for cancelling this booking. This action cannot be undone.
                 </AlertDialogDescription>
             </AlertDialogHeader>
+            <div className="py-4">
+                <Label htmlFor="cancellation-reason" className="sr-only">Cancellation Reason</Label>
+                <Textarea
+                    id="cancellation-reason"
+                    placeholder="Type your reason here..."
+                    value={cancellationReason}
+                    onChange={(e) => setCancellationReason(e.target.value)}
+                />
+            </div>
             <AlertDialogFooter>
-                <AlertDialogCancel>Go Back</AlertDialogCancel>
+                <AlertDialogCancel onClick={() => setCancellationReason('')}>Go Back</AlertDialogCancel>
                 <AlertDialogAction onClick={handleCancelBooking} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
                     Yes, Cancel Booking
                 </AlertDialogAction>

@@ -9,8 +9,9 @@ export type Booking = {
   type: 'Student Training' | 'Hire and Fly';
   startTime: Timestamp;
   endTime: Timestamp;
-  status: 'Confirmed' | 'Pending' | 'Cancelled';
+  status: 'Confirmed' | 'Pending' | 'Cancelled' | 'Cancelled with Reason';
   overnightId?: string;
+  cancellationReason?: string;
 };
 
     

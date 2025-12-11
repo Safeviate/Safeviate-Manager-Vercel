@@ -45,11 +45,15 @@
         "status": {
           "type": "string",
           "description": "The status of the booking.",
-          "enum": ["Confirmed", "Pending", "Cancelled"]
+          "enum": ["Confirmed", "Pending", "Cancelled", "Cancelled with Reason"]
         },
         "overnightId": {
           "type": "string",
           "description": "A unique ID to link parts of an overnight booking."
+        },
+        "cancellationReason": {
+            "type": "string",
+            "description": "The reason for the booking cancellation."
         }
       },
       "required": ["id", "bookingNumber", "aircraftId", "pilotId", "type", "startTime", "endTime", "status"]
@@ -861,5 +865,3 @@
   }
 }
 
-
-    

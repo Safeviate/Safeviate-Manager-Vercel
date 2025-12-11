@@ -51,7 +51,7 @@ const BookingItem = ({ booking, pilots, selectedDate, onClick }: { booking: Book
             onClick={onClick}
             className={cn(
             'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground z-10 min-h-[40px] cursor-pointer border border-gray-400',
-            booking.status === 'Cancelled' ? 'bg-destructive' : 'bg-primary'
+            (booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason') ? 'bg-destructive' : 'bg-primary'
             )}
             style={{ top: `${top}px`, height: `${height}px` }}
         >
@@ -59,6 +59,7 @@ const BookingItem = ({ booking, pilots, selectedDate, onClick }: { booking: Book
             <p className="font-semibold truncate">{booking.bookingNumber ? `#${booking.bookingNumber} - ` : ''}{booking.type}</p>
             <p className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}</p>
             {booking.status === 'Cancelled' && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
+            {(booking.status === 'Cancelled with Reason') && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
             {hasContinuationBottom && <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-t from-black/20 to-transparent" />}
         </div>
     )
