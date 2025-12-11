@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -67,6 +68,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
   const firestore = useFirestore();
   const { toast } = useToast();
   const isEditing = !!initialData.booking;
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const form = useForm<BookingFormValues>({
@@ -117,10 +119,9 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
     onClose();
   };
 
-  const handleDelete = () => {
+  const handleCancelBooking = () => {
     if (!isEditing || !firestore) return;
     const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', initialData.booking!.id);
-    // You can choose to either delete the document or update its status
     updateDocumentNonBlocking(bookingRef, { status: 'Cancelled' });
     toast({
       title: 'Booking Cancelled',
@@ -128,6 +129,17 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
     });
     onClose();
   };
+
+  const handleDeleteBooking = () => {
+    if (!isEditing || !firestore) return;
+    const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', initialData.booking!.id);
+    deleteDocumentNonBlocking(bookingRef);
+    toast({
+      title: 'Booking Deleted',
+      description: 'The booking has been permanently deleted.',
+    });
+    onClose();
+  }
 
   return (
     <>
@@ -258,30 +270,56 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
 
           <DialogFooter>
              {isEditing && (
-                <Button type="button" variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} className="mr-auto">
-                    Cancel Booking
-                </Button>
+                <>
+                  <Button type="button" variant="outline" className='text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive' onClick={() => setIsCancelDialogOpen(true)} >
+                      Cancel Booking
+                  </Button>
+                  <Button type="button" variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} className="mr-auto">
+                      Delete Permanently
+                  </Button>
+                </>
             )}
-            <Button type="button" variant="outline" onClick={onClose}>
-              Close
-            </Button>
+            <DialogClose asChild>
+                <Button type="button" variant="outline">
+                Close
+                </Button>
+            </DialogClose>
             <Button type="submit">{isEditing ? 'Save Changes' : 'Create Booking'}</Button>
           </DialogFooter>
         </form>
       </Form>
       
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      {/* Cancel Confirmation */}
+      <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
         <AlertDialogContent>
             <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogTitle>Are you sure you want to cancel?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This will cancel the booking. This action can be reversed by changing the status back.
+                    This will mark the booking as cancelled but it will remain in the system.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Go Back</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                <AlertDialogAction onClick={handleCancelBooking} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
                     Yes, Cancel Booking
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the booking from the database.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Go Back</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteBooking} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                    Yes, Delete Forever
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
