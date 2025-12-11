@@ -269,18 +269,18 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
               )}
             />
           </div>
-          <DialogFooter className="pt-4 pr-6">
+          <DialogFooter className="pt-4 pr-6 flex-col items-stretch gap-2">
+            <Button type="submit">{isEditing ? 'Save' : 'Create Booking'}</Button>
              {isEditing && (
                 <>
+                  <Button type="button" variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
+                      Delete
+                  </Button>
                   <Button type="button" variant="outline" className='text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive' onClick={() => setIsCancelDialogOpen(true)} >
                       Cancel
                   </Button>
-                  <Button type="button" variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} className="mr-auto">
-                      Delete
-                  </Button>
                 </>
             )}
-            <Button type="submit">{isEditing ? 'Save' : 'Create Booking'}</Button>
           </DialogFooter>
         </form>
         </ScrollArea>
