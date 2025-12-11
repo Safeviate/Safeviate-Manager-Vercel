@@ -34,6 +34,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 interface BookingFormProps {
@@ -151,7 +152,8 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
       </DialogHeader>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+      <ScrollArea className="max-h-[60vh]">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 pr-6">
           <FormField
             control={form.control}
             name="aircraftId"
@@ -267,26 +269,21 @@ export function BookingForm({ tenantId, aircraftList, pilotList, initialData, on
               )}
             />
           </div>
-
-          <DialogFooter>
+          <DialogFooter className="pt-4 pr-6">
              {isEditing && (
                 <>
                   <Button type="button" variant="outline" className='text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive' onClick={() => setIsCancelDialogOpen(true)} >
-                      Cancel Booking
+                      Cancel
                   </Button>
                   <Button type="button" variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} className="mr-auto">
-                      Delete Permanently
+                      Delete
                   </Button>
                 </>
             )}
-            <DialogClose asChild>
-                <Button type="button" variant="outline">
-                Close
-                </Button>
-            </DialogClose>
-            <Button type="submit">{isEditing ? 'Save Changes' : 'Create Booking'}</Button>
+            <Button type="submit">{isEditing ? 'Save' : 'Create Booking'}</Button>
           </DialogFooter>
         </form>
+        </ScrollArea>
       </Form>
       
       {/* Cancel Confirmation */}
