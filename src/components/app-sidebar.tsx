@@ -70,7 +70,7 @@ export function AppSidebar() {
     if (item.subItems) {
         return (
             <SidebarCollapsible defaultOpen={isActive}>
-                <SidebarCollapsibleTrigger className="w-full">
+                <SidebarCollapsibleTrigger asChild>
                     <SidebarMenuButton
                         isActive={isActive}
                         tooltip={item.label}
@@ -87,8 +87,8 @@ export function AppSidebar() {
                   <SidebarMenuSub>
                       {item.subItems.map(subItem => (
                           <SidebarMenuSubItem key={subItem.href}>
-                              <Link href={subItem.href} passHref>
-                                  <SidebarMenuSubButton isActive={pathname.startsWith(subItem.href)} onClick={handleLinkClick}>
+                              <Link href={subItem.href}>
+                                  <SidebarMenuSubButton asChild isActive={pathname.startsWith(subItem.href)} onClick={handleLinkClick}>
                                       {subItem.label}
                                   </SidebarMenuSubButton>
                               </Link>
@@ -174,3 +174,5 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
+    

@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -564,29 +563,20 @@ const SidebarMenuButton = React.forwardRef<
     const { isMobile, state } = useSidebar()
     
     const buttonContent = (
-      <>
+      <Comp
+        ref={ref}
+        data-sidebar="menu-button"
+        data-size={size}
+        data-active={isActive}
+        className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
+        {...props}
+      >
         {children}
-        {isCollapsible && (
-            <ChevronDown className="ml-auto h-4 w-4 shrink-0 transition-transform duration-200 ease-in-out group-data-[state=open]:-rotate-180" />
-        )}
-      </>
-    );
-
-    const button = (
-        <Comp
-          ref={ref}
-          data-sidebar="menu-button"
-          data-size={size}
-          data-active={isActive}
-          className={cn(sidebarMenuButtonVariants({ variant, size }), className, isCollapsible && "justify-between")}
-          {...props}
-        >
-          {buttonContent}
-        </Comp>
+      </Comp>
     );
 
     if (!tooltip) {
-      return button
+      return buttonContent
     }
 
     if (typeof tooltip === "string") {
@@ -597,7 +587,7 @@ const SidebarMenuButton = React.forwardRef<
 
     return (
       <Tooltip>
-        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
         <TooltipContent
           side="right"
           align="center"
@@ -753,9 +743,9 @@ const SidebarMenuSubButton = React.forwardRef<
 })
 SidebarMenuSubButton.displayName = "SidebarMenuSubButton"
 
-const SidebarCollapsible = Collapsible.Root;
-const SidebarCollapsibleTrigger = Collapsible.Trigger;
-const SidebarCollapsibleContent = Collapsible.Content;
+const SidebarCollapsible = Collapsible.Root
+const SidebarCollapsibleTrigger = Collapsible.Trigger
+const SidebarCollapsibleContent = Collapsible.Content
 
 export {
   Sidebar,
@@ -784,5 +774,7 @@ export {
   useSidebar,
   SidebarCollapsible,
   SidebarCollapsibleTrigger,
-  SidebarCollapsibleContent
+  SidebarCollapsibleContent,
 }
+
+    
