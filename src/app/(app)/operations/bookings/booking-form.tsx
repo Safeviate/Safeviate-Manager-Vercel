@@ -136,10 +136,13 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
 
   const onSubmit = async (data: BookingFormValues) => {
     if (!firestore) return;
-  
+
     if (isEditing) {
-      // For simplicity, editing overnight bookings only updates details, not structure
-      handleStandardBooking(data, initialData.booking?.bookingNumber);
+      if (initialData.booking?.overnightId) {
+        await handleOvernightUpdate(data, initialData.booking.overnightId);
+      } else {
+        handleStandardBooking(data, initialData.booking?.bookingNumber);
+      }
     } else {
       try {
         const bookingNumber = await getNextBookingNumber(firestore, tenantId, 'bookings');
@@ -236,6 +239,67 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
         description: `Booking #${bookingNumber} has been split for the schedule.`,
     });
   }
+
+  const handleOvernightUpdate = async (data: BookingFormValues, overnightId: string) => {
+    if (!firestore) return;
+  
+    const bookingsToUpdate = allBookings.filter(b => b.overnightId === overnightId);
+    if (bookingsToUpdate.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: 'Could not find the overnight booking parts to update.',
+      });
+      return;
+    }
+  
+    const day1Part = bookingsToUpdate.find(b => isSameDay(b.startTime.toDate(), initialData.date));
+    const day2Part = bookingsToUpdate.find(b => b.id !== day1Part?.id);
+  
+    if (!day1Part || !day2Part) {
+        toast({
+            variant: 'destructive',
+            title: 'Update Failed',
+            description: 'Could not identify both parts of the overnight booking.',
+          });
+          return;
+    }
+
+    // --- Prepare updates for Day 1 ---
+    const [startHour, startMinute] = data.startTime.split(':').map(Number);
+    const newDay1StartTime = setMinutes(setHours(day1Part.startTime.toDate(), startHour), startMinute);
+    const day1BookingData: Partial<Booking> = {
+        ...data,
+        startTime: Timestamp.fromDate(newDay1StartTime),
+        endTime: Timestamp.fromDate(endOfDay(day1Part.startTime.toDate())), // Always ends at 23:59
+    };
+    delete (day1BookingData as any).isOvernight;
+    delete (day1BookingData as any).overnightEndTime;
+
+
+    // --- Prepare updates for Day 2 ---
+    const [endHour, endMinute] = (data.overnightEndTime || "00:00").split(':').map(Number);
+    const newDay2EndTime = setMinutes(setHours(day2Part.startTime.toDate(), endHour), endMinute);
+    const day2BookingData: Partial<Booking> = {
+        ...data,
+        startTime: Timestamp.fromDate(startOfDay(day2Part.startTime.toDate())), // Always starts at 00:00
+        endTime: Timestamp.fromDate(newDay2EndTime),
+    };
+    delete (day2BookingData as any).isOvernight;
+    delete (day2BookingData as any).overnightEndTime;
+  
+    // --- Perform transactional update ---
+    const day1Ref = doc(firestore, 'tenants', tenantId, 'bookings', day1Part.id);
+    const day2Ref = doc(firestore, 'tenants', tenantId, 'bookings', day2Part.id);
+  
+    updateDocumentNonBlocking(day1Ref, day1BookingData);
+    updateDocumentNonBlocking(day2Ref, day2BookingData);
+
+    toast({
+      title: 'Overnight Booking Updated',
+      description: 'The booking details have been updated across both days.',
+    });
+  };
 
 
   const handleCancelBooking = () => {
@@ -433,7 +497,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                 <FormItem>
                   <FormLabel>{isOvernight ? 'End Time (Day 1)' : 'End Time'}</FormLabel>
                   <FormControl>
-                    <Input type="time" {...field} disabled={isOvernight} />
+                    <Input type="time" {...field} disabled={isOvernight && !isEditing} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
