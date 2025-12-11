@@ -15,7 +15,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { BookingForm } from './booking-form';
 import { useToast } from '@/hooks/use-toast';
 
@@ -188,41 +187,27 @@ export default function BookingsPage() {
     const clickedSlotStart = setMinutes(setHours(selectedDate, hour), minute);
     const now = new Date();
     
-    // An existing booking can always be opened
     if (booking) {
         setFormInitialState({
             aircraft,
             time: format(booking.startTime.toDate(), 'HH:mm'),
-            date: startOfDay(booking.startTime.toDate()), // Ensure date is correct, esp for overnight
+            date: startOfDay(booking.startTime.toDate()),
             booking: booking
         });
         setIsFormOpen(true);
         return;
     }
 
-    // Check if the selected day is today
     if (isSameDay(selectedDate, now)) {
-        // If the entire slot is in the past, show an error
         if (isBefore(addHours(clickedSlotStart, 1), now)) {
-            toast({
-                variant: 'destructive',
-                title: 'Invalid Time',
-                description: 'Bookings cannot be created in the past.',
-            });
+            toast({ variant: 'destructive', title: 'Invalid Time', description: 'Bookings cannot be created in the past.' });
             return;
         }
-
-        // If the slot is the current hour, use the current time as start
         if (isBefore(clickedSlotStart, now)) {
             time = format(now, 'HH:mm');
         }
     } else if (isBefore(selectedDate, startOfDay(now))) {
-        // If the selected day is in the past, show an error
-        toast({
-            variant: 'destructive',
-            title: 'Invalid Date',
-            description: 'Bookings cannot be created on a past date.',
-        });
+        toast({ variant: 'destructive', title: 'Invalid Date', description: 'Bookings cannot be created on a past date.' });
         return;
     }
     
@@ -239,106 +224,99 @@ export default function BookingsPage() {
 
   return (
     <>
-    <div className="flex flex-col gap-6 h-full">
-      <div className="flex justify-end items-center">
-        <Popover>
-            <PopoverTrigger asChild>
-                <Button variant="outline">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(selectedDate, 'PPP')}
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-                <CustomCalendar 
-                    selectedDate={selectedDate}
-                    onDateSelect={(date) => date && setSelectedDate(date)}
-                />
-            </PopoverContent>
-        </Popover>
-      </div>
-
-      <Card className="flex-grow flex flex-col overflow-hidden">
-        <CardHeader>
-          <CardTitle>Daily Schedule</CardTitle>
-          <CardDescription>
-            A vertical timeline of all bookings for {format(selectedDate, 'PPP')}.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0 flex-grow overflow-auto" style={{ height: 'calc(100vh - 20rem)' }}>
-          {isLoading && (
-            <div className="p-6 space-y-4">
-              <Skeleton className="h-8 w-1/2" />
-              <div className="flex gap-4 h-96">
-                <Skeleton className="flex-1 h-full" />
-                <Skeleton className="flex-1 h-full" />
-                <Skeleton className="flex-1 h-full" />
-              </div>
-            </div>
-          )}
-          {error && <p className="p-6 text-destructive">Error loading data: {error.message}</p>}
-          {!isLoading && !error && (
-            <div className='relative overflow-auto h-full'>
-                {/* Header */}
-                <div className="sticky top-0 z-30 flex bg-swimlane-header text-swimlane-header-foreground flex-shrink-0">
-                  {(aircraft || []).map((ac) => (
-                    <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px]">
-                      {ac.tailNumber}
-                    </div>
-                  ))}
-                  {extraLanes.map((_, index) => (
-                    <div key={`extra-header-${index}`} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px] text-muted-foreground">
-                      (Empty Lane)
-                    </div>
-                  ))}
-                   {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-2 text-center">No Aircraft Found</div>}
-                </div>
-
-                {/* Body */}
-                <div className="flex min-w-max" style={{height: `${TOTAL_HOURS * HOUR_HEIGHT_PX}px`}}>
-                  {(aircraft || []).map((ac) => (
-                    <AircraftColumn
-                      key={ac.id}
-                      aircraft={ac}
-                      bookings={(bookings || []).filter(b => b.aircraftId === ac.id)}
-                      pilots={pilots || []}
-                      showNowLine={showNowLine}
-                      nowLinePosition={nowLinePosition}
+      <div className="flex flex-col gap-6 h-full">
+        <div className="flex justify-end items-center">
+          <Popover>
+              <PopoverTrigger asChild>
+                  <Button variant="outline">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {format(selectedDate, 'PPP')}
+                  </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                  <CustomCalendar 
                       selectedDate={selectedDate}
-                      onSlotClick={handleSlotClick}
-                    />
-                  ))}
-                  {extraLanes.map((_, index) => (
-                     <AircraftColumn
-                        key={`extra-lane-${index}`}
-                        bookings={[]}
-                        pilots={[]}
+                      onDateSelect={(date) => date && setSelectedDate(date)}
+                  />
+              </PopoverContent>
+          </Popover>
+        </div>
+
+        <Card className="flex-grow flex flex-col overflow-hidden">
+          <CardHeader>
+            <CardTitle>Daily Schedule</CardTitle>
+            <CardDescription>
+              A vertical timeline of all bookings for {format(selectedDate, 'PPP')}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0 flex-grow overflow-auto" style={{ height: 'calc(100vh - 20rem)' }}>
+            {isLoading && (
+              <div className="p-6 space-y-4">
+                <Skeleton className="h-8 w-1/2" />
+                <div className="flex gap-4 h-96">
+                  <Skeleton className="flex-1 h-full" />
+                  <Skeleton className="flex-1 h-full" />
+                  <Skeleton className="flex-1 h-full" />
+                </div>
+              </div>
+            )}
+            {error && <p className="p-6 text-destructive">Error loading data: {error.message}</p>}
+            {!isLoading && !error && (
+              <div className='relative overflow-auto h-full'>
+                  <div className="sticky top-0 z-30 flex bg-swimlane-header text-swimlane-header-foreground flex-shrink-0">
+                    {(aircraft || []).map((ac) => (
+                      <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px]">
+                        {ac.tailNumber}
+                      </div>
+                    ))}
+                    {extraLanes.map((_, index) => (
+                      <div key={`extra-header-${index}`} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px] text-muted-foreground">
+                        (Empty Lane)
+                      </div>
+                    ))}
+                    {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-2 text-center">No Aircraft Found</div>}
+                  </div>
+
+                  <div className="flex min-w-max" style={{height: `${TOTAL_HOURS * HOUR_HEIGHT_PX}px`}}>
+                    {(aircraft || []).map((ac) => (
+                      <AircraftColumn
+                        key={ac.id}
+                        aircraft={ac}
+                        bookings={(bookings || []).filter(b => b.aircraftId === ac.id)}
+                        pilots={pilots || []}
                         showNowLine={showNowLine}
                         nowLinePosition={nowLinePosition}
                         selectedDate={selectedDate}
-                        onSlotClick={() => {}}
-                    />
-                  ))}
-                  {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-4 text-center text-muted-foreground">Please add aircraft to see the schedule.</div>}
-                </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-    <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="sm:max-w-md">
-            {formInitialState && (
-                <BookingForm
-                    tenantId={tenantId}
-                    aircraftList={aircraft || []}
-                    pilotList={pilots || []}
-                    allBookings={allBookings || []}
-                    initialData={formInitialState}
-                    onClose={() => setIsFormOpen(false)}
-                />
+                        onSlotClick={handleSlotClick}
+                      />
+                    ))}
+                    {extraLanes.map((_, index) => (
+                      <AircraftColumn
+                          key={`extra-lane-${index}`}
+                          bookings={[]}
+                          pilots={[]}
+                          showNowLine={showNowLine}
+                          nowLinePosition={nowLinePosition}
+                          selectedDate={selectedDate}
+                          onSlotClick={() => {}}
+                      />
+                    ))}
+                    {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-4 text-center text-muted-foreground">Please add aircraft to see the schedule.</div>}
+                  </div>
+              </div>
             )}
-        </DialogContent>
-    </Dialog>
+          </CardContent>
+        </Card>
+      </div>
+      <BookingForm
+          tenantId={tenantId}
+          aircraftList={aircraft || []}
+          pilotList={pilots || []}
+          allBookings={allBookings || []}
+          initialData={formInitialState}
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+      />
     </>
   );
 }

@@ -15,6 +15,8 @@ import type { Booking } from '@/types/booking';
 
 import { Button } from '@/components/ui/button';
 import {
+  Dialog,
+  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
@@ -41,18 +43,18 @@ import { Switch } from '@/components/ui/switch';
 import { v4 as uuidv4 } from 'uuid';
 import { deleteBookings, getNextBookingNumber } from './booking-functions';
 
-
 interface BookingFormProps {
   tenantId: string;
   aircraftList: Aircraft[];
   pilotList: PilotProfile[];
-  allBookings: Booking[]; // Pass all bookings to find the other part of an overnight booking
+  allBookings: Booking[];
   initialData: {
     aircraft: Aircraft;
     time: string;
     date: Date;
     booking?: Booking;
-  };
+  } | null;
+  isOpen: boolean;
   onClose: () => void;
 }
 
@@ -77,58 +79,54 @@ const bookingSchema = z.object({
 
 type BookingFormValues = z.infer<typeof bookingSchema>;
 
-export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, initialData, onClose }: BookingFormProps) {
+export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, initialData, isOpen, onClose }: BookingFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const isEditing = !!initialData.booking;
+  const isEditing = !!initialData?.booking;
+
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState('');
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
-    defaultValues: (() => {
-        const isEditMode = !!initialData.booking;
-        const isOvernightBooking = !!initialData.booking?.overnightId;
+  });
 
-        if (isEditMode && isOvernightBooking) {
-            const currentPart = initialData.booking!;
-            const otherPart = allBookings.find(b => 
-                b.overnightId === currentPart.overnightId && b.id !== currentPart.id
-            );
+  useEffect(() => {
+    if (initialData) {
+      const isEditMode = !!initialData.booking;
+      const isOvernightBooking = !!initialData.booking?.overnightId;
 
-            // Determine which part is Day 1 and which is Day 2 by comparing start times
-            let day1Part: Booking | undefined;
-            let day2Part: Booking | undefined;
+      let defaultValues: BookingFormValues;
 
-            if (otherPart && isBefore(currentPart.startTime.toDate(), otherPart.startTime.toDate())) {
-                day1Part = currentPart;
-                day2Part = otherPart;
-            } else if (otherPart) {
-                day1Part = otherPart;
-                day2Part = currentPart;
-            } else { // Fallback if only one part is found (e.g. other part is on a different day than fetched)
-                const sortedParts = allBookings.filter(b => b.overnightId === currentPart.overnightId).sort((a,b) => a.startTime.toMillis() - b.startTime.toMillis());
-                day1Part = sortedParts[0];
-                day2Part = sortedParts[1];
-            }
-            
-            return {
-                aircraftId: initialData.aircraft.id,
-                pilotId: currentPart.pilotId,
-                instructorId: currentPart.instructorId || '',
-                type: currentPart.type,
-                startTime: day1Part ? format(day1Part.startTime.toDate(), 'HH:mm') : '00:00',
-                endTime: '23:59', // Day 1 always ends at midnight
-                status: currentPart.status,
-                isOvernight: true,
-                overnightEndTime: day2Part ? format(day2Part.endTime.toDate(), 'HH:mm') : '08:00',
-                cancellationReason: currentPart.cancellationReason || day2Part?.cancellationReason || '',
-            };
+      if (isEditMode && isOvernightBooking) {
+        const currentPart = initialData.booking!;
+        const otherPart = allBookings.find(b => b.overnightId === currentPart.overnightId && b.id !== currentPart.id);
+        
+        let day1Part: Booking, day2Part: Booking;
+        if (otherPart && isBefore(currentPart.startTime.toDate(), otherPart.startTime.toDate())) {
+            day1Part = currentPart; day2Part = otherPart;
+        } else if (otherPart) {
+            day1Part = otherPart; day2Part = currentPart;
+        } else {
+            const sortedParts = allBookings.filter(b => b.overnightId === currentPart.overnightId).sort((a,b) => a.startTime.toMillis() - b.startTime.toMillis());
+            day1Part = sortedParts[0]; day2Part = sortedParts[1];
         }
 
-        // Default values for new bookings or standard edit
-        return {
+        defaultValues = {
+            aircraftId: initialData.aircraft.id,
+            pilotId: day1Part?.pilotId || currentPart.pilotId,
+            instructorId: day1Part?.instructorId || currentPart.instructorId || '',
+            type: day1Part?.type || currentPart.type,
+            startTime: day1Part ? format(day1Part.startTime.toDate(), 'HH:mm') : '00:00',
+            endTime: '23:59', // Day 1 always ends at midnight
+            status: currentPart.status,
+            isOvernight: true,
+            overnightEndTime: day2Part ? format(day2Part.endTime.toDate(), 'HH:mm') : '08:00',
+            cancellationReason: currentPart.cancellationReason || day2Part?.cancellationReason || '',
+        };
+      } else {
+        defaultValues = {
             aircraftId: initialData.aircraft.id,
             pilotId: initialData.booking?.pilotId || '',
             instructorId: initialData.booking?.instructorId || '',
@@ -140,8 +138,10 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
             overnightEndTime: '08:00',
             cancellationReason: initialData.booking?.cancellationReason || '',
         };
-    })(),
-});
+      }
+      form.reset(defaultValues);
+    }
+  }, [initialData, form, allBookings]);
   
   const isOvernight = form.watch('isOvernight');
 
@@ -152,7 +152,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   }, [isOvernight, form, isEditing]);
 
   const onSubmit = async (data: BookingFormValues) => {
-    if (!firestore) return;
+    if (!firestore || !initialData) return;
 
     if (isEditing && initialData.booking) {
       if (initialData.booking.overnightId) {
@@ -175,14 +175,14 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
           title: 'Booking Failed',
           description: 'Could not generate a booking number. Please try again.',
         });
-        return; // Stop execution if we can't get a booking number
+        return;
       }
     }
     onClose();
   };
   
-
   const handleStandardBooking = (data: BookingFormValues, bookingNumber?: number) => {
+    if (!initialData) return;
     const [startHour, startMinute] = data.startTime.split(':').map(Number);
     const [endHour, endMinute] = data.endTime.split(':').map(Number);
     
@@ -199,8 +199,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
         bookingData.bookingNumber = bookingNumber;
     }
 
-
-    if (isEditing) {
+    if (isEditing && initialData.booking) {
       const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', initialData.booking!.id);
       updateDocumentNonBlocking(bookingRef, bookingData);
       toast({ title: 'Booking Updated', description: 'The booking has been successfully updated.' });
@@ -212,12 +211,11 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   }
 
   const handleOvernightBooking = (data: BookingFormValues, bookingNumber: number) => {
+    if (!initialData) return;
     const overnightId = uuidv4();
-
-    // Part 1: Booking for the current day
     const [startHour, startMinute] = data.startTime.split(':').map(Number);
     const startTime = setMinutes(setHours(initialData.date, startHour), startMinute);
-    const endTime = endOfDay(initialData.date); // End of the first day
+    const endTime = endOfDay(initialData.date);
 
     const bookingData1: Partial<Booking> = {
         ...data,
@@ -229,7 +227,6 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     delete (bookingData1 as any).isOvernight;
     delete (bookingData1 as any).overnightEndTime;
 
-    // Part 2: Booking for the next day
     const nextDay = addDays(startOfDay(initialData.date), 1);
     const [overnightEndHour, overnightEndMinute] = (data.overnightEndTime || "00:00").split(':').map(Number);
     
@@ -246,7 +243,6 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     delete (bookingData2 as any).isOvernight;
     delete (bookingData2 as any).overnightEndTime;
 
-    // Save both bookings
     const bookingsRef = collection(firestore, 'tenants', tenantId, 'bookings');
     addDocumentNonBlocking(bookingsRef, bookingData1);
     addDocumentNonBlocking(bookingsRef, bookingData2);
@@ -262,11 +258,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   
     const bookingsToUpdate = allBookings.filter(b => b.overnightId === overnightId);
     if (bookingsToUpdate.length === 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: 'Could not find the overnight booking parts to update.',
-      });
+      toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not find the overnight booking parts to update.' });
       return;
     }
   
@@ -274,72 +266,51 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     const day2Part = bookingsToUpdate.sort((a,b) => a.startTime.toMillis() - b.startTime.toMillis())[1];
   
     if (!day1Part || !day2Part) {
-        toast({
-            variant: 'destructive',
-            title: 'Update Failed',
-            description: 'Could not identify both parts of the overnight booking.',
-          });
-          return;
+        toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not identify both parts of the overnight booking.' });
+        return;
     }
 
-    // --- Prepare updates for Day 1 ---
     const [startHour, startMinute] = data.startTime.split(':').map(Number);
     const newDay1StartTime = setMinutes(setHours(day1Part.startTime.toDate(), startHour), startMinute);
     const day1BookingData: Partial<Booking> = {
         ...data,
         startTime: Timestamp.fromDate(newDay1StartTime),
-        endTime: Timestamp.fromDate(endOfDay(day1Part.startTime.toDate())), // Always ends at 23:59
+        endTime: Timestamp.fromDate(endOfDay(day1Part.startTime.toDate())),
     };
     delete (day1BookingData as any).isOvernight;
     delete (day1BookingData as any).overnightEndTime;
 
-
-    // --- Prepare updates for Day 2 ---
     const [endHour, endMinute] = (data.overnightEndTime || "00:00").split(':').map(Number);
     const newDay2EndTime = setMinutes(setHours(day2Part.startTime.toDate(), endHour), endMinute);
     const day2BookingData: Partial<Booking> = {
         ...data,
-        startTime: Timestamp.fromDate(startOfDay(day2Part.startTime.toDate())), // Always starts at 00:00
+        startTime: Timestamp.fromDate(startOfDay(day2Part.startTime.toDate())),
         endTime: Timestamp.fromDate(newDay2EndTime),
     };
     delete (day2BookingData as any).isOvernight;
     delete (day2BookingData as any).overnightEndTime;
   
-    // --- Perform transactional update ---
     const day1Ref = doc(firestore, 'tenants', tenantId, 'bookings', day1Part.id);
     const day2Ref = doc(firestore, 'tenants', tenantId, 'bookings', day2Part.id);
   
     updateDocumentNonBlocking(day1Ref, day1BookingData);
     updateDocumentNonBlocking(day2Ref, day2BookingData);
 
-    toast({
-      title: 'Overnight Booking Updated',
-      description: 'The booking details have been updated across both days.',
-    });
+    toast({ title: 'Overnight Booking Updated', description: 'The booking details have been updated across both days.' });
   };
 
-
   const handleCancelBooking = () => {
-    if (!isEditing || !firestore || !initialData.booking) {
-        return;
-    }
+    if (!isEditing || !firestore || !initialData?.booking) return;
 
     if (!cancellationReason.trim()) {
-        toast({
-            variant: 'destructive',
-            title: 'Reason Required',
-            description: 'Please provide a reason for the cancellation.',
-        });
+        toast({ variant: 'destructive', title: 'Reason Required', description: 'Please provide a reason for the cancellation.' });
         return;
     }
 
     const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', initialData.booking.id);
     updateDocumentNonBlocking(bookingRef, { status: 'Cancelled with Reason', cancellationReason: cancellationReason });
     
-    toast({
-      title: 'Booking Cancelled',
-      description: 'The booking has been marked as cancelled with a reason.',
-    });
+    toast({ title: 'Booking Cancelled', description: 'The booking has been marked as cancelled with a reason.' });
 
     setIsCancelDialogOpen(false);
     setCancellationReason('');
@@ -347,204 +318,175 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   };
 
   const handleDeleteBooking = async () => {
-    if (!isEditing || !firestore) return;
-
-    const { booking } = initialData;
-    if (!booking) return;
+    if (!isEditing || !firestore || !initialData?.booking) return;
 
     try {
         let docsToDelete: any[] = [];
-        if (booking.overnightId) {
-            // This is an overnight booking, find all parts to delete
+        if (initialData.booking.overnightId) {
             const bookingsRef = collection(firestore, 'tenants', tenantId, 'bookings');
-            const q = query(bookingsRef, where('overnightId', '==', booking.overnightId));
+            const q = query(bookingsRef, where('overnightId', '==', initialData.booking.overnightId));
             const querySnapshot = await getDocs(q);
-            
             querySnapshot.forEach((doc) => {
                 docsToDelete.push(doc.ref);
             });
         } else {
-            // This is a standard booking
-            docsToDelete.push(doc(firestore, 'tenants', tenantId, 'bookings', booking.id));
+            docsToDelete.push(doc(firestore, 'tenants', tenantId, 'bookings', initialData.booking.id));
         }
 
         if (docsToDelete.length > 0) {
             await deleteBookings(firestore, tenantId, docsToDelete);
-            toast({
-                title: 'Booking Deleted',
-                description: 'The booking has been permanently deleted.',
-            });
+            toast({ title: 'Booking Deleted', description: 'The booking has been permanently deleted.' });
         }
-        
     } catch (error) {
         console.error("Error deleting booking(s):", error);
-        toast({
-            variant: "destructive",
-            title: "Deletion Failed",
-            description: "Could not delete the booking(s).",
-        });
+        toast({ variant: "destructive", title: "Deletion Failed", description: "Could not delete the booking(s)." });
     }
     
     onClose();
   }
 
+  const triggerCancelDialog = () => {
+    onClose(); // Close the edit dialog
+    setIsCancelDialogOpen(true); // Open the cancel dialog
+  };
+
+  const triggerDeleteDialog = () => {
+    onClose(); // Close the edit dialog
+    setIsDeleteDialogOpen(true); // Open the delete dialog
+  };
+  
+  if (!initialData) return null;
+
   return (
     <>
-      <DialogHeader>
-        <DialogTitle>{isEditing ? 'Edit Booking' : 'Create Booking'}</DialogTitle>
-        <DialogDescription>
-          {isEditing ? `Editing booking #${initialData.booking?.bookingNumber} for ${initialData.aircraft.tailNumber}` : `New booking for ${initialData.aircraft.tailNumber} on ${format(initialData.date, 'PPP')}`}
-        </DialogDescription>
-      </DialogHeader>
+      {/* Edit/Create Dialog */}
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{isEditing ? 'Edit Booking' : 'Create Booking'}</DialogTitle>
+            <DialogDescription>
+              {isEditing ? `Editing booking #${initialData.booking?.bookingNumber} for ${initialData.aircraft.tailNumber}` : `New booking for ${initialData.aircraft.tailNumber} on ${format(initialData.date, 'PPP')}`}
+            </DialogDescription>
+          </DialogHeader>
 
-      <Form {...form}>
-      <ScrollArea className="max-h-[60vh]">
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pr-1">
-          <FormField
-            control={form.control}
-            name="aircraftId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Aircraft</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value} disabled>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an aircraft" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {aircraftList.map(ac => <SelectItem key={ac.id} value={ac.id}>{ac.tailNumber}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="type"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Booking Type</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select booking type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="Student Training">Student Training</SelectItem>
-                    <SelectItem value="Hire and Fly">Hire and Fly</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="pilotId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Pilot / Student</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a pilot" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {pilotList.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {form.watch('type') === 'Student Training' && (
-              <FormField
-                control={form.control}
-                name="instructorId"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Instructor</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                        <SelectTrigger>
-                        <SelectValue placeholder="Select an instructor" />
-                        </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                        {pilotList.filter(p => p.userType === 'Instructor').map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}
-                    </SelectContent>
-                    </Select>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-          )}
-
-          <FormField
-              control={form.control}
-              name="isOvernight"
-              render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                  <div className="space-y-0.5">
-                  <FormLabel>Overnight Booking</FormLabel>
-                  <FormMessage />
-                  </div>
-                  <FormControl>
-                  <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      disabled={isEditing}
-                  />
-                  </FormControl>
-              </FormItem>
-              )}
-          />
-
-
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="startTime"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Start Time</FormLabel>
-                  <FormControl>
-                    <Input type="time" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="endTime"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{isOvernight ? 'End Time (Day 1)' : 'End Time'}</FormLabel>
-                  <FormControl>
-                    <Input type="time" {...field} disabled={isOvernight} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          {isOvernight && (
-            <div className="grid grid-cols-2 gap-4">
+          <Form {...form}>
+            <ScrollArea className="max-h-[60vh]">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-4">
                  <FormField
                     control={form.control}
-                    name="overnightEndTime"
+                    name="aircraftId"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Aircraft</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Select an aircraft" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {aircraftList.map(ac => <SelectItem key={ac.id} value={ac.id}>{ac.tailNumber}</SelectItem>)}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Booking Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Select booking type" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="Student Training">Student Training</SelectItem>
+                            <SelectItem value="Hire and Fly">Hire and Fly</SelectItem>
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="pilotId"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Pilot / Student</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Select a pilot" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {pilotList.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+
+                {form.watch('type') === 'Student Training' && (
+                    <FormField
+                        control={form.control}
+                        name="instructorId"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Instructor</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Select an instructor" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {pilotList.filter(p => p.userType === 'Instructor').map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                )}
+
+                <FormField
+                    control={form.control}
+                    name="isOvernight"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                        <FormLabel>Overnight Booking</FormLabel>
+                        <FormMessage />
+                        </div>
+                        <FormControl>
+                        <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isEditing}
+                        />
+                        </FormControl>
+                    </FormItem>
+                    )}
+                />
+
+
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                    control={form.control}
+                    name="startTime"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>End Time (Day 2)</FormLabel>
+                        <FormLabel>Start Time</FormLabel>
                         <FormControl>
                             <Input type="time" {...field} />
                         </FormControl>
@@ -552,26 +494,58 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                         </FormItem>
                     )}
                     />
-            </div>
-          )}
-        </form>
-        </ScrollArea>
-      </Form>
-      <DialogFooter className="pt-4 flex flex-row justify-center items-stretch gap-2">
-          <Button type="submit" className='flex-1' onClick={form.handleSubmit(onSubmit)}>{isEditing ? 'Save Changes' : 'Create Booking'}</Button>
-            {isEditing && (
-              <>
-                <Button type="button" variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} className='flex-1'>
-                    Delete
-                </Button>
-                <Button type="button" variant="outline" className='text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive flex-1' onClick={() => setIsCancelDialogOpen(true)} >
-                    Cancel Booking
-                </Button>
-              </>
-          )}
-      </DialogFooter>
+                    <FormField
+                    control={form.control}
+                    name="endTime"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>{isOvernight ? 'End Time (Day 1)' : 'End Time'}</FormLabel>
+                        <FormControl>
+                            <Input type="time" {...field} disabled={isOvernight} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </div>
+
+                {isOvernight && (
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="overnightEndTime"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>End Time (Day 2)</FormLabel>
+                                <FormControl>
+                                    <Input type="time" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                    </div>
+                )}
+              </form>
+            </ScrollArea>
+          </Form>
+          <DialogFooter className="pt-4 flex-col sm:flex-row sm:justify-center items-stretch gap-2 px-6 pb-6">
+              <Button type="submit" className='flex-1' onClick={form.handleSubmit(onSubmit)}>{isEditing ? 'Save Changes' : 'Create Booking'}</Button>
+                {isEditing && (
+                <>
+                    <Button type="button" variant="destructive" onClick={triggerDeleteDialog} className='flex-1'>
+                        Delete
+                    </Button>
+                    <Button type="button" variant="outline" className='text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive flex-1' onClick={triggerCancelDialog} >
+                        Cancel Booking
+                    </Button>
+                </>
+              )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
-      {/* Cancel Confirmation */}
+      {/* Cancel Confirmation Dialog */}
       <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
         <AlertDialogContent>
             <AlertDialogHeader>
@@ -587,18 +561,19 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                     placeholder="Type your reason here..."
                     value={cancellationReason}
                     onChange={(e) => setCancellationReason(e.target.value)}
+                    autoFocus
                 />
             </div>
             <AlertDialogFooter>
                 <AlertDialogCancel onClick={() => setCancellationReason('')}>Go Back</AlertDialogCancel>
-                <AlertDialogAction onClick={handleCancelBooking} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                <AlertDialogAction onClick={handleCancelBooking} disabled={!cancellationReason.trim()}>
                     Yes, Cancel Booking
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete Confirmation */}
+      {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
             <AlertDialogHeader>
