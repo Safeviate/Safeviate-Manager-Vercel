@@ -9,7 +9,7 @@ import {
   GaugeCircle,
   PlaneTakeoff,
   AlertTriangle,
-  BookUser,
+  GraduationCap,
   Plane,
   CheckSquare,
 } from 'lucide-react';
@@ -68,7 +68,7 @@ export const menuConfig: MenuItem[] = [
   {
     href: '/training',
     label: 'Training',
-    icon: BookUser,
+    icon: GraduationCap,
   },
   {
     href: '/assets',
