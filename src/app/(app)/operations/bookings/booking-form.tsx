@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { addHours, format, setHours, setMinutes, addDays, startOfDay, isSameDay, endOfDay } from 'date-fns';
+import { addHours, format, setHours, setMinutes, addDays, startOfDay, isSameDay, endOfDay, isBefore } from 'date-fns';
 import { Timestamp, collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useCollection } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -94,9 +94,19 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                 b.overnightId === currentPart.overnightId && b.id !== currentPart.id
             );
 
-            // Determine which part is Day 1 and which is Day 2
-            const day1Part = isSameDay(currentPart.startTime.toDate(), initialData.date) ? currentPart : otherPart;
-            const day2Part = isSameDay(currentPart.startTime.toDate(), initialData.date) ? otherPart : currentPart;
+            // Determine which part is Day 1 and which is Day 2 by comparing start times
+            let day1Part: Booking | undefined;
+            let day2Part: Booking | undefined;
+
+            if (otherPart && isBefore(currentPart.startTime.toDate(), otherPart.startTime.toDate())) {
+                day1Part = currentPart;
+                day2Part = otherPart;
+            } else if (otherPart) {
+                day1Part = otherPart;
+                day2Part = currentPart;
+            } else {
+                day1Part = currentPart; // In case the other part is not found
+            }
             
             return {
                 aircraftId: initialData.aircraft.id,
@@ -104,7 +114,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                 instructorId: currentPart.instructorId || '',
                 type: currentPart.type,
                 startTime: day1Part ? format(day1Part.startTime.toDate(), 'HH:mm') : '00:00',
-                endTime: day1Part ? format(day1Part.endTime.toDate(), 'HH:mm') : '23:59',
+                endTime: '23:59', // Day 1 always ends at midnight
                 status: currentPart.status,
                 isOvernight: true,
                 overnightEndTime: day2Part ? format(day2Part.endTime.toDate(), 'HH:mm') : '08:00',
@@ -253,8 +263,8 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
       return;
     }
   
-    const day1Part = bookingsToUpdate.find(b => isSameDay(b.startTime.toDate(), initialData.date));
-    const day2Part = bookingsToUpdate.find(b => b.id !== day1Part?.id);
+    const day1Part = bookingsToUpdate.sort((a,b) => a.startTime.toMillis() - b.startTime.toMillis())[0];
+    const day2Part = bookingsToUpdate.sort((a,b) => a.startTime.toMillis() - b.startTime.toMillis())[1];
   
     if (!day1Part || !day2Part) {
         toast({
@@ -497,7 +507,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                 <FormItem>
                   <FormLabel>{isOvernight ? 'End Time (Day 1)' : 'End Time'}</FormLabel>
                   <FormControl>
-                    <Input type="time" {...field} disabled={isOvernight && !isEditing} />
+                    <Input type="time" {...field} disabled={isOvernight} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
