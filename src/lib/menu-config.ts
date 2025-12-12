@@ -12,6 +12,7 @@ import {
   GraduationCap,
   Plane,
   CheckSquare,
+  BookCopy,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -51,7 +52,7 @@ export const menuConfig: MenuItem[] = [
       {
         href: '/operations/maintenance',
         label: 'Bookings',
-        description: 'Track and manage aircraft maintenance.',
+        description: 'View and manage all bookings.',
       },
     ],
   },
