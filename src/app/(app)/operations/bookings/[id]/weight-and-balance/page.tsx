@@ -14,7 +14,7 @@ import { ArrowLeft, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, Polygon, ComposedChart, Scatter } from 'recharts';
 import { cn } from '@/lib/utils';
 
 interface WeightAndBalancePageProps {
@@ -55,7 +55,7 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
     const error = bookingError || aircraftError;
     
     const calculation = useMemo(() => {
-        if (!aircraft) return null;
+        if (!aircraft || !aircraft.stationArms) return null;
 
         const emptyWeight = aircraft.emptyWeight || 0;
         const emptyMoment = aircraft.emptyWeightMoment || 0;
@@ -83,11 +83,12 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
 
         // Check if within limits
         const isPointInPolygon = (point: [number, number], polygon: [number, number][]) => {
-            let [x, y] = point;
+            let [x, y] = point; // CG, Weight
             let isInside = false;
+             if (!polygon || polygon.length === 0) return false;
             for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-                let [xi, yi] = polygon[i];
-                let [xj, yj] = polygon[j];
+                let [xi, yi] = polygon[i]; // CG, Weight
+                let [xj, yj] = polygon[j]; // CG, Weight
                 let intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
                 if (intersect) isInside = !isInside;
             }
@@ -104,31 +105,57 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
             stations,
             takeoffWeight, takeoffMoment, takeoffCg,
             landingWeight, landingMoment, landingCg,
-            isTakeoffCgOk, isLandingCgOk, isTakeoffWeightOk, isLandingWeightOk
+            isTakeoffCgOk, isLandingCgOk, isTakeoffWeightOk, isLandingWeightOk,
         };
     }, [aircraft, frontSeatsWeight, rearSeatsWeight, baggage1Weight, baggage2Weight, fuelGallons, tripFuelGallons]);
 
     const chartData = useMemo(() => {
-        if (!calculation || !aircraft?.cgEnvelope) return [];
-        const envelope = aircraft.cgEnvelope.map(([weight, cg]) => ({ name: 'Envelope', weight, cg }));
-        return [
-            ...envelope,
-            { name: 'Takeoff', weight: calculation.takeoffWeight, cg: calculation.takeoffCg, fill: '#8884d8' },
-            { name: 'Landing', weight: calculation.landingWeight, cg: calculation.landingCg, fill: '#82ca9d' }
-        ];
+        if (!calculation || !aircraft?.cgEnvelope) return { envelope: [], points: [] };
+        const envelope = aircraft.cgEnvelope.map(([cg, weight]) => ({ cg, weight }));
+
+        return {
+            envelope: [...envelope, envelope[0]], // Close the polygon
+            points: [
+                { name: 'Takeoff', cg: calculation.takeoffCg, weight: calculation.takeoffWeight, fill: '#8884d8' },
+                { name: 'Landing', cg: calculation.landingCg, weight: calculation.landingWeight, fill: '#82ca9d' }
+            ]
+        }
     }, [calculation, aircraft]);
 
 
     if (isLoading) {
-        return <div className="max-w-6xl mx-auto space-y-6"><Skeleton className="h-96 w-full" /></div>;
+        return <div className="max-w-6xl mx-auto space-y-6"><Skeleton className="h-[80vh] w-full" /></div>;
     }
     
     if (error || !booking || !aircraft) {
         return <div className="text-destructive text-center">Error: {error?.message || 'Booking or Aircraft data could not be loaded.'}</div>;
     }
+
+    if (!aircraft.stationArms || !aircraft.cgEnvelope) {
+        return (
+            <div className="max-w-6xl mx-auto space-y-6">
+                <div>
+                    <Button asChild variant="outline" size="sm">
+                        <Link href={`/operations/bookings/${bookingId}/checklist`}>
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Back to Checklist
+                        </Link>
+                    </Button>
+                </div>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Configuration Incomplete</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-muted-foreground">The weight and balance parameters (station arms, CG envelope) have not been configured for this aircraft ({aircraft.tailNumber}). Please edit the aircraft in the Assets section to add this information.</p>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
     
     const ResultIndicator = ({ isOk, label }: { isOk: boolean, label: string }) => (
-        <div className={cn("flex items-center gap-2 p-3 rounded-lg text-lg font-semibold", isOk ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800')}>
+        <div className={cn("flex items-center gap-2 p-3 rounded-lg text-lg font-semibold", isOk ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300')}>
             {isOk ? <CheckCircle2 /> : <AlertTriangle />}
             <span>{label}: {isOk ? 'Within Limits' : 'OUT OF LIMITS'}</span>
         </div>
@@ -243,26 +270,48 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                 <CardHeader>
                     <CardTitle>Center of Gravity Envelope</CardTitle>
                 </CardHeader>
-                <CardContent className="h-96 w-full">
+                <CardContent className="h-96 w-full pr-8">
                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                        <ComposedChart
+                            data={chartData.points}
+                            margin={{
+                                top: 20, right: 20, bottom: 20, left: 20,
+                            }}
+                        >
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="cg" type="number" name="CG (in)" unit=" in" domain={['dataMin - 1', 'dataMax + 1']} />
-                            <YAxis dataKey="weight" type="number" name="Weight (lbs)" unit=" lbs" domain={['dataMin - 100', 'dataMax + 100']} />
+                            <XAxis 
+                                dataKey="cg" 
+                                type="number" 
+                                name="CG (in)" 
+                                unit=" in" 
+                                domain={['dataMin - 2', 'dataMax + 2']} 
+                                tickCount={10}
+                                label={{ value: "Center of Gravity (inches from datum)", position: 'insideBottom', offset: -15 }}
+                            />
+                            <YAxis 
+                                dataKey="weight" 
+                                type="number" 
+                                name="Weight (lbs)" 
+                                unit=" lbs" 
+                                domain={['dataMin - 200', 'dataMax + 200']}
+                                width={80}
+                                label={{ value: "Weight (lbs)", angle: -90, position: 'insideLeft' }}
+                             />
                             <Tooltip cursor={{ strokeDasharray: '3 3' }} />
                             <Legend />
-                            <Line dataKey="cg" data={chartData.filter(d => d.name === 'Envelope')} stroke="#8884d8" name="CG Envelope" dot={false} strokeWidth={2} />
-                             {calculation && (
-                                <Line type="monotone" dataKey="weight" data={[{name: 'Takeoff', weight: calculation.takeoffWeight, cg: calculation.takeoffCg}]} stroke="none" dot={{ r: 8, fill: '#8884d8' }} activeDot={{ r: 10 }} name="Takeoff" />
-                            )}
-                            {calculation && (
-                                <Line type="monotone" dataKey="weight" data={[{name: 'Landing', weight: calculation.landingWeight, cg: calculation.landingCg}]} stroke="none" dot={{ r: 8, fill: '#82ca9d' }} activeDot={{ r: 10 }} name="Landing" />
-                            )}
+                            
+                            <Line data={chartData.envelope} dataKey="weight" type="linear" stroke="#a0aec0" dot={false} activeDot={false} name="CG Envelope" />
+                           
+                            <Scatter name="Takeoff" dataKey="cg" data={chartData.points.filter(p => p.name === 'Takeoff')} fill="#8884d8" shape="cross" />
+                            <Scatter name="Landing" dataKey="cg" data={chartData.points.filter(p => p.name === 'Landing')} fill="#82ca9d" shape="triangle" />
+                            
                             {aircraft.maxTakeoffWeight && <ReferenceLine y={aircraft.maxTakeoffWeight} label={{ value: `Max Takeoff: ${aircraft.maxTakeoffWeight} lbs`, position: 'insideTopLeft' }} stroke="red" strokeDasharray="3 3" />}
-                        </LineChart>
+                            {aircraft.maxLandingWeight && <ReferenceLine y={aircraft.maxLandingWeight} label={{ value: `Max Landing: ${aircraft.maxLandingWeight} lbs`, position: 'insideTopLeft' }} stroke="orange" strokeDasharray="3 3" />}
+                        </ComposedChart>
                     </ResponsiveContainer>
                 </CardContent>
             </Card>
         </div>
     );
 }
+
