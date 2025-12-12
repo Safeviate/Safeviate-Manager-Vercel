@@ -44,14 +44,14 @@ export const menuConfig: MenuItem[] = [
     icon: PlaneTakeoff,
     subItems: [
       {
-        href: '/operations/maintenance',
-        label: 'Maintenance',
-        description: 'Track and manage aircraft maintenance.',
+        href: '/operations/bookings',
+        label: 'Schedule',
+        description: 'Schedule and manage aircraft bookings.',
       },
       {
-        href: '/operations/bookings',
+        href: '/operations/maintenance',
         label: 'Bookings',
-        description: 'Schedule and manage aircraft bookings.',
+        description: 'Track and manage aircraft maintenance.',
       },
     ],
   },

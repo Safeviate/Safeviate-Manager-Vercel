@@ -117,7 +117,7 @@ const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePositi
 };
 
 
-export default function BookingsPage() {
+export default function SchedulePage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate'; // Hardcoded for now
   const [selectedDate, setSelectedDate] = useState(new Date());
