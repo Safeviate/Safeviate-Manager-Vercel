@@ -36,6 +36,8 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
   const [initialTacho, setInitialTacho] = useState('');
   const [tachoAtNext50Inspection, setTachoAtNext50Inspection] = useState('');
   const [tachoAtNext100Inspection, setTachoAtNext100Inspection] = useState('');
+  const [emptyWeight, setEmptyWeight] = useState('');
+  const [emptyWeightMoment, setEmptyWeightMoment] = useState('');
 
 
   const [isOpen, setIsOpen] = useState(false);
@@ -76,6 +78,8 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
         currentTacho: initialTachoValue,
         tachoAtNext50Inspection: Number(tachoAtNext50Inspection) || 0,
         tachoAtNext100Inspection: Number(tachoAtNext100Inspection) || 0,
+        emptyWeight: Number(emptyWeight) || 0,
+        emptyWeightMoment: Number(emptyWeightMoment) || 0,
     });
 
     toast({
@@ -96,6 +100,8 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
     setInitialTacho('');
     setTachoAtNext50Inspection('');
     setTachoAtNext100Inspection('');
+    setEmptyWeight('');
+    setEmptyWeightMoment('');
     setIsOpen(false);
   }
 
@@ -165,6 +171,14 @@ export function AircraftForm({ tenantId }: AircraftFormProps) {
           <div className="space-y-2">
             <Label htmlFor="tachoAtNext100Inspection">Tacho at Next 100 Insp.</Label>
             <Input id="tachoAtNext100Inspection" type="number" value={tachoAtNext100Inspection} onChange={(e) => setTachoAtNext100Inspection(e.target.value)} />
+          </div>
+           <div className="space-y-2">
+            <Label htmlFor="emptyWeight">Empty Weight (lbs)</Label>
+            <Input id="emptyWeight" type="number" value={emptyWeight} onChange={(e) => setEmptyWeight(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="emptyWeightMoment">Empty Weight Moment</Label>
+            <Input id="emptyWeightMoment" type="number" value={emptyWeightMoment} onChange={(e) => setEmptyWeightMoment(e.target.value)} />
           </div>
         </div>
         <DialogFooter>

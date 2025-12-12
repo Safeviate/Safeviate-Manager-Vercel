@@ -32,6 +32,8 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
   const [currentTacho, setCurrentTacho] = useState(aircraft.currentTacho?.toString() || '');
   const [tachoAtNext50Inspection, setTachoAtNext50Inspection] = useState(aircraft.tachoAtNext50Inspection?.toString() || '');
   const [tachoAtNext100Inspection, setTachoAtNext100Inspection] = useState(aircraft.tachoAtNext100Inspection?.toString() || '');
+  const [emptyWeight, setEmptyWeight] = useState(aircraft.emptyWeight?.toString() || '');
+  const [emptyWeightMoment, setEmptyWeightMoment] = useState(aircraft.emptyWeightMoment?.toString() || '');
   
   const handleUpdateAircraft = () => {
     if (!tailNumber.trim() || !model.trim() || !type.trim()) {
@@ -66,6 +68,8 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
       currentTacho: Number(currentTacho) || 0,
       tachoAtNext50Inspection: Number(tachoAtNext50Inspection) || 0,
       tachoAtNext100Inspection: Number(tachoAtNext100Inspection) || 0,
+      emptyWeight: Number(emptyWeight) || 0,
+      emptyWeightMoment: Number(emptyWeightMoment) || 0,
     });
 
     toast({
@@ -129,6 +133,14 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
             <div className="space-y-2">
               <Label htmlFor="tachoAtNext100Inspection">Tacho at Next 100 Insp.</Label>
               <Input id="tachoAtNext100Inspection" type="number" value={tachoAtNext100Inspection} onChange={(e) => setTachoAtNext100Inspection(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="emptyWeight">Empty Weight (lbs)</Label>
+                <Input id="emptyWeight" type="number" value={emptyWeight} onChange={(e) => setEmptyWeight(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="emptyWeightMoment">Empty Weight Moment</Label>
+                <Input id="emptyWeightMoment" type="number" value={emptyWeightMoment} onChange={(e) => setEmptyWeightMoment(e.target.value)} />
             </div>
         </div>
       </CardContent>

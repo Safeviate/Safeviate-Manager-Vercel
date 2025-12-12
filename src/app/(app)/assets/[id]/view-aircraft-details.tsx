@@ -47,6 +47,8 @@ export function ViewAircraftDetails({ aircraft }: ViewAircraftDetailsProps) {
             <DetailItem label="Current Hobbs" value={aircraft.currentHobbs} />
             <DetailItem label="Initial Tacho" value={aircraft.initialTacho} />
             <DetailItem label="Current Tacho" value={aircraft.currentTacho} />
+            <DetailItem label="Empty Weight (lbs)" value={aircraft.emptyWeight} />
+            <DetailItem label="Empty Weight Moment" value={aircraft.emptyWeightMoment} />
             <div className="md:col-span-2 space-y-4">
               <ServiceCountdown label="Next 50hr Inspection" currentTacho={aircraft.currentTacho} tachoAtNextInspection={aircraft.tachoAtNext50Inspection} inspectionInterval={50} />
               <ServiceCountdown label="Next 100hr Inspection" currentTacho={aircraft.currentTacho} tachoAtNextInspection={aircraft.tachoAtNext100Inspection} inspectionInterval={100} />

@@ -31,6 +31,18 @@ export type Aircraft = {
   tachoAtNext50Inspection?: number;
   tachoAtNext100Inspection?: number;
   documents?: AircraftDocument[];
+  emptyWeight?: number;
+  emptyWeightMoment?: number;
+  maxTakeoffWeight?: number;
+  maxLandingWeight?: number;
+  stationArms?: {
+    frontSeats?: number;
+    rearSeats?: number;
+    fuel?: number;
+    baggage1?: number;
+    baggage2?: number;
+  };
+  cgEnvelope?: [number, number][];
 };
 
 export default function AssetsPage() {
@@ -66,7 +78,7 @@ export default function AssetsPage() {
           {isLoading && (
             <div className="text-center p-8">Loading aircraft...</div>
           )}
-          {!isLoading && error && (
+          {!isLoading && !error && (
             <div className="text-center p-8 text-destructive">
               Error: {error.message}
             </div>
