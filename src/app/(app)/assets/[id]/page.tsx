@@ -9,7 +9,7 @@ import { EditAircraftForm } from './edit-aircraft-form';
 import { ViewAircraftDetails } from './view-aircraft-details';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Pencil, Camera, FileUp, Upload, View, Trash2, CalendarIcon } from 'lucide-react';
+import { Pencil, Camera, FileUp, Upload, View, Trash2, CalendarIcon, ListChecks } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DocumentUploader } from './document-uploader';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +23,7 @@ import type { DocumentExpirySettings } from '../../admin/document-dates/page';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useDebounce } from '@/hooks/use-debounce';
+import Link from 'next/link';
 
 interface AircraftProfilePageProps {
     params: { id: string };
@@ -375,10 +376,16 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
                         <Card>
                             <CardHeader>
                                 <CardTitle>Checklist History</CardTitle>
-                                <CardDescription>View the checklist history of the aircraft.</CardDescription>
+                                <CardDescription>View and start pre-flight or post-flight checklists.</CardDescription>
                             </CardHeader>
-                            <CardContent>
-                                <p className="text-sm text-muted-foreground">Checklist history details will be displayed here.</p>
+                            <CardContent className='flex flex-col gap-4'>
+                                <p className="text-sm text-muted-foreground">No recent checklists found for this aircraft.</p>
+                                <Button asChild className='w-fit'>
+                                    <Link href={`/assets/${aircraftId}/checklist`}>
+                                        <ListChecks className="mr-2 h-4 w-4" />
+                                        Start Pre-Flight Check
+                                    </Link>
+                                </Button>
                             </CardContent>
                         </Card>
                     )}
