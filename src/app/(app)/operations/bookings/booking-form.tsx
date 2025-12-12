@@ -107,6 +107,13 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const [isChecklistOpen, setIsChecklistOpen] = useState(true);
   const [checklistType, setChecklistType] = useState<'pre-flight' | 'post-flight'>('pre-flight');
 
+  // Tacho/Hobbs state
+  const [preFlightTacho, setPreFlightTacho] = useState('');
+  const [preFlightHobbs, setPreFlightHobbs] = useState('');
+  const [postFlightTacho, setPostFlightTacho] = useState('');
+  const [postFlightHobbs, setPostFlightHobbs] = useState('');
+
+
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
   });
@@ -159,6 +166,13 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
         };
       }
       form.reset(defaultValues);
+
+      // Set initial tacho/hobbs values
+      if (initialData.aircraft) {
+        setPreFlightTacho(initialData.aircraft.currentTacho?.toString() || '');
+        setPreFlightHobbs(initialData.aircraft.currentHobbs?.toString() || '');
+      }
+
     }
   }, [initialData, form, allBookings]);
   
@@ -365,7 +379,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     if (!isEditing || !firestore || !initialData?.booking) return;
 
     if (!cancellationReason.trim()) {
-        toast({ variant: 'destructive', title: 'Reason Required', description: 'Please provide a reason for the cancellation.' });
+        toast({ variant: 'destructive', title: 'Reason Required', description: 'Please provide a reason for cancelling this booking.' });
         return;
     }
 
@@ -621,29 +635,64 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                                 </div>
                                 
                                 {checklistType === 'pre-flight' ? (
-                                    <div className="space-y-2">
-                                        <Label>Onboard Documents</Label>
-                                        <div className="space-y-3 rounded-lg border p-4">
-                                            {allChecklistDocs.map(docName => (
-                                                <div key={docName} className="flex items-center space-x-3">
-                                                    <Checkbox
-                                                        id={docName}
-                                                        checked={checkedItems[docName] || false}
-                                                        onCheckedChange={(checked) => handleCheckboxChange(docName, !!checked)}
-                                                    />
-                                                    <Label htmlFor={docName} className="font-normal text-base cursor-pointer">
-                                                        {docName}
-                                                    </Label>
+                                    <div className='space-y-4'>
+                                        <div className="space-y-2">
+                                            <Label>Meter Readings</Label>
+                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border p-4">
+                                                <div className='space-y-1'>
+                                                    <Label htmlFor="prev-hobbs" className='text-xs text-muted-foreground'>Previous Hobbs</Label>
+                                                    <Input id="prev-hobbs" value={initialData.aircraft.currentHobbs || '0'} readOnly disabled />
                                                 </div>
-                                            ))}
+                                                <div className='space-y-1'>
+                                                    <Label htmlFor="prev-tacho" className='text-xs text-muted-foreground'>Previous Tacho</Label>
+                                                    <Input id="prev-tacho" value={initialData.aircraft.currentTacho || '0'} readOnly disabled />
+                                                </div>
+                                                <div className='space-y-1'>
+                                                    <Label htmlFor="current-hobbs">Current Hobbs</Label>
+                                                    <Input id="current-hobbs" type="number" value={preFlightHobbs} onChange={e => setPreFlightHobbs(e.target.value)} />
+                                                </div>
+                                                <div className='space-y-1'>
+                                                    <Label htmlFor="current-tacho">Current Tacho</Label>
+                                                    <Input id="current-tacho" type="number" value={preFlightTacho} onChange={e => setPreFlightTacho(e.target.value)} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Onboard Documents</Label>
+                                            <div className="space-y-3 rounded-lg border p-4">
+                                                {allChecklistDocs.map(docName => (
+                                                    <div key={docName} className="flex items-center space-x-3">
+                                                        <Checkbox
+                                                            id={docName}
+                                                            checked={checkedItems[docName] || false}
+                                                            onCheckedChange={(checked) => handleCheckboxChange(docName, !!checked)}
+                                                        />
+                                                        <Label htmlFor={docName} className="font-normal text-base cursor-pointer">
+                                                            {docName}
+                                                        </Label>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="space-y-2">
-                                        <Label>Post-Flight Checks</Label>
-                                         <div className="space-y-3 rounded-lg border p-4">
-                                            <p className="text-muted-foreground text-sm">Post-flight checks (e.g., snag reporting, photo uploads) will go here.</p>
-                                         </div>
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label>Final Meter Readings</Label>
+                                            <div className="grid grid-cols-2 gap-4 rounded-lg border p-4">
+                                                <div className='space-y-1'>
+                                                    <Label htmlFor="final-hobbs">Final Hobbs</Label>
+                                                    <Input id="final-hobbs" type="number" value={postFlightHobbs} onChange={e => setPostFlightHobbs(e.target.value)} />
+                                                </div>
+                                                <div className='space-y-1'>
+                                                    <Label htmlFor="final-tacho">Final Tacho</Label>
+                                                    <Input id="final-tacho" type="number" value={postFlightTacho} onChange={e => setPostFlightTacho(e.target.value)} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3 rounded-lg border p-4">
+                                            <p className="text-muted-foreground text-sm">Additional post-flight checks (e.g., snag reporting, photo uploads) will go here.</p>
+                                        </div>
                                     </div>
                                 )}
 
@@ -718,3 +767,5 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     </>
   );
 }
+
+    
