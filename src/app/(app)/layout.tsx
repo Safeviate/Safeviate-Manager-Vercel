@@ -13,7 +13,7 @@ export default function AppLayout({
     <AuthGuard>
       <SidebarProvider>
         <AppSidebar />
-        <div className="flex flex-col flex-1 h-screen overflow-hidden">
+        <div className="flex flex-col flex-1 h-screen">
           <AppHeader />
           <SidebarInset className="p-4 lg:p-6 flex-1 overflow-y-auto pb-20 md:pb-4">
             {children}
