@@ -1,4 +1,3 @@
-
 'use client';
 import {
   Sidebar,
@@ -64,7 +63,6 @@ export function AppSidebar() {
 
   const renderMenuItem = (item: MenuItemType) => {
     const isParentActive = pathname.startsWith(item.href);
-    const isDirectParentActive = pathname === item.href;
 
     if (item.subItems) {
       return (
@@ -87,7 +85,7 @@ export function AppSidebar() {
               {item.subItems.map((subItem) => (
                 <SidebarMenuSubItem key={subItem.href}>
                   <Link href={subItem.href}>
-                    <SidebarMenuSubButton asChild isActive={pathname.startsWith(subItem.href)}>
+                    <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
                       <span>{subItem.label}</span>
                     </SidebarMenuSubButton>
                   </Link>
