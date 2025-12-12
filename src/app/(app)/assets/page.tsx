@@ -78,7 +78,7 @@ export default function AssetsPage() {
           {isLoading && (
             <div className="text-center p-8">Loading aircraft...</div>
           )}
-          {!isLoading && error && (
+          {error && (
             <div className="text-center p-8 text-destructive">
               Error: {error.message}
             </div>

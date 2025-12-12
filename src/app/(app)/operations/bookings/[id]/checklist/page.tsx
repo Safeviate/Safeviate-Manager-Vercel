@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Scale } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -127,6 +127,16 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
                                 </div>
                             ))}
                         </div>
+                    </div>
+                     <div className="space-y-4">
+                        <h3 className="text-lg font-medium">Weight & Balance</h3>
+                        <p className="text-sm text-muted-foreground">Calculate the aircraft's weight and balance for this flight.</p>
+                        <Button asChild>
+                            <Link href={`/operations/bookings/${bookingId}/weight-and-balance`}>
+                                <Scale className="mr-2 h-4 w-4" />
+                                Calculate Weight & Balance
+                            </Link>
+                        </Button>
                     </div>
                 </CardContent>
                 <CardFooter>
