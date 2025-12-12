@@ -234,11 +234,11 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     
     // Add meter readings to responses
     if (checklistType === 'pre-flight') {
-        if(preFlightHobbs) responses.push({ itemId: 'pre-flight-hobbs', checked: false, notes: preFlightHobbs });
-        if(preFlightTacho) responses.push({ itemId: 'pre-flight-tacho', checked: false, notes: preFlightTacho });
+        if(preFlightHobbs) responses.push({ itemId: 'pre-flight-hobbs', checked: false, hobbs: Number(preFlightHobbs) });
+        if(preFlightTacho) responses.push({ itemId: 'pre-flight-tacho', checked: false, tacho: Number(preFlightTacho) });
     } else {
-        if(postFlightHobbs) responses.push({ itemId: 'post-flight-hobbs', checked: false, notes: postFlightHobbs });
-        if(postFlightTacho) responses.push({ itemId: 'post-flight-tacho', checked: false, notes: postFlightTacho });
+        if(postFlightHobbs) responses.push({ itemId: 'post-flight-hobbs', checked: false, hobbs: Number(postFlightHobbs) });
+        if(postFlightTacho) responses.push({ itemId: 'post-flight-tacho', checked: false, tacho: Number(postFlightTacho) });
     }
 
     if (responses.length === 0) return; // Don't save empty checklists
@@ -823,3 +823,5 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     </>
   );
 }
+
+    

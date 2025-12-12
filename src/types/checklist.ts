@@ -6,6 +6,8 @@ export type ChecklistItemResponse = {
   checked: boolean;
   notes?: string;
   photoUrl?: string;
+  tacho?: number;
+  hobbs?: number;
 };
 
 export type ChecklistResponse = {
@@ -16,3 +18,5 @@ export type ChecklistResponse = {
   submissionTime: Timestamp;
   responses: ChecklistItemResponse[];
 };
+
+    
