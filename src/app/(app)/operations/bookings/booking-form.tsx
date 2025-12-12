@@ -102,6 +102,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const [cancellationReason, setCancellationReason] = useState('');
   
   // Checklist State
+  const [isDetailsOpen, setIsDetailsOpen] = useState(true);
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [isChecklistOpen, setIsChecklistOpen] = useState(true);
 
@@ -432,160 +433,169 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
           <Form {...form}>
             <ScrollArea className="max-h-[60vh]">
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-4">
-                 <FormField
-                    control={form.control}
-                    name="aircraftId"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Aircraft</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled>
-                        <FormControl>
-                            <SelectTrigger>
-                            <SelectValue placeholder="Select an aircraft" />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            {aircraftList.map(ac => <SelectItem key={ac.id} value={ac.id}>{ac.tailNumber}</SelectItem>)}
-                        </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-
-                <FormField
-                    control={form.control}
-                    name="type"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Booking Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                            <SelectTrigger>
-                            <SelectValue placeholder="Select booking type" />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            <SelectItem value="Student Training">Student Training</SelectItem>
-                            <SelectItem value="Hire and Fly">Hire and Fly</SelectItem>
-                        </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-
-                <FormField
-                    control={form.control}
-                    name="pilotId"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Pilot / Student</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                            <SelectTrigger>
-                            <SelectValue placeholder="Select a pilot" />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            {pilotList.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}
-                        </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-
-                {form.watch('type') === 'Student Training' && (
+                <Collapsible open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+                  <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="flex w-full items-center justify-between px-1">
+                          <h3 className="text-lg font-semibold">Booking Details</h3>
+                          <ChevronsUpDown className="h-4 w-4" />
+                      </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-4 pt-2">
                     <FormField
                         control={form.control}
-                        name="instructorId"
+                        name="aircraftId"
                         render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Instructor</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                            <FormLabel>Aircraft</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled>
                             <FormControl>
                                 <SelectTrigger>
-                                <SelectValue placeholder="Select an instructor" />
+                                <SelectValue placeholder="Select an aircraft" />
                                 </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                                {pilotList.filter(p => p.userType === 'Instructor').map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}
+                                {aircraftList.map(ac => <SelectItem key={ac.id} value={ac.id}>{ac.tailNumber}</SelectItem>)}
                             </SelectContent>
                             </Select>
                             <FormMessage />
                         </FormItem>
                         )}
                     />
-                )}
 
-                <FormField
-                    control={form.control}
-                    name="isOvernight"
-                    render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                        <div className="space-y-0.5">
-                        <FormLabel>Overnight Booking</FormLabel>
-                        <FormMessage />
-                        </div>
-                        <FormControl>
-                        <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isEditing}
-                        />
-                        </FormControl>
-                    </FormItem>
-                    )}
-                />
-
-
-                <div className="grid grid-cols-2 gap-4">
                     <FormField
-                    control={form.control}
-                    name="startTime"
-                    render={({ field }) => (
+                        control={form.control}
+                        name="type"
+                        render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Start Time</FormLabel>
-                        <FormControl>
-                            <Input type="time" {...field} />
-                        </FormControl>
-                        <FormMessage />
+                            <FormLabel>Booking Type</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Select booking type" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                <SelectItem value="Student Training">Student Training</SelectItem>
+                                <SelectItem value="Hire and Fly">Hire and Fly</SelectItem>
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
                         </FormItem>
-                    )}
+                        )}
                     />
-                    <FormField
-                    control={form.control}
-                    name="endTime"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>{isOvernight ? 'End Time (Day 1)' : 'End Time'}</FormLabel>
-                        <FormControl>
-                            <Input type="time" {...field} disabled={isOvernight} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                </div>
 
-                {isOvernight && (
-                    <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="pilotId"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Pilot / Student</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Select a pilot" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {pilotList.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+
+                    {form.watch('type') === 'Student Training' && (
                         <FormField
                             control={form.control}
-                            name="overnightEndTime"
+                            name="instructorId"
                             render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>End Time (Day 2)</FormLabel>
+                            <FormItem>
+                                <FormLabel>Instructor</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
-                                    <Input type="time" {...field} />
+                                    <SelectTrigger>
+                                    <SelectValue placeholder="Select an instructor" />
+                                    </SelectTrigger>
                                 </FormControl>
+                                <SelectContent>
+                                    {pilotList.filter(p => p.userType === 'Instructor').map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}
+                                </SelectContent>
+                                </Select>
                                 <FormMessage />
-                                </FormItem>
+                            </FormItem>
                             )}
+                        />
+                    )}
+
+                    <FormField
+                        control={form.control}
+                        name="isOvernight"
+                        render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                            <FormLabel>Overnight Booking</FormLabel>
+                            <FormMessage />
+                            </div>
+                            <FormControl>
+                            <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                disabled={isEditing}
                             />
+                            </FormControl>
+                        </FormItem>
+                        )}
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                        control={form.control}
+                        name="startTime"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Start Time</FormLabel>
+                            <FormControl>
+                                <Input type="time" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="endTime"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>{isOvernight ? 'End Time (Day 1)' : 'End Time'}</FormLabel>
+                            <FormControl>
+                                <Input type="time" {...field} disabled={isOvernight} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
                     </div>
-                )}
+
+                    {isOvernight && (
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="overnightEndTime"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>End Time (Day 2)</FormLabel>
+                                    <FormControl>
+                                        <Input type="time" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                        </div>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
                 
                 {isEditing && (
                     <>
