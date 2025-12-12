@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -12,9 +13,6 @@ import type { Booking } from '@/types/booking';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { ListChecks } from 'lucide-react';
 
 interface BookingsTableProps {
   bookings: Booking[];
@@ -42,7 +40,6 @@ export function BookingsTable({ bookings, aircraftMap, pilotsMap, tenantId }: Bo
           <TableHead>Start Time</TableHead>
           <TableHead>End Time</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -59,14 +56,6 @@ export function BookingsTable({ bookings, aircraftMap, pilotsMap, tenantId }: Bo
                 >
                     {booking.status}
                 </Badge>
-            </TableCell>
-            <TableCell className="text-right">
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/operations/bookings/${booking.id}/checklist`}>
-                    <ListChecks className="mr-2 h-4 w-4" />
-                    Start Checklist
-                </Link>
-              </Button>
             </TableCell>
           </TableRow>
         ))}
