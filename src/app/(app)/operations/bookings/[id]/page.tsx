@@ -1,3 +1,4 @@
+
 'use client';
 
 import { use, useMemo } from 'react';
@@ -102,8 +103,8 @@ export default function BookingDetailsPage({ params }: BookingDetailsPageProps) 
                     <DetailItem label="Pilot" value={pilot ? `${pilot.firstName} ${pilot.lastName}` : '...'} />
                     {booking.instructorId && <DetailItem label="Instructor" value={instructor ? `${instructor.firstName} ${instructor.lastName}` : '...'} />}
                     <DetailItem label="Booking Type" value={booking.type} />
-                    <DetailItem label="Start Time" value={format(booking.startTime.toDate(), 'p')} />
-                    <DetailItem label="End Time" value={format(booking.endTime.toDate(), 'p')} />
+                    <DetailItem label="Start Time" value={format(booking.startTime.toDate(), 'HH:mm')} />
+                    <DetailItem label="End Time" value={format(booking.endTime.toDate(), 'HH:mm')} />
                     {booking.cancellationReason && (
                         <div className="md:col-span-2 lg:col-span-3">
                            <DetailItem label="Cancellation Reason" value={booking.cancellationReason} />

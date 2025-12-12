@@ -52,8 +52,8 @@ export function BookingsTable({ bookings, aircraftMap, pilotsMap, tenantId }: Bo
             <TableCell className="font-medium">{booking.bookingNumber || 'N/A'}</TableCell>
             <TableCell>{aircraftMap.get(booking.aircraftId) || 'Unknown'}</TableCell>
             <TableCell>{pilotsMap.get(booking.pilotId) || 'Unknown'}</TableCell>
-            <TableCell>{format(booking.startTime.toDate(), 'dd/MM/yyyy p')}</TableCell>
-            <TableCell>{format(booking.endTime.toDate(), 'dd/MM/yyyy p')}</TableCell>
+            <TableCell>{format(booking.startTime.toDate(), 'dd/MM/yyyy HH:mm')}</TableCell>
+            <TableCell>{format(booking.endTime.toDate(), 'dd/MM/yyyy HH:mm')}</TableCell>
             <TableCell>
                 <Badge variant={booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason' ? 'destructive' : 'secondary'}
                   className={cn(booking.status === 'Confirmed' && 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100')}
