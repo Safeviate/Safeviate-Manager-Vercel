@@ -9,6 +9,7 @@ import type { Booking } from '@/types/booking';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
 import { BookingsTable } from './bookings-table';
+import type { ChecklistResponse } from '@/types/checklist';
 
 export default function BookingsPage() {
   const firestore = useFirestore();
@@ -38,12 +39,21 @@ export default function BookingsPage() {
     [firestore]
   );
 
+  const checklistResponsesQuery = useMemoFirebase(
+    () =>
+      firestore
+        ? query(collection(firestore, 'tenants', tenantId, 'checklistResponses'))
+        : null,
+    [firestore, tenantId]
+  );
+
   const { data: bookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
   const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
   const { data: pilots, isLoading: isLoadingPilots, error: pilotsError } = useCollection<PilotProfile>(pilotsQuery);
+  const { data: checklistResponses, isLoading: isLoadingChecklists, error: checklistsError } = useCollection<ChecklistResponse>(checklistResponsesQuery);
 
-  const isLoading = isLoadingBookings || isLoadingAircraft || isLoadingPilots;
-  const error = bookingsError || aircraftError || pilotsError;
+  const isLoading = isLoadingBookings || isLoadingAircraft || isLoadingPilots || isLoadingChecklists;
+  const error = bookingsError || aircraftError || pilotsError || checklistsError;
 
   const aircraftMap = useMemo(() => {
     if (!aircraft) return new Map<string, string>();
@@ -77,6 +87,7 @@ export default function BookingsPage() {
                 {!isLoading && !error && (
                     <BookingsTable 
                         bookings={bookings || []}
+                        checklistResponses={checklistResponses || []}
                         aircraftMap={aircraftMap}
                         pilotsMap={pilotsMap}
                         tenantId={tenantId}
