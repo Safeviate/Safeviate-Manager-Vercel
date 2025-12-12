@@ -105,6 +105,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const [isDetailsOpen, setIsDetailsOpen] = useState(true);
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [isChecklistOpen, setIsChecklistOpen] = useState(true);
+  const [checklistType, setChecklistType] = useState<'pre-flight' | 'post-flight'>('pre-flight');
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
@@ -191,7 +192,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     const checklistResponse: Omit<ChecklistResponse, 'id'> = {
         bookingId,
         pilotId,
-        checklistType: 'pre-flight',
+        checklistType,
         submissionTime: Timestamp.now(),
         responses,
     };
@@ -199,7 +200,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     const checklistRef = collection(firestore, 'tenants', tenantId, 'checklistResponses');
     addDocumentNonBlocking(checklistRef, checklistResponse);
 
-    toast({ title: "Checklist Saved", description: "Pre-flight checklist has been submitted." });
+    toast({ title: `Checklist Saved`, description: `${checklistType === 'pre-flight' ? 'Pre-flight' : 'Post-flight'} checklist has been submitted.` });
   };
 
 
@@ -603,28 +604,49 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                         <Collapsible open={isChecklistOpen} onOpenChange={setIsChecklistOpen}>
                             <CollapsibleTrigger asChild>
                                 <Button variant="ghost" className="flex w-full items-center justify-between px-1">
-                                    <h3 className="text-lg font-semibold">Pre-Flight Checklist</h3>
+                                    <h3 className="text-lg font-semibold capitalize">{checklistType.replace('-', ' ')} Checklist</h3>
                                     <ChevronsUpDown className="h-4 w-4" />
                                 </Button>
                             </CollapsibleTrigger>
                             <CollapsibleContent className="space-y-4 pt-2">
-                                <div className="space-y-2">
-                                    <Label>Onboard Documents</Label>
-                                    <div className="space-y-3 rounded-lg border p-4">
-                                        {allChecklistDocs.map(docName => (
-                                            <div key={docName} className="flex items-center space-x-3">
-                                                <Checkbox
-                                                    id={docName}
-                                                    checked={checkedItems[docName] || false}
-                                                    onCheckedChange={(checked) => handleCheckboxChange(docName, !!checked)}
-                                                />
-                                                <Label htmlFor={docName} className="font-normal text-base cursor-pointer">
-                                                    {docName}
-                                                </Label>
-                                            </div>
-                                        ))}
+                                <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                                    <div className="space-y-0.5">
+                                        <Label>Toggle Checklist (Dev Only)</Label>
+                                        <p className="text-xs text-muted-foreground">Switch between pre and post flight views.</p>
                                     </div>
+                                    <Switch
+                                        checked={checklistType === 'post-flight'}
+                                        onCheckedChange={(checked) => setChecklistType(checked ? 'post-flight' : 'pre-flight')}
+                                    />
                                 </div>
+                                
+                                {checklistType === 'pre-flight' ? (
+                                    <div className="space-y-2">
+                                        <Label>Onboard Documents</Label>
+                                        <div className="space-y-3 rounded-lg border p-4">
+                                            {allChecklistDocs.map(docName => (
+                                                <div key={docName} className="flex items-center space-x-3">
+                                                    <Checkbox
+                                                        id={docName}
+                                                        checked={checkedItems[docName] || false}
+                                                        onCheckedChange={(checked) => handleCheckboxChange(docName, !!checked)}
+                                                    />
+                                                    <Label htmlFor={docName} className="font-normal text-base cursor-pointer">
+                                                        {docName}
+                                                    </Label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <Label>Post-Flight Checks</Label>
+                                         <div className="space-y-3 rounded-lg border p-4">
+                                            <p className="text-muted-foreground text-sm">Post-flight checks (e.g., snag reporting, photo uploads) will go here.</p>
+                                         </div>
+                                    </div>
+                                )}
+
                             </CollapsibleContent>
                         </Collapsible>
                     </>
