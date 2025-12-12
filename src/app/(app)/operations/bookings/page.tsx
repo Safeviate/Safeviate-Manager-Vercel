@@ -15,8 +15,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { BookingForm } from './booking-form';
-import { useToast } from '@/hooks/use-toast';
 
 
 const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
@@ -74,12 +72,6 @@ const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePositi
         <div 
           key={hour} 
           className="relative border-t" style={{ height: `${HOUR_HEIGHT_PX}px` }}
-          onClick={() => {
-            if(aircraft) {
-              const time = format(new Date(0, 0, 0, hour), 'HH:mm');
-              onSlotClick(aircraft, time);
-            }
-          }}
         >
             <span className="absolute top-1 left-1 text-xs text-muted-foreground pointer-events-none">
                 {format(new Date(0, 0, 0, hour), 'HH:mm')}
@@ -125,10 +117,6 @@ export default function SchedulePage() {
   const [nowLinePosition, setNowLinePosition] = useState(0);
   const [showNowLine, setShowNowLine] = useState(false);
 
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formInitialState, setFormInitialState] = useState<{ aircraft: Aircraft; time: string; date: Date; booking?: Booking } | null>(null);
-  const { toast } = useToast();
-
   const aircraftQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
     [firestore, tenantId]
@@ -137,11 +125,10 @@ export default function SchedulePage() {
   const bookingsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     const start = Timestamp.fromDate(startOfDay(subDays(selectedDate, 1))); // Fetch from start of previous day
-    const end = Timestamp.fromDate(endOfDay(selectedDate)); // Fetch until end of selected day
+    const end = Timestamp.fromDate(endOfDay(addDays(selectedDate, 1))); // Fetch until end of next day
     return query(
         collection(firestore, 'tenants', tenantId, 'bookings'),
         where('startTime', '<=', end),
-        where('startTime', '>=', start)
     );
   }, [firestore, tenantId, selectedDate]);
 
@@ -184,44 +171,6 @@ export default function SchedulePage() {
     const interval = setInterval(calculateNowLine, 60000); // Update every minute
     return () => clearInterval(interval);
   }, [selectedDate]);
-
-  const handleSlotClick = useCallback((aircraft: Aircraft, time: string, booking?: Booking) => {
-    const [hour, minute] = time.split(':').map(Number);
-    const clickedSlotStart = setMinutes(setHours(selectedDate, hour), minute);
-    const now = new Date();
-    
-    if (booking) {
-        setFormInitialState({
-            aircraft,
-            time: format(booking.startTime.toDate(), 'HH:mm'),
-            date: startOfDay(booking.startTime.toDate()),
-            booking: booking
-        });
-        setIsFormOpen(true);
-        return;
-    }
-
-    if (isSameDay(selectedDate, now)) {
-        if (isBefore(addHours(clickedSlotStart, 1), now)) {
-            toast({ variant: 'destructive', title: 'Invalid Time', description: 'Bookings cannot be created in the past.' });
-            return;
-        }
-        if (isBefore(clickedSlotStart, now)) {
-            time = format(now, 'HH:mm');
-        }
-    } else if (isBefore(selectedDate, startOfDay(now))) {
-        toast({ variant: 'destructive', title: 'Invalid Date', description: 'Bookings cannot be created on a past date.' });
-        return;
-    }
-    
-    setFormInitialState({
-        aircraft,
-        time,
-        date: selectedDate,
-        booking: booking
-    });
-    setIsFormOpen(true);
-  }, [selectedDate, toast]);
   
   const extraLanes = ['', '', '', ''];
 
@@ -290,7 +239,7 @@ export default function SchedulePage() {
                         showNowLine={showNowLine}
                         nowLinePosition={nowLinePosition}
                         selectedDate={selectedDate}
-                        onSlotClick={handleSlotClick}
+                        onSlotClick={() => {}}
                       />
                     ))}
                     {extraLanes.map((_, index) => (
@@ -311,15 +260,6 @@ export default function SchedulePage() {
           </CardContent>
         </Card>
       </div>
-      <BookingForm
-          tenantId={tenantId}
-          aircraftList={aircraft || []}
-          pilotList={pilots || []}
-          allBookings={allBookings || []}
-          initialData={formInitialState}
-          isOpen={isFormOpen}
-          onClose={() => setIsFormOpen(false)}
-      />
     </>
   );
 }
