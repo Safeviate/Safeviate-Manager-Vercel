@@ -2,11 +2,12 @@
 'use client';
 
 import { use, useMemo } from 'react';
-import { doc } from 'firebase/firestore';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
+import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/app/(app)/assets/page';
 import type { PilotProfile } from '@/app/(app)/users/personnel/page';
+import type { ChecklistResponse } from '@/types/checklist';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -26,6 +27,15 @@ const DetailItem = ({ label, value }: { label: string; value?: string | null }) 
       <p className="text-base">{value || 'N/A'}</p>
     </div>
 );
+
+const getMeterReading = (responses: ChecklistResponse[], bookingId: string, type: 'pre-flight' | 'post-flight', meter: 'hobbs' | 'tacho'): number | null => {
+    const checklist = responses.find(r => r.bookingId === bookingId && r.checklistType === type);
+    if (!checklist) return null;
+    
+    const item = checklist.responses.find(res => res.itemId === `${type}-${meter}`);
+    return item?.[meter] ?? null;
+};
+
 
 export default function BookingDetailsPage({ params }: BookingDetailsPageProps) {
     const resolvedParams = use(params);
@@ -53,11 +63,34 @@ export default function BookingDetailsPage({ params }: BookingDetailsPageProps) 
         [firestore, tenantId, booking]
     );
 
+    const checklistResponsesQuery = useMemoFirebase(
+        () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'checklistResponses'), where('bookingId', '==', bookingId)) : null),
+        [firestore, tenantId, bookingId]
+    );
+
     const { data: aircraft, isLoading: isLoadingAircraft } = useDoc<Aircraft>(aircraftDocRef);
     const { data: pilot, isLoading: isLoadingPilot } = useDoc<PilotProfile>(pilotDocRef);
     const { data: instructor, isLoading: isLoadingInstructor } = useDoc<PilotProfile>(instructorDocRef);
+    const { data: checklistResponses, isLoading: isLoadingChecklists } = useCollection<ChecklistResponse>(checklistResponsesQuery);
 
-    const isLoading = isLoadingBooking || isLoadingAircraft || isLoadingPilot || isLoadingInstructor;
+    const isLoading = isLoadingBooking || isLoadingAircraft || isLoadingPilot || isLoadingInstructor || isLoadingChecklists;
+
+    const { hobbsDuration, tachoDuration } = useMemo(() => {
+        if (!checklistResponses || checklistResponses.length === 0) {
+            return { hobbsDuration: null, tachoDuration: null };
+        }
+
+        const preHobbs = getMeterReading(checklistResponses, bookingId, 'pre-flight', 'hobbs');
+        const postHobbs = getMeterReading(checklistResponses, bookingId, 'post-flight', 'hobbs');
+        const preTacho = getMeterReading(checklistResponses, bookingId, 'pre-flight', 'tacho');
+        const postTacho = getMeterReading(checklistResponses, bookingId, 'post-flight', 'tacho');
+  
+        const hobbs = (preHobbs !== null && postHobbs !== null) ? postHobbs - preHobbs : null;
+        const tacho = (preTacho !== null && postTacho !== null) ? postTacho - preTacho : null;
+  
+        return { hobbsDuration: hobbs, tachoDuration: tacho };
+
+    }, [checklistResponses, bookingId]);
 
     if (isLoading) {
         return (
@@ -105,6 +138,8 @@ export default function BookingDetailsPage({ params }: BookingDetailsPageProps) 
                     <DetailItem label="Booking Type" value={booking.type} />
                     <DetailItem label="Start Time" value={format(booking.startTime.toDate(), 'HH:mm')} />
                     <DetailItem label="End Time" value={format(booking.endTime.toDate(), 'HH:mm')} />
+                     <DetailItem label="Hobbs Duration" value={hobbsDuration !== null ? hobbsDuration.toFixed(1) : 'N/A'} />
+                    <DetailItem label="Tacho Duration" value={tachoDuration !== null ? tachoDuration.toFixed(1) : 'N/A'} />
                     {booking.cancellationReason && (
                         <div className="md:col-span-2 lg:col-span-3">
                            <DetailItem label="Cancellation Reason" value={booking.cancellationReason} />
