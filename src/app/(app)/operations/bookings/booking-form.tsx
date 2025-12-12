@@ -42,6 +42,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { v4 as uuidv4 } from 'uuid';
 import { deleteBookings, getNextBookingNumber } from './booking-functions';
+import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ChevronsUpDown } from 'lucide-react';
+import type { ChecklistResponse, ChecklistItemResponse } from '@/types/checklist';
 
 interface BookingFormProps {
   tenantId: string;
@@ -79,6 +84,14 @@ const bookingSchema = z.object({
 
 type BookingFormValues = z.infer<typeof bookingSchema>;
 
+const requiredAircraftDocuments = [
+    'Certificate of Release to service',
+    'Certificate of Registration',
+    'Certificate of Airworthiness',
+    'Radio',
+    'Insurance',
+];
+
 export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, initialData, isOpen, onClose }: BookingFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -87,6 +100,10 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState('');
+  
+  // Checklist State
+  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+  const [isChecklistOpen, setIsChecklistOpen] = useState(true);
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
@@ -151,6 +168,40 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     }
   }, [isOvernight, form, isEditing]);
 
+  const allChecklistDocs = useMemo(() => {
+    if (!initialData?.aircraft) return [];
+    return Array.from(new Set([...requiredAircraftDocuments, ...(initialData.aircraft.documents?.map(d => d.name) || [])]));
+  }, [initialData?.aircraft]);
+
+  const handleCheckboxChange = (itemName: string, isChecked: boolean) => {
+    setCheckedItems(prev => ({ ...prev, [itemName]: isChecked }));
+  };
+
+  const saveChecklist = (bookingId: string, pilotId: string) => {
+    if (!firestore || Object.keys(checkedItems).length === 0) return;
+
+    const responses: ChecklistItemResponse[] = Object.entries(checkedItems).map(([itemId, checked]) => ({
+        itemId,
+        checked,
+        notes: '', // For future use
+        photoUrl: '', // For future use
+    }));
+
+    const checklistResponse: Omit<ChecklistResponse, 'id'> = {
+        bookingId,
+        pilotId,
+        checklistType: 'pre-flight',
+        submissionTime: Timestamp.now(),
+        responses,
+    };
+    
+    const checklistRef = collection(firestore, 'tenants', tenantId, 'checklistResponses');
+    addDocumentNonBlocking(checklistRef, checklistResponse);
+
+    toast({ title: "Checklist Saved", description: "Pre-flight checklist has been submitted." });
+  };
+
+
   const onSubmit = async (data: BookingFormValues) => {
     if (!firestore || !initialData) return;
 
@@ -158,15 +209,20 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
       if (initialData.booking.overnightId) {
         await handleOvernightUpdate(data, initialData.booking.overnightId);
       } else {
-        handleStandardBooking(data, initialData.booking?.bookingNumber);
+        await handleStandardBooking(data, initialData.booking.id, initialData.booking?.bookingNumber);
       }
+      // Save checklist if editing
+      saveChecklist(initialData.booking.id, data.pilotId);
     } else {
       try {
         const bookingNumber = await getNextBookingNumber(firestore, tenantId, 'bookings');
         if (data.isOvernight) {
           handleOvernightBooking(data, bookingNumber);
         } else {
-          handleStandardBooking(data, bookingNumber);
+          const newBookingId = await handleStandardBooking(data, undefined, bookingNumber);
+          if (newBookingId) {
+            saveChecklist(newBookingId, data.pilotId);
+          }
         }
       } catch (error) {
         console.error(error);
@@ -181,7 +237,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     onClose();
   };
   
-  const handleStandardBooking = (data: BookingFormValues, bookingNumber?: number) => {
+  const handleStandardBooking = async (data: BookingFormValues, existingId?: string, bookingNumber?: number): Promise<string | undefined> => {
     if (!initialData) return;
     const [startHour, startMinute] = data.startTime.split(':').map(Number);
     const [endHour, endMinute] = data.endTime.split(':').map(Number);
@@ -199,14 +255,16 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
         bookingData.bookingNumber = bookingNumber;
     }
 
-    if (isEditing && initialData.booking) {
-      const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', initialData.booking!.id);
+    if (existingId) {
+      const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', existingId);
       updateDocumentNonBlocking(bookingRef, bookingData);
       toast({ title: 'Booking Updated', description: 'The booking has been successfully updated.' });
+      return existingId;
     } else {
       const bookingsRef = collection(firestore, 'tenants', tenantId, 'bookings');
-      addDocumentNonBlocking(bookingsRef, bookingData);
+      const newDocRef = await addDocumentNonBlocking(bookingsRef, bookingData);
       toast({ title: 'Booking Created', description: 'The new booking has been added to the schedule.' });
+      return newDocRef?.id;
     }
   }
 
@@ -244,7 +302,9 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     delete (bookingData2 as any).overnightEndTime;
 
     const bookingsRef = collection(firestore, 'tenants', tenantId, 'bookings');
-    addDocumentNonBlocking(bookingsRef, bookingData1);
+    addDocumentNonBlocking(bookingsRef, bookingData1).then(docRef => {
+      if (docRef) saveChecklist(docRef.id, data.pilotId);
+    });
     addDocumentNonBlocking(bookingsRef, bookingData2);
 
     toast({
@@ -525,6 +585,39 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                             )}
                             />
                     </div>
+                )}
+                
+                {isEditing && (
+                    <>
+                        <Separator />
+                        <Collapsible open={isChecklistOpen} onOpenChange={setIsChecklistOpen}>
+                            <CollapsibleTrigger asChild>
+                                <Button variant="ghost" className="flex w-full items-center justify-between px-1">
+                                    <h3 className="text-lg font-semibold">Pre-Flight Checklist</h3>
+                                    <ChevronsUpDown className="h-4 w-4" />
+                                </Button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="space-y-4 pt-2">
+                                <div className="space-y-2">
+                                    <Label>Onboard Documents</Label>
+                                    <div className="space-y-3 rounded-lg border p-4">
+                                        {allChecklistDocs.map(docName => (
+                                            <div key={docName} className="flex items-center space-x-3">
+                                                <Checkbox
+                                                    id={docName}
+                                                    checked={checkedItems[docName] || false}
+                                                    onCheckedChange={(checked) => handleCheckboxChange(docName, !!checked)}
+                                                />
+                                                <Label htmlFor={docName} className="font-normal text-base cursor-pointer">
+                                                    {docName}
+                                                </Label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </CollapsibleContent>
+                        </Collapsible>
+                    </>
                 )}
               </form>
             </ScrollArea>

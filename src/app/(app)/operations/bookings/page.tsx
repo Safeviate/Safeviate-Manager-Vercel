@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
+import { BookingForm } from './booking-form';
 
 
 const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
@@ -63,6 +64,13 @@ const BookingItem = ({ booking, pilots, selectedDate, onClick }: { booking: Book
 }
 
 const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePosition, selectedDate, onSlotClick }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; showNowLine: boolean; nowLinePosition: number; selectedDate: Date; onSlotClick: (aircraft: Aircraft, time: string, booking?: Booking) => void; }) => {
+  const handleTimeSlotClick = (hour: number) => {
+    if (aircraft) {
+        const time = `${hour.toString().padStart(2, '0')}:00`;
+        onSlotClick(aircraft, time);
+    }
+  };
+  
   return (
     <div 
         className="flex-1 relative border-r min-w-[150px]"
@@ -71,7 +79,9 @@ const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePositi
       {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
         <div 
           key={hour} 
-          className="relative border-t" style={{ height: `${HOUR_HEIGHT_PX}px` }}
+          className="relative border-t cursor-pointer" 
+          style={{ height: `${HOUR_HEIGHT_PX}px` }}
+          onClick={() => handleTimeSlotClick(hour)}
         >
             <span className="absolute top-1 left-1 text-xs text-muted-foreground pointer-events-none">
                 {format(new Date(0, 0, 0, hour), 'HH:mm')}
@@ -116,6 +126,10 @@ export default function SchedulePage() {
 
   const [nowLinePosition, setNowLinePosition] = useState(0);
   const [showNowLine, setShowNowLine] = useState(false);
+
+  // State for managing the booking form modal
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formInitialData, setFormInitialData] = useState<any>(null);
 
   const aircraftQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
@@ -171,6 +185,21 @@ export default function SchedulePage() {
     const interval = setInterval(calculateNowLine, 60000); // Update every minute
     return () => clearInterval(interval);
   }, [selectedDate]);
+  
+  const handleSlotClick = useCallback((aircraft: Aircraft, time: string, booking?: Booking) => {
+    setFormInitialData({
+        aircraft,
+        time,
+        date: selectedDate,
+        booking: booking
+    });
+    setIsFormOpen(true);
+  }, [selectedDate]);
+
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setFormInitialData(null);
+  };
   
   const extraLanes = ['', '', '', ''];
 
@@ -239,7 +268,7 @@ export default function SchedulePage() {
                         showNowLine={showNowLine}
                         nowLinePosition={nowLinePosition}
                         selectedDate={selectedDate}
-                        onSlotClick={() => {}}
+                        onSlotClick={handleSlotClick}
                       />
                     ))}
                     {extraLanes.map((_, index) => (
@@ -250,7 +279,7 @@ export default function SchedulePage() {
                           showNowLine={showNowLine}
                           nowLinePosition={nowLinePosition}
                           selectedDate={selectedDate}
-                          onSlotClick={() => {}}
+                          onSlotClick={handleSlotClick}
                       />
                     ))}
                     {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-4 text-center text-muted-foreground">Please add aircraft to see the schedule.</div>}
@@ -260,6 +289,17 @@ export default function SchedulePage() {
           </CardContent>
         </Card>
       </div>
+      {isFormOpen && (
+        <BookingForm 
+            tenantId={tenantId}
+            aircraftList={aircraft || []}
+            pilotList={pilots || []}
+            allBookings={allBookings || []}
+            initialData={formInitialData}
+            isOpen={isFormOpen}
+            onClose={handleCloseForm}
+        />
+      )}
     </>
   );
 }
