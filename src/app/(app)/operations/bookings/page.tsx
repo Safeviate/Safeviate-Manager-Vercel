@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -111,7 +110,7 @@ const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePositi
             booking={booking}
             pilots={pilots}
             selectedDate={selectedDate}
-            onClick={() => onSlotClick(aircraft!, format(booking.startTime.toDate(), 'HH:mm'), booking)}
+            onClick={() => aircraft && onSlotClick(aircraft, format(booking.startTime.toDate(), 'HH:mm'), booking)}
         />
       ))}
     </div>

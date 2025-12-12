@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { addHours, format, setHours, setMinutes, addDays, startOfDay, isSameDay, endOfDay, isBefore } from 'date-fns';
 import { Timestamp, collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useCollection } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
@@ -44,8 +44,9 @@ import { deleteBookings, getNextBookingNumber } from './booking-functions';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ChevronsUpDown } from 'lucide-react';
+import { ChevronsUpDown, AlertCircle } from 'lucide-react';
 import type { ChecklistResponse, ChecklistItemResponse } from '@/types/checklist';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface BookingFormProps {
   tenantId: string;
@@ -111,6 +112,37 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const [preFlightHobbs, setPreFlightHobbs] = useState('');
   const [postFlightTacho, setPostFlightTacho] = useState('');
   const [postFlightHobbs, setPostFlightHobbs] = useState('');
+
+  const checklistResponsesQuery = useMemoFirebase(
+    () => {
+        if (!firestore || !initialData?.booking) return null;
+        // Fetch all checklist responses to find the one for the previous booking
+        return query(collection(firestore, 'tenants', tenantId, 'checklistResponses'));
+    },
+    [firestore, tenantId, initialData?.booking]
+  );
+  const { data: checklistResponses } = useCollection<ChecklistResponse>(checklistResponsesQuery);
+
+  const isPreFlightChecklistDisabled = useMemo(() => {
+    if (!isEditing || !initialData?.booking || !allBookings || !checklistResponses) return false;
+
+    const currentBooking = initialData.booking;
+    const aircraftBookings = allBookings
+        .filter(b => b.aircraftId === currentBooking.aircraftId && b.id !== currentBooking.id)
+        .sort((a, b) => b.endTime.toMillis() - a.endTime.toMillis());
+
+    const previousBooking = aircraftBookings.find(b => isBefore(b.endTime.toDate(), currentBooking.startTime.toDate()));
+
+    if (!previousBooking) {
+        return false; // No previous booking, so checklist is enabled
+    }
+
+    const previousPostFlightChecklist = checklistResponses.find(
+        r => r.bookingId === previousBooking.id && r.checklistType === 'post-flight'
+    );
+    
+    return !previousPostFlightChecklist;
+  }, [initialData?.booking, allBookings, checklistResponses, isEditing]);
 
 
   const form = useForm<BookingFormValues>({
@@ -236,7 +268,9 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
         await handleStandardBooking(data, initialData.booking.id, initialData.booking?.bookingNumber);
       }
       // Save checklist if editing
-      saveChecklist(initialData.booking.id, data.pilotId);
+      if (!isPreFlightChecklistDisabled) {
+        saveChecklist(initialData.booking.id, data.pilotId);
+      }
     } else {
       try {
         const bookingNumber = await getNextBookingNumber(firestore, tenantId, 'bookings');
@@ -245,7 +279,9 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
         } else {
           const newBookingId = await handleStandardBooking(data, undefined, bookingNumber);
           if (newBookingId) {
-            saveChecklist(newBookingId, data.pilotId);
+             if (!isPreFlightChecklistDisabled) {
+                saveChecklist(newBookingId, data.pilotId);
+             }
           }
         }
       } catch (error) {
@@ -327,7 +363,9 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
 
     const bookingsRef = collection(firestore, 'tenants', tenantId, 'bookings');
     addDocumentNonBlocking(bookingsRef, bookingData1).then(docRef => {
-      if (docRef) saveChecklist(docRef.id, data.pilotId);
+      if (docRef && !isPreFlightChecklistDisabled) {
+        saveChecklist(docRef.id, data.pilotId);
+      }
     });
     addDocumentNonBlocking(bookingsRef, bookingData2);
 
@@ -623,87 +661,97 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                 {isEditing && (
                     <>
                         <Separator />
-                        <Collapsible open={isChecklistOpen} onOpenChange={setIsChecklistOpen}>
-                            <CollapsibleTrigger asChild>
-                                <Button variant="ghost" className="flex w-full items-center justify-between px-1">
+                        <Collapsible open={isChecklistOpen} onOpenChange={setIsChecklistOpen} disabled={isPreFlightChecklistDisabled}>
+                            <CollapsibleTrigger asChild disabled={isPreFlightChecklistDisabled}>
+                                <Button variant="ghost" className="flex w-full items-center justify-between px-1 disabled:opacity-50 disabled:cursor-not-allowed">
                                     <h3 className="text-lg font-semibold capitalize">{checklistType.replace('-', ' ')} Checklist</h3>
                                     <ChevronsUpDown className="h-4 w-4" />
                                 </Button>
                             </CollapsibleTrigger>
-                            <CollapsibleContent className="space-y-4 pt-2">
-                                <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-                                    <div className="space-y-0.5">
-                                        <Label>Toggle Checklist (Dev Only)</Label>
-                                        <p className="text-xs text-muted-foreground">Switch between pre and post flight views.</p>
-                                    </div>
-                                    <Switch
-                                        checked={checklistType === 'post-flight'}
-                                        onCheckedChange={(checked) => setChecklistType(checked ? 'post-flight' : 'pre-flight')}
-                                    />
-                                </div>
-                                
-                                {checklistType === 'pre-flight' ? (
-                                    <div className='space-y-4'>
-                                        <div className="space-y-2">
-                                            <Label>Meter Readings</Label>
-                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border p-4">
-                                                <div className='space-y-1'>
-                                                    <Label htmlFor="prev-hobbs" className='text-xs text-muted-foreground'>Previous Hobbs</Label>
-                                                    <Input id="prev-hobbs" value={initialData.aircraft.currentHobbs || '0'} readOnly disabled />
-                                                </div>
-                                                <div className='space-y-1'>
-                                                    <Label htmlFor="prev-tacho" className='text-xs text-muted-foreground'>Previous Tacho</Label>
-                                                    <Input id="prev-tacho" value={initialData.aircraft.currentTacho || '0'} readOnly disabled />
-                                                </div>
-                                                <div className='space-y-1'>
-                                                    <Label htmlFor="current-hobbs">Current Hobbs</Label>
-                                                    <Input id="current-hobbs" type="number" value={preFlightHobbs} onChange={e => setPreFlightHobbs(e.target.value)} />
-                                                </div>
-                                                <div className='space-y-1'>
-                                                    <Label htmlFor="current-tacho">Current Tacho</Label>
-                                                    <Input id="current-tacho" type="number" value={preFlightTacho} onChange={e => setPreFlightTacho(e.target.value)} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Onboard Documents</Label>
-                                            <div className="space-y-3 rounded-lg border p-4">
-                                                {allChecklistDocs.map(docName => (
-                                                    <div key={docName} className="flex items-center space-x-3">
-                                                        <Checkbox
-                                                            id={docName}
-                                                            checked={checkedItems[docName] || false}
-                                                            onCheckedChange={(checked) => handleCheckboxChange(docName, !!checked)}
-                                                        />
-                                                        <Label htmlFor={docName} className="font-normal text-base cursor-pointer">
-                                                            {docName}
-                                                        </Label>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
+                             <CollapsibleContent className="space-y-4 pt-2">
+                                {isPreFlightChecklistDisabled ? (
+                                    <Alert variant="destructive">
+                                        <AlertCircle className="h-4 w-4" />
+                                        <AlertDescription>
+                                            The post-flight checklist from the previous booking on this aircraft must be completed before starting a new pre-flight check.
+                                        </AlertDescription>
+                                    </Alert>
                                 ) : (
-                                    <div className="space-y-4">
-                                        <div className="space-y-2">
-                                            <Label>Final Meter Readings</Label>
-                                            <div className="grid grid-cols-2 gap-4 rounded-lg border p-4">
-                                                <div className='space-y-1'>
-                                                    <Label htmlFor="final-hobbs">Final Hobbs</Label>
-                                                    <Input id="final-hobbs" type="number" value={postFlightHobbs} onChange={e => setPostFlightHobbs(e.target.value)} />
+                                <>
+                                    <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                                        <div className="space-y-0.5">
+                                            <Label>Toggle Checklist (Dev Only)</Label>
+                                            <p className="text-xs text-muted-foreground">Switch between pre and post flight views.</p>
+                                        </div>
+                                        <Switch
+                                            checked={checklistType === 'post-flight'}
+                                            onCheckedChange={(checked) => setChecklistType(checked ? 'post-flight' : 'pre-flight')}
+                                        />
+                                    </div>
+                                    
+                                    {checklistType === 'pre-flight' ? (
+                                        <div className='space-y-4'>
+                                            <div className="space-y-2">
+                                                <Label>Meter Readings</Label>
+                                                <div className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border p-4">
+                                                    <div className='space-y-1'>
+                                                        <Label htmlFor="prev-hobbs" className='text-xs text-muted-foreground'>Previous Hobbs</Label>
+                                                        <Input id="prev-hobbs" value={initialData.aircraft.currentHobbs || '0'} readOnly disabled />
+                                                    </div>
+                                                    <div className='space-y-1'>
+                                                        <Label htmlFor="prev-tacho" className='text-xs text-muted-foreground'>Previous Tacho</Label>
+                                                        <Input id="prev-tacho" value={initialData.aircraft.currentTacho || '0'} readOnly disabled />
+                                                    </div>
+                                                    <div className='space-y-1'>
+                                                        <Label htmlFor="current-hobbs">Current Hobbs</Label>
+                                                        <Input id="current-hobbs" type="number" value={preFlightHobbs} onChange={e => setPreFlightHobbs(e.target.value)} />
+                                                    </div>
+                                                    <div className='space-y-1'>
+                                                        <Label htmlFor="current-tacho">Current Tacho</Label>
+                                                        <Input id="current-tacho" type="number" value={preFlightTacho} onChange={e => setPreFlightTacho(e.target.value)} />
+                                                    </div>
                                                 </div>
-                                                <div className='space-y-1'>
-                                                    <Label htmlFor="final-tacho">Final Tacho</Label>
-                                                    <Input id="final-tacho" type="number" value={postFlightTacho} onChange={e => setPostFlightTacho(e.target.value)} />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Onboard Documents</Label>
+                                                <div className="space-y-3 rounded-lg border p-4">
+                                                    {allChecklistDocs.map(docName => (
+                                                        <div key={docName} className="flex items-center space-x-3">
+                                                            <Checkbox
+                                                                id={docName}
+                                                                checked={checkedItems[docName] || false}
+                                                                onCheckedChange={(checked) => handleCheckboxChange(docName, !!checked)}
+                                                            />
+                                                            <Label htmlFor={docName} className="font-normal text-base cursor-pointer">
+                                                                {docName}
+                                                            </Label>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="space-y-3 rounded-lg border p-4">
-                                            <p className="text-muted-foreground text-sm">Additional post-flight checks (e.g., snag reporting, photo uploads) will go here.</p>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label>Final Meter Readings</Label>
+                                                <div className="grid grid-cols-2 gap-4 rounded-lg border p-4">
+                                                    <div className='space-y-1'>
+                                                        <Label htmlFor="final-hobbs">Final Hobbs</Label>
+                                                        <Input id="final-hobbs" type="number" value={postFlightHobbs} onChange={e => setPostFlightHobbs(e.target.value)} />
+                                                    </div>
+                                                    <div className='space-y-1'>
+                                                        <Label htmlFor="final-tacho">Final Tacho</Label>
+                                                        <Input id="final-tacho" type="number" value={postFlightTacho} onChange={e => setPostFlightTacho(e.target.value)} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3 rounded-lg border p-4">
+                                                <p className="text-muted-foreground text-sm">Additional post-flight checks (e.g., snag reporting, photo uploads) will go here.</p>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
+                                </>
                                 )}
-
                             </CollapsibleContent>
                         </Collapsible>
                     </>
