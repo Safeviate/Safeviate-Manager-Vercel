@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -11,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from './scroll-area';
+import { startOfToday } from 'date-fns';
 
 interface CustomCalendarProps {
     selectedDate?: Date;
@@ -61,26 +63,29 @@ export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarPro
 
   // Add days of the current month
   for (let day = 1; day <= daysInMonth; day++) {
-    const today = new Date();
-    const isToday =
-      day === today.getDate() &&
-      currentDate.getMonth() === today.getMonth() &&
-      currentDate.getFullYear() === today.getFullYear();
+    const today = startOfToday();
+    const dayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+
+    const isToday = dayDate.getTime() === today.getTime();
     
     const isSelected = selectedDate &&
       day === selectedDate.getDate() &&
       currentDate.getMonth() === selectedDate.getMonth() &&
       currentDate.getFullYear() === selectedDate.getFullYear();
 
+    const isPast = dayDate < today;
+
     calendarDays.push(
       <button
         key={`day-${day}`}
         onClick={() => handleDayClick(day)}
+        disabled={isPast}
         className={cn(
           'flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors',
-          'hover:bg-accent hover:text-accent-foreground',
+          !isPast && 'hover:bg-accent hover:text-accent-foreground',
           isToday && !isSelected && 'bg-muted text-muted-foreground',
-          isSelected && 'bg-primary text-primary-foreground hover:bg-primary/90'
+          isSelected && 'bg-primary text-primary-foreground hover:bg-primary/90',
+          isPast && 'text-muted-foreground opacity-50 cursor-not-allowed'
         )}
       >
         {day}
