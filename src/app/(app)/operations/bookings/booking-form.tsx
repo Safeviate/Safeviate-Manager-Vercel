@@ -513,331 +513,331 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const aircraftType = initialData.aircraft.type;
   const abbreviation = initialData.booking ? getBookingTypeAbbreviation(initialData.booking.type) : '';
 
-  return (
+  // This component will render inside a Dialog if !isEditing, or as a full page component if isEditing
+  const FormContent = () => (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{isEditing ? 'Edit Booking' : 'Create Booking'}</DialogTitle>
-            <DialogDescription>
-              {isEditing ? `Editing booking #${abbreviation}${initialData.booking?.bookingNumber} for ${initialData.aircraft.tailNumber}` : `New booking for ${initialData.aircraft.tailNumber} on ${format(initialData.date, 'PPP')}`}
-            </DialogDescription>
-          </DialogHeader>
+      <div className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{isEditing ? 'Edit Booking' : 'Create Booking'}</DialogTitle>
+          <DialogDescription>
+            {isEditing ? `Editing booking #${abbreviation}${initialData.booking?.bookingNumber} for ${initialData.aircraft.tailNumber}` : `New booking for ${initialData.aircraft.tailNumber} on ${format(initialData.date, 'PPP')}`}
+          </DialogDescription>
+        </DialogHeader>
 
-          <Form {...form}>
-            <ScrollArea className="max-h-[60vh]">
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-4">
-                <Collapsible open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-                  <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="flex w-full items-center justify-between px-1">
-                          <h3 className="text-lg font-semibold">Booking Details</h3>
-                          <ChevronsUpDown className="h-4 w-4" />
-                      </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-4 pt-2">
-                    <FormField
-                        control={form.control}
-                        name="aircraftId"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Aircraft</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled>
-                            <FormControl>
-                                <SelectTrigger>
-                                <SelectValue placeholder="Select an aircraft" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {aircraftList.map(ac => <SelectItem key={ac.id} value={ac.id}>{ac.tailNumber}</SelectItem>)}
-                            </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
+        <Form {...form}>
+          <ScrollArea className="max-h-[60vh]">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-4">
+              <Collapsible open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+                <CollapsibleTrigger asChild>
+                    <Button variant="ghost" className="flex w-full items-center justify-between px-1">
+                        <h3 className="text-lg font-semibold">Booking Details</h3>
+                        <ChevronsUpDown className="h-4 w-4" />
+                    </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 pt-2">
+                  <FormField
+                      control={form.control}
+                      name="aircraftId"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Aircraft</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value} disabled>
+                          <FormControl>
+                              <SelectTrigger>
+                              <SelectValue placeholder="Select an aircraft" />
+                              </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                              {aircraftList.map(ac => <SelectItem key={ac.id} value={ac.id}>{ac.tailNumber}</SelectItem>)}
+                          </SelectContent>
+                          </Select>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
 
-                    <FormField
-                        control={form.control}
-                        name="type"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Booking Type</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                <SelectValue placeholder="Select booking type" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                <SelectItem value="Student Training">Student Training</SelectItem>
-                                <SelectItem value="Hire and Fly">Hire and Fly</SelectItem>
-                                <SelectItem value="Maintenance Flight">Maintenance Flight</SelectItem>
-                            </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
+                  <FormField
+                      control={form.control}
+                      name="type"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Booking Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                              <SelectTrigger>
+                              <SelectValue placeholder="Select booking type" />
+                              </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                              <SelectItem value="Student Training">Student Training</SelectItem>
+                              <SelectItem value="Hire and Fly">Hire and Fly</SelectItem>
+                              <SelectItem value="Maintenance Flight">Maintenance Flight</SelectItem>
+                          </SelectContent>
+                          </Select>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
 
-                    <FormField
-                        control={form.control}
-                        name="pilotId"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Pilot / Student</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                <SelectValue placeholder="Select a pilot" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {pilotList.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}
-                            </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
+                  <FormField
+                      control={form.control}
+                      name="pilotId"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Pilot / Student</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                              <SelectTrigger>
+                              <SelectValue placeholder="Select a pilot" />
+                              </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                              {pilotList.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}
+                          </SelectContent>
+                          </Select>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
 
-                    {form.watch('type') === 'Student Training' && (
-                        <FormField
-                            control={form.control}
-                            name="instructorId"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Instructor</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                    <SelectValue placeholder="Select an instructor" />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {pilotList.filter(p => p.userType === 'Instructor').map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}
-                                </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                    )}
+                  {form.watch('type') === 'Student Training' && (
+                      <FormField
+                          control={form.control}
+                          name="instructorId"
+                          render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Instructor</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                  <SelectTrigger>
+                                  <SelectValue placeholder="Select an instructor" />
+                                  </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                  {pilotList.filter(p => p.userType === 'Instructor').map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}
+                              </SelectContent>
+                              </Select>
+                              <FormMessage />
+                          </FormItem>
+                          )}
+                      />
+                  )}
 
-                    <FormField
-                        control={form.control}
-                        name="isOvernight"
-                        render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                            <div className="space-y-0.5">
-                            <FormLabel>Overnight Booking</FormLabel>
-                            <FormMessage />
-                            </div>
-                            <FormControl>
-                            <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                disabled={isEditing}
-                            />
-                            </FormControl>
-                        </FormItem>
-                        )}
-                    />
+                  <FormField
+                      control={form.control}
+                      name="isOvernight"
+                      render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                          <div className="space-y-0.5">
+                          <FormLabel>Overnight Booking</FormLabel>
+                          <FormMessage />
+                          </div>
+                          <FormControl>
+                          <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={isEditing}
+                          />
+                          </FormControl>
+                      </FormItem>
+                      )}
+                  />
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                        control={form.control}
-                        name="startTime"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Start Time</FormLabel>
-                            <FormControl>
-                                <Input type="time" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                        <FormField
-                        control={form.control}
-                        name="endTime"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>{isOvernight ? 'End Time (Day 1)' : 'End Time'}</FormLabel>
-                            <FormControl>
-                                <Input type="time" {...field} disabled={isOvernight} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                    </div>
+                  <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                      control={form.control}
+                      name="startTime"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Start Time</FormLabel>
+                          <FormControl>
+                              <Input type="time" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                      />
+                      <FormField
+                      control={form.control}
+                      name="endTime"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>{isOvernight ? 'End Time (Day 1)' : 'End Time'}</FormLabel>
+                          <FormControl>
+                              <Input type="time" {...field} disabled={isOvernight} />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                      />
+                  </div>
 
-                    {isOvernight && (
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="overnightEndTime"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>End Time (Day 2)</FormLabel>
-                                    <FormControl>
-                                        <Input type="time" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
-                        </div>
-                    )}
-                  </CollapsibleContent>
-                </Collapsible>
-                
-                {isEditing && (
-                    <>
-                        <Separator />
-                        <Collapsible open={isChecklistOpen} onOpenChange={setIsChecklistOpen} disabled={isPreFlightChecklistDisabled}>
-                            <CollapsibleTrigger asChild disabled={isPreFlightChecklistDisabled}>
-                                <Button variant="ghost" className="flex w-full items-center justify-between px-1 disabled:opacity-50 disabled:cursor-not-allowed">
-                                    <h3 className="text-lg font-semibold capitalize">{checklistType.replace('-', ' ')} Checklist</h3>
-                                    <ChevronsUpDown className="h-4 w-4" />
-                                </Button>
-                            </CollapsibleTrigger>
-                             <CollapsibleContent className="space-y-4 pt-2">
-                                {isPreFlightChecklistDisabled ? (
-                                    <Alert variant="destructive">
-                                        <AlertCircle className="h-4 w-4" />
-                                        <AlertDescription>
-                                            The post-flight checklist from the previous booking on this aircraft must be completed before starting a new pre-flight check.
-                                        </AlertDescription>
-                                    </Alert>
-                                ) : (
-                                <>
-                                    <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-                                        <div className="space-y-0.5">
-                                            <Label>Toggle Checklist (Dev Only)</Label>
-                                            <p className="text-xs text-muted-foreground">Switch between pre and post flight views.</p>
-                                        </div>
-                                        <Switch
-                                            checked={checklistType === 'post-flight'}
-                                            onCheckedChange={(checked) => setChecklistType(checked ? 'post-flight' : 'pre-flight')}
-                                        />
-                                    </div>
-                                    
-                                    {checklistType === 'pre-flight' ? (
-                                        <div className='space-y-4'>
-                                            <div className="space-y-2">
-                                                <Label>Meter Readings & Uplifts</Label>
-                                                <div className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border p-4">
-                                                    <div className='space-y-1'>
-                                                        <Label htmlFor="prev-hobbs" className='text-xs text-muted-foreground'>Previous Hobbs</Label>
-                                                        <Input id="prev-hobbs" value={initialData.aircraft.currentHobbs || '0'} readOnly disabled />
-                                                    </div>
-                                                    <div className='space-y-1'>
-                                                        <Label htmlFor="prev-tacho" className='text-xs text-muted-foreground'>Previous Tacho</Label>
-                                                        <Input id="prev-tacho" value={initialData.aircraft.currentTacho || '0'} readOnly disabled />
-                                                    </div>
-                                                    <div className='space-y-1'>
-                                                        <Label htmlFor="current-hobbs">Current Hobbs</Label>
-                                                        <Input id="current-hobbs" type="number" value={preFlightHobbs} onChange={e => setPreFlightHobbs(e.target.value)} />
-                                                    </div>
-                                                    <div className='space-y-1'>
-                                                        <Label htmlFor="current-tacho">Current Tacho</Label>
-                                                        <Input id="current-tacho" type="number" value={preFlightTacho} onChange={e => setPreFlightTacho(e.target.value)} />
-                                                    </div>
-                                                    <div className='space-y-1 col-span-2'>
-                                                        <Label htmlFor="fuel-uplift">Fuel Uplift (Litres)</Label>
-                                                        <Input id="fuel-uplift" type="number" value={fuelUplift} onChange={e => setFuelUplift(e.target.value)} />
-                                                    </div>
-                                                    {aircraftType === 'Single-Engine' && (
-                                                        <div className='space-y-1 col-span-2'>
-                                                            <Label htmlFor="oil-uplift">Oil Uplift (Quarts)</Label>
-                                                            <Input id="oil-uplift" type="number" value={oilUplift} onChange={e => setOilUplift(e.target.value)} />
-                                                        </div>
-                                                    )}
-                                                    {aircraftType === 'Multi-Engine' && (
-                                                        <>
-                                                            <div className='space-y-1'>
-                                                                <Label htmlFor="left-oil-uplift">Left Engine Oil Uplift (Quarts)</Label>
-                                                                <Input id="left-oil-uplift" type="number" value={leftOilUplift} onChange={e => setLeftOilUplift(e.target.value)} />
-                                                            </div>
-                                                            <div className='space-y-1'>
-                                                                <Label htmlFor="right-oil-uplift">Right Engine Oil Uplift (Quarts)</Label>
-                                                                <Input id="right-oil-uplift" type="number" value={rightOilUplift} onChange={e => setRightOilUplift(e.target.value)} />
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Onboard Documents</Label>
-                                                <div className="space-y-3 rounded-lg border p-4">
-                                                    {allChecklistDocs.map(docName => (
-                                                        <div key={docName} className="flex items-center space-x-3">
-                                                            <Checkbox
-                                                                id={docName}
-                                                                checked={checkedItems[docName] || false}
-                                                                onCheckedChange={(checked) => handleCheckboxChange(docName, !!checked)}
-                                                            />
-                                                            <Label htmlFor={docName} className="font-normal text-base cursor-pointer">
-                                                                {docName}
-                                                            </Label>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label>Final Meter Readings & Uplifts</Label>
-                                                <div className="grid grid-cols-2 gap-4 rounded-lg border p-4">
-                                                    <div className='space-y-1'>
-                                                        <Label htmlFor="final-hobbs">Final Hobbs</Label>
-                                                        <Input id="final-hobbs" type="number" value={postFlightHobbs} onChange={e => setPostFlightHobbs(e.target.value)} />
-                                                    </div>
-                                                    <div className='space-y-1'>
-                                                        <Label htmlFor="final-tacho">Final Tacho</Label>
-                                                        <Input id="final-tacho" type="number" value={postFlightTacho} onChange={e => setPostFlightTacho(e.target.value)} />
-                                                    </div>
-                                                    <div className='space-y-1 col-span-2'>
-                                                        <Label htmlFor="post-fuel-uplift">Fuel Uplift (Litres)</Label>
-                                                        <Input id="post-fuel-uplift" type="number" value={postFlightFuelUplift} onChange={e => setPostFlightFuelUplift(e.target.value)} />
-                                                    </div>
-                                                     {aircraftType === 'Single-Engine' && (
-                                                        <div className='space-y-1 col-span-2'>
-                                                            <Label htmlFor="post-oil-uplift">Oil Uplift (Quarts)</Label>
-                                                            <Input id="post-oil-uplift" type="number" value={postFlightOilUplift} onChange={e => setPostFlightOilUplift(e.target.value)} />
-                                                        </div>
-                                                    )}
-                                                    {aircraftType === 'Multi-Engine' && (
-                                                        <>
-                                                            <div className='space-y-1'>
-                                                                <Label htmlFor="post-left-oil-uplift">Left Engine Oil Uplift (Quarts)</Label>
-                                                                <Input id="post-left-oil-uplift" type="number" value={postFlightLeftOilUplift} onChange={e => setPostFlightLeftOilUplift(e.target.value)} />
-                                                            </div>
-                                                            <div className='space-y-1'>
-                                                                <Label htmlFor="post-right-oil-uplift">Right Engine Oil Uplift (Quarts)</Label>
-                                                                <Input id="post-right-oil-uplift" type="number" value={postFlightRightOilUplift} onChange={e => setPostFlightRightOilUplift(e.target.value)} />
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="space-y-3 rounded-lg border p-4">
-                                                <p className="text-muted-foreground text-sm">Additional post-flight checks (e.g., snag reporting, photo uploads) will go here.</p>
-                                            </div>
-                                        </div>
-                                    )}
-                                </>
-                                )}
-                            </CollapsibleContent>
-                        </Collapsible>
-                    </>
-                )}
-              </form>
-            </ScrollArea>
-          </Form>
-          <DialogFooter className="pt-4 flex-col sm:flex-row sm:justify-center items-stretch gap-2 px-6 pb-6">
+                  {isOvernight && (
+                      <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                              control={form.control}
+                              name="overnightEndTime"
+                              render={({ field }) => (
+                                  <FormItem>
+                                  <FormLabel>End Time (Day 2)</FormLabel>
+                                  <FormControl>
+                                      <Input type="time" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                  </FormItem>
+                              )}
+                              />
+                      </div>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+              
+              {isEditing && (
+                  <>
+                      <Separator />
+                      <Collapsible open={isChecklistOpen} onOpenChange={setIsChecklistOpen} disabled={isPreFlightChecklistDisabled}>
+                          <CollapsibleTrigger asChild disabled={isPreFlightChecklistDisabled}>
+                              <Button variant="ghost" className="flex w-full items-center justify-between px-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                                  <h3 className="text-lg font-semibold capitalize">{checklistType.replace('-', ' ')} Checklist</h3>
+                                  <ChevronsUpDown className="h-4 w-4" />
+                              </Button>
+                          </CollapsibleTrigger>
+                           <CollapsibleContent className="space-y-4 pt-2">
+                              {isPreFlightChecklistDisabled ? (
+                                  <Alert variant="destructive">
+                                      <AlertCircle className="h-4 w-4" />
+                                      <AlertDescription>
+                                          The post-flight checklist from the previous booking on this aircraft must be completed before starting a new pre-flight check.
+                                      </AlertDescription>
+                                  </Alert>
+                              ) : (
+                              <>
+                                  <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                                      <div className="space-y-0.5">
+                                          <Label>Toggle Checklist (Dev Only)</Label>
+                                          <p className="text-xs text-muted-foreground">Switch between pre and post flight views.</p>
+                                      </div>
+                                      <Switch
+                                          checked={checklistType === 'post-flight'}
+                                          onCheckedChange={(checked) => setChecklistType(checked ? 'post-flight' : 'pre-flight')}
+                                      />
+                                  </div>
+                                  
+                                  {checklistType === 'pre-flight' ? (
+                                      <div className='space-y-4'>
+                                          <div className="space-y-2">
+                                              <Label>Meter Readings & Uplifts</Label>
+                                              <div className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border p-4">
+                                                  <div className='space-y-1'>
+                                                      <Label htmlFor="prev-hobbs" className='text-xs text-muted-foreground'>Previous Hobbs</Label>
+                                                      <Input id="prev-hobbs" value={initialData.aircraft.currentHobbs || '0'} readOnly disabled />
+                                                  </div>
+                                                  <div className='space-y-1'>
+                                                      <Label htmlFor="prev-tacho" className='text-xs text-muted-foreground'>Previous Tacho</Label>
+                                                      <Input id="prev-tacho" value={initialData.aircraft.currentTacho || '0'} readOnly disabled />
+                                                  </div>
+                                                  <div className='space-y-1'>
+                                                      <Label htmlFor="current-hobbs">Current Hobbs</Label>
+                                                      <Input id="current-hobbs" type="number" value={preFlightHobbs} onChange={e => setPreFlightHobbs(e.target.value)} />
+                                                  </div>
+                                                  <div className='space-y-1'>
+                                                      <Label htmlFor="current-tacho">Current Tacho</Label>
+                                                      <Input id="current-tacho" type="number" value={preFlightTacho} onChange={e => setPreFlightTacho(e.target.value)} />
+                                                  </div>
+                                                  <div className='space-y-1 col-span-2'>
+                                                      <Label htmlFor="fuel-uplift">Fuel Uplift (Litres)</Label>
+                                                      <Input id="fuel-uplift" type="number" value={fuelUplift} onChange={e => setFuelUplift(e.target.value)} />
+                                                  </div>
+                                                  {aircraftType === 'Single-Engine' && (
+                                                      <div className='space-y-1 col-span-2'>
+                                                          <Label htmlFor="oil-uplift">Oil Uplift (Quarts)</Label>
+                                                          <Input id="oil-uplift" type="number" value={oilUplift} onChange={e => setOilUplift(e.target.value)} />
+                                                      </div>
+                                                  )}
+                                                  {aircraftType === 'Multi-Engine' && (
+                                                      <>
+                                                          <div className='space-y-1'>
+                                                              <Label htmlFor="left-oil-uplift">Left Engine Oil Uplift (Quarts)</Label>
+                                                              <Input id="left-oil-uplift" type="number" value={leftOilUplift} onChange={e => setLeftOilUplift(e.target.value)} />
+                                                          </div>
+                                                          <div className='space-y-1'>
+                                                              <Label htmlFor="right-oil-uplift">Right Engine Oil Uplift (Quarts)</Label>
+                                                              <Input id="right-oil-uplift" type="number" value={rightOilUplift} onChange={e => setRightOilUplift(e.target.value)} />
+                                                          </div>
+                                                      </>
+                                                  )}
+                                              </div>
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label>Onboard Documents</Label>
+                                              <div className="space-y-3 rounded-lg border p-4">
+                                                  {allChecklistDocs.map(docName => (
+                                                      <div key={docName} className="flex items-center space-x-3">
+                                                          <Checkbox
+                                                              id={docName}
+                                                              checked={checkedItems[docName] || false}
+                                                              onCheckedChange={(checked) => handleCheckboxChange(docName, !!checked)}
+                                                          />
+                                                          <Label htmlFor={docName} className="font-normal text-base cursor-pointer">
+                                                              {docName}
+                                                          </Label>
+                                                      </div>
+                                                  ))}
+                                              </div>
+                                          </div>
+                                      </div>
+                                  ) : (
+                                      <div className="space-y-4">
+                                          <div className="space-y-2">
+                                              <Label>Final Meter Readings & Uplifts</Label>
+                                              <div className="grid grid-cols-2 gap-4 rounded-lg border p-4">
+                                                  <div className='space-y-1'>
+                                                      <Label htmlFor="final-hobbs">Final Hobbs</Label>
+                                                      <Input id="final-hobbs" type="number" value={postFlightHobbs} onChange={e => setPostFlightHobbs(e.target.value)} />
+                                                  </div>
+                                                  <div className='space-y-1'>
+                                                      <Label htmlFor="final-tacho">Final Tacho</Label>
+                                                      <Input id="final-tacho" type="number" value={postFlightTacho} onChange={e => setPostFlightTacho(e.target.value)} />
+                                                  </div>
+                                                  <div className='space-y-1 col-span-2'>
+                                                      <Label htmlFor="post-fuel-uplift">Fuel Uplift (Litres)</Label>
+                                                      <Input id="post-fuel-uplift" type="number" value={postFlightFuelUplift} onChange={e => setPostFlightFuelUplift(e.target.value)} />
+                                                  </div>
+                                                   {aircraftType === 'Single-Engine' && (
+                                                      <div className='space-y-1 col-span-2'>
+                                                          <Label htmlFor="post-oil-uplift">Oil Uplift (Quarts)</Label>
+                                                          <Input id="post-oil-uplift" type="number" value={postFlightOilUplift} onChange={e => setPostFlightOilUplift(e.target.value)} />
+                                                      </div>
+                                                  )}
+                                                  {aircraftType === 'Multi-Engine' && (
+                                                      <>
+                                                          <div className='space-y-1'>
+                                                              <Label htmlFor="post-left-oil-uplift">Left Engine Oil Uplift (Quarts)</Label>
+                                                              <Input id="post-left-oil-uplift" type="number" value={postFlightLeftOilUplift} onChange={e => setPostFlightLeftOilUplift(e.target.value)} />
+                                                          </div>
+                                                          <div className='space-y-1'>
+                                                              <Label htmlFor="post-right-oil-uplift">Right Engine Oil Uplift (Quarts)</Label>
+                                                              <Input id="post-right-oil-uplift" type="number" value={postFlightRightOilUplift} onChange={e => setPostFlightRightOilUplift(e.target.value)} />
+                                                          </div>
+                                                      </>
+                                                  )}
+                                              </div>
+                                          </div>
+                                          <div className="space-y-3 rounded-lg border p-4">
+                                              <p className="text-muted-foreground text-sm">Additional post-flight checks (e.g., snag reporting, photo uploads) will go here.</p>
+                                          </div>
+                                      </div>
+                                  )}
+                              </>
+                              )}
+                          </CollapsibleContent>
+                      </Collapsible>
+                  </>
+              )}
+            </form>
+          </ScrollArea>
+        </Form>
+        <DialogFooter className="pt-4 flex-col sm:flex-row sm:justify-center items-stretch gap-2 px-6 pb-6">
             <Button type="submit" className='flex-1' onClick={form.handleSubmit(onSubmit)}>{isEditing ? 'Save Changes' : 'Create Booking'}</Button>
             {isEditing && (
               <div className="contents">
@@ -896,9 +896,29 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                 </AlertDialog>
               </div>
             )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            {
+              !isEditing && (
+                <DialogClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DialogClose>
+              )
+            }
+        </DialogFooter>
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      {!isEditing ? (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <DialogContent>
+            <FormContent />
+          </DialogContent>
+        </Dialog>
+      ) : (
+        <FormContent />
+      )}
     </>
   );
 }
