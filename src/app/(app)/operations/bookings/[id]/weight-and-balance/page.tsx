@@ -1,3 +1,4 @@
+
 'use client';
 
 import { use, useMemo, useState } from 'react';
@@ -320,5 +321,4 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
             </Card>
         </div>
     );
-
-    
+}
