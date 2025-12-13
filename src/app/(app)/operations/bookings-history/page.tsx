@@ -167,6 +167,7 @@ export default function BookingsHistoryPage() {
 
   const trainingBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Student Training'), [enrichedBookings]);
   const hireAndFlyBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Hire and Fly'), [enrichedBookings]);
+  const maintenanceBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Maintenance Flight'), [enrichedBookings]);
 
 
   const renderContent = () => {
@@ -185,6 +186,7 @@ export default function BookingsHistoryPage() {
                 <TabsTrigger value="all">All Bookings</TabsTrigger>
                 <TabsTrigger value="training">Training</TabsTrigger>
                 <TabsTrigger value="hire-and-fly">Hire & Fly</TabsTrigger>
+                <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
             </TabsList>
         </div>
         <CardContent className='p-0'>
@@ -197,6 +199,9 @@ export default function BookingsHistoryPage() {
                 </TabsContent>
                 <TabsContent value="hire-and-fly" className='m-0'>
                     <BookingsTable bookings={hireAndFlyBookings} />
+                </TabsContent>
+                <TabsContent value="maintenance" className='m-0'>
+                    <BookingsTable bookings={maintenanceBookings} />
                 </TabsContent>
             </ScrollArea>
         </CardContent>
