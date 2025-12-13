@@ -468,13 +468,11 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   }
 
   const triggerCancelDialog = () => {
-    onClose(); // Close the edit dialog
-    setIsCancelDialogOpen(true); // Open the cancel dialog
+    setIsCancelDialogOpen(true);
   };
 
   const triggerDeleteDialog = () => {
-    onClose(); // Close the edit dialog
-    setIsDeleteDialogOpen(true); // Open the delete dialog
+    setIsDeleteDialogOpen(true);
   };
   
   if (!initialData) return null;
@@ -823,5 +821,3 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     </>
   );
 }
-
-    
