@@ -223,6 +223,13 @@ export default function SchedulePage() {
   }, [selectedDate]);
   
   const handleSlotClick = useCallback((aircraft: Aircraft, time: string, booking?: Booking) => {
+    // If a booking is clicked, open it in a new tab
+    if (booking) {
+        window.open(`/operations/bookings/${booking.id}`, '_blank');
+        return;
+    }
+    
+    // Logic for creating a new booking in a dialog
     const now = new Date();
     let startTime = time;
 
@@ -240,7 +247,7 @@ export default function SchedulePage() {
         aircraft,
         time: startTime,
         date: selectedDate,
-        booking: booking
+        booking: undefined, // Explicitly undefined for new bookings
     });
     setIsFormOpen(true);
   }, [selectedDate]);
