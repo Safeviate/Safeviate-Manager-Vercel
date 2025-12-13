@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -479,7 +480,6 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
 
   return (
     <>
-      {/* Edit/Create Dialog */}
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -773,7 +773,6 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
         </DialogContent>
       </Dialog>
       
-      {/* Cancel Confirmation Dialog */}
       <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
         <AlertDialogContent>
             <AlertDialogHeader>
@@ -801,7 +800,6 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
             <AlertDialogHeader>
