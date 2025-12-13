@@ -50,16 +50,18 @@ const ChecklistDetails = ({ title, checklist, aircraftType }: { title: string, c
     }
 
     let oilUpliftDisplay = 'N/A';
+    const singleEngineOilUplift = findItemValue(`${checklist.checklistType}-oil-uplift`, 'notes');
+    
     if (aircraftType === 'Multi-Engine') {
         const left = findItemValue(`${checklist.checklistType}-left-oil-uplift`, 'notes');
         const right = findItemValue(`${checklist.checklistType}-right-oil-uplift`, 'notes');
         if (left || right) {
-            oilUpliftDisplay = `L: ${left || 0} / R: ${right || 0}`;
+            oilUpliftDisplay = `L: ${left || '0'} / R: ${right || '0'}`;
         }
-    } else {
-        oilUpliftDisplay = findItemValue(`${checklist.checklistType}-oil-uplift`, 'notes')?.toString() || 'N/A';
+    } else if (singleEngineOilUplift) {
+        oilUpliftDisplay = singleEngineOilUplift.toString();
     }
-    
+
 
     return (
         <div>
