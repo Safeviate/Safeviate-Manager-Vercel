@@ -21,6 +21,15 @@ import { BookingForm } from './booking-form';
 const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
 const TOTAL_HOURS = 24;
 
+const getBookingTypeAbbreviation = (type: Booking['type']): string => {
+    switch (type) {
+        case 'Student Training': return 'T';
+        case 'Hire and Fly': return 'H';
+        case 'Maintenance Flight': return 'M';
+        default: return '';
+    }
+}
+
 const BookingItem = ({ booking, pilots, selectedDate, onClick }: { booking: Booking, pilots: PilotProfile[], selectedDate: Date, onClick: () => void }) => {
     const startTime = booking.startTime.toDate();
     const endTime = booking.endTime.toDate();
@@ -43,6 +52,8 @@ const BookingItem = ({ booking, pilots, selectedDate, onClick }: { booking: Book
     
     const hasContinuationTop = !startsOnSelectedDay;
     const hasContinuationBottom = !endsOnSelectedDay;
+    
+    const abbreviation = getBookingTypeAbbreviation(booking.type);
 
     return (
          <div
@@ -54,7 +65,7 @@ const BookingItem = ({ booking, pilots, selectedDate, onClick }: { booking: Book
             style={{ top: `${top}px`, height: `${height}px` }}
         >
             {hasContinuationTop && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-b from-black/20 to-transparent" />}
-            <p className="font-semibold truncate">{booking.bookingNumber ? `#${booking.bookingNumber} - ` : ''}{booking.type}</p>
+            <p className="font-semibold truncate">{booking.bookingNumber ? `${abbreviation}${booking.bookingNumber} - ` : ''}{booking.type}</p>
             <p className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}</p>
             {booking.status === 'Cancelled' && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
             {(booking.status === 'Cancelled with Reason') && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}

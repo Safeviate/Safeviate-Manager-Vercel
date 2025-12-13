@@ -94,6 +94,15 @@ const requiredAircraftDocuments = [
     'Insurance',
 ];
 
+const getBookingTypeAbbreviation = (type: Booking['type']): string => {
+    switch (type) {
+        case 'Student Training': return 'T';
+        case 'Hire and Fly': return 'H';
+        case 'Maintenance Flight': return 'M';
+        default: return '';
+    }
+}
+
 export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, initialData, isOpen, onClose }: BookingFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -490,6 +499,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   if (!initialData) return null;
 
   const aircraftType = initialData.aircraft.type;
+  const abbreviation = initialData.booking ? getBookingTypeAbbreviation(initialData.booking.type) : '';
 
   return (
     <>
@@ -498,7 +508,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
           <DialogHeader>
             <DialogTitle>{isEditing ? 'Edit Booking' : 'Create Booking'}</DialogTitle>
             <DialogDescription>
-              {isEditing ? `Editing booking #${initialData.booking?.bookingNumber} for ${initialData.aircraft.tailNumber}` : `New booking for ${initialData.aircraft.tailNumber} on ${format(initialData.date, 'PPP')}`}
+              {isEditing ? `Editing booking #${abbreviation}${initialData.booking?.bookingNumber} for ${initialData.aircraft.tailNumber}` : `New booking for ${initialData.aircraft.tailNumber} on ${format(initialData.date, 'PPP')}`}
             </DialogDescription>
           </DialogHeader>
 

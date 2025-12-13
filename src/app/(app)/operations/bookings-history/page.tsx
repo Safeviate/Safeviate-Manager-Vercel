@@ -30,6 +30,15 @@ type EnrichedBooking = Booking & {
   postFlightOilUplift?: string;
 };
 
+const getBookingTypeAbbreviation = (type: Booking['type']): string => {
+    switch (type) {
+        case 'Student Training': return 'T';
+        case 'Hire and Fly': return 'H';
+        case 'Maintenance Flight': return 'M';
+        default: return '';
+    }
+}
+
 const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
     if (bookings.length === 0) {
         return (
@@ -60,7 +69,7 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
             <TableBody>
                 {bookings.map(b => (
                     <TableRow key={b.id}>
-                        <TableCell className="font-medium">{b.bookingNumber}</TableCell>
+                        <TableCell className="font-medium">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
                         <TableCell>{b.aircraftTailNumber}</TableCell>
                         <TableCell>{b.pilotName}</TableCell>
                         <TableCell>{format(b.startTime.toDate(), 'PPP HH:mm')}</TableCell>
