@@ -172,14 +172,14 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
             
             <div>
                 <h3 className="text-lg font-semibold mb-4">Planning</h3>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                     <div className="lg:col-span-2">
                         {cgEnvelopePoints.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={300}>
-                            <ScatterChart margin={{ top: 20, right: 30, bottom: 30, left: 30 }}>
+                        <ResponsiveContainer width="100%" height={350}>
+                            <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis type="number" dataKey="cg" name="CG" unit=" in" domain={['dataMin - 1', 'dataMax + 1']} tickCount={5}>
-                                    <RechartsLabel value="CG (in)" offset={-20} position="insideBottom" />
+                                    <RechartsLabel value="CG (in)" offset={-25} position="insideBottom" />
                                 </XAxis>
                                 <YAxis type="number" dataKey="weight" name="Weight" unit=" lbs" domain={['dataMin - 100', 'dataMax + 100']} tickCount={5}>
                                     <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
@@ -190,12 +190,12 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                             </ScatterChart>
                         </ResponsiveContainer>
                         ) : (
-                            <div className="flex items-center justify-center h-[300px] text-muted-foreground bg-muted/50 rounded-lg p-4">
+                            <div className="flex items-center justify-center h-[350px] text-muted-foreground bg-muted/50 rounded-lg p-4">
                                 No CG Envelope data configured for this aircraft.
                             </div>
                         )}
                     </div>
-                     <div className="space-y-4">
+                     <div className="space-y-6">
                         <div className="space-y-2">
                             <Label htmlFor="weight-input">Aircraft Weight (lbs)</Label>
                             <Input
