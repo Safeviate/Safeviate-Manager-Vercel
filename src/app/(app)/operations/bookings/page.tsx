@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import type { Aircraft } from '../../assets/page';
 import type { Booking } from '@/types/booking';
 import type { PilotProfile } from '../../users/personnel/page';
-import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addHours, addDays, startOfHour, subDays } from 'date-fns';
+import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addHours, addDays, startOfHour, subDays, startOfToday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -64,11 +64,27 @@ const BookingItem = ({ booking, pilots, selectedDate, onClick }: { booking: Book
 }
 
 const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePosition, selectedDate, onSlotClick }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; showNowLine: boolean; nowLinePosition: number; selectedDate: Date; onSlotClick: (aircraft: Aircraft, time: string, booking?: Booking) => void; }) => {
-  const handleTimeSlotClick = (hour: number) => {
-    if (aircraft) {
-        const time = `${hour.toString().padStart(2, '0')}:00`;
-        onSlotClick(aircraft, time);
-    }
+    const today = startOfToday();
+    const isSelectedDateToday = isSameDay(selectedDate, today);
+    const isSelectedDateInPast = isBefore(selectedDate, today);
+
+    const handleTimeSlotClick = (hour: number) => {
+        if (aircraft) {
+            const now = new Date();
+            const slotTime = setMinutes(setHours(selectedDate, hour), 0);
+            
+            // If the selected date is today and the slot is in the past, block it.
+            if (isSelectedDateToday && isBefore(slotTime, startOfHour(now))) {
+                // Optionally, you can add a toast or some feedback here
+                return; 
+            }
+            if (isSelectedDateInPast) {
+                return;
+            }
+
+            const time = `${hour.toString().padStart(2, '0')}:00`;
+            onSlotClick(aircraft, time);
+        }
   };
   
   return (
@@ -76,18 +92,27 @@ const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePositi
         className="flex-1 relative border-r min-w-[150px]"
     >
       {/* Hour lines and labels for this column */}
-      {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
-        <div 
-          key={hour} 
-          className="relative border-t cursor-pointer" 
-          style={{ height: `${HOUR_HEIGHT_PX}px` }}
-          onClick={() => handleTimeSlotClick(hour)}
-        >
-            <span className="absolute top-1 left-1 text-xs text-muted-foreground pointer-events-none">
-                {format(new Date(0, 0, 0, hour), 'HH:mm')}
-            </span>
-        </div>
-      ))}
+      {Array.from({ length: TOTAL_HOURS }).map((_, hour) => {
+        const now = new Date();
+        const slotTime = setMinutes(setHours(selectedDate, hour), 0);
+        const isPast = isSelectedDateInPast || (isSelectedDateToday && isBefore(slotTime, startOfHour(now)));
+
+        return (
+            <div 
+            key={hour} 
+            className={cn(
+                "relative border-t",
+                isPast ? "bg-muted/30 cursor-not-allowed" : "cursor-pointer"
+            )} 
+            style={{ height: `${HOUR_HEIGHT_PX}px` }}
+            onClick={() => handleTimeSlotClick(hour)}
+            >
+                <span className="absolute top-1 left-1 text-xs text-muted-foreground pointer-events-none">
+                    {format(new Date(0, 0, 0, hour), 'HH:mm')}
+                </span>
+            </div>
+        )
+      })}
       
       {/* "Past" Shadow */}
       {showNowLine && (
@@ -187,9 +212,22 @@ export default function SchedulePage() {
   }, [selectedDate]);
   
   const handleSlotClick = useCallback((aircraft: Aircraft, time: string, booking?: Booking) => {
+    const now = new Date();
+    let startTime = time;
+
+    // If it's today and the clicked slot is in the past, default to the current time.
+    if (isSameDay(selectedDate, now) && !booking) {
+        const [hour, minute] = time.split(':').map(Number);
+        const slotDate = setMinutes(setHours(selectedDate, hour), minute);
+
+        if (isBefore(slotDate, now)) {
+            startTime = format(now, 'HH:mm');
+        }
+    }
+    
     setFormInitialData({
         aircraft,
-        time,
+        time: startTime,
         date: selectedDate,
         booking: booking
     });
