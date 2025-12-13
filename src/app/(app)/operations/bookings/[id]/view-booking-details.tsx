@@ -171,8 +171,30 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
             
             <div>
                 <h3 className="text-lg font-semibold mb-4">Planning</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-4 md:col-span-1">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                        {cgEnvelopePoints.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                            <ScatterChart margin={{ top: 20, right: 30, bottom: 30, left: 30 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis type="number" dataKey="cg" name="CG" unit=" in" domain={['dataMin - 1', 'dataMax + 1']} tickCount={5}>
+                                    <RechartsLabel value="CG (in)" offset={-20} position="insideBottom" />
+                                </XAxis>
+                                <YAxis type="number" dataKey="weight" name="Weight" unit=" lbs" domain={['dataMin - 100', 'dataMax + 100']} tickCount={5}>
+                                    <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
+                                </YAxis>
+                                <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                                <Area type="linear" dataKey="weight" data={cgEnvelopePoints} name="CG Limit" stroke="#8884d8" fill="#8884d8" fillOpacity={0.2} strokeWidth={2} />
+                                <Scatter name="Current CG" data={[{ weight: targetPoint.y, cg: targetPoint.x }]} fill={isWithinLimits ? "#22c55e" : "#ef4444"} shape="star" size={150} />
+                            </ScatterChart>
+                        </ResponsiveContainer>
+                        ) : (
+                            <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/50 rounded-lg p-4">
+                                No CG Envelope data configured for this aircraft.
+                            </div>
+                        )}
+                    </div>
+                     <div className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="weight-input">Aircraft Weight (lbs)</Label>
                             <Input
@@ -196,28 +218,6 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                                 {isWithinLimits ? 'Within Limits' : 'Out of Limits'}
                             </Badge>
                         </div>
-                    </div>
-                    <div className="md:col-span-2">
-                        {cgEnvelopePoints.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={300}>
-                            <ScatterChart margin={{ top: 20, right: 30, bottom: 30, left: 30 }}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis type="number" dataKey="cg" name="CG" unit=" in" domain={['dataMin - 1', 'dataMax + 1']} tickCount={5}>
-                                    <RechartsLabel value="CG (in)" offset={-20} position="insideBottom" />
-                                </XAxis>
-                                <YAxis type="number" dataKey="weight" name="Weight" unit=" lbs" domain={['dataMin - 100', 'dataMax + 100']} tickCount={5}>
-                                    <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
-                                </YAxis>
-                                <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                <Area type="linear" dataKey="weight" data={cgEnvelopePoints} name="CG Limit" stroke="#8884d8" fill="#8884d8" fillOpacity={0.2} strokeWidth={2} />
-                                <Scatter name="Current CG" data={[{ weight: targetPoint.y, cg: targetPoint.x }]} fill={isWithinLimits ? "#22c55e" : "#ef4444"} shape="star" size={150} />
-                            </ScatterChart>
-                        </ResponsiveContainer>
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/50 rounded-lg p-4">
-                                No CG Envelope data configured for this aircraft.
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
