@@ -49,11 +49,6 @@ export const menuConfig: MenuItem[] = [
         label: 'Schedule',
         description: 'Schedule and manage aircraft bookings.',
       },
-      {
-        href: '/operations/maintenance',
-        label: 'Bookings',
-        description: 'View and manage all bookings.',
-      },
     ],
   },
   {
