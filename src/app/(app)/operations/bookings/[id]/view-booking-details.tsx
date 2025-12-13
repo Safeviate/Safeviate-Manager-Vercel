@@ -10,6 +10,7 @@ import type { ChecklistResponse } from '@/types/checklist';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 
 interface ViewBookingDetailsProps {
   booking: Booking;
@@ -19,10 +20,10 @@ interface ViewBookingDetailsProps {
   checklists: ChecklistResponse[];
 }
 
-const DetailItem = ({ label, value }: { label: string; value?: string | number | null }) => (
+const DetailItem = ({ label, value, children }: { label: string; value?: string | number | null, children?: React.ReactNode }) => (
     <div>
       <p className="text-sm font-medium text-muted-foreground">{label}</p>
-      <p className="text-base font-semibold">{value?.toString() || 'N/A'}</p>
+      {children ? children : <p className="text-base font-semibold">{value?.toString() || 'N/A'}</p>}
     </div>
 );
 
@@ -131,7 +132,11 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
             
             <div>
                 <h3 className="text-lg font-semibold mb-4">Planning</h3>
-                {/* Content for the Planning section will go here */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <DetailItem label="Basic Empty Weight">
+                        <Input type="number" placeholder="Enter weight in lbs" />
+                    </DetailItem>
+                </div>
             </div>
 
 
