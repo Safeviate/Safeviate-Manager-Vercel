@@ -10,8 +10,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Scale } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Polygon,
+  Label as RechartsLabel,
+} from 'recharts';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface WeightAndBalancePageProps {
     params: { id: string };
@@ -19,43 +33,19 @@ interface WeightAndBalancePageProps {
 
 const FUEL_WEIGHT_PER_GALLON = 6; // lbs
 
-// --- Calculation Row Component ---
-const CalcRow = ({ label, weight, arm, moment, isSubtotal = false }: { label: string, weight?: string, arm?: string, moment?: string, isSubtotal?: boolean }) => (
-    <div className={`grid grid-cols-4 items-center gap-2 ${isSubtotal ? 'font-bold bg-muted/20' : ''}`}>
-        <div className="p-2 border-r">{label}</div>
-        <div className="p-2 border-r text-right">{weight}</div>
-        <div className="p-2 border-r text-right">{arm}</div>
-        <div className="p-2 text-right">{moment}</div>
-    </div>
-);
+// --- Helper function to check if a point is inside a polygon ---
+function isPointInPolygon(point: { x: number; y: number }, polygon: { x: number; y: number }[]) {
+  let isInside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x, yi = polygon[i].y;
+    const xj = polygon[j].x, yj = polygon[j].y;
 
-const InputRow = ({ label, weight, onWeightChange, arm }: { label: string, weight: number, onWeightChange: (val: number) => void, arm?: number }) => (
-    <div className="grid grid-cols-4 items-center gap-2">
-        <div className="p-2 border-r">{label}</div>
-        <div className="p-2 border-r">
-            <Input type="number" value={weight || ''} onChange={e => onWeightChange(Number(e.target.value))} className="h-8 text-right bg-background" />
-        </div>
-        <div className="p-2 border-r text-right">{arm?.toFixed(2) || ''}</div>
-        <div className="p-2 text-right">{(weight * (arm || 0)).toFixed(1)}</div>
-    </div>
-);
-
-const FuelInputRow = ({ label, gallons, onGallonsChange, arm, isNegative = false }: { label: string, gallons: number, onGallonsChange: (val: number) => void, arm?: number, isNegative?: boolean }) => {
-    const weight = gallons * FUEL_WEIGHT_PER_GALLON * (isNegative ? -1 : 1);
-    const moment = weight * (arm || 0);
-    return (
-        <div className="grid grid-cols-4 items-center gap-2">
-            <div className="p-2 border-r">{label}</div>
-            <div className="p-2 border-r flex items-center gap-2">
-                <Input type="number" value={gallons || ''} onChange={e => onGallonsChange(Number(e.target.value))} className="h-8 text-right bg-background flex-1" />
-                <span className="text-muted-foreground">x {FUEL_WEIGHT_PER_GALLON} =</span>
-                <span className="font-semibold">{weight.toFixed(1)}</span>
-            </div>
-            <div className="p-2 border-r text-right">{arm?.toFixed(2) || ''}</div>
-            <div className="p-2 text-right">{moment.toFixed(1)}</div>
-        </div>
-    );
-};
+    const intersect = ((yi > point.y) !== (yj > point.y))
+        && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+    if (intersect) isInside = !isInside;
+  }
+  return isInside;
+}
 
 
 export default function WeightAndBalancePage({ params }: WeightAndBalancePageProps) {
@@ -65,15 +55,11 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
     const bookingId = resolvedParams.id;
 
     // --- State for Inputs ---
-    const [oilWeight, setOilWeight] = useState(0);
-    const [pilot1Weight, setPilot1Weight] = useState(0);
-    const [pilot2Weight, setPilot2Weight] = useState(0);
-    const [passenger1Weight, setPassenger1Weight] = useState(0);
-    const [passenger2Weight, setPassenger2Weight] = useState(0);
+    const [frontSeatWeight, setFrontSeatWeight] = useState(0);
+    const [rearSeatWeight, setRearSeatWeight] = useState(0);
     const [baggage1Weight, setBaggage1Weight] = useState(0);
-    const [fuelLoadGallons, setFuelLoadGallons] = useState(0);
-    const [fuelGroundBurnGallons, setFuelGroundBurnGallons] = useState(0);
-    const [fuelFlightBurnGallons, setFuelFlightBurnGallons] = useState(0);
+    const [baggage2Weight, setBaggage2Weight] = useState(0);
+    const [fuelGallons, setFuelGallons] = useState(0);
     
     // --- Data Fetching ---
     const bookingDocRef = useMemoFirebase(() => (firestore ? doc(firestore, 'tenants', tenantId, 'bookings', bookingId) : null), [firestore, tenantId, bookingId]);
@@ -93,143 +79,170 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
         const emptyMoment = aircraft.emptyWeightMoment || 0;
         const arms = aircraft.stationArms;
 
-        // Basic Condition
-        const pilotWeight = pilot1Weight + pilot2Weight;
-        const basicWeight = emptyWeight + oilWeight + pilotWeight;
-        const oilMoment = oilWeight * (arms.oil || 27.5); // Using a default if not present
-        const pilotMoment = pilotWeight * (arms.frontSeats || 0);
-        const basicMoment = emptyMoment + oilMoment + pilotMoment;
-        const basicCg = basicMoment / (basicWeight || 1);
-
         // Zero Fuel Condition
-        const passengerWeight = passenger1Weight + passenger2Weight;
-        const baggageWeight = baggage1Weight;
-        const zeroFuelWeight = basicWeight + passengerWeight + baggageWeight;
-        const passengerMoment = passengerWeight * (arms.rearSeats || 0);
-        const baggageMoment = baggageWeight * (arms.baggage1 || 0);
-        const zeroFuelMoment = basicMoment + passengerMoment + baggageMoment;
+        const zeroFuelWeight = emptyWeight + frontSeatWeight + rearSeatWeight + baggage1Weight + baggage2Weight;
+        const frontSeatMoment = frontSeatWeight * (arms.frontSeats || 0);
+        const rearSeatMoment = rearSeatWeight * (arms.rearSeats || 0);
+        const baggage1Moment = baggage1Weight * (arms.baggage1 || 0);
+        const baggage2Moment = baggage2Weight * (arms.baggage2 || 0);
+        const zeroFuelMoment = emptyMoment + frontSeatMoment + rearSeatMoment + baggage1Moment + baggage2Moment;
         const zeroFuelCg = zeroFuelMoment / (zeroFuelWeight || 1);
-        
-        // Ramp Condition
-        const fuelLoadWeight = fuelLoadGallons * FUEL_WEIGHT_PER_GALLON;
-        const rampWeight = zeroFuelWeight + fuelLoadWeight;
-        const fuelLoadMoment = fuelLoadWeight * (arms.fuel || 0);
-        const rampMoment = zeroFuelMoment + fuelLoadMoment;
-        const rampCg = rampMoment / (rampWeight || 1);
 
         // Takeoff Condition
-        const groundBurnWeight = fuelGroundBurnGallons * FUEL_WEIGHT_PER_GALLON;
-        const takeoffWeight = rampWeight - groundBurnWeight;
-        const groundBurnMoment = groundBurnWeight * (arms.fuel || 0);
-        const takeoffMoment = rampMoment - groundBurnMoment;
+        const fuelWeight = fuelGallons * FUEL_WEIGHT_PER_GALLON;
+        const takeoffWeight = zeroFuelWeight + fuelWeight;
+        const fuelMoment = fuelWeight * (arms.fuel || 0);
+        const takeoffMoment = zeroFuelMoment + fuelMoment;
         const takeoffCg = takeoffMoment / (takeoffWeight || 1);
-
-        // Landing Condition
-        const flightBurnWeight = fuelFlightBurnGallons * FUEL_WEIGHT_PER_GALLON;
-        const landingWeight = takeoffWeight - flightBurnWeight;
-        const flightBurnMoment = flightBurnWeight * (arms.fuel || 0);
-        const landingMoment = takeoffMoment - flightBurnMoment;
-        const landingCg = landingMoment / (landingWeight || 1);
-
-        // Maneuvering Speed
-        const maxGrossWeight = aircraft.maxTakeoffWeight || 0;
-        const vaAtMaxGross = 110; // Placeholder, should come from aircraft data
-        const maneuveringSpeed = takeoffWeight > 0 ? vaAtMaxGross * Math.sqrt(takeoffWeight / maxGrossWeight) : 0;
 
         return {
             emptyWeight, emptyMoment, arms,
-            oilMoment, pilotMoment, basicWeight, basicMoment, basicCg,
-            passengerMoment, baggageMoment, zeroFuelWeight, zeroFuelMoment, zeroFuelCg,
-            fuelLoadWeight, fuelLoadMoment, rampWeight, rampMoment, rampCg,
-            takeoffWeight, takeoffMoment, takeoffCg,
-            landingWeight, landingMoment, landingCg,
-            maneuveringSpeed, maxGrossWeight
+            zeroFuelWeight, zeroFuelCg, zeroFuelMoment,
+            takeoffWeight, takeoffCg, takeoffMoment,
         };
-    }, [aircraft, oilWeight, pilot1Weight, pilot2Weight, passenger1Weight, passenger2Weight, baggage1Weight, fuelLoadGallons, fuelGroundBurnGallons, fuelFlightBurnGallons]);
+    }, [aircraft, frontSeatWeight, rearSeatWeight, baggage1Weight, baggage2Weight, fuelGallons]);
+
+    const cgEnvelopePoints = useMemo(() => aircraft?.cgEnvelope?.map(([weight, cg]) => ({ weight, cg })) || [], [aircraft]);
+
+    const takeoffPoint = useMemo(() => ({ x: calculation?.takeoffCg || 0, y: calculation?.takeoffWeight || 0 }), [calculation]);
+
+    const isTakeoffWeightOk = calculation && aircraft?.maxTakeoffWeight ? calculation.takeoffWeight <= aircraft.maxTakeoffWeight : true;
+    const isTakeoffCgOk = calculation ? isPointInPolygon(takeoffPoint, cgEnvelopePoints.map(p => ({ x: p.cg, y: p.weight }))) : true;
+    const isTakeoffOk = isTakeoffWeightOk && isTakeoffCgOk;
+
 
     if (isLoading) {
-        return <div className="max-w-4xl mx-auto space-y-6"><Skeleton className="h-[80vh] w-full" /></div>;
+        return <div className="max-w-7xl mx-auto space-y-6"><Skeleton className="h-[80vh] w-full" /></div>;
     }
     
     if (error || !booking || !aircraft) {
         return <div className="text-destructive text-center">Error: {error?.message || 'Booking or Aircraft data could not be loaded.'}</div>;
     }
     
-    // Add default arm for oil if not present, for display purposes
-    const displayArms = { ...aircraft.stationArms, oil: aircraft.stationArms?.oil || 27.5 };
-
+    const renderRow = (label: string, weight: number, arm: number | undefined) => {
+        const moment = weight * (arm || 0);
+        return (
+             <div className="grid grid-cols-4 items-center gap-2">
+                <div className="p-2 text-sm">{label}</div>
+                <div className="p-2 text-sm text-right">{weight.toFixed(1)}</div>
+                <div className="p-2 text-sm text-right">{arm?.toFixed(2) || 'N/A'}</div>
+                <div className="p-2 text-sm text-right">{moment.toFixed(1)}</div>
+            </div>
+        );
+    }
+    
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
-             <div>
-                 <Button asChild variant="outline" size="sm">
-                    <Link href={`/operations/bookings/${bookingId}/checklist`}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Checklist
-                    </Link>
+        <div className="max-w-7xl mx-auto space-y-6">
+            <div>
+                <Button asChild variant="outline" size="sm">
+                <Link href={`/operations/bookings/${bookingId}/checklist`}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Checklist
+                </Link>
                 </Button>
             </div>
-            <Card>
-                <CardHeader className="flex flex-row justify-between items-center">
-                    <div>
-                        <CardTitle>Weight &amp; Balance Calculator</CardTitle>
-                        <CardDescription>For aircraft {aircraft.tailNumber} on booking #{booking.bookingNumber}.</CardDescription>
-                    </div>
-                    <div className="flex gap-2">
-                        <Button variant="outline">Save</Button>
-                        <Button variant="outline">Load</Button>
-                        <Button variant="destructive">Reset</Button>
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="border rounded-lg text-sm">
-                        {/* --- Table Header --- */}
-                        <div className="grid grid-cols-4 items-center gap-2 font-bold bg-muted/40 rounded-t-lg">
-                            <div className="p-2 border-r">ITEM</div>
-                            <div className="p-2 border-r text-right">Weight</div>
-                            <div className="p-2 border-r text-right">Arm</div>
-                            <div className="p-2 text-right">Moment</div>
-                        </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1 space-y-6">
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Load</CardTitle>
+                            <CardDescription>Enter the weight for each station.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="front-seat">Front Seats (lbs)</Label>
+                                <Input type="number" id="front-seat" value={frontSeatWeight || ''} onChange={(e) => setFrontSeatWeight(Number(e.target.value))} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="rear-seat">Rear Seats (lbs)</Label>
+                                <Input type="number" id="rear-seat" value={rearSeatWeight || ''} onChange={(e) => setRearSeatWeight(Number(e.target.value))} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="baggage-1">Baggage 1 (lbs)</Label>
+                                <Input type="number" id="baggage-1" value={baggage1Weight || ''} onChange={(e) => setBaggage1Weight(Number(e.target.value))} />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="baggage-2">Baggage 2 (lbs)</Label>
+                                <Input type="number" id="baggage-2" value={baggage2Weight || ''} onChange={(e) => setBaggage2Weight(Number(e.target.value))} />
+                            </div>
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Fuel</CardTitle>
+                            <CardDescription>Enter fuel quantity for takeoff.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="fuel-gallons">Fuel (Gallons)</Label>
+                                <Input type="number" id="fuel-gallons" value={fuelGallons || ''} onChange={(e) => setFuelGallons(Number(e.target.value))} />
+                            </div>
+                             <div className="p-2 border rounded-md text-sm text-center bg-muted">
+                                Fuel Weight: <strong>{(fuelGallons * FUEL_WEIGHT_PER_GALLON).toFixed(1)} lbs</strong>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
 
-                        {/* --- Table Body --- */}
-                        <div className="divide-y">
-                            <CalcRow label="Basic Empty Weight" weight={calculation?.emptyWeight.toFixed(1)} arm={(calculation?.emptyMoment / (calculation.emptyWeight || 1)).toFixed(2)} moment={calculation?.emptyMoment.toFixed(1)} />
-                            <InputRow label="Oil" weight={oilWeight} onWeightChange={setOilWeight} arm={displayArms.oil} />
-                            <InputRow label="Pilot 1" weight={pilot1Weight} onWeightChange={setPilot1Weight} arm={displayArms.frontSeats} />
-                            <InputRow label="Pilot 2" weight={pilot2Weight} onWeightChange={setPilot2Weight} arm={displayArms.frontSeats} />
-                            <CalcRow isSubtotal label="Basic Condition" weight={calculation?.basicWeight.toFixed(1)} arm={`CG: ${calculation?.basicCg.toFixed(2)}`} moment={calculation?.basicMoment.toFixed(1)} />
-                            <InputRow label="Passenger 1" weight={passenger1Weight} onWeightChange={setPassenger1Weight} arm={displayArms.rearSeats} />
-                            <InputRow label="Passenger 2" weight={passenger2Weight} onWeightChange={setPassenger2Weight} arm={displayArms.rearSeats} />
-                            <InputRow label="Baggage Area 1" weight={baggage1Weight} onWeightChange={setBaggage1Weight} arm={displayArms.baggage1} />
-                            <CalcRow isSubtotal label="Zero Fuel Condition" weight={calculation?.zeroFuelWeight.toFixed(1)} arm={`CG: ${calculation?.zeroFuelCg.toFixed(2)}`} moment={calculation?.zeroFuelMoment.toFixed(1)} />
-                            <FuelInputRow label="Fuel Load" gallons={fuelLoadGallons} onGallonsChange={setFuelLoadGallons} arm={displayArms.fuel} />
-                            <CalcRow isSubtotal label="Ramp Condition" weight={calculation?.rampWeight.toFixed(1)} arm={`CG: ${calculation?.rampCg.toFixed(2)}`} moment={calculation?.rampMoment.toFixed(1)} />
-                            <FuelInputRow label="Fuel Burned On Ground (-)" gallons={fuelGroundBurnGallons} onGallonsChange={setFuelGroundBurnGallons} arm={displayArms.fuel} isNegative />
-                            <CalcRow isSubtotal label="TakeOff Condition" weight={calculation?.takeoffWeight.toFixed(1)} arm={`CG: ${calculation?.takeoffCg.toFixed(2)}`} moment={calculation?.takeoffMoment.toFixed(1)} />
-                            <FuelInputRow label="Fuel Burned During Flight (-)" gallons={fuelFlightBurnGallons} onGallonsChange={setFuelFlightBurnGallons} arm={displayArms.fuel} isNegative />
-                            <CalcRow isSubtotal label="Landing Condition" weight={calculation?.landingWeight.toFixed(1)} arm={`CG: ${calculation?.landingCg.toFixed(2)}`} moment={calculation?.landingMoment.toFixed(1)} />
-                        </div>
-                    </div>
-
-                     <div className="border rounded-lg p-4 space-y-4">
-                        <h3 className="font-semibold text-lg">Maneuvering Speed (V<sub>A</sub>)</h3>
-                        <div className="grid grid-cols-2 items-center gap-4">
-                            <label>V<sub>A</sub> @ Max Gross Weight</label>
-                            <Input value="110" readOnly className='text-right' />
-
-                             <label>Aircraft Weight</label>
-                            <Input value={calculation?.takeoffWeight.toFixed(0) || '0'} readOnly className='text-right' />
-
-                            <label>Max Gross Weight</label>
-                            <Input value={calculation?.maxGrossWeight || '0'} readOnly className='text-right' />
-
-                            <label className="font-bold">Maneuvering Speed (V<sub>A</sub>)</label>
-                            <Input value={calculation?.maneuveringSpeed.toFixed(0) || '0'} readOnly className="font-bold text-right" />
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                <div className="lg:col-span-2">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Weight & Balance Summary</CardTitle>
+                            <CardDescription>Review the calculated weight and center of gravity.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="border rounded-lg">
+                                <div className="grid grid-cols-4 items-center gap-2 font-bold bg-muted/40 rounded-t-lg">
+                                    <div className="p-2">Item</div>
+                                    <div className="p-2 text-right">Weight (lbs)</div>
+                                    <div className="p-2 text-right">Arm (in)</div>
+                                    <div className="p-2 text-right">Moment (lb-in)</div>
+                                </div>
+                                <div className="divide-y">
+                                    {renderRow("Basic Empty Weight", calculation?.emptyWeight || 0, calculation?.emptyMoment / (calculation?.emptyWeight || 1))}
+                                    {renderRow("Front Seats", frontSeatWeight, calculation?.arms.frontSeats)}
+                                    {renderRow("Rear Seats", rearSeatWeight, calculation?.arms.rearSeats)}
+                                    {renderRow("Baggage 1", baggage1Weight, calculation?.arms.baggage1)}
+                                    {renderRow("Baggage 2", baggage2Weight, calculation?.arms.baggage2)}
+                                     <div className="grid grid-cols-4 items-center gap-2 font-bold bg-muted/20">
+                                        <div className="p-2">Zero Fuel Condition</div>
+                                        <div className="p-2 text-right">{calculation?.zeroFuelWeight.toFixed(1)}</div>
+                                        <div className="p-2 text-right">{calculation?.zeroFuelCg.toFixed(2)}</div>
+                                        <div className="p-2 text-right">{calculation?.zeroFuelMoment.toFixed(1)}</div>
+                                    </div>
+                                    {renderRow("Fuel", fuelGallons * FUEL_WEIGHT_PER_GALLON, calculation?.arms.fuel)}
+                                    <div className="grid grid-cols-4 items-center gap-2 font-bold bg-muted/20">
+                                        <div className="p-2">Takeoff Condition</div>
+                                        <div className="p-2 text-right">{calculation?.takeoffWeight.toFixed(1)}</div>
+                                        <div className="p-2 text-right">{calculation?.takeoffCg.toFixed(2)}</div>
+                                        <div className="p-2 text-right">{calculation?.takeoffMoment.toFixed(1)}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className='flex justify-center'>
+                                <Badge className={cn(isTakeoffOk ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-lg text-white px-6 py-2')}>
+                                    {isTakeoffOk ? 'Takeoff Within Limits' : 'Takeoff Out of Limits'}
+                                </Badge>
+                            </div>
+                            <ResponsiveContainer width="100%" height={400}>
+                                <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis type="number" dataKey="cg" name="CG" unit=" in" domain={['dataMin - 1', 'dataMax + 1']}>
+                                        <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" />
+                                    </XAxis>
+                                    <YAxis type="number" dataKey="weight" name="Weight" unit=" lbs" domain={['dataMin - 100', 'dataMax + 100']}>
+                                         <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
+                                    </YAxis>
+                                    <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                                    <Polygon dataKey="weight" points={cgEnvelopePoints} fill="#8884d8" fillOpacity={0.2} stroke="#8884d8" strokeWidth={2} name="CG Envelope" />
+                                    <Scatter name="Takeoff CG" data={[ { weight: takeoffPoint.y, cg: takeoffPoint.x } ]} fill={isTakeoffOk ? "#22c55e" : "#ef4444"} shape="star" size={150} />
+                                </ScatterChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </div>
     );
 }
 
-    
