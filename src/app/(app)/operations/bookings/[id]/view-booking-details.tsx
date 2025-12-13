@@ -172,7 +172,7 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
             
             <div>
                 <h3 className="text-lg font-semibold mb-4">Planning</h3>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                     <div className="lg:col-span-2">
                         {cgEnvelopePoints.length > 0 ? (
                         <ResponsiveContainer width="100%" height={300}>
