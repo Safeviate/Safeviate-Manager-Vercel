@@ -59,12 +59,12 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor }: Vie
                 <DetailItem label="End Time" value={format(booking.endTime.toDate(), 'PPP HH:mm')} />
             </div>
 
-            {booking.status === 'Cancelled with Reason' && (
+            {booking.status === 'Cancelled with Reason' && booking.cancellationReason && (
                 <>
                     <Separator />
                     <div>
                         <p className="text-sm font-medium text-muted-foreground">Cancellation Reason</p>
-                        <p className="text-base font-semibold text-destructive">{booking.cancellationReason || 'No reason provided.'}</p>
+                        <p className="text-base font-semibold text-destructive">{booking.cancellationReason}</p>
                     </div>
                 </>
             )}
