@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -114,10 +115,10 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
   const postFlightChecklist = useMemo(() => checklists.find(c => c.checklistType === 'post-flight'), [checklists]);
 
   // --- Chart State ---
-  const [weight, setWeight] = useState(aircraft.emptyWeight || 2000);
-  const [cg, setCg] = useState(aircraft.emptyWeightMoment ? (aircraft.emptyWeightMoment / (aircraft.emptyWeight || 1)) : 40);
+  const [weight, setWeight] = useState(aircraft.emptyWeight || 0);
+  const [cg, setCg] = useState(aircraft.emptyWeight && aircraft.emptyWeightMoment ? (aircraft.emptyWeightMoment / aircraft.emptyWeight) : 0);
 
-  const cgEnvelopePoints = useMemo(() => aircraft.cgEnvelope?.map(([weight, cg]) => ({ weight, cg })) || [], [aircraft]);
+  const cgEnvelopePoints = useMemo(() => aircraft.cgEnvelope?.map(([weight, cg]) => ({ weight, cg })) || [], [aircraft.cgEnvelope]);
   const polygonForCheck = useMemo(() => cgEnvelopePoints.map(p => ({ x: p.cg, y: p.weight })), [cgEnvelopePoints]);
 
   const targetPoint = { x: cg, y: weight };
