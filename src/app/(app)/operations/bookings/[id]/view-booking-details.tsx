@@ -1,10 +1,12 @@
 
 'use client';
 
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/app/(app)/assets/page';
 import type { PilotProfile } from '@/app/(app)/users/personnel/page';
+import type { ChecklistResponse } from '@/types/checklist';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -14,6 +16,7 @@ interface ViewBookingDetailsProps {
   aircraft: Aircraft | null;
   pilot: PilotProfile | null;
   instructor: PilotProfile | null;
+  checklists: ChecklistResponse[];
 }
 
 const DetailItem = ({ label, value }: { label: string; value?: string | number | null }) => (
@@ -32,9 +35,52 @@ const getBookingTypeAbbreviation = (type: Booking['type']): string => {
     }
 }
 
-export function ViewBookingDetails({ booking, aircraft, pilot, instructor }: ViewBookingDetailsProps) {
+const ChecklistDetails = ({ title, checklist, aircraftType }: { title: string, checklist: ChecklistResponse | undefined, aircraftType?: string }) => {
+    if (!checklist) {
+        return (
+            <div>
+                <h4 className="font-medium text-base mb-2">{title}</h4>
+                <p className="text-sm text-muted-foreground">Not submitted.</p>
+            </div>
+        )
+    }
+
+    const findItemValue = (itemId: string, field: 'tacho' | 'hobbs' | 'notes') => {
+        return checklist.responses.find(r => r.itemId === itemId)?.[field]
+    }
+
+    let oilUpliftDisplay = 'N/A';
+    if (aircraftType === 'Multi-Engine') {
+        const left = findItemValue(`${checklist.checklistType}-left-oil-uplift`, 'notes');
+        const right = findItemValue(`${checklist.checklistType}-right-oil-uplift`, 'notes');
+        if (left || right) {
+            oilUpliftDisplay = `L: ${left || 0} / R: ${right || 0}`;
+        }
+    } else {
+        oilUpliftDisplay = findItemValue(`${checklist.checklistType}-oil-uplift`, 'notes')?.toString() || 'N/A';
+    }
+    
+
+    return (
+        <div>
+            <h4 className="font-medium text-base mb-2">{title}</h4>
+            <div className="grid grid-cols-2 gap-4">
+                <DetailItem label="Tacho" value={findItemValue(`${checklist.checklistType}-tacho`, 'tacho')?.toFixed(2)} />
+                <DetailItem label="Hobbs" value={findItemValue(`${checklist.checklistType}-hobbs`, 'hobbs')?.toFixed(2)} />
+                <DetailItem label="Fuel Uplift" value={findItemValue(`${checklist.checklistType}-fuel-uplift`, 'notes')} />
+                <DetailItem label="Oil Uplift" value={oilUpliftDisplay} />
+            </div>
+        </div>
+    )
+}
+
+export function ViewBookingDetails({ booking, aircraft, pilot, instructor, checklists }: ViewBookingDetailsProps) {
   
   const abbreviation = getBookingTypeAbbreviation(booking.type);
+
+  const preFlightChecklist = useMemo(() => checklists.find(c => c.checklistType === 'pre-flight'), [checklists]);
+  const postFlightChecklist = useMemo(() => checklists.find(c => c.checklistType === 'post-flight'), [checklists]);
+
 
   return (
     <Card>
@@ -68,8 +114,17 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor }: Vie
                     </div>
                 </>
             )}
+            
+            <Separator />
 
-            {/* TODO: Add checklist details here once they are available */}
+            <div>
+                <h3 className="text-lg font-semibold mb-4">Checklist Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <ChecklistDetails title="Pre-Flight" checklist={preFlightChecklist} aircraftType={aircraft?.type} />
+                    <ChecklistDetails title="Post-Flight" checklist={postFlightChecklist} aircraftType={aircraft?.type} />
+                </div>
+            </div>
+
         </CardContent>
     </Card>
   );

@@ -2,11 +2,12 @@
 'use client';
 
 import { use, useMemo, useState } from 'react';
-import { collection, query, doc } from 'firebase/firestore';
+import { collection, query, doc, where } from 'firebase/firestore';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Aircraft } from '../../../assets/page';
 import type { Booking } from '@/types/booking';
 import type { PilotProfile } from '../../../users/personnel/page';
+import type { ChecklistResponse } from '@/types/checklist';
 import { BookingForm } from '../booking-form';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -39,7 +40,14 @@ export default function BookingPage({ params }: BookingPageProps) {
     const allBookingsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'bookings')) : null), [firestore, tenantId]);
     const { data: allBookings, isLoading: isLoadingAllBookings } = useCollection<Booking>(allBookingsQuery);
 
-    const isLoading = isLoadingBooking || isLoadingAircraft || isLoadingPilots || isLoadingAllBookings;
+    const checklistsQuery = useMemoFirebase(
+      () => (firestore && bookingId ? query(collection(firestore, 'tenants', tenantId, 'checklistResponses'), where('bookingId', '==', bookingId)) : null),
+      [firestore, tenantId, bookingId]
+    );
+    const { data: checklists, isLoading: isLoadingChecklists } = useCollection<ChecklistResponse>(checklistsQuery);
+
+
+    const isLoading = isLoadingBooking || isLoadingAircraft || isLoadingPilots || isLoadingAllBookings || isLoadingChecklists;
 
     const aircraft = useMemo(() => {
         if (!booking || !aircraftList) return null;
@@ -117,7 +125,13 @@ export default function BookingPage({ params }: BookingPageProps) {
                     onClose={() => setIsEditing(false)} // This will now act as a "cancel"
                 />
             ) : (
-                <ViewBookingDetails booking={booking} aircraft={aircraft} pilot={pilot} instructor={instructor} />
+                <ViewBookingDetails 
+                    booking={booking} 
+                    aircraft={aircraft} 
+                    pilot={pilot} 
+                    instructor={instructor} 
+                    checklists={checklists || []}
+                />
             )}
         </div>
     );
