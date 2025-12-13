@@ -127,6 +127,14 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                 </div>
             </div>
 
+            <Separator />
+            
+            <div>
+                <h3 className="text-lg font-semibold mb-4">Planning</h3>
+                {/* Content for the Planning section will go here */}
+            </div>
+
+
         </CardContent>
     </Card>
   );
