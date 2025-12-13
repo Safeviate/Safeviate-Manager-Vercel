@@ -21,8 +21,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Polygon,
   Label as RechartsLabel,
+  Area,
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -35,6 +35,7 @@ const FUEL_WEIGHT_PER_GALLON = 6; // lbs
 
 // --- Helper function to check if a point is inside a polygon ---
 function isPointInPolygon(point: { x: number; y: number }, polygon: { x: number; y: number }[]) {
+  if (polygon.length === 0) return false;
   let isInside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
     const xi = polygon[i].x, yi = polygon[i].y;
@@ -107,7 +108,8 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
     const takeoffPoint = useMemo(() => ({ x: calculation?.takeoffCg || 0, y: calculation?.takeoffWeight || 0 }), [calculation]);
 
     const isTakeoffWeightOk = calculation && aircraft?.maxTakeoffWeight ? calculation.takeoffWeight <= aircraft.maxTakeoffWeight : true;
-    const isTakeoffCgOk = calculation ? isPointInPolygon(takeoffPoint, cgEnvelopePoints.map(p => ({ x: p.cg, y: p.weight }))) : true;
+    const polygonForCheck = useMemo(() => cgEnvelopePoints.map(p => ({ x: p.cg, y: p.weight })), [cgEnvelopePoints]);
+    const isTakeoffCgOk = calculation ? isPointInPolygon(takeoffPoint, polygonForCheck) : true;
     const isTakeoffOk = isTakeoffWeightOk && isTakeoffCgOk;
 
 
@@ -119,14 +121,13 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
         return <div className="text-destructive text-center">Error: {error?.message || 'Booking or Aircraft data could not be loaded.'}</div>;
     }
     
-    const renderRow = (label: string, weight: number, arm: number | undefined) => {
-        const moment = weight * (arm || 0);
+    const renderRow = (label: string, weight: number, arm: number | undefined, moment: number | undefined) => {
         return (
              <div className="grid grid-cols-4 items-center gap-2">
                 <div className="p-2 text-sm">{label}</div>
                 <div className="p-2 text-sm text-right">{weight.toFixed(1)}</div>
                 <div className="p-2 text-sm text-right">{arm?.toFixed(2) || 'N/A'}</div>
-                <div className="p-2 text-sm text-right">{moment.toFixed(1)}</div>
+                <div className="p-2 text-sm text-right">{moment?.toFixed(1) || 'N/A'}</div>
             </div>
         );
     }
@@ -199,18 +200,18 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                                     <div className="p-2 text-right">Moment (lb-in)</div>
                                 </div>
                                 <div className="divide-y">
-                                    {renderRow("Basic Empty Weight", calculation?.emptyWeight || 0, calculation?.emptyMoment / (calculation?.emptyWeight || 1))}
-                                    {renderRow("Front Seats", frontSeatWeight, calculation?.arms.frontSeats)}
-                                    {renderRow("Rear Seats", rearSeatWeight, calculation?.arms.rearSeats)}
-                                    {renderRow("Baggage 1", baggage1Weight, calculation?.arms.baggage1)}
-                                    {renderRow("Baggage 2", baggage2Weight, calculation?.arms.baggage2)}
+                                    {renderRow("Basic Empty Weight", calculation?.emptyWeight || 0, (calculation?.emptyMoment || 0) / (calculation?.emptyWeight || 1), calculation?.emptyMoment)}
+                                    {renderRow("Front Seats", frontSeatWeight, calculation?.arms.frontSeats, frontSeatWeight * (calculation?.arms.frontSeats || 0))}
+                                    {renderRow("Rear Seats", rearSeatWeight, calculation?.arms.rearSeats, rearSeatWeight * (calculation?.arms.rearSeats || 0))}
+                                    {renderRow("Baggage 1", baggage1Weight, calculation?.arms.baggage1, baggage1Weight * (calculation?.arms.baggage1 || 0))}
+                                    {renderRow("Baggage 2", baggage2Weight, calculation?.arms.baggage2, baggage2Weight * (calculation?.arms.baggage2 || 0))}
                                      <div className="grid grid-cols-4 items-center gap-2 font-bold bg-muted/20">
                                         <div className="p-2">Zero Fuel Condition</div>
                                         <div className="p-2 text-right">{calculation?.zeroFuelWeight.toFixed(1)}</div>
                                         <div className="p-2 text-right">{calculation?.zeroFuelCg.toFixed(2)}</div>
                                         <div className="p-2 text-right">{calculation?.zeroFuelMoment.toFixed(1)}</div>
                                     </div>
-                                    {renderRow("Fuel", fuelGallons * FUEL_WEIGHT_PER_GALLON, calculation?.arms.fuel)}
+                                    {renderRow("Fuel", fuelGallons * FUEL_WEIGHT_PER_GALLON, calculation?.arms.fuel, (fuelGallons * FUEL_WEIGHT_PER_GALLON) * (calculation?.arms.fuel || 0))}
                                     <div className="grid grid-cols-4 items-center gap-2 font-bold bg-muted/20">
                                         <div className="p-2">Takeoff Condition</div>
                                         <div className="p-2 text-right">{calculation?.takeoffWeight.toFixed(1)}</div>
@@ -227,14 +228,14 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                             <ResponsiveContainer width="100%" height={400}>
                                 <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 20 }}>
                                     <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis type="number" dataKey="cg" name="CG" unit=" in" domain={['dataMin - 1', 'dataMax + 1']}>
+                                    <XAxis type="number" dataKey="cg" name="CG" unit=" in" domain={['dataMin - 1', 'dataMax + 1']} tickCount={8}>
                                         <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" />
                                     </XAxis>
                                     <YAxis type="number" dataKey="weight" name="Weight" unit=" lbs" domain={['dataMin - 100', 'dataMax + 100']}>
                                          <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
                                     </YAxis>
                                     <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                    <Polygon dataKey="weight" points={cgEnvelopePoints} fill="#8884d8" fillOpacity={0.2} stroke="#8884d8" strokeWidth={2} name="CG Envelope" />
+                                    <Area type="linear" dataKey="weight" data={cgEnvelopePoints} name="CG Limit" stroke="#8884d8" fill="#8884d8" fillOpacity={0.2} strokeWidth={2} />
                                     <Scatter name="Takeoff CG" data={[ { weight: takeoffPoint.y, cg: takeoffPoint.x } ]} fill={isTakeoffOk ? "#22c55e" : "#ef4444"} shape="star" size={150} />
                                 </ScatterChart>
                             </ResponsiveContainer>
@@ -245,4 +246,3 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
         </div>
     );
 }
-
