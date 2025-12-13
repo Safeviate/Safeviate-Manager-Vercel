@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface EditAircraftFormProps {
   tenantId: string;
@@ -100,7 +101,15 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
             </div>
              <div className="space-y-2">
                 <Label htmlFor="type">Type</Label>
-                <Input id="type" value={type} onChange={(e) => setType(e.target.value)} />
+                <Select onValueChange={setType} value={type}>
+                    <SelectTrigger id="type">
+                        <SelectValue placeholder="Select a type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="Single-Engine">Single-Engine</SelectItem>
+                        <SelectItem value="Multi-Engine">Multi-Engine</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
             <div className="space-y-2">
                 <Label htmlFor="frameHours">Frame Hours</Label>
