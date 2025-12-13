@@ -24,6 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from '@/components/ui/input';
 import { useDebounce } from '@/hooks/use-debounce';
 import Link from 'next/link';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface AircraftProfilePageProps {
     params: { id: string };
@@ -370,7 +371,9 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
                             <CardTitle>Documents</CardTitle>
                             <CardDescription>Manage documents for {aircraft.tailNumber}.</CardDescription>
                         </CardHeader>
-                        {documentsCardContent}
+                        <ScrollArea className="h-[calc(100vh-25rem)]">
+                            {documentsCardContent}
+                        </ScrollArea>
                     </Card>
                     {!isEditing && (
                         <Card>
@@ -414,3 +417,5 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
         </div>
     );
 }
+
+    
