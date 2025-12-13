@@ -50,14 +50,6 @@ export const menuConfig: MenuItem[] = [
         description: 'Schedule and manage aircraft bookings.',
       },
       {
-        href: '/operations/bookings/training',
-        label: 'Training',
-      },
-      {
-        href: '/operations/bookings/hire-and-fly',
-        label: 'Hire and Fly',
-      },
-      {
         href: '/operations/bookings-history',
         label: 'Bookings History',
         description: 'View and manage past bookings.',
