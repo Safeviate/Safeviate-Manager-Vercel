@@ -144,7 +144,7 @@ export default function SchedulePage() {
         collection(firestore, 'tenants', tenantId, 'bookings'),
         where('startTime', '<=', end),
     );
-  }, [firestore, tenantId, selectedDate]);
+  }, [firestore, tenantId, startOfDay(selectedDate).toISOString()]); // Use stable ISO string for dependency
 
   const pilotsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'pilots')) : null),
@@ -162,7 +162,7 @@ export default function SchedulePage() {
     return allBookings.filter(b => 
         b.startTime.toDate() <= dayEnd && b.endTime.toDate() >= dayStart
     );
-  }, [allBookings, selectedDate]);
+  }, [allBookings, startOfDay(selectedDate).toISOString()]); // Use stable ISO string for dependency
 
 
   const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingPilots;
