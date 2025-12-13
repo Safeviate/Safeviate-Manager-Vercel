@@ -84,48 +84,63 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
   const postFlightChecklist = useMemo(() => checklists.find(c => c.checklistType === 'post-flight'), [checklists]);
 
   return (
-    <Card>
-        <CardHeader>
-             <div className="flex justify-between items-start">
-                <div>
-                    <CardTitle>Booking #{abbreviation}{booking.bookingNumber}</CardTitle>
-                    <CardDescription>Details for the booking on {aircraft.tailNumber}.</CardDescription>
-                </div>
-                 <Badge variant={booking.status.startsWith('Cancel') ? 'destructive' : 'secondary'}>{booking.status}</Badge>
-            </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <DetailItem label="Aircraft" value={aircraft.tailNumber} />
-                <DetailItem label="Booking Type" value={booking.type} />
-                <DetailItem label="Pilot / Student" value={pilot ? `${pilot.firstName} ${pilot.lastName}` : 'N/A'} />
-                <DetailItem label="Start Time" value={format(booking.startTime.toDate(), 'PPP HH:mm')} />
-                <DetailItem label="End Time" value={format(booking.endTime.toDate(), 'PPP HH:mm')} />
-                {booking.type === 'Student Training' && (
-                    <DetailItem label="Instructor" value={instructor ? `${instructor.firstName} ${instructor.lastName}` : 'N/A'} />
-                )}
-            </div>
-
-            {booking.status === 'Cancelled with Reason' && booking.cancellationReason && (
-                <>
-                    <Separator />
+    <div className='space-y-6'>
+        <Card>
+            <CardHeader>
+                <div className="flex justify-between items-start">
                     <div>
-                        <p className="text-sm font-medium text-muted-foreground">Cancellation Reason</p>
-                        <p className="text-base font-semibold text-destructive">{booking.cancellationReason}</p>
+                        <CardTitle>Booking #{abbreviation}{booking.bookingNumber}</CardTitle>
+                        <CardDescription>Details for the booking on {aircraft.tailNumber}.</CardDescription>
                     </div>
-                </>
-            )}
-            
-            <Separator />
+                    <Badge variant={booking.status.startsWith('Cancel') ? 'destructive' : 'secondary'}>{booking.status}</Badge>
+                </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <DetailItem label="Aircraft" value={aircraft.tailNumber} />
+                    <DetailItem label="Booking Type" value={booking.type} />
+                    <DetailItem label="Pilot / Student" value={pilot ? `${pilot.firstName} ${pilot.lastName}` : 'N/A'} />
+                    <DetailItem label="Start Time" value={format(booking.startTime.toDate(), 'PPP HH:mm')} />
+                    <DetailItem label="End Time" value={format(booking.endTime.toDate(), 'PPP HH:mm')} />
+                    {booking.type === 'Student Training' && (
+                        <DetailItem label="Instructor" value={instructor ? `${instructor.firstName} ${instructor.lastName}` : 'N/A'} />
+                    )}
+                </div>
 
-            <div>
-                <h3 className="text-lg font-semibold mb-4">Checklist Information</h3>
+                {booking.status === 'Cancelled with Reason' && booking.cancellationReason && (
+                    <>
+                        <Separator />
+                        <div>
+                            <p className="text-sm font-medium text-muted-foreground">Cancellation Reason</p>
+                            <p className="text-base font-semibold text-destructive">{booking.cancellationReason}</p>
+                        </div>
+                    </>
+                )}
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle>Planning</CardTitle>
+                <CardDescription>
+                    Perform weight & balance calculations for this flight.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <p className="text-sm text-muted-foreground text-center">Planning tools will be available here.</p>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle>Checklist Information</CardTitle>
+                <CardDescription>Review pre-flight and post-flight data.</CardDescription>
+            </CardHeader>
+            <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                     <ChecklistDetails title="Pre-Flight" checklist={preFlightChecklist} aircraftType={aircraft.type} />
                     <ChecklistDetails title="Post-Flight" checklist={postFlightChecklist} aircraftType={aircraft.type} />
                 </div>
-            </div>
-        </CardContent>
-    </Card>
+            </CardContent>
+        </Card>
+    </div>
   );
 }
