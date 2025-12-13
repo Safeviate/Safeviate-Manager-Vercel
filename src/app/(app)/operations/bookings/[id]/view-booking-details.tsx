@@ -120,17 +120,6 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
         </Card>
         <Card>
             <CardHeader>
-                <CardTitle>Planning</CardTitle>
-                <CardDescription>
-                    Perform weight & balance calculations for this flight.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <p className="text-sm text-muted-foreground text-center">Planning tools will be available here.</p>
-            </CardContent>
-        </Card>
-        <Card>
-            <CardHeader>
                 <CardTitle>Checklist Information</CardTitle>
                 <CardDescription>Review pre-flight and post-flight data.</CardDescription>
             </CardHeader>
@@ -139,6 +128,17 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                     <ChecklistDetails title="Pre-Flight" checklist={preFlightChecklist} aircraftType={aircraft.type} />
                     <ChecklistDetails title="Post-Flight" checklist={postFlightChecklist} aircraftType={aircraft.type} />
                 </div>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle>Planning</CardTitle>
+                <CardDescription>
+                    Perform weight & balance calculations for this flight.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <p className="text-sm text-muted-foreground text-center">Planning tools will be available here.</p>
             </CardContent>
         </Card>
     </div>
