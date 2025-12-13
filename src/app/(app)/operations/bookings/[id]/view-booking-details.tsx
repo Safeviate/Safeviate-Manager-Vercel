@@ -10,21 +10,6 @@ import type { ChecklistResponse } from '@/types/checklist';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  ScatterChart,
-  Scatter,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Label as RechartsLabel,
-  Area,
-} from 'recharts';
-import { cn } from '@/lib/utils';
-
 
 interface ViewBookingDetailsProps {
   booking: Booking;
@@ -91,39 +76,12 @@ const ChecklistDetails = ({ title, checklist, aircraftType }: { title: string, c
     )
 }
 
-// --- Helper function to check if a point is inside a polygon ---
-function isPointInPolygon(point: { x: number; y: number }, polygon: { x: number; y: number }[]) {
-  if (!polygon || polygon.length === 0) return false;
-  let isInside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i].x, yi = polygon[i].y;
-    const xj = polygon[j].x, yj = polygon[j].y;
-
-    const intersect = ((yi > point.y) !== (yj > point.y))
-        && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
-    if (intersect) isInside = !isInside;
-  }
-  return isInside;
-}
-
-
 export function ViewBookingDetails({ booking, aircraft, pilot, instructor, checklists }: ViewBookingDetailsProps) {
   
   const abbreviation = getBookingTypeAbbreviation(booking.type);
 
   const preFlightChecklist = useMemo(() => checklists.find(c => c.checklistType === 'pre-flight'), [checklists]);
   const postFlightChecklist = useMemo(() => checklists.find(c => c.checklistType === 'post-flight'), [checklists]);
-
-  // --- Chart State ---
-  const [weight, setWeight] = useState(aircraft.emptyWeight || 0);
-  const [cg, setCg] = useState(aircraft.emptyWeight && aircraft.emptyWeightMoment ? (aircraft.emptyWeightMoment / aircraft.emptyWeight) : 0);
-
-  const cgEnvelopePoints = useMemo(() => aircraft.cgEnvelope?.map(([weight, cg]) => ({ weight, cg })) || [], [aircraft.cgEnvelope]);
-  const polygonForCheck = useMemo(() => cgEnvelopePoints.map(p => ({ x: p.cg, y: p.weight })), [cgEnvelopePoints]);
-
-  const targetPoint = { x: cg, y: weight };
-  const isWithinLimits = isPointInPolygon(targetPoint, polygonForCheck);
-
 
   return (
     <Card>
@@ -165,61 +123,6 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                     <ChecklistDetails title="Pre-Flight" checklist={preFlightChecklist} aircraftType={aircraft.type} />
                     <ChecklistDetails title="Post-Flight" checklist={postFlightChecklist} aircraftType={aircraft.type} />
-                </div>
-            </div>
-
-            <Separator />
-            
-            <div>
-                <h3 className="text-lg font-semibold mb-4">Planning</h3>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                    <div className="lg:col-span-2">
-                        {cgEnvelopePoints.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={350}>
-                            <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis type="number" dataKey="cg" name="CG" unit=" in" domain={['dataMin - 1', 'dataMax + 1']} tickCount={5}>
-                                    <RechartsLabel value="CG (in)" offset={-25} position="insideBottom" />
-                                </XAxis>
-                                <YAxis type="number" dataKey="weight" name="Weight" unit=" lbs" domain={['dataMin - 100', 'dataMax + 100']} tickCount={5}>
-                                    <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
-                                </YAxis>
-                                <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                <Area type="linear" dataKey="weight" data={cgEnvelopePoints} name="CG Limit" stroke="#8884d8" fill="#8884d8" fillOpacity={0.2} strokeWidth={2} />
-                                <Scatter name="Current CG" data={[{ weight: targetPoint.y, cg: targetPoint.x }]} fill={isWithinLimits ? "#22c55e" : "#ef4444"} shape="star" size={150} />
-                            </ScatterChart>
-                        </ResponsiveContainer>
-                        ) : (
-                            <div className="flex items-center justify-center h-[350px] text-muted-foreground bg-muted/50 rounded-lg p-4">
-                                No CG Envelope data configured for this aircraft.
-                            </div>
-                        )}
-                    </div>
-                     <div className="space-y-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="weight-input">Aircraft Weight (lbs)</Label>
-                            <Input
-                                id="weight-input"
-                                type="number"
-                                value={weight}
-                                onChange={(e) => setWeight(Number(e.target.value))}
-                            />
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="cg-input">Center of Gravity (in)</Label>
-                            <Input
-                                id="cg-input"
-                                type="number"
-                                value={cg}
-                                onChange={(e) => setCg(Number(e.target.value))}
-                            />
-                        </div>
-                        <div className="pt-4 text-center">
-                            <Badge className={cn(isWithinLimits ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-lg text-white px-6 py-2')}>
-                                {isWithinLimits ? 'Within Limits' : 'Out of Limits'}
-                            </Badge>
-                        </div>
-                    </div>
                 </div>
             </div>
         </CardContent>
