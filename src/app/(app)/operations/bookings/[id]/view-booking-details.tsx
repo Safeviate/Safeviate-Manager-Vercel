@@ -190,7 +190,7 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                             </ScatterChart>
                         </ResponsiveContainer>
                         ) : (
-                            <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/50 rounded-lg p-4">
+                            <div className="flex items-center justify-center h-[300px] text-muted-foreground bg-muted/50 rounded-lg p-4">
                                 No CG Envelope data configured for this aircraft.
                             </div>
                         )}
