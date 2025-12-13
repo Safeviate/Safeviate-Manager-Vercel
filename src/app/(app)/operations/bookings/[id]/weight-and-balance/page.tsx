@@ -87,17 +87,18 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
             let isInside = false;
              if (!polygon || polygon.length === 0) return false;
             for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-                let [xi, yi] = polygon[i]; // CG, Weight
-                let [xj, yj] = polygon[j]; // CG, Weight
+                let [yi, xi] = polygon[i]; // Weight, CG
+                let [yj, xj] = polygon[j]; // Weight, CG
                 let intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
                 if (intersect) isInside = !isInside;
             }
             return isInside;
         };
-
+        
         const cgEnvelope = aircraft.cgEnvelope || [];
-        const isTakeoffCgOk = isPointInPolygon([takeoffCg, takeoffWeight], cgEnvelope);
-        const isLandingCgOk = isPointInPolygon([landingCg, landingWeight], cgEnvelope);
+        // The points are stored as [weight, cg] but the function expects [cg, weight]
+        const isTakeoffCgOk = isPointInPolygon([takeoffCg, takeoffWeight], cgEnvelope.map(p => [p[1], p[0]]));
+        const isLandingCgOk = isPointInPolygon([landingCg, landingWeight], cgEnvelope.map(p => [p[1], p[0]]));
         const isTakeoffWeightOk = takeoffWeight <= (aircraft.maxTakeoffWeight || Infinity);
         const isLandingWeightOk = landingWeight <= (aircraft.maxLandingWeight || Infinity);
 
@@ -111,7 +112,8 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
 
     const chartData = useMemo(() => {
         if (!calculation || !aircraft?.cgEnvelope) return { envelope: [], points: [] };
-        const envelope = aircraft.cgEnvelope.map(([cg, weight]) => ({ cg, weight }));
+        // cgEnvelope is [weight, cg], recharts needs it as object with keys
+        const envelope = aircraft.cgEnvelope.map(([weight, cg]) => ({ cg, weight }));
 
         return {
             envelope: [...envelope, envelope[0]], // Close the polygon
@@ -131,7 +133,7 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
         return <div className="text-destructive text-center">Error: {error?.message || 'Booking or Aircraft data could not be loaded.'}</div>;
     }
 
-    if (!aircraft.stationArms || !aircraft.cgEnvelope) {
+    if (!aircraft.stationArms || !aircraft.cgEnvelope || aircraft.cgEnvelope.length < 3) {
         return (
             <div className="max-w-6xl mx-auto space-y-6">
                 <div>
@@ -173,7 +175,7 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
             </div>
             <Card>
                 <CardHeader>
-                    <CardTitle>Weight & Balance Calculator</CardTitle>
+                    <CardTitle>Weight &amp; Balance Calculator</CardTitle>
                     <CardDescription>For aircraft {aircraft.tailNumber} on booking #{booking.bookingNumber}.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -273,26 +275,24 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                 <CardContent className="h-96 w-full pr-8">
                    <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart
-                            data={chartData.points}
-                            margin={{
+                             margin={{
                                 top: 20, right: 20, bottom: 20, left: 20,
                             }}
                         >
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis 
+                             <XAxis 
                                 dataKey="cg" 
                                 type="number" 
                                 name="CG (in)" 
-                                unit=" in" 
-                                domain={['dataMin - 2', 'dataMax + 2']} 
-                                tickCount={10}
+                                unit=" in"
+                                domain={['dataMin - 1', 'dataMax + 1']}
                                 label={{ value: "Center of Gravity (inches from datum)", position: 'insideBottom', offset: -15 }}
                             />
                             <YAxis 
                                 dataKey="weight" 
                                 type="number" 
                                 name="Weight (lbs)" 
-                                unit=" lbs" 
+                                unit=" lbs"
                                 domain={['dataMin - 200', 'dataMax + 200']}
                                 width={80}
                                 label={{ value: "Weight (lbs)", angle: -90, position: 'insideLeft' }}
@@ -300,10 +300,18 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                             <Tooltip cursor={{ strokeDasharray: '3 3' }} />
                             <Legend />
                             
-                            <Line data={chartData.envelope} dataKey="weight" type="linear" stroke="#a0aec0" dot={false} activeDot={false} name="CG Envelope" />
+                            <Polygon 
+                                data={chartData.envelope} 
+                                dataKey="weight" 
+                                stroke="#a0aec0" 
+                                fill="#a0aec0" 
+                                fillOpacity={0.2}
+                                points={chartData.envelope.map(p => ({x: p.cg, y: p.weight}))}
+                                name="CG Envelope" 
+                            />
                            
-                            <Scatter name="Takeoff" dataKey="cg" data={chartData.points.filter(p => p.name === 'Takeoff')} fill="#8884d8" shape="cross" />
-                            <Scatter name="Landing" dataKey="cg" data={chartData.points.filter(p => p.name === 'Landing')} fill="#82ca9d" shape="triangle" />
+                            <Scatter name="Takeoff" data={chartData.points.filter(p => p.name === 'Takeoff')} fill="#8884d8" shape="cross" />
+                            <Scatter name="Landing" data={chartData.points.filter(p => p.name === 'Landing')} fill="#82ca9d" shape="triangle" />
                             
                             {aircraft.maxTakeoffWeight && <ReferenceLine y={aircraft.maxTakeoffWeight} label={{ value: `Max Takeoff: ${aircraft.maxTakeoffWeight} lbs`, position: 'insideTopLeft' }} stroke="red" strokeDasharray="3 3" />}
                             {aircraft.maxLandingWeight && <ReferenceLine y={aircraft.maxLandingWeight} label={{ value: `Max Landing: ${aircraft.maxLandingWeight} lbs`, position: 'insideTopLeft' }} stroke="orange" strokeDasharray="3 3" />}
@@ -314,4 +322,3 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
         </div>
     );
 }
-

@@ -14,6 +14,7 @@ import { ArrowLeft, Scale } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
 
 interface ChecklistPageProps {
     params: { id: string };
@@ -96,9 +97,9 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
         <div className="max-w-4xl mx-auto space-y-6">
             <div>
                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/operations/maintenance`}>
+                    <Link href={`/operations/bookings`}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Bookings
+                        Back to Schedule
                     </Link>
                 </Button>
             </div>
@@ -128,13 +129,16 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
                             ))}
                         </div>
                     </div>
+                    
+                    <Separator />
+
                      <div className="space-y-4">
-                        <h3 className="text-lg font-medium">Weight & Balance</h3>
+                        <h3 className="text-lg font-medium">Weight &amp; Balance</h3>
                         <p className="text-sm text-muted-foreground">Calculate the aircraft's weight and balance for this flight.</p>
                         <Button asChild>
                             <Link href={`/operations/bookings/${bookingId}/weight-and-balance`}>
                                 <Scale className="mr-2 h-4 w-4" />
-                                Calculate Weight & Balance
+                                Calculate Weight &amp; Balance
                             </Link>
                         </Button>
                     </div>
