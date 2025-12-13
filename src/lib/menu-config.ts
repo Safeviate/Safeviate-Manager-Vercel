@@ -145,6 +145,11 @@ export const menuConfig: MenuItem[] = [
           href: '/development/test',
           label: 'Test Page',
           description: 'A test page for development purposes.'
+        },
+        {
+          href: '/development/chart-test',
+          label: 'Dynamic Chart Test',
+          description: 'A page to test dynamic chart functionality.'
         }
     ]
   }
