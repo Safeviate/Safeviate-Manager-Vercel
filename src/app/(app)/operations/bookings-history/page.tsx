@@ -15,6 +15,7 @@ import type { Booking } from '@/types/booking';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
 import type { ChecklistResponse } from '@/types/checklist';
+import { useRouter } from 'next/navigation';
 
 // A consolidated type for display
 type EnrichedBooking = Booking & {
@@ -40,6 +41,12 @@ const getBookingTypeAbbreviation = (type: Booking['type']): string => {
 }
 
 const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
+    const router = useRouter();
+
+    const handleRowClick = (bookingId: string) => {
+        window.open(`/operations/bookings/${bookingId}`, '_blank');
+    };
+
     if (bookings.length === 0) {
         return (
             <div className="h-24 text-center flex items-center justify-center text-muted-foreground">
@@ -68,7 +75,7 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
             </TableHeader>
             <TableBody>
                 {bookings.map(b => (
-                    <TableRow key={b.id}>
+                    <TableRow key={b.id} onClick={() => handleRowClick(b.id)} className="cursor-pointer">
                         <TableCell className="font-medium">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
                         <TableCell>{b.aircraftTailNumber}</TableCell>
                         <TableCell>{b.pilotName}</TableCell>
