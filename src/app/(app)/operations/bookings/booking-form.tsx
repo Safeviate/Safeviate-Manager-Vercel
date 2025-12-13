@@ -69,7 +69,7 @@ const bookingSchema = z.object({
   aircraftId: z.string().min(1, 'Aircraft is required.'),
   pilotId: z.string().min(1, 'Pilot is required.'),
   instructorId: z.string().optional(),
-  type: z.enum(['Student Training', 'Hire and Fly'], { required_error: 'Booking type is required.' }),
+  type: z.enum(['Student Training', 'Hire and Fly', 'Maintenance Flight'], { required_error: 'Booking type is required.' }),
   startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.'),
   endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.'),
   status: z.enum(['Confirmed', 'Pending', 'Cancelled', 'Cancelled with Reason']),
@@ -549,6 +549,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                             <SelectContent>
                                 <SelectItem value="Student Training">Student Training</SelectItem>
                                 <SelectItem value="Hire and Fly">Hire and Fly</SelectItem>
+                                <SelectItem value="Maintenance Flight">Maintenance Flight</SelectItem>
                             </SelectContent>
                             </Select>
                             <FormMessage />
@@ -879,3 +880,5 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     </>
   );
 }
+
+    

@@ -1,3 +1,4 @@
+
 import type { Timestamp } from 'firebase/firestore';
 
 export type Booking = {
@@ -6,10 +7,12 @@ export type Booking = {
   aircraftId: string;
   pilotId: string;
   instructorId?: string;
-  type: 'Student Training' | 'Hire and Fly';
+  type: 'Student Training' | 'Hire and Fly' | 'Maintenance Flight';
   startTime: Timestamp;
   endTime: Timestamp;
   status: 'Confirmed' | 'Pending' | 'Cancelled' | 'Cancelled with Reason';
   overnightId?: string;
   cancellationReason?: string;
 };
+
+    
