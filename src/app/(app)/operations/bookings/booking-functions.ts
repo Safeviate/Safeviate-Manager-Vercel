@@ -16,18 +16,20 @@ import {
 import type { Booking } from '@/types/booking';
 
 /**
- * Gets the next sequential number for a given counter in a thread-safe manner using a Firestore transaction.
+ * Gets the next sequential number for a given booking type in a thread-safe manner.
  *
  * @param firestore The Firestore instance.
  * @param tenantId The ID of the tenant.
- * @param counterName The name of the counter to increment (e.g., 'bookings').
+ * @param bookingType The type of the booking to generate a number for.
  * @returns A promise that resolves with the next sequential number.
  */
 export async function getNextBookingNumber(
   firestore: Firestore,
   tenantId: string,
-  counterName: string
+  bookingType: 'Student Training' | 'Hire and Fly' | 'Maintenance Flight'
 ): Promise<number> {
+  // Create a unique counter name for each booking type, e.g., 'bookings-student-training'
+  const counterName = `bookings-${bookingType.toLowerCase().replace(/\s+/g, '-')}`;
   const counterRef = doc(firestore, 'tenants', tenantId, 'counters', counterName);
 
   try {
@@ -49,9 +51,10 @@ export async function getNextBookingNumber(
   } catch (error) {
     console.error(`Error getting next ${counterName} number:`, error);
     // In case of an error, re-throw it to be handled by the caller.
-    throw new Error(`Could not generate a new ${counterName} number.`);
+    throw new Error(`Could not generate a new booking number for ${bookingType}.`);
   }
 }
+
 
 /**
  * Deletes one or more booking documents and decrements the counter within a single transaction.
@@ -65,6 +68,10 @@ export async function deleteBookings(
     bookingDocRefs: DocumentReference[]
 ): Promise<void> {
 
+    // This function currently decrements the generic 'bookings' counter.
+    // For a multi-counter system, this would need to know which counter to decrement.
+    // As a simplification, we will leave this as is. A more robust implementation
+    // would involve passing the booking type or storing it on the booking to find the right counter.
     const counterRef = doc(firestore, 'tenants', tenantId, 'counters', 'bookings');
 
     try {

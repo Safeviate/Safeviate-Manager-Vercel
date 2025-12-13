@@ -293,7 +293,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
       }
     } else {
       try {
-        const bookingNumber = await getNextBookingNumber(firestore, tenantId, 'bookings');
+        const bookingNumber = await getNextBookingNumber(firestore, tenantId, data.type);
         if (data.isOvernight) {
           handleOvernightBooking(data, bookingNumber);
         } else {
@@ -880,5 +880,3 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     </>
   );
 }
-
-    
