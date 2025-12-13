@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface EditAircraftFormProps {
   tenantId: string;
@@ -82,77 +83,83 @@ export function EditAircraftForm({ tenantId, aircraft, onCancel }: EditAircraftF
   };
   
   return (
-    <Card>
+    <Card className="flex flex-col h-full">
       <CardHeader>
         <CardTitle>Aircraft Information</CardTitle>
         <CardDescription>
             Update the core details for this aircraft.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-            <div className="space-y-2">
-                <Label htmlFor="tailNumber">Tail Number</Label>
-                <Input id="tailNumber" value={tailNumber} onChange={(e) => setTailNumber(e.target.value)} />
+      <CardContent className="flex-grow overflow-hidden">
+        <ScrollArea className="h-full pr-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                <div className="space-y-2">
+                    <Label htmlFor="tailNumber">Tail Number</Label>
+                    <Input id="tailNumber" value={tailNumber} onChange={(e) => setTailNumber(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="model">Model</Label>
+                    <Input id="model" value={model} onChange={(e) => setModel(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="type">Type</Label>
+                    <Select onValueChange={setType} value={type}>
+                        <SelectTrigger id="type">
+                            <SelectValue placeholder="Select a type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Single-Engine">Single-Engine</SelectItem>
+                            <SelectItem value="Multi-Engine">Multi-Engine</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="frameHours">Frame Hours</Label>
+                    <Input id="frameHours" type="number" value={frameHours} onChange={(e) => setFrameHours(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="engineHours">Engine Hours</Label>
+                    <Input id="engineHours" type="number" value={engineHours} onChange={(e) => setEngineHours(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="initialHobbs">Initial Hobbs</Label>
+                    <Input id="initialHobbs" type="number" value={initialHobbs} onChange={(e) => setInitialHobbs(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="currentHobbs">Current Hobbs</Label>
+                    <Input id="currentHobbs" type="number" value={currentHobbs} onChange={(e) => setCurrentHobbs(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="initialTacho">Initial Tacho</Label>
+                    <Input id="initialTacho" type="number" value={initialTacho} onChange={(e) => setInitialTacho(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="currentTacho">Current Tacho</Label>
+                    <Input id="currentTacho" type="number" value={currentTacho} onChange={(e) => setCurrentTacho(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                <Label htmlFor="tachoAtNext50Inspection">Tacho at Next 50 Insp.</Label>
+                <Input id="tachoAtNext50Inspection" type="number" value={tachoAtNext50Inspection} onChange={(e) => setTachoAtNext50Inspection(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                <Label htmlFor="tachoAtNext100Inspection">Tacho at Next 100 Insp.</Label>
+                <Input id="tachoAtNext100Inspection" type="number" value={tachoAtNext100Inspection} onChange={(e) => setTachoAtNext100Inspection(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="emptyWeight">Empty Weight (lbs)</Label>
+                    <Input id="emptyWeight" type="number" value={emptyWeight} onChange={(e) => setEmptyWeight(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="emptyWeightMoment">Empty Weight Moment</Label>
+                    <Input id="emptyWeightMoment" type="number" value={emptyWeightMoment} onChange={(e) => setEmptyWeightMoment(e.target.value)} />
+                </div>
             </div>
-            <div className="space-y-2">
-                <Label htmlFor="model">Model</Label>
-                <Input id="model" value={model} onChange={(e) => setModel(e.target.value)} />
-            </div>
-             <div className="space-y-2">
-                <Label htmlFor="type">Type</Label>
-                <Select onValueChange={setType} value={type}>
-                    <SelectTrigger id="type">
-                        <SelectValue placeholder="Select a type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="Single-Engine">Single-Engine</SelectItem>
-                        <SelectItem value="Multi-Engine">Multi-Engine</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="frameHours">Frame Hours</Label>
-                <Input id="frameHours" type="number" value={frameHours} onChange={(e) => setFrameHours(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="engineHours">Engine Hours</Label>
-                <Input id="engineHours" type="number" value={engineHours} onChange={(e) => setEngineHours(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="initialHobbs">Initial Hobbs</Label>
-                <Input id="initialHobbs" type="number" value={initialHobbs} onChange={(e) => setInitialHobbs(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="currentHobbs">Current Hobbs</Label>
-                <Input id="currentHobbs" type="number" value={currentHobbs} onChange={(e) => setCurrentHobbs(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="initialTacho">Initial Tacho</Label>
-                <Input id="initialTacho" type="number" value={initialTacho} onChange={(e) => setInitialTacho(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="currentTacho">Current Tacho</Label>
-                <Input id="currentTacho" type="number" value={currentTacho} onChange={(e) => setCurrentTacho(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tachoAtNext50Inspection">Tacho at Next 50 Insp.</Label>
-              <Input id="tachoAtNext50Inspection" type="number" value={tachoAtNext50Inspection} onChange={(e) => setTachoAtNext50Inspection(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tachoAtNext100Inspection">Tacho at Next 100 Insp.</Label>
-              <Input id="tachoAtNext100Inspection" type="number" value={tachoAtNext100Inspection} onChange={(e) => setTachoAtNext100Inspection(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="emptyWeight">Empty Weight (lbs)</Label>
-                <Input id="emptyWeight" type="number" value={emptyWeight} onChange={(e) => setEmptyWeight(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="emptyWeightMoment">Empty Weight Moment</Label>
-                <Input id="emptyWeightMoment" type="number" value={emptyWeightMoment} onChange={(e) => setEmptyWeightMoment(e.target.value)} />
-            </div>
-        </div>
+        </ScrollArea>
       </CardContent>
+      <CardFooter className="border-t pt-6 flex justify-end gap-2">
+        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button onClick={handleUpdateAircraft}>Save Changes</Button>
+      </CardFooter>
     </Card>
   );
 }
