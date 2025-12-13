@@ -67,10 +67,10 @@ const ChecklistDetails = ({ title, checklist, aircraftType }: { title: string, c
     return (
         <div>
             <h4 className="font-medium text-base mb-2">{title}</h4>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                 <DetailItem label="Tacho" value={findItemValue(`${checklist.checklistType}-tacho`, 'tacho')?.toFixed(2)} />
                 <DetailItem label="Hobbs" value={findItemValue(`${checklist.checklistType}-hobbs`, 'hobbs')?.toFixed(2)} />
-                <DetailItem label="Fuel Uplift" value={findItemValue(`${checklist.checklistType}-fuel-uplift`, 'notes')} />
+                <DetailItem label="Fuel Uplift" value={findItemValue(`${checklist.checklistType}-fuel-uplift`, 'notes') || 'N/A'} />
                 <DetailItem label="Oil Uplift" value={oilUpliftDisplay} />
             </div>
         </div>
@@ -101,11 +101,11 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                 <DetailItem label="Aircraft" value={aircraft?.tailNumber} />
                 <DetailItem label="Booking Type" value={booking.type} />
                 <DetailItem label="Pilot / Student" value={pilot ? `${pilot.firstName} ${pilot.lastName}` : 'N/A'} />
+                <DetailItem label="Start Time" value={format(booking.startTime.toDate(), 'PPP HH:mm')} />
+                <DetailItem label="End Time" value={format(booking.endTime.toDate(), 'PPP HH:mm')} />
                 {booking.type === 'Student Training' && (
                     <DetailItem label="Instructor" value={instructor ? `${instructor.firstName} ${instructor.lastName}` : 'N/A'} />
                 )}
-                <DetailItem label="Start Time" value={format(booking.startTime.toDate(), 'PPP HH:mm')} />
-                <DetailItem label="End Time" value={format(booking.endTime.toDate(), 'PPP HH:mm')} />
             </div>
 
             {booking.status === 'Cancelled with Reason' && booking.cancellationReason && (
@@ -122,7 +122,7 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
 
             <div>
                 <h3 className="text-lg font-semibold mb-4">Checklist Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                     <ChecklistDetails title="Pre-Flight" checklist={preFlightChecklist} aircraftType={aircraft?.type} />
                     <ChecklistDetails title="Post-Flight" checklist={postFlightChecklist} aircraftType={aircraft?.type} />
                 </div>
