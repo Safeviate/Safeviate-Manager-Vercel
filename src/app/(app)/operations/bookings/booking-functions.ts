@@ -57,22 +57,21 @@ export async function getNextBookingNumber(
 
 
 /**
- * Deletes one or more booking documents and decrements the counter within a single transaction.
+ * Deletes one or more booking documents and decrements the counter for the specified booking type.
  * @param firestore The Firestore instance.
  * @param tenantId The ID of the tenant.
  * @param bookingDocRefs An array of DocumentReferences for the bookings to be deleted.
+ * @param bookingType The type of the booking being deleted.
  */
 export async function deleteBookings(
     firestore: Firestore,
     tenantId: string,
-    bookingDocRefs: DocumentReference[]
+    bookingDocRefs: DocumentReference[],
+    bookingType: 'Student Training' | 'Hire and Fly' | 'Maintenance Flight'
 ): Promise<void> {
 
-    // This function currently decrements the generic 'bookings' counter.
-    // For a multi-counter system, this would need to know which counter to decrement.
-    // As a simplification, we will leave this as is. A more robust implementation
-    // would involve passing the booking type or storing it on the booking to find the right counter.
-    const counterRef = doc(firestore, 'tenants', tenantId, 'counters', 'bookings');
+    const counterName = `bookings-${bookingType.toLowerCase().replace(/\s+/g, '-')}`;
+    const counterRef = doc(firestore, 'tenants', tenantId, 'counters', counterName);
 
     try {
         await runTransaction(firestore, async (transaction) => {
@@ -80,8 +79,8 @@ export async function deleteBookings(
             const counterDoc = await transaction.get(counterRef);
             if (counterDoc.exists()) {
                 const currentNumber = counterDoc.data().currentNumber || 0;
-                // Decrement the counter, but not below 0
-                const nextNumber = Math.max(0, currentNumber - 1);
+                // Decrement the counter for each document being deleted, but not below 0
+                const nextNumber = Math.max(0, currentNumber - bookingDocRefs.length);
                 transaction.update(counterRef, { currentNumber: nextNumber });
             }
 
@@ -91,7 +90,7 @@ export async function deleteBookings(
             });
         });
     } catch (error) {
-        console.error('Error deleting booking(s) and decrementing counter:', error);
+        console.error(`Error deleting booking(s) and decrementing counter '${counterName}':`, error);
         throw new Error('Could not delete the booking(s).');
     }
 }

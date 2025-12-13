@@ -6,7 +6,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { addHours, format, setHours, setMinutes, addDays, startOfDay, isSameDay, endOfDay, isBefore } from 'date-fns';
-import { Timestamp, collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { Timestamp, collection, doc, query, where, getDocs, writeBatch, getDoc } from 'firebase/firestore';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '../../assets/page';
@@ -473,6 +473,8 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
 
     try {
         let docsToDelete: any[] = [];
+        let bookingType: Booking['type'];
+
         if (initialData.booking.overnightId) {
             const bookingsRef = collection(firestore, 'tenants', tenantId, 'bookings');
             const q = query(bookingsRef, where('overnightId', '==', initialData.booking.overnightId));
@@ -480,12 +482,22 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
             querySnapshot.forEach((doc) => {
                 docsToDelete.push(doc.ref);
             });
+            // Assume all parts of an overnight booking have the same type
+            bookingType = querySnapshot.docs[0]?.data().type as Booking['type'];
         } else {
-            docsToDelete.push(doc(firestore, 'tenants', tenantId, 'bookings', initialData.booking.id));
+            const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', initialData.booking.id);
+            const bookingSnap = await getDoc(bookingRef);
+            if (bookingSnap.exists()) {
+                docsToDelete.push(bookingRef);
+                bookingType = bookingSnap.data().type as Booking['type'];
+            } else {
+                 toast({ variant: "destructive", title: "Deletion Failed", description: "Booking not found." });
+                 return;
+            }
         }
 
-        if (docsToDelete.length > 0) {
-            await deleteBookings(firestore, tenantId, docsToDelete);
+        if (docsToDelete.length > 0 && bookingType!) {
+            await deleteBookings(firestore, tenantId, docsToDelete, bookingType);
             toast({ title: 'Booking Deleted', description: 'The booking has been permanently deleted.' });
         }
     } catch (error) {
