@@ -126,7 +126,7 @@ export const menuConfig: MenuItem[] = [
         description: 'Manage document expiration dates.',
       },
       {
-        href: '/admin/mass-balance-templates',
+        href: '/admin/mass-balance',
         label: 'Mass & Balance',
         description: 'Manage W&B profiles for different aircraft models.',
       },
@@ -151,11 +151,6 @@ export const menuConfig: MenuItem[] = [
           href: '/development/test',
           label: 'Test Page',
           description: 'A test page for development purposes.'
-        },
-        {
-          href: '/development/chart-test',
-          label: 'Dynamic Chart Test',
-          description: 'A page to test dynamic chart functionality.'
         }
     ]
   }
