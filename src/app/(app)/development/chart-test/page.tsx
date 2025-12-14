@@ -107,22 +107,25 @@ const WBCalculator = () => {
     });
   }, [stations, graphConfig.envelope]);
 
+  // --- UPDATED: AUTO-FIT (X-AXIS ONLY) ---
+  // Adjusts the CG (X) to fit the green box, but KEEPS your Weight (Y) settings.
   const handleAutoFit = () => {
     if (graphConfig.envelope.length < 2) return alert("Add points first!");
     
+    // 1. Get X values from the green polygon
     const xValues = graphConfig.envelope.map(p => p.x);
-    const yValues = graphConfig.envelope.map(p => p.y);
     
+    // 2. Calculate ideal X limits (with a little padding)
     const minX = Math.floor(Math.min(...xValues) - 1); 
     const maxX = Math.ceil(Math.max(...xValues) + 1);
-    const minY = Math.floor(Math.min(...yValues) - 100);
-    const maxY = Math.ceil(Math.max(...yValues) + 100);
 
-    setGraphConfig({
-        ...graphConfig,
-        xMin: String(minX), xMax: String(maxX),
-        yMin: String(minY), yMax: String(maxY)
-    });
+    // 3. Update State
+    setGraphConfig(prevConfig => ({
+        ...prevConfig,
+        xMin: String(minX), 
+        xMax: String(maxX)
+        // We DO NOT update yMin/yMax here, so your manual entries stay put!
+    }));
   };
 
   const updateStation = (id: number, field: 'name' | 'weight' | 'arm', val: string) => {
