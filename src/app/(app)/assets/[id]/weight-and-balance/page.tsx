@@ -297,3 +297,5 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
         </div>
     );
 }
+
+    
