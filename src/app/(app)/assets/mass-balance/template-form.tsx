@@ -134,10 +134,10 @@ const defaultConfiguratorValues: FormValues = {
     modelName: "",
     stations: [],
     cgEnvelope: [],
-    xMin: undefined,
-    xMax: undefined,
-    yMin: undefined,
-    yMax: undefined,
+    xMin: '' as any,
+    xMax: '' as any,
+    yMin: '' as any,
+    yMax: '' as any,
 };
 
 
