@@ -76,6 +76,12 @@ export const menuConfig: MenuItem[] = [
     href: '/assets',
     label: 'Assets',
     icon: Plane,
+    subItems: [
+        {
+            href: '/assets/mass-balance',
+            label: 'Mass & Balance',
+        },
+    ]
   },
   {
     href: '/users',
@@ -126,11 +132,6 @@ export const menuConfig: MenuItem[] = [
         description: 'Manage document expiration dates.',
       },
       {
-        href: '/admin/mass-balance',
-        label: 'Mass & Balance',
-        description: 'Manage W&B profiles for different aircraft models.',
-      },
-      {
         href: '/admin/database',
         label: 'Database',
         description: 'Manage database seeding and setup.',
@@ -146,11 +147,6 @@ export const menuConfig: MenuItem[] = [
             href: '/development/database',
             label: 'Tenant Creator',
             description: 'Create new tenants with custom branding.',
-        },
-        {
-          href: '/development/chart-test',
-          label: 'W&B Configurator',
-          description: 'A tool to configure and test Weight & Balance charts.'
         },
         {
           href: '/development/test',
