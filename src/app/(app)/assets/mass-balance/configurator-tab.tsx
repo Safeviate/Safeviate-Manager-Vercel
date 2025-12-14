@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -12,6 +13,8 @@ import { Label } from '@/components/ui/label';
 import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 
@@ -338,8 +341,10 @@ export function ConfiguratorTab() {
                 Please consult aircraft POH before flight
               </p>
 
-              <div className={`absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg ${results.isSafe ? 'bg-green-600' : 'bg-red-600 text-white'}`}>
-                {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
+              <div className="absolute bottom-4 right-4">
+                <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-red-600 hover:bg-red-600', 'text-white shadow-lg')}>
+                    {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
+                </Badge>
               </div>
           </Card>
         </div>

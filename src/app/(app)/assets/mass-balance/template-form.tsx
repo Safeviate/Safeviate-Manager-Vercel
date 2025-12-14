@@ -280,7 +280,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                     </ScatterChart>
                 </ResponsiveContainer>
                  <div className='absolute top-4 right-4'>
-                    <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-lg text-white px-6 py-2')}>
+                    <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-white shadow-lg')}>
                         {results.isSafe ? 'Within Limits' : 'Out of Limits'}
                     </Badge>
                 </div>
