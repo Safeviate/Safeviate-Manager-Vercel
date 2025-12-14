@@ -256,7 +256,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card>
             <CardContent className="relative flex flex-col justify-center items-center pt-6">
-                <ResponsiveContainer width="100%" height={400}>
+                <ResponsiveContainer width="100%" height={300}>
                     <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[watchedXMin || 'dataMin', watchedXMax || 'dataMax']} allowDataOverflow={true} ticks={xAxisTicks}>
@@ -289,16 +289,16 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
               <CardDescription>Define the weight and balance parameters for an aircraft model.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <FormField control={form.control} name="modelName" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Model Name</FormLabel>
-                  <FormControl><Input {...field} placeholder="e.g., Cessna 172S" /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              
-              <Separator />
-              
+                <FormField control={form.control} name="modelName" render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Model Name</FormLabel>
+                    <FormControl><Input {...field} placeholder="e.g., Cessna 172S" /></FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )} />
+                
+                <Separator />
+
                 <div>
                     <div className="flex justify-between items-center mb-2">
                     <h3 className="text-lg font-medium">Loading Stations</h3>
@@ -323,7 +323,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                     ))}
                     </div>
               </div>
-
+              
               <Separator />
 
               <div>
