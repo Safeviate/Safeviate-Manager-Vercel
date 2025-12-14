@@ -6,7 +6,7 @@ import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Responsive
 import { doc, setDoc } from "firebase/firestore";
 import { useFirestore } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, Plus, Trash2, HelpCircle, X, RotateCcw, Maximize } from 'lucide-react';
+import { Save, Plus, Trash2, HelpCircle, X, RotateCcw, Maximize, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +23,19 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
+
+// --- HELPER: Visual Warning Component ---
+const OffScreenWarning = ({ direction, value, label }: { direction: string, value: number, label: string }) => (
+  <div className={`absolute top-1/2 ${direction === 'left' ? 'left-4' : 'right-4'} transform -translate-y-1/2 bg-destructive/90 border border-red-500 text-white p-3 rounded shadow-xl z-10 flex flex-col items-center animate-pulse`}>
+    <AlertTriangle className="text-red-400 mb-1" size={24} />
+    <span className="font-bold text-xs uppercase">{label} Off Scale!</span>
+    <span className="text-lg font-mono">{value}</span>
+    <span className="text-xs text-gray-300">
+      {direction === 'left' ? '← Move Left' : 'Move Right →'}
+    </span>
+  </div>
+);
+
 
 const GuideModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
     return (
@@ -154,6 +167,16 @@ const WBCalculator = () => {
     }
   };
 
+  const isOffScreen = () => {
+    if (results.cg < Number(graphConfig.xMin)) return { axis: 'x', dir: 'left', val: results.cg };
+    if (results.cg > Number(graphConfig.xMax)) return { axis: 'x', dir: 'right', val: results.cg };
+    if (results.weight < Number(graphConfig.yMin)) return { axis: 'y', dir: 'bottom', val: results.weight };
+    if (results.weight > Number(graphConfig.yMax)) return { axis: 'y', dir: 'top', val: results.weight };
+    return null;
+  };
+
+  const offScreenStatus = isOffScreen();
+
   return (
     <div className="p-6 font-sans space-y-6">
       <GuideModal isOpen={showGuide} onClose={() => setShowGuide(false)} />
@@ -166,7 +189,14 @@ const WBCalculator = () => {
         </div>
       </div>
 
-      <Card className="flex-1 flex flex-col justify-center items-center p-4">
+      <Card className="flex-1 flex flex-col justify-center items-center p-4 relative overflow-hidden">
+        {offScreenStatus && (
+            <OffScreenWarning 
+                direction={offScreenStatus.dir} 
+                value={offScreenStatus.val} 
+                label={offScreenStatus.axis === 'x' ? 'CG' : 'Weight'} 
+            />
+        )}
         <ResponsiveContainer width="100%" height={500}>
         <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -237,16 +267,18 @@ const WBCalculator = () => {
                   {graphConfig.envelope.length === 0 ? (
                   <div className="text-center py-4 border-2 border-dashed rounded-lg bg-muted/50"><p className="text-sm text-muted-foreground">No points defined.</p></div>
                   ) : (
-                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                      {graphConfig.envelope.map((pt, i) => (
-                      <div key={i} className="flex gap-2 items-center group bg-muted/30 p-1 rounded">
-                          <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-black shrink-0" style={{ backgroundColor: POINT_COLORS[i % POINT_COLORS.length] }}>{i + 1}</div>
-                          <Input type="number" value={pt.x} onChange={(e) => updateEnvelopePoint(i, 'x', e.target.value)} placeholder="CG" />
-                          <Input type="number" value={pt.y} onChange={(e) => updateEnvelopePoint(i, 'y', e.target.value)} placeholder="Wt" />
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => removeEnvelopePoint(i)}><Trash2 size={14}/></Button>
-                      </div>
-                      ))}
-                  </div>
+                  <ScrollArea className="h-40 pr-3">
+                    <div className="space-y-2">
+                        {graphConfig.envelope.map((pt, i) => (
+                        <div key={i} className="flex gap-2 items-center group bg-muted/30 p-1 rounded">
+                            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-background shrink-0" style={{ backgroundColor: POINT_COLORS[i % POINT_COLORS.length] }}>{i + 1}</div>
+                            <Input type="number" value={pt.x} onChange={(e) => updateEnvelopePoint(i, 'x', e.target.value)} placeholder="CG" />
+                            <Input type="number" value={pt.y} onChange={(e) => updateEnvelopePoint(i, 'y', e.target.value)} placeholder="Wt" />
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => removeEnvelopePoint(i)}><Trash2 size={14}/></Button>
+                        </div>
+                        ))}
+                    </div>
+                  </ScrollArea>
                   )}
               </CardContent>
           </Card>
@@ -256,6 +288,7 @@ const WBCalculator = () => {
                   <div className="flex justify-between items-center"><CardTitle>3. Loading Stations</CardTitle><Button variant="outline" size="sm" onClick={addStation}><Plus size={12}/> Add Item</Button></div>
               </CardHeader>
               <CardContent className="space-y-2">
+                <ScrollArea className='h-40 pr-3'>
                   {stations.map((s) => (
                   <div key={s.id} className="grid grid-cols-12 gap-2 items-center group">
                       <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="col-span-5" placeholder="Name" />
@@ -264,6 +297,7 @@ const WBCalculator = () => {
                       <Button variant="ghost" size="icon" className="col-span-1 h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => removeStation(s.id)}><Trash2 size={14}/></Button>
                   </div>
                   ))}
+                </ScrollArea>
               </CardContent>
           </Card>
       </div>
