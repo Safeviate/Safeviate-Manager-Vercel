@@ -176,7 +176,7 @@ export function ConfiguratorTab() {
       xMax: graphConfig.xMax,
       yMin: graphConfig.yMin,
       yMax: graphConfig.yMax,
-      cgEnvelope: graphConfig.envelope.map(p => [p.x, p.y]),
+      cgEnvelope: graphConfig.envelope.map(p => ({ x: p.x, y: p.y })),
       stations: stations.map(s => ({...s, weight: Number(s.weight), arm: Number(s.arm)}))
     };
   
@@ -346,8 +346,6 @@ export function ConfiguratorTab() {
       </div>
     </div>
   );
-};
+}
 
 export default ConfiguratorTab;
-
-    
