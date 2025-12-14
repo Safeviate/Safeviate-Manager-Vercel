@@ -9,7 +9,7 @@ import { EditAircraftForm } from './edit-aircraft-form';
 import { ViewAircraftDetails } from './view-aircraft-details';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Pencil, Camera, FileUp, Upload, View, Trash2, CalendarIcon, ListChecks } from 'lucide-react';
+import { Pencil, Camera, FileUp, Upload, View, Trash2, CalendarIcon, ListChecks, Scale } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DocumentUploader } from './document-uploader';
 import { useToast } from '@/hooks/use-toast';
@@ -335,9 +335,19 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
         <div className='space-y-6'>
              <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold tracking-tight">{isEditing ? `Editing ${aircraft.tailNumber}` : aircraft.tailNumber}</h1>
-                <Button onClick={() => setIsEditing(!isEditing)}>
-                    {isEditing ? 'Cancel' : <><Pencil className='mr-2 h-4 w-4' /> Edit Aircraft</>}
-                </Button>
+                <div className='flex items-center gap-2'>
+                  {!isEditing && (
+                    <Button asChild variant="outline">
+                      <Link href={`/assets/${aircraftId}/weight-and-balance`}>
+                        <Scale className="mr-2 h-4 w-4" />
+                        Weight & Balance
+                      </Link>
+                    </Button>
+                  )}
+                  <Button onClick={() => setIsEditing(!isEditing)}>
+                      {isEditing ? 'Cancel' : <><Pencil className='mr-2 h-4 w-4' /> Edit Aircraft</>}
+                  </Button>
+                </div>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
