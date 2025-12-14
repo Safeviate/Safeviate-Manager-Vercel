@@ -243,8 +243,9 @@ const WBCalculator = () => {
               allowDataOverflow={true}
               tick={{fill: 'hsl(var(--muted-foreground))'}} 
               stroke="hsl(var(--muted-foreground))"
+              dy={10}
             >
-              <RechartsLabel value="CG (inches)" offset={-30} position="insideBottom" fill="hsl(var(--muted-foreground))" />
+              <RechartsLabel value="CG (inches)" offset={-30} position="insideBottom" fill="hsl(var(--muted-foreground))" dy={10} />
             </XAxis>
             <YAxis 
               type="number" 
@@ -344,5 +345,3 @@ const WBCalculator = () => {
 };
 
 export default WBCalculator;
-
-    
