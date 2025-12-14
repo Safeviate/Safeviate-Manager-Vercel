@@ -241,7 +241,7 @@ const ChartTestPage = () => {
              )}
 
              <ResponsiveContainer width="100%" height={600}>
-                <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
+                <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
                   <CartesianGrid strokeDasharray="3 3" />
                   
                   <XAxis 
@@ -301,3 +301,5 @@ const ChartTestPage = () => {
 };
 
 export default ChartTestPage;
+
+    

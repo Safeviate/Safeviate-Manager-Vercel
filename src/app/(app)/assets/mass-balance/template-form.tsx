@@ -257,7 +257,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
         <Card>
             <CardContent className="relative flex flex-col justify-center items-center pt-6">
                 <ResponsiveContainer width="100%" height={400}>
-                    <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
+                    <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[watchedXMin || 'dataMin', watchedXMax || 'dataMax']} allowDataOverflow={true} ticks={xAxisTicks}>
                            <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" dy={10} />
@@ -276,7 +276,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                     </ScatterChart>
                 </ResponsiveContainer>
                  <div className='absolute top-4 right-4'>
-                    <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-sm text-white px-3 py-1')}>
+                    <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-sm text-white px-4 py-1')}>
                         {results.isSafe ? 'Within Limits' : 'Out of Limits'}
                     </Badge>
                 </div>
@@ -406,3 +406,5 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
     </Form>
   );
 }
+
+    

@@ -242,7 +242,7 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                                 </div>
                             </div>
                             <div className='flex justify-center'>
-                                <Badge className={cn(isTakeoffOk ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-lg text-white px-6 py-2')}>
+                                <Badge className={cn(isTakeoffOk ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-sm text-white px-4 py-1')}>
                                     {isTakeoffOk ? 'Takeoff Within Limits' : 'Takeoff Out of Limits'}
                                 </Badge>
                             </div>
@@ -255,7 +255,7 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                                     />
                                 )}
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
+                                    <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
                                         <CartesianGrid strokeDasharray="3 3" />
                                         <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={domainX} allowDataOverflow={true}>
                                             <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" dy={10} />
@@ -285,3 +285,4 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
     );
 }
 
+    

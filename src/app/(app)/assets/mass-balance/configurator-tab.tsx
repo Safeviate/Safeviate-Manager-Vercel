@@ -292,7 +292,7 @@ export function ConfiguratorTab() {
              )}
 
              <ResponsiveContainer width="100%" height={600}>
-                <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
+                <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
                   <CartesianGrid strokeDasharray="3 3" />
                   
                   <XAxis 
@@ -342,7 +342,7 @@ export function ConfiguratorTab() {
               </p>
 
               <div className="absolute bottom-4 right-4">
-                <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-red-600 hover:bg-red-600', 'text-white shadow-lg')}>
+                <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-red-600 hover:bg-red-600', 'text-sm text-white px-4 py-1 shadow-lg')}>
                     {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
                 </Badge>
               </div>
@@ -354,3 +354,5 @@ export function ConfiguratorTab() {
 }
 
 export default ConfiguratorTab;
+
+    
