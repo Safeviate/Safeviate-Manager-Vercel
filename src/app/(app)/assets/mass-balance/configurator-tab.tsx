@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 
@@ -59,6 +62,9 @@ const OffScreenWarning = ({ direction, value, label }: { direction: string; valu
 
 export function ConfiguratorTab() {
   const [showGuide, setShowGuide] = useState(false);
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const tenantId = 'safeviate';
   
   // 1. STATE
   const [graphConfig, setGraphConfig] = useState({
@@ -150,7 +156,38 @@ export function ConfiguratorTab() {
     }
   };
 
-  const saveToFirebase = async () => { /* Firebase logic would go here */ alert('Save to Firebase not implemented in this test page.'); };
+  const saveToFirebase = () => {
+    if (!firestore) {
+      toast({ variant: "destructive", title: "Error", description: "Firestore is not initialized." });
+      return;
+    }
+    if (!graphConfig.modelName.trim()) {
+      toast({ variant: "destructive", title: "Missing Name", description: "Please enter a model name for the template." });
+      return;
+    }
+  
+    const [make, ...modelParts] = graphConfig.modelName.split(' ');
+    const model = modelParts.join(' ');
+  
+    const templateData = {
+      make: make || 'Unknown',
+      model: model || graphConfig.modelName,
+      xMin: graphConfig.xMin,
+      xMax: graphConfig.xMax,
+      yMin: graphConfig.yMin,
+      yMax: graphConfig.yMax,
+      cgEnvelope: graphConfig.envelope.map(p => [p.x, p.y]),
+      // We are not saving stations or loading configuration here, only the envelope.
+    };
+  
+    const collectionRef = collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles');
+    addDocumentNonBlocking(collectionRef, templateData);
+  
+    toast({
+      title: "Template Saved",
+      description: `The W&B template for "${graphConfig.modelName}" is being created.`
+    });
+  };
 
   // CALCULATE TICKS
   const xAxisTicks = generateNiceTicks(graphConfig.xMin, graphConfig.xMax, 8);
@@ -181,15 +218,26 @@ export function ConfiguratorTab() {
         <div className="lg:col-span-5 space-y-6">
           
           <Card>
-            <CardHeader className='flex-row items-center justify-between'>
-              <CardTitle className="text-lg">Chart Axes Limits</CardTitle>
-              <Button onClick={handleAutoFit} variant="outline" size="sm"><Maximize size={12}/> Auto-Fit X-Axis</Button>
+            <CardHeader>
+              <CardTitle>Template &amp; Chart Limits</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
-              <div><Label className="text-xs">Min CG</Label><Input type="number" value={graphConfig.xMin} onChange={(e) => setGraphConfig({...graphConfig, xMin: Number(e.target.value)})} /></div>
-              <div><Label className="text-xs">Max CG</Label><Input type="number" value={graphConfig.xMax} onChange={(e) => setGraphConfig({...graphConfig, xMax: Number(e.target.value)})}/></div>
-              <div><Label className="text-xs">Min Weight</Label><Input type="number" value={graphConfig.yMin} onChange={(e) => setGraphConfig({...graphConfig, yMin: Number(e.target.value)})}/></div>
-              <div><Label className="text-xs">Max Weight</Label><Input type="number" value={graphConfig.yMax} onChange={(e) => setGraphConfig({...graphConfig, yMax: Number(e.target.value)})}/></div>
+            <CardContent className="space-y-4">
+               <div>
+                  <Label className="text-xs">Model Name</Label>
+                  <Input 
+                    type="text" 
+                    value={graphConfig.modelName} 
+                    onChange={(e) => setGraphConfig({...graphConfig, modelName: e.target.value})} 
+                    placeholder="e.g., Cessna 172S"
+                  />
+                </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><Label className="text-xs">Min CG</Label><Input type="number" value={graphConfig.xMin} onChange={(e) => setGraphConfig({...graphConfig, xMin: Number(e.target.value)})} /></div>
+                <div><Label className="text-xs">Max CG</Label><Input type="number" value={graphConfig.xMax} onChange={(e) => setGraphConfig({...graphConfig, xMax: Number(e.target.value)})}/></div>
+                <div><Label className="text-xs">Min Weight</Label><Input type="number" value={graphConfig.yMin} onChange={(e) => setGraphConfig({...graphConfig, yMin: Number(e.target.value)})}/></div>
+                <div><Label className="text-xs">Max Weight</Label><Input type="number" value={graphConfig.yMax} onChange={(e) => setGraphConfig({...graphConfig, yMax: Number(e.target.value)})}/></div>
+              </div>
+               <Button onClick={handleAutoFit} variant="outline" size="sm" className="w-full"><Maximize size={12}/> Auto-Fit X-Axis</Button>
             </CardContent>
           </Card>
 

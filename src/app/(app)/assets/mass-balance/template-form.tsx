@@ -44,6 +44,11 @@ export interface AircraftModelProfile {
   maxTakeoffWeight?: number;
   maxLandingWeight?: number;
   stationArms?: StationArm;
+  cgEnvelope?: CgEnvelopePoint[];
+  xMin?: number;
+  xMax?: number;
+  yMin?: number;
+  yMax?: number;
 }
 
 interface TemplateFormProps {
@@ -212,3 +217,5 @@ export function MassBalanceTemplateForm({ tenantId, initialData, isOpen, onClose
     </Dialog>
   );
 }
+
+    
