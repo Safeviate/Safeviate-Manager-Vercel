@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -46,6 +47,38 @@ import { cn } from '@/lib/utils';
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 
+// --- HELPER 1: Generate "Nice" Ticks ---
+const generateNiceTicks = (min: number, max: number, stepCount = 6) => {
+    const start = Number(min);
+    const end = Number(max);
+    if (isNaN(start) || isNaN(end) || start >= end) return [];
+  
+    const diff = end - start;
+    const roughStep = diff / (stepCount - 1);
+    const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
+    const normalizedStep = roughStep / magnitude;
+    
+    let step;
+    if (normalizedStep < 1.5) step = 1 * magnitude;
+    else if (normalizedStep < 3) step = 2 * magnitude;
+    else if (normalizedStep < 7) step = 5 * magnitude;
+    else step = 10 * magnitude;
+  
+    const ticks = [];
+    let current = Math.ceil(start / step) * step;
+    if (current > start) ticks.push(start);
+    
+    while (current <= end) {
+      ticks.push(current);
+      current += step;
+    }
+    
+    if (ticks[ticks.length - 1] < end && (end - ticks[ticks.length - 1]) < step * 0.1) {
+      ticks.push(end);
+    }
+    
+    return ticks;
+  };
 
 export type Station = {
     id: number;
@@ -213,6 +246,9 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
     form.setValue('xMin', minX);
     form.setValue('xMax', maxX);
   };
+  
+  const xAxisTicks = generateNiceTicks(watchedXMin || 0, watchedXMax || 0, 8);
+  const yAxisTicks = generateNiceTicks(watchedYMin || 0, watchedYMax || 0, 8);
 
 
   return (
@@ -232,10 +268,10 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                 <ResponsiveContainer width="100%" height={400}>
                     <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[watchedXMin || 'dataMin', watchedXMax || 'dataMax']} allowDataOverflow={true}>
+                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[watchedXMin || 'dataMin', watchedXMax || 'dataMax']} allowDataOverflow={true} ticks={xAxisTicks}>
                            <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" dy={10} />
                         </XAxis>
-                        <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[watchedYMin || 'dataMin', watchedYMax || 'dataMax']} allowDataOverflow={true} >
+                        <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[watchedYMin || 'dataMin', watchedYMax || 'dataMax']} allowDataOverflow={true} ticks={yAxisTicks}>
                              <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
                         </YAxis>
                         <Tooltip cursor={{ strokeDasharray: '3 3' }} />
