@@ -33,6 +33,13 @@ export type StationArm = {
   baggage2?: number;
 };
 
+export type Station = {
+    id: number;
+    name: string;
+    weight: number;
+    arm: number;
+};
+
 export type CgEnvelopePoint = [number, number];
 
 export interface AircraftModelProfile {
@@ -44,6 +51,7 @@ export interface AircraftModelProfile {
   maxTakeoffWeight?: number;
   maxLandingWeight?: number;
   stationArms?: StationArm;
+  stations?: Station[];
   cgEnvelope?: CgEnvelopePoint[];
   xMin?: number;
   xMax?: number;

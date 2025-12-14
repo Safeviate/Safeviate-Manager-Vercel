@@ -177,7 +177,7 @@ export function ConfiguratorTab() {
       yMin: graphConfig.yMin,
       yMax: graphConfig.yMax,
       cgEnvelope: graphConfig.envelope.map(p => [p.x, p.y]),
-      // We are not saving stations or loading configuration here, only the envelope.
+      stations: stations.map(s => ({...s, weight: Number(s.weight), arm: Number(s.arm)}))
     };
   
     const collectionRef = collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles');
