@@ -142,7 +142,7 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
         return (
             <div className="max-w-7xl mx-auto space-y-6 text-center p-6">
                 <h2 className="text-xl font-semibold text-destructive">Incomplete Aircraft Configuration</h2>
-                <p className="text-muted-foreground">This aircraft is missing critical weight & balance information (e.g., station arms, CG envelope, empty weight). Please complete the aircraft's profile in the Assets section.</p>
+                <p className="text-muted-foreground">This aircraft is missing critical weight &amp; balance information (e.g., station arms, CG envelope, empty weight). Please complete the aircraft's profile in the Assets section.</p>
                 <Button asChild variant="outline" className="mt-4">
                     <Link href={`/assets/${aircraft.id}`}>Go to Aircraft Profile</Link>
                 </Button>
@@ -217,7 +217,7 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                 <div className="lg:col-span-2">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Weight & Balance Summary</CardTitle>
+                            <CardTitle>Weight &amp; Balance Summary</CardTitle>
                             <CardDescription>Review the calculated weight and center of gravity.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
@@ -278,5 +278,7 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
         </div>
     );
 }
+
+    
 
     
