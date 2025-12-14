@@ -300,4 +300,6 @@ export function ConfiguratorTab() {
   );
 };
 
-export default WBCalculator;
+export default ConfiguratorTab;
+
+    
