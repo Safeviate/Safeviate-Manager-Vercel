@@ -140,14 +140,26 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
         );
     }
 
-    const domainX = [Math.min(...cgEnvelopePoints.map(p => p.x)) - 1, Math.max(...cgEnvelopePoints.map(p => p.x)) + 1];
-    const domainY = [Math.min(...cgEnvelopePoints.map(p => p.y)) - 100, Math.max(...cgEnvelopePoints.map(p => p.y)) + 100];
-    
+    const domain = useMemo(() => {
+        if (cgEnvelopePoints.length === 0) return { x: [0, 100], y: [0, 3000] };
+        
+        const xValues = cgEnvelopePoints.map(p => p.x);
+        const yValues = cgEnvelopePoints.map(p => p.y);
+
+        const xPadding = (Math.max(...xValues) - Math.min(...xValues)) * 0.1;
+        const yPadding = (Math.max(...yValues) - Math.min(...yValues)) * 0.1;
+        
+        return {
+            x: [Math.min(...xValues) - xPadding, Math.max(...xValues) + xPadding],
+            y: [Math.min(...yValues) - yPadding, Math.max(...yValues) + yPadding],
+        };
+    }, [cgEnvelopePoints]);
+
     const isOffScreen = () => {
-        if (takeoffPoint.x < domainX[0]) return { axis: 'x', dir: 'left', val: takeoffPoint.x };
-        if (takeoffPoint.x > domainX[1]) return { axis: 'x', dir: 'right', val: takeoffPoint.x };
-        if (takeoffPoint.y < domainY[0]) return { axis: 'y', dir: 'bottom', val: takeoffPoint.y };
-        if (takeoffPoint.y > domainY[1]) return { axis: 'y', dir: 'top', val: takeoffPoint.y };
+        if (takeoffPoint.x < domain.x[0]) return { axis: 'x', dir: 'left', val: takeoffPoint.x };
+        if (takeoffPoint.x > domain.x[1]) return { axis: 'x', dir: 'right', val: takeoffPoint.x };
+        if (takeoffPoint.y < domain.y[0]) return { axis: 'y', dir: 'bottom', val: takeoffPoint.y };
+        if (takeoffPoint.y > domain.y[1]) return { axis: 'y', dir: 'top', val: takeoffPoint.y };
         return null;
     };
 
@@ -241,11 +253,7 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                                     </div>
                                 </div>
                             </div>
-                            <div className='flex justify-center'>
-                                <Badge className={cn(isTakeoffOk ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-sm text-white px-4 py-1')}>
-                                    {isTakeoffOk ? 'Takeoff Within Limits' : 'Takeoff Out of Limits'}
-                                </Badge>
-                            </div>
+                            
                             <div className="relative h-[400px]">
                                 {offScreenStatus && (
                                     <OffScreenWarning 
@@ -257,10 +265,10 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                                 <ResponsiveContainer width="100%" height="100%">
                                     <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
                                         <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={domainX} allowDataOverflow={true}>
+                                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={domain.x} allowDataOverflow={true} tickCount={8}>
                                             <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" dy={10} />
                                         </XAxis>
-                                        <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={domainY} allowDataOverflow={true} >
+                                        <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={domain.y} allowDataOverflow={true} tickCount={8}>
                                              <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
                                         </YAxis>
                                         <Tooltip cursor={{ strokeDasharray: '3 3' }} />
@@ -273,6 +281,11 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                                         <ReferenceDot x={takeoffPoint.x} y={takeoffPoint.y} r={8} fill={isTakeoffOk ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="hsl(var(--primary-foreground))" strokeWidth={2} />
                                     </ScatterChart>
                                 </ResponsiveContainer>
+                                <div className="absolute top-4 right-4">
+                                  <Badge className={cn(isTakeoffOk ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-sm text-white px-3 py-1')}>
+                                      {isTakeoffOk ? 'Within Limits' : 'Out of Limits'}
+                                  </Badge>
+                                </div>
                             </div>
                         </CardContent>
                         <CardFooter>
@@ -284,5 +297,3 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
         </div>
     );
 }
-
-    

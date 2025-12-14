@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 
 // --- HELPER 1: Generate "Nice" Ticks ---
-const generateNiceTicks = (min: number, max: number, stepCount = 6) => {
+const generateNiceTicks = (min: number, max: number, stepCount = 8) => {
   const start = Number(min);
   const end = Number(max);
   if (isNaN(start) || isNaN(end) || start >= end) return [];
@@ -120,11 +120,23 @@ export function ConfiguratorTab() {
 
   // HANDLERS
   const handleAutoFit = () => {
-    if (graphConfig.envelope.length < 2) return alert("Add points first!");
+    if (graphConfig.envelope.length < 2) {
+        toast({ variant: "destructive", title: "Cannot Auto-Fit", description: "Please add at least two envelope points." });
+        return;
+    }
     const xValues = graphConfig.envelope.map(p => p.x);
-    const minX = Math.floor(Math.min(...xValues) - 1); 
-    const maxX = Math.ceil(Math.max(...xValues) + 1);
-    setGraphConfig(prevConfig => ({ ...prevConfig, xMin: minX, xMax: maxX }));
+    const yValues = graphConfig.envelope.map(p => p.y);
+
+    const xPadding = (Math.max(...xValues) - Math.min(...xValues)) * 0.1 || 1;
+    const yPadding = (Math.max(...yValues) - Math.min(...yValues)) * 0.1 || 100;
+    
+    setGraphConfig(prevConfig => ({ 
+        ...prevConfig, 
+        xMin: Math.floor(Math.min(...xValues) - xPadding),
+        xMax: Math.ceil(Math.max(...xValues) + xPadding),
+        yMin: Math.floor(Math.min(...yValues) - yPadding),
+        yMax: Math.ceil(Math.max(...yValues) + yPadding),
+    }));
   };
 
   const updateStation = (id: number, field: 'name' | 'weight' | 'arm', val: string | number) => setStations(stations.map(s => s.id === id ? { ...s, [field]: val } : s));
@@ -240,7 +252,7 @@ export function ConfiguratorTab() {
                 <div><Label className="text-xs">Min Weight</Label><Input type="number" value={graphConfig.yMin} onChange={(e) => setGraphConfig({...graphConfig, yMin: Number(e.target.value)})}/></div>
                 <div><Label className="text-xs">Max Weight</Label><Input type="number" value={graphConfig.yMax} onChange={(e) => setGraphConfig({...graphConfig, yMax: Number(e.target.value)})}/></div>
               </div>
-               <Button onClick={handleAutoFit} variant="outline" size="sm" className="w-full"><Maximize size={12}/> Auto-Fit X-Axis</Button>
+               <Button onClick={handleAutoFit} variant="outline" size="sm" className="w-full"><Maximize size={12}/> Auto-Fit Axes</Button>
             </CardContent>
           </Card>
 
@@ -342,8 +354,8 @@ export function ConfiguratorTab() {
               </p>
 
               <div className="absolute bottom-4 right-4">
-                <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-red-600 hover:bg-red-600', 'text-sm text-white px-4 py-1 shadow-lg')}>
-                    {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
+                <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-sm text-white px-3 py-1 shadow-lg')}>
+                    {results.isSafe ? "Within Limits" : "Out of Limits"}
                 </Badge>
               </div>
           </Card>
@@ -354,5 +366,3 @@ export function ConfiguratorTab() {
 }
 
 export default ConfiguratorTab;
-
-    

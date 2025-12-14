@@ -114,6 +114,21 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
     const isTakeoffCgOk = calculation ? isPointInPolygon(takeoffPoint, polygonForCheck) : true;
     const isTakeoffOk = isTakeoffWeightOk && isTakeoffCgOk;
 
+    const domain = useMemo(() => {
+        if (cgEnvelopePoints.length === 0) return { x: [0, 100], y: [0, 3000] };
+        
+        const xValues = cgEnvelopePoints.map(p => p.cg);
+        const yValues = cgEnvelopePoints.map(p => p.weight);
+
+        const xPadding = (Math.max(...xValues) - Math.min(...xValues)) * 0.1;
+        const yPadding = (Math.max(...yValues) - Math.min(...yValues)) * 0.1;
+        
+        return {
+            x: [Math.min(...xValues) - xPadding, Math.max(...xValues) + xPadding],
+            y: [Math.min(...yValues) - yPadding, Math.max(...yValues) + yPadding],
+        };
+    }, [cgEnvelopePoints]);
+
 
     if (isLoading) {
         return <div className="max-w-7xl mx-auto space-y-6"><Skeleton className="h-[80vh] w-full" /></div>;
@@ -234,25 +249,28 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                                     </div>
                                 </div>
                             </div>
-                            <div className='flex justify-center'>
-                                <Badge className={cn(isTakeoffOk ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-sm text-white px-4 py-1')}>
-                                    {isTakeoffOk ? 'Takeoff Within Limits' : 'Takeoff Out of Limits'}
-                                </Badge>
+                            
+                            <div className="relative h-[400px]">
+                                <ResponsiveContainer width="100%" height={400}>
+                                    <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis type="number" dataKey="cg" name="CG" unit=" in" domain={domain.x} allowDataOverflow={true} tickCount={8}>
+                                            <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" />
+                                        </XAxis>
+                                        <YAxis type="number" dataKey="weight" name="Weight" unit=" lbs" domain={domain.y} allowDataOverflow={true} tickCount={8}>
+                                            <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
+                                        </YAxis>
+                                        <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                                        <Area type="linear" dataKey="weight" data={cgEnvelopePoints} name="CG Limit" stroke="#8884d8" fill="#8884d8" fillOpacity={0.2} strokeWidth={2} />
+                                        <Scatter name="Takeoff CG" data={[ { weight: takeoffPoint.y, cg: takeoffPoint.x } ]} fill={isTakeoffOk ? "#22c55e" : "#ef4444"} shape="star" size={150} />
+                                    </ScatterChart>
+                                </ResponsiveContainer>
+                                <div className="absolute top-4 right-4">
+                                  <Badge className={cn(isTakeoffOk ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-sm text-white px-3 py-1')}>
+                                      {isTakeoffOk ? 'Within Limits' : 'Out of Limits'}
+                                  </Badge>
+                                </div>
                             </div>
-                            <ResponsiveContainer width="100%" height={400}>
-                                <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis type="number" dataKey="cg" name="CG" unit=" in" domain={['dataMin - 1', 'dataMax + 1']} tickCount={8}>
-                                        <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" />
-                                    </XAxis>
-                                    <YAxis type="number" dataKey="weight" name="Weight" unit=" lbs" domain={['dataMin - 100', 'dataMax + 100']}>
-                                         <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
-                                    </YAxis>
-                                    <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                    <Area type="linear" dataKey="weight" data={cgEnvelopePoints} name="CG Limit" stroke="#8884d8" fill="#8884d8" fillOpacity={0.2} strokeWidth={2} />
-                                    <Scatter name="Takeoff CG" data={[ { weight: takeoffPoint.y, cg: takeoffPoint.x } ]} fill={isTakeoffOk ? "#22c55e" : "#ef4444"} shape="star" size={150} />
-                                </ScatterChart>
-                            </ResponsiveContainer>
                         </CardContent>
                     </Card>
                 </div>
@@ -260,5 +278,3 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
         </div>
     );
 }
-
-    

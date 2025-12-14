@@ -48,7 +48,7 @@ import { cn } from '@/lib/utils';
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 
 // --- HELPER 1: Generate "Nice" Ticks ---
-const generateNiceTicks = (min: number, max: number, stepCount = 6) => {
+const generateNiceTicks = (min: number, max: number, stepCount = 8) => {
     const start = Number(min);
     const end = Number(max);
     if (isNaN(start) || isNaN(end) || start >= end) return [];
@@ -235,16 +235,21 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
     if (envelope.length < 2) {
         toast({
             variant: "destructive",
-            title: "Not enough data",
-            description: "Please add at least two envelope points to use auto-fit.",
+            title: "Cannot Auto-Fit",
+            description: "Please add at least two envelope points.",
         });
         return;
     }
     const xValues = envelope.map(p => p.x);
-    const minX = Math.floor(Math.min(...xValues) - 1);
-    const maxX = Math.ceil(Math.max(...xValues) + 1);
-    form.setValue('xMin', minX);
-    form.setValue('xMax', maxX);
+    const yValues = envelope.map(p => p.y);
+
+    const xPadding = (Math.max(...xValues) - Math.min(...xValues)) * 0.1 || 1;
+    const yPadding = (Math.max(...yValues) - Math.min(...yValues)) * 0.1 || 100;
+    
+    form.setValue('xMin', Math.floor(Math.min(...xValues) - xPadding));
+    form.setValue('xMax', Math.ceil(Math.max(...xValues) + xPadding));
+    form.setValue('yMin', Math.floor(Math.min(...yValues) - yPadding));
+    form.setValue('yMax', Math.ceil(Math.max(...yValues) + yPadding));
   };
   
   const xAxisTicks = generateNiceTicks(watchedXMin || 0, watchedXMax || 0, 8);
@@ -259,10 +264,10 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                 <ResponsiveContainer width="100%" height={400}>
                     <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[watchedXMin || 'dataMin', watchedXMax || 'dataMax']} allowDataOverflow={true} ticks={xAxisTicks}>
+                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[watchedXMin || 'dataMin', watchedXMax || 'dataMax']} allowDataOverflow={true} ticks={xAxisTicks} tickCount={8}>
                            <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" dy={10} />
                         </XAxis>
-                        <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[watchedYMin || 'dataMin', watchedYMax || 'dataMax']} allowDataOverflow={true} ticks={yAxisTicks}>
+                        <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[watchedYMin || 'dataMin', watchedYMax || 'dataMax']} allowDataOverflow={true} ticks={yAxisTicks} tickCount={8}>
                              <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
                         </YAxis>
                         <Tooltip cursor={{ strokeDasharray: '3 3' }} />
@@ -276,7 +281,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                     </ScatterChart>
                 </ResponsiveContainer>
                  <div className='absolute top-4 right-4'>
-                    <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-sm text-white px-4 py-1')}>
+                    <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-sm text-white px-3 py-1')}>
                         {results.isSafe ? 'Within Limits' : 'Out of Limits'}
                     </Badge>
                 </div>
@@ -296,9 +301,9 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                     <FormMessage />
                     </FormItem>
                 )} />
-                
-                <Separator />
 
+                <Separator />
+                
                 <div>
                     <div className="flex justify-between items-center mb-2">
                     <h3 className="text-lg font-medium">Loading Stations</h3>
@@ -322,7 +327,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                         </div>
                     ))}
                     </div>
-              </div>
+                </div>
               
               <Separator />
 
@@ -343,7 +348,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                   )} />
                 </div>
                 <Button onClick={handleAutoFit} type="button" variant="outline" size="sm" className="w-full mt-4">
-                  <Maximize className="mr-2 h-4 w-4"/> Auto-Fit X-Axis
+                  <Maximize className="mr-2 h-4 w-4"/> Auto-Fit Axes
                 </Button>
               </div>
               
@@ -406,5 +411,3 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
     </Form>
   );
 }
-
-    
