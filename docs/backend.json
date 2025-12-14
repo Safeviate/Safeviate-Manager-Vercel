@@ -1,6 +1,45 @@
 
 {
   "entities": {
+    "AircraftModelProfile": {
+      "title": "Aircraft Model Profile",
+      "type": "object",
+      "description": "Represents a weight and balance template for a specific aircraft make and model.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the profile." },
+        "make": { "type": "string", "description": "The manufacturer of the aircraft (e.g., Cessna)." },
+        "model": { "type": "string", "description": "The model of the aircraft (e.g., 172S)." },
+        "emptyWeight": { "type": "number", "description": "The standard empty weight of this aircraft model (in lbs)." },
+        "emptyWeightMoment": { "type": "number", "description": "The standard moment of this model at its empty weight (in lbs-in)." },
+        "maxTakeoffWeight": { "type": "number", "description": "Maximum allowable takeoff weight (in lbs)." },
+        "maxLandingWeight": { "type": "number", "description": "Maximum allowable landing weight (in lbs)." },
+        "stationArms": {
+          "type": "object",
+          "description": "Defines the arm (distance from datum in inches) for each station.",
+          "properties": {
+            "frontSeats": { "type": "number", "description": "Arm for the front seats." },
+            "rearSeats": { "type": "number", "description": "Arm for the rear seats." },
+            "fuel": { "type": "number", "description": "Arm for the fuel tank(s)." },
+            "baggage1": { "type": "number", "description": "Arm for the primary baggage area." },
+            "baggage2": { "type": "number", "description": "Arm for the secondary baggage area, if applicable." }
+          }
+        },
+        "cgEnvelope": {
+          "type": "array",
+          "description": "An array of [weight, cg] pairs defining the vertices of the CG envelope polygon.",
+          "items": {
+            "type": "array",
+            "items": [
+              { "type": "number", "description": "Weight (lbs)" },
+              { "type": "number", "description": "Center of Gravity (inches)" }
+            ],
+            "minItems": 2,
+            "maxItems": 2
+          }
+        }
+      },
+      "required": ["id", "make", "model"]
+    },
     "Booking": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Booking",
@@ -675,6 +714,20 @@
   "firestore": {
     "structure": [
       {
+        "path": "tenants/{tenantId}/aircraftModelProfiles/{profileId}",
+        "definition": {
+          "entityName": "AircraftModelProfile",
+          "schema": {
+            "$ref": "#/backend/entities/AircraftModelProfile"
+          },
+          "description": "Stores W&B templates for aircraft models.",
+          "params": [
+            { "name": "tenantId", "description": "Tenant ID." },
+            { "name": "profileId", "description": "Profile ID." }
+          ]
+        }
+      },
+      {
         "path": "tenants/{tenantId}",
         "definition": {
           "entityName": "Tenant",
@@ -962,5 +1015,3 @@
     "reasoning": "The Firestore structure is designed to support a multi-tenant aviation academy management application, focusing on security, scalability, and ease of debugging. Authorization Independence is achieved through denormalization where needed, especially for collaborative data. Structural Segregation ensures that each collection has a homogeneous security posture. Access Modeling follows consistent patterns, utilizing path-based ownership for user-specific data and membership maps for collaborative entities. The structure is multi-tenant, where tenants are isolated from each other. The structure uses the tenants collection to keep a list of tenants and provides a tenant id for all other collections in the database. This strategy allows the application to manage multiple academies within the same system, each with its own set of data and settings.\n\n*   **Tenants:** The root level collection `tenants` stores individual tenant documents. Each tenant has its own unique ID and associated settings.\n*   **Users:** User data is now split into `personnel` (non-flying staff) and `pilots` (students, instructors, private pilots) under each tenant to better segregate data models and security rules.\n*   **Settings:** A generic `settings` collection is added under each tenant. This allows for storing various configuration documents, such as `document-expiry`, in a structured and scalable way without creating new top-level collections for each setting type.\n*   **ChecklistResponses:** A new collection to store the completed checklists, linked to a tenant.\n\nQAPs (Rules are not Filters) is addressed by:\n\n*   Segregating data into collections with homogeneous security requirements.\n*   Using path-based ownership for private data.\n*   Employing membership maps for collaborative data, and storing these maps directly within the documents to avoid `get()` calls in security rules.\n\nSpecifically, the following denormalization strategies are used:\n\n*   Authorization context (e.g., members, ownerId) is copied into subcollection documents to avoid hierarchical dependencies.\n*   Tenant ID is included in all documents to support multi-tenancy access control.\n\nThis design enables robust security rules that are simple to write, easy to understand, and highly performant."
   }
 }
-
-    

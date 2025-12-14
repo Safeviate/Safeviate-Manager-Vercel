@@ -13,6 +13,7 @@ import {
   Plane,
   CheckSquare,
   BookCopy,
+  Scale,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -123,6 +124,11 @@ export const menuConfig: MenuItem[] = [
         href: '/admin/document-dates',
         label: 'Document Dates',
         description: 'Manage document expiration dates.',
+      },
+      {
+        href: '/admin/mass-balance-templates',
+        label: 'Mass & Balance Templates',
+        description: 'Manage W&B templates for different aircraft models.',
       },
       {
         href: '/admin/database',
