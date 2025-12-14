@@ -112,10 +112,10 @@ interface TemplateFormProps {
 
 const formSchema = z.object({
   modelName: z.string().optional(),
-  xMin: z.coerce.number().optional(),
-  xMax: z.coerce.number().optional(),
-  yMin: z.coerce.number().optional(),
-  yMax: z.coerce.number().optional(),
+  xMin: z.coerce.number({invalid_type_error: "Min CG is required"}),
+  xMax: z.coerce.number({invalid_type_error: "Max CG is required"}),
+  yMin: z.coerce.number({invalid_type_error: "Min Weight is required"}),
+  yMax: z.coerce.number({invalid_type_error: "Max Weight is required"}),
   stations: z.array(z.object({
     id: z.coerce.number(),
     name: z.string().min(1, 'Station name is required.'),
@@ -132,10 +132,12 @@ type FormValues = z.infer<typeof formSchema>;
 
 const defaultConfiguratorValues: FormValues = {
     modelName: "",
-    xMin: 0, xMax: 100,    
-    yMin: 0, yMax: 3000,    
     stations: [],
     cgEnvelope: [],
+    xMin: undefined,
+    xMax: undefined,
+    yMin: undefined,
+    yMax: undefined,
 };
 
 
@@ -145,10 +147,10 @@ const getDefaultValues = (profile?: AircraftModelProfile | null, mode?: Template
     }
     return {
         modelName: profile ? `${profile.make} ${profile.model}` : '',
-        xMin: profile?.xMin ?? 0,
-        xMax: profile?.xMax ?? 0,
-        yMin: profile?.yMin ?? 0,
-        yMax: profile?.yMax ?? 0,
+        xMin: profile?.xMin,
+        xMax: profile?.xMax,
+        yMin: profile?.yMin,
+        yMax: profile?.yMax,
         stations: profile?.stations ?? [],
         cgEnvelope: profile?.cgEnvelope ?? [],
     }
