@@ -173,7 +173,7 @@ const WBCalculator = () => {
   const yTicks = generateTicks(graphConfig.yMin, graphConfig.yMax, 6);
 
   return (
-    <div className="min-h-screen p-6 font-sans">
+    <div className="p-6 font-sans">
       <GuideModal isOpen={showGuide} onClose={() => setShowGuide(false)} />
       <div className="flex justify-between items-center mb-8 border-b pb-4">
         <div>
@@ -191,96 +191,90 @@ const WBCalculator = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-5 space-y-6">
-          <ScrollArea className="h-[80vh] pr-4">
-            <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className='flex items-center justify-between'>
-                  1. Chart Limits
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowGuide(true)}>
-                    <HelpCircle size={16} className="text-muted-foreground" />
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                <div><Label>Min CG (X)</Label><Input type="number" placeholder="80" value={graphConfig.xMin} onChange={(e) => setGraphConfig({...graphConfig, xMin: e.target.value})} /></div>
-                <div><Label>Max CG (X)</Label><Input type="number" placeholder="95" value={graphConfig.xMax} onChange={(e) => setGraphConfig({...graphConfig, xMax: e.target.value})} /></div>
-                <div><Label>Min Weight (Y)</Label><Input type="number" placeholder="1400" value={graphConfig.yMin} onChange={(e) => setGraphConfig({...graphConfig, yMin: e.target.value})} /></div>
-                <div><Label>Max Weight (Y)</Label><Input type="number" placeholder="2600" value={graphConfig.yMax} onChange={(e) => setGraphConfig({...graphConfig, yMax: e.target.value})} /></div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>2. Envelope Points</CardTitle>
-                  <Button variant="outline" size="sm" onClick={addEnvelopePoint}><Plus size={12}/> Add Point</Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {graphConfig.envelope.length === 0 ? (
-                  <div className="text-center py-4 border-2 border-dashed rounded-lg bg-muted/50"><p className="text-sm text-muted-foreground">No points defined.</p></div>
-                ) : (
-                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                    {graphConfig.envelope.map((pt, i) => (
-                      <div key={i} className="flex gap-2 items-center group">
-                        <span className="text-muted-foreground text-xs w-4 font-mono">{i+1}.</span>
-                        <Input type="number" value={pt.x} onChange={(e) => updateEnvelopePoint(i, 'x', e.target.value)} placeholder="CG" />
-                        <Input type="number" value={pt.y} onChange={(e) => updateEnvelopePoint(i, 'y', e.target.value)} placeholder="Wt" />
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => removeEnvelopePoint(i)}><Trash2 size={14}/></Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                 <div className="flex justify-between items-center"><CardTitle>3. Loading Stations</CardTitle><Button variant="outline" size="sm" onClick={addStation}><Plus size={12}/> Add Item</Button></div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {stations.map((s) => (
-                  <div key={s.id} className="grid grid-cols-12 gap-2 items-center group">
-                    <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="col-span-5" placeholder="Name" />
-                    <Input type="number" value={s.weight} onChange={(e) => updateStation(s.id, 'weight', e.target.value)} className="col-span-3" placeholder="Lbs" />
-                    <Input type="number" value={s.arm} onChange={(e) => updateStation(s.id, 'arm', e.target.value)} className="col-span-3" placeholder="Arm" />
-                    <Button variant="ghost" size="icon" className="col-span-1 h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => removeStation(s.id)}><Trash2 size={14}/></Button>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+      <div className="flex flex-col gap-8">
+        <Card className="flex-1 flex flex-col justify-center items-center p-4">
+            <ResponsiveContainer width="100%" height={500}>
+            <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[Number(graphConfig.xMin), Number(graphConfig.xMax)]} ticks={xTicks} tick={{fill: 'hsl(var(--muted-foreground))'}} stroke="hsl(var(--muted-foreground))">
+                <RechartsLabel value="CG (inches)" offset={-25} position="insideBottom" fill="hsl(var(--muted-foreground))" />
+                </XAxis>
+                <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[Number(graphConfig.yMin), Number(graphConfig.yMax)]} ticks={yTicks} tick={{fill: 'hsl(var(--muted-foreground))'}} stroke="hsl(var(--muted-foreground))">
+                <RechartsLabel value="Gross Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} fill="hsl(var(--muted-foreground))" />
+                </YAxis>
+                <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}/>
+                <Scatter name="Envelope Line" data={graphConfig.envelope} fill="transparent" line={{ stroke: 'hsl(var(--chart-2))', strokeWidth: 2 }} shape={() => null} isAnimationActive={false} />
+                <Scatter name="Envelope Points" data={graphConfig.envelope} isAnimationActive={false}>
+                {graphConfig.envelope.map((entry, index) => <Cell key={`cell-${index}`} fill={POINT_COLORS[index % POINT_COLORS.length]} stroke="white" strokeWidth={1}/>)}
+                </Scatter>
+                <Scatter name="Current Load" data={[{ x: results.cg, y: results.weight }]} isAnimationActive={false}>
+                    <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "hsl(var(--chart-2))" : "hsl(var(--destructive))"} stroke="white" strokeWidth={2} />
+                </Scatter>
+            </ScatterChart>
+            </ResponsiveContainer>
+            <div className={`mt-4 px-4 py-2 rounded-full text-sm font-bold ${results.isSafe ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
             </div>
-          </ScrollArea>
-        </div>
+        </Card>
 
-        <div className="lg:col-span-7 flex flex-col">
-          <Card className="flex-1 flex flex-col justify-center items-center p-4">
-             <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[Number(graphConfig.xMin), Number(graphConfig.xMax)]} ticks={xTicks} tick={{fill: 'hsl(var(--muted-foreground))'}} stroke="hsl(var(--muted-foreground))">
-                    <RechartsLabel value="CG (inches)" offset={-25} position="insideBottom" fill="hsl(var(--muted-foreground))" />
-                  </XAxis>
-                  <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[Number(graphConfig.yMin), Number(graphConfig.yMax)]} ticks={yTicks} tick={{fill: 'hsl(var(--muted-foreground))'}} stroke="hsl(var(--muted-foreground))">
-                    <RechartsLabel value="Gross Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} fill="hsl(var(--muted-foreground))" />
-                  </YAxis>
-                  <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}/>
-                  <Scatter name="Envelope Line" data={graphConfig.envelope} fill="transparent" line={{ stroke: 'hsl(var(--chart-2))', strokeWidth: 2 }} shape={() => null} isAnimationActive={false} />
-                  <Scatter name="Envelope Points" data={graphConfig.envelope} isAnimationActive={false}>
-                    {graphConfig.envelope.map((entry, index) => <Cell key={`cell-${index}`} fill={POINT_COLORS[index % POINT_COLORS.length]} stroke="white" strokeWidth={1}/>)}
-                  </Scatter>
-                  <Scatter name="Current Load" data={[{ x: results.cg, y: results.weight }]} isAnimationActive={false}>
-                      <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "hsl(var(--chart-2))" : "hsl(var(--destructive))"} stroke="white" strokeWidth={2} />
-                  </Scatter>
-                </ScatterChart>
-              </ResponsiveContainer>
-              <div className={`mt-4 px-4 py-2 rounded-full text-sm font-bold ${results.isSafe ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                  {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
-              </div>
-          </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className='flex items-center justify-between'>
+                    1. Chart Limits
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowGuide(true)}>
+                        <HelpCircle size={16} className="text-muted-foreground" />
+                    </Button>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-4">
+                    <div><Label>Min CG (X)</Label><Input type="number" placeholder="80" value={graphConfig.xMin} onChange={(e) => setGraphConfig({...graphConfig, xMin: e.target.value})} /></div>
+                    <div><Label>Max CG (X)</Label><Input type="number" placeholder="95" value={graphConfig.xMax} onChange={(e) => setGraphConfig({...graphConfig, xMax: e.target.value})} /></div>
+                    <div><Label>Min Weight (Y)</Label><Input type="number" placeholder="1400" value={graphConfig.yMin} onChange={(e) => setGraphConfig({...graphConfig, yMin: e.target.value})} /></div>
+                    <div><Label>Max Weight (Y)</Label><Input type="number" placeholder="2600" value={graphConfig.yMax} onChange={(e) => setGraphConfig({...graphConfig, yMax: e.target.value})} /></div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                    <CardTitle>2. Envelope Points</CardTitle>
+                    <Button variant="outline" size="sm" onClick={addEnvelopePoint}><Plus size={12}/> Add Point</Button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {graphConfig.envelope.length === 0 ? (
+                    <div className="text-center py-4 border-2 border-dashed rounded-lg bg-muted/50"><p className="text-sm text-muted-foreground">No points defined.</p></div>
+                    ) : (
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                        {graphConfig.envelope.map((pt, i) => (
+                        <div key={i} className="flex gap-2 items-center group">
+                            <span className="text-muted-foreground text-xs w-4 font-mono">{i+1}.</span>
+                            <Input type="number" value={pt.x} onChange={(e) => updateEnvelopePoint(i, 'x', e.target.value)} placeholder="CG" />
+                            <Input type="number" value={pt.y} onChange={(e) => updateEnvelopePoint(i, 'y', e.target.value)} placeholder="Wt" />
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => removeEnvelopePoint(i)}><Trash2 size={14}/></Button>
+                        </div>
+                        ))}
+                    </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-center"><CardTitle>3. Loading Stations</CardTitle><Button variant="outline" size="sm" onClick={addStation}><Plus size={12}/> Add Item</Button></div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                    {stations.map((s) => (
+                    <div key={s.id} className="grid grid-cols-12 gap-2 items-center group">
+                        <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="col-span-5" placeholder="Name" />
+                        <Input type="number" value={s.weight} onChange={(e) => updateStation(s.id, 'weight', e.target.value)} className="col-span-3" placeholder="Lbs" />
+                        <Input type="number" value={s.arm} onChange={(e) => updateStation(s.id, 'arm', e.target.value)} className="col-span-3" placeholder="Arm" />
+                        <Button variant="ghost" size="icon" className="col-span-1 h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => removeStation(s.id)}><Trash2 size={14}/></Button>
+                    </div>
+                    ))}
+                </CardContent>
+            </Card>
         </div>
       </div>
     </div>
@@ -288,5 +282,3 @@ const WBCalculator = () => {
 };
 
 export default WBCalculator;
-
-    
