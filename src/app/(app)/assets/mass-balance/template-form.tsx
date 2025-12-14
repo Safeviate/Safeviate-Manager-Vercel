@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -96,6 +96,17 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+const getDefaultValues = (profile?: AircraftModelProfile | null): FormValues => ({
+    modelName: profile ? `${profile.make} ${profile.model}` : '',
+    xMin: profile?.xMin ?? 0,
+    xMax: profile?.xMax ?? 0,
+    yMin: profile?.yMin ?? 0,
+    yMax: profile?.yMax ?? 0,
+    stations: profile?.stations ?? [],
+    cgEnvelope: profile?.cgEnvelope ?? [],
+});
+
+
 export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -105,8 +116,12 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {},
+    defaultValues: getDefaultValues(initialData),
   });
+  
+  useEffect(() => {
+    form.reset(getDefaultValues(initialData));
+  }, [initialData, form]);
 
   const watchedStations = useWatch({ control: form.control, name: 'stations' });
   const watchedEnvelope = useWatch({ control: form.control, name: 'cgEnvelope' });
@@ -148,19 +163,6 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
     });
   }, [watchedStations, watchedEnvelope]);
 
-
-  useEffect(() => {
-    const modelName = initialData ? `${initialData.make} ${initialData.model}` : '';
-    form.reset({
-        modelName: modelName,
-        xMin: initialData?.xMin || 0,
-        xMax: initialData?.xMax || 0,
-        yMin: initialData?.yMin || 0,
-        yMax: initialData?.yMax || 0,
-        stations: initialData?.stations || [],
-        cgEnvelope: initialData?.cgEnvelope || [],
-    });
-  }, [initialData, form]);
 
   const onSubmit = (data: FormValues) => {
     if (!firestore) return;
