@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,14 +14,12 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import { MassBalanceTemplateForm, type AircraftModelProfile } from './template-form';
+import { type AircraftModelProfile } from './template-form';
+import Link from 'next/link';
 
 export function TemplatesTab() {
   const firestore = useFirestore();
   const tenantId = 'safeviate'; // Hardcoded for now
-  
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedProfile, setSelectedProfile] = useState<AircraftModelProfile | null>(null);
 
   const profilesQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles')) : null),
@@ -31,22 +28,14 @@ export function TemplatesTab() {
 
   const { data: profiles, isLoading, error } = useCollection<AircraftModelProfile>(profilesQuery);
 
-  const handleOpenForm = (profile?: AircraftModelProfile) => {
-    setSelectedProfile(profile || null);
-    setIsFormOpen(true);
-  };
-  
-  const handleCloseForm = () => {
-    setIsFormOpen(false);
-    setSelectedProfile(null);
-  };
-
   return (
     <div className="flex flex-col gap-6 h-full mt-4">
       <div className="flex justify-end">
-        <Button onClick={() => handleOpenForm()}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Profile
+        <Button asChild>
+          <Link href="/assets/mass-balance/new">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Profile
+          </Link>
         </Button>
       </div>
 
@@ -70,8 +59,8 @@ export function TemplatesTab() {
                       <TableCell className="font-medium">{profile.make}</TableCell>
                       <TableCell>{profile.model}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => handleOpenForm(profile)}>
-                           Edit
+                        <Button asChild variant="outline" size="sm">
+                           <Link href={`/assets/mass-balance/${profile.id}/edit`}>Edit</Link>
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -88,13 +77,6 @@ export function TemplatesTab() {
           )}
         </CardContent>
       </Card>
-      
-      <MassBalanceTemplateForm
-          tenantId={tenantId}
-          initialData={selectedProfile}
-          isOpen={isFormOpen}
-          onClose={handleCloseForm}
-      />
     </div>
   );
 }
