@@ -148,6 +148,11 @@ export const menuConfig: MenuItem[] = [
             description: 'Create new tenants with custom branding.',
         },
         {
+          href: '/development/chart-test',
+          label: 'W&B Configurator',
+          description: 'A tool to configure and test Weight & Balance charts.'
+        },
+        {
           href: '/development/test',
           label: 'Test Page',
           description: 'A test page for development purposes.'
