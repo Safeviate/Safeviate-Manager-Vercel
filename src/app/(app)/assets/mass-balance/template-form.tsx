@@ -1,7 +1,8 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useState, useEffect, useMemo } from 'react';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { doc, collection } from 'firebase/firestore';
@@ -9,10 +10,22 @@ import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, delete
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
+import {
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Label as RechartsLabel,
+  ReferenceDot,
+  Cell,
+} from 'recharts';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Trash2, Save, Plus } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -27,6 +40,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { isPointInPolygon } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+
+const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 
 
 export type Station = {
@@ -89,6 +107,13 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
     resolver: zodResolver(formSchema),
     defaultValues: {},
   });
+
+  const watchedStations = useWatch({ control: form.control, name: 'stations' });
+  const watchedEnvelope = useWatch({ control: form.control, name: 'cgEnvelope' });
+  const watchedXMin = useWatch({ control: form.control, name: 'xMin' });
+  const watchedXMax = useWatch({ control: form.control, name: 'xMax' });
+  const watchedYMin = useWatch({ control: form.control, name: 'yMin' });
+  const watchedYMax = useWatch({ control: form.control, name: 'yMax' });
   
   const { fields: stationFields, append: appendStation, remove: removeStation } = useFieldArray({
     control: form.control,
@@ -99,6 +124,30 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
     control: form.control,
     name: "cgEnvelope",
   });
+
+  const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
+
+  useEffect(() => {
+    let totalMom = 0;
+    let totalWt = 0;
+    const stations = watchedStations || [];
+    stations.forEach(st => {
+      const wt = parseFloat(st.weight as any) || 0;
+      const arm = parseFloat(st.arm as any) || 0;
+      totalWt += wt;
+      totalMom += (wt * arm);
+    });
+    const cg = totalWt > 0 ? (totalMom / totalWt) : 0;
+    const safe = (watchedEnvelope?.length || 0) > 2 
+        ? isPointInPolygon({ x: cg, y: totalWt }, watchedEnvelope || []) 
+        : false;
+    setResults({ 
+      cg: parseFloat(cg.toFixed(2)), 
+      weight: parseFloat(totalWt.toFixed(1)),
+      isSafe: safe
+    });
+  }, [watchedStations, watchedEnvelope]);
+
 
   useEffect(() => {
     const modelName = initialData ? `${initialData.make} ${initialData.model}` : '';
@@ -147,130 +196,161 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{isEditing ? `Edit ${initialData?.make} ${initialData?.model}` : 'Create New W&B Profile'}</CardTitle>
-        <CardDescription>
-            Define the weight and balance parameters for an aircraft model.
-        </CardDescription>
-      </CardHeader>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent>
-            <div className="space-y-6">
-                <FormField control={form.control} name="modelName" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Model Name</FormLabel>
-                        <FormControl><Input {...field} placeholder="e.g., Cessna 172S" /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}/>
-                
-                <Separator />
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="lg:col-span-1">
+            <CardHeader>
+              <CardTitle>{isEditing ? `Edit ${initialData?.make} ${initialData?.model}` : 'Create New W&B Profile'}</CardTitle>
+              <CardDescription>Define the weight and balance parameters for an aircraft model.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <FormField control={form.control} name="modelName" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Model Name</FormLabel>
+                  <FormControl><Input {...field} placeholder="e.g., Cessna 172S" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              
+              <Separator />
 
-                <div>
-                    <h3 className="text-lg font-medium mb-2">Chart Axis Limits</h3>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <FormField control={form.control} name="xMin" render={({ field }) => (
-                            <FormItem><FormLabel>Min CG (X-Axis)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                        )}/>
-                        <FormField control={form.control} name="xMax" render={({ field }) => (
-                            <FormItem><FormLabel>Max CG (X-Axis)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                        )}/>
-                        <FormField control={form.control} name="yMin" render={({ field }) => (
-                            <FormItem><FormLabel>Min Weight (Y-Axis)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                        )}/>
-                        <FormField control={form.control} name="yMax" render={({ field }) => (
-                            <FormItem><FormLabel>Max Weight (Y-Axis)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                        )}/>
-                    </div>
-                </div>
-                
-                <Separator />
-                
-                <div>
-                    <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-lg font-medium">Loading Stations</h3>
-                        <Button type="button" size="sm" variant="outline" onClick={() => appendStation({ id: Date.now(), name: '', weight: 0, arm: 0 })}>
-                            <Plus className="mr-2 h-4 w-4" /> Add Station
-                        </Button>
-                    </div>
-                    <div className="space-y-2">
-                        {stationFields.map((field, index) => (
-                            <div key={field.id} className="grid grid-cols-12 gap-2 items-center text-sm">
-                                <FormField control={form.control} name={`stations.${index}.name`} render={({ field }) => (
-                                    <FormItem className="col-span-5"><FormControl><Input {...field} placeholder="Station Name" /></FormControl></FormItem>
-                                )}/>
-                                <FormField control={form.control} name={`stations.${index}.weight`} render={({ field }) => (
-                                    <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Weight" /></FormControl></FormItem>
-                                )}/>
-                                <FormField control={form.control} name={`stations.${index}.arm`} render={({ field }) => (
-                                    <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Arm" /></FormControl></FormItem>
-                                )}/>
-                                <Button type="button" onClick={() => removeStation(index)} variant="ghost" size="icon" className="col-span-1 text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16}/></Button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <Separator />
-
-                <div>
-                    <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-lg font-medium">CG Envelope Points</h3>
-                        <Button type="button" size="sm" variant="outline" onClick={() => appendEnvelope({ x: 0, y: 0 })}>
-                            <Plus className="mr-2 h-4 w-4" /> Add Point
-                        </Button>
-                    </div>
-                    <div className="space-y-2">
-                        {envelopeFields.map((field, index) => (
-                            <div key={field.id} className="grid grid-cols-12 gap-2 items-center text-sm">
-                                <div className="col-span-1 text-center font-bold">{index + 1}</div>
-                                <FormField control={form.control} name={`cgEnvelope.${index}.x`} render={({ field }) => (
-                                    <FormItem className="col-span-5"><FormControl><Input type="number" {...field} placeholder="CG (X)" /></FormControl></FormItem>
-                                )}/>
-                                <FormField control={form.control} name={`cgEnvelope.${index}.y`} render={({ field }) => (
-                                    <FormItem className="col-span-5"><FormControl><Input type="number" {...field} placeholder="Weight (Y)" /></FormControl></FormItem>
-                                )}/>
-                                <Button type="button" onClick={() => removeEnvelope(index)} variant="ghost" size="icon" className="col-span-1 text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16}/></Button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-            </div>
-          </CardContent>
-          <CardFooter className='border-t pt-4 mt-4 flex items-center justify-between'>
               <div>
-                  {isEditing && (
-                      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                          <AlertDialogTrigger asChild>
-                              <Button variant="destructive">Delete Profile</Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                              <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                      This action cannot be undone. This will permanently delete the W&B profile for {initialData?.model}.
-                                  </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={handleDelete} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-                                      Delete
-                                  </AlertDialogAction>
-                              </AlertDialogFooter>
-                          </AlertDialogContent>
-                      </AlertDialog>
-                  )}
+                <h3 className="text-lg font-medium mb-2">Chart Axis Limits</h3>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <FormField control={form.control} name="xMin" render={({ field }) => (
+                    <FormItem><FormLabel>Min CG</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="xMax" render={({ field }) => (
+                    <FormItem><FormLabel>Max CG</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="yMin" render={({ field }) => (
+                    <FormItem><FormLabel>Min Weight</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="yMax" render={({ field }) => (
+                    <FormItem><FormLabel>Max Weight</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </div>
               </div>
-              <div className='flex gap-2'>
-                  <Button variant="outline" type="button" onClick={() => router.push('/assets/mass-balance')}>Cancel</Button>
-                  <Button type="submit"><Save className='mr-2'/> Save Profile</Button>
+              
+              <Separator />
+              
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg font-medium">Loading Stations</h3>
+                  <Button type="button" size="sm" variant="outline" onClick={() => appendStation({ id: Date.now(), name: '', weight: 0, arm: 0 })}>
+                    <Plus className="mr-2 h-4 w-4" /> Add
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {stationFields.map((field, index) => (
+                    <div key={field.id} className="grid grid-cols-12 gap-2 items-center text-sm">
+                      <FormField control={form.control} name={`stations.${index}.name`} render={({ field }) => (
+                        <FormItem className="col-span-5"><FormControl><Input {...field} placeholder="Station Name" /></FormControl></FormItem>
+                      )} />
+                      <FormField control={form.control} name={`stations.${index}.weight`} render={({ field }) => (
+                        <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Weight" /></FormControl></FormItem>
+                      )} />
+                      <FormField control={form.control} name={`stations.${index}.arm`} render={({ field }) => (
+                        <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Arm" /></FormControl></FormItem>
+                      )} />
+                      <Button type="button" onClick={() => removeStation(index)} variant="ghost" size="icon" className="col-span-1 text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16} /></Button>
+                    </div>
+                  ))}
+                </div>
               </div>
-          </CardFooter>
-        </form>
-      </Form>
-    </Card>
+
+              <Separator />
+
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg font-medium">CG Envelope Points</h3>
+                  <Button type="button" size="sm" variant="outline" onClick={() => appendEnvelope({ x: 0, y: 0 })}>
+                    <Plus className="mr-2 h-4 w-4" /> Add
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {envelopeFields.map((field, index) => (
+                    <div key={field.id} className="grid grid-cols-12 gap-2 items-center text-sm">
+                      <div className="col-span-1 text-center font-bold text-white rounded-full size-6 flex items-center justify-center" style={{backgroundColor: POINT_COLORS[index % POINT_COLORS.length]}}>{index + 1}</div>
+                      <FormField control={form.control} name={`cgEnvelope.${index}.x`} render={({ field }) => (
+                        <FormItem className="col-span-5"><FormControl><Input type="number" {...field} placeholder="CG (X)" /></FormControl></FormItem>
+                      )} />
+                      <FormField control={form.control} name={`cgEnvelope.${index}.y`} render={({ field }) => (
+                        <FormItem className="col-span-5"><FormControl><Input type="number" {...field} placeholder="Weight (Y)" /></FormControl></FormItem>
+                      )} />
+                      <Button type="button" onClick={() => removeEnvelope(index)} variant="ghost" size="icon" className="col-span-1 text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16} /></Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="lg:col-span-1 flex flex-col">
+            <CardHeader>
+                <CardTitle>Live Preview</CardTitle>
+                <CardDescription>This chart visualizes the data as you enter it.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-grow flex flex-col justify-center items-center">
+               <div className='flex justify-center mb-4'>
+                    <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-lg text-white px-6 py-2')}>
+                        {results.isSafe ? 'Within Limits' : 'Out of Limits'}
+                    </Badge>
+                </div>
+                <ResponsiveContainer width="100%" height={400}>
+                    <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[watchedXMin || 'dataMin', watchedXMax || 'dataMax']} allowDataOverflow={true}>
+                           <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" dy={10} />
+                        </XAxis>
+                        <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[watchedYMin || 'dataMin', watchedYMax || 'dataMax']} allowDataOverflow={true} >
+                             <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
+                        </YAxis>
+                        <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                        <Scatter name="Envelope" data={watchedEnvelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} fill="transparent" shape={() => null} />
+                        <Scatter name="Envelope Points" data={watchedEnvelope}>
+                            {(watchedEnvelope || []).map((_entry, index) => (
+                                <Cell key={`cell-${index}`} fill={POINT_COLORS[index % POINT_COLORS.length]} />
+                            ))}
+                        </Scatter>
+                        <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="hsl(var(--primary-foreground))" strokeWidth={2} />
+                    </ScatterChart>
+                </ResponsiveContainer>
+            </CardContent>
+            <CardFooter className="border-t pt-4 flex items-center justify-between">
+                <div>
+                    {isEditing && (
+                        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" type="button">Delete Profile</Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete the W&B profile for {initialData?.model}.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDelete} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                                        Delete
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                </div>
+                <div className='flex gap-2'>
+                    <Button variant="outline" type="button" onClick={() => router.push('/assets/mass-balance')}>Cancel</Button>
+                    <Button type="submit"><Save className='mr-2' /> Save Profile</Button>
+                </div>
+            </CardFooter>
+          </Card>
+        </div>
+      </form>
+    </Form>
   );
 }
+
