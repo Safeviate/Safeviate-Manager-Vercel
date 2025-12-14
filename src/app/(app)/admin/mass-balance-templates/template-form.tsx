@@ -44,7 +44,6 @@ export interface AircraftModelProfile {
   maxTakeoffWeight?: number;
   maxLandingWeight?: number;
   stationArms?: StationArm;
-  cgEnvelope?: CgEnvelopePoint[];
 }
 
 interface TemplateFormProps {
@@ -68,7 +67,6 @@ const formSchema = z.object({
     baggage1: z.number().optional(),
     baggage2: z.number().optional(),
   }).optional(),
-  cgEnvelope: z.array(z.tuple([z.number(), z.number()])).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -77,7 +75,6 @@ export function MassBalanceTemplateForm({ tenantId, initialData, isOpen, onClose
   const firestore = useFirestore();
   const { toast } = useToast();
   const isEditing = !!initialData;
-  const [localEnvelope, setLocalEnvelope] = useState<CgEnvelopePoint[]>(initialData?.cgEnvelope || []);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -89,7 +86,6 @@ export function MassBalanceTemplateForm({ tenantId, initialData, isOpen, onClose
       maxTakeoffWeight: initialData?.maxTakeoffWeight || 0,
       maxLandingWeight: initialData?.maxLandingWeight || 0,
       stationArms: initialData?.stationArms || {},
-      cgEnvelope: initialData?.cgEnvelope || [],
     },
   });
   
@@ -102,23 +98,12 @@ export function MassBalanceTemplateForm({ tenantId, initialData, isOpen, onClose
         maxTakeoffWeight: initialData?.maxTakeoffWeight || 0,
         maxLandingWeight: initialData?.maxLandingWeight || 0,
         stationArms: initialData?.stationArms || {},
-        cgEnvelope: initialData?.cgEnvelope || [],
     });
-    setLocalEnvelope(initialData?.cgEnvelope || []);
   }, [initialData, form]);
-
-  const addEnvelopePoint = () => setLocalEnvelope(prev => [...prev, [0,0]]);
-  const removeEnvelopePoint = (index: number) => setLocalEnvelope(prev => prev.filter((_, i) => i !== index));
-  const updateEnvelopePoint = (index: number, pos: 0 | 1, value: string) => {
-    const newPoint: CgEnvelopePoint = [...localEnvelope[index]];
-    newPoint[pos] = Number(value);
-    setLocalEnvelope(prev => prev.map((p, i) => i === index ? newPoint : p));
-  };
-
 
   const onSubmit = (data: FormValues) => {
     if (!firestore) return;
-    const dataToSave = { ...data, cgEnvelope: localEnvelope };
+    const dataToSave = { ...data };
 
     if (isEditing && initialData) {
       const docRef = doc(firestore, 'tenants', tenantId, 'aircraftModelProfiles', initialData.id);
@@ -210,26 +195,6 @@ export function MassBalanceTemplateForm({ tenantId, initialData, isOpen, onClose
                                     <FormField control={form.control} name="stationArms.baggage2" render={({ field }) => (
                                         <FormItem><FormLabel>Baggage Area 2</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(e.target.valueAsNumber)}/></FormControl><FormMessage /></FormItem>
                                     )}/>
-                                </div>
-                            </div>
-
-                            <Separator />
-
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <h3 className="text-lg font-medium">CG Envelope Points</h3>
-                                    <Button type="button" size="sm" variant="outline" onClick={addEnvelopePoint}>Add Point</Button>
-                                </div>
-                                <div className='space-y-2 p-4 border rounded-md'>
-                                     {localEnvelope.map((point, index) => (
-                                        <div key={index} className="flex gap-4 items-center">
-                                            <Label className='w-20'>Point {index + 1}</Label>
-                                            <Input type="number" placeholder="Weight (lbs)" value={point[0]} onChange={e => updateEnvelopePoint(index, 0, e.target.value)} />
-                                            <Input type="number" placeholder="CG (in)" value={point[1]} onChange={e => updateEnvelopePoint(index, 1, e.target.value)} />
-                                            <Button type="button" size="icon" variant="ghost" onClick={() => removeEnvelopePoint(index)}><Trash2 className='h-4 w-4'/></Button>
-                                        </div>
-                                     ))}
-                                     {localEnvelope.length === 0 && <p className='text-sm text-muted-foreground text-center'>No envelope points defined.</p>}
                                 </div>
                             </div>
                         </div>

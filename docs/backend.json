@@ -23,19 +23,6 @@
             "baggage1": { "type": "number", "description": "Arm for the primary baggage area." },
             "baggage2": { "type": "number", "description": "Arm for the secondary baggage area, if applicable." }
           }
-        },
-        "cgEnvelope": {
-          "type": "array",
-          "description": "An array of [weight, cg] pairs defining the vertices of the CG envelope polygon.",
-          "items": {
-            "type": "array",
-            "items": [
-              { "type": "number", "description": "Weight (lbs)" },
-              { "type": "number", "description": "Center of Gravity (inches)" }
-            ],
-            "minItems": 2,
-            "maxItems": 2
-          }
         }
       },
       "required": ["id", "make", "model"]
