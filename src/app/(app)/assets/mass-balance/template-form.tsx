@@ -131,24 +131,13 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const defaultConfiguratorValues: FormValues = {
-    modelName: "Piper PA-28-180 (Example)",
-    xMin: 80, xMax: 94,    
-    yMin: 1400, yMax: 2600,    
+    modelName: "",
+    xMin: 0, xMax: 100,    
+    yMin: 0, yMax: 3000,    
     stations: [
-      { id: 1, name: "Empty Weight", weight: 1416, arm: 85.0 },
-      { id: 2, name: "Pilot & Front Pax", weight: 340, arm: 85.5 },
-      { id: 3, name: "Fuel (48 gal)", weight: 288, arm: 95.0 },
-      { id: 4, name: "Rear Pax", weight: 0, arm: 118.1 },
-      { id: 5, name: "Baggage", weight: 0, arm: 142.8 },
+      { id: 1, name: "Empty Weight", weight: 0, arm: 0 },
     ],
-    cgEnvelope: [
-        { x: 82, y: 1400 },
-        { x: 82, y: 1950 },
-        { x: 86.5, y: 2450 },
-        { x: 93, y: 2450 },
-        { x: 93, y: 1400 },
-        { x: 82, y: 1400 },
-    ],
+    cgEnvelope: [],
 };
 
 
@@ -293,7 +282,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
   const handleResetConfigurator = () => {
     if (window.confirm("Are you sure you want to reset the configurator to its default state?")) {
         form.reset(defaultConfiguratorValues);
-        toast({ title: "Configurator Reset", description: "The form has been reset to the default example." });
+        toast({ title: "Configurator Reset", description: "The form has been reset to a blank slate." });
     }
   }
 
@@ -336,7 +325,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
         <Card>
             <CardHeader>
               <CardTitle>{isConfiguratorMode ? 'Configurator' : (isEditing ? `Edit ${initialData?.make} ${initialData?.model}` : 'Create New W&B Profile')}</CardTitle>
-              <CardDescription>{isConfiguratorMode ? 'Interactively test weight and balance configurations.' : 'Define the weight and balance parameters for an aircraft model.'}</CardDescription>
+              <CardDescription>{isConfiguratorMode ? 'Interactively build and test a new template from scratch.' : 'Define the weight and balance parameters for an aircraft model.'}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                 {!isConfiguratorMode && (
@@ -348,6 +337,17 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
                         </FormItem>
                     )} />
                 )}
+
+                {isConfiguratorMode && (
+                    <FormField control={form.control} name="modelName" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Template Name (For Testing)</FormLabel>
+                        <FormControl><Input {...field} placeholder="e.g., Cessna 172S" /></FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
+                )}
+
 
                 {!isConfiguratorMode && <Separator />}
                 
