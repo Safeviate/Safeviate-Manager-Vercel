@@ -259,12 +259,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                 <CardTitle>Live Preview</CardTitle>
                 <CardDescription>This chart visualizes the data as you enter it.</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col justify-center items-center">
-               <div className='flex justify-center mb-4'>
-                    <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-lg text-white px-6 py-2')}>
-                        {results.isSafe ? 'Within Limits' : 'Out of Limits'}
-                    </Badge>
-                </div>
+            <CardContent className="relative flex flex-col justify-center items-center">
                 <ResponsiveContainer width="100%" height={400}>
                     <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
                         <CartesianGrid strokeDasharray="3 3" />
@@ -284,6 +279,11 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                         <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="hsl(var(--primary-foreground))" strokeWidth={2} />
                     </ScatterChart>
                 </ResponsiveContainer>
+                 <div className='absolute top-4 right-4'>
+                    <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-lg text-white px-6 py-2')}>
+                        {results.isSafe ? 'Within Limits' : 'Out of Limits'}
+                    </Badge>
+                </div>
             </CardContent>
         </Card>
 
