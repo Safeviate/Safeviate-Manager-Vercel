@@ -28,12 +28,12 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { isPointInPolygon } from '@/lib/utils';
 import { AlertTriangle } from 'lucide-react';
+import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
 
 interface WeightAndBalancePageProps {
     params: { id: string };
 }
 
-const FUEL_WEIGHT_PER_GALLON = 6; // lbs
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 
 

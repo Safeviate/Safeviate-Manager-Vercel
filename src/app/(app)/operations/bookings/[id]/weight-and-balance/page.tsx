@@ -26,12 +26,11 @@ import {
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
 
 interface WeightAndBalancePageProps {
     params: { id: string };
 }
-
-const FUEL_WEIGHT_PER_GALLON = 6; // lbs
 
 // --- Helper function to check if a point is inside a polygon ---
 function isPointInPolygon(point: { x: number; y: number }, polygon: { x: number; y: number }[]) {
