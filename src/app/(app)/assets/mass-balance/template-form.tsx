@@ -134,9 +134,7 @@ const defaultConfiguratorValues: FormValues = {
     modelName: "",
     xMin: 0, xMax: 100,    
     yMin: 0, yMax: 3000,    
-    stations: [
-      { id: 1, name: "Empty Weight", weight: 0, arm: 0 },
-    ],
+    stations: [],
     cgEnvelope: [],
 };
 
