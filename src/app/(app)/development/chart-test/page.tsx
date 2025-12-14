@@ -24,7 +24,45 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 
-// --- HELPER: Visual Warning Component ---
+// --- HELPER 1: Generate "Nice" Ticks for Y-Axis ---
+// This forces the grid to use round numbers (e.g., 1400, 1500, 1600) 
+// instead of random decimals.
+const generateNiceTicks = (min: string | number, max: string | number, stepCount = 6) => {
+  const start = Number(min);
+  const end = Number(max);
+  if (isNaN(start) || isNaN(end) || start >= end) return [];
+
+  const diff = end - start;
+  // Calculate a "rough" step size
+  const roughStep = diff / (stepCount - 1);
+  
+  // Round the step to a nice number (50, 100, 200, 500)
+  const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
+  const normalizedStep = roughStep / magnitude;
+  
+  let step;
+  if (normalizedStep < 1.5) step = 1 * magnitude;
+  else if (normalizedStep < 3) step = 2 * magnitude;
+  else if (normalizedStep < 7) step = 5 * magnitude;
+  else step = 10 * magnitude;
+
+  const ticks = [];
+  // Generate ticks starting from the first nice number >= min
+  let current = Math.ceil(start / step) * step;
+  
+  // Ensure we include the exact min if user typed it
+  if (current > start) ticks.push(start);
+  
+  while (current <= end) {
+    ticks.push(current);
+    current += step;
+  }
+  
+  return ticks;
+};
+
+
+// --- HELPER 2: Visual Warning Component ---
 const OffScreenWarning = ({ direction, value, label }: { direction: string, value: number, label: string }) => (
   <div className={`absolute top-1/2 ${direction === 'left' ? 'left-4' : 'right-4'} transform -translate-y-1/2 bg-destructive/90 border border-red-500 text-white p-3 rounded shadow-xl z-10 flex flex-col items-center animate-pulse`}>
     <AlertTriangle className="text-red-400 mb-1" size={24} />
@@ -35,27 +73,6 @@ const OffScreenWarning = ({ direction, value, label }: { direction: string, valu
     </span>
   </div>
 );
-
-
-const GuideModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Graph Tips</DialogTitle>
-          </DialogHeader>
-          <div className="py-4 text-center">
-            <p className="mb-4">If your graph looks "squashed", your Axis Limits (Min/Max) are likely too wide for the data.</p>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button>Close</Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );
-};
 
 
 const WBCalculator = () => {
@@ -108,23 +125,16 @@ const WBCalculator = () => {
   }, [stations, graphConfig.envelope]);
 
   // --- UPDATED: AUTO-FIT (X-AXIS ONLY) ---
-  // Adjusts the CG (X) to fit the green box, but KEEPS your Weight (Y) settings.
   const handleAutoFit = () => {
     if (graphConfig.envelope.length < 2) return alert("Add points first!");
-    
-    // 1. Get X values from the green polygon
     const xValues = graphConfig.envelope.map(p => p.x);
-    
-    // 2. Calculate ideal X limits (with a little padding)
     const minX = Math.floor(Math.min(...xValues) - 1); 
     const maxX = Math.ceil(Math.max(...xValues) + 1);
 
-    // 3. Update State
     setGraphConfig(prevConfig => ({
         ...prevConfig,
         xMin: String(minX), 
         xMax: String(maxX)
-        // We DO NOT update yMin/yMax here, so your manual entries stay put!
     }));
   };
 
@@ -155,6 +165,12 @@ const WBCalculator = () => {
         setStations([{ id: 1, name: "Empty Weight", weight: "1416", arm: "85.0" }]);
     }
   };
+
+  const clearStations = () => {
+    if (window.confirm("Clear all loading stations?")) {
+      setStations([{ id: Date.now(), name: "Empty Weight", weight: "", arm: "" }]);
+    }
+  };
   
   const saveToFirebase = async () => {
     if (!firestore) return alert("Firestore not available");
@@ -169,6 +185,9 @@ const WBCalculator = () => {
       console.error("Error saving: ", e);
     }
   };
+  
+  // Calculate Ticks for render
+  const yAxisTicks = generateNiceTicks(graphConfig.yMin, graphConfig.yMax);
 
   const isOffScreen = () => {
     if (results.cg < Number(graphConfig.xMin)) return { axis: 'x', dir: 'left', val: results.cg };
@@ -182,8 +201,6 @@ const WBCalculator = () => {
 
   return (
     <div className="p-6 font-sans space-y-6">
-      <GuideModal isOpen={showGuide} onClose={() => setShowGuide(false)} />
-      
       <div className="flex justify-between items-center pb-4">
         <h1 className="text-2xl font-bold">W&B Configurator</h1>
         <div className="flex gap-3">
@@ -222,7 +239,7 @@ const WBCalculator = () => {
               name="Weight" 
               unit=" lbs" 
               domain={[Number(graphConfig.yMin), Number(graphConfig.yMax)]} 
-              tickCount={8}
+              ticks={yAxisTicks}
               allowDataOverflow={true}
               tick={{fill: 'hsl(var(--muted-foreground))'}} 
               stroke="hsl(var(--muted-foreground))"
@@ -244,12 +261,11 @@ const WBCalculator = () => {
         </div>
       </Card>
 
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card>
               <CardHeader className='flex-row items-center justify-between'>
                 <CardTitle>1. Chart Axes Limits</CardTitle>
-                <Button onClick={handleAutoFit} size="sm" variant="outline"><Maximize size={16}/> Auto-Fit</Button>
+                <Button onClick={handleAutoFit} size="sm" variant="outline"><Maximize size={16}/> Auto-Fit X-Axis</Button>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-4">
                   <div><Label>Min CG</Label><Input type="number" value={graphConfig.xMin} onChange={(e) => setGraphConfig({...graphConfig, xMin: e.target.value})} /></div>
@@ -288,7 +304,13 @@ const WBCalculator = () => {
 
           <Card>
               <CardHeader>
-                  <div className="flex justify-between items-center"><CardTitle>3. Loading Stations</CardTitle><Button variant="outline" size="sm" onClick={addStation}><Plus size={12}/> Add Item</Button></div>
+                  <div className="flex justify-between items-center">
+                    <CardTitle>3. Loading Stations</CardTitle>
+                    <div className="flex gap-2">
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={clearStations} title="Clear all stations"><Trash2 size={14}/></Button>
+                        <Button variant="outline" size="sm" onClick={addStation}><Plus size={12}/> Add Item</Button>
+                    </div>
+                  </div>
               </CardHeader>
               <CardContent className="space-y-2">
                 <ScrollArea className='h-40 pr-3'>
