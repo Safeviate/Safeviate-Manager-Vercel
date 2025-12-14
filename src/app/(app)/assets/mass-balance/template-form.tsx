@@ -27,7 +27,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Trash2, Save, Plus, Maximize } from 'lucide-react';
+import { Trash2, Save, Plus, Maximize, RotateCcw } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import {
@@ -105,12 +105,13 @@ export interface AircraftModelProfile {
 }
 
 interface TemplateFormProps {
-    tenantId: string;
+    tenantId?: string;
     initialData?: AircraftModelProfile | null;
+    mode?: 'template' | 'configurator';
 }
 
 const formSchema = z.object({
-  modelName: z.string().min(1, 'Model name is required.'),
+  modelName: z.string().optional(),
   xMin: z.coerce.number().optional(),
   xMax: z.coerce.number().optional(),
   yMin: z.coerce.number().optional(),
@@ -129,32 +130,60 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const getDefaultValues = (profile?: AircraftModelProfile | null): FormValues => ({
-    modelName: profile ? `${profile.make} ${profile.model}` : '',
-    xMin: profile?.xMin ?? 0,
-    xMax: profile?.xMax ?? 0,
-    yMin: profile?.yMin ?? 0,
-    yMax: profile?.yMax ?? 0,
-    stations: profile?.stations ?? [],
-    cgEnvelope: profile?.cgEnvelope ?? [],
-});
+const defaultConfiguratorValues: FormValues = {
+    modelName: "Piper PA-28-180 (Example)",
+    xMin: 80, xMax: 94,    
+    yMin: 1400, yMax: 2600,    
+    stations: [
+      { id: 1, name: "Empty Weight", weight: 1416, arm: 85.0 },
+      { id: 2, name: "Pilot & Front Pax", weight: 340, arm: 85.5 },
+      { id: 3, name: "Fuel (48 gal)", weight: 288, arm: 95.0 },
+      { id: 4, name: "Rear Pax", weight: 0, arm: 118.1 },
+      { id: 5, name: "Baggage", weight: 0, arm: 142.8 },
+    ],
+    cgEnvelope: [
+        { x: 82, y: 1400 },
+        { x: 82, y: 1950 },
+        { x: 86.5, y: 2450 },
+        { x: 93, y: 2450 },
+        { x: 93, y: 1400 },
+        { x: 82, y: 1400 },
+    ],
+};
 
 
-export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormProps) {
+const getDefaultValues = (profile?: AircraftModelProfile | null, mode?: TemplateFormProps['mode']): FormValues => {
+    if (mode === 'configurator') {
+        return defaultConfiguratorValues;
+    }
+    return {
+        modelName: profile ? `${profile.make} ${profile.model}` : '',
+        xMin: profile?.xMin ?? 0,
+        xMax: profile?.xMax ?? 0,
+        yMin: profile?.yMin ?? 0,
+        yMax: profile?.yMax ?? 0,
+        stations: profile?.stations ?? [],
+        cgEnvelope: profile?.cgEnvelope ?? [],
+    }
+};
+
+
+export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'template' }: TemplateFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
   const isEditing = !!initialData;
+  const isConfiguratorMode = mode === 'configurator';
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: getDefaultValues(initialData),
+    defaultValues: getDefaultValues(initialData, mode),
   });
   
   useEffect(() => {
-    form.reset(getDefaultValues(initialData));
-  }, [initialData, form]);
+    form.reset(getDefaultValues(initialData, mode));
+  }, [initialData, mode, form]);
 
   const watchedStations = useWatch({ control: form.control, name: 'stations' });
   const watchedEnvelope = useWatch({ control: form.control, name: 'cgEnvelope' });
@@ -198,7 +227,16 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
 
 
   const onSubmit = (data: FormValues) => {
-    if (!firestore) return;
+    if (isConfiguratorMode || !tenantId || !firestore) return;
+    
+    if (!data.modelName?.trim()) {
+        toast({
+            variant: "destructive",
+            title: "Model Name Required",
+            description: "Please enter a name for the model.",
+        });
+        return;
+    }
     
     const [make, ...modelParts] = data.modelName.split(' ');
     const model = modelParts.join(' ');
@@ -223,7 +261,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
   };
 
   const handleDelete = () => {
-    if (!firestore || !isEditing || !initialData) return;
+    if (isConfiguratorMode || !tenantId || !firestore || !isEditing || !initialData) return;
     const docRef = doc(firestore, 'tenants', tenantId, 'aircraftModelProfiles', initialData.id);
     deleteDocumentNonBlocking(docRef);
     toast({ title: 'Profile Deleted', description: `The W&B profile has been deleted.` });
@@ -252,6 +290,13 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
     form.setValue('yMax', Math.ceil(Math.max(...yValues) + yPadding));
   };
   
+  const handleResetConfigurator = () => {
+    if (window.confirm("Are you sure you want to reset the configurator to its default state?")) {
+        form.reset(defaultConfiguratorValues);
+        toast({ title: "Configurator Reset", description: "The form has been reset to the default example." });
+    }
+  }
+
   const xAxisTicks = generateNiceTicks(watchedXMin || 0, watchedXMax || 0, 8);
   const yAxisTicks = generateNiceTicks(watchedYMin || 0, watchedYMax || 0, 8);
 
@@ -265,7 +310,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                     <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[watchedXMin || 'dataMin', watchedXMax || 'dataMax']} allowDataOverflow={true} ticks={xAxisTicks} tickCount={8}>
-                           <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" dy={10} />
+                           <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" />
                         </XAxis>
                         <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[watchedYMin || 'dataMin', watchedYMax || 'dataMax']} allowDataOverflow={true} ticks={yAxisTicks} tickCount={8}>
                              <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
@@ -290,19 +335,21 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
 
         <Card>
             <CardHeader>
-              <CardTitle>{isEditing ? `Edit ${initialData?.make} ${initialData?.model}` : 'Create New W&B Profile'}</CardTitle>
-              <CardDescription>Define the weight and balance parameters for an aircraft model.</CardDescription>
+              <CardTitle>{isConfiguratorMode ? 'Configurator' : (isEditing ? `Edit ${initialData?.make} ${initialData?.model}` : 'Create New W&B Profile')}</CardTitle>
+              <CardDescription>{isConfiguratorMode ? 'Interactively test weight and balance configurations.' : 'Define the weight and balance parameters for an aircraft model.'}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <FormField control={form.control} name="modelName" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Model Name</FormLabel>
-                    <FormControl><Input {...field} placeholder="e.g., Cessna 172S" /></FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )} />
+                {!isConfiguratorMode && (
+                    <FormField control={form.control} name="modelName" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Model Name</FormLabel>
+                        <FormControl><Input {...field} placeholder="e.g., Cessna 172S" /></FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
+                )}
 
-                <Separator />
+                {!isConfiguratorMode && <Separator />}
                 
                 <div>
                     <div className="flex justify-between items-center mb-2">
@@ -377,35 +424,43 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="border-t pt-4 flex items-center justify-between">
-                <div>
-                    {isEditing && (
-                        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive" type="button">Delete Profile</Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        This action cannot be undone. This will permanently delete the W&B profile for {initialData?.model}.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleDelete} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-                                        Delete
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    )}
-                </div>
-                <div className='flex gap-2'>
-                    <Button variant="outline" type="button" onClick={() => router.push('/assets/mass-balance')}>Cancel</Button>
-                    <Button type="submit"><Save className='mr-2' /> Save Profile</Button>
-                </div>
-            </CardFooter>
+            {!isConfiguratorMode ? (
+                <CardFooter className="border-t pt-4 flex items-center justify-between">
+                    <div>
+                        {isEditing && (
+                            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" type="button">Delete Profile</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete the W&amp;B profile for {initialData?.model}.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleDelete} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                                            Delete
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+                    </div>
+                    <div className='flex gap-2'>
+                        <Button variant="outline" type="button" onClick={() => router.push('/assets/mass-balance')}>Cancel</Button>
+                        <Button type="submit"><Save className='mr-2' /> Save Profile</Button>
+                    </div>
+                </CardFooter>
+            ) : (
+                <CardFooter className="border-t pt-4 flex items-center justify-end">
+                    <Button variant="outline" type="button" onClick={handleResetConfigurator}>
+                        <RotateCcw className="mr-2 h-4 w-4" /> Reset
+                    </Button>
+                </CardFooter>
+            )}
         </Card>
       </form>
     </Form>
