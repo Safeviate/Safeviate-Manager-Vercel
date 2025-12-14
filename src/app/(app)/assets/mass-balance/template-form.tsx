@@ -193,6 +193,32 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
 
   const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
 
+  const sortedEnvelope = React.useMemo(() => {
+    const envelope = watchedEnvelope || [];
+    if (envelope.length < 3) {
+      return envelope; // Not enough points to sort
+    }
+
+    // Find the centroid of the polygon
+    const centroid = envelope.reduce(
+      (acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }),
+      { x: 0, y: 0 }
+    );
+    centroid.x /= envelope.length;
+    centroid.y /= envelope.length;
+
+    // Sort points by angle from the centroid
+    const sorted = [...envelope].sort((a, b) => {
+      const angleA = Math.atan2(a.y - centroid.y, a.x - centroid.x);
+      const angleB = Math.atan2(b.y - centroid.y, b.x - centroid.x);
+      return angleA - angleB;
+    });
+
+    // Close the polygon by adding the first point to the end
+    return [...sorted, sorted[0]];
+  }, [watchedEnvelope]);
+
+
   useEffect(() => {
     let totalMom = 0;
     let totalWt = 0;
@@ -305,7 +331,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
                              <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
                         </YAxis>
                         <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                        <Scatter name="Envelope" data={watchedEnvelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} fill="transparent" shape={() => null} />
+                        <Scatter name="Envelope" data={sortedEnvelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} fill="transparent" shape={() => null} />
                         <Scatter name="Envelope Points" data={watchedEnvelope}>
                             {(watchedEnvelope || []).map((_entry, index) => (
                                 <Cell key={`cell-${index}`} fill={POINT_COLORS[index % POINT_COLORS.length]} />
