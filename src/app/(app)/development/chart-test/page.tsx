@@ -189,7 +189,6 @@ const WBCalculator = () => {
         model: graphConfig.modelName,
         cgEnvelope: graphConfig.envelope.map(p => [p.y, p.x]),
         stationArms: stations.reduce((acc, station) => {
-            // A simple way to map station names to stationArm keys
             if (station.name.toLowerCase().includes('front')) acc.frontSeats = Number(station.arm);
             if (station.name.toLowerCase().includes('rear')) acc.rearSeats = Number(station.arm);
             if (station.name.toLowerCase().includes('fuel')) acc.fuel = Number(station.arm);
@@ -216,14 +215,13 @@ const WBCalculator = () => {
 
   return (
     <div className="p-6 font-sans space-y-6">
-      <div className="flex justify-between items-center pb-4">
+       <div className="flex justify-between items-center pb-4">
         <h1 className="text-2xl font-bold">W&B Configurator</h1>
         <div className="flex gap-3">
           <Button onClick={handleReset} variant="destructive"><RotateCcw size={16} /> Reset</Button>
           <Button onClick={saveToFirebase}><Save size={16} /> Save Profile</Button>
         </div>
       </div>
-
        <Card className="flex-1 flex flex-col justify-center items-center p-4 relative overflow-hidden">
         {offScreenStatus && (
             <OffScreenWarning 
@@ -246,7 +244,7 @@ const WBCalculator = () => {
               tick={{fill: 'hsl(var(--muted-foreground))'}} 
               stroke="hsl(var(--muted-foreground))"
             >
-              <RechartsLabel value="CG (inches)" offset={-25} position="insideBottom" fill="hsl(var(--muted-foreground))" />
+              <RechartsLabel value="CG (inches)" offset={-30} position="insideBottom" fill="hsl(var(--muted-foreground))" />
             </XAxis>
             <YAxis 
               type="number" 
