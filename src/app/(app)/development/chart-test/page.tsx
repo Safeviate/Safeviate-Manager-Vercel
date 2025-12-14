@@ -270,6 +270,9 @@ const WBCalculator = () => {
             </Scatter>
         </ScatterChart>
         </ResponsiveContainer>
+        <p className="absolute bottom-20 left-1/2 transform -translate-x-1/2 text-destructive font-bold text-xs md:text-sm uppercase tracking-widest pointer-events-none whitespace-nowrap">
+            Please consult aircraft POH before flight
+        </p>
         <div className={`mt-4 px-4 py-2 rounded-full text-sm font-bold ${results.isSafe ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
             {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
         </div>
@@ -345,3 +348,5 @@ const WBCalculator = () => {
 };
 
 export default WBCalculator;
+
+    
