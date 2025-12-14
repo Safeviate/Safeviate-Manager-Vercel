@@ -197,9 +197,41 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="lg:col-span-1">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <Card>
+            <CardHeader>
+                <CardTitle>Live Preview</CardTitle>
+                <CardDescription>This chart visualizes the data as you enter it.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col justify-center items-center">
+               <div className='flex justify-center mb-4'>
+                    <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-lg text-white px-6 py-2')}>
+                        {results.isSafe ? 'Within Limits' : 'Out of Limits'}
+                    </Badge>
+                </div>
+                <ResponsiveContainer width="100%" height={400}>
+                    <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[watchedXMin || 'dataMin', watchedXMax || 'dataMax']} allowDataOverflow={true}>
+                           <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" dy={10} />
+                        </XAxis>
+                        <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[watchedYMin || 'dataMin', watchedYMax || 'dataMax']} allowDataOverflow={true} >
+                             <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
+                        </YAxis>
+                        <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                        <Scatter name="Envelope" data={watchedEnvelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} fill="transparent" shape={() => null} />
+                        <Scatter name="Envelope Points" data={watchedEnvelope}>
+                            {(watchedEnvelope || []).map((_entry, index) => (
+                                <Cell key={`cell-${index}`} fill={POINT_COLORS[index % POINT_COLORS.length]} />
+                            ))}
+                        </Scatter>
+                        <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="hsl(var(--primary-foreground))" strokeWidth={2} />
+                    </ScatterChart>
+                </ResponsiveContainer>
+            </CardContent>
+        </Card>
+
+        <Card>
             <CardHeader>
               <CardTitle>{isEditing ? `Edit ${initialData?.make} ${initialData?.model}` : 'Create New W&B Profile'}</CardTitle>
               <CardDescription>Define the weight and balance parameters for an aircraft model.</CardDescription>
@@ -285,39 +317,6 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                 </div>
               </div>
             </CardContent>
-          </Card>
-          
-          <Card className="lg:col-span-1 flex flex-col">
-            <CardHeader>
-                <CardTitle>Live Preview</CardTitle>
-                <CardDescription>This chart visualizes the data as you enter it.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-grow flex flex-col justify-center items-center">
-               <div className='flex justify-center mb-4'>
-                    <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-lg text-white px-6 py-2')}>
-                        {results.isSafe ? 'Within Limits' : 'Out of Limits'}
-                    </Badge>
-                </div>
-                <ResponsiveContainer width="100%" height={400}>
-                    <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[watchedXMin || 'dataMin', watchedXMax || 'dataMax']} allowDataOverflow={true}>
-                           <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" dy={10} />
-                        </XAxis>
-                        <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[watchedYMin || 'dataMin', watchedYMax || 'dataMax']} allowDataOverflow={true} >
-                             <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
-                        </YAxis>
-                        <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                        <Scatter name="Envelope" data={watchedEnvelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} fill="transparent" shape={() => null} />
-                        <Scatter name="Envelope Points" data={watchedEnvelope}>
-                            {(watchedEnvelope || []).map((_entry, index) => (
-                                <Cell key={`cell-${index}`} fill={POINT_COLORS[index % POINT_COLORS.length]} />
-                            ))}
-                        </Scatter>
-                        <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="hsl(var(--primary-foreground))" strokeWidth={2} />
-                    </ScatterChart>
-                </ResponsiveContainer>
-            </CardContent>
             <CardFooter className="border-t pt-4 flex items-center justify-between">
                 <div>
                     {isEditing && (
@@ -347,10 +346,8 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                     <Button type="submit"><Save className='mr-2' /> Save Profile</Button>
                 </div>
             </CardFooter>
-          </Card>
-        </div>
+        </Card>
       </form>
     </Form>
   );
 }
-
