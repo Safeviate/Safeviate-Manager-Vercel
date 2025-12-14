@@ -191,8 +191,7 @@ const WBCalculator = () => {
         </div>
       </div>
 
-      <div className="flex flex-col gap-8">
-        <Card className="flex-1 flex flex-col justify-center items-center p-4">
+        <Card className="flex-1 flex flex-col justify-center items-center p-4 mb-6">
             <ResponsiveContainer width="100%" height={500}>
             <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -249,7 +248,7 @@ const WBCalculator = () => {
                     <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                         {graphConfig.envelope.map((pt, i) => (
                         <div key={i} className="flex gap-2 items-center group">
-                            <span className="text-muted-foreground text-xs w-4 font-mono">{i+1}.</span>
+                            <span className="h-4 w-4 rounded-full flex-shrink-0" style={{ backgroundColor: POINT_COLORS[i % POINT_COLORS.length] }}></span>
                             <Input type="number" value={pt.x} onChange={(e) => updateEnvelopePoint(i, 'x', e.target.value)} placeholder="CG" />
                             <Input type="number" value={pt.y} onChange={(e) => updateEnvelopePoint(i, 'y', e.target.value)} placeholder="Wt" />
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => removeEnvelopePoint(i)}><Trash2 size={14}/></Button>
@@ -276,7 +275,6 @@ const WBCalculator = () => {
                 </CardContent>
             </Card>
         </div>
-      </div>
     </div>
   );
 };
