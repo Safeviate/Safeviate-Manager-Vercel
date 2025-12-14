@@ -266,7 +266,7 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                                     </ScatterChart>
                                 </ResponsiveContainer>
                                 <div className="absolute top-4 right-4">
-                                  <Badge className={cn(isTakeoffOk ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-sm text-white px-3 py-1')}>
+                                  <Badge className={cn(isTakeoffOk ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-xs text-white px-2 py-0.5')}>
                                       {isTakeoffOk ? 'Within Limits' : 'Out of Limits'}
                                   </Badge>
                                 </div>
