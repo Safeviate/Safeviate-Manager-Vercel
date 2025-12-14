@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label as RechartsLabel, ReferenceDot, Cell } from 'recharts';
-import { doc, setDoc } from "firebase/firestore";
-import { useFirestore } from '@/firebase';
+import { doc } from "firebase/firestore";
+import { useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
 import { Save, Plus, Trash2, HelpCircle, X, RotateCcw, Maximize, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,22 +21,19 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 
-// --- HELPER 1: Generate "Nice" Ticks for Y-Axis ---
-// This forces the grid to use round numbers (e.g., 1400, 1500, 1600) 
-// instead of random decimals.
+// --- HELPER 1: Generate "Nice" Ticks for Axes ---
 const generateNiceTicks = (min: string | number, max: string | number, stepCount = 6) => {
   const start = Number(min);
   const end = Number(max);
   if (isNaN(start) || isNaN(end) || start >= end) return [];
 
   const diff = end - start;
-  // Calculate a "rough" step size
   const roughStep = diff / (stepCount - 1);
   
-  // Round the step to a nice number (50, 100, 200, 500)
   const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
   const normalizedStep = roughStep / magnitude;
   
@@ -47,20 +44,21 @@ const generateNiceTicks = (min: string | number, max: string | number, stepCount
   else step = 10 * magnitude;
 
   const ticks = [];
-  // Generate ticks starting from the first nice number >= min
   let current = Math.ceil(start / step) * step;
   
-  // Ensure we include the exact min if user typed it
   if (current > start) ticks.push(start);
   
   while (current <= end) {
     ticks.push(current);
     current += step;
   }
+
+  if (ticks[ticks.length - 1] < end && (end - ticks[ticks.length - 1]) < step * 0.1) {
+    ticks.push(end);
+  }
   
   return ticks;
 };
-
 
 // --- HELPER 2: Visual Warning Component ---
 const OffScreenWarning = ({ direction, value, label }: { direction: string, value: number, label: string }) => (
@@ -74,9 +72,9 @@ const OffScreenWarning = ({ direction, value, label }: { direction: string, valu
   </div>
 );
 
-
 const WBCalculator = () => {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [showGuide, setShowGuide] = useState(false);
   
   const [graphConfig, setGraphConfig] = useState({
@@ -124,9 +122,11 @@ const WBCalculator = () => {
     });
   }, [stations, graphConfig.envelope]);
 
-  // --- UPDATED: AUTO-FIT (X-AXIS ONLY) ---
   const handleAutoFit = () => {
-    if (graphConfig.envelope.length < 2) return alert("Add points first!");
+    if (graphConfig.envelope.length < 2) {
+        toast({ variant: "destructive", title: "Cannot Auto-Fit", description: "Please add at least two envelope points." });
+        return;
+    }
     const xValues = graphConfig.envelope.map(p => p.x);
     const minX = Math.floor(Math.min(...xValues) - 1); 
     const maxX = Math.ceil(Math.max(...xValues) + 1);
@@ -173,21 +173,36 @@ const WBCalculator = () => {
   };
   
   const saveToFirebase = async () => {
-    if (!firestore) return alert("Firestore not available");
-    if (!graphConfig.modelName) return alert("Please enter a Model Name");
-    try {
-      await setDoc(doc(firestore, "aircraft_profiles", graphConfig.modelName), {
-        graphConfig,
-        defaultStations: stations
-      });
-      alert("Aircraft Profile Saved!");
-    } catch (e) {
-      console.error("Error saving: ", e);
+    if (!firestore) {
+        toast({ variant: "destructive", title: "Error", description: "Firestore not available" });
+        return;
     }
+    if (!graphConfig.modelName) {
+        toast({ variant: "destructive", title: "Error", description: "Please enter a Model Name" });
+        return;
+    }
+    
+    const tenantId = 'safeviate';
+    const aircraftRef = doc(firestore, "tenants", tenantId, "aircrafts", graphConfig.modelName);
+
+    setDocumentNonBlocking(aircraftRef, {
+        model: graphConfig.modelName,
+        cgEnvelope: graphConfig.envelope.map(p => [p.y, p.x]),
+        stationArms: stations.reduce((acc, station) => {
+            // A simple way to map station names to stationArm keys
+            if (station.name.toLowerCase().includes('front')) acc.frontSeats = Number(station.arm);
+            if (station.name.toLowerCase().includes('rear')) acc.rearSeats = Number(station.arm);
+            if (station.name.toLowerCase().includes('fuel')) acc.fuel = Number(station.arm);
+            if (station.name.toLowerCase().includes('baggage')) acc.baggage1 = Number(station.arm);
+            return acc;
+        }, {} as any)
+    }, { merge: true });
+
+    toast({ title: "Aircraft Profile Saving", description: `Profile for ${graphConfig.modelName} is being saved.`});
   };
   
-  // Calculate Ticks for render
-  const yAxisTicks = generateNiceTicks(graphConfig.yMin, graphConfig.yMax);
+  const xAxisTicks = generateNiceTicks(graphConfig.xMin, graphConfig.xMax, 8);
+  const yAxisTicks = generateNiceTicks(graphConfig.yMin, graphConfig.yMax, 8);
 
   const isOffScreen = () => {
     if (results.cg < Number(graphConfig.xMin)) return { axis: 'x', dir: 'left', val: results.cg };
@@ -209,7 +224,7 @@ const WBCalculator = () => {
         </div>
       </div>
 
-      <Card className="flex-1 flex flex-col justify-center items-center p-4 relative overflow-hidden">
+       <Card className="flex-1 flex flex-col justify-center items-center p-4 relative overflow-hidden">
         {offScreenStatus && (
             <OffScreenWarning 
                 direction={offScreenStatus.dir} 
@@ -226,7 +241,7 @@ const WBCalculator = () => {
               name="CG" 
               unit=" in" 
               domain={[Number(graphConfig.xMin), Number(graphConfig.xMax)]} 
-              tickCount={7}
+              ticks={xAxisTicks}
               allowDataOverflow={true}
               tick={{fill: 'hsl(var(--muted-foreground))'}} 
               stroke="hsl(var(--muted-foreground))"
