@@ -255,11 +255,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card>
-            <CardHeader>
-                <CardTitle>Live Preview</CardTitle>
-                <CardDescription>This chart visualizes the data as you enter it.</CardDescription>
-            </CardHeader>
-            <CardContent className="relative flex flex-col justify-center items-center">
+            <CardContent className="relative flex flex-col justify-center items-center pt-6">
                 <ResponsiveContainer width="100%" height={400}>
                     <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
                         <CartesianGrid strokeDasharray="3 3" />
@@ -280,7 +276,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                     </ScatterChart>
                 </ResponsiveContainer>
                  <div className='absolute top-4 right-4'>
-                    <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-white shadow-lg')}>
+                    <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-sm text-white px-3 py-1')}>
                         {results.isSafe ? 'Within Limits' : 'Out of Limits'}
                     </Badge>
                 </div>
@@ -302,30 +298,30 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
               )} />
               
               <Separator />
-
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-lg font-medium">Loading Stations</h3>
-                  <Button type="button" size="sm" variant="outline" onClick={() => appendStation({ id: Date.now(), name: '', weight: 0, arm: 0 })}>
-                    <Plus className="mr-2 h-4 w-4" /> Add
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {stationFields.map((field, index) => (
-                    <div key={field.id} className="grid grid-cols-12 gap-2 items-center text-sm">
-                      <FormField control={form.control} name={`stations.${index}.name`} render={({ field }) => (
-                        <FormItem className="col-span-5"><FormControl><Input {...field} placeholder="Station Name" /></FormControl></FormItem>
-                      )} />
-                      <FormField control={form.control} name={`stations.${index}.weight`} render={({ field }) => (
-                        <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Weight" /></FormControl></FormItem>
-                      )} />
-                      <FormField control={form.control} name={`stations.${index}.arm`} render={({ field }) => (
-                        <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Arm" /></FormControl></FormItem>
-                      )} />
-                      <Button type="button" onClick={() => removeStation(index)} variant="ghost" size="icon" className="col-span-1 text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16} /></Button>
+              
+                <div>
+                    <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-lg font-medium">Loading Stations</h3>
+                    <Button type="button" size="sm" variant="outline" onClick={() => appendStation({ id: Date.now(), name: '', weight: 0, arm: 0 })}>
+                        <Plus className="mr-2 h-4 w-4" /> Add
+                    </Button>
                     </div>
-                  ))}
-                </div>
+                    <div className="space-y-2">
+                    {stationFields.map((field, index) => (
+                        <div key={field.id} className="grid grid-cols-12 gap-2 items-center text-sm">
+                        <FormField control={form.control} name={`stations.${index}.name`} render={({ field }) => (
+                            <FormItem className="col-span-5"><FormControl><Input {...field} placeholder="Station Name" /></FormControl></FormItem>
+                        )} />
+                        <FormField control={form.control} name={`stations.${index}.weight`} render={({ field }) => (
+                            <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Weight" /></FormControl></FormItem>
+                        )} />
+                        <FormField control={form.control} name={`stations.${index}.arm`} render={({ field }) => (
+                            <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Arm" /></FormControl></FormItem>
+                        )} />
+                        <Button type="button" onClick={() => removeStation(index)} variant="ghost" size="icon" className="col-span-1 text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16} /></Button>
+                        </div>
+                    ))}
+                    </div>
               </div>
 
               <Separator />
