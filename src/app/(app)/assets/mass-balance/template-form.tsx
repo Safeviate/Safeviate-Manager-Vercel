@@ -248,26 +248,6 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
               <Separator />
 
               <div>
-                <h3 className="text-lg font-medium mb-2">Chart Axis Limits</h3>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <FormField control={form.control} name="xMin" render={({ field }) => (
-                    <FormItem><FormLabel>Min CG</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="xMax" render={({ field }) => (
-                    <FormItem><FormLabel>Max CG</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="yMin" render={({ field }) => (
-                    <FormItem><FormLabel>Min Weight</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="yMax" render={({ field }) => (
-                    <FormItem><FormLabel>Max Weight</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                </div>
-              </div>
-              
-              <Separator />
-              
-              <div>
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-lg font-medium">Loading Stations</h3>
                   <Button type="button" size="sm" variant="outline" onClick={() => appendStation({ id: Date.now(), name: '', weight: 0, arm: 0 })}>
@@ -294,6 +274,26 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
 
               <Separator />
 
+              <div>
+                <h3 className="text-lg font-medium mb-2">Chart Axis Limits</h3>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <FormField control={form.control} name="xMin" render={({ field }) => (
+                    <FormItem><FormLabel>Min CG</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="xMax" render={({ field }) => (
+                    <FormItem><FormLabel>Max CG</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="yMin" render={({ field }) => (
+                    <FormItem><FormLabel>Min Weight</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="yMax" render={({ field }) => (
+                    <FormItem><FormLabel>Max Weight</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </div>
+              </div>
+              
+              <Separator />
+              
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-lg font-medium">CG Envelope Points</h3>
