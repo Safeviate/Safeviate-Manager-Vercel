@@ -123,11 +123,11 @@ export function MassBalanceTemplateForm({ tenantId, initialData, isOpen, onClose
     if (isEditing && initialData) {
       const docRef = doc(firestore, 'tenants', tenantId, 'aircraftModelProfiles', initialData.id);
       updateDocumentNonBlocking(docRef, dataToSave);
-      toast({ title: 'Template Updated', description: `The W&B template for ${data.model} has been updated.` });
+      toast({ title: 'Profile Updated', description: `The W&B profile for ${data.model} has been updated.` });
     } else {
       const collectionRef = collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles');
       addDocumentNonBlocking(collectionRef, dataToSave);
-      toast({ title: 'Template Created', description: `A new W&B template for ${data.model} has been saved.` });
+      toast({ title: 'Profile Created', description: `A new W&B profile for ${data.model} has been saved.` });
     }
     onClose();
   };
@@ -136,7 +136,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData, isOpen, onClose
     if (!firestore || !isEditing || !initialData) return;
     const docRef = doc(firestore, 'tenants', tenantId, 'aircraftModelProfiles', initialData.id);
     deleteDocumentNonBlocking(docRef);
-    toast({ title: 'Template Deleted', description: `The W&B template has been deleted.` });
+    toast({ title: 'Profile Deleted', description: `The W&B profile has been deleted.` });
     onClose();
   };
 
@@ -144,7 +144,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData, isOpen, onClose
     <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-4xl">
             <DialogHeader>
-                <DialogTitle>{isEditing ? `Edit ${initialData.make} ${initialData.model}` : 'Create New W&B Template'}</DialogTitle>
+                <DialogTitle>{isEditing ? `Edit ${initialData.make} ${initialData.model}` : 'Create New W&B Profile'}</DialogTitle>
                 <DialogDescription>
                     Define the weight and balance parameters for an aircraft model.
                 </DialogDescription>
@@ -173,7 +173,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData, isOpen, onClose
                             <Separator />
 
                             <div className="space-y-4">
-                                <h3 className="text-lg font-medium">Weight & Limits</h3>
+                                <h3 className="text-lg font-medium">Weight &amp; Limits</h3>
                                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                     <FormField control={form.control} name="emptyWeight" render={({ field }) => (
                                         <FormItem><FormLabel>Empty Weight (lbs)</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} /></FormControl><FormMessage /></FormItem>
@@ -238,10 +238,10 @@ export function MassBalanceTemplateForm({ tenantId, initialData, isOpen, onClose
             </Form>
             <DialogFooter className='border-t pt-4 mt-4'>
                 {isEditing && (
-                    <Button variant="destructive" onClick={handleDelete} className='mr-auto'>Delete Template</Button>
+                    <Button variant="destructive" onClick={handleDelete} className='mr-auto'>Delete Profile</Button>
                 )}
                 <Button variant="outline" onClick={onClose}>Cancel</Button>
-                <Button onClick={form.handleSubmit(onSubmit)}><Save className='mr-2'/> Save Template</Button>
+                <Button onClick={form.handleSubmit(onSubmit)}><Save className='mr-2'/> Save Profile</Button>
             </DialogFooter>
         </DialogContent>
     </Dialog>

@@ -127,8 +127,8 @@ export const menuConfig: MenuItem[] = [
       },
       {
         href: '/admin/mass-balance-templates',
-        label: 'Mass & Balance Templates',
-        description: 'Manage W&B templates for different aircraft models.',
+        label: 'Mass & Balance',
+        description: 'Manage W&B profiles for different aircraft models.',
       },
       {
         href: '/admin/database',

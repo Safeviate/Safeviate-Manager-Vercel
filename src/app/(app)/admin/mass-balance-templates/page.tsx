@@ -45,18 +45,18 @@ export default function MassBalanceTemplatesPage() {
     <div className="flex flex-col gap-6 h-full">
       <div className="flex justify-between items-center">
          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Mass & Balance Templates</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Mass & Balance</h1>
             <p className="text-muted-foreground">Manage reusable Weight & Balance profiles for your aircraft models.</p>
         </div>
         <Button onClick={() => handleOpenForm()}>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add Template
+          Add Profile
         </Button>
       </div>
 
       <Card>
         <CardContent className="p-0">
-          {isLoading && <p className="p-4 text-center">Loading templates...</p>}
+          {isLoading && <p className="p-4 text-center">Loading profiles...</p>}
           {error && <p className="p-4 text-center text-destructive">Error: {error.message}</p>}
           {!isLoading && !error && (
             <Table>
@@ -83,7 +83,7 @@ export default function MassBalanceTemplatesPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={3} className="h-24 text-center">
-                      No templates found.
+                      No profiles found.
                     </TableCell>
                   </TableRow>
                 )}
