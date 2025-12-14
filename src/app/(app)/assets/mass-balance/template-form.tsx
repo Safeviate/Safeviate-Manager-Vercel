@@ -256,7 +256,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card>
             <CardContent className="relative flex flex-col justify-center items-center pt-6">
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={400}>
                     <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[watchedXMin || 'dataMin', watchedXMax || 'dataMax']} allowDataOverflow={true} ticks={xAxisTicks}>
