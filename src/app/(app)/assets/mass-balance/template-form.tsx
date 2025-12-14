@@ -26,7 +26,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Trash2, Save, Plus } from 'lucide-react';
+import { Trash2, Save, Plus, Maximize } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import {
@@ -197,6 +197,24 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
     router.push('/assets/mass-balance');
   };
 
+  const handleAutoFit = () => {
+    const envelope = form.getValues('cgEnvelope') || [];
+    if (envelope.length < 2) {
+        toast({
+            variant: "destructive",
+            title: "Not enough data",
+            description: "Please add at least two envelope points to use auto-fit.",
+        });
+        return;
+    }
+    const xValues = envelope.map(p => p.x);
+    const minX = Math.floor(Math.min(...xValues) - 1);
+    const maxX = Math.ceil(Math.max(...xValues) + 1);
+    form.setValue('xMin', minX);
+    form.setValue('xMax', maxX);
+  };
+
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -292,6 +310,9 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                     <FormItem><FormLabel>Max Weight</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
+                <Button onClick={handleAutoFit} type="button" variant="outline" size="sm" className="w-full mt-4">
+                  <Maximize className="mr-2 h-4 w-4"/> Auto-Fit X-Axis
+                </Button>
               </div>
               
               <Separator />
