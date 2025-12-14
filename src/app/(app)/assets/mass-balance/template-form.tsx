@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { doc, collection } from 'firebase/firestore';
@@ -19,19 +19,10 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, Save } from 'lucide-react';
+import { Trash2, Save, Plus } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-
-export type StationArm = {
-  frontSeats?: number;
-  rearSeats?: number;
-  fuel?: number;
-  baggage1?: number;
-  baggage2?: number;
-};
 
 export type Station = {
     id: number;
@@ -40,17 +31,15 @@ export type Station = {
     arm: number;
 };
 
-export type CgEnvelopePoint = [number, number];
+export type CgEnvelopePoint = {
+    x: number;
+    y: number;
+};
 
 export interface AircraftModelProfile {
   id: string;
   make: string;
   model: string;
-  emptyWeight?: number;
-  emptyWeightMoment?: number;
-  maxTakeoffWeight?: number;
-  maxLandingWeight?: number;
-  stationArms?: StationArm;
   stations?: Station[];
   cgEnvelope?: CgEnvelopePoint[];
   xMin?: number;
@@ -67,19 +56,21 @@ interface TemplateFormProps {
 }
 
 const formSchema = z.object({
-  make: z.string().min(1, 'Make is required.'),
-  model: z.string().min(1, 'Model is required.'),
-  emptyWeight: z.number().optional(),
-  emptyWeightMoment: z.number().optional(),
-  maxTakeoffWeight: z.number().optional(),
-  maxLandingWeight: z.number().optional(),
-  stationArms: z.object({
-    frontSeats: z.number().optional(),
-    rearSeats: z.number().optional(),
-    fuel: z.number().optional(),
-    baggage1: z.number().optional(),
-    baggage2: z.number().optional(),
-  }).optional(),
+  modelName: z.string().min(1, 'Model name is required.'),
+  xMin: z.coerce.number().optional(),
+  xMax: z.coerce.number().optional(),
+  yMin: z.coerce.number().optional(),
+  yMax: z.coerce.number().optional(),
+  stations: z.array(z.object({
+    id: z.coerce.number(),
+    name: z.string().min(1, 'Station name is required.'),
+    weight: z.coerce.number(),
+    arm: z.coerce.number(),
+  })).optional(),
+  cgEnvelope: z.array(z.object({
+    x: z.coerce.number(),
+    y: z.coerce.number(),
+  })).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -91,41 +82,53 @@ export function MassBalanceTemplateForm({ tenantId, initialData, isOpen, onClose
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      make: initialData?.make || '',
-      model: initialData?.model || '',
-      emptyWeight: initialData?.emptyWeight || 0,
-      emptyWeightMoment: initialData?.emptyWeightMoment || 0,
-      maxTakeoffWeight: initialData?.maxTakeoffWeight || 0,
-      maxLandingWeight: initialData?.maxLandingWeight || 0,
-      stationArms: initialData?.stationArms || {},
-    },
+    defaultValues: {},
   });
   
+  const { fields: stationFields, append: appendStation, remove: removeStation } = useFieldArray({
+    control: form.control,
+    name: "stations",
+  });
+  
+  const { fields: envelopeFields, append: appendEnvelope, remove: removeEnvelope } = useFieldArray({
+    control: form.control,
+    name: "cgEnvelope",
+  });
+
   useEffect(() => {
+    const modelName = initialData ? `${initialData.make} ${initialData.model}` : '';
     form.reset({
-        make: initialData?.make || '',
-        model: initialData?.model || '',
-        emptyWeight: initialData?.emptyWeight || 0,
-        emptyWeightMoment: initialData?.emptyWeightMoment || 0,
-        maxTakeoffWeight: initialData?.maxTakeoffWeight || 0,
-        maxLandingWeight: initialData?.maxLandingWeight || 0,
-        stationArms: initialData?.stationArms || {},
+        modelName: modelName,
+        xMin: initialData?.xMin || 0,
+        xMax: initialData?.xMax || 0,
+        yMin: initialData?.yMin || 0,
+        yMax: initialData?.yMax || 0,
+        stations: initialData?.stations || [],
+        cgEnvelope: initialData?.cgEnvelope || [],
     });
   }, [initialData, form]);
 
   const onSubmit = (data: FormValues) => {
     if (!firestore) return;
-    const dataToSave = { ...data };
+    
+    const [make, ...modelParts] = data.modelName.split(' ');
+    const model = modelParts.join(' ');
+
+    const dataToSave = { 
+        ...data,
+        make: make || 'Unknown',
+        model: model || data.modelName,
+    };
+    delete (dataToSave as any).modelName;
 
     if (isEditing && initialData) {
       const docRef = doc(firestore, 'tenants', tenantId, 'aircraftModelProfiles', initialData.id);
       updateDocumentNonBlocking(docRef, dataToSave);
-      toast({ title: 'Profile Updated', description: `The W&B profile for ${data.model} has been updated.` });
+      toast({ title: 'Profile Updated', description: `The W&B profile for ${data.modelName} has been updated.` });
     } else {
       const collectionRef = collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles');
       addDocumentNonBlocking(collectionRef, dataToSave);
-      toast({ title: 'Profile Created', description: `A new W&B profile for ${data.model} has been saved.` });
+      toast({ title: 'Profile Created', description: `A new W&B profile for ${data.modelName} has been saved.` });
     }
     onClose();
   };
@@ -142,7 +145,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData, isOpen, onClose
     <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-4xl">
             <DialogHeader>
-                <DialogTitle>{isEditing ? `Edit ${initialData.make} ${initialData.model}` : 'Create New W&B Profile'}</DialogTitle>
+                <DialogTitle>{isEditing ? `Edit ${initialData?.make} ${initialData?.model}` : 'Create New W&B Profile'}</DialogTitle>
                 <DialogDescription>
                     Define the weight and balance parameters for an aircraft model.
                 </DialogDescription>
@@ -151,65 +154,87 @@ export function MassBalanceTemplateForm({ tenantId, initialData, isOpen, onClose
                 <form onSubmit={form.handleSubmit(onSubmit)}>
                     <ScrollArea className="h-[70vh] p-1">
                         <div className="space-y-6 px-4 py-2">
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField control={form.control} name="make" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Make</FormLabel>
-                                        <FormControl><Input {...field} placeholder="e.g., Cessna" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-                                <FormField control={form.control} name="model" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Model</FormLabel>
-                                        <FormControl><Input {...field} placeholder="e.g., 172S" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-                             </div>
+                             
+                            <FormField control={form.control} name="modelName" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Model Name</FormLabel>
+                                    <FormControl><Input {...field} placeholder="e.g., Cessna 172S" /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
                             
                             <Separator />
 
-                            <div className="space-y-4">
-                                <h3 className="text-lg font-medium">Weight &amp; Limits</h3>
+                            <div>
+                                <h3 className="text-lg font-medium mb-2">Chart Axis Limits</h3>
                                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                    <FormField control={form.control} name="emptyWeight" render={({ field }) => (
-                                        <FormItem><FormLabel>Empty Weight (lbs)</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} /></FormControl><FormMessage /></FormItem>
+                                    <FormField control={form.control} name="xMin" render={({ field }) => (
+                                        <FormItem><FormLabel>Min CG (X-Axis)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                                     )}/>
-                                    <FormField control={form.control} name="emptyWeightMoment" render={({ field }) => (
-                                        <FormItem><FormLabel>Empty Moment (lb-in)</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(e.target.valueAsNumber)}/></FormControl><FormMessage /></FormItem>
+                                    <FormField control={form.control} name="xMax" render={({ field }) => (
+                                        <FormItem><FormLabel>Max CG (X-Axis)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                                     )}/>
-                                    <FormField control={form.control} name="maxTakeoffWeight" render={({ field }) => (
-                                        <FormItem><FormLabel>Max Takeoff Weight</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(e.target.valueAsNumber)}/></FormControl><FormMessage /></FormItem>
+                                    <FormField control={form.control} name="yMin" render={({ field }) => (
+                                        <FormItem><FormLabel>Min Weight (Y-Axis)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                                     )}/>
-                                    <FormField control={form.control} name="maxLandingWeight" render={({ field }) => (
-                                        <FormItem><FormLabel>Max Landing Weight</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} /></FormControl><FormMessage /></FormItem>
+                                    <FormField control={form.control} name="yMax" render={({ field }) => (
+                                        <FormItem><FormLabel>Max Weight (Y-Axis)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                                     )}/>
                                 </div>
                             </div>
                             
                             <Separator />
                             
-                            <div className="space-y-4">
-                                <h3 className="text-lg font-medium">Station Arms (inches from datum)</h3>
-                                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                                    <FormField control={form.control} name="stationArms.frontSeats" render={({ field }) => (
-                                        <FormItem><FormLabel>Front Seats</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(e.target.valueAsNumber)}/></FormControl><FormMessage /></FormItem>
-                                    )}/>
-                                    <FormField control={form.control} name="stationArms.rearSeats" render={({ field }) => (
-                                        <FormItem><FormLabel>Rear Seats</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(e.target.valueAsNumber)}/></FormControl><FormMessage /></FormItem>
-                                    )}/>
-                                    <FormField control={form.control} name="stationArms.fuel" render={({ field }) => (
-                                        <FormItem><FormLabel>Fuel Tank(s)</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(e.target.valueAsNumber)}/></FormControl><FormMessage /></FormItem>
-                                    )}/>
-                                    <FormField control={form.control} name="stationArms.baggage1" render={({ field }) => (
-                                        <FormItem><FormLabel>Baggage Area 1</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(e.target.valueAsNumber)}/></FormControl><FormMessage /></FormItem>
-                                    )}/>
-                                    <FormField control={form.control} name="stationArms.baggage2" render={({ field }) => (
-                                        <FormItem><FormLabel>Baggage Area 2</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(e.target.valueAsNumber)}/></FormControl><FormMessage /></FormItem>
-                                    )}/>
+                            <div>
+                                <div className="flex justify-between items-center mb-2">
+                                    <h3 className="text-lg font-medium">Loading Stations</h3>
+                                    <Button type="button" size="sm" variant="outline" onClick={() => appendStation({ id: Date.now(), name: '', weight: 0, arm: 0 })}>
+                                        <Plus className="mr-2 h-4 w-4" /> Add Station
+                                    </Button>
+                                </div>
+                                <div className="space-y-2">
+                                    {stationFields.map((field, index) => (
+                                        <div key={field.id} className="grid grid-cols-12 gap-2 items-center text-sm">
+                                            <FormField control={form.control} name={`stations.${index}.name`} render={({ field }) => (
+                                                <FormItem className="col-span-5"><FormControl><Input {...field} placeholder="Station Name" /></FormControl></FormItem>
+                                            )}/>
+                                            <FormField control={form.control} name={`stations.${index}.weight`} render={({ field }) => (
+                                                <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Weight" /></FormControl></FormItem>
+                                            )}/>
+                                            <FormField control={form.control} name={`stations.${index}.arm`} render={({ field }) => (
+                                                <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Arm" /></FormControl></FormItem>
+                                            )}/>
+                                            <Button type="button" onClick={() => removeStation(index)} variant="ghost" size="icon" className="col-span-1 text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16}/></Button>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
+
+                            <Separator />
+
+                             <div>
+                                <div className="flex justify-between items-center mb-2">
+                                    <h3 className="text-lg font-medium">CG Envelope Points</h3>
+                                    <Button type="button" size="sm" variant="outline" onClick={() => appendEnvelope({ x: 0, y: 0 })}>
+                                        <Plus className="mr-2 h-4 w-4" /> Add Point
+                                    </Button>
+                                </div>
+                                <div className="space-y-2">
+                                    {envelopeFields.map((field, index) => (
+                                        <div key={field.id} className="grid grid-cols-12 gap-2 items-center text-sm">
+                                            <div className="col-span-1 text-center font-bold">{index + 1}</div>
+                                            <FormField control={form.control} name={`cgEnvelope.${index}.x`} render={({ field }) => (
+                                                <FormItem className="col-span-5"><FormControl><Input type="number" {...field} placeholder="CG (X)" /></FormControl></FormItem>
+                                            )}/>
+                                            <FormField control={form.control} name={`cgEnvelope.${index}.y`} render={({ field }) => (
+                                                <FormItem className="col-span-5"><FormControl><Input type="number" {...field} placeholder="Weight (Y)" /></FormControl></FormItem>
+                                            )}/>
+                                            <Button type="button" onClick={() => removeEnvelope(index)} variant="ghost" size="icon" className="col-span-1 text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16}/></Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
                         </div>
                     </ScrollArea>
                 </form>
@@ -225,5 +250,3 @@ export function MassBalanceTemplateForm({ tenantId, initialData, isOpen, onClose
     </Dialog>
   );
 }
-
-    

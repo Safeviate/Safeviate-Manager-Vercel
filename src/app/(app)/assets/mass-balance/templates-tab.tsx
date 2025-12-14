@@ -89,14 +89,12 @@ export function TemplatesTab() {
         </CardContent>
       </Card>
       
-      {isFormOpen && (
-        <MassBalanceTemplateForm
-            tenantId={tenantId}
-            initialData={selectedProfile}
-            isOpen={isFormOpen}
-            onClose={handleCloseForm}
-        />
-      )}
+      <MassBalanceTemplateForm
+          tenantId={tenantId}
+          initialData={selectedProfile}
+          isOpen={isFormOpen}
+          onClose={handleCloseForm}
+      />
     </div>
   );
 }
