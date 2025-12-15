@@ -321,6 +321,12 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
         <div className="order-1">
             <Card>
+                <CardHeader>
+                    <CardTitle>{isConfiguratorMode ? 'Interactive Graph' : (isEditing ? `W&B Graph for ${initialData?.make} ${initialData?.model}` : 'W&B Graph')}</CardTitle>
+                    <CardDescription>
+                        {isConfiguratorMode ? "Visualize the aircraft's center of gravity as you configure it." : 'Review the center of gravity based on the loading stations.'}
+                    </CardDescription>
+                </CardHeader>
                 <CardContent className="relative flex flex-col justify-center items-center pt-6">
                     <ResponsiveContainer width="100%" height={400}>
                         <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
@@ -378,79 +384,83 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
 
 
                     {!isConfiguratorMode && <Separator />}
-                    
-                    <div>
-                        <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-lg font-medium">Loading Stations</h3>
-                        <Button type="button" size="sm" variant="outline" onClick={() => appendStation({ id: Date.now(), name: '', weight: 0, arm: 0 })}>
-                            <Plus className="mr-2 h-4 w-4" /> Add
-                        </Button>
-                        </div>
-                        <div className="space-y-2">
-                        {stationFields.map((field, index) => (
-                            <div key={field.id} className="grid grid-cols-12 gap-2 items-center text-sm">
-                            <FormField control={form.control} name={`stations.${index}.name`} render={({ field }) => (
-                                <FormItem className="col-span-5"><FormControl><Input {...field} placeholder="Station Name" /></FormControl></FormItem>
-                            )} />
-                            <FormField control={form.control} name={`stations.${index}.weight`} render={({ field }) => (
-                                <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Weight" /></FormControl></FormItem>
-                            )} />
-                            <FormField control={form.control} name={`stations.${index}.arm`} render={({ field }) => (
-                                <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Arm" /></FormControl></FormItem>
-                            )} />
-                            <Button type="button" onClick={() => removeStation(index)} variant="ghost" size="icon" className="col-span-1 text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16} /></Button>
-                            </div>
-                        ))}
-                        </div>
-                    </div>
-                
-                <Separator />
 
-                <div>
-                    <h3 className="text-lg font-medium mb-2">Chart Axis Limits</h3>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <FormField control={form.control} name="xMin" render={({ field }) => (
-                        <FormItem><FormLabel>Min CG</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="xMax" render={({ field }) => (
-                        <FormItem><FormLabel>Max CG</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="yMin" render={({ field }) => (
-                        <FormItem><FormLabel>Min Weight</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="yMax" render={({ field }) => (
-                        <FormItem><FormLabel>Max Weight</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    </div>
-                    <Button onClick={handleAutoFit} type="button" variant="outline" size="sm" className="w-full mt-4">
-                    <Maximize className="mr-2 h-4 w-4"/> Auto-Fit Axes
-                    </Button>
-                </div>
-                
-                <Separator />
-                
-                <div>
-                    <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-lg font-medium">CG Envelope Points</h3>
-                    <Button type="button" size="sm" variant="outline" onClick={() => appendEnvelope({ x: 0, y: 0 })}>
-                        <Plus className="mr-2 h-4 w-4" /> Add
-                    </Button>
-                    </div>
-                    <div className="space-y-2">
-                    {envelopeFields.map((field, index) => (
-                        <div key={field.id} className="grid grid-cols-12 gap-2 items-center text-sm">
-                        <div className="col-span-1 text-center font-bold text-white rounded-full size-6 flex items-center justify-center" style={{backgroundColor: POINT_COLORS[index % POINT_COLORS.length]}}>{index + 1}</div>
-                        <FormField control={form.control} name={`cgEnvelope.${index}.x`} render={({ field }) => (
-                            <FormItem className="col-span-5"><FormControl><Input type="number" {...field} placeholder="CG (X)" /></FormControl></FormItem>
-                        )} />
-                        <FormField control={form.control} name={`cgEnvelope.${index}.y`} render={({ field }) => (
-                            <FormItem className="col-span-5"><FormControl><Input type="number" {...field} placeholder="Weight (Y)" /></FormControl></FormItem>
-                        )} />
-                        <Button type="button" onClick={() => removeEnvelope(index)} variant="ghost" size="icon" className="col-span-1 text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16} /></Button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-6">
+                        <div>
+                            <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-md font-medium">Loading Stations</h3>
+                            <Button type="button" size="sm" variant="outline" onClick={() => appendStation({ id: Date.now(), name: '', weight: 0, arm: 0 })}>
+                                <Plus className="mr-2 h-4 w-4" /> Add
+                            </Button>
+                            </div>
+                            <div className="space-y-2">
+                            {stationFields.map((field, index) => (
+                                <div key={field.id} className="grid grid-cols-12 gap-2 items-center text-sm">
+                                <FormField control={form.control} name={`stations.${index}.name`} render={({ field }) => (
+                                    <FormItem className="col-span-5"><FormControl><Input {...field} placeholder="Station Name" /></FormControl></FormItem>
+                                )} />
+                                <FormField control={form.control} name={`stations.${index}.weight`} render={({ field }) => (
+                                    <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Weight" /></FormControl></FormItem>
+                                )} />
+                                <FormField control={form.control} name={`stations.${index}.arm`} render={({ field }) => (
+                                    <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Arm" /></FormControl></FormItem>
+                                )} />
+                                <Button type="button" onClick={() => removeStation(index)} variant="ghost" size="icon" className="col-span-1 text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16} /></Button>
+                                </div>
+                            ))}
+                            </div>
                         </div>
-                    ))}
+                      </div>
+
+                      <div className="space-y-6">
+                        <div>
+                            <h3 className="text-md font-medium mb-2">Chart Axis Limits</h3>
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <FormField control={form.control} name="xMin" render={({ field }) => (
+                                <FormItem><FormLabel>Min CG</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={form.control} name="xMax" render={({ field }) => (
+                                <FormItem><FormLabel>Max CG</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={form.control} name="yMin" render={({ field }) => (
+                                <FormItem><FormLabel>Min Weight</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={form.control} name="yMax" render={({ field }) => (
+                                <FormItem><FormLabel>Max Weight</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            </div>
+                            <Button onClick={handleAutoFit} type="button" variant="outline" size="sm" className="w-full mt-4">
+                            <Maximize className="mr-2 h-4 w-4"/> Auto-Fit Axes
+                            </Button>
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div>
+                            <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-md font-medium">CG Envelope Points</h3>
+                            <Button type="button" size="sm" variant="outline" onClick={() => appendEnvelope({ x: 0, y: 0 })}>
+                                <Plus className="mr-2 h-4 w-4" /> Add
+                            </Button>
+                            </div>
+                            <div className="space-y-2">
+                            {envelopeFields.map((field, index) => (
+                                <div key={field.id} className="grid grid-cols-12 gap-2 items-center text-sm">
+                                <div className="col-span-1 text-center font-bold text-white rounded-full size-6 flex items-center justify-center" style={{backgroundColor: POINT_COLORS[index % POINT_COLORS.length]}}>{index + 1}</div>
+                                <FormField control={form.control} name={`cgEnvelope.${index}.x`} render={({ field }) => (
+                                    <FormItem className="col-span-5"><FormControl><Input type="number" {...field} placeholder="CG (X)" /></FormControl></FormItem>
+                                )} />
+                                <FormField control={form.control} name={`cgEnvelope.${index}.y`} render={({ field }) => (
+                                    <FormItem className="col-span-5"><FormControl><Input type="number" {...field} placeholder="Weight (Y)" /></FormControl></FormItem>
+                                )} />
+                                <Button type="button" onClick={() => removeEnvelope(index)} variant="ghost" size="icon" className="col-span-1 text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16} /></Button>
+                                </div>
+                            ))}
+                            </div>
+                        </div>
+                      </div>
                     </div>
-                </div>
                 </CardContent>
                 {!isConfiguratorMode ? (
                     <CardFooter className="border-t pt-4 flex items-center justify-between">

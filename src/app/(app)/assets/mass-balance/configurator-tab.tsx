@@ -332,7 +332,23 @@ export function ConfiguratorTab() {
 
     const [make, ...modelParts] = modelNameForSave.split(' ');
     const model = modelParts.join(' ');
-
+    
+    const stationsToSave = [
+      {
+        id: 1, // BEW should have a stable ID
+        name: 'Basic Empty Weight',
+        weight: basicEmpty.weight,
+        arm: basicEmpty.arm,
+      },
+      ...stations.map(st => ({
+        // Ensure we only save the relevant data, not internal state like 'type'
+        id: st.id,
+        name: st.name,
+        weight: st.weight,
+        arm: st.arm,
+      }))
+    ];
+    
     const profileData = {
       make,
       model,
@@ -341,15 +357,7 @@ export function ConfiguratorTab() {
       yMin: graphConfig.yMin,
       yMax: graphConfig.yMax,
       cgEnvelope: graphConfig.envelope,
-      stations: [
-        {
-          id: 1,
-          name: 'Basic Empty Weight',
-          weight: basicEmpty.weight,
-          arm: basicEmpty.arm,
-        },
-        ...stations,
-      ],
+      stations: stationsToSave,
     };
 
     const collectionRef = collection(
@@ -396,44 +404,44 @@ export function ConfiguratorTab() {
           <Button onClick={handleReset} variant="destructive">
             <RotateCcw size={16} className="mr-2" /> Reset
           </Button>
-          <Button onClick={() => setIsSaveDialogOpen(true)}>
-            <Save size={16} className="mr-2" /> Save Template
-          </Button>
+          <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+             <DialogTrigger asChild>
+                <Button>
+                    <Save size={16} className="mr-2" /> Save Template
+                </Button>
+             </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Save W&B Template</DialogTitle>
+                    <DialogDescription>
+                        Enter a name for this aircraft model template.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-2">
+                    <Label htmlFor="model-name">Model Name</Label>
+                    <Input 
+                        id="model-name"
+                        value={modelNameForSave}
+                        onChange={(e) => setModelNameForSave(e.target.value)}
+                        placeholder="e.g., Cessna 172S"
+                    />
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button onClick={saveToFirebase} disabled={!modelNameForSave.trim()}>Save Template</Button>
+                </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
-
-      <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Save W&B Template</DialogTitle>
-                <DialogDescription>
-                    Enter a name for this aircraft model template.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="py-4 space-y-2">
-                <Label htmlFor="model-name">Model Name</Label>
-                <Input 
-                    id="model-name"
-                    value={modelNameForSave}
-                    onChange={(e) => setModelNameForSave(e.target.value)}
-                    placeholder="e.g., Cessna 172S"
-                />
-            </div>
-            <DialogFooter>
-                <DialogClose asChild>
-                    <Button variant="outline">Cancel</Button>
-                </DialogClose>
-                <Button onClick={saveToFirebase} disabled={!modelNameForSave.trim()}>Save Template</Button>
-            </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <Card>
         <CardHeader>
             <CardTitle>Interactive Graph</CardTitle>
             <CardDescription>Visualize the aircraft&apos;s center of gravity based on the configuration below.</CardDescription>
         </CardHeader>
-        <CardContent className="relative min-h-[500px] flex flex-col justify-center items-center overflow-hidden">
+        <CardContent className="relative min-h-[500px] flex flex-col justify-center items-center overflow-hidden pt-6">
           {offScreenStatus && (
             <OffScreenWarning
               direction={offScreenStatus.dir}
@@ -539,7 +547,6 @@ export function ConfiguratorTab() {
         </CardContent>
         <CardContent className="p-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
-          {/* Left Column */}
           <div className="space-y-6">
             <div>
               <h3 className="text-md font-semibold mb-4">
@@ -730,8 +737,6 @@ export function ConfiguratorTab() {
               </div>
             </div>
           </div>
-          
-          {/* Right Column */}
           <div className="space-y-6">
             <div>
               <div className="flex justify-between items-center mb-4">
