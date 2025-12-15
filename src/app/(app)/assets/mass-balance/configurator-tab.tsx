@@ -474,7 +474,7 @@ export function ConfiguratorTab() {
               />
             </ScatterChart>
           </ResponsiveContainer>
-          <p className="font-extrabold text-red-600 absolute bottom-20 left-1/2 transform -translate-x-1/2 pointer-events-none whitespace-nowrap drop-shadow-md uppercase tracking-widest text-sm md:text-base">
+          <p className="font-extrabold text-red-600 absolute bottom-4 left-1/2 transform -translate-x-1/2 pointer-events-none whitespace-nowrap drop-shadow-md uppercase tracking-widest text-sm md:text-base">
             CONSULT AIRCRAFT POH BEFORE FLIGHT
           </p>
           <div
@@ -504,7 +504,7 @@ export function ConfiguratorTab() {
             <div className="space-y-6">
               {/* Basic Empty Weight */}
               <div>
-                <h3 className="text-lg font-semibold mb-4">
+                <h3 className="text-md font-semibold mb-4">
                   Basic Empty Weight
                 </h3>
                 <div className="grid grid-cols-3 gap-3">
@@ -549,7 +549,7 @@ export function ConfiguratorTab() {
               {/* Loading Stations */}
               <div>
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold">Loading Stations</h3>
+                  <h3 className="text-md font-semibold">Loading Stations</h3>
                   <div className="flex gap-2">
                     <Button
                       onClick={() => addStation('fuel')}
@@ -694,7 +694,7 @@ export function ConfiguratorTab() {
               {/* Chart Configuration */}
               <div>
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold">Chart Configuration</h3>
+                  <h3 className="text-md font-semibold">Chart Configuration</h3>
                   <Button
                     onClick={handleAutoFit}
                     variant="outline"
@@ -757,7 +757,7 @@ export function ConfiguratorTab() {
                     />
                   </div>
                 </div>
-                <Label>Envelope Points</Label>
+                <Label className="text-md font-semibold">Envelope Points</Label>
                 <div className="space-y-2 mt-2">
                   {graphConfig.envelope.map((pt, i) => (
                     <div key={i} className="flex gap-2 items-center">
