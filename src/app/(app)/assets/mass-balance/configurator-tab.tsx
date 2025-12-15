@@ -641,7 +641,7 @@ export function ConfiguratorTab() {
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-12 gap-2 items-center">
-                                            <div className="col-span-2">
+                                            <div className="col-span-5">
                                                 <Input value="Gallons" readOnly disabled className="text-xs text-muted-foreground h-8"/>
                                             </div>
                                             <div className="col-span-3">
