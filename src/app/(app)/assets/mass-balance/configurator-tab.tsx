@@ -251,7 +251,7 @@ export function ConfiguratorTab() {
       </div>
 
       <Card>
-        <CardContent className="p-4 relative min-h-[600px] flex flex-col justify-center items-center overflow-hidden">
+        <CardContent className="relative min-h-[600px] flex flex-col justify-center items-center overflow-hidden pt-6">
             {offScreenStatus && <OffScreenWarning direction={offScreenStatus.dir} value={offScreenStatus.val} label={offScreenStatus.axis === 'x' ? 'CG' : 'Weight'} />}
             <ResponsiveContainer width="100%" height={600}>
                 <ScatterChart margin={{ top: 20, right: 30, bottom: 40, left: 40 }}>
@@ -405,6 +405,4 @@ export function ConfiguratorTab() {
   );
 };
 
-export default WBCalculator;
-
-    
+export default ConfiguratorTab;
