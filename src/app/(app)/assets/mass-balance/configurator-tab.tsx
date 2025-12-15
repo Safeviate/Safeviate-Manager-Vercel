@@ -14,13 +14,14 @@ import {
   ReferenceDot,
   Cell,
 } from 'recharts';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 import { isPointInPolygon } from '@/lib/utils';
 import { Save, Plus, Trash2, RotateCcw, Maximize, Fuel, AlertTriangle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 const FUEL_WEIGHT_PER_GALLON = 6;
@@ -72,7 +73,7 @@ const OffScreenWarning = ({ direction, value, label }: { direction: string; valu
 
 export default function ConfiguratorTab() {
   const { toast } = useToast();
-
+  
   // 1. STATE: Graph Config
   const [graphConfig, setGraphConfig] = useState({
     modelName: "Piper PA-28-180",
@@ -97,10 +98,10 @@ export default function ConfiguratorTab() {
 
   // 3. STATE: Stations
   const [stations, setStations] = useState([
-    { id: 2, name: "Pilot & Front Pax", weight: 340, arm: 85.5, type: 'standard' as 'standard' | 'fuel', gallons: 0, maxGallons: 0 },
+    { id: 2, name: "Pilot & Front Pax", weight: 340, arm: 85.5, type: 'standard' as 'standard' | 'fuel' },
     { id: 3, name: "Fuel", weight: 288, arm: 95.0, type: 'fuel' as 'standard' | 'fuel', gallons: 48, maxGallons: 50 },
-    { id: 4, name: "Rear Pax", weight: 0, arm: 118.1, type: 'standard' as 'standard' | 'fuel', gallons: 0, maxGallons: 0 },
-    { id: 5, name: "Baggage", weight: 0, arm: 142.8, type: 'standard' as 'standard' | 'fuel', gallons: 0, maxGallons: 0 },
+    { id: 4, name: "Rear Pax", weight: 0, arm: 118.1, type: 'standard' as 'standard' | 'fuel' },
+    { id: 5, name: "Baggage", weight: 0, arm: 142.8, type: 'standard' as 'standard' | 'fuel' },
   ]);
 
   const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
@@ -155,7 +156,7 @@ export default function ConfiguratorTab() {
   };
 
   const handleAutoFit = () => {
-    if (graphConfig.envelope.length < 2) return toast({ title: "Add points first!", variant: 'destructive'});
+    if (graphConfig.envelope.length < 2) return toast({ title: "Add points first!", variant: "destructive"});
     const xValues = graphConfig.envelope.map(p => p.x);
     const minX = Math.floor(Math.min(...xValues) - 1); 
     const maxX = Math.ceil(Math.max(...xValues) + 1);
@@ -171,11 +172,11 @@ export default function ConfiguratorTab() {
         weight: type === 'fuel' ? 0 : '',
         arm: '',
         type: type,
-        ...(type === 'fuel' ? { gallons: 0, maxGallons: 50 } : {gallons: 0, maxGallons: 0})
+        ...(type === 'fuel' ? { gallons: 0, maxGallons: 50 } : {})
     };
     setStations([...stations, newStation as any]);
   };
-  
+
   const removeStation = (id: number) => setStations(stations.filter(s => s.id !== id));
   
   const updateEnvelopePoint = (index: number, field: 'x' | 'y', val: string) => {
@@ -198,7 +199,7 @@ export default function ConfiguratorTab() {
       });
       setBasicEmpty({ weight: 1416, moment: 120360, arm: 85.0 });
       setStations([
-        { id: 2, name: "Pilot & Front Pax", weight: 340, arm: 85.5, type: 'standard', gallons: 0, maxGallons: 0 },
+        { id: 2, name: "Pilot & Front Pax", weight: 340, arm: 85.5, type: 'standard' },
         { id: 3, name: "Fuel", weight: 288, arm: 95.0, type: 'fuel', gallons: 48, maxGallons: 50 }
       ]);
     }
@@ -210,9 +211,11 @@ export default function ConfiguratorTab() {
     }
   };
 
-  const saveToFirebase = async () => { toast({ title: "Save not implemented in this test page."}) };
+  const saveToFirebase = async () => { 
+    toast({ title: "Save not implemented", description: "This is a demo and does not save." });
+  };
 
-  // DYNAMIC SAFETY DOMAIN
+  // SAFETY DOMAIN
   const allX = [...graphConfig.envelope.map(p => p.x), results.cg].filter(n => !isNaN(n));
   const allY = [...graphConfig.envelope.map(p => p.y), results.weight].filter(n => !isNaN(n));
   const paddingX = 0.5; const paddingY = 50;  
@@ -228,7 +231,8 @@ export default function ConfiguratorTab() {
   return (
     <div className="p-6">
       
-      <div className="flex justify-between items-center mb-6 border-b pb-4">
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-6 border-b border-border/10 pb-4">
         <h1 className="text-2xl font-bold tracking-tight">W&B Configurator</h1>
         <div className="flex gap-3">
           <Button onClick={handleReset} variant="destructive"><RotateCcw size={16} /> Reset</Button>
@@ -238,36 +242,42 @@ export default function ConfiguratorTab() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
+        {/* LEFT COLUMN: CONTROLS */}
         <div className="lg:col-span-5 space-y-6 h-[85vh] overflow-y-auto pr-2">
           
+          {/* 1. BASIC EMPTY WEIGHT */}
           <Card>
              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-primary"></span> 
+                <CardTitle className="text-blue-400 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span> 
                     1. Basic Empty Weight
                 </CardTitle>
              </CardHeader>
              <CardContent className="grid grid-cols-3 gap-3">
                 <div className="group">
-                    <Label htmlFor="bew-weight" className="text-xs">Weight</Label>
-                    <Input id="bew-weight" type="number" value={basicEmpty.weight} onChange={(e) => handleBasicEmptyChange('weight', e.target.value)} className="font-mono text-right" />
+                    <Label className="text-[10px] uppercase font-semibold mb-1 block group-focus-within:text-blue-400">Weight</Label>
+                    <Input type="number" value={basicEmpty.weight} onChange={(e) => handleBasicEmptyChange('weight', e.target.value)} 
+                        className="w-full font-mono text-right" />
                 </div>
                 <div className="group">
-                    <Label htmlFor="bew-arm" className="text-xs">Arm</Label>
-                    <Input id="bew-arm" type="number" value={basicEmpty.arm} onChange={(e) => handleBasicEmptyChange('arm', e.target.value)} className="font-mono text-right" />
+                    <Label className="text-[10px] uppercase font-semibold mb-1 block group-focus-within:text-blue-400">Arm</Label>
+                    <Input type="number" value={basicEmpty.arm} onChange={(e) => handleBasicEmptyChange('arm', e.target.value)} 
+                        className="w-full font-mono text-right" />
                 </div>
                 <div className="group">
-                    <Label htmlFor="bew-moment" className="text-xs">Moment</Label>
-                    <Input id="bew-moment" type="number" value={basicEmpty.moment} onChange={(e) => handleBasicEmptyChange('moment', e.target.value)} className="font-mono text-right" />
+                    <Label className="text-[10px] uppercase font-semibold mb-1 block group-focus-within:text-blue-400">Moment</Label>
+                    <Input type="number" value={basicEmpty.moment} onChange={(e) => handleBasicEmptyChange('moment', e.target.value)} 
+                        className="w-full font-mono text-right" />
                 </div>
              </CardContent>
           </Card>
 
+          {/* 2. LOADING STATIONS */}
           <Card>
              <CardHeader>
                 <div className="flex justify-between items-center">
-                    <CardTitle className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-primary"></span>
+                    <CardTitle className="text-blue-400 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                         2. Loading Stations
                     </CardTitle>
                     <div className="flex gap-2">
@@ -277,7 +287,7 @@ export default function ConfiguratorTab() {
                     </div>
                 </div>
              </CardHeader>
-            <CardContent>
+             <CardContent>
                 <div className="grid grid-cols-12 gap-2 text-[9px] uppercase text-muted-foreground font-bold px-1 mb-2 tracking-wider">
                    <div className="col-span-5">Station</div>
                    <div className="col-span-3 text-right">Weight</div>
@@ -294,7 +304,7 @@ export default function ConfiguratorTab() {
                                     <Fuel size={12} className="text-yellow-500"/>
                                     <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="bg-transparent text-sm font-bold text-foreground border-none shadow-none focus-visible:ring-0 p-1" />
                                     <div className="flex items-center bg-muted border rounded px-1 ml-auto shrink-0">
-                                       <Input type="number" value={s.gallons || 0} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
+                                       <Input type="number" value={(s as any).gallons || 0} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
                                           className="w-8 bg-transparent text-xs text-right text-yellow-400 outline-none p-0.5 border-none shadow-none focus-visible:ring-0" />
                                        <span className="text-[9px] text-muted-foreground ml-1">gal</span>
                                     </div>
@@ -309,7 +319,7 @@ export default function ConfiguratorTab() {
                                     <Button onClick={() => removeStation(s.id)} variant="ghost" size="icon" className="h-6 w-6"><Trash2 size={12}/></Button>
                                 </div>
                             </div>
-                            <input type="range" min="0" max={s.maxGallons || 50} value={s.gallons || 0}
+                            <input type="range" min="0" max={(s as any).maxGallons || 50} value={(s as any).gallons || 0}
                                     onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
                                     className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-yellow-500 block" />
                          </div>
@@ -319,10 +329,10 @@ export default function ConfiguratorTab() {
                                 <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="bg-transparent text-sm font-medium text-foreground border-none shadow-none focus-visible:ring-0 p-1" placeholder="Item Name" />
                             </div>
                             <div className="col-span-3">
-                                <Input type="number" value={s.weight as number} onChange={(e) => updateStation(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" />
+                                <Input type="number" value={s.weight} onChange={(e) => updateStation(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" />
                             </div>
                             <div className="col-span-3">
-                                 <Input type="number" value={s.arm as number} onChange={(e) => updateStation(s.id, 'arm', e.target.value)} className="w-full p-1 text-sm text-right" />
+                                 <Input type="number" value={s.arm} onChange={(e) => updateStation(s.id, 'arm', e.target.value)} className="w-full p-1 text-sm text-right" />
                             </div>
                             <div className="col-span-1 flex justify-end">
                                 <Button onClick={() => removeStation(s.id)} variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-6 w-6 opacity-0 group-hover:opacity-100"><Trash2 size={12}/></Button>
@@ -335,24 +345,25 @@ export default function ConfiguratorTab() {
             </CardContent>
           </Card>
 
+          {/* 3. CONFIG CARD */}
           <Card>
-             <CardHeader>
+            <CardHeader>
                 <div className="flex justify-between items-center">
-                   <CardTitle className="flex items-center gap-2">
-                     <span className="w-2 h-2 rounded-full bg-primary"></span>
+                   <CardTitle className="text-blue-400 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
+                     <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                      3. Chart Config
                    </CardTitle>
                    <Button onClick={handleAutoFit} variant="outline" size="sm" className="text-xs">
                       <Maximize size={10} className="mr-1"/> Auto-Fit
                    </Button>
                 </div>
-             </CardHeader>
-             <CardContent>
+            </CardHeader>
+            <CardContent>
                  <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="space-y-1"><Label className="text-xs">Min CG</Label><Input type="number" value={graphConfig.xMin} onChange={(e) => setGraphConfig({...graphConfig, xMin: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
-                  <div className="space-y-1"><Label className="text-xs">Max CG</Label><Input type="number" value={graphConfig.xMax} onChange={(e) => setGraphConfig({...graphConfig, xMax: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
-                  <div className="space-y-1"><Label className="text-xs">Min Weight</Label><Input type="number" value={graphConfig.yMin} onChange={(e) => setGraphConfig({...graphConfig, yMin: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
-                  <div className="space-y-1"><Label className="text-xs">Max Weight</Label><Input type="number" value={graphConfig.yMax} onChange={(e) => setGraphConfig({...graphConfig, yMax: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
+                    <div><Label className="text-[9px] uppercase">Min CG</Label><Input type="number" value={graphConfig.xMin} onChange={(e) => setGraphConfig({...graphConfig, xMin: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
+                    <div><Label className="text-[9px] uppercase">Max CG</Label><Input type="number" value={graphConfig.xMax} onChange={(e) => setGraphConfig({...graphConfig, xMax: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
+                    <div><Label className="text-[9px] uppercase">Min Weight</Label><Input type="number" value={graphConfig.yMin} onChange={(e) => setGraphConfig({...graphConfig, yMin: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
+                    <div><Label className="text-[9px] uppercase">Max Weight</Label><Input type="number" value={graphConfig.yMax} onChange={(e) => setGraphConfig({...graphConfig, yMax: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
                 </div>
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                    {graphConfig.envelope.map((pt, i) => (
@@ -364,7 +375,7 @@ export default function ConfiguratorTab() {
                    ))}
                    <Button onClick={addEnvelopePoint} variant="secondary" className="w-full h-8 text-xs mt-2"><Plus size={12} className="mr-1"/> Add Point</Button>
                 </div>
-             </CardContent>
+            </CardContent>
           </Card>
 
         </div>
@@ -399,7 +410,7 @@ export default function ConfiguratorTab() {
                 </ScatterChart>
               </ResponsiveContainer>
 
-              <p className="absolute bottom-20 left-1/2 transform -translate-x-1/2 text-destructive font-bold text-xs md:text-sm uppercase tracking-widest pointer-events-none opacity-80">
+              <p className="absolute bottom-20 left-1/2 transform -translate-x-1/2 text-destructive font-bold text-xs md:text-sm uppercase tracking-widest pointer-events-none whitespace-nowrap opacity-80">
                 Please consult aircraft POH before flight
               </p>
 
@@ -407,7 +418,7 @@ export default function ConfiguratorTab() {
                 <div className={`w-2 h-2 rounded-full ${results.isSafe ? 'bg-white' : 'bg-white animate-pulse'}`}></div>
                 {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
               </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>
