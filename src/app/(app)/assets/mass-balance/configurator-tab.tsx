@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -402,7 +401,7 @@ export function ConfiguratorTab() {
           <ResponsiveContainer width="100%" height={600}>
             <ScatterChart
               margin={{ top: 20, right: 30, bottom: 40, left: 40 }}
-              className="text-[10px]"
+              className="text-xs"
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
