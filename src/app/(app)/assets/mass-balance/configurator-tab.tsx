@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -408,9 +407,11 @@ const ConfiguratorTab = () => {
                 <div className={`w-2 h-2 rounded-full ${results.isSafe ? 'bg-white' : 'bg-white animate-pulse'}`}></div>
                 {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
               </div>
-          </Card>
+            </Card>
         </div>
       </div>
     </div>
   );
 };
+
+export default WBCalculator;
