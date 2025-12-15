@@ -642,14 +642,14 @@ export function ConfiguratorTab() {
                                         </div>
                                         <div className="space-y-2">
                                             <div className="grid grid-cols-2 gap-4 items-center">
-                                                <div className="grid grid-cols-2 gap-2 items-center">
-                                                    <Input value="Gallons" readOnly disabled className="text-xs text-muted-foreground h-8" />
+                                                <div className="grid grid-cols-3 gap-2 items-center">
+                                                    <Input value="Gallons" readOnly disabled className="text-xs text-muted-foreground h-8 col-span-2" />
                                                     <Input
                                                         id={`gallons-${s.id}`}
                                                         type="number"
                                                         value={s.gallons || 0}
                                                         onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
-                                                        className="h-8 w-20 text-right"
+                                                        className="h-8 text-right"
                                                     />
                                                 </div>
                                                 <div className='flex items-center gap-2'>
