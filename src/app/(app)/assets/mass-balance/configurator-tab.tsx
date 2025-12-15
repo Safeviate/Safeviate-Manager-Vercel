@@ -641,26 +641,28 @@ export function ConfiguratorTab() {
                                             </Button>
                                             </div>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4 items-center">
-                                            <div className='flex items-center gap-2'>
-                                                <Label htmlFor={`gallons-${s.id}`} className='text-xs text-muted-foreground flex-shrink-0'>Gallons:</Label>
-                                                <Input
-                                                    id={`gallons-${s.id}`}
-                                                    type="number"
-                                                    value={s.gallons || 0}
-                                                    onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
-                                                    className="h-8 w-20 text-right"
-                                                />
-                                            </div>
-                                            <div className='flex items-center gap-2'>
-                                                <Label htmlFor={`max-gallons-${s.id}`} className='text-xs text-muted-foreground flex-shrink-0'>Max:</Label>
-                                                <Input
-                                                    id={`max-gallons-${s.id}`}
-                                                    type="number"
-                                                    value={s.maxGallons || 0}
-                                                    onChange={(e) => updateStation(s.id, 'maxGallons', e.target.value)}
-                                                    className="h-8 w-20 text-right"
-                                                />
+                                        <div className="space-y-2">
+                                            <div className="grid grid-cols-2 gap-4 items-center">
+                                                <div className='flex items-center gap-2'>
+                                                    <Label htmlFor={`gallons-${s.id}`} className='text-xs text-muted-foreground flex-shrink-0'>Gallons:</Label>
+                                                    <Input
+                                                        id={`gallons-${s.id}`}
+                                                        type="number"
+                                                        value={s.gallons || 0}
+                                                        onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
+                                                        className="h-8 w-20 text-right"
+                                                    />
+                                                </div>
+                                                <div className='flex items-center gap-2'>
+                                                    <Label htmlFor={`max-gallons-${s.id}`} className='text-xs text-muted-foreground flex-shrink-0'>Max:</Label>
+                                                    <Input
+                                                        id={`max-gallons-${s.id}`}
+                                                        type="number"
+                                                        value={s.maxGallons || 0}
+                                                        onChange={(e) => updateStation(s.id, 'maxGallons', e.target.value)}
+                                                        className="h-8 w-20 text-right"
+                                                    />
+                                                </div>
                                             </div>
                                             <div className="col-span-2">
                                                 <input
@@ -827,3 +829,5 @@ export function ConfiguratorTab() {
 }
 
 export default ConfiguratorTab;
+
+    
