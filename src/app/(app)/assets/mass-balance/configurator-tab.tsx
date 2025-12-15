@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -128,7 +129,7 @@ const OffScreenWarning = ({
     <span className="font-bold text-xs uppercase">{label} Off Scale!</span>
     <span className="text-lg font-mono">{value}</span>
     <span className="text-xs text-muted-foreground">
-      {direction === 'left' ? '← Move Left' : 'Move Right →'}
+      {direction === 'left' ? <>&larr; Move Left</> : <>Move Right &rarr;</>}
     </span>
   </div>
 );
@@ -390,45 +391,21 @@ export function ConfiguratorTab() {
       return;
     }
 
-    const [make, ...modelParts] = modelNameForSave.split(' ');
-    const model = modelParts.join(' ');
-
-    const allStations = [
-      { id: 1, name: 'Basic Empty Weight', weight: basicEmpty.weight, arm: basicEmpty.arm },
-      ...stations,
-    ];
-
-    const stationArms = stations.reduce((acc, st) => {
-        const nameLower = st.name.toLowerCase();
-        if (nameLower.includes('front')) acc.frontSeats = st.arm;
-        else if (nameLower.includes('rear')) acc.rearSeats = st.arm;
-        else if (st.type === 'fuel') acc.fuel = st.arm;
-        else if (nameLower.includes('baggage 1')) acc.baggage1 = st.arm;
-        else if (nameLower.includes('baggage 2')) acc.baggage2 = st.arm;
-        return acc;
-      }, {} as Record<string, number>);
-
-    const profileData: Omit<AircraftModelProfile, 'id'> = {
-      make: make || 'Unknown',
-      model: model || modelNameForSave,
-      emptyWeight: basicEmpty.weight,
-      emptyWeightMoment: basicEmpty.moment,
-      maxTakeoffWeight: graphConfig.yMax,
-      stationArms: stationArms,
-      stations: allStations,
-      cgEnvelope: graphConfig.envelope,
-      xMin: graphConfig.xMin,
-      xMax: graphConfig.xMax,
-      yMin: graphConfig.yMin,
-      yMax: graphConfig.yMax,
+    const configData = {
+      modelName: modelNameForSave,
+      basicEmpty,
+      stations,
+      graphConfig,
+      savedAt: new Date().toISOString()
     };
     
-    const collectionRef = collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles');
-    addDocumentNonBlocking(collectionRef, profileData);
+    // Save to the new, separate path as instructed
+    const collectionRef = collection(firestore, 'tenants', tenantId, 'assets', 'massAndBalance');
+    addDocumentNonBlocking(collectionRef, configData);
 
     toast({
       title: 'Configuration Saved',
-      description: `The configuration for "${modelNameForSave}" has been saved as a new template.`,
+      description: `The configuration for "${modelNameForSave}" has been saved.`,
     });
 
     setIsSaveDialogOpen(false);
