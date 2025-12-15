@@ -12,9 +12,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
-const FUEL_WEIGHT_PER_GALLON = 6; 
 
 const generateNiceTicks = (min: number | string, max: number | string, stepCount = 6) => {
   const start = Number(min);
@@ -236,13 +238,13 @@ export function ConfiguratorTab() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold tracking-tight">W&B Configurator</h1>
+        <h1 className="text-2xl font-bold tracking-tight">W&amp;B Configurator</h1>
         <div className="flex gap-3">
           <Button onClick={handleReset} variant="destructive">
-            <RotateCcw size={16} /> Reset
+            <RotateCcw size={16} className='mr-2' /> Reset
           </Button>
           <Button onClick={saveToFirebase}>
-            <Save size={16} /> Save Template
+            <Save size={16} className='mr-2' /> Save Template
           </Button>
         </div>
       </div>
@@ -277,8 +279,8 @@ export function ConfiguratorTab() {
                         <CardTitle>Loading Stations</CardTitle>
                          <div className="flex gap-2">
                             <Button onClick={clearStations} variant="destructive" size="icon" title="Clear all"><Trash2 size={16}/></Button>
-                            <Button onClick={() => addStation('fuel')} variant="outline" size="sm" title="Add Fuel Tank"><Fuel size={16}/> Fuel</Button>
-                            <Button onClick={() => addStation('standard')} variant="outline" size="sm"><Plus size={16}/> Add</Button>
+                            <Button onClick={() => addStation('fuel')} variant="outline" size="sm" title="Add Fuel Tank"><Fuel size={16} className='mr-2'/> Fuel</Button>
+                            <Button onClick={() => addStation('standard')} variant="outline" size="sm"><Plus size={16} className='mr-2'/> Add</Button>
                         </div>
                     </div>
                 </CardHeader>
@@ -297,6 +299,7 @@ export function ConfiguratorTab() {
                                     <div className="col-span-5 flex items-center gap-2">
                                         <Fuel size={14} className="text-yellow-500"/>
                                         <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="text-sm font-bold h-8" />
+                                        <Badge variant="outline" className="ml-auto shrink-0">{s.gallons || 0} gal</Badge>
                                     </div>
                                     <div className="col-span-3">
                                         <Input type="number" value={s.weight} onChange={(e) => handleFuelChange(s.id, 'weight', e.target.value)} className="text-sm text-right h-8" />
@@ -338,7 +341,7 @@ export function ConfiguratorTab() {
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <CardTitle>Chart Configuration</CardTitle>
-                        <Button onClick={handleAutoFit} variant="outline" size="sm"><Maximize size={16}/> Auto-Fit</Button>
+                        <Button onClick={handleAutoFit} variant="outline" size="sm"><Maximize size={16} className='mr-2'/> Auto-Fit</Button>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -391,6 +394,10 @@ export function ConfiguratorTab() {
                     <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-muted-foreground">
                         Disclaimer: This tool is for educational purposes only. Always consult the official POH.
                     </p>
+                    <div className={cn("absolute bottom-4 right-4 px-3 py-1 rounded-full font-bold shadow-lg flex items-center gap-2", results.isSafe ? 'bg-green-600/90 text-white' : 'bg-destructive text-white')}>
+                        <div className={cn("w-2 h-2 rounded-full", results.isSafe ? 'bg-white' : 'bg-white animate-pulse')}></div>
+                        <span className="text-xs">{results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}</span>
+                    </div>
                 </CardContent>
             </Card>
         </div>
