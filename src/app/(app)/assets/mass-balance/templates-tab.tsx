@@ -30,15 +30,6 @@ export function TemplatesTab() {
 
   return (
     <div className="flex flex-col gap-6 h-full mt-4">
-      <div className="flex justify-end">
-        <Button asChild>
-          <Link href="/assets/mass-balance/new">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Profile
-          </Link>
-        </Button>
-      </div>
-
       <Card>
         <CardContent className="p-0">
           {isLoading && <p className="p-4 text-center">Loading profiles...</p>}
