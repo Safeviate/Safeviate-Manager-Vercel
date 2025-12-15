@@ -318,8 +318,38 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col lg:flex-row gap-6">
-        <div className="lg:w-1/3 order-2 lg:order-1">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
+        <div className="order-1">
+            <Card>
+                <CardContent className="relative flex flex-col justify-center items-center pt-6">
+                    <ResponsiveContainer width="100%" height={400}>
+                        <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[watchedXMin || 'dataMin', watchedXMax || 'dataMax']} allowDataOverflow={true} ticks={xAxisTicks} tickCount={8}>
+                            <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" />
+                            </XAxis>
+                            <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[watchedYMin || 'dataMin', watchedYMax || 'dataMax']} allowDataOverflow={true} ticks={yAxisTicks} tickCount={8}>
+                                <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
+                            </YAxis>
+                            <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                            <Scatter name="Envelope" data={sortedEnvelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} fill="transparent" shape={() => null} />
+                            <Scatter name="Envelope Points" data={watchedEnvelope}>
+                                {(watchedEnvelope || []).map((_entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={POINT_COLORS[index % POINT_COLORS.length]} />
+                                ))}
+                            </Scatter>
+                            <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="hsl(var(--primary-foreground))" strokeWidth={2} />
+                        </ScatterChart>
+                    </ResponsiveContainer>
+                    <div className='absolute top-4 right-4'>
+                        <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-sm text-white px-3 py-1')}>
+                            {results.isSafe ? 'Within Limits' : 'Out of Limits'}
+                        </Badge>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+        <div className="order-2">
             <Card>
                 <CardHeader>
                 <CardTitle>{isConfiguratorMode ? 'Configurator' : (isEditing ? `Edit ${initialData?.make} ${initialData?.model}` : 'Create New W&B Profile')}</CardTitle>
@@ -459,36 +489,6 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
                         </Button>
                     </CardFooter>
                 )}
-            </Card>
-        </div>
-        <div className="lg:w-2/3 order-1 lg:order-2">
-            <Card>
-                <CardContent className="relative flex flex-col justify-center items-center pt-6">
-                    <ResponsiveContainer width="100%" height={400}>
-                        <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[watchedXMin || 'dataMin', watchedXMax || 'dataMax']} allowDataOverflow={true} ticks={xAxisTicks} tickCount={8}>
-                            <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" />
-                            </XAxis>
-                            <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[watchedYMin || 'dataMin', watchedYMax || 'dataMax']} allowDataOverflow={true} ticks={yAxisTicks} tickCount={8}>
-                                <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
-                            </YAxis>
-                            <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                            <Scatter name="Envelope" data={sortedEnvelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} fill="transparent" shape={() => null} />
-                            <Scatter name="Envelope Points" data={watchedEnvelope}>
-                                {(watchedEnvelope || []).map((_entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={POINT_COLORS[index % POINT_COLORS.length]} />
-                                ))}
-                            </Scatter>
-                            <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="hsl(var(--primary-foreground))" strokeWidth={2} />
-                        </ScatterChart>
-                    </ResponsiveContainer>
-                    <div className='absolute top-4 right-4'>
-                        <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-sm text-white px-3 py-1')}>
-                            {results.isSafe ? 'Within Limits' : 'Out of Limits'}
-                        </Badge>
-                    </div>
-                </CardContent>
             </Card>
         </div>
       </form>
