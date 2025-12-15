@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -394,6 +393,11 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
                                 <Plus className="mr-2 h-4 w-4" /> Add
                             </Button>
                             </div>
+                            <div className="grid grid-cols-12 gap-2 text-xs font-bold text-muted-foreground px-1 mb-2">
+                                <div className="col-span-5">Station Name</div>
+                                <div className="col-span-3">Weight</div>
+                                <div className="col-span-3">Arm</div>
+                            </div>
                             <div className="space-y-2">
                             {stationFields.map((field, index) => (
                                 <div key={field.id} className="grid grid-cols-12 gap-2 items-center text-sm">
@@ -439,10 +443,15 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
                         
                         <div>
                             <div className="flex justify-between items-center mb-2">
-                            <h3 className="text-md font-medium">CG Envelope Points</h3>
-                            <Button type="button" size="sm" variant="outline" onClick={() => appendEnvelope({ x: 0, y: 0 })}>
-                                <Plus className="mr-2 h-4 w-4" /> Add
-                            </Button>
+                                <h3 className="text-md font-medium">CG Envelope Points</h3>
+                                <Button type="button" size="sm" variant="outline" onClick={() => appendEnvelope({ x: 0, y: 0 })}>
+                                    <Plus className="mr-2 h-4 w-4" /> Add
+                                </Button>
+                            </div>
+                             <div className="grid grid-cols-12 gap-2 text-xs font-bold text-muted-foreground px-1 mb-2">
+                                <div className="col-span-1"></div>
+                                <div className="col-span-5">CG (X)</div>
+                                <div className="col-span-5">Weight (Y)</div>
                             </div>
                             <div className="space-y-2">
                             {envelopeFields.map((field, index) => (
