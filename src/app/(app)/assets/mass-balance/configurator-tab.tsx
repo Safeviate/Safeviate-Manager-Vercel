@@ -606,7 +606,6 @@ export function ConfiguratorTab() {
                                     <div className="p-2 border rounded-lg bg-secondary/20 space-y-2">
                                         <div className="grid grid-cols-12 gap-2 items-center">
                                             <div className="col-span-5 flex items-center gap-2">
-                                            <Fuel size={14} className="text-yellow-500 flex-shrink-0" />
                                             <Input
                                                 value={s.name}
                                                 onChange={(e) => updateStation(s.id, 'name', e.target.value)}
@@ -829,5 +828,3 @@ export function ConfiguratorTab() {
 }
 
 export default ConfiguratorTab;
-
-    
