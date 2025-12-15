@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -162,7 +161,6 @@ const ConfiguratorTab = () => {
   };
 
   const updateStation = (id: number, field: string, val: string) => setStations(stations.map(s => s.id === id ? { ...s, [field]: val } : s));
-
   const addStation = (type = 'standard') => {
     const newStation = {
         id: Date.now(),
@@ -209,9 +207,9 @@ const ConfiguratorTab = () => {
     }
   };
 
-  const saveToFirebase = async () => { /* Firebase logic */ };
+  const saveToFirebase = async () => { /* Firebase logic omitted for brevity */ };
 
-  // SAFETY DOMAIN
+  // DYNAMIC SAFETY DOMAIN CALCULATION
   const allX = [...graphConfig.envelope.map(p => p.x), results.cg].filter(n => !isNaN(n));
   const allY = [...graphConfig.envelope.map(p => p.y), results.weight].filter(n => !isNaN(n));
   const paddingX = 0.5; const paddingY = 50;
@@ -233,7 +231,6 @@ const ConfiguratorTab = () => {
           <Button onClick={saveToFirebase}><Save size={16} /> Save</Button>
         </div>
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-5 space-y-6 h-[85vh] overflow-y-auto pr-2">
           <Card>
@@ -282,11 +279,9 @@ const ConfiguratorTab = () => {
                    <div className="col-span-3 text-right">Arm</div>
                    <div className="col-span-1"></div>
                 </div>
-
                 <div className="space-y-1">
                   {stations.map((s) => (
                     <div key={s.id} className="group relative border-b border-border last:border-0 pb-2 mb-1">
-
                       {s.type === 'fuel' ? (
                          <div className="pt-1">
                             <div className="grid grid-cols-12 gap-2 items-center mb-1">
@@ -365,10 +360,7 @@ const ConfiguratorTab = () => {
                 </div>
             </CardContent>
           </Card>
-
         </div>
-
-        {/* RIGHT COLUMN: GRAPH */}
         <div className="lg:col-span-7 flex flex-col">
             <Card className="p-4 relative min-h-[600px] flex flex-col justify-center items-center overflow-hidden">
              {offScreenStatus && (
@@ -405,7 +397,7 @@ const ConfiguratorTab = () => {
                 <div className={`w-2 h-2 rounded-full ${results.isSafe ? 'bg-white' : 'bg-white animate-pulse'}`}></div>
                 {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
               </div>
-          </Card>
+            </Card>
         </div>
       </div>
     </div>
