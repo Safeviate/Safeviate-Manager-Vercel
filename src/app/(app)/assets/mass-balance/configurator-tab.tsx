@@ -14,14 +14,16 @@ import {
   ReferenceDot,
   Cell,
 } from 'recharts';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, Plus, Trash2, RotateCcw, Maximize, Fuel, AlertTriangle } from 'lucide-react';
+import { Save, Plus, Trash2, Maximize, RotateCcw, Fuel, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
+
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 
@@ -70,8 +72,8 @@ const OffScreenWarning = ({ direction, value, label }: { direction: string; valu
     </div>
   );
 
-const ConfiguratorTab = () => {
-    const { toast } = useToast();
+export default function ConfiguratorTab() {
+  const { toast } = useToast();
   // 1. STATE: Graph Config
   const [graphConfig, setGraphConfig] = useState({
     modelName: "Piper PA-28-180",
@@ -372,11 +374,9 @@ const ConfiguratorTab = () => {
                 <div className={`w-2 h-2 rounded-full ${results.isSafe ? 'bg-white' : 'bg-white animate-pulse'}`}></div>
                 {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
               </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>
   );
 };
-
-export default WBCalculator;
