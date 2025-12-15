@@ -3,7 +3,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TemplatesTab } from './templates-tab';
-import { ConfiguratorTab } from './configurator-tab';
+import ConfiguratorTab from './configurator-tab';
 
 export default function MassBalancePage() {
 
