@@ -96,11 +96,11 @@ const ConfiguratorTab = () => {
 
   // 3. STATE: Stations
   const [stations, setStations] = useState([
-    { id: 2, name: "Pilot & Front Pax", weight: 340, arm: 85.5, type: 'standard' as 'standard' | 'fuel' },
-    { id: 3, name: "Fuel", weight: 288, arm: 95.0, type: 'fuel' as 'standard' | 'fuel', gallons: 48, maxGallons: 50 },
-    { id: 4, name: "Rear Pax", weight: 0, arm: 118.1, type: 'standard' as 'standard' | 'fuel' },
-    { id: 5, name: "Baggage", weight: 0, arm: 142.8, type: 'standard' as 'standard' | 'fuel' },
-  ]);
+    { id: 2, name: "Pilot & Front Pax", weight: 340, arm: 85.5, type: 'standard' },
+    { id: 3, name: "Fuel", weight: 288, arm: 95.0, type: 'fuel', gallons: 48, maxGallons: 50 },
+    { id: 4, name: "Rear Pax", weight: 0, arm: 118.1, type: 'standard' },
+    { id: 5, name: "Baggage", weight: 0, arm: 142.8, type: 'standard' },
+  ] as any[]);
 
   const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
 
@@ -110,8 +110,8 @@ const ConfiguratorTab = () => {
     let totalWt = parseFloat(basicEmpty.weight as any) || 0;
 
     stations.forEach(st => {
-      const wt = parseFloat(st.weight as any) || 0;
-      const arm = parseFloat(st.arm as any) || 0;
+      const wt = parseFloat(st.weight) || 0;
+      const arm = parseFloat(st.arm) || 0;
       totalWt += wt;
       totalMom += (wt * arm);
     });
@@ -161,19 +161,18 @@ const ConfiguratorTab = () => {
     setGraphConfig(prevConfig => ({ ...prevConfig, xMin: minX, xMax: maxX }));
   };
 
-  const updateStation = (id: number, field: string, val: string) => setStations(stations.map(s => s.id === id ? { ...s, [field]: val } as any : s));
+  const updateStation = (id: number, field: string, val: string) => setStations(stations.map(s => s.id === id ? { ...s, [field]: val } : s));
 
-  // ADD STATION (Handles both Types)
-  const addStation = (type: 'standard' | 'fuel' = 'standard') => {
+  const addStation = (type = 'standard') => {
     const newStation = {
         id: Date.now(),
         name: type === 'fuel' ? "New Fuel Tank" : "New Item",
-        weight: type === 'fuel' ? 0 : '',
-        arm: '',
+        weight: type === 'fuel' ? 0 : "",
+        arm: "",
         type: type,
         ...(type === 'fuel' ? { gallons: 0, maxGallons: 50 } : {})
     };
-    setStations([...stations, newStation as any]);
+    setStations([...stations, newStation]);
   };
 
   const removeStation = (id: number) => setStations(stations.filter(s => s.id !== id));
@@ -227,8 +226,6 @@ const ConfiguratorTab = () => {
 
   return (
     <div className="p-6">
-
-      {/* HEADER */}
       <div className="flex justify-between items-center mb-6 border-b border-border/10 pb-4">
         <h1 className="text-2xl font-bold tracking-tight">W&B Configurator</h1>
         <div className="flex gap-3">
@@ -238,38 +235,32 @@ const ConfiguratorTab = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-        {/* LEFT COLUMN: CONTROLS */}
         <div className="lg:col-span-5 space-y-6 h-[85vh] overflow-y-auto pr-2">
-
-          {/* 1. BASIC EMPTY WEIGHT */}
-           <Card>
+          <Card>
              <CardHeader>
                 <CardTitle className="text-blue-400 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span> 
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                     1. Basic Empty Weight
                 </CardTitle>
              </CardHeader>
              <CardContent className="grid grid-cols-3 gap-3">
                 <div className="group">
                     <Label className="text-[10px] uppercase font-semibold mb-1 block group-focus-within:text-blue-400">Weight</Label>
-                    <Input type="number" value={basicEmpty.weight} onChange={(e) => handleBasicEmptyChange('weight', e.target.value)} 
+                    <Input type="number" value={basicEmpty.weight} onChange={(e) => handleBasicEmptyChange('weight', e.target.value)}
                         className="w-full font-mono text-right" />
                 </div>
                 <div className="group">
                     <Label className="text-[10px] uppercase font-semibold mb-1 block group-focus-within:text-blue-400">Arm</Label>
-                    <Input type="number" value={basicEmpty.arm} onChange={(e) => handleBasicEmptyChange('arm', e.target.value)} 
+                    <Input type="number" value={basicEmpty.arm} onChange={(e) => handleBasicEmptyChange('arm', e.target.value)}
                         className="w-full font-mono text-right" />
                 </div>
                 <div className="group">
                     <Label className="text-[10px] uppercase font-semibold mb-1 block group-focus-within:text-blue-400">Moment</Label>
-                    <Input type="number" value={basicEmpty.moment} onChange={(e) => handleBasicEmptyChange('moment', e.target.value)} 
+                    <Input type="number" value={basicEmpty.moment} onChange={(e) => handleBasicEmptyChange('moment', e.target.value)}
                         className="w-full font-mono text-right" />
                 </div>
              </CardContent>
           </Card>
-
-          {/* 2. LOADING STATIONS (CONDENSED & CLEAN) */}
           <Card>
              <CardHeader>
                 <div className="flex justify-between items-center">
@@ -278,32 +269,34 @@ const ConfiguratorTab = () => {
                         2. Loading Stations
                     </CardTitle>
                     <div className="flex gap-2">
-                        <Button onClick={clearStations} variant="destructive" size="icon" className="h-8 w-8" title="Clear all"><Trash2 size={12}/></Button>
-                        <Button onClick={() => addStation('fuel')} variant="outline" size="sm" className="text-yellow-500 border-yellow-500/50 hover:bg-yellow-500/10 hover:text-yellow-500" title="Add Fuel Tank"><Fuel size={12}/> Fuel</Button>
-                        <Button onClick={() => addStation('standard')} variant="secondary" size="sm"><Plus size={12}/> Add</Button>
+                      <Button onClick={clearStations} variant="destructive" size="icon" className="h-8 w-8" title="Clear all"><Trash2 size={12}/></Button>
+                      <Button onClick={() => addStation('fuel')} variant="outline" size="sm" className="text-yellow-500 border-yellow-500/50 hover:bg-yellow-500/10 hover:text-yellow-500" title="Add Fuel Tank"><Fuel size={12}/> Fuel</Button>
+                      <Button onClick={() => addStation('standard')} variant="secondary" size="sm"><Plus size={12}/> Add</Button>
                     </div>
                 </div>
              </CardHeader>
              <CardContent>
                 <div className="grid grid-cols-12 gap-2 text-[9px] uppercase text-muted-foreground font-bold px-1 mb-2 tracking-wider">
-                    <div className="col-span-5">Station</div>
-                    <div className="col-span-3 text-right">Weight</div>
-                    <div className="col-span-3 text-right">Arm</div>
-                    <div className="col-span-1"></div>
+                   <div className="col-span-5">Station</div>
+                   <div className="col-span-3 text-right">Weight</div>
+                   <div className="col-span-3 text-right">Arm</div>
+                   <div className="col-span-1"></div>
                 </div>
+
                 <div className="space-y-1">
-                {stations.map((s) => (
+                  {stations.map((s) => (
                     <div key={s.id} className="group relative border-b border-border last:border-0 pb-2 mb-1">
-                    {s.type === 'fuel' ? (
-                        <div className="pt-1">
+
+                      {s.type === 'fuel' ? (
+                         <div className="pt-1">
                             <div className="grid grid-cols-12 gap-2 items-center mb-1">
                                 <div className="col-span-5 flex items-center gap-2">
                                     <Fuel size={12} className="text-yellow-500"/>
-                                    <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="bg-transparent text-sm font-bold text-foreground border-none shadow-none focus-visible:ring-0 p-1" />
-                                    <div className="flex items-center bg-muted border rounded px-1 ml-auto shrink-0">
-                                    <Input type="number" value={(s as any).gallons || 0} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
-                                        className="w-8 bg-transparent text-xs text-right text-yellow-400 outline-none p-0.5 border-none shadow-none focus-visible:ring-0" />
-                                    <span className="text-[9px] text-muted-foreground ml-1">gal</span>
+                                    <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="bg-transparent text-sm font-bold text-foreground border-b border-transparent focus:border-yellow-500 outline-none w-full mr-2 placeholder-gray-600" />
+                                    <div className="flex items-center bg-background border border-border rounded px-1 ml-auto shrink-0">
+                                       <Input type="number" value={s.gallons || 0} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
+                                          className="w-8 bg-transparent text-xs text-right text-foreground outline-none p-0.5 border-none ring-0 focus-visible:ring-0" />
+                                       <span className="text-[9px] text-muted-foreground ml-1">gal</span>
                                     </div>
                                 </div>
                                 <div className="col-span-3">
@@ -312,74 +305,72 @@ const ConfiguratorTab = () => {
                                 <div className="col-span-3">
                                     <Input type="number" value={s.arm} onChange={(e) => handleFuelChange(s.id, 'arm', e.target.value)} className="w-full p-1 text-sm text-right" />
                                 </div>
-                                <div className="col-span-1 flex justify-end">
+                                 <div className="col-span-1 flex justify-end">
                                     <Button onClick={() => removeStation(s.id)} variant="ghost" size="icon" className="h-6 w-6"><Trash2 size={12}/></Button>
                                 </div>
                             </div>
-                            <input type="range" min="0" max={(s as any).maxGallons || 50} value={(s as any).gallons || 0}
+                            <input type="range" min="0" max={s.maxGallons || 50} value={s.gallons || 0}
                                     onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
                                     className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-yellow-500 block" />
-                        </div>
-                    ) : (
+                         </div>
+                      ) : (
                         <div className="grid grid-cols-12 gap-2 items-center py-1">
                             <div className="col-span-5">
-                                <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="bg-transparent text-sm font-medium text-foreground border-none shadow-none focus-visible:ring-0 p-1" placeholder="Item Name" />
+                                <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="bg-transparent text-sm font-medium text-foreground border-none outline-none w-full placeholder-gray-600 ring-0 focus-visible:ring-0 p-1" placeholder="Item Name" />
                             </div>
                             <div className="col-span-3">
                                 <Input type="number" value={s.weight} onChange={(e) => updateStation(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" />
                             </div>
                             <div className="col-span-3">
-                                <Input type="number" value={s.arm} onChange={(e) => updateStation(s.id, 'arm', e.target.value)} className="w-full p-1 text-sm text-right" />
+                                 <Input type="number" value={s.arm} onChange={(e) => updateStation(s.id, 'arm', e.target.value)} className="w-full p-1 text-sm text-right" />
                             </div>
                             <div className="col-span-1 flex justify-end">
                                 <Button onClick={() => removeStation(s.id)} variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-6 w-6 opacity-0 group-hover:opacity-100"><Trash2 size={12}/></Button>
                             </div>
                         </div>
-                    )}
+                      )}
                     </div>
-                ))}
+                  ))}
                 </div>
             </CardContent>
           </Card>
-
-          {/* 3. CONFIG CARD */}
           <Card>
             <CardHeader>
-                <div className="flex justify-between items-center">
+               <div className="flex justify-between items-center">
                    <CardTitle className="text-blue-400 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
                      <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                      3. Chart Config
                    </CardTitle>
-                   <Button onClick={handleAutoFit} variant="outline" size="sm" className="text-xs">
-                      <Maximize size={10} className="mr-1"/> Auto-Fit
+                   <Button onClick={handleAutoFit} variant="outline" size="sm" className="text-xs flex items-center gap-1">
+                      <Maximize size={10}/> Auto-Fit
                    </Button>
                 </div>
             </CardHeader>
             <CardContent>
                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div><Label className="text-[9px] uppercase">Min CG</Label><Input type="number" value={graphConfig.xMin} onChange={(e) => setGraphConfig({...graphConfig, xMin: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
-                    <div><Label className="text-[9px] uppercase">Max CG</Label><Input type="number" value={graphConfig.xMax} onChange={(e) => setGraphConfig({...graphConfig, xMax: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
-                    <div><Label className="text-[9px] uppercase">Min Weight</Label><Input type="number" value={graphConfig.yMin} onChange={(e) => setGraphConfig({...graphConfig, yMin: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
-                    <div><Label className="text-[9px] uppercase">Max Weight</Label><Input type="number" value={graphConfig.yMax} onChange={(e) => setGraphConfig({...graphConfig, yMax: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
+                  <div><Label className="text-[9px] uppercase">Min CG</Label><Input type="number" value={graphConfig.xMin} onChange={(e) => setGraphConfig({...graphConfig, xMin: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
+                  <div><Label className="text-[9px] uppercase">Max CG</Label><Input type="number" value={graphConfig.xMax} onChange={(e) => setGraphConfig({...graphConfig, xMax: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
+                  <div><Label className="text-[9px] uppercase">Min Weight</Label><Input type="number" value={graphConfig.yMin} onChange={(e) => setGraphConfig({...graphConfig, yMin: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
+                  <div><Label className="text-[9px] uppercase">Max Weight</Label><Input type="number" value={graphConfig.yMax} onChange={(e) => setGraphConfig({...graphConfig, yMax: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
                 </div>
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                    {graphConfig.envelope.map((pt, i) => (
                       <div key={i} className="flex gap-1 items-center">
                          <div className="w-5 h-5 rounded flex items-center justify-center text-[10px] text-black font-bold" style={{ backgroundColor: POINT_COLORS[i % POINT_COLORS.length] }}>{i + 1}</div>
-                         <Input type="number" value={pt.x} onChange={(e) => updateEnvelopePoint(i, 'x', e.target.value)} className="h-8 p-1 text-xs text-center" />
-                         <Input type="number" value={pt.y} onChange={(e) => updateEnvelopePoint(i, 'y', e.target.value)} className="h-8 p-1 text-xs text-center" />
+                         <Input type="number" value={pt.x} onChange={(e) => updateEnvelopePoint(i, 'x', e.target.value)} className="w-full h-8 p-1 text-xs text-center" />
+                         <Input type="number" value={pt.y} onChange={(e) => updateEnvelopePoint(i, 'y', e.target.value)} className="w-full h-8 p-1 text-xs text-center" />
                       </div>
                    ))}
                    <Button onClick={addEnvelopePoint} variant="secondary" className="w-full h-8 text-xs mt-2"><Plus size={12} className="mr-1"/> Add Point</Button>
                 </div>
             </CardContent>
           </Card>
+
         </div>
 
         {/* RIGHT COLUMN: GRAPH */}
         <div className="lg:col-span-7 flex flex-col">
-          <Card className="p-4 relative min-h-[600px] flex flex-col justify-center items-center overflow-hidden">
-
+            <Card className="p-4 relative min-h-[600px] flex flex-col justify-center items-center overflow-hidden">
              {offScreenStatus && (
                <OffScreenWarning direction={offScreenStatus.dir} value={offScreenStatus.val} label={offScreenStatus.axis === 'x' ? 'CG' : 'Weight'} />
              )}
@@ -388,7 +379,7 @@ const ConfiguratorTab = () => {
                 <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[finalXMin, finalXMax]} ticks={xAxisTicks} allowDataOverflow={true} stroke="hsl(var(--muted-foreground))" tick={{fill: 'hsl(var(--muted-foreground))', fontSize: '0.75rem'}} dy={10}>
-                    <RechartsLabel value="CG (inches)" offset={0} position="insideBottom" fill="hsl(var(--muted-foreground))" />
+                    <RechartsLabel value="CG (inches)" offset={0} position="insideBottom" fill="hsl(var(--muted-foreground))" dy={10} />
                   </XAxis>
                   <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[finalYMin, finalYMax]} ticks={yAxisTicks} allowDataOverflow={true} stroke="hsl(var(--muted-foreground))" tick={{fill: 'hsl(var(--muted-foreground))', fontSize: '0.75rem'}}>
                     <RechartsLabel value="Gross Weight (lbs)" angle={-90} position="insideLeft" fill="hsl(var(--muted-foreground))" />
