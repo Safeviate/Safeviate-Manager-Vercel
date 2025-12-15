@@ -2,13 +2,25 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label as RechartsLabel, ReferenceDot, Cell } from 'recharts';
+import {
+    ScatterChart,
+    Scatter,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+    Label as RechartsLabel,
+    ReferenceDot,
+    Cell,
+} from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
 import { Save, Plus, Trash2, HelpCircle, RotateCcw, Maximize, AlertTriangle, Fuel } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 const FUEL_WEIGHT_PER_GALLON = 6; // Standard Avgas weight
@@ -48,7 +60,9 @@ const generateNiceTicks = (min: number, max: number, stepCount = 6) => {
 
 // --- HELPER 2: Visual Warning Component ---
 const OffScreenWarning = ({ direction, value, label }: { direction: string; value: number; label: string; }) => (
-  <div className={`absolute top-1/2 ${direction === 'left' ? 'left-4' : 'right-4'} transform -translate-y-1/2 bg-destructive/90 border border-red-500 text-white p-3 rounded shadow-xl z-10 flex flex-col items-center animate-pulse`}>
+  <div className={cn('absolute top-1/2 transform -translate-y-1/2 bg-destructive/90 border border-red-500 text-white p-3 rounded shadow-xl z-10 flex flex-col items-center animate-pulse',
+    direction === 'left' ? 'left-4' : 'right-4'
+  )}>
     <AlertTriangle className="text-red-400 mb-1" size={24} />
     <span className="font-bold text-xs uppercase">{label} Off Scale!</span>
     <span className="text-lg font-mono">{value}</span>
@@ -83,10 +97,10 @@ const ConfiguratorTab = () => {
 
   // 3. STATE: Stations (Passengers, Baggage, etc.)
   const [stations, setStations] = useState([
-    { id: 2, name: "Pilot & Front Pax", weight: 340, arm: 85.5, type: 'standard' },
+    { id: 2, name: "Pilot & Front Pax", weight: 340, arm: 85.5, type: 'standard', gallons: 0, maxGallons: 0 },
     { id: 3, name: "Fuel", weight: 288, arm: 95.0, type: 'fuel', gallons: 48, maxGallons: 50 },
-    { id: 4, name: "Rear Pax", weight: 0, arm: 118.1, type: 'standard' },
-    { id: 5, name: "Baggage", weight: 0, arm: 142.8, type: 'standard' },
+    { id: 4, name: "Rear Pax", weight: 0, arm: 118.1, type: 'standard', gallons: 0, maxGallons: 0 },
+    { id: 5, name: "Baggage", weight: 0, arm: 142.8, type: 'standard', gallons: 0, maxGallons: 0 },
   ]);
 
   const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
@@ -402,4 +416,4 @@ const ConfiguratorTab = () => {
   );
 };
 
-export default WBCalculator;
+export default ConfiguratorTab;
