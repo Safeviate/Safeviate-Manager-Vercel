@@ -95,6 +95,17 @@ export interface AircraftModelProfile {
   id: string;
   make: string;
   model: string;
+  emptyWeight?: number;
+  emptyWeightMoment?: number;
+  maxTakeoffWeight?: number;
+  maxLandingWeight?: number;
+  stationArms?: {
+    frontSeats?: number;
+    rearSeats?: number;
+    fuel?: number;
+    baggage1?: number;
+    baggage2?: number;
+  },
   stations?: Station[];
   cgEnvelope?: CgEnvelopePoint[];
   xMin?: number;

@@ -63,8 +63,11 @@ export function AssignProfileForm({ tenantId, profiles, aircraftList }: AssignPr
         emptyWeight: profileToAssign.emptyWeight,
         emptyWeightMoment: profileToAssign.emptyWeightMoment,
         maxTakeoffWeight: profileToAssign.maxTakeoffWeight,
+        maxLandingWeight: profileToAssign.maxLandingWeight,
         stationArms: profileToAssign.stationArms,
-        cgEnvelope: profileToAssign.cgEnvelope?.map(p => [p.y, p.x]), // Convert {x,y} back to [weight, cg]
+        // The configurator saves the envelope as [{x, y}], but the aircraft entity expects [[weight, cg]]
+        // The y-value is weight, and x-value is CG.
+        cgEnvelope: profileToAssign.cgEnvelope?.map(p => [p.y, p.x]),
     };
 
     updateDocumentNonBlocking(aircraftRef, dataToUpdate);
