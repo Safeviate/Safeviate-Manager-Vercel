@@ -379,31 +379,30 @@ export function ConfiguratorTab() {
     });
   };
 
-  const saveToFirebase = () => {
-    if (!firestore || !modelNameForSave) {
+  const saveConfiguration = () => {
+    if (!modelNameForSave) {
       toast({ variant: 'destructive', title: 'Model Name Required' });
       return;
     }
-  
+
     const [make, ...modelParts] = modelNameForSave.split(' ');
     const model = modelParts.join(' ');
-  
+
     const allStations = [
       { id: 1, name: 'Basic Empty Weight', weight: basicEmpty.weight, arm: basicEmpty.arm },
       ...stations,
     ];
-  
-    // Create the stationArms object for the Aircraft entity schema
+
     const stationArms = stations.reduce((acc, st) => {
-        const nameLower = st.name.toLowerCase();
-        if (nameLower.includes('front')) acc.frontSeats = st.arm;
-        else if (nameLower.includes('rear')) acc.rearSeats = st.arm;
-        else if (st.type === 'fuel') acc.fuel = st.arm;
-        else if (nameLower.includes('baggage 1')) acc.baggage1 = st.arm;
-        else if (nameLower.includes('baggage 2')) acc.baggage2 = st.arm;
-        return acc;
+      const nameLower = st.name.toLowerCase();
+      if (nameLower.includes('front')) acc.frontSeats = st.arm;
+      else if (nameLower.includes('rear')) acc.rearSeats = st.arm;
+      else if (st.type === 'fuel') acc.fuel = st.arm;
+      else if (nameLower.includes('baggage 1')) acc.baggage1 = st.arm;
+      else if (nameLower.includes('baggage 2')) acc.baggage2 = st.arm;
+      return acc;
     }, {} as Record<string, number>);
-  
+
     const profileData: Partial<AircraftModelProfile> = {
       make: make || 'Unknown',
       model: model || modelNameForSave,
@@ -418,20 +417,14 @@ export function ConfiguratorTab() {
       yMin: graphConfig.yMin,
       yMax: graphConfig.yMax,
     };
-  
-    const collectionRef = collection(
-      firestore,
-      'tenants',
-      'safeviate',
-      'aircraftModelProfiles'
-    );
-    addDocumentNonBlocking(collectionRef, profileData);
+    
+    console.log("Saving Configuration:", profileData);
     toast({
-      title: 'Profile Saved',
-      description: `The profile "${modelNameForSave}" is being saved.`,
+      title: 'Configuration Saved (to console)',
+      description: `The configuration for "${modelNameForSave}" has been logged.`,
     });
+
     setIsSaveDialogOpen(false);
-    setModelNameForSave('');
   };
 
   const allX = [
@@ -466,14 +459,14 @@ export function ConfiguratorTab() {
           <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
              <DialogTrigger asChild>
                 <Button>
-                    <Save size={16} className="mr-2" /> Save Template
+                    <Save size={16} className="mr-2" /> Save Configuration
                 </Button>
              </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Save W&B Template</DialogTitle>
+                    <DialogTitle>Save W&B Configuration</DialogTitle>
                     <DialogDescription>
-                        Enter a name for this aircraft model template.
+                        Enter a name for this aircraft model configuration.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-2">
@@ -489,7 +482,7 @@ export function ConfiguratorTab() {
                     <DialogClose asChild>
                         <Button variant="outline">Cancel</Button>
                     </DialogClose>
-                    <Button onClick={saveToFirebase} disabled={!modelNameForSave.trim()}>Save Template</Button>
+                    <Button onClick={saveConfiguration} disabled={!modelNameForSave.trim()}>Save Configuration</Button>
                 </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -902,3 +895,5 @@ export function ConfiguratorTab() {
 }
 
 export default ConfiguratorTab;
+
+    
