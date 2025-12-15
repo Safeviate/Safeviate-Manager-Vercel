@@ -1,7 +1,9 @@
-
 'use client';
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TemplatesTab } from './templates-tab';
+import { MassBalanceTemplateForm } from './template-form';
+
 
 export default function MassBalancePage() {
 
@@ -13,7 +15,18 @@ export default function MassBalancePage() {
                     <p className="text-muted-foreground">Manage reusable W&B profiles for your aircraft models.</p>
                 </div>
             </div>
-            <TemplatesTab />
+            <Tabs defaultValue="templates" className="space-y-4">
+                <TabsList>
+                    <TabsTrigger value="templates">Templates</TabsTrigger>
+                    <TabsTrigger value="configurator">Configurator</TabsTrigger>
+                </TabsList>
+                <TabsContent value="templates">
+                    <TemplatesTab />
+                </TabsContent>
+                <TabsContent value="configurator">
+                    <MassBalanceTemplateForm tenantId='safeviate' mode='configurator' />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
