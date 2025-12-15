@@ -257,7 +257,7 @@ export function ConfiguratorTab() {
                 <ScatterChart margin={{ top: 20, right: 30, bottom: 40, left: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[finalXMin, finalXMax]} ticks={xAxisTicks} allowDataOverflow={true} dy={10}>
-                    <RechartsLabel value="CG (inches)" offset={0} position="insideBottom" dy={10} />
+                    <RechartsLabel value="CG (inches)" offset={0} position="insideBottom" />
                 </XAxis>
                 <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[finalYMin, finalYMax]} ticks={yAxisTicks} allowDataOverflow={true}>
                     <RechartsLabel value="Gross Weight (lbs)" angle={-90} position="insideLeft" />
@@ -399,6 +399,6 @@ export function ConfiguratorTab() {
   );
 };
 
-export default WBCalculator;
+export default ConfiguratorTab;
 
     
