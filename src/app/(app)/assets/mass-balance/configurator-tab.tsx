@@ -252,15 +252,15 @@ export function ConfiguratorTab() {
     setGraphConfig((prevConfig) => ({ ...prevConfig, xMin: minX, xMax: maxX }));
   };
 
-  const updateStation = (id: number, field: string, val: string) =>
+  const updateStation = (id: number, field: string, val: any) =>
     setStations(stations.map((s) => (s.id === id ? { ...s, [field]: val } : s)));
 
   const addStation = (type = 'standard') => {
     const newStation = {
       id: Date.now(),
       name: type === 'fuel' ? 'New Fuel Tank' : 'New Item',
-      weight: type === 'fuel' ? 0 : '',
-      arm: '',
+      weight: 0,
+      arm: 0,
       type: type,
       ...(type === 'fuel' ? { gallons: 0, maxGallons: 50 } : {}),
     };
@@ -337,12 +337,15 @@ export function ConfiguratorTab() {
         name: 'Basic Empty Weight',
         weight: basicEmpty.weight,
         arm: basicEmpty.arm,
+        type: 'bew',
       },
       ...stations.map(st => ({
         id: st.id,
         name: st.name,
         weight: st.weight,
         arm: st.arm,
+        type: st.type,
+        ...(st.type === 'fuel' ? { gallons: st.gallons, maxGallons: st.maxGallons } : {}),
       }))
     ];
     
@@ -640,24 +643,36 @@ export function ConfiguratorTab() {
                                         </Button>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 pl-8">
-                                        <Label htmlFor={`gallons-${s.id}`} className='text-xs text-muted-foreground flex-shrink-0'>Gallons:</Label>
-                                        <Input
-                                            id={`gallons-${s.id}`}
-                                            type="number"
-                                            value={s.gallons || 0}
-                                            onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
-                                            className="h-8 w-20 text-right"
-                                        />
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max={s.maxGallons || 50}
-                                            value={s.gallons || 0}
-                                            onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
-                                            className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-yellow-500 block"
-                                        />
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div className='flex items-center gap-2'>
+                                          <Label htmlFor={`gallons-${s.id}`} className='text-xs text-muted-foreground flex-shrink-0'>Gallons:</Label>
+                                          <Input
+                                              id={`gallons-${s.id}`}
+                                              type="number"
+                                              value={s.gallons || 0}
+                                              onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
+                                              className="h-8 w-20 text-right"
+                                          />
+                                      </div>
+                                      <div className='flex items-center gap-2'>
+                                          <Label htmlFor={`max-gallons-${s.id}`} className='text-xs text-muted-foreground flex-shrink-0'>Max:</Label>
+                                          <Input
+                                              id={`max-gallons-${s.id}`}
+                                              type="number"
+                                              value={s.maxGallons || 0}
+                                              onChange={(e) => updateStation(s.id, 'maxGallons', e.target.value)}
+                                              className="h-8 w-20 text-right"
+                                          />
+                                      </div>
                                     </div>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max={s.maxGallons || 50}
+                                        value={s.gallons || 0}
+                                        onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
+                                        className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-yellow-500 block"
+                                    />
                                     </div>
                                 ) : (
                                     <div className="grid grid-cols-12 gap-2 items-center">
