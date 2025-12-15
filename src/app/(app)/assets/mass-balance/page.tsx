@@ -2,11 +2,8 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TemplatesTab } from './templates-tab';
-import { MassBalanceTemplateForm } from './template-form';
-
 
 export default function MassBalancePage() {
-
     return (
         <div className="flex flex-col gap-6 h-full">
              <div className="flex justify-between items-center">
@@ -18,13 +15,9 @@ export default function MassBalancePage() {
             <Tabs defaultValue="templates" className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="templates">Templates</TabsTrigger>
-                    <TabsTrigger value="configurator">Configurator</TabsTrigger>
                 </TabsList>
                 <TabsContent value="templates">
                     <TemplatesTab />
-                </TabsContent>
-                <TabsContent value="configurator">
-                    <MassBalanceTemplateForm tenantId='safeviate' mode='configurator' />
                 </TabsContent>
             </Tabs>
         </div>
