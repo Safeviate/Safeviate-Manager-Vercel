@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, 'useState', 'useEffect' from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScatterChart,
   Scatter,
@@ -474,7 +474,7 @@ export function ConfiguratorTab() {
               />
             </ScatterChart>
           </ResponsiveContainer>
-          <p className="absolute bottom-20 left-1/2 transform -translate-x-1/2 text-red-600 font-extrabold text-sm md:text-base uppercase tracking-widest pointer-events-none whitespace-nowrap drop-shadow-md">
+          <p className="font-extrabold text-red-600 absolute bottom-20 left-1/2 transform -translate-x-1/2 pointer-events-none whitespace-nowrap drop-shadow-md uppercase tracking-widest text-sm md:text-base">
             CONSULT AIRCRAFT POH BEFORE FLIGHT
           </p>
           <div
@@ -588,12 +588,11 @@ export function ConfiguratorTab() {
                                 }
                                 className="text-sm font-bold h-8"
                               />
-                              <Badge
-                                variant="outline"
-                                className="ml-auto shrink-0"
-                              >
-                                {s.gallons || 0} gal
-                              </Badge>
+                               <div className="flex items-center bg-slate-200/90 border border-slate-300 rounded px-2 py-0.5 ml-auto shrink-0 shadow-inner">
+                                   <input type="number" value={s.gallons || 0} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
+                                      className="w-10 bg-transparent text-sm font-bold text-right text-yellow-600 outline-none p-0" />
+                                   <span className="text-[10px] text-slate-600 ml-1 font-semibold">gal</span>
+                                </div>
                             </div>
                             <div className="col-span-3">
                               <Input
