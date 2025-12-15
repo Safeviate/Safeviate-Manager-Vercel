@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -161,6 +162,7 @@ const ConfiguratorTab = () => {
   };
 
   const updateStation = (id: number, field: string, val: string) => setStations(stations.map(s => s.id === id ? { ...s, [field]: val } : s));
+  
   const addStation = (type = 'standard') => {
     const newStation = {
         id: Date.now(),
@@ -172,7 +174,7 @@ const ConfiguratorTab = () => {
     };
     setStations([...stations, newStation]);
   };
-
+  
   const removeStation = (id: number) => setStations(stations.filter(s => s.id !== id));
 
   const updateEnvelopePoint = (index: number, field: 'x' | 'y', val: string) => {
@@ -209,7 +211,7 @@ const ConfiguratorTab = () => {
 
   const saveToFirebase = async () => { /* Firebase logic omitted for brevity */ };
 
-  // DYNAMIC SAFETY DOMAIN CALCULATION
+  // DYNAMIC SAFETY DOMAIN
   const allX = [...graphConfig.envelope.map(p => p.x), results.cg].filter(n => !isNaN(n));
   const allY = [...graphConfig.envelope.map(p => p.y), results.weight].filter(n => !isNaN(n));
   const paddingX = 0.5; const paddingY = 50;
@@ -231,8 +233,10 @@ const ConfiguratorTab = () => {
           <Button onClick={saveToFirebase}><Save size={16} /> Save</Button>
         </div>
       </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-5 space-y-6 h-[85vh] overflow-y-auto pr-2">
+          
           <Card>
              <CardHeader>
                 <CardTitle className="text-blue-400 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
@@ -258,6 +262,7 @@ const ConfiguratorTab = () => {
                 </div>
              </CardContent>
           </Card>
+          
           <Card>
              <CardHeader>
                 <div className="flex justify-between items-center">
