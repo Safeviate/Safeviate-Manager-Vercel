@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -13,9 +14,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
 import { type AircraftModelProfile } from './template-form';
 import Link from 'next/link';
+import { AssignProfileForm } from './assign-profile-form';
+import type { Aircraft } from '../page';
 
 export function TemplatesTab() {
   const firestore = useFirestore();
@@ -25,11 +27,27 @@ export function TemplatesTab() {
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles')) : null),
     [firestore, tenantId]
   );
+  
+  const aircraftQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
+    [firestore, tenantId]
+  );
 
-  const { data: profiles, isLoading, error } = useCollection<AircraftModelProfile>(profilesQuery);
+  const { data: profiles, isLoading: isLoadingProfiles, error: profilesError } = useCollection<AircraftModelProfile>(profilesQuery);
+  const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
+
+  const isLoading = isLoadingProfiles || isLoadingAircraft;
+  const error = profilesError || aircraftError;
 
   return (
     <div className="flex flex-col gap-6 h-full mt-4">
+       <div className="flex justify-end">
+          <AssignProfileForm 
+            tenantId={tenantId}
+            profiles={profiles || []}
+            aircraftList={aircraft || []}
+          />
+        </div>
       <Card>
         <CardContent className="p-0">
           {isLoading && <p className="p-4 text-center">Loading profiles...</p>}
