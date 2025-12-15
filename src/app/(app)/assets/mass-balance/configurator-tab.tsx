@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -14,7 +13,7 @@ import {
   ReferenceDot,
   Cell,
 } from 'recharts';
-import { collection } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
 import {
@@ -128,7 +127,7 @@ const OffScreenWarning = ({
     <span className="font-bold text-xs uppercase">{label} Off Scale!</span>
     <span className="text-lg font-mono">{value}</span>
     <span className="text-xs text-muted-foreground">
-      {direction === 'left' ? '← Move Left' : 'Move Right →'}
+      {direction === 'left' ? '← Move Left' : 'Move Right →'
     </span>
   </div>
 );
@@ -136,6 +135,7 @@ const OffScreenWarning = ({
 export function ConfiguratorTab() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const tenantId = 'safeviate';
 
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [modelNameForSave, setModelNameForSave] = useState('');
@@ -384,6 +384,10 @@ export function ConfiguratorTab() {
       toast({ variant: 'destructive', title: 'Model Name Required' });
       return;
     }
+    if (!firestore) {
+      toast({ variant: 'destructive', title: 'Database not available' });
+      return;
+    }
 
     const [make, ...modelParts] = modelNameForSave.split(' ');
     const model = modelParts.join(' ');
@@ -394,16 +398,16 @@ export function ConfiguratorTab() {
     ];
 
     const stationArms = stations.reduce((acc, st) => {
-      const nameLower = st.name.toLowerCase();
-      if (nameLower.includes('front')) acc.frontSeats = st.arm;
-      else if (nameLower.includes('rear')) acc.rearSeats = st.arm;
-      else if (st.type === 'fuel') acc.fuel = st.arm;
-      else if (nameLower.includes('baggage 1')) acc.baggage1 = st.arm;
-      else if (nameLower.includes('baggage 2')) acc.baggage2 = st.arm;
-      return acc;
-    }, {} as Record<string, number>);
+        const nameLower = st.name.toLowerCase();
+        if (nameLower.includes('front')) acc.frontSeats = st.arm;
+        else if (nameLower.includes('rear')) acc.rearSeats = st.arm;
+        else if (st.type === 'fuel') acc.fuel = st.arm;
+        else if (nameLower.includes('baggage 1')) acc.baggage1 = st.arm;
+        else if (nameLower.includes('baggage 2')) acc.baggage2 = st.arm;
+        return acc;
+      }, {} as Record<string, number>);
 
-    const profileData: Partial<AircraftModelProfile> = {
+    const profileData: Omit<AircraftModelProfile, 'id'> = {
       make: make || 'Unknown',
       model: model || modelNameForSave,
       emptyWeight: basicEmpty.weight,
@@ -418,10 +422,12 @@ export function ConfiguratorTab() {
       yMax: graphConfig.yMax,
     };
     
-    console.log("Saving Configuration:", profileData);
+    const collectionRef = collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles');
+    addDocumentNonBlocking(collectionRef, profileData);
+
     toast({
-      title: 'Configuration Saved (to console)',
-      description: `The configuration for "${modelNameForSave}" has been logged.`,
+      title: 'Configuration Saved',
+      description: `The configuration for "${modelNameForSave}" has been saved as a new template.`,
     });
 
     setIsSaveDialogOpen(false);
@@ -895,5 +901,3 @@ export function ConfiguratorTab() {
 }
 
 export default ConfiguratorTab;
-
-    
