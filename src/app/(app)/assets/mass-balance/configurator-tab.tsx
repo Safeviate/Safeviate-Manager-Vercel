@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -370,10 +371,7 @@ export function ConfiguratorTab() {
   const finalYMax = Math.max(Number(graphConfig.yMax), Math.max(...allY) + paddingY);
   const xAxisTicks = generateNiceTicks(finalXMin, finalXMax, 8);
   const yAxisTicks = generateNiceTicks(finalYMin, finalYMax, 8);
-  const isOffScreen = () => {
-    if (results.cg < finalXMin) return { axis: 'x', dir: 'left', val: results.cg };
-    return null;
-  };
+  const isOffScreen = () => { if (results.cg < finalXMin) return { axis: 'x', dir: 'left', val: results.cg }; return null; };
   const offScreenStatus = isOffScreen();
 
   return (
@@ -404,6 +402,7 @@ export function ConfiguratorTab() {
           <ResponsiveContainer width="100%" height={600}>
             <ScatterChart
               margin={{ top: 20, right: 30, bottom: 40, left: 40 }}
+              className="text-[10px]"
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
@@ -498,9 +497,10 @@ export function ConfiguratorTab() {
         </CardContent>
 
         <Separator />
-
+        
         <CardContent className="p-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
+            {/* Left Column */}
             <div className="space-y-6">
               {/* Basic Empty Weight */}
               <div>
@@ -689,7 +689,8 @@ export function ConfiguratorTab() {
                 </div>
               </div>
             </div>
-
+            
+            {/* Right Column */}
             <div className="space-y-6">
               {/* Chart Configuration */}
               <div>
