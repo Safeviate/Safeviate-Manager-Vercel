@@ -32,8 +32,17 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-  CardFooter,
 } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogClose,
+  } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -120,8 +129,10 @@ export function ConfiguratorTab() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [modelNameForSave, setModelNameForSave] = useState('');
+
   const [graphConfig, setGraphConfig] = useState({
-    modelName: 'Piper PA-28-180',
     xMin: 80,
     xMax: 94,
     yMin: 1400,
@@ -279,7 +290,6 @@ export function ConfiguratorTab() {
   const handleReset = () => {
     if (window.confirm('Reset to default Piper PA-28 data?')) {
       setGraphConfig({
-        modelName: 'Piper PA-28-180',
         xMin: 80,
         xMax: 94,
         yMin: 1400,
@@ -312,14 +322,15 @@ export function ConfiguratorTab() {
           maxGallons: 50,
         },
       ]);
+      setModelNameForSave('Piper PA-28-180');
     }
   };
 
   const saveToFirebase = () => {
-    if (!firestore || !graphConfig.modelName)
+    if (!firestore || !modelNameForSave)
       return toast({ variant: 'destructive', title: 'Model Name Required' });
 
-    const [make, ...modelParts] = graphConfig.modelName.split(' ');
+    const [make, ...modelParts] = modelNameForSave.split(' ');
     const model = modelParts.join(' ');
 
     const profileData = {
@@ -350,8 +361,10 @@ export function ConfiguratorTab() {
     addDocumentNonBlocking(collectionRef, profileData);
     toast({
       title: 'Profile Saved',
-      description: `The profile "${graphConfig.modelName}" is being saved.`,
+      description: `The profile "${modelNameForSave}" is being saved.`,
     });
+    setIsSaveDialogOpen(false);
+    setModelNameForSave('');
   };
 
   const allX = [
@@ -383,14 +396,44 @@ export function ConfiguratorTab() {
           <Button onClick={handleReset} variant="destructive">
             <RotateCcw size={16} className="mr-2" /> Reset
           </Button>
-          <Button onClick={saveToFirebase}>
+          <Button onClick={() => setIsSaveDialogOpen(true)}>
             <Save size={16} className="mr-2" /> Save Template
           </Button>
         </div>
       </div>
 
+      <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Save W&B Template</DialogTitle>
+                <DialogDescription>
+                    Enter a name for this aircraft model template.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-2">
+                <Label htmlFor="model-name">Model Name</Label>
+                <Input 
+                    id="model-name"
+                    value={modelNameForSave}
+                    onChange={(e) => setModelNameForSave(e.target.value)}
+                    placeholder="e.g., Cessna 172S"
+                />
+            </div>
+            <DialogFooter>
+                <DialogClose asChild>
+                    <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button onClick={saveToFirebase} disabled={!modelNameForSave.trim()}>Save Template</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card>
-        <CardContent className="relative min-h-[600px] flex flex-col justify-center items-center overflow-hidden pt-6">
+        <CardHeader>
+            <CardTitle>Interactive Graph</CardTitle>
+            <CardDescription>Visualize the aircraft&apos;s center of gravity based on the configuration below.</CardDescription>
+        </CardHeader>
+        <CardContent className="relative min-h-[500px] flex flex-col justify-center items-center overflow-hidden">
           {offScreenStatus && (
             <OffScreenWarning
               direction={offScreenStatus.dir}
@@ -398,7 +441,7 @@ export function ConfiguratorTab() {
               label={offScreenStatus.axis === 'x' ? 'CG' : 'Weight'}
             />
           )}
-          <ResponsiveContainer width="100%" height={600}>
+          <ResponsiveContainer width="100%" height={500}>
             <ScatterChart
               margin={{ top: 20, right: 30, bottom: 40, left: 40 }}
               className="text-xs"
@@ -494,14 +537,13 @@ export function ConfiguratorTab() {
             </span>
           </div>
         </CardContent>
-
-        <Separator />
-        
+      </Card>
+      
+      <Card>
         <CardContent className="p-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
             {/* Left Column */}
             <div className="space-y-6">
-              {/* Basic Empty Weight */}
               <div>
                 <h3 className="text-md font-semibold mb-4">
                   Basic Empty Weight
@@ -545,7 +587,6 @@ export function ConfiguratorTab() {
 
               <Separator />
 
-              {/* Loading Stations */}
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-md font-semibold">Loading Stations</h3>
@@ -555,6 +596,7 @@ export function ConfiguratorTab() {
                       variant="outline"
                       size="sm"
                       title="Add Fuel Tank"
+                      type="button"
                     >
                       <Fuel size={16} className="mr-2" /> Fuel
                     </Button>
@@ -562,6 +604,7 @@ export function ConfiguratorTab() {
                       onClick={() => addStation('standard')}
                       variant="outline"
                       size="sm"
+                      type="button"
                     >
                       <Plus size={16} className="mr-2" /> Add
                     </Button>
@@ -623,6 +666,7 @@ export function ConfiguratorTab() {
                                 variant="ghost"
                                 size="icon"
                                 className="text-muted-foreground hover:text-destructive h-8 w-8"
+                                type="button"
                               >
                                 <Trash2 size={16} />
                               </Button>
@@ -677,6 +721,7 @@ export function ConfiguratorTab() {
                               variant="ghost"
                               size="icon"
                               className="text-muted-foreground hover:text-destructive h-8 w-8 opacity-0 group-hover:opacity-100"
+                              type="button"
                             >
                               <Trash2 size={16} />
                             </Button>
@@ -691,7 +736,6 @@ export function ConfiguratorTab() {
             
             {/* Right Column */}
             <div className="space-y-6">
-              {/* Chart Configuration */}
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-md font-semibold">Chart Configuration</h3>
@@ -699,6 +743,7 @@ export function ConfiguratorTab() {
                     onClick={handleAutoFit}
                     variant="outline"
                     size="sm"
+                    type="button"
                   >
                     <Maximize size={16} className="mr-2" /> Auto-Fit
                   </Button>
@@ -757,8 +802,11 @@ export function ConfiguratorTab() {
                     />
                   </div>
                 </div>
-                <Label className="text-md font-semibold">Envelope Points</Label>
-                <div className="space-y-2 mt-2">
+              </div>
+              <Separator />
+               <div>
+                <h3 className="text-md font-semibold">Envelope Points</h3>
+                 <div className="space-y-2 mt-2">
                   {graphConfig.envelope.map((pt, i) => (
                     <div key={i} className="flex gap-2 items-center">
                       <div
@@ -790,6 +838,7 @@ export function ConfiguratorTab() {
                         onClick={() => removeEnvelopePoint(i)}
                         variant="ghost"
                         size="icon"
+                        type="button"
                       >
                         <Trash2 className="text-destructive" />
                       </Button>
@@ -800,6 +849,7 @@ export function ConfiguratorTab() {
                   onClick={addEnvelopePoint}
                   variant="outline"
                   className="w-full mt-2"
+                  type="button"
                 >
                   <Plus size={16} className="mr-2" /> Add Point
                 </Button>
