@@ -343,7 +343,15 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
                                     <Cell key={`cell-${index}`} fill={POINT_COLORS[index % POINT_COLORS.length]} />
                                 ))}
                             </Scatter>
-                            <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="hsl(var(--primary-foreground))" strokeWidth={2} />
+                            <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="hsl(var(--primary-foreground))" strokeWidth={2}>
+                                <RechartsLabel 
+                                    value={`(${results.cg}, ${results.weight})`} 
+                                    position="top" 
+                                    fill="hsl(var(--foreground))"
+                                    fontSize="12"
+                                    offset={10}
+                                />
+                            </ReferenceDot>
                         </ScatterChart>
                     </ResponsiveContainer>
                     <div className='absolute top-4 right-4'>

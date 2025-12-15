@@ -23,6 +23,7 @@ import {
   ResponsiveContainer,
   Label as RechartsLabel,
   Area,
+  ReferenceDot,
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -220,7 +221,27 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                                         </YAxis>
                                         <Tooltip cursor={{ strokeDasharray: '3 3' }} />
                                         <Area type="linear" dataKey="weight" data={cgEnvelopePoints} name="CG Limit" stroke="#8884d8" fill="#8884d8" fillOpacity={0.2} strokeWidth={2} />
-                                        <Scatter name="Takeoff CG" data={[ { weight: takeoffPoint.y, cg: takeoffPoint.x } ]} fill={isTakeoffOk ? "#22c55e" : "#ef4444"} shape="star" size={150} />
+                                        <Scatter name="Takeoff CG" data={[ { weight: takeoffPoint.y, cg: takeoffPoint.x } ]} fill={isTakeoffOk ? "#22c55e" : "#ef4444"}>
+                                            {/* Custom shape rendering for the dot */}
+                                            {takeoffPoint &&
+                                                <ReferenceDot
+                                                    x={takeoffPoint.x}
+                                                    y={takeoffPoint.y}
+                                                    r={8}
+                                                    fill={isTakeoffOk ? "#22c55e" : "#ef4444"}
+                                                    stroke="#fff"
+                                                    strokeWidth={2}
+                                                >
+                                                     <RechartsLabel 
+                                                        value={`(${takeoffPoint.x.toFixed(2)}, ${takeoffPoint.y.toFixed(1)})`} 
+                                                        position="top" 
+                                                        fill="hsl(var(--foreground))"
+                                                        fontSize="12"
+                                                        offset={10}
+                                                    />
+                                                </ReferenceDot>
+                                            }
+                                        </Scatter>
                                     </ScatterChart>
                                 </ResponsiveContainer>
                                 <div className="absolute top-4 right-4">

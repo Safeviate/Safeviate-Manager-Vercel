@@ -518,7 +518,15 @@ export function ConfiguratorTab() {
                 }
                 stroke="hsl(var(--primary-foreground))"
                 strokeWidth={2}
-              />
+              >
+                <RechartsLabel
+                  value={`(${results.cg}, ${results.weight})`}
+                  position="top"
+                  fill="hsl(var(--foreground))"
+                  fontSize="12"
+                  offset={10}
+                />
+              </ReferenceDot>
             </ScatterChart>
           </ResponsiveContainer>
           <p className="font-extrabold text-red-600 absolute bottom-4 left-1/2 transform -translate-x-1/2 pointer-events-none whitespace-nowrap drop-shadow-md uppercase tracking-widest text-sm md:text-base">

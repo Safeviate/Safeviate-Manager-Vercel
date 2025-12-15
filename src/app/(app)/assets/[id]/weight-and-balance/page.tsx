@@ -236,7 +236,15 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                                           <ReferenceDot key={`dot-${index}`} x={p.x} y={p.y} r={5} fill={POINT_COLORS[index % POINT_COLORS.length]} stroke="none" />
                                         ))}
 
-                                        <ReferenceDot x={takeoffPoint.x} y={takeoffPoint.y} r={8} fill={isTakeoffOk ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="hsl(var(--primary-foreground))" strokeWidth={2} />
+                                        <ReferenceDot x={takeoffPoint.x} y={takeoffPoint.y} r={8} fill={isTakeoffOk ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="hsl(var(--primary-foreground))" strokeWidth={2}>
+                                            <RechartsLabel 
+                                                value={`(${takeoffPoint.x.toFixed(2)}, ${takeoffPoint.y.toFixed(1)})`} 
+                                                position="top" 
+                                                fill="hsl(var(--foreground))"
+                                                fontSize="12"
+                                                offset={10}
+                                            />
+                                        </ReferenceDot>
                                     </ScatterChart>
                                 </ResponsiveContainer>
                                 <div className="absolute top-4 right-4">
