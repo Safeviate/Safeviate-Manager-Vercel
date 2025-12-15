@@ -171,50 +171,8 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                 </Link>
                 </Button>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-1 space-y-6">
-                     <Card>
-                        <CardHeader>
-                            <CardTitle>Load</CardTitle>
-                            <CardDescription>Enter the weight for each station.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="front-seat">Front Seats (lbs)</Label>
-                                <Input type="number" id="front-seat" value={frontSeatWeight || ''} onChange={(e) => setFrontSeatWeight(Number(e.target.value))} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="rear-seat">Rear Seats (lbs)</Label>
-                                <Input type="number" id="rear-seat" value={rearSeatWeight || ''} onChange={(e) => setRearSeatWeight(Number(e.target.value))} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="baggage-1">Baggage 1 (lbs)</Label>
-                                <Input type="number" id="baggage-1" value={baggage1Weight || ''} onChange={(e) => setBaggage1Weight(Number(e.target.value))} />
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="baggage-2">Baggage 2 (lbs)</Label>
-                                <Input type="number" id="baggage-2" value={baggage2Weight || ''} onChange={(e) => setBaggage2Weight(Number(e.target.value))} />
-                            </div>
-                        </CardContent>
-                    </Card>
-                     <Card>
-                        <CardHeader>
-                            <CardTitle>Fuel</CardTitle>
-                            <CardDescription>Enter fuel quantity for takeoff.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="fuel-gallons">Fuel (Gallons)</Label>
-                                <Input type="number" id="fuel-gallons" value={fuelGallons || ''} onChange={(e) => setFuelGallons(Number(e.target.value))} />
-                            </div>
-                             <div className="p-2 border rounded-md text-sm text-center bg-muted">
-                                Fuel Weight: <strong>{(fuelGallons * FUEL_WEIGHT_PER_GALLON).toFixed(1)} lbs</strong>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <div className="lg:col-span-2">
+            <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 order-first lg:order-none">
                     <Card>
                         <CardHeader>
                             <CardTitle>Weight &amp; Balance Summary</CardTitle>
@@ -274,11 +232,49 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                         </CardContent>
                     </Card>
                 </div>
+
+                <div className="lg:col-span-1 space-y-6">
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Load</CardTitle>
+                            <CardDescription>Enter the weight for each station.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="front-seat">Front Seats (lbs)</Label>
+                                <Input type="number" id="front-seat" value={frontSeatWeight || ''} onChange={(e) => setFrontSeatWeight(Number(e.target.value))} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="rear-seat">Rear Seats (lbs)</Label>
+                                <Input type="number" id="rear-seat" value={rearSeatWeight || ''} onChange={(e) => setRearSeatWeight(Number(e.target.value))} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="baggage-1">Baggage 1 (lbs)</Label>
+                                <Input type="number" id="baggage-1" value={baggage1Weight || ''} onChange={(e) => setBaggage1Weight(Number(e.target.value))} />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="baggage-2">Baggage 2 (lbs)</Label>
+                                <Input type="number" id="baggage-2" value={baggage2Weight || ''} onChange={(e) => setBaggage2Weight(Number(e.target.value))} />
+                            </div>
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Fuel</CardTitle>
+                            <CardDescription>Enter fuel quantity for takeoff.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="fuel-gallons">Fuel (Gallons)</Label>
+                                <Input type="number" id="fuel-gallons" value={fuelGallons || ''} onChange={(e) => setFuelGallons(Number(e.target.value))} />
+                            </div>
+                             <div className="p-2 border rounded-md text-sm text-center bg-muted">
+                                Fuel Weight: <strong>{(fuelGallons * FUEL_WEIGHT_PER_GALLON).toFixed(1)} lbs</strong>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </div>
     );
 }
-
-    
-
-    

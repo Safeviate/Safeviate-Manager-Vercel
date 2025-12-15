@@ -391,8 +391,8 @@ export function ConfiguratorTab() {
                         <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="hsl(var(--primary-foreground))" strokeWidth={2} />
                         </ScatterChart>
                     </ResponsiveContainer>
-                    <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-muted-foreground">
-                        Disclaimer: This tool is for educational purposes only. Always consult the official POH.
+                    <p className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-red-600 font-bold text-xs md:text-sm uppercase tracking-widest pointer-events-none whitespace-nowrap">
+                         CONSULT AIRCRAFT POH BEFORE FLIGHT
                     </p>
                     <div className={cn("absolute bottom-4 right-4 px-3 py-1 rounded-full font-bold shadow-lg flex items-center gap-2", results.isSafe ? 'bg-green-600/90 text-white' : 'bg-destructive text-white')}>
                         <div className={cn("w-2 h-2 rounded-full", results.isSafe ? 'bg-white' : 'bg-white animate-pulse')}></div>
