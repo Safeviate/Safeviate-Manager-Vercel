@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -332,32 +333,37 @@ export function ConfiguratorTab() {
     const model = modelParts.join(' ');
     
     const stationsToSave = [
-      {
-        id: 1, // BEW should have a stable ID
-        name: 'Basic Empty Weight',
-        weight: basicEmpty.weight,
-        arm: basicEmpty.arm,
-        type: 'bew',
-      },
-      ...stations.map(st => ({
-        id: st.id,
-        name: st.name,
-        weight: st.weight,
-        arm: st.arm,
-        type: st.type,
-        ...(st.type === 'fuel' ? { gallons: st.gallons, maxGallons: st.maxGallons } : {}),
-      }))
+        {
+            name: "Basic Empty Weight",
+            weight: basicEmpty.weight,
+            arm: basicEmpty.arm,
+            type: "bew",
+        },
+        ...stations.map((st) => ({
+            name: st.name,
+            weight: st.weight,
+            arm: st.arm,
+            type: st.type,
+            ...(st.type === "fuel" ? { gallons: st.gallons, maxGallons: st.maxGallons } : {}),
+        })),
     ];
     
     const profileData = {
       make,
       model,
-      xMin: graphConfig.xMin,
-      xMax: graphConfig.xMax,
-      yMin: graphConfig.yMin,
-      yMax: graphConfig.yMax,
-      cgEnvelope: graphConfig.envelope.map(p => ({ x: p.x, y: p.y })),
-      stations: stationsToSave,
+      emptyWeight: basicEmpty.weight,
+      emptyWeightMoment: basicEmpty.moment,
+      stationArms: stations.reduce((acc, st) => {
+        // A simple way to map some common names to the more structured stationArms
+        if (st.name.toLowerCase().includes('front')) acc.frontSeats = st.arm;
+        if (st.name.toLowerCase().includes('rear')) acc.rearSeats = st.arm;
+        if (st.type === 'fuel') acc.fuel = st.arm;
+        if (st.name.toLowerCase().includes('baggage 1')) acc.baggage1 = st.arm;
+        if (st.name.toLowerCase().includes('baggage 2')) acc.baggage2 = st.arm;
+        return acc;
+      }, {}),
+      cgEnvelope: graphConfig.envelope.map(p => [p.y, p.x]), // Save as [weight, cg]
+      maxTakeoffWeight: graphConfig.yMax,
     };
 
     const collectionRef = collection(
@@ -665,14 +671,16 @@ export function ConfiguratorTab() {
                                           />
                                       </div>
                                     </div>
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max={s.maxGallons || 50}
-                                        value={s.gallons || 0}
-                                        onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
-                                        className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-yellow-500 block"
-                                    />
+                                    <div>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max={s.maxGallons || 50}
+                                            value={s.gallons || 0}
+                                            onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
+                                            className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-yellow-500 block"
+                                        />
+                                    </div>
                                     </div>
                                 ) : (
                                     <div className="grid grid-cols-12 gap-2 items-center">
