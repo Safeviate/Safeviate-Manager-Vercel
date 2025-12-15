@@ -2,25 +2,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-    ScatterChart,
-    Scatter,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    Label as RechartsLabel,
-    ReferenceDot,
-    Cell,
-} from 'recharts';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label as RechartsLabel, ReferenceDot, Cell } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, Plus, Trash2, RotateCcw, Maximize, AlertTriangle, Fuel } from 'lucide-react';
+import { Save, Plus, Trash2, HelpCircle, RotateCcw, Maximize, Fuel, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
 import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection } from 'firebase/firestore';
@@ -61,6 +49,18 @@ const generateNiceTicks = (min: number, max: number, stepCount = 6) => {
   
   return ticks;
 };
+
+// --- HELPER 2: Visual Warning Component ---
+const OffScreenWarning = ({ direction, value, label }: { direction: string; value: number; label: string; }) => (
+    <div className={`absolute top-1/2 ${direction === 'left' ? 'left-4' : 'right-4'} transform -translate-y-1/2 bg-destructive/90 border border-red-500 text-white p-3 rounded shadow-xl z-10 flex flex-col items-center animate-pulse`}>
+      <AlertTriangle className="text-red-400 mb-1" size={24} />
+      <span className="font-bold text-xs uppercase">{label} Off Scale!</span>
+      <span className="text-lg font-mono">{value}</span>
+      <span className="text-xs text-muted-foreground">
+        {direction === 'left' ? '← Move Left' : 'Move Right →'}
+      </span>
+    </div>
+  );
 
 const ConfiguratorTab = () => {
   const firestore = useFirestore();
@@ -214,10 +214,9 @@ const ConfiguratorTab = () => {
          xMax: graphConfig.xMax,
          yMin: graphConfig.yMin,
          yMax: graphConfig.yMax,
-         // Assuming basicEmpty is part of the template now
          emptyWeight: basicEmpty.weight,
          emptyWeightMoment: basicEmpty.moment,
-         stations: stations.map(({id, ...rest}) => rest), // Remove temporary id
+         stations: stations.map(({id, ...rest}) => rest),
        };
        await addDocumentNonBlocking(collectionRef, dataToSave);
        toast({ title: "Aircraft Profile Saved!" });
@@ -392,7 +391,7 @@ const ConfiguratorTab = () => {
                 Please consult aircraft POH before flight
               </p>
 
-              <div className={cn('absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg', results.isSafe ? 'bg-green-600 text-white' : 'bg-red-600 text-white')}>
+              <div className={results.isSafe ? 'absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg bg-green-600 text-white' : 'absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg bg-red-600 text-white'}>
                 {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
               </div>
           </Card>
@@ -402,6 +401,6 @@ const ConfiguratorTab = () => {
   );
 };
 
-export default WBCalculator;
+export default ConfiguratorTab;
 
     
