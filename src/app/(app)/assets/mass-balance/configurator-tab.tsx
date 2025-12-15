@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -72,6 +71,7 @@ const OffScreenWarning = ({ direction, value, label }: { direction: string; valu
 );
 
 const ConfiguratorTab = () => {
+  const { toast } = useToast();
   // 1. STATE: Graph Config
   const [graphConfig, setGraphConfig] = useState({
     modelName: "Piper PA-28-180",
@@ -95,12 +95,12 @@ const ConfiguratorTab = () => {
   });
 
   // 3. STATE: Stations
-  const [stations, setStations] = useState([
+  const [stations, setStations] = useState<any[]>([
     { id: 2, name: "Pilot & Front Pax", weight: 340, arm: 85.5, type: 'standard' },
     { id: 3, name: "Fuel", weight: 288, arm: 95.0, type: 'fuel', gallons: 48, maxGallons: 50 },
     { id: 4, name: "Rear Pax", weight: 0, arm: 118.1, type: 'standard' },
     { id: 5, name: "Baggage", weight: 0, arm: 142.8, type: 'standard' },
-  ] as any[]);
+  ]);
 
   const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
 
@@ -154,7 +154,10 @@ const ConfiguratorTab = () => {
   };
 
   const handleAutoFit = () => {
-    if (graphConfig.envelope.length < 2) return alert("Add points first!");
+    if (graphConfig.envelope.length < 2) {
+        toast({ title: "Cannot auto-fit", description: "Please add at least two envelope points.", variant: "destructive" });
+        return;
+    }
     const xValues = graphConfig.envelope.map(p => p.x);
     const minX = Math.floor(Math.min(...xValues) - 1);
     const maxX = Math.ceil(Math.max(...xValues) + 1);
@@ -174,7 +177,7 @@ const ConfiguratorTab = () => {
     };
     setStations([...stations, newStation]);
   };
-  
+
   const removeStation = (id: number) => setStations(stations.filter(s => s.id !== id));
 
   const updateEnvelopePoint = (index: number, field: 'x' | 'y', val: string) => {
@@ -209,9 +212,11 @@ const ConfiguratorTab = () => {
     }
   };
 
-  const saveToFirebase = async () => { /* Firebase logic omitted for brevity */ };
+  const saveToFirebase = async () => { 
+    toast({ title: "Save action", description: "Save to Firebase not implemented in this test page." });
+  };
 
-  // DYNAMIC SAFETY DOMAIN
+  // SAFETY DOMAIN
   const allX = [...graphConfig.envelope.map(p => p.x), results.cg].filter(n => !isNaN(n));
   const allY = [...graphConfig.envelope.map(p => p.y), results.weight].filter(n => !isNaN(n));
   const paddingX = 0.5; const paddingY = 50;
@@ -239,24 +244,24 @@ const ConfiguratorTab = () => {
           
           <Card>
              <CardHeader>
-                <CardTitle className="text-blue-400 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                <CardTitle className="text-primary font-bold text-xs uppercase tracking-widest flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-primary"></span>
                     1. Basic Empty Weight
                 </CardTitle>
              </CardHeader>
              <CardContent className="grid grid-cols-3 gap-3">
                 <div className="group">
-                    <Label className="text-[10px] uppercase font-semibold mb-1 block group-focus-within:text-blue-400">Weight</Label>
+                    <Label className="text-[10px] uppercase font-semibold mb-1 block group-focus-within:text-primary">Weight</Label>
                     <Input type="number" value={basicEmpty.weight} onChange={(e) => handleBasicEmptyChange('weight', e.target.value)}
                         className="w-full font-mono text-right" />
                 </div>
                 <div className="group">
-                    <Label className="text-[10px] uppercase font-semibold mb-1 block group-focus-within:text-blue-400">Arm</Label>
+                    <Label className="text-[10px] uppercase font-semibold mb-1 block group-focus-within:text-primary">Arm</Label>
                     <Input type="number" value={basicEmpty.arm} onChange={(e) => handleBasicEmptyChange('arm', e.target.value)}
                         className="w-full font-mono text-right" />
                 </div>
                 <div className="group">
-                    <Label className="text-[10px] uppercase font-semibold mb-1 block group-focus-within:text-blue-400">Moment</Label>
+                    <Label className="text-[10px] uppercase font-semibold mb-1 block group-focus-within:text-primary">Moment</Label>
                     <Input type="number" value={basicEmpty.moment} onChange={(e) => handleBasicEmptyChange('moment', e.target.value)}
                         className="w-full font-mono text-right" />
                 </div>
@@ -266,8 +271,8 @@ const ConfiguratorTab = () => {
           <Card>
              <CardHeader>
                 <div className="flex justify-between items-center">
-                    <CardTitle className="text-blue-400 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    <CardTitle className="text-primary font-bold text-xs uppercase tracking-widest flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-primary"></span>
                         2. Loading Stations
                     </CardTitle>
                     <div className="flex gap-2">
@@ -337,8 +342,8 @@ const ConfiguratorTab = () => {
           <Card>
             <CardHeader>
                <div className="flex justify-between items-center">
-                   <CardTitle className="text-blue-400 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
-                     <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                   <CardTitle className="text-primary font-bold text-xs uppercase tracking-widest flex items-center gap-2">
+                     <span className="w-2 h-2 rounded-full bg-primary"></span>
                      3. Chart Config
                    </CardTitle>
                    <Button onClick={handleAutoFit} variant="outline" size="sm" className="text-xs flex items-center gap-1">
