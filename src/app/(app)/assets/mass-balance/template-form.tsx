@@ -318,176 +318,179 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <Card>
-            <CardContent className="relative flex flex-col justify-center items-center pt-6">
-                <ResponsiveContainer width="100%" height={400}>
-                    <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[watchedXMin || 'dataMin', watchedXMax || 'dataMax']} allowDataOverflow={true} ticks={xAxisTicks} tickCount={8}>
-                           <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" />
-                        </XAxis>
-                        <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[watchedYMin || 'dataMin', watchedYMax || 'dataMax']} allowDataOverflow={true} ticks={yAxisTicks} tickCount={8}>
-                             <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
-                        </YAxis>
-                        <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                        <Scatter name="Envelope" data={sortedEnvelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} fill="transparent" shape={() => null} />
-                        <Scatter name="Envelope Points" data={watchedEnvelope}>
-                            {(watchedEnvelope || []).map((_entry, index) => (
-                                <Cell key={`cell-${index}`} fill={POINT_COLORS[index % POINT_COLORS.length]} />
-                            ))}
-                        </Scatter>
-                        <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="hsl(var(--primary-foreground))" strokeWidth={2} />
-                    </ScatterChart>
-                </ResponsiveContainer>
-                 <div className='absolute top-4 right-4'>
-                    <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-sm text-white px-3 py-1')}>
-                        {results.isSafe ? 'Within Limits' : 'Out of Limits'}
-                    </Badge>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col lg:flex-row gap-6">
+        <div className="lg:w-1/3 order-2 lg:order-1">
+            <Card>
+                <CardHeader>
+                <CardTitle>{isConfiguratorMode ? 'Configurator' : (isEditing ? `Edit ${initialData?.make} ${initialData?.model}` : 'Create New W&B Profile')}</CardTitle>
+                <CardDescription>{isConfiguratorMode ? 'Interactively build and test a new template from scratch.' : 'Define the weight and balance parameters for an aircraft model.'}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    {!isConfiguratorMode && (
+                        <FormField control={form.control} name="modelName" render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Model Name</FormLabel>
+                            <FormControl><Input {...field} placeholder="e.g., Cessna 172S" /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )} />
+                    )}
+
+                    {isConfiguratorMode && (
+                        <FormField control={form.control} name="modelName" render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Template Name (For Testing)</FormLabel>
+                            <FormControl><Input {...field} placeholder="e.g., Cessna 172S" /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )} />
+                    )}
+
+
+                    {!isConfiguratorMode && <Separator />}
+                    
+                    <div>
+                        <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-lg font-medium">Loading Stations</h3>
+                        <Button type="button" size="sm" variant="outline" onClick={() => appendStation({ id: Date.now(), name: '', weight: 0, arm: 0 })}>
+                            <Plus className="mr-2 h-4 w-4" /> Add
+                        </Button>
+                        </div>
+                        <div className="space-y-2">
+                        {stationFields.map((field, index) => (
+                            <div key={field.id} className="grid grid-cols-12 gap-2 items-center text-sm">
+                            <FormField control={form.control} name={`stations.${index}.name`} render={({ field }) => (
+                                <FormItem className="col-span-5"><FormControl><Input {...field} placeholder="Station Name" /></FormControl></FormItem>
+                            )} />
+                            <FormField control={form.control} name={`stations.${index}.weight`} render={({ field }) => (
+                                <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Weight" /></FormControl></FormItem>
+                            )} />
+                            <FormField control={form.control} name={`stations.${index}.arm`} render={({ field }) => (
+                                <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Arm" /></FormControl></FormItem>
+                            )} />
+                            <Button type="button" onClick={() => removeStation(index)} variant="ghost" size="icon" className="col-span-1 text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16} /></Button>
+                            </div>
+                        ))}
+                        </div>
+                    </div>
+                
+                <Separator />
+
+                <div>
+                    <h3 className="text-lg font-medium mb-2">Chart Axis Limits</h3>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <FormField control={form.control} name="xMin" render={({ field }) => (
+                        <FormItem><FormLabel>Min CG</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="xMax" render={({ field }) => (
+                        <FormItem><FormLabel>Max CG</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="yMin" render={({ field }) => (
+                        <FormItem><FormLabel>Min Weight</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="yMax" render={({ field }) => (
+                        <FormItem><FormLabel>Max Weight</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    </div>
+                    <Button onClick={handleAutoFit} type="button" variant="outline" size="sm" className="w-full mt-4">
+                    <Maximize className="mr-2 h-4 w-4"/> Auto-Fit Axes
+                    </Button>
                 </div>
-            </CardContent>
-        </Card>
-
-        <Card>
-            <CardHeader>
-              <CardTitle>{isConfiguratorMode ? 'Configurator' : (isEditing ? `Edit ${initialData?.make} ${initialData?.model}` : 'Create New W&B Profile')}</CardTitle>
-              <CardDescription>{isConfiguratorMode ? 'Interactively build and test a new template from scratch.' : 'Define the weight and balance parameters for an aircraft model.'}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                {!isConfiguratorMode && (
-                    <FormField control={form.control} name="modelName" render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Model Name</FormLabel>
-                        <FormControl><Input {...field} placeholder="e.g., Cessna 172S" /></FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )} />
-                )}
-
-                {isConfiguratorMode && (
-                    <FormField control={form.control} name="modelName" render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Template Name (For Testing)</FormLabel>
-                        <FormControl><Input {...field} placeholder="e.g., Cessna 172S" /></FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )} />
-                )}
-
-
-                {!isConfiguratorMode && <Separator />}
+                
+                <Separator />
                 
                 <div>
                     <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-lg font-medium">Loading Stations</h3>
-                    <Button type="button" size="sm" variant="outline" onClick={() => appendStation({ id: Date.now(), name: '', weight: 0, arm: 0 })}>
+                    <h3 className="text-lg font-medium">CG Envelope Points</h3>
+                    <Button type="button" size="sm" variant="outline" onClick={() => appendEnvelope({ x: 0, y: 0 })}>
                         <Plus className="mr-2 h-4 w-4" /> Add
                     </Button>
                     </div>
                     <div className="space-y-2">
-                    {stationFields.map((field, index) => (
+                    {envelopeFields.map((field, index) => (
                         <div key={field.id} className="grid grid-cols-12 gap-2 items-center text-sm">
-                        <FormField control={form.control} name={`stations.${index}.name`} render={({ field }) => (
-                            <FormItem className="col-span-5"><FormControl><Input {...field} placeholder="Station Name" /></FormControl></FormItem>
+                        <div className="col-span-1 text-center font-bold text-white rounded-full size-6 flex items-center justify-center" style={{backgroundColor: POINT_COLORS[index % POINT_COLORS.length]}}>{index + 1}</div>
+                        <FormField control={form.control} name={`cgEnvelope.${index}.x`} render={({ field }) => (
+                            <FormItem className="col-span-5"><FormControl><Input type="number" {...field} placeholder="CG (X)" /></FormControl></FormItem>
                         )} />
-                        <FormField control={form.control} name={`stations.${index}.weight`} render={({ field }) => (
-                            <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Weight" /></FormControl></FormItem>
+                        <FormField control={form.control} name={`cgEnvelope.${index}.y`} render={({ field }) => (
+                            <FormItem className="col-span-5"><FormControl><Input type="number" {...field} placeholder="Weight (Y)" /></FormControl></FormItem>
                         )} />
-                        <FormField control={form.control} name={`stations.${index}.arm`} render={({ field }) => (
-                            <FormItem className="col-span-3"><FormControl><Input type="number" {...field} placeholder="Arm" /></FormControl></FormItem>
-                        )} />
-                        <Button type="button" onClick={() => removeStation(index)} variant="ghost" size="icon" className="col-span-1 text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16} /></Button>
+                        <Button type="button" onClick={() => removeEnvelope(index)} variant="ghost" size="icon" className="col-span-1 text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16} /></Button>
                         </div>
                     ))}
                     </div>
                 </div>
-              
-              <Separator />
-
-              <div>
-                <h3 className="text-lg font-medium mb-2">Chart Axis Limits</h3>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <FormField control={form.control} name="xMin" render={({ field }) => (
-                    <FormItem><FormLabel>Min CG</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="xMax" render={({ field }) => (
-                    <FormItem><FormLabel>Max CG</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="yMin" render={({ field }) => (
-                    <FormItem><FormLabel>Min Weight</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="yMax" render={({ field }) => (
-                    <FormItem><FormLabel>Max Weight</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                </div>
-                <Button onClick={handleAutoFit} type="button" variant="outline" size="sm" className="w-full mt-4">
-                  <Maximize className="mr-2 h-4 w-4"/> Auto-Fit Axes
-                </Button>
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-lg font-medium">CG Envelope Points</h3>
-                  <Button type="button" size="sm" variant="outline" onClick={() => appendEnvelope({ x: 0, y: 0 })}>
-                    <Plus className="mr-2 h-4 w-4" /> Add
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {envelopeFields.map((field, index) => (
-                    <div key={field.id} className="grid grid-cols-12 gap-2 items-center text-sm">
-                      <div className="col-span-1 text-center font-bold text-white rounded-full size-6 flex items-center justify-center" style={{backgroundColor: POINT_COLORS[index % POINT_COLORS.length]}}>{index + 1}</div>
-                      <FormField control={form.control} name={`cgEnvelope.${index}.x`} render={({ field }) => (
-                        <FormItem className="col-span-5"><FormControl><Input type="number" {...field} placeholder="CG (X)" /></FormControl></FormItem>
-                      )} />
-                      <FormField control={form.control} name={`cgEnvelope.${index}.y`} render={({ field }) => (
-                        <FormItem className="col-span-5"><FormControl><Input type="number" {...field} placeholder="Weight (Y)" /></FormControl></FormItem>
-                      )} />
-                      <Button type="button" onClick={() => removeEnvelope(index)} variant="ghost" size="icon" className="col-span-1 text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16} /></Button>
+                </CardContent>
+                {!isConfiguratorMode ? (
+                    <CardFooter className="border-t pt-4 flex items-center justify-between">
+                        <div>
+                            {isEditing && (
+                                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" type="button">Delete Profile</Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This action cannot be undone. This will permanently delete the W&amp;B profile for {initialData?.model}.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleDelete} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                                                Delete
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            )}
+                        </div>
+                        <div className='flex gap-2'>
+                            <Button variant="outline" type="button" onClick={() => router.push('/assets/mass-balance')}>Cancel</Button>
+                            <Button type="submit"><Save className='mr-2' /> Save Profile</Button>
+                        </div>
+                    </CardFooter>
+                ) : (
+                    <CardFooter className="border-t pt-4 flex items-center justify-end">
+                        <Button variant="outline" type="button" onClick={handleResetConfigurator}>
+                            <RotateCcw className="mr-2 h-4 w-4" /> Reset
+                        </Button>
+                    </CardFooter>
+                )}
+            </Card>
+        </div>
+        <div className="lg:w-2/3 order-1 lg:order-2">
+            <Card>
+                <CardContent className="relative flex flex-col justify-center items-center pt-6">
+                    <ResponsiveContainer width="100%" height={400}>
+                        <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[watchedXMin || 'dataMin', watchedXMax || 'dataMax']} allowDataOverflow={true} ticks={xAxisTicks} tickCount={8}>
+                            <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" />
+                            </XAxis>
+                            <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[watchedYMin || 'dataMin', watchedYMax || 'dataMax']} allowDataOverflow={true} ticks={yAxisTicks} tickCount={8}>
+                                <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
+                            </YAxis>
+                            <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                            <Scatter name="Envelope" data={sortedEnvelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} fill="transparent" shape={() => null} />
+                            <Scatter name="Envelope Points" data={watchedEnvelope}>
+                                {(watchedEnvelope || []).map((_entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={POINT_COLORS[index % POINT_COLORS.length]} />
+                                ))}
+                            </Scatter>
+                            <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="hsl(var(--primary-foreground))" strokeWidth={2} />
+                        </ScatterChart>
+                    </ResponsiveContainer>
+                    <div className='absolute top-4 right-4'>
+                        <Badge className={cn(results.isSafe ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-sm text-white px-3 py-1')}>
+                            {results.isSafe ? 'Within Limits' : 'Out of Limits'}
+                        </Badge>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-            {!isConfiguratorMode ? (
-                <CardFooter className="border-t pt-4 flex items-center justify-between">
-                    <div>
-                        {isEditing && (
-                            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" type="button">Delete Profile</Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This action cannot be undone. This will permanently delete the W&amp;B profile for {initialData?.model}.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleDelete} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-                                            Delete
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        )}
-                    </div>
-                    <div className='flex gap-2'>
-                        <Button variant="outline" type="button" onClick={() => router.push('/assets/mass-balance')}>Cancel</Button>
-                        <Button type="submit"><Save className='mr-2' /> Save Profile</Button>
-                    </div>
-                </CardFooter>
-            ) : (
-                <CardFooter className="border-t pt-4 flex items-center justify-end">
-                    <Button variant="outline" type="button" onClick={handleResetConfigurator}>
-                        <RotateCcw className="mr-2 h-4 w-4" /> Reset
-                    </Button>
-                </CardFooter>
-            )}
-        </Card>
+                </CardContent>
+            </Card>
+        </div>
       </form>
     </Form>
   );
