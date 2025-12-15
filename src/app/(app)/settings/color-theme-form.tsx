@@ -12,6 +12,7 @@ import { useTheme, type SavedTheme } from '@/components/theme-provider';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 
 // Define a type for the tenant's theme from Firestore
 type TenantTheme = {
@@ -42,6 +43,8 @@ export function ColorThemeForm() {
     setHeaderThemeValue,
     swimlaneTheme,
     setSwimlaneThemeValue,
+    scale,
+    setScale,
     savedThemes,
     saveCurrentTheme,
     applySavedTheme,
@@ -93,6 +96,7 @@ export function ColorThemeForm() {
         sidebarColors: sidebarTheme, // Keep sidebar as is or define in tenant
         headerColors: { 'header-background': tenant.theme.backgroundColour || headerTheme['header-background'], 'header-foreground': headerTheme['header-foreground'], 'header-border': headerTheme['header-border'] },
         swimlaneColors: swimlaneTheme,
+        scale: scale,
     };
 
     applySavedTheme(themeToApply as SavedTheme);
@@ -152,6 +156,23 @@ export function ColorThemeForm() {
         <CardDescription>Customize the look and feel of the application.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div>
+            <h3 className="text-lg font-medium mb-2">UI Scaling</h3>
+            <p className='text-sm text-muted-foreground mb-4'>Adjust the overall size of the application interface.</p>
+            <div className='flex items-center gap-4'>
+                <Slider
+                    value={[scale]}
+                    onValueChange={(value) => setScale(value[0])}
+                    min={75}
+                    max={150}
+                    step={5}
+                />
+                <span className='text-sm font-medium text-muted-foreground w-16 text-center'>{scale}%</span>
+            </div>
+        </div>
+        
+        <Separator />
+
         <div>
             <h3 className="text-lg font-medium mb-2">Set Theme from Tenant</h3>
             <p className='text-sm text-muted-foreground mb-4'>Override the current theme with a saved tenant configuration.</p>

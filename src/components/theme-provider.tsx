@@ -59,6 +59,7 @@ export type SavedTheme = {
   headerColors: HeaderThemeColors;
   popoverColors: PopoverThemeColors;
   swimlaneColors: SwimlaneThemeColors;
+  scale?: number;
 };
 
 type ThemeContextType = {
@@ -76,6 +77,8 @@ type ThemeContextType = {
   setHeaderThemeValue: (key: keyof HeaderThemeColors, value: string) => void;
   swimlaneTheme: SwimlaneThemeColors;
   setSwimlaneThemeValue: (key: keyof SwimlaneThemeColors, value: string) => void;
+  scale: number;
+  setScale: (scale: number) => void;
   savedThemes: SavedTheme[];
   saveCurrentTheme: (name: string) => void;
   applySavedTheme: (theme: SavedTheme) => void;
@@ -91,6 +94,7 @@ export const POPOVER_THEME_KEY = 'safeviate-popover-theme';
 export const SIDEBAR_THEME_KEY = 'safeviate-sidebar-theme';
 export const HEADER_THEME_KEY = 'safeviate-header-theme';
 export const SWIMLANE_THEME_KEY = 'safeviate-swimlane-theme';
+export const SCALE_KEY = 'safeviate-scale';
 export const SAVED_THEMES_KEY = 'safeviate-saved-themes';
 
 // --- Default Values ---
@@ -132,6 +136,7 @@ const defaultSwimlaneColors: SwimlaneThemeColors = {
     'swimlane-header-background': '#f1f5f9',
     'swimlane-header-foreground': '#475569',
 };
+const defaultScale = 100;
 
 // --- Helper Functions ---
 const applyColorsToDOM = (colors: Record<string, string>) => {
@@ -139,6 +144,11 @@ const applyColorsToDOM = (colors: Record<string, string>) => {
   Object.entries(colors).forEach(([key, value]) => {
     document.documentElement.style.setProperty(`--${key}`, hexToHsl(value as string));
   });
+};
+
+const applyScaleToDOM = (scale: number) => {
+    if (typeof window === 'undefined') return;
+    document.documentElement.style.fontSize = `${scale}%`;
 };
 
 const getInitialState = <T>(key: string, defaultValue: T): T => {
@@ -172,6 +182,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [sidebarTheme, setSidebarTheme] = useState<SidebarThemeColors>(() => getInitialState(SIDEBAR_THEME_KEY, defaultSidebarColors));
   const [headerTheme, setHeaderTheme] = useState<HeaderThemeColors>(() => getInitialState(HEADER_THEME_KEY, defaultHeaderColors));
   const [swimlaneTheme, setSwimlaneTheme] = useState<SwimlaneThemeColors>(() => getInitialState(SWIMLANE_THEME_KEY, defaultSwimlaneColors));
+  const [scale, setScaleState] = useState<number>(() => getInitialState(SCALE_KEY, defaultScale));
   const [savedThemes, setSavedThemes] = useState<SavedTheme[]>(() => getInitialState(SAVED_THEMES_KEY, []));
 
   useEffect(() => {
@@ -182,7 +193,8 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     applyColorsToDOM(sidebarTheme);
     applyColorsToDOM(headerTheme);
     applyColorsToDOM(swimlaneTheme);
-  }, [theme, buttonTheme, cardTheme, popoverTheme, sidebarTheme, headerTheme, swimlaneTheme]);
+    applyScaleToDOM(scale);
+  }, [theme, buttonTheme, cardTheme, popoverTheme, sidebarTheme, headerTheme, swimlaneTheme, scale]);
   
 
   const updateTheme = <T extends object>(
@@ -196,6 +208,12 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setter(newTheme);
     localStorage.setItem(key, JSON.stringify(newTheme));
     document.documentElement.style.setProperty(`--${String(prop)}`, hexToHsl(value));
+  };
+
+  const setScale = (newScale: number) => {
+    setScaleState(newScale);
+    localStorage.setItem(SCALE_KEY, JSON.stringify(newScale));
+    applyScaleToDOM(newScale);
   };
   
   const setThemeValue = (prop: keyof ThemeColors, value: string) => updateTheme(THEME_KEY, theme, setTheme, prop, value);
@@ -215,6 +233,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setSidebarTheme(themeToApply.sidebarColors);
     setHeaderTheme(themeToApply.headerColors);
     setSwimlaneTheme(themeToApply.swimlaneColors || defaultSwimlaneColors);
+    setScaleState(themeToApply.scale || defaultScale);
     
     applyColorsToDOM(themeToApply.colors);
     applyColorsToDOM(themeToApply.buttonColors || defaultButtonColors);
@@ -223,6 +242,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     applyColorsToDOM(themeToApply.sidebarColors);
     applyColorsToDOM(themeToApply.headerColors);
     applyColorsToDOM(themeToApply.swimlaneColors || defaultSwimlaneColors);
+    applyScaleToDOM(themeToApply.scale || defaultScale);
 
     localStorage.setItem(THEME_KEY, JSON.stringify(themeToApply.colors));
     localStorage.setItem(BUTTON_THEME_KEY, JSON.stringify(themeToApply.buttonColors || defaultButtonColors));
@@ -231,6 +251,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.setItem(SIDEBAR_THEME_KEY, JSON.stringify(themeToApply.sidebarColors));
     localStorage.setItem(HEADER_THEME_KEY, JSON.stringify(themeToApply.headerColors));
     localStorage.setItem(SWIMLANE_THEME_KEY, JSON.stringify(themeToApply.swimlaneColors || defaultSwimlaneColors));
+    localStorage.setItem(SCALE_KEY, JSON.stringify(themeToApply.scale || defaultScale));
   };
 
   const saveCurrentTheme = (name: string) => {
@@ -243,6 +264,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       sidebarColors: sidebarTheme,
       headerColors: headerTheme,
       swimlaneColors: swimlaneTheme,
+      scale,
     };
     const updatedSavedThemes = [...savedThemes, newTheme];
     setSavedThemes(updatedSavedThemes);
@@ -263,6 +285,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.removeItem(SIDEBAR_THEME_KEY);
     localStorage.removeItem(HEADER_THEME_KEY);
     localStorage.removeItem(SWIMLANE_THEME_KEY);
+    localStorage.removeItem(SCALE_KEY);
     
     setTheme(defaultColors);
     setButtonTheme(defaultButtonColors);
@@ -271,6 +294,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setSidebarTheme(defaultSidebarColors);
     setHeaderTheme(defaultHeaderColors);
     setSwimlaneTheme(defaultSwimlaneColors);
+    setScaleState(defaultScale);
 
     applyColorsToDOM(defaultColors);
     applyColorsToDOM(defaultButtonColors);
@@ -279,6 +303,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     applyColorsToDOM(defaultSidebarColors);
     applyColorsToDOM(defaultHeaderColors);
     applyColorsToDOM(defaultSwimlaneColors);
+    applyScaleToDOM(defaultScale);
 
     window.location.reload();
   };
@@ -298,6 +323,8 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setHeaderThemeValue,
     swimlaneTheme,
     setSwimlaneThemeValue,
+    scale,
+    setScale,
     savedThemes,
     saveCurrentTheme,
     applySavedTheme,
