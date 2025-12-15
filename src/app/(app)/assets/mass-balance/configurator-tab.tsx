@@ -641,7 +641,7 @@ export function ConfiguratorTab() {
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-12 gap-2 items-center">
-                                            <div className="col-span-5">
+                                            <div className="col-span-2">
                                                 <Input value="Gallons" readOnly disabled className="text-xs text-muted-foreground h-8"/>
                                             </div>
                                             <div className="col-span-3">
@@ -663,16 +663,6 @@ export function ConfiguratorTab() {
                                                     className="h-8 text-right flex-grow"
                                                 />
                                             </div>
-                                        </div>
-                                        <div className="px-1 pt-1">
-                                            <input
-                                                type="range"
-                                                min="0"
-                                                max={s.maxGallons || 50}
-                                                value={s.gallons || 0}
-                                                onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
-                                                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-yellow-500 block"
-                                            />
                                         </div>
                                     </div>
                                 ) : (
