@@ -390,24 +390,24 @@ export function ConfiguratorTab() {
       toast({ variant: 'destructive', title: 'Database not available' });
       return;
     }
-
+  
     const configData = {
       modelName: modelNameForSave,
       basicEmpty,
       stations,
       graphConfig,
-      savedAt: new Date().toISOString()
+      savedAt: new Date().toISOString(),
     };
-    
-    // Save to the new, separate path as instructed
-    const collectionRef = collection(firestore, 'tenants', tenantId, 'assets', 'massAndBalance');
+  
+    // Corrected path with an odd number of segments
+    const collectionRef = collection(firestore, 'tenants', tenantId, 'massAndBalance');
     addDocumentNonBlocking(collectionRef, configData);
-
+  
     toast({
       title: 'Configuration Saved',
       description: `The configuration for "${modelNameForSave}" has been saved.`,
     });
-
+  
     setIsSaveDialogOpen(false);
   };
 
@@ -450,7 +450,7 @@ export function ConfiguratorTab() {
                 <DialogHeader>
                     <DialogTitle>Save W&B Configuration</DialogTitle>
                     <DialogDescription>
-                        Enter a name for this aircraft model configuration.
+                        Enter a name for this aircraft model configuration. This will NOT create a reusable template.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-2">

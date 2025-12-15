@@ -59,59 +59,6 @@
       },
       "required": ["id", "make", "model"]
     },
-    "MassAndBalanceConfig": {
-        "title": "Mass and Balance Configuration",
-        "type": "object",
-        "description": "A saved instance of a mass and balance calculation from the configurator.",
-        "properties": {
-            "id": { "type": "string" },
-            "modelName": { "type": "string", "description": "The user-provided name for this configuration." },
-            "basicEmpty": {
-                "type": "object",
-                "properties": {
-                    "weight": { "type": "number" },
-                    "moment": { "type": "number" },
-                    "arm": { "type": "number" }
-                }
-            },
-            "stations": {
-              "type": "array",
-              "description": "A list of loading stations for the aircraft model.",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "id": { "type": "number" },
-                  "name": { "type": "string" },
-                  "weight": { "type": "number" },
-                  "arm": { "type": "number" },
-                  "type": { "type": "string" },
-                  "gallons": { "type": "number" },
-                  "maxGallons": { "type": "number" }
-                }
-              }
-            },
-            "graphConfig": {
-                "type": "object",
-                "properties": {
-                    "xMin": { "type": "number" },
-                    "xMax": { "type": "number" },
-                    "yMin": { "type": "number" },
-                    "yMax": { "type": "number" },
-                    "envelope": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "x": { "type": "number" },
-                                "y": { "type": "number" }
-                            }
-                        }
-                    }
-                }
-            },
-            "savedAt": { "type": "string", "format": "date-time" }
-        }
-    },
     "Booking": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Booking",
@@ -800,11 +747,11 @@
         }
       },
       {
-        "path": "tenants/{tenantId}/assets/massAndBalance/{configId}",
+        "path": "tenants/{tenantId}/massAndBalance/{configId}",
         "definition": {
-          "entityName": "MassAndBalanceConfig",
+          "entityName": "AircraftModelProfile",
           "schema": {
-            "$ref": "#/backend/entities/MassAndBalanceConfig"
+            "$ref": "#/backend/entities/AircraftModelProfile"
           },
           "description": "Stores saved Mass & Balance configurations from the configurator tool.",
           "params": [
