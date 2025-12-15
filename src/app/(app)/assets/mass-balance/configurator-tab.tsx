@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -216,7 +217,7 @@ const ConfiguratorTab = () => {
     toast({ title: "Save action", description: "Save to Firebase not implemented in this test page." });
   };
 
-  // SAFETY DOMAIN
+  // DYNAMIC SAFETY DOMAIN CALCULATION
   const allX = [...graphConfig.envelope.map(p => p.x), results.cg].filter(n => !isNaN(n));
   const allY = [...graphConfig.envelope.map(p => p.y), results.weight].filter(n => !isNaN(n));
   const paddingX = 0.5; const paddingY = 50;
@@ -407,11 +408,9 @@ const ConfiguratorTab = () => {
                 <div className={`w-2 h-2 rounded-full ${results.isSafe ? 'bg-white' : 'bg-white animate-pulse'}`}></div>
                 {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
               </div>
-            </Card>
+          </Card>
         </div>
       </div>
     </div>
   );
 };
-
-export default WBCalculator;
