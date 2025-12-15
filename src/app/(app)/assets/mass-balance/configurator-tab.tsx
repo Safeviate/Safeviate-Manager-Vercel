@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -127,7 +128,7 @@ const OffScreenWarning = ({
     <span className="font-bold text-xs uppercase">{label} Off Scale!</span>
     <span className="text-lg font-mono">{value}</span>
     <span className="text-xs text-muted-foreground">
-      {direction === 'left' ? '← Move Left' : 'Move Right →'
+      {direction === 'left' ? '← Move Left' : 'Move Right →'}
     </span>
   </div>
 );
