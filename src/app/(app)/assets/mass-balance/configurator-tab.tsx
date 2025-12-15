@@ -36,7 +36,7 @@ const generateNiceTicks = (min: number, max: number, stepCount = 6) => {
   const roughStep = diff / (stepCount - 1);
   const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
   const normalizedStep = roughStep / magnitude;
-  
+
   let step;
   if (normalizedStep < 1.5) step = 1 * magnitude;
   else if (normalizedStep < 3) step = 2 * magnitude;
@@ -46,29 +46,29 @@ const generateNiceTicks = (min: number, max: number, stepCount = 6) => {
   const ticks = [];
   let current = Math.ceil(start / step) * step;
   if (current > start) ticks.push(start);
-  
+
   while (current <= end) {
     ticks.push(current);
     current += step;
   }
-  
+
   if (ticks[ticks.length - 1] < end && (end - ticks[ticks.length - 1]) < step * 0.1) {
     ticks.push(end);
   }
-  
+
   return ticks;
 };
 
 // --- HELPER 2: Visual Warning Component ---
 const OffScreenWarning = ({ direction, value, label }: { direction: string; value: number; label: string; }) => (
-  <div className={`absolute top-1/2 ${direction === 'left' ? 'left-4' : 'right-4'} transform -translate-y-1/2 bg-destructive/90 border border-red-500 text-white p-3 rounded shadow-xl z-10 flex flex-col items-center animate-pulse`}>
-    <AlertTriangle className="text-red-400 mb-1" size={24} />
-    <span className="font-bold text-xs uppercase">{label} Off Scale!</span>
-    <span className="text-lg font-mono">{value}</span>
-    <span className="text-xs text-muted-foreground">
-      {direction === 'left' ? '← Move Left' : 'Move Right →'}
-    </span>
-  </div>
+    <div className={`absolute top-1/2 ${direction === 'left' ? 'left-4' : 'right-4'} transform -translate-y-1/2 bg-destructive/90 border border-red-500 text-white p-3 rounded shadow-xl z-10 flex flex-col items-center animate-pulse`}>
+      <AlertTriangle className="text-red-400 mb-1" size={24} />
+      <span className="font-bold text-xs uppercase">{label} Off Scale!</span>
+      <span className="text-lg font-mono">{value}</span>
+      <span className="text-xs text-muted-foreground">
+        {direction === 'left' ? '← Move Left' : 'Move Right →'}
+      </span>
+    </div>
 );
 
 const ConfiguratorTab = () => {
