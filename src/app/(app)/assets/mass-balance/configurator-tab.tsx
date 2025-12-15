@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -26,7 +27,7 @@ const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f
 const FUEL_WEIGHT_PER_GALLON = 6;
 
 // --- HELPER 1: Generate "Nice" Ticks ---
-const generateNiceTicks = (min: number, max: number, stepCount = 6) => {
+const generateNiceTicks = (min: number | string, max: number | string, stepCount = 6) => {
   const start = Number(min);
   const end = Number(max);
   if (isNaN(start) || isNaN(end) || start >= end) return [];
