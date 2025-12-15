@@ -249,159 +249,153 @@ export function ConfiguratorTab() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-5 space-y-6 h-full">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Basic Empty Weight</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-3 gap-3">
-                        <div className="space-y-1">
-                            <Label htmlFor="bew-weight">Weight</Label>
-                            <Input id="bew-weight" type="number" value={basicEmpty.weight} onChange={(e) => handleBasicEmptyChange('weight', e.target.value)} />
-                        </div>
-                         <div className="space-y-1">
-                            <Label htmlFor="bew-arm">Arm</Label>
-                            <Input id="bew-arm" type="number" value={basicEmpty.arm} onChange={(e) => handleBasicEmptyChange('arm', e.target.value)} />
-                        </div>
-                         <div className="space-y-1">
-                            <Label htmlFor="bew-moment">Moment</Label>
-                            <Input id="bew-moment" type="number" value={basicEmpty.moment} onChange={(e) => handleBasicEmptyChange('moment', e.target.value)} />
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+      <Card>
+        <CardContent className="p-4 relative min-h-[600px] flex flex-col justify-center items-center overflow-hidden">
+            {offScreenStatus && <OffScreenWarning direction={offScreenStatus.dir} value={offScreenStatus.val} label={offScreenStatus.axis === 'x' ? 'CG' : 'Weight'} />}
+            <ResponsiveContainer width="100%" height={600}>
+                <ScatterChart margin={{ top: 20, right: 30, bottom: 40, left: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[finalXMin, finalXMax]} ticks={xAxisTicks} allowDataOverflow={true} dy={10}>
+                    <RechartsLabel value="CG (inches)" offset={0} position="insideBottom" dy={10} />
+                </XAxis>
+                <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[finalYMin, finalYMax]} ticks={yAxisTicks} allowDataOverflow={true}>
+                    <RechartsLabel value="Gross Weight (lbs)" angle={-90} position="insideLeft" />
+                </YAxis>
+                <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                <Scatter name="Envelope Line" data={graphConfig.envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} isAnimationActive={false} />
+                <Scatter name="Envelope Points" data={graphConfig.envelope} isAnimationActive={false}>
+                    {graphConfig.envelope.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={POINT_COLORS[index % POINT_COLORS.length]} stroke="hsl(var(--primary-foreground))" strokeWidth={1}/>
+                    ))}
+                </Scatter>
+                <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="hsl(var(--primary-foreground))" strokeWidth={2} />
+                </ScatterChart>
+            </ResponsiveContainer>
+            <p className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-red-600 font-bold text-sm uppercase tracking-widest pointer-events-none whitespace-nowrap">
+                CONSULT AIRCRAFT POH BEFORE FLIGHT
+            </p>
+            <div className={cn("absolute bottom-4 right-4 px-3 py-1 rounded-full font-bold shadow-lg flex items-center gap-2", results.isSafe ? 'bg-green-600/90 text-white' : 'bg-destructive text-white')}>
+                <div className={cn("w-2 h-2 rounded-full", results.isSafe ? 'bg-white' : 'bg-white animate-pulse')}></div>
+                <span className="text-xs">{results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}</span>
+            </div>
+        </CardContent>
 
-            <Card>
-                <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <CardTitle>Loading Stations</CardTitle>
-                         <div className="flex gap-2">
-                            <Button onClick={clearStations} variant="destructive" size="icon" title="Clear all"><Trash2 size={16}/></Button>
-                            <Button onClick={() => addStation('fuel')} variant="outline" size="sm" title="Add Fuel Tank"><Fuel size={16} className='mr-2'/> Fuel</Button>
-                            <Button onClick={() => addStation('standard')} variant="outline" size="sm"><Plus size={16} className='mr-2'/> Add</Button>
-                        </div>
+        <Separator />
+        
+        <CardContent className="p-6 space-y-6">
+            {/* Basic Empty Weight */}
+            <div>
+                <h3 className="text-lg font-semibold mb-4">Basic Empty Weight</h3>
+                <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                        <Label htmlFor="bew-weight">Weight</Label>
+                        <Input id="bew-weight" type="number" value={basicEmpty.weight} onChange={(e) => handleBasicEmptyChange('weight', e.target.value)} />
                     </div>
-                </CardHeader>
-                 <CardContent>
-                    <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground font-bold px-1 mb-2 tracking-wider">
-                        <div className="col-span-5">Station</div>
-                        <div className="col-span-3 text-right">Weight</div>
-                        <div className="col-span-3 text-right">Arm</div>
+                        <div className="space-y-1">
+                        <Label htmlFor="bew-arm">Arm</Label>
+                        <Input id="bew-arm" type="number" value={basicEmpty.arm} onChange={(e) => handleBasicEmptyChange('arm', e.target.value)} />
                     </div>
-                    <div className="space-y-2">
-                    {stations.map((s) => (
-                        <div key={s.id} className="group relative">
-                        {s.type === 'fuel' ? (
-                            <div className="p-2 border rounded-lg bg-secondary/20">
-                                <div className="grid grid-cols-12 gap-2 items-center mb-2">
-                                    <div className="col-span-5 flex items-center gap-2">
-                                        <Fuel size={14} className="text-yellow-500"/>
-                                        <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="text-sm font-bold h-8" />
-                                        <Badge variant="outline" className="ml-auto shrink-0">{s.gallons || 0} gal</Badge>
-                                    </div>
-                                    <div className="col-span-3">
-                                        <Input type="number" value={s.weight} onChange={(e) => handleFuelChange(s.id, 'weight', e.target.value)} className="text-sm text-right h-8" />
-                                    </div>
-                                    <div className="col-span-3">
-                                        <Input type="number" value={s.arm} onChange={(e) => handleFuelChange(s.id, 'arm', e.target.value)} className="text-sm text-right h-8" />
-                                    </div>
-                                    <div className="col-span-1 flex justify-end">
-                                        <Button onClick={() => removeStation(s.id)} variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16}/></Button>
-                                    </div>
-                                </div>
-                                <input type="range" min="0" max={s.maxGallons || 50} value={s.gallons || 0} 
-                                        onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
-                                        className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-yellow-500 block" />
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-12 gap-2 items-center py-1">
-                                <div className="col-span-5">
-                                    <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} placeholder="Item Name" className="h-8" />
+                        <div className="space-y-1">
+                        <Label htmlFor="bew-moment">Moment</Label>
+                        <Input id="bew-moment" type="number" value={basicEmpty.moment} onChange={(e) => handleBasicEmptyChange('moment', e.target.value)} />
+                    </div>
+                </div>
+            </div>
+
+            <Separator />
+            
+            {/* Loading Stations */}
+            <div>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">Loading Stations</h3>
+                        <div className="flex gap-2">
+                        <Button onClick={clearStations} variant="destructive" size="icon" title="Clear all"><Trash2 size={16}/></Button>
+                        <Button onClick={() => addStation('fuel')} variant="outline" size="sm" title="Add Fuel Tank"><Fuel size={16} className='mr-2'/> Fuel</Button>
+                        <Button onClick={() => addStation('standard')} variant="outline" size="sm"><Plus size={16} className='mr-2'/> Add</Button>
+                    </div>
+                </div>
+                <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground font-bold px-1 mb-2 tracking-wider">
+                    <div className="col-span-5">Station</div>
+                    <div className="col-span-3 text-right">Weight</div>
+                    <div className="col-span-3 text-right">Arm</div>
+                </div>
+                <div className="space-y-2">
+                {stations.map((s) => (
+                    <div key={s.id} className="group relative">
+                    {s.type === 'fuel' ? (
+                        <div className="p-2 border rounded-lg bg-secondary/20">
+                            <div className="grid grid-cols-12 gap-2 items-center mb-2">
+                                <div className="col-span-5 flex items-center gap-2">
+                                    <Fuel size={14} className="text-yellow-500"/>
+                                    <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="text-sm font-bold h-8" />
+                                    <Badge variant="outline" className="ml-auto shrink-0">{s.gallons || 0} gal</Badge>
                                 </div>
                                 <div className="col-span-3">
-                                    <Input type="number" value={s.weight} onChange={(e) => updateStation(s.id, 'weight', e.target.value)} className="text-right h-8" />
+                                    <Input type="number" value={s.weight} onChange={(e) => handleFuelChange(s.id, 'weight', e.target.value)} className="text-sm text-right h-8" />
                                 </div>
                                 <div className="col-span-3">
-                                    <Input type="number" value={s.arm} onChange={(e) => updateStation(s.id, 'arm', e.target.value)} className="text-right h-8" />
+                                    <Input type="number" value={s.arm} onChange={(e) => handleFuelChange(s.id, 'arm', e.target.value)} className="text-sm text-right h-8" />
                                 </div>
                                 <div className="col-span-1 flex justify-end">
-                                    <Button onClick={() => removeStation(s.id)} variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></Button>
+                                    <Button onClick={() => removeStation(s.id)} variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8"><Trash2 size={16}/></Button>
                                 </div>
                             </div>
-                        )}
+                            <input type="range" min="0" max={s.maxGallons || 50} value={s.gallons || 0} 
+                                    onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
+                                    className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-yellow-500 block" />
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-12 gap-2 items-center py-1">
+                            <div className="col-span-5">
+                                <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} placeholder="Item Name" className="h-8" />
+                            </div>
+                            <div className="col-span-3">
+                                <Input type="number" value={s.weight} onChange={(e) => updateStation(s.id, 'weight', e.target.value)} className="text-right h-8" />
+                            </div>
+                            <div className="col-span-3">
+                                <Input type="number" value={s.arm} onChange={(e) => updateStation(s.id, 'arm', e.target.value)} className="text-right h-8" />
+                            </div>
+                            <div className="col-span-1 flex justify-end">
+                                <Button onClick={() => removeStation(s.id)} variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></Button>
+                            </div>
+                        </div>
+                    )}
+                    </div>
+                ))}
+                </div>
+            </div>
+
+            <Separator />
+            
+            {/* Chart Configuration */}
+            <div>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">Chart Configuration</h3>
+                    <Button onClick={handleAutoFit} variant="outline" size="sm"><Maximize size={16} className='mr-2'/> Auto-Fit</Button>
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                    <div><Label>Min CG</Label><Input type="number" value={graphConfig.xMin} onChange={(e) => setGraphConfig({...graphConfig, xMin: e.target.value as any})} /></div>
+                    <div><Label>Max CG</Label><Input type="number" value={graphConfig.xMax} onChange={(e) => setGraphConfig({...graphConfig, xMax: e.target.value as any})} /></div>
+                    <div><Label>Min Weight</Label><Input type="number" value={graphConfig.yMin} onChange={(e) => setGraphConfig({...graphConfig, yMin: e.target.value as any})} /></div>
+                    <div><Label>Max Weight</Label><Input type="number" value={graphConfig.yMax} onChange={(e) => setGraphConfig({...graphConfig, yMax: e.target.value as any})} /></div>
+                </div>
+                <Label>Envelope Points</Label>
+                <div className="space-y-2 mt-2">
+                    {graphConfig.envelope.map((pt, i) => (
+                        <div key={i} className="flex gap-2 items-center">
+                            <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs text-white font-bold" style={{ backgroundColor: POINT_COLORS[i % POINT_COLORS.length] }}>{i + 1}</div>
+                            <Input type="number" value={pt.x} onChange={(e) => updateEnvelopePoint(i, 'x', e.target.value)} placeholder="CG (X)" />
+                            <Input type="number" value={pt.y} onChange={(e) => updateEnvelopePoint(i, 'y', e.target.value)} placeholder="Weight (Y)" />
+                            <Button onClick={() => removeEnvelopePoint(i)} variant="ghost" size="icon"><Trash2 className="text-destructive"/></Button>
                         </div>
                     ))}
-                    </div>
-                </CardContent>
-            </Card>
-
-             <Card>
-                <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <CardTitle>Chart Configuration</CardTitle>
-                        <Button onClick={handleAutoFit} variant="outline" size="sm"><Maximize size={16} className='mr-2'/> Auto-Fit</Button>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div><Label>Min CG</Label><Input type="number" value={graphConfig.xMin} onChange={(e) => setGraphConfig({...graphConfig, xMin: e.target.value as any})} /></div>
-                        <div><Label>Max CG</Label><Input type="number" value={graphConfig.xMax} onChange={(e) => setGraphConfig({...graphConfig, xMax: e.target.value as any})} /></div>
-                        <div><Label>Min Weight</Label><Input type="number" value={graphConfig.yMin} onChange={(e) => setGraphConfig({...graphConfig, yMin: e.target.value as any})} /></div>
-                        <div><Label>Max Weight</Label><Input type="number" value={graphConfig.yMax} onChange={(e) => setGraphConfig({...graphConfig, yMax: e.target.value as any})} /></div>
-                    </div>
-                    <Separator className="my-4" />
-                    <Label>Envelope Points</Label>
-                    <div className="space-y-2 mt-2">
-                        {graphConfig.envelope.map((pt, i) => (
-                            <div key={i} className="flex gap-2 items-center">
-                                <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs text-white font-bold" style={{ backgroundColor: POINT_COLORS[i % POINT_COLORS.length] }}>{i + 1}</div>
-                                <Input type="number" value={pt.x} onChange={(e) => updateEnvelopePoint(i, 'x', e.target.value)} placeholder="CG (X)" />
-                                <Input type="number" value={pt.y} onChange={(e) => updateEnvelopePoint(i, 'y', e.target.value)} placeholder="Weight (Y)" />
-                                <Button onClick={() => removeEnvelopePoint(i)} variant="ghost" size="icon"><Trash2 className="text-destructive"/></Button>
-                            </div>
-                        ))}
-                    </div>
-                    <Button onClick={addEnvelopePoint} variant="outline" className="w-full mt-2"><Plus size={16} className="mr-2"/> Add Point</Button>
-                </CardContent>
-             </Card>
-        </div>
-
-        <div className="lg:col-span-7 flex flex-col">
-            <Card className="h-full">
-                <CardContent className="p-4 relative min-h-[600px] flex flex-col justify-center items-center overflow-hidden">
-                    {offScreenStatus && <OffScreenWarning direction={offScreenStatus.dir} value={offScreenStatus.val} label={offScreenStatus.axis === 'x' ? 'CG' : 'Weight'} />}
-                    <ResponsiveContainer width="100%" height={600}>
-                        <ScatterChart margin={{ top: 20, right: 30, bottom: 40, left: 40 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[finalXMin, finalXMax]} ticks={xAxisTicks} allowDataOverflow={true} dy={10}>
-                            <RechartsLabel value="CG (inches)" offset={0} position="insideBottom" dy={10} />
-                        </XAxis>
-                        <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[finalYMin, finalYMax]} ticks={yAxisTicks} allowDataOverflow={true}>
-                            <RechartsLabel value="Gross Weight (lbs)" angle={-90} position="insideLeft" />
-                        </YAxis>
-                        <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                        <Scatter name="Envelope Line" data={graphConfig.envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} isAnimationActive={false} />
-                        <Scatter name="Envelope Points" data={graphConfig.envelope} isAnimationActive={false}>
-                            {graphConfig.envelope.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={POINT_COLORS[index % POINT_COLORS.length]} stroke="hsl(var(--primary-foreground))" strokeWidth={1}/>
-                            ))}
-                        </Scatter>
-                        <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="hsl(var(--primary-foreground))" strokeWidth={2} />
-                        </ScatterChart>
-                    </ResponsiveContainer>
-                    <p className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-red-600 font-bold text-xs md:text-sm uppercase tracking-widest pointer-events-none whitespace-nowrap">
-                         CONSULT AIRCRAFT POH BEFORE FLIGHT
-                    </p>
-                    <div className={cn("absolute bottom-4 right-4 px-3 py-1 rounded-full font-bold shadow-lg flex items-center gap-2", results.isSafe ? 'bg-green-600/90 text-white' : 'bg-destructive text-white')}>
-                        <div className={cn("w-2 h-2 rounded-full", results.isSafe ? 'bg-white' : 'bg-white animate-pulse')}></div>
-                        <span className="text-xs">{results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}</span>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-      </div>
+                </div>
+                <Button onClick={addEnvelopePoint} variant="outline" className="w-full mt-2"><Plus size={16} className="mr-2"/> Add Point</Button>
+            </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
+
+export default WBCalculator;
