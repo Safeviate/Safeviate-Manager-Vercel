@@ -335,36 +335,44 @@ export function ConfiguratorTab() {
   const saveToFirebase = () => {
     if (!firestore || !modelNameForSave)
       return toast({ variant: 'destructive', title: 'Model Name Required' });
-
+  
     const [make, ...modelParts] = modelNameForSave.split(' ');
     const model = modelParts.join(' ');
-    
+  
+    const allStations = [
+      { id: 1, name: 'Basic Empty Weight', weight: basicEmpty.weight, arm: basicEmpty.arm },
+      ...stations,
+    ];
+  
+    // Create the stationArms object for the Aircraft entity schema
+    const stationArms = stations.reduce((acc, st) => {
+        const nameLower = st.name.toLowerCase();
+        if (nameLower.includes('front')) acc.frontSeats = st.arm;
+        else if (nameLower.includes('rear')) acc.rearSeats = st.arm;
+        else if (st.type === 'fuel') acc.fuel = st.arm;
+        else if (nameLower.includes('baggage 1')) acc.baggage1 = st.arm;
+        else if (nameLower.includes('baggage 2')) acc.baggage2 = st.arm;
+        return acc;
+    }, {} as Record<string, number>);
+  
+  
     const profileData = {
-        make: make || 'Unknown',
-        model: model || modelNameForSave,
-        emptyWeight: basicEmpty.weight,
-        emptyWeightMoment: basicEmpty.moment,
-        maxTakeoffWeight: graphConfig.yMax,
-        stationArms: stations.reduce((acc, st) => {
-            const nameLower = st.name.toLowerCase();
-            if (nameLower.includes('front')) acc.frontSeats = st.arm;
-            else if (nameLower.includes('rear')) acc.rearSeats = st.arm;
-            else if (st.type === 'fuel') acc.fuel = st.arm;
-            else if (nameLower.includes('baggage 1')) acc.baggage1 = st.arm;
-            else if (nameLower.includes('baggage 2')) acc.baggage2 = st.arm;
-            return acc;
-        }, {}),
-        cgEnvelope: graphConfig.envelope.map(p => [p.y, p.x]),
-        xMin: graphConfig.xMin,
-        xMax: graphConfig.xMax,
-        yMin: graphConfig.yMin,
-        yMax: graphConfig.yMax,
-        stations: [
-            { id: 1, name: 'Basic Empty Weight', weight: basicEmpty.weight, arm: basicEmpty.arm },
-            ...stations,
-        ]
+      make: make || 'Unknown',
+      model: model || modelNameForSave,
+      // From Aircraft entity schema
+      emptyWeight: basicEmpty.weight,
+      emptyWeightMoment: basicEmpty.moment,
+      maxTakeoffWeight: graphConfig.yMax,
+      stationArms: stationArms,
+      // From AircraftModelProfile entity schema for configurator/template use
+      stations: allStations,
+      cgEnvelope: graphConfig.envelope.map(p => ({ x: p.x, y: p.y })),
+      xMin: graphConfig.xMin,
+      xMax: graphConfig.xMax,
+      yMin: graphConfig.yMin,
+      yMax: graphConfig.yMax,
     };
-
+  
     const collectionRef = collection(
       firestore,
       'tenants',
@@ -833,3 +841,5 @@ export function ConfiguratorTab() {
 }
 
 export default ConfiguratorTab;
+
+    
