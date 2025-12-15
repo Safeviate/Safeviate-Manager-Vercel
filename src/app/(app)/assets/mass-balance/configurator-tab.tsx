@@ -231,14 +231,21 @@ export function ConfiguratorTab() {
     setStations(
       stations.map((s) => {
         if (s.id !== id) return s;
-        if (field === 'gallons')
-          return { ...s, gallons: val, weight: val * FUEL_WEIGHT_PER_GALLON };
-        if (field === 'weight')
-          return {
-            ...s,
-            weight: val,
-            gallons: parseFloat((val / FUEL_WEIGHT_PER_GALLON).toFixed(1)),
-          };
+
+        if (field === 'gallons') {
+            const finalGallons = Math.min(val, s.maxGallons || val);
+            return { ...s, gallons: finalGallons, weight: finalGallons * FUEL_WEIGHT_PER_GALLON };
+        }
+        if (field === 'weight') {
+            const calculatedGallons = parseFloat((val / FUEL_WEIGHT_PER_GALLON).toFixed(1));
+            const finalGallons = Math.min(calculatedGallons, s.maxGallons || calculatedGallons);
+            const finalWeight = finalGallons * FUEL_WEIGHT_PER_GALLON;
+            return {
+                ...s,
+                weight: finalWeight,
+                gallons: finalGallons,
+            };
+        }
         return { ...s, [field]: val };
       })
     );
