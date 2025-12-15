@@ -15,7 +15,7 @@ import {
   Cell,
 } from 'recharts';
 import { collection } from 'firebase/firestore';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
 import {
   Save,
@@ -51,6 +51,14 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
+import type { AircraftModelProfile } from './template-form';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+  } from '@/components/ui/select';
 
 const POINT_COLORS = [
   '#ef4444',
@@ -175,6 +183,14 @@ export function ConfiguratorTab() {
   ]);
 
   const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
+
+  // --- Fetch Templates ---
+  const profilesQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'tenants', 'safeviate', 'aircraftModelProfiles') : null),
+    [firestore]
+  );
+  const { data: profiles, isLoading: isLoadingProfiles } = useCollection<AircraftModelProfile>(profilesQuery);
+
 
   useEffect(() => {
     let totalMom = parseFloat(basicEmpty.moment as any) || 0;
@@ -330,6 +346,37 @@ export function ConfiguratorTab() {
       ]);
       setModelNameForSave('Piper PA-28-180');
     }
+  };
+
+  const handleLoadTemplate = (templateId: string) => {
+    const template = profiles?.find(p => p.id === templateId);
+    if (!template) return;
+
+    setModelNameForSave(`${template.make} ${template.model}`);
+    
+    // Separate BEW from other stations
+    const bewStation = template.stations?.find(s => s.name === 'Basic Empty Weight');
+    const otherStations = template.stations?.filter(s => s.name !== 'Basic Empty Weight') || [];
+
+    setBasicEmpty({
+        weight: bewStation?.weight || template.emptyWeight || 0,
+        moment: (bewStation?.weight || template.emptyWeight || 0) * (bewStation?.arm || 0) || template.emptyWeightMoment || 0,
+        arm: bewStation?.arm || 0,
+    });
+    setStations(otherStations);
+
+    setGraphConfig({
+        xMin: template.xMin || 0,
+        xMax: template.xMax || 100,
+        yMin: template.yMin || 0,
+        yMax: template.yMax || 3000,
+        envelope: template.cgEnvelope || [],
+    });
+
+    toast({
+        title: "Template Loaded",
+        description: `Loaded the W&B profile for ${template.make} ${template.model}.`,
+    });
   };
 
   const saveToFirebase = () => {
@@ -568,14 +615,29 @@ export function ConfiguratorTab() {
         </CardContent>
         <CardContent className="p-6">
         <div className='space-y-4'>
-            <div>
-              <Label htmlFor="model-name">Model Name</Label>
-              <Input
-                  id="model-name"
-                  value={modelNameForSave}
-                  onChange={(e) => setModelNameForSave(e.target.value)}
-                  placeholder="e.g., Piper PA 28 180"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <Label htmlFor="model-name">Template Name</Label>
+                    <Input
+                        id="model-name"
+                        value={modelNameForSave}
+                        onChange={(e) => setModelNameForSave(e.target.value)}
+                        placeholder="e.g., Piper PA 28 180"
+                    />
+                </div>
+                 <div>
+                    <Label>Load Saved Template</Label>
+                    <Select onValueChange={handleLoadTemplate} disabled={isLoadingProfiles}>
+                        <SelectTrigger>
+                            <SelectValue placeholder={isLoadingProfiles ? "Loading templates..." : "Select a template"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {(profiles || []).map(p => (
+                                <SelectItem key={p.id} value={p.id}>{p.make} {p.model}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                 </div>
             </div>
 
             <Separator />
@@ -665,7 +727,7 @@ export function ConfiguratorTab() {
                                         </div>
                                         <div className="grid grid-cols-12 gap-2 items-center">
                                             <div className="col-span-5">
-                                                <Input value="Gallons" readOnly disabled className="text-xs text-muted-foreground h-8"/>
+                                                <Input value="Gallons" readOnly disabled className="text-xs text-muted-foreground h-8 col-span-2"/>
                                             </div>
                                             <div className="col-span-3">
                                                 <Input
@@ -841,5 +903,3 @@ export function ConfiguratorTab() {
 }
 
 export default ConfiguratorTab;
-
-    
