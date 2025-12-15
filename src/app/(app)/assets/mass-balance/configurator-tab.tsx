@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -399,3 +400,5 @@ export function ConfiguratorTab() {
 };
 
 export default WBCalculator;
+
+    
