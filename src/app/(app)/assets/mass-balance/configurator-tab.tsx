@@ -642,8 +642,8 @@ export function ConfiguratorTab() {
                                         </div>
                                         <div className="space-y-2">
                                             <div className="grid grid-cols-2 gap-4 items-center">
-                                                <div className='flex items-center gap-2'>
-                                                    <Label htmlFor={`gallons-${s.id}`} className='text-xs text-muted-foreground flex-shrink-0'>Gallons:</Label>
+                                                <div className="grid grid-cols-2 gap-2 items-center">
+                                                    <Input value="Gallons" readOnly disabled className="text-xs text-muted-foreground h-8" />
                                                     <Input
                                                         id={`gallons-${s.id}`}
                                                         type="number"
