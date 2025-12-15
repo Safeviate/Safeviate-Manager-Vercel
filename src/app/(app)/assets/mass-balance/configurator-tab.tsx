@@ -2,30 +2,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  ScatterChart,
-  Scatter,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Label as RechartsLabel,
-  ReferenceDot,
-  Cell,
-} from 'recharts';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label as RechartsLabel, ReferenceDot, Cell } from 'recharts';
+import { useToast } from '@/hooks/use-toast';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, Plus, Trash2, Maximize, RotateCcw, Fuel, AlertTriangle } from 'lucide-react';
+import { Save, Plus, Trash2, RotateCcw, Maximize, Fuel, AlertTriangle } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
-
+import { cn } from '@/lib/utils';
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
+const FUEL_WEIGHT_PER_GALLON = 6; 
 
 // --- HELPER 1: Generate "Nice" Ticks ---
 const generateNiceTicks = (min: number, max: number, stepCount = 6) => {
@@ -62,18 +50,18 @@ const generateNiceTicks = (min: number, max: number, stepCount = 6) => {
 
 // --- HELPER 2: Visual Warning Component ---
 const OffScreenWarning = ({ direction, value, label }: { direction: string; value: number; label: string; }) => (
-    <div className={`absolute top-1/2 ${direction === 'left' ? 'left-4' : 'right-4'} transform -translate-y-1/2 bg-destructive/90 border border-red-500 text-white p-3 rounded shadow-xl z-10 flex flex-col items-center animate-pulse`}>
-      <AlertTriangle className="text-red-400 mb-1" size={24} />
-      <span className="font-bold text-xs uppercase">{label} Off Scale!</span>
-      <span className="text-lg font-mono">{value}</span>
-      <span className="text-xs text-muted-foreground">
-        {direction === 'left' ? '← Move Left' : 'Move Right →'}
-      </span>
-    </div>
-  );
+  <div className={`absolute top-1/2 ${direction === 'left' ? 'left-4' : 'right-4'} transform -translate-y-1/2 bg-destructive/90 border border-red-500 text-white p-3 rounded shadow-xl z-10 flex flex-col items-center animate-pulse`}>
+    <AlertTriangle className="text-red-400 mb-1" size={24} />
+    <span className="font-bold text-xs uppercase">{label} Off Scale!</span>
+    <span className="text-lg font-mono">{value}</span>
+    <span className="text-xs text-muted-foreground">
+      {direction === 'left' ? '← Move Left' : 'Move Right →'}
+    </span>
+  </div>
+);
 
 export default function ConfiguratorTab() {
-  const { toast } = useToast();
+    const { toast } = useToast();
   // 1. STATE: Graph Config
   const [graphConfig, setGraphConfig] = useState({
     modelName: "Piper PA-28-180",
@@ -156,7 +144,7 @@ export default function ConfiguratorTab() {
   };
 
   const handleAutoFit = () => {
-    if (graphConfig.envelope.length < 2) return toast({title: "Add points first!", variant: 'destructive'});
+    if (graphConfig.envelope.length < 2) return toast({ title: "Add points first!", variant: 'destructive'});
     const xValues = graphConfig.envelope.map(p => p.x);
     const minX = Math.floor(Math.min(...xValues) - 1); 
     const maxX = Math.ceil(Math.max(...xValues) + 1);
@@ -238,112 +226,137 @@ export default function ConfiguratorTab() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         <div className="lg:col-span-5 space-y-6 h-[85vh] overflow-y-auto pr-2">
-          
-          <Card>
-             <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-primary"></span> 
-                    1. Basic Empty Weight
-                </CardTitle>
-             </CardHeader>
-             <CardContent className="grid grid-cols-3 gap-3">
-                <div className="group space-y-1">
-                    <Label htmlFor="bew-weight" className="text-xs">Weight</Label>
-                    <Input id="bew-weight" type="number" value={basicEmpty.weight} onChange={(e) => handleBasicEmptyChange('weight', e.target.value)} 
-                        className="font-mono text-right" />
-                </div>
-                <div className="group space-y-1">
-                    <Label htmlFor="bew-arm" className="text-xs">Arm</Label>
-                    <Input id="bew-arm" type="number" value={basicEmpty.arm} onChange={(e) => handleBasicEmptyChange('arm', e.target.value)} 
-                        className="font-mono text-right" />
-                </div>
-                <div className="group space-y-1">
-                    <Label htmlFor="bew-moment" className="text-xs">Moment</Label>
-                    <Input id="bew-moment" type="number" value={basicEmpty.moment} onChange={(e) => handleBasicEmptyChange('moment', e.target.value)} 
-                        className="font-mono text-right" />
-                </div>
-             </CardContent>
-          </Card>
-
-          <Card>
-             <CardHeader className="flex flex-row justify-between items-center">
-              <CardTitle className="text-lg flex items-center gap-2">
-                 <span className="w-2 h-2 rounded-full bg-primary"></span>
-                 2. Loading Stations
-              </CardTitle>
-              <div className="flex gap-2">
-                <Button onClick={clearStations} variant="destructive" size="icon" className='h-8 w-8' title="Clear all"><Trash2 size={12}/></Button>
-                <Button onClick={addStation} variant="secondary" size="sm"><Plus size={12}/> Add</Button>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-3">
-              {stations.map((s) => (
-                <div key={s.id} className="bg-muted/30 p-3 rounded-lg border">
-                  <div className="flex justify-between items-center mb-2">
-                    <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="bg-transparent text-sm font-bold border-b border-border focus:border-primary w-full mr-2" placeholder="Station Name" />
-                    <Button onClick={() => removeStation(s.id)} variant="ghost" className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"><Trash2 size={14}/></Button>
-                  </div>
-
-                  {s.type === 'fuel' ? (
-                     <div className="space-y-3">
-                        <div className="flex items-center gap-2 bg-background p-1 rounded-full border">
-                            <Fuel size={14} className="text-yellow-500 ml-1"/>
-                            <input type="range" min="0" max={s.maxGallons || 50} value={s.gallons || 0} 
-                                onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
-                                className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-yellow-500 mr-1" />
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                            <div><Label className="text-[9px] uppercase tracking-wider">Gallons</Label><Input type="number" value={s.gallons || 0} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)} className="text-xs text-right text-yellow-400" /></div>
-                            <div><Label className="text-[9px] uppercase tracking-wider">Weight</Label><Input type="number" value={s.weight} onChange={(e) => handleFuelChange(s.id, 'weight', e.target.value)} className="text-xs text-right" /></div>
-                            <div><Label className="text-[9px] uppercase tracking-wider">Arm</Label><Input type="number" value={s.arm} onChange={(e) => handleFuelChange(s.id, 'arm', e.target.value)} className="text-xs text-right" /></div>
-                        </div>
-                     </div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-3">
-                        <div><Label className="text-[9px] uppercase tracking-wider">Weight</Label><Input type="number" value={s.weight} onChange={(e) => updateStation(s.id, 'weight', e.target.value)} className="text-xs text-right" /></div>
-                        <div><Label className="text-[9px] uppercase tracking-wider">Arm</Label><Input type="number" value={s.arm} onChange={(e) => updateStation(s.id, 'arm', e.target.value)} className="text-xs text-right" /></div>
+            <Card>
+                <CardHeader>
+                    <CardTitle className='flex items-center gap-2'>
+                        <span className="w-2 h-2 rounded-full bg-primary"></span> 
+                        1. Basic Empty Weight
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-3 gap-3">
+                    <div className="group space-y-1">
+                        <Label htmlFor="bew-weight" className="text-xs">Weight</Label>
+                        <Input id="bew-weight" type="number" value={basicEmpty.weight} onChange={(e) => handleBasicEmptyChange('weight', e.target.value)} className="font-mono text-right" />
                     </div>
-                  )}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                    <div className="group space-y-1">
+                        <Label htmlFor="bew-arm" className="text-xs">Arm</Label>
+                        <Input id="bew-arm" type="number" value={basicEmpty.arm} onChange={(e) => handleBasicEmptyChange('arm', e.target.value)} className="font-mono text-right" />
+                    </div>
+                    <div className="group space-y-1">
+                        <Label htmlFor="bew-moment" className="text-xs">Moment</Label>
+                        <Input id="bew-moment" type="number" value={basicEmpty.moment} onChange={(e) => handleBasicEmptyChange('moment', e.target.value)} className="font-mono text-right" />
+                    </div>
+                </CardContent>
+            </Card>
+            
+            <Card>
+                <CardHeader className="flex flex-row justify-between items-center">
+                    <CardTitle className='flex items-center gap-2'>
+                        <span className="w-2 h-2 rounded-full bg-primary"></span> 
+                        2. Loading Stations
+                    </CardTitle>
+                    <div className="flex gap-2">
+                        <Button onClick={clearStations} variant="destructive" size="icon" className='h-8 w-8' title="Clear all"><Trash2 size={12}/></Button>
+                        <Button onClick={addStation} variant="secondary" size="sm"><Plus size={12}/> Add</Button>
+                    </div>
+                </CardHeader>
+                <CardContent className='space-y-1'>
+                    <div className="grid grid-cols-12 gap-2 text-[9px] uppercase text-muted-foreground font-bold px-1 mb-2 tracking-wider">
+                        <div className="col-span-5">Station</div>
+                        <div className="col-span-3 text-right">Weight</div>
+                        <div className="col-span-3 text-right">Arm</div>
+                        <div className="col-span-1"></div>
+                    </div>
 
-          <Card>
-            <CardHeader className="flex flex-row justify-between items-center">
-               <CardTitle className="text-lg flex items-center gap-2">
-                 <span className="w-2 h-2 rounded-full bg-primary"></span>
-                 3. Chart Config
-               </CardTitle>
-               <Button onClick={handleAutoFit} variant="outline" size="sm" className="text-xs">
-                  <Maximize size={10} className="mr-1"/> Auto-Fit
-               </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div><Label className="text-xs">Min CG</Label><Input type="number" value={graphConfig.xMin} onChange={(e) => setGraphConfig({...graphConfig, xMin: Number(e.target.value)})} className="text-xs" /></div>
-                <div><Label className="text-xs">Max CG</Label><Input type="number" value={graphConfig.xMax} onChange={(e) => setGraphConfig({...graphConfig, xMax: Number(e.target.value)})} className="text-xs" /></div>
-                <div><Label className="text-xs">Min Weight</Label><Input type="number" value={graphConfig.yMin} onChange={(e) => setGraphConfig({...graphConfig, yMin: Number(e.target.value)})} className="text-xs" /></div>
-                <div><Label className="text-xs">Max Weight</Label><Input type="number" value={graphConfig.yMax} onChange={(e) => setGraphConfig({...graphConfig, yMax: Number(e.target.value)})} className="text-xs" /></div>
-              </div>
-              <div className="space-y-1 max-h-32 overflow-y-auto">
-                {graphConfig.envelope.map((pt, i) => (
-                    <div key={i} className="flex gap-1 items-center">
-                        <div className="w-5 h-5 rounded flex items-center justify-center text-[10px] text-black font-bold" style={{ backgroundColor: POINT_COLORS[i % POINT_COLORS.length] }}>{i + 1}</div>
-                        <Input type="number" value={pt.x} onChange={(e) => updateEnvelopePoint(i, 'x', e.target.value)} className="h-8 text-xs text-center" />
-                        <Input type="number" value={pt.y} onChange={(e) => updateEnvelopePoint(i, 'y', e.target.value)} className="h-8 text-xs text-center" />
+                    {stations.map((s) => (
+                    <div key={s.id} className="group relative border-b border-border last:border-0 pb-2 mb-1">
+                    {s.type === 'fuel' ? (
+                        <div className="pt-1">
+                            <div className="grid grid-cols-12 gap-2 items-center mb-1">
+                                <div className="col-span-5 flex items-center gap-2">
+                                    <Fuel size={12} className="text-yellow-500"/>
+                                    <span className="text-sm font-bold">{s.name}</span>
+                                    <div className="flex items-center bg-muted border rounded px-1 ml-auto">
+                                        <Input type="number" value={s.gallons || 0} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)} 
+                                            className="w-8 bg-transparent text-xs text-right text-yellow-400 outline-none p-0.5 border-none shadow-none focus-visible:ring-0" />
+                                        <span className="text-[9px] text-muted-foreground ml-1">gal</span>
+                                    </div>
+                                </div>
+                                <div className="col-span-3">
+                                    <Input type="number" value={s.weight} onChange={(e) => handleFuelChange(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" />
+                                </div>
+                                <div className="col-span-3">
+                                    <Input type="number" value={s.arm} onChange={(e) => handleFuelChange(s.id, 'arm', e.target.value)} className="w-full p-1 text-sm text-right" />
+                                </div>
+                                <div className="col-span-1 flex justify-end">
+                                    <Button onClick={() => removeStation(s.id)} variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-6 w-6"><Trash2 size={12}/></Button>
+                                </div>
+                            </div>
+                            <input type="range" min="0" max={s.maxGallons || 50} value={s.gallons || 0} 
+                                    onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
+                                    className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-yellow-500 block" />
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-12 gap-2 items-center py-1">
+                            <div className="col-span-5">
+                                <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="bg-transparent text-sm font-medium text-foreground border-none shadow-none focus-visible:ring-0 p-1" placeholder="Item Name" />
+                            </div>
+                            <div className="col-span-3">
+                                <Input type="number" value={s.weight} onChange={(e) => updateStation(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" />
+                            </div>
+                            <div className="col-span-3">
+                                <Input type="number" value={s.arm} onChange={(e) => updateStation(s.id, 'arm', e.target.value)} className="w-full p-1 text-sm text-right" />
+                            </div>
+                            <div className="col-span-1 flex justify-end">
+                                <Button onClick={() => removeStation(s.id)} variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-6 w-6 opacity-0 group-hover:opacity-100"><Trash2 size={12}/></Button>
+                            </div>
+                        </div>
+                    )}
                     </div>
                 ))}
-                <Button onClick={addEnvelopePoint} variant="secondary" className="w-full h-8 text-xs mt-2"><Plus size={12} className="mr-1"/> Add Point</Button>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader className="flex-row items-center justify-between">
+                    <CardTitle className='flex items-center gap-2'>
+                        <span className="w-2 h-2 rounded-full bg-primary"></span> 
+                        3. Chart Config
+                    </CardTitle>
+                    <Button onClick={handleAutoFit} variant="outline" size="sm" className="text-xs">
+                        <Maximize size={10} className="mr-1"/> Auto-Fit
+                    </Button>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div><Label className="text-xs">Min CG</Label><Input type="number" value={graphConfig.xMin} onChange={(e) => setGraphConfig({...graphConfig, xMin: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
+                        <div><Label className="text-xs">Max CG</Label><Input type="number" value={graphConfig.xMax} onChange={(e) => setGraphConfig({...graphConfig, xMax: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
+                        <div><Label className="text-xs">Min Weight</Label><Input type="number" value={graphConfig.yMin} onChange={(e) => setGraphConfig({...graphConfig, yMin: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
+                        <div><Label className="text-xs">Max Weight</Label><Input type="number" value={graphConfig.yMax} onChange={(e) => setGraphConfig({...graphConfig, yMax: Number(e.target.value)})} className="p-1.5 text-xs" /></div>
+                    </div>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {graphConfig.envelope.map((pt, i) => (
+                            <div key={i} className="flex gap-1 items-center">
+                                <div className="w-5 h-5 rounded flex items-center justify-center text-[10px] text-black font-bold" style={{ backgroundColor: POINT_COLORS[i % POINT_COLORS.length] }}>{i + 1}</div>
+                                <Input type="number" value={pt.x} onChange={(e) => updateEnvelopePoint(i, 'x', e.target.value)} className="h-8 p-1 text-xs text-center" />
+                                <Input type="number" value={pt.y} onChange={(e) => updateEnvelopePoint(i, 'y', e.target.value)} className="h-8 p-1 text-xs text-center" />
+                            </div>
+                        ))}
+                        <Button onClick={addEnvelopePoint} variant="secondary" className="w-full h-8 text-xs mt-2"><Plus size={12} className="mr-1"/> Add Point</Button>
+                    </div>
+                </CardContent>
+            </Card>
+
         </div>
 
+        {/* RIGHT COLUMN: GRAPH */}
         <div className="lg:col-span-7 flex flex-col">
           <Card className="p-4 relative min-h-[600px] flex flex-col justify-center items-center overflow-hidden">
              
+             {offScreenStatus && (
+               <OffScreenWarning direction={offScreenStatus.dir} value={offScreenStatus.val} label={offScreenStatus.axis === 'x' ? 'CG' : 'Weight'} />
+             )}
+
              <ResponsiveContainer width="100%" height={600}>
                 <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -370,8 +383,8 @@ export default function ConfiguratorTab() {
                 Please consult aircraft POH before flight
               </p>
 
-              <div className={`absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 ${results.isSafe ? 'bg-green-600/90 text-white' : 'bg-red-600/90 text-white'}`}>
-                <div className={`w-2 h-2 rounded-full ${results.isSafe ? 'bg-white' : 'bg-white animate-pulse'}`}></div>
+              <div className={cn("absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2", results.isSafe ? 'bg-green-600/90 text-white' : 'bg-red-600/90 text-white')}>
+                <div className={cn("w-2 h-2 rounded-full", results.isSafe ? 'bg-white' : 'bg-white animate-pulse')}></div>
                 {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
               </div>
           </Card>
