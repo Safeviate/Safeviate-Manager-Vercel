@@ -380,8 +380,10 @@ export function ConfiguratorTab() {
   };
 
   const saveToFirebase = () => {
-    if (!firestore || !modelNameForSave)
-      return toast({ variant: 'destructive', title: 'Model Name Required' });
+    if (!firestore || !modelNameForSave) {
+      toast({ variant: 'destructive', title: 'Model Name Required' });
+      return;
+    }
   
     const [make, ...modelParts] = modelNameForSave.split(' ');
     const model = modelParts.join(' ');
@@ -402,18 +404,15 @@ export function ConfiguratorTab() {
         return acc;
     }, {} as Record<string, number>);
   
-  
-    const profileData = {
+    const profileData: Partial<AircraftModelProfile> = {
       make: make || 'Unknown',
       model: model || modelNameForSave,
-      // From Aircraft entity schema
       emptyWeight: basicEmpty.weight,
       emptyWeightMoment: basicEmpty.moment,
       maxTakeoffWeight: graphConfig.yMax,
       stationArms: stationArms,
-      // From AircraftModelProfile entity schema for configurator/template use
       stations: allStations,
-      cgEnvelope: graphConfig.envelope.map(p => ({ x: p.x, y: p.y })),
+      cgEnvelope: graphConfig.envelope,
       xMin: graphConfig.xMin,
       xMax: graphConfig.xMax,
       yMin: graphConfig.yMin,
