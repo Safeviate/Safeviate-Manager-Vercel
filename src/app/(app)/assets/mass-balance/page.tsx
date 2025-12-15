@@ -2,6 +2,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TemplatesTab } from './templates-tab';
+import { ConfiguratorTab } from './configurator-tab';
 
 export default function MassBalancePage() {
     return (
@@ -15,9 +16,13 @@ export default function MassBalancePage() {
             <Tabs defaultValue="templates" className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="templates">Templates</TabsTrigger>
+                    <TabsTrigger value="configurator">Configurator</TabsTrigger>
                 </TabsList>
                 <TabsContent value="templates">
                     <TemplatesTab />
+                </TabsContent>
+                <TabsContent value="configurator">
+                    <ConfiguratorTab />
                 </TabsContent>
             </Tabs>
         </div>
