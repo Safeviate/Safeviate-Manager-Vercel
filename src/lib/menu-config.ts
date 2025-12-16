@@ -1,4 +1,3 @@
-
 import {
   LayoutDashboard,
   Users,
@@ -77,34 +76,38 @@ export const menuConfig: MenuItem[] = [
     label: 'Assets',
     icon: Plane,
     subItems: [
-        {
-            href: '/assets/mass-balance',
-            label: 'Mass & Balance',
-        },
-    ]
+      {
+        href: '/assets',
+        label: 'Aircraft',
+      },
+      {
+        href: '/assets/mass-balance',
+        label: 'Mass & Balance',
+      },
+    ],
   },
   {
     href: '/users',
     label: 'Users',
     icon: Users,
     subItems: [
-        {
-            href: '/users/personnel',
-            label: 'Personnel',
-        },
-        {
-            href: '/users/instructors',
-            label: 'Instructors',
-        },
-        {
-            href: '/users/private-pilots',
-            label: 'Private Pilots',
-        },
-        {
-            href: '/users/students',
-            label: 'Students',
-        }
-    ]
+      {
+        href: '/users/personnel',
+        label: 'Personnel',
+      },
+      {
+        href: '/users/instructors',
+        label: 'Instructors',
+      },
+      {
+        href: '/users/private-pilots',
+        label: 'Private Pilots',
+      },
+      {
+        href: '/users/students',
+        label: 'Students',
+      },
+    ],
   },
   {
     href: '/admin',
@@ -143,18 +146,18 @@ export const menuConfig: MenuItem[] = [
     label: 'Development',
     icon: Code,
     subItems: [
-        {
-            href: '/development/database',
-            label: 'Tenant Creator',
-            description: 'Create new tenants with custom branding.',
-        },
-        {
-          href: '/development/test',
-          label: 'Test Page',
-          description: 'A test page for development purposes.'
-        }
-    ]
-  }
+      {
+        href: '/development/database',
+        label: 'Tenant Creator',
+        description: 'Create new tenants with custom branding.',
+      },
+      {
+        href: '/development/test',
+        label: 'Test Page',
+        description: 'A test page for development purposes.',
+      },
+    ],
+  },
 ];
 
 export const settingsMenuItem: MenuItem = {
