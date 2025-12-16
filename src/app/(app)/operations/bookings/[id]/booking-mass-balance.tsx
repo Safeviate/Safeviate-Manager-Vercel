@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
-import type { Booking } from '@/types/booking';
+import { useMemo, useState, useEffect } from 'react';
+import type { Booking, MassAndBalance } from '@/types/booking';
 import type { Aircraft } from '@/app/(app)/assets/page';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,8 @@ import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
 interface BookingMassBalanceProps {
     aircraft: Aircraft | null;
     booking: Booking | null;
+    onCalculationChange: (data: Omit<MassAndBalance, 'calculationTime'>) => void;
+    initialData?: MassAndBalance | null;
 }
 
 // --- Helper function to check if a point is inside a polygon ---
@@ -47,14 +49,14 @@ function isPointInPolygon(point: { x: number; y: number }, polygon: { x: number;
 }
 
 
-export function BookingMassBalance({ aircraft, booking }: BookingMassBalanceProps) {
+export function BookingMassBalance({ aircraft, booking, onCalculationChange, initialData }: BookingMassBalanceProps) {
     
     // --- State for Inputs ---
-    const [frontSeatWeight, setFrontSeatWeight] = useState(0);
-    const [rearSeatWeight, setRearSeatWeight] = useState(0);
-    const [baggage1Weight, setBaggage1Weight] = useState(0);
-    const [baggage2Weight, setBaggage2Weight] = useState(0);
-    const [fuelGallons, setFuelGallons] = useState(0);
+    const [frontSeatWeight, setFrontSeatWeight] = useState(initialData?.frontSeatWeight || 0);
+    const [rearSeatWeight, setRearSeatWeight] = useState(initialData?.rearSeatWeight || 0);
+    const [baggage1Weight, setBaggage1Weight] = useState(initialData?.baggage1Weight || 0);
+    const [baggage2Weight, setBaggage2Weight] = useState(initialData?.baggage2Weight || 0);
+    const [fuelGallons, setFuelGallons] = useState(initialData?.fuelGallons || 0);
     
     // --- Calculations ---
     const calculation = useMemo(() => {
@@ -89,6 +91,21 @@ export function BookingMassBalance({ aircraft, booking }: BookingMassBalanceProp
             takeoffWeight, takeoffCg, takeoffMoment,
         };
     }, [aircraft, frontSeatWeight, rearSeatWeight, baggage1Weight, baggage2Weight, fuelGallons]);
+    
+    useEffect(() => {
+        if (calculation) {
+            onCalculationChange({
+                frontSeatWeight,
+                rearSeatWeight,
+                baggage1Weight,
+                baggage2Weight,
+                fuelGallons,
+                takeoffWeight: calculation.takeoffWeight,
+                takeoffCg: calculation.takeoffCg,
+            })
+        }
+    }, [calculation, frontSeatWeight, rearSeatWeight, baggage1Weight, baggage2Weight, fuelGallons, onCalculationChange]);
+
 
     const cgEnvelopePoints = useMemo(() => aircraft?.cgEnvelope?.map(p => ({ weight: p.weight, cg: p.cg })) || [], [aircraft]);
     const polygonForCheck = useMemo(() => cgEnvelopePoints.map(p => ({ x: p.cg, y: p.weight })), [cgEnvelopePoints]);

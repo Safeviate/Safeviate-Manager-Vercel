@@ -11,7 +11,7 @@ import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useCol
 import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
-import type { Booking } from '@/types/booking';
+import type { Booking, MassAndBalance } from '@/types/booking';
 import type { FeatureSettings } from '../../admin/features/page';
 
 import { Button } from '@/components/ui/button';
@@ -47,9 +47,10 @@ import { deleteBookings, getNextBookingNumber } from './booking-functions';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ChevronsUpDown, AlertCircle, Pencil } from 'lucide-react';
+import { ChevronsUpDown, AlertCircle, Pencil, Save } from 'lucide-react';
 import type { ChecklistResponse, ChecklistItemResponse } from '@/types/checklist';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { BookingMassBalance } from './[id]/booking-mass-balance';
 
 interface BookingFormProps {
   tenantId: string;
@@ -135,6 +136,11 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const [postFlightOilUplift, setPostFlightOilUplift] = useState('');
   const [postFlightLeftOilUplift, setPostFlightLeftOilUplift] = useState('');
   const [postFlightRightOilUplift, setPostFlightRightOilUplift] = useState('');
+  
+  // Mass & Balance State
+  const [isMassBalanceOpen, setIsMassBalanceOpen] = useState(true);
+  const [massBalanceData, setMassBalanceData] = useState<Omit<MassAndBalance, 'calculationTime'> | null>(null);
+
 
   const checklistResponsesQuery = useMemoFirebase(
     () => {
@@ -524,6 +530,23 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     
     onClose();
   }
+
+  const handleSaveMassAndBalance = () => {
+    if (!firestore || !initialData?.booking || !massBalanceData) return;
+
+    const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', initialData.booking.id);
+    const dataToSave: MassAndBalance = {
+      ...massBalanceData,
+      calculationTime: Timestamp.now(),
+    }
+    updateDocumentNonBlocking(bookingRef, { massAndBalance: dataToSave });
+
+    toast({
+        title: "Mass & Balance Saved",
+        description: "The calculation has been saved to this booking.",
+    });
+  };
+
   
   if (!initialData) return null;
 
@@ -616,7 +639,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
           </DialogHeader>
           
           <Form {...form}>
-            <ScrollArea className="max-h-[60vh]">
+            <ScrollArea className="max-h-[70vh]">
               <div className="space-y-4 p-6">
                 <Collapsible open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
                   <CollapsibleTrigger asChild>
@@ -822,6 +845,31 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                                 )}
                             </CollapsibleContent>
                         </Collapsible>
+
+                        <Separator />
+
+                        <Collapsible open={isMassBalanceOpen} onOpenChange={setIsMassBalanceOpen}>
+                             <CollapsibleTrigger asChild>
+                                <Button variant="ghost" className="flex w-full items-center justify-between px-1">
+                                    <h3 className="text-lg font-semibold">Mass & Balance</h3>
+                                    <ChevronsUpDown className="h-4 w-4" />
+                                </Button>
+                            </CollapsibleTrigger>
+                             <CollapsibleContent className="space-y-4 pt-2">
+                                <BookingMassBalance
+                                    aircraft={initialData.aircraft}
+                                    booking={initialData.booking}
+                                    onCalculationChange={setMassBalanceData}
+                                    initialData={initialData.booking?.massAndBalance}
+                                />
+                                <div className="flex justify-end">
+                                    <Button onClick={handleSaveMassAndBalance} disabled={!massBalanceData}>
+                                        <Save className='mr-2' />
+                                        Save Mass & Balance
+                                    </Button>
+                                </div>
+                            </CollapsibleContent>
+                        </Collapsible>
                     </>
                 )}
               </div>
@@ -905,7 +953,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl p-0 gap-0">
+      <DialogContent className="sm:max-w-4xl p-0 gap-0">
         <FormContent />
       </DialogContent>
     </Dialog>

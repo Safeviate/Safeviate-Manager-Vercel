@@ -131,8 +131,6 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                 </div>
             </CardContent>
         </Card>
-        
-        <BookingMassBalance aircraft={aircraft} booking={booking} />
     </div>
   );
 }
