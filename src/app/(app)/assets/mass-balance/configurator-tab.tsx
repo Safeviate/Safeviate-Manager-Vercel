@@ -44,7 +44,6 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -769,25 +768,7 @@ export function ConfiguratorTab() {
                         <DialogClose asChild>
                             <Button variant="outline">Cancel</Button>
                         </DialogClose>
-                        <AlertDialog open={isConfirmClearDialogOpen} onOpenChange={setIsConfirmClearDialogOpen}>
-                            <AlertDialogTrigger asChild>
-                                <Button variant='destructive' disabled={!selectedAircraftId}>Proceed to Clear</Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        This will permanently delete the mass and balance data for aircraft <span className='font-bold'>{aircraftList?.find(a => a.id === selectedAircraftId)?.tailNumber}</span>.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleClearAircraftWandB} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-                                        Yes, Clear Data
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
+                        <Button variant='destructive' disabled={!selectedAircraftId} onClick={() => setIsConfirmClearDialogOpen(true)}>Proceed to Clear</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -1261,10 +1242,29 @@ export function ConfiguratorTab() {
         </div>
         </CardContent>
       </Card>
+      
+      {/* This dialog is now outside the main component flow, so it won't trap focus */}
+      <AlertDialog open={isConfirmClearDialogOpen} onOpenChange={setIsConfirmClearDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This will permanently delete the mass and balance data for aircraft <span className='font-bold'>{aircraftList?.find(a => a.id === selectedAircraftId)?.tailNumber}</span>.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleClearAircraftWandB} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                    Yes, Clear Data
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
 export default ConfiguratorTab;
+
 
 
