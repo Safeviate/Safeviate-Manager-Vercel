@@ -9,7 +9,6 @@ import type { ChecklistResponse } from '@/types/checklist';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { BookingMassBalance } from './booking-mass-balance';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -132,8 +131,6 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                 )}
             </CardContent>
         </Card>
-        
-        <BookingMassBalance aircraft={aircraft} />
         
         <Card>
             <CardHeader>
