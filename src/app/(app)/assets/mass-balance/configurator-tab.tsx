@@ -15,7 +15,7 @@ import {
   ReferenceDot,
   Cell,
 } from 'recharts';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs } from 'firebase/firestore';
 import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
 import {
@@ -327,52 +327,7 @@ export function ConfiguratorTab() {
     setGraphConfig({ ...graphConfig, envelope: newEnv });
   };
 
-  const handleReset = () => {
-    if (window.confirm('Reset to default Piper PA-28 data?')) {
-      const defaultData = {
-        xMin: 80,
-        xMax: 94,
-        yMin: 1400,
-        yMax: 2600,
-        envelope: [
-          { x: 82, y: 1400 },
-          { x: 82, y: 1950 },
-          { x: 86.5, y: 2450 },
-          { x: 93, y: 2450 },
-          { x: 93, y: 1400 },
-          { x: 82, y: 1400 },
-        ],
-      };
-      const defaultStations = [
-        { id: 2, name: 'Pilot & Front Pax', weight: 340, arm: 85.5, type: 'standard' },
-        { id: 3, name: 'Fuel', weight: 288, arm: 95.0, type: 'fuel', gallons: 48, maxGallons: 50 },
-      ];
-      const defaultBasicEmpty = { weight: 1416, moment: 120360, arm: 85.0 };
-
-      setGraphConfig(defaultData);
-      setStations(defaultStations);
-      setBasicEmpty(defaultBasicEmpty);
-      setMakeForSave('Piper');
-      setModelForSave('PA-28-180');
-
-      // Also reset react-hook-form if it holds any state from other components
-      form.reset({
-        ...defaultData,
-        stations: defaultStations,
-        emptyWeight: defaultBasicEmpty.weight,
-        emptyWeightMoment: defaultBasicEmpty.moment,
-        modelName: 'Piper PA-28-180'
-      });
-      toast({ title: 'Configurator Reset', description: 'Default data for Piper PA-28 has been loaded.' });
-    }
-  };
-
-  const handleLoadTemplate = (templateId: string) => {
-    const template = profiles?.find(p => p.id === templateId);
-    if (!template) return;
-    
-    setSelectedTemplateId(templateId); 
-
+  const loadProfileData = (template: AircraftModelProfile) => {
     setMakeForSave(template.make || '');
     setModelForSave(template.model || '');
     
@@ -398,7 +353,42 @@ export function ConfiguratorTab() {
         title: "Template Loaded",
         description: `Loaded the W&B profile for ${template.make} ${template.model}.`,
     });
+  }
 
+  const handleReset = async () => {
+    if (!firestore) {
+        toast({ variant: 'destructive', title: 'Firestore not available' });
+        return;
+    }
+    
+    const profilesRef = collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles');
+    const q = query(profilesRef, where("make", "==", "Default"));
+    
+    try {
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            const defaultProfile = querySnapshot.docs[0].data() as AircraftModelProfile;
+            loadProfileData(defaultProfile);
+        } else {
+            toast({ variant: 'destructive', title: 'Default Profile Not Found', description: 'Could not find a default profile in the database.' });
+        }
+    } catch (error) {
+        console.error("Error fetching default profile: ", error);
+        toast({ variant: 'destructive', title: 'Error Loading Default', description: 'Failed to fetch the default profile from the database.' });
+    }
+};
+
+  const handleLoadTemplate = (templateId: string) => {
+    if (templateId === 'reset') {
+        handleReset();
+        setSelectedTemplateId('');
+        return;
+    }
+    const template = profiles?.find(p => p.id === templateId);
+    if (!template) return;
+    
+    setSelectedTemplateId(templateId); 
+    loadProfileData(template);
     // Reset the dropdown after loading
     setTimeout(() => setSelectedTemplateId(''), 0);
   };
@@ -758,6 +748,7 @@ export function ConfiguratorTab() {
                             <SelectValue placeholder={isLoadingProfiles ? "Loading templates..." : "Select a template"} />
                         </SelectTrigger>
                         <SelectContent>
+                            <SelectItem value="reset">Default Profile (Piper PA-28)</SelectItem>
                             {(profiles || []).map(p => (
                                 <SelectItem key={p.id} value={p.id}>{p.make} {p.model}</SelectItem>
                             ))}
