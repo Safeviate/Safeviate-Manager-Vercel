@@ -17,6 +17,8 @@ import {
   SidebarMenuSub,
   SidebarMenuSubItem,
   SidebarMenuSubButton,
+  SidebarMobile,
+  SidebarMobileContent,
 } from '@/components/ui/sidebar';
 import { Plane, LogOut, ChevronDown } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -39,17 +41,109 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+
+
+const SidebarItems = () => {
+    const pathname = usePathname();
+    const { setOpenMobile } = useSidebar();
+  
+    const renderMenuItem = (item: MenuItemType) => {
+      const isParentActive = pathname.startsWith(item.href);
+      const Icon = item.icon;
+  
+      if (item.subItems) {
+        return (
+          <SidebarCollapsible defaultOpen={isParentActive}>
+            <SidebarCollapsibleTrigger asChild>
+              <SidebarMenuButton
+                isActive={isParentActive && !item.subItems.some(sub => pathname.startsWith(sub.href))}
+                tooltip={item.label}
+                className="justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <Icon className="h-5 w-5" />
+                  <span>{item.label}</span>
+                </div>
+                <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 ease-in-out group-data-[state=open]:-rotate-180" />
+              </SidebarMenuButton>
+            </SidebarCollapsibleTrigger>
+            <SidebarCollapsibleContent>
+              <SidebarMenuSub>
+                {item.subItems.map((subItem) => (
+                  <SidebarMenuSubItem key={subItem.href} onClick={() => setOpenMobile(false)}>
+                    <Link href={subItem.href}>
+                      <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                        <span>{subItem.label}</span>
+                      </SidebarMenuSubButton>
+                    </Link>
+                  </SidebarMenuSubItem>
+                ))}
+              </SidebarMenuSub>
+            </SidebarCollapsibleContent>
+          </SidebarCollapsible>
+        );
+      }
+  
+      return (
+        <Link href={item.href} className="w-full" onClick={() => setOpenMobile(false)}>
+          <SidebarMenuButton
+            isActive={pathname === item.href}
+            tooltip={item.label}
+          >
+            <Icon className="h-5 w-5" />
+            <span>{item.label}</span>
+          </SidebarMenuButton>
+        </Link>
+      );
+    };
+  
+    const visibleMenuConfig = menuConfig.filter(
+      (item) =>
+        item.label !== 'Development' || process.env.NODE_ENV === 'development'
+    );
+
+    return (
+        <SidebarMenu>
+            {visibleMenuConfig.map((item, index) => (
+            <React.Fragment key={item.href}>
+                <SidebarMenuItem>{renderMenuItem(item)}</SidebarMenuItem>
+                {index < visibleMenuConfig.length - 1 && <SidebarSeparator />}
+            </React.Fragment>
+            ))}
+        </SidebarMenu>
+    )
+}
+
+export function AppSidebarMobile() {
+    const { openMobile, setOpenMobile } = useSidebar();
+    const isMobile = useIsMobile();
+  
+    if (!isMobile) return null;
+  
+    return (
+      <SidebarMobile open={openMobile} onOpenChange={setOpenMobile}>
+        <SidebarMobileContent>
+          <SidebarHeader>
+            <div className="flex items-center gap-2">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
+                <Plane className="size-5 text-primary-foreground" />
+              </div>
+              <span className="font-headline text-lg">Safeviate</span>
+            </div>
+          </SidebarHeader>
+          <SidebarSeparator className="my-1" />
+          <SidebarContent>
+            <SidebarItems />
+          </SidebarContent>
+        </SidebarMobileContent>
+      </SidebarMobile>
+    );
+}
 
 export function AppSidebar() {
-  const pathname = usePathname();
   const auth = useAuth();
   const router = useRouter();
-  const { isMobile } = useSidebar();
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   const handleSignOut = () => {
     if (auth) {
@@ -57,65 +151,6 @@ export function AppSidebar() {
     }
     router.push('/login');
   };
-
-  const handleLinkClick = () => {
-    // This function can be used for any mobile-specific logic if needed in the future
-  };
-
-  const renderMenuItem = (item: MenuItemType) => {
-    const isParentActive = pathname.startsWith(item.href);
-    const Icon = item.icon;
-
-    if (item.subItems) {
-      return (
-        <SidebarCollapsible defaultOpen={isParentActive}>
-          <SidebarCollapsibleTrigger asChild>
-            <SidebarMenuButton
-              isActive={isParentActive && !item.subItems.some(sub => pathname.startsWith(sub.href))}
-              tooltip={item.label}
-              className="justify-between"
-            >
-              <div className="flex items-center gap-2">
-                <Icon className="h-5 w-5" />
-                <span>{item.label}</span>
-              </div>
-              <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 ease-in-out group-data-[state=open]:-rotate-180" />
-            </SidebarMenuButton>
-          </SidebarCollapsibleTrigger>
-          <SidebarCollapsibleContent>
-            <SidebarMenuSub>
-              {item.subItems.map((subItem) => (
-                <SidebarMenuSubItem key={subItem.href}>
-                  <Link href={subItem.href}>
-                    <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
-                      <span>{subItem.label}</span>
-                    </SidebarMenuSubButton>
-                  </Link>
-                </SidebarMenuSubItem>
-              ))}
-            </SidebarMenuSub>
-          </SidebarCollapsibleContent>
-        </SidebarCollapsible>
-      );
-    }
-
-    return (
-      <Link href={item.href} className="w-full" onClick={handleLinkClick}>
-        <SidebarMenuButton
-          isActive={pathname === item.href}
-          tooltip={item.label}
-        >
-          <Icon className="h-5 w-5" />
-          <span>{item.label}</span>
-        </SidebarMenuButton>
-      </Link>
-    );
-  };
-
-  const visibleMenuConfig = menuConfig.filter(
-    (item) =>
-      item.label !== 'Development' || process.env.NODE_ENV === 'development'
-  );
 
   return (
     <Sidebar>
@@ -129,21 +164,23 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarSeparator className="my-1" />
       <SidebarContent>
-        <SidebarMenu>
-          {visibleMenuConfig.map((item, index) => (
-            <React.Fragment key={item.href}>
-              <SidebarMenuItem>{renderMenuItem(item)}</SidebarMenuItem>
-              {index < visibleMenuConfig.length - 1 && <SidebarSeparator />}
-            </React.Fragment>
-          ))}
-        </SidebarMenu>
+        <SidebarItems />
       </SidebarContent>
       <SidebarFooter>
         <SidebarGroup>
           <SidebarMenu>
-            <SidebarMenuItem>{renderMenuItem(settingsMenuItem)}</SidebarMenuItem>
+            <SidebarMenuItem>
+                <Link href={settingsMenuItem.href} className="w-full" >
+                    <SidebarMenuButton
+                        isActive={usePathname().startsWith(settingsMenuItem.href)}
+                        tooltip={settingsMenuItem.label}
+                    >
+                        <settingsMenuItem.icon className="h-5 w-5" />
+                        <span>{settingsMenuItem.label}</span>
+                    </SidebarMenuButton>
+                </Link>
+            </SidebarMenuItem>
             <SidebarSeparator className="my-1 mx-2" />
-            {isClient && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton
@@ -172,7 +209,6 @@ export function AppSidebar() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            )}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarFooter>

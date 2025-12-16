@@ -228,7 +228,7 @@ const Sidebar = React.forwardRef<
             // Adjust the padding for floating and inset variants.
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
+              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l border-sidebar-border",
             className
           )}
           {...props}
@@ -245,6 +245,35 @@ const Sidebar = React.forwardRef<
   }
 )
 Sidebar.displayName = "Sidebar"
+
+const SidebarMobile = React.forwardRef<
+  React.ElementRef<typeof Sheet>,
+  React.ComponentProps<typeof Sheet>
+>((props, ref) => <Sheet ref={ref} {...props} />)
+SidebarMobile.displayName = "SidebarMobile"
+
+const SidebarMobileContent = React.forwardRef<
+  React.ElementRef<typeof SheetContent>,
+  React.ComponentProps<typeof SheetContent>
+>(({ className, ...props }, ref) => {
+  return (
+    <SheetContent
+      ref={ref}
+      className={cn(
+        "flex w-[--sidebar-width-mobile] flex-col bg-sidebar p-2 text-sidebar-foreground",
+        className
+      )}
+      style={
+        {
+          "--sidebar-width-mobile": SIDEBAR_WIDTH_MOBILE,
+        } as React.CSSProperties
+      }
+      {...props}
+    />
+  )
+})
+SidebarMobileContent.displayName = "SidebarMobileContent"
+
 
 const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
@@ -767,6 +796,6 @@ export {
   SidebarCollapsible,
   SidebarCollapsibleTrigger,
   SidebarCollapsibleContent,
+  SidebarMobile,
+  SidebarMobileContent,
 }
-
-    

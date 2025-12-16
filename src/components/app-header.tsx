@@ -4,6 +4,9 @@
 import { usePathname } from 'next/navigation';
 import { menuConfig, settingsMenuItem } from '@/lib/menu-config';
 import type { MenuItem, SubMenuItem } from '@/lib/menu-config';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 const findCurrentItem = (
   items: (MenuItem | SubMenuItem)[],
@@ -58,10 +61,12 @@ const getTitle = (pathname: string): string => {
 
 export function AppHeader() {
   const pathname = usePathname();
+  const isMobile = useIsMobile();
   const title = getTitle(pathname);
 
   return (
     <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-header px-4 text-header-foreground sm:px-6">
+      <SidebarTrigger className={cn('md:hidden', !isMobile && 'hidden')} />
       {title && (
         <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
       )}
