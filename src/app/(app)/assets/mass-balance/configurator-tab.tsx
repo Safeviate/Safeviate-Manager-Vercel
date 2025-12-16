@@ -443,14 +443,14 @@ export function ConfiguratorTab() {
           <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
              <DialogTrigger asChild>
                 <Button>
-                    <Save size={16} className="mr-2" /> Save Configuration
+                    <Save size={16} className="mr-2" /> Save as Profile
                 </Button>
              </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Save W&B Configuration</DialogTitle>
+                    <DialogTitle>Save W&B Profile</DialogTitle>
                     <DialogDescription>
-                        Enter a name for this aircraft model configuration. This will NOT create a reusable template.
+                        Enter a name for this aircraft model configuration. This will create a reusable template.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-2">
@@ -466,7 +466,7 @@ export function ConfiguratorTab() {
                     <DialogClose asChild>
                         <Button variant="outline">Cancel</Button>
                     </DialogClose>
-                    <Button onClick={saveConfiguration} disabled={!modelNameForSave.trim()}>Save Configuration</Button>
+                    <Button onClick={saveConfiguration} disabled={!modelNameForSave.trim()}>Save Profile</Button>
                 </DialogFooter>
             </DialogContent>
           </Dialog>

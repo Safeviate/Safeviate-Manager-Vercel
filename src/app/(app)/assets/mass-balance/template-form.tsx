@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -157,10 +158,10 @@ const getDefaultValues = (profile?: AircraftModelProfile | null, mode?: Template
     }
     return {
         modelName: profile ? `${profile.make} ${profile.model}` : '',
-        xMin: profile?.xMin,
-        xMax: profile?.xMax,
-        yMin: profile?.yMin,
-        yMax: profile?.yMax,
+        xMin: profile?.xMin || 0,
+        xMax: profile?.xMax || 100,
+        yMin: profile?.yMin || 0,
+        yMax: profile?.yMax || 3000,
         stations: profile?.stations ?? [],
         cgEnvelope: profile?.cgEnvelope ?? [],
     }
