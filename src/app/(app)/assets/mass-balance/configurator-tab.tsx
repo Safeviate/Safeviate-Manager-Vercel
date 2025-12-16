@@ -43,7 +43,6 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -367,7 +366,7 @@ export function ConfiguratorTab() {
 
     toast({
         title: "Profile Loaded",
-        description: `Loaded the W&B profile for ${template.profileName}.`,
+        description: `Loaded the Mass & Balance profile for ${template.profileName}.`,
     });
   }
 
@@ -461,7 +460,7 @@ export function ConfiguratorTab() {
     });
     
     toast({
-        title: "Aircraft W&B Loaded",
+        title: "Aircraft M&B Loaded",
         description: `Loaded configuration for ${aircraft.tailNumber}.`,
     });
     
@@ -613,7 +612,7 @@ export function ConfiguratorTab() {
 
     toast({
         title: 'Configuration Assigned',
-        description: `The current W&B configuration has been saved to the selected aircraft.`
+        description: `The current M&B configuration has been saved to the selected aircraft.`
     });
 
     //setIsAssignAircraftDialogOpen(false);
@@ -643,7 +642,7 @@ export function ConfiguratorTab() {
     updateDocumentNonBlocking(aircraftRef, dataToClear);
 
     toast({
-        title: 'Aircraft W&B Cleared',
+        title: 'Aircraft M&B Cleared',
         description: `The Mass & Balance configuration has been cleared for the selected aircraft.`
     });
     
@@ -692,24 +691,6 @@ export function ConfiguratorTab() {
             <h1 className="text-2xl font-bold tracking-tight">
             Mass &amp; Balance Configurator
             </h1>
-            {loadedAircraftTailNumber && (
-                <div className='flex items-center gap-2'>
-                    <Badge variant="secondary" className='text-base'>
-                        {loadedAircraftTailNumber}
-                    </Badge>
-                    <Button variant="ghost" size="icon" className='h-6 w-6 text-muted-foreground' onClick={handleReset}>
-                        <XCircle className='h-4 w-4'/>
-                        <span className='sr-only'>Clear loaded aircraft</span>
-                    </Button>
-                </div>
-            )}
-             {loadedProfileName && (
-                <div className='flex items-center gap-2'>
-                    <Badge variant="outline" className='text-base border-primary text-primary'>
-                        {loadedProfileName}
-                    </Badge>
-                </div>
-            )}
         </div>
         <div className="flex gap-3">
           <Button onClick={handleReset} variant="outline">
@@ -726,7 +707,7 @@ export function ConfiguratorTab() {
                 <DialogHeader>
                     <DialogTitle>Assign Configuration to Aircraft</DialogTitle>
                     <DialogDescription>
-                        This will overwrite the selected aircraft&apos;s current W&amp;B data with the data from the configurator.
+                        This will overwrite the selected aircraft&apos;s current M&amp;B data with the data from the configurator.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-2">
@@ -754,7 +735,7 @@ export function ConfiguratorTab() {
             <Dialog open={isClearAircraftDialogOpen} onOpenChange={handleClearDialogOpenChange}>
                 <DialogTrigger asChild>
                     <Button variant="destructive">
-                        <Wrench size={16} className="mr-2" /> Clear Aircraft W&amp;B
+                        <Wrench size={16} className="mr-2" /> Clear Aircraft M&amp;B
                     </Button>
                 </DialogTrigger>
                 <DialogContent>
@@ -763,7 +744,7 @@ export function ConfiguratorTab() {
                             <DialogHeader>
                                 <DialogTitle>Clear Aircraft Mass & Balance</DialogTitle>
                                 <DialogDescription>
-                                    Select an aircraft to clear its stored W&amp;B configuration. This action cannot be undone.
+                                    Select an aircraft to clear its stored M&amp;B configuration. This action cannot be undone.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="py-4 space-y-2">
@@ -965,27 +946,47 @@ export function ConfiguratorTab() {
               </ReferenceDot>
             </ScatterChart>
           </ResponsiveContainer>
+          <div className='absolute top-4 right-4 flex items-center gap-4'>
+            {loadedAircraftTailNumber && (
+                    <div className='flex items-center gap-2'>
+                        <Badge variant="secondary" className='text-base'>
+                            {loadedAircraftTailNumber}
+                        </Badge>
+                        <Button variant="ghost" size="icon" className='h-6 w-6 text-muted-foreground' onClick={handleReset}>
+                            <XCircle className='h-4 w-4'/>
+                            <span className='sr-only'>Clear loaded aircraft</span>
+                        </Button>
+                    </div>
+                )}
+            {loadedProfileName && (
+                <div className='flex items-center gap-2'>
+                    <Badge variant="outline" className='text-base border-primary text-primary'>
+                        {loadedProfileName}
+                    </Badge>
+                </div>
+            )}
+            <div
+                className={cn(
+                'px-3 py-1 rounded-full font-bold shadow-lg flex items-center gap-2',
+                results.isSafe
+                    ? 'bg-green-600/90 text-white'
+                    : 'bg-destructive text-white'
+                )}
+            >
+                <div
+                className={cn(
+                    'w-2 h-2 rounded-full',
+                    results.isSafe ? 'bg-white' : 'bg-white animate-pulse'
+                )}
+                ></div>
+                <span className="text-xs">
+                {results.isSafe ? 'WITHIN LIMITS' : 'OUT OF LIMITS'}
+                </span>
+            </div>
+          </div>
           <p className="font-extrabold text-red-600 absolute bottom-4 left-1/2 transform -translate-x-1/2 pointer-events-none whitespace-nowrap drop-shadow-md uppercase tracking-widest text-sm md:text-base">
             CONSULT AIRCRAFT POH BEFORE FLIGHT
           </p>
-          <div
-            className={cn(
-              'absolute bottom-4 right-4 px-3 py-1 rounded-full font-bold shadow-lg flex items-center gap-2',
-              results.isSafe
-                ? 'bg-green-600/90 text-white'
-                : 'bg-destructive text-white'
-            )}
-          >
-            <div
-              className={cn(
-                'w-2 h-2 rounded-full',
-                results.isSafe ? 'bg-white' : 'bg-white animate-pulse'
-              )}
-            ></div>
-            <span className="text-xs">
-              {results.isSafe ? 'WITHIN LIMITS' : 'OUT OF LIMITS'}
-            </span>
-          </div>
         </CardContent>
         <CardContent className="p-6">
         <div className='space-y-4'>
@@ -997,7 +998,7 @@ export function ConfiguratorTab() {
                             <SelectValue placeholder={isLoadingProfiles ? "Loading profiles..." : "Select a profile"} />
                         </SelectTrigger>
                         <SelectContent>
-                            {(profiles || []).map(p => (
+                             {(profiles || []).map(p => (
                                 <SelectItem key={p.id} value={p.id}>{p.profileName}</SelectItem>
                             ))}
                         </SelectContent>
