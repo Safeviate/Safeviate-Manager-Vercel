@@ -49,7 +49,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronsUpDown, AlertCircle } from 'lucide-react';
 import type { ChecklistResponse, ChecklistItemResponse } from '@/types/checklist';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 interface BookingFormProps {
   tenantId: string;
@@ -514,16 +513,16 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const aircraftType = initialData.aircraft.type;
   const abbreviation = initialData.booking ? getBookingTypeAbbreviation(initialData.booking.type) : '';
 
-  const FormContent = () => (
-    <>
-      <CardHeader>
-        <DialogTitle>{isEditing ? 'Edit Booking' : 'Create Booking'}</DialogTitle>
-        <DialogDescription>
-          {isEditing ? `Editing booking #${abbreviation}${initialData.booking?.bookingNumber} for ${initialData.aircraft.tailNumber}` : `New booking for ${initialData.aircraft.tailNumber} on ${format(initialData.date, 'PPP')}`}
-        </DialogDescription>
-      </CardHeader>
-      
-      <CardContent className="p-0">
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-2xl p-0 gap-0">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle>{isEditing ? 'Edit Booking' : 'Create Booking'}</DialogTitle>
+            <DialogDescription>
+              {isEditing ? `Editing booking #${abbreviation}${initialData.booking?.bookingNumber} for ${initialData.aircraft.tailNumber}` : `New booking for ${initialData.aircraft.tailNumber} on ${format(initialData.date, 'PPP')}`}
+            </DialogDescription>
+          </DialogHeader>
+          
           <Form {...form}>
             <ScrollArea className="max-h-[60vh]">
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-6">
@@ -837,92 +836,74 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
               </form>
             </ScrollArea>
           </Form>
-      </CardContent>
-      <div className="flex flex-col sm:flex-row sm:justify-center items-stretch gap-2 px-6 pb-6 pt-4 border-t">
-          <Button type="submit" className='flex-1' onClick={form.handleSubmit(onSubmit)}>{isEditing ? 'Save Changes' : 'Create Booking'}</Button>
-          {isEditing && (
-            <div className="contents">
-              <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogTrigger asChild>
-                  <Button type="button" variant="destructive" className='flex-1'>
-                      Delete
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the booking from the database. If this is an overnight booking, all parts will be deleted.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Go Back</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteBooking} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-                            Yes, Delete Forever
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-
-              <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-                <AlertDialogTrigger asChild>
-                  <Button type="button" variant="outline" className='text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive flex-1'>
-                    Cancel Booking
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure you want to cancel?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Please provide a reason for cancelling this booking. This action cannot be undone.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <div className="py-4">
-                        <Label htmlFor="cancellation-reason" className="sr-only">Cancellation Reason</Label>
-                        <Textarea
-                            id="cancellation-reason"
-                            placeholder="Type your reason here..."
-                            value={cancellationReason}
-                            onChange={(e) => setCancellationReason(e.target.value)}
-                            autoFocus
-                        />
+          <DialogFooter className="p-6 pt-0 border-t">
+            <div className="flex w-full items-center justify-between">
+                <div>
+                {isEditing && (
+                    <div className="flex gap-2">
+                        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                            <AlertDialogTrigger asChild>
+                            <Button type="button" variant="destructive">
+                                Delete
+                            </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete the booking from the database. If this is an overnight booking, all parts will be deleted.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Go Back</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDeleteBooking} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                                        Yes, Delete Forever
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                        <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+                            <AlertDialogTrigger asChild>
+                            <Button type="button" variant="outline" className='text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive'>
+                                Cancel Booking
+                            </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure you want to cancel?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Please provide a reason for cancelling this booking. This action cannot be undone.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <div className="py-4">
+                                    <Label htmlFor="cancellation-reason" className="sr-only">Cancellation Reason</Label>
+                                    <Textarea
+                                        id="cancellation-reason"
+                                        placeholder="Type your reason here..."
+                                        value={cancellationReason}
+                                        onChange={(e) => setCancellationReason(e.target.value)}
+                                        autoFocus
+                                    />
+                                </div>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={() => setCancellationReason('')}>Go Back</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleCancelBooking} disabled={!cancellationReason.trim()}>
+                                        Yes, Cancel Booking
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </div>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setCancellationReason('')}>Go Back</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleCancelBooking} disabled={!cancellationReason.trim()}>
-                            Yes, Cancel Booking
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                )}
+                </div>
+                <div className="flex gap-2">
+                    <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button type="submit" onClick={form.handleSubmit(onSubmit)}>{isEditing ? 'Save Changes' : 'Create Booking'}</Button>
+                </div>
             </div>
-          )}
-          {
-            isEditing ? (
-              <Button variant="outline" onClick={onClose}>Cancel</Button>
-            ) : (
-              <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
-              </DialogClose>
-            )
-          }
-      </div>
-    </>
-  );
-
-  if (isEditing) {
-    // When editing on a dedicated page, render inside a Card
-    return (
-        <Card className="sm:max-w-2xl mx-auto">
-            <FormContent />
-        </Card>
-    );
-  }
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl p-0 gap-0">
-        <FormContent />
+          </DialogFooter>
       </DialogContent>
     </Dialog>
   );
