@@ -38,6 +38,7 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
+    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
@@ -530,10 +531,9 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const aircraftType = initialData.aircraft.type;
   const abbreviation = initialData.booking ? getBookingTypeAbbreviation(initialData.booking.type) : '';
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl p-0 gap-0">
-          <DialogHeader className="p-6 pb-0">
+  const FormContent = () => (
+     <>
+        <DialogHeader className="p-6 pb-0">
             <DialogTitle>{isEditing ? 'Edit Booking' : 'Create Booking'}</DialogTitle>
             <DialogDescription>
               {isEditing ? `Editing booking #${abbreviation}${initialData.booking?.bookingNumber} for ${initialData.aircraft.tailNumber}` : `New booking for ${initialData.aircraft.tailNumber} on ${format(initialData.date, 'PPP')}`}
@@ -921,9 +921,14 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                 </div>
             </div>
           </DialogFooter>
+     </>
+  )
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-2xl p-0 gap-0">
+        <FormContent />
       </DialogContent>
     </Dialog>
   );
 }
-
-    
