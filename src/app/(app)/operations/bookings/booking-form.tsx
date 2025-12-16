@@ -47,7 +47,7 @@ import { deleteBookings, getNextBookingNumber } from './booking-functions';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ChevronsUpDown, AlertCircle } from 'lucide-react';
+import { ChevronsUpDown, AlertCircle, Pencil } from 'lucide-react';
 import type { ChecklistResponse, ChecklistItemResponse } from '@/types/checklist';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -109,6 +109,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const firestore = useFirestore();
   const { toast } = useToast();
   const isEditing = !!initialData?.booking;
+  const [isDetailsEditing, setIsDetailsEditing] = useState(!isEditing);
 
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -340,10 +341,8 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
         return;
       }
     }
-    // Don't close the form on booking save if it's an edit, so user can still do checklist
-    if (!isEditing) {
-        onClose();
-    }
+    // After a successful save, switch back to view mode
+    setIsDetailsEditing(false);
   };
   
   const handleStandardBooking = async (data: BookingFormValues, existingId?: string, bookingNumber?: number): Promise<string | undefined> => {
@@ -373,6 +372,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
       const bookingsRef = collection(firestore, 'tenants', tenantId, 'bookings');
       const newDocRef = await addDocumentNonBlocking(bookingsRef, bookingData);
       toast({ title: 'Booking Created', description: 'The new booking has been added to the schedule.' });
+      onClose(); // Close only on creation
       return newDocRef?.id;
     }
   }
@@ -418,6 +418,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
         title: 'Overnight Booking Created',
         description: `Booking #${bookingNumber} has been split for the schedule.`,
     });
+    onClose();
   }
 
   const handleOvernightUpdate = async (data: BookingFormValues, overnightId: string) => {
@@ -608,9 +609,9 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const FormContent = () => (
      <>
         <DialogHeader className="p-6 pb-0">
-            <DialogTitle>{isEditing ? 'Edit Booking' : 'Create Booking'}</DialogTitle>
+            <DialogTitle>{isEditing ? 'View Booking' : 'Create Booking'}</DialogTitle>
             <DialogDescription>
-              {isEditing ? `Editing booking #${abbreviation}${initialData.booking?.bookingNumber} for ${initialData.aircraft.tailNumber}` : `New booking for ${initialData.aircraft.tailNumber} on ${format(initialData.date, 'PPP')}`}
+              {isEditing ? `Viewing booking #${abbreviation}${initialData.booking?.bookingNumber} for ${initialData.aircraft.tailNumber}` : `New booking for ${initialData.aircraft.tailNumber} on ${format(initialData.date, 'PPP')}`}
             </DialogDescription>
           </DialogHeader>
           
@@ -652,7 +653,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                         render={({ field }) => (
                         <FormItem>
                             <FormLabel>Booking Type</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={!isDetailsEditing}>
                             <FormControl>
                                 <SelectTrigger>
                                 <SelectValue placeholder="Select booking type" />
@@ -675,7 +676,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                         render={({ field }) => (
                         <FormItem>
                             <FormLabel>Pilot / Student</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={!isDetailsEditing}>
                             <FormControl>
                                 <SelectTrigger>
                                 <SelectValue placeholder="Select a pilot" />
@@ -697,7 +698,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Instructor</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={!isDetailsEditing}>
                                 <FormControl>
                                     <SelectTrigger>
                                     <SelectValue placeholder="Select an instructor" />
@@ -726,7 +727,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                             <Switch
                                 checked={field.value}
                                 onCheckedChange={field.onChange}
-                                disabled={isEditing}
+                                disabled={isEditing || !isDetailsEditing}
                             />
                             </FormControl>
                         </FormItem>
@@ -741,7 +742,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                             <FormItem>
                             <FormLabel>Start Time</FormLabel>
                             <FormControl>
-                                <Input type="time" {...field} />
+                                <Input type="time" {...field} disabled={!isDetailsEditing} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -754,7 +755,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                             <FormItem>
                             <FormLabel>{isOvernight ? 'End Time (Day 1)' : 'End Time'}</FormLabel>
                             <FormControl>
-                                <Input type="time" {...field} disabled={isOvernight} />
+                                <Input type="time" {...field} disabled={isOvernight || !isDetailsEditing} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -771,7 +772,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                                     <FormItem>
                                     <FormLabel>End Time (Day 2)</FormLabel>
                                     <FormControl>
-                                        <Input type="time" {...field} />
+                                        <Input type="time" {...field} disabled={!isDetailsEditing} />
                                     </FormControl>
                                     <FormMessage />
                                     </FormItem>
@@ -779,9 +780,12 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                                 />
                         </div>
                     )}
-                    <div className='flex justify-end pt-2'>
-                        <Button type="button" onClick={form.handleSubmit(onSubmit)}>{isEditing ? 'Save Changes' : 'Create Booking'}</Button>
-                    </div>
+                    {isDetailsEditing && (
+                        <div className='flex justify-end gap-2 pt-2'>
+                             <Button type="button" variant="outline" onClick={() => setIsDetailsEditing(false)}>Cancel</Button>
+                            <Button type="button" onClick={form.handleSubmit(onSubmit)}>{isEditing ? 'Save Changes' : 'Create Booking'}</Button>
+                        </div>
+                    )}
                   </CollapsibleContent>
                 </Collapsible>
                 
@@ -884,6 +888,12 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                 )}
                 </div>
                 <div className="flex gap-2">
+                    {!isDetailsEditing && isEditing && (
+                        <Button variant="outline" onClick={() => setIsDetailsEditing(true)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit Details
+                        </Button>
+                    )}
                     <DialogClose asChild>
                         <Button variant="outline">Close</Button>
                     </DialogClose>
