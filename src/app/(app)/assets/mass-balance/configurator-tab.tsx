@@ -847,22 +847,6 @@ export function ConfiguratorTab() {
         </div>
       </div>
       <Card className="relative">
-        <CardHeader>
-          <div className="flex items-center gap-4">
-            <CardTitle>Interactive Graph</CardTitle>
-            {(loadedAircraftTailNumber || loadedProfileName) && (
-              <p className="text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">
-                  {loadedAircraftTailNumber ? `Aircraft: ${loadedAircraftTailNumber}` : `Profile: ${loadedProfileName}`}
-                </span>
-              </p>
-            )}
-          </div>
-          <CardDescription>
-            Visualize the aircraft&apos;s center of gravity based on the
-            configuration below.
-          </CardDescription>
-        </CardHeader>
         <div className="absolute top-6 right-6 z-10">
           <div
             className={cn(
@@ -883,6 +867,22 @@ export function ConfiguratorTab() {
             </span>
           </div>
         </div>
+        <CardHeader>
+          <div className="flex items-center gap-4">
+            <CardTitle>Interactive Graph</CardTitle>
+            {(loadedAircraftTailNumber || loadedProfileName) && (
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">
+                  {loadedAircraftTailNumber ? `Aircraft: ${loadedAircraftTailNumber}` : `Profile: ${loadedProfileName}`}
+                </span>
+              </p>
+            )}
+          </div>
+          <CardDescription>
+            Visualize the aircraft&apos;s center of gravity based on the
+            configuration below.
+          </CardDescription>
+        </CardHeader>
         <CardContent className="min-h-[500px] flex flex-col justify-center items-center overflow-hidden pt-6">
           {offScreenStatus && (
             <OffScreenWarning
