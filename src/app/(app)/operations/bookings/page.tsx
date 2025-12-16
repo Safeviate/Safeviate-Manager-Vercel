@@ -13,10 +13,11 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, PlaneTakeoff, PlaneLanding } from 'lucide-react';
+import { CalendarIcon, CheckSquare, Edit, FileText, PlaneLanding, PlaneTakeoff, Trash2, Ban } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { BookingForm } from './booking-form';
 import { useRouter } from 'next/navigation';
+import { BookingDetailsDialog } from './booking-details-dialog';
 
 
 const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
@@ -156,13 +157,33 @@ const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePositi
             selectedDate={selectedDate}
         >
             <div className="flex flex-col space-y-2">
+                 <Button variant="outline" size="sm" onClick={() => onActionClick('details', booking)}>
+                    <FileText className="mr-2" />
+                    Details
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => onActionClick('pre-flight', booking)}>
-                    <PlaneTakeoff className="mr-2 h-4 w-4" />
+                    <PlaneTakeoff className="mr-2" />
                     Pre-Flight Checklist
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => onActionClick('post-flight', booking)}>
-                    <PlaneLanding className="mr-2 h-4 w-4" />
+                    <PlaneLanding className="mr-2" />
                     Post-Flight Checklist
+                </Button>
+                 <Button variant="outline" size="sm" onClick={() => onActionClick('view', booking)}>
+                    <CheckSquare className="mr-2" />
+                    View
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => onActionClick('edit', booking)}>
+                    <Edit className="mr-2" />
+                    Edit
+                </Button>
+                <Button variant="outline" size="sm" className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => onActionClick('cancel', booking)}>
+                    <Ban className="mr-2" />
+                    Cancel
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => onActionClick('delete', booking)}>
+                    <Trash2 className="mr-2" />
+                    Delete
                 </Button>
             </div>
         </BookingItem>
@@ -184,6 +205,10 @@ export default function SchedulePage() {
   // State for managing the booking form modal
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formInitialData, setFormInitialData] = useState<any>(null);
+
+  // State for details dialog
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [selectedBookingForDetails, setSelectedBookingForDetails] = useState<Booking | null>(null);
 
   const aircraftQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
@@ -275,8 +300,25 @@ export default function SchedulePage() {
   };
   
   const handleActionClick = (action: string, booking: Booking) => {
-    if (action === 'pre-flight' || action === 'post-flight') {
-        router.push(`/operations/bookings/${booking.id}/checklist?type=${action}`);
+    const aircraftForBooking = aircraft?.find(a => a.id === booking.aircraftId);
+    if (!aircraftForBooking) return;
+
+    if (action === 'details') {
+        setSelectedBookingForDetails(booking);
+        setIsDetailsDialogOpen(true);
+    } else if (action === 'view') {
+        router.push(`/operations/bookings/${booking.id}`);
+    } else if (action === 'edit' || action === 'pre-flight' || action === 'post-flight') {
+        setFormInitialData({
+            aircraft: aircraftForBooking,
+            time: format(booking.startTime.toDate(), 'HH:mm'),
+            date: booking.startTime.toDate(),
+            booking: booking,
+        });
+        setIsFormOpen(true);
+    } else {
+        // Handle cancel, delete, etc.
+        console.log(`Action "${action}" on booking ${booking.id}`);
     }
   };
 
@@ -379,6 +421,18 @@ export default function SchedulePage() {
             initialData={formInitialData}
             isOpen={isFormOpen}
             onClose={handleCloseForm}
+        />
+      )}
+       {isDetailsDialogOpen && selectedBookingForDetails && (
+        <BookingDetailsDialog
+            booking={selectedBookingForDetails}
+            pilots={pilots || []}
+            aircraftList={aircraft || []}
+            isOpen={isDetailsDialogOpen}
+            onClose={() => {
+                setIsDetailsDialogOpen(false);
+                setSelectedBookingForDetails(null);
+            }}
         />
       )}
     </>
