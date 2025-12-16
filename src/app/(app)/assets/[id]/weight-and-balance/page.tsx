@@ -1,11 +1,13 @@
 
+
 'use client';
 
 import { use, useMemo, useState, useEffect } from 'react';
 import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Aircraft } from '../../page';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import type { Booking } from '@/types/booking';
+import type { Aircraft } from '@/app/(app)/assets/page';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -21,33 +23,31 @@ import {
   Tooltip,
   ResponsiveContainer,
   Label as RechartsLabel,
+  Area,
   ReferenceDot,
-  Cell,
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { isPointInPolygon } from '@/lib/utils';
-import { AlertTriangle } from 'lucide-react';
 import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
 
 interface WeightAndBalancePageProps {
     params: { id: string };
 }
 
-const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
+// --- Helper function to check if a point is inside a polygon ---
+function isPointInPolygon(point: { x: number; y: number }, polygon: { x: number; y: number }[]) {
+  if (!polygon || polygon.length === 0) return false;
+  let isInside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x, yi = polygon[i].y;
+    const xj = polygon[j].x, yj = polygon[j].y;
 
-
-// --- HELPER 2: Visual Warning Component ---
-const OffScreenWarning = ({ direction, value, label }: { direction: string, value: number, label: string }) => (
-    <div className={`absolute top-1/2 ${direction === 'left' ? 'left-4' : 'right-4'} transform -translate-y-1/2 bg-destructive/90 border border-red-500 text-white p-3 rounded shadow-xl z-10 flex flex-col items-center animate-pulse`}>
-      <AlertTriangle className="text-red-400 mb-1" size={24} />
-      <span className="font-bold text-xs uppercase">{label} Off Scale!</span>
-      <span className="text-lg font-mono">{value}</span>
-      <span className="text-xs text-muted-foreground">
-        {direction === 'left' ? '← Move Left' : 'Move Right →'}
-      </span>
-    </div>
-  );
+    const intersect = ((yi > point.y) !== (yj > point.y))
+        && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+    if (intersect) isInside = !isInside;
+  }
+  return isInside;
+}
 
 
 export default function WeightAndBalancePage({ params }: WeightAndBalancePageProps) {
@@ -80,10 +80,12 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
         const baggage1Moment = baggage1Weight * (arms.baggage1 || 0);
         const baggage2Moment = baggage2Weight * (arms.baggage2 || 0);
         
+        // Zero Fuel Condition
         const zeroFuelWeight = emptyWeight + frontSeatWeight + rearSeatWeight + baggage1Weight + baggage2Weight;
         const zeroFuelMoment = emptyMoment + frontSeatMoment + rearSeatMoment + baggage1Moment + baggage2Moment;
         const zeroFuelCg = zeroFuelWeight > 0 ? zeroFuelMoment / zeroFuelWeight : 0;
 
+        // Takeoff Condition
         const fuelWeight = fuelGallons * FUEL_WEIGHT_PER_GALLON;
         const fuelMoment = fuelWeight * (arms.fuel || 0);
         const takeoffWeight = zeroFuelWeight + fuelWeight;
@@ -99,14 +101,29 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
         };
     }, [aircraft, frontSeatWeight, rearSeatWeight, baggage1Weight, baggage2Weight, fuelGallons]);
 
-    const cgEnvelopePoints = useMemo(() => aircraft?.cgEnvelope?.map(([weight, cg]) => ({ x: cg, y: weight })) || [], [aircraft]);
-    const polygonForCheck = useMemo(() => cgEnvelopePoints.map(p => ({ x: p.x, y: p.y })), [cgEnvelopePoints]);
+    const cgEnvelopePoints = useMemo(() => aircraft?.cgEnvelope?.map(([weight, cg]) => ({ weight, cg })) || [], [aircraft]);
+    const polygonForCheck = useMemo(() => cgEnvelopePoints.map(p => ({ x: p.cg, y: p.weight })), [cgEnvelopePoints]);
 
     const takeoffPoint = useMemo(() => ({ x: calculation?.takeoffCg || 0, y: calculation?.takeoffWeight || 0 }), [calculation]);
 
     const isTakeoffWeightOk = calculation && aircraft?.maxTakeoffWeight ? calculation.takeoffWeight <= aircraft.maxTakeoffWeight : true;
     const isTakeoffCgOk = calculation ? isPointInPolygon(takeoffPoint, polygonForCheck) : true;
     const isTakeoffOk = isTakeoffWeightOk && isTakeoffCgOk;
+
+    const domain = useMemo(() => {
+        if (cgEnvelopePoints.length === 0) return { x: [0, 100], y: [0, 3000] };
+        
+        const xValues = cgEnvelopePoints.map(p => p.cg);
+        const yValues = cgEnvelopePoints.map(p => p.weight);
+
+        const xPadding = (Math.max(...xValues) - Math.min(...xValues)) * 0.1;
+        const yPadding = (Math.max(...yValues) - Math.min(...yValues)) * 0.1;
+        
+        return {
+            x: [Math.min(...xValues) - xPadding, Math.max(...xValues) + xPadding],
+            y: [Math.min(...yValues) - yPadding, Math.max(...yValues) + yPadding],
+        };
+    }, [cgEnvelopePoints]);
 
 
     if (isLoading) {
@@ -139,31 +156,6 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
             </div>
         );
     }
-
-    const domain = useMemo(() => {
-        if (cgEnvelopePoints.length === 0) return { x: [0, 100], y: [0, 3000] };
-        
-        const xValues = cgEnvelopePoints.map(p => p.x);
-        const yValues = cgEnvelopePoints.map(p => p.y);
-
-        const xPadding = (Math.max(...xValues) - Math.min(...xValues)) * 0.1;
-        const yPadding = (Math.max(...yValues) - Math.min(...yValues)) * 0.1;
-        
-        return {
-            x: [Math.min(...xValues) - xPadding, Math.max(...xValues) + xPadding],
-            y: [Math.min(...yValues) - yPadding, Math.max(...yValues) + yPadding],
-        };
-    }, [cgEnvelopePoints]);
-
-    const isOffScreen = () => {
-        if (takeoffPoint.x < domain.x[0]) return { axis: 'x', dir: 'left', val: takeoffPoint.x };
-        if (takeoffPoint.x > domain.x[1]) return { axis: 'x', dir: 'right', val: takeoffPoint.x };
-        if (takeoffPoint.y < domain.y[0]) return { axis: 'y', dir: 'bottom', val: takeoffPoint.y };
-        if (takeoffPoint.y > domain.y[1]) return { axis: 'y', dir: 'top', val: takeoffPoint.y };
-        return null;
-    };
-
-    const offScreenStatus = isOffScreen();
     
     return (
         <div className="max-w-7xl mx-auto space-y-6">
@@ -177,12 +169,12 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
             </div>
             <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 order-first lg:order-none">
-                    <Card className="h-full flex flex-col">
+                    <Card>
                         <CardHeader>
                             <CardTitle>Weight &amp; Balance Summary</CardTitle>
                             <CardDescription>Review the calculated weight and center of gravity for {aircraft.tailNumber}.</CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-6 flex-grow">
+                        <CardContent className="space-y-6">
                             <div className="border rounded-lg">
                                 <div className="grid grid-cols-4 items-center gap-2 font-bold bg-muted/40 rounded-t-lg">
                                     <div className="p-2 text-sm">Item</div>
@@ -213,39 +205,38 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                             </div>
                             
                             <div className="relative h-[400px]">
-                                {offScreenStatus && (
-                                    <OffScreenWarning 
-                                        direction={offScreenStatus.dir} 
-                                        value={offScreenStatus.val} 
-                                        label={offScreenStatus.axis === 'x' ? 'CG' : 'Weight'} 
-                                    />
-                                )}
-                                <ResponsiveContainer width="100%" height="100%">
+                                <ResponsiveContainer width="100%" height={400}>
                                     <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
                                         <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={domain.x} allowDataOverflow={true} tickCount={8}>
-                                            <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" dy={10} />
+                                        <XAxis type="number" dataKey="cg" name="CG" unit=" in" domain={domain.x} allowDataOverflow={true} tickCount={8}>
+                                            <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" />
                                         </XAxis>
-                                        <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={domain.y} allowDataOverflow={true} tickCount={8}>
-                                             <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
+                                        <YAxis type="number" dataKey="weight" name="Weight" unit=" lbs" domain={domain.y} allowDataOverflow={true} tickCount={8}>
+                                            <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
                                         </YAxis>
                                         <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                        <Scatter name="Envelope" data={cgEnvelopePoints} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} fill="transparent" shape={() => null} />
-                                        
-                                        {cgEnvelopePoints.map((p, index) => (
-                                          <ReferenceDot key={`dot-${index}`} x={p.x} y={p.y} r={5} fill={POINT_COLORS[index % POINT_COLORS.length]} stroke="none" />
-                                        ))}
-
-                                        <ReferenceDot x={takeoffPoint.x} y={takeoffPoint.y} r={8} fill={isTakeoffOk ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="hsl(var(--primary-foreground))" strokeWidth={2}>
-                                            <RechartsLabel 
-                                                value={`(${takeoffPoint.x.toFixed(2)}, ${takeoffPoint.y.toFixed(1)})`} 
-                                                position="top" 
-                                                fill="hsl(var(--foreground))"
-                                                fontSize="12"
-                                                offset={10}
-                                            />
-                                        </ReferenceDot>
-                                    </ScatterChart>
+                                        <Area type="linear" dataKey="weight" data={cgEnvelopePoints} name="CG Limit" stroke="#8884d8" fill="#8884d8" fillOpacity={0.2} strokeWidth={2} />
+                                        <Scatter name="Takeoff CG" data={[ { weight: takeoffPoint.y, cg: takeoffPoint.x } ]} fill={isTakeoffOk ? "#22c55e" : "#ef4444"}>
+                                            {/* Custom shape rendering for the dot */}
+                                            {takeoffPoint &&
+                                                <ReferenceDot
+                                                    x={takeoffPoint.x}
+                                                    y={takeoffPoint.y}
+                                                    r={8}
+                                                    fill={isTakeoffOk ? "#22c55e" : "#ef4444"}
+                                                    stroke="#fff"
+                                                    strokeWidth={2}
+                                                >
+                                                     <RechartsLabel 
+                                                        value={`(${takeoffPoint.x.toFixed(2)}, ${takeoffPoint.y.toFixed(1)})`} 
+                                                        position="top" 
+                                                        fill="hsl(var(--foreground))"
+                                                        fontSize="12"
+                                                        offset={10}
+                                                    />
+                                                </ReferenceDot>
+                                            }
+                                        </ScatterChart>
                                 </ResponsiveContainer>
                                 <div className="absolute top-4 right-4">
                                   <Badge className={cn(isTakeoffOk ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-xs text-white px-2 py-0.5')}>
@@ -254,9 +245,6 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                                 </div>
                             </div>
                         </CardContent>
-                        <CardFooter>
-                            <p className="text-xs text-muted-foreground w-full text-center">Disclaimer: This calculator is for educational purposes only. Always consult the official aircraft POH for flight planning.</p>
-                        </CardFooter>
                     </Card>
                 </div>
 
@@ -301,7 +289,6 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                         </CardContent>
                     </Card>
                 </div>
-
             </div>
         </div>
     );

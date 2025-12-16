@@ -16,7 +16,7 @@ import {
   Cell,
 } from 'recharts';
 import { collection, doc } from 'firebase/firestore';
-import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
 import {
   Save,
@@ -26,6 +26,7 @@ import {
   Maximize,
   Fuel,
   AlertTriangle,
+  Plane,
 } from 'lucide-react';
 import {
   Card,
@@ -53,6 +54,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
 import type { AircraftModelProfile } from './template-form';
+import type { Aircraft } from '../page';
 import {
     Select,
     SelectContent,
@@ -139,8 +141,11 @@ export function ConfiguratorTab() {
   const { toast } = useToast();
   const tenantId = 'safeviate';
 
-  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
-  const [modelNameForSave, setModelNameForSave] = useState('');
+  const [isSaveProfileDialogOpen, setIsSaveProfileDialogOpen] = useState(false);
+  const [isAssignAircraftDialogOpen, setIsAssignAircraftDialogOpen] = useState(false);
+  const [makeForSave, setMakeForSave] = useState('');
+  const [modelForSave, setModelForSave] = useState('');
+  const [selectedAircraftId, setSelectedAircraftId] = useState('');
 
   const [graphConfig, setGraphConfig] = useState({
     xMin: 80,
@@ -186,12 +191,18 @@ export function ConfiguratorTab() {
 
   const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
 
-  // --- Fetch Templates ---
+  // --- Fetch Data ---
   const profilesQuery = useMemoFirebase(
     () => (firestore ? collection(firestore, 'tenants', 'safeviate', 'aircraftModelProfiles') : null),
     [firestore]
   );
   const { data: profiles, isLoading: isLoadingProfiles } = useCollection<AircraftModelProfile>(profilesQuery);
+  
+  const aircraftQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'tenants', 'safeviate', 'aircrafts') : null),
+    [firestore]
+  );
+  const { data: aircraftList, isLoading: isLoadingAircraft } = useCollection<Aircraft>(aircraftQuery);
 
 
   useEffect(() => {
@@ -346,7 +357,8 @@ export function ConfiguratorTab() {
           maxGallons: 50,
         },
       ]);
-      setModelNameForSave('Piper PA-28-180');
+      setMakeForSave('Piper');
+      setModelForSave('PA-28-180');
     }
   };
 
@@ -354,9 +366,10 @@ export function ConfiguratorTab() {
     const template = profiles?.find(p => p.id === templateId);
     if (!template) return;
 
-    setModelNameForSave(`${template.make} ${template.model}`);
+    setMakeForSave(template.make || '');
+    setModelForSave(template.model || '');
     
-    // Separate BEW from other stations
+    // Separate BEW from other stations if it exists
     const bewStation = template.stations?.find(s => s.name === 'Basic Empty Weight');
     const otherStations = template.stations?.filter(s => s.name !== 'Basic Empty Weight') || [];
 
@@ -381,9 +394,49 @@ export function ConfiguratorTab() {
     });
   };
 
-  const saveConfiguration = () => {
-    if (!modelNameForSave) {
-      toast({ variant: 'destructive', title: 'Model Name Required' });
+  const handleLoadFromAircraft = (aircraftId: string) => {
+    const aircraft = aircraftList?.find(a => a.id === aircraftId);
+    if (!aircraft) return;
+
+    setMakeForSave(aircraft.model || ''); // Or derive make if possible
+    setModelForSave(aircraft.tailNumber || '');
+
+    setBasicEmpty({
+        weight: aircraft.emptyWeight || 0,
+        moment: aircraft.emptyWeightMoment || 0,
+        arm: (aircraft.emptyWeight && aircraft.emptyWeight > 0) ? (aircraft.emptyWeightMoment || 0) / aircraft.emptyWeight : 0,
+    });
+    
+    // Reconstruct stations from simple stationArms
+    const reconstructedStations: any[] = [];
+    if (aircraft.stationArms) {
+        if(aircraft.stationArms.frontSeats) reconstructedStations.push({ id: Date.now() + 1, name: 'Front Seats', arm: aircraft.stationArms.frontSeats, weight: 0, type: 'standard' });
+        if(aircraft.stationArms.rearSeats) reconstructedStations.push({ id: Date.now() + 2, name: 'Rear Seats', arm: aircraft.stationArms.rearSeats, weight: 0, type: 'standard' });
+        if(aircraft.stationArms.baggage1) reconstructedStations.push({ id: Date.now() + 3, name: 'Baggage 1', arm: aircraft.stationArms.baggage1, weight: 0, type: 'standard' });
+        if(aircraft.stationArms.baggage2) reconstructedStations.push({ id: Date.now() + 4, name: 'Baggage 2', arm: aircraft.stationArms.baggage2, weight: 0, type: 'standard' });
+        if(aircraft.stationArms.fuel) reconstructedStations.push({ id: Date.now() + 5, name: 'Fuel', arm: aircraft.stationArms.fuel, weight: 0, type: 'fuel', gallons: 0, maxGallons: 50 }); // Assume max 50 gal
+    }
+    setStations(reconstructedStations);
+
+    const envelope = (aircraft.cgEnvelope || []).map(p => ({ x: p[1], y: p[0] })); // Convert [[weight, cg]] to [{x,y}]
+    setGraphConfig({
+        // Try to auto-detect limits from envelope, with fallbacks
+        xMin: Math.min(...envelope.map(p => p.x)) - 2 || 0,
+        xMax: Math.max(...envelope.map(p => p.x)) + 2 || 100,
+        yMin: Math.min(...envelope.map(p => p.y)) - 200 || 0,
+        yMax: Math.max(...envelope.map(p => p.y)) + 200 || 3000,
+        envelope,
+    });
+    
+    toast({
+        title: "Aircraft W&B Loaded",
+        description: `Loaded configuration for ${aircraft.tailNumber}.`,
+    });
+  };
+
+  const saveAsProfile = () => {
+    if (!makeForSave || !modelForSave) {
+      toast({ variant: 'destructive', title: 'Make and Model Required' });
       return;
     }
     if (!firestore) {
@@ -391,25 +444,74 @@ export function ConfiguratorTab() {
       return;
     }
   
-    const configData = {
-      modelName: modelNameForSave,
-      basicEmpty,
-      stations,
-      graphConfig,
-      savedAt: new Date().toISOString(),
+    const configData: Partial<AircraftModelProfile> = {
+      make: makeForSave,
+      model: modelForSave,
+      emptyWeight: basicEmpty.weight,
+      emptyWeightMoment: basicEmpty.moment,
+      stations: [
+        { id: 1, name: 'Basic Empty Weight', weight: basicEmpty.weight, arm: basicEmpty.arm },
+        ...stations,
+      ],
+      cgEnvelope: graphConfig.envelope,
+      xMin: graphConfig.xMin,
+      xMax: graphConfig.xMax,
+      yMin: graphConfig.yMin,
+      yMax: graphConfig.yMax,
     };
   
-    // Corrected path with an odd number of segments
-    const collectionRef = collection(firestore, 'tenants', tenantId, 'massAndBalance');
+    const collectionRef = collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles');
     addDocumentNonBlocking(collectionRef, configData);
   
     toast({
-      title: 'Configuration Saved',
-      description: `The configuration for "${modelNameForSave}" has been saved.`,
+      title: 'Profile Saved',
+      description: `The profile for "${makeForSave} ${modelForSave}" has been saved.`,
     });
   
-    setIsSaveDialogOpen(false);
+    setIsSaveProfileDialogOpen(false);
   };
+
+  const handleAssignToAircraft = () => {
+    if (!selectedAircraftId) {
+        toast({ variant: 'destructive', title: 'No Aircraft Selected' });
+        return;
+    }
+    if (!firestore) {
+        toast({ variant: 'destructive', title: 'Database not available' });
+        return;
+    }
+    
+    const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', selectedAircraftId);
+    
+    // Convert stations back to simple stationArms for the aircraft document
+    const stationArms: Record<string, number> = {};
+    stations.forEach(s => {
+        if (s.name.toLowerCase().includes('front')) stationArms.frontSeats = s.arm;
+        if (s.name.toLowerCase().includes('rear')) stationArms.rearSeats = s.arm;
+        if (s.name.toLowerCase().includes('baggage 1')) stationArms.baggage1 = s.arm;
+        if (s.name.toLowerCase().includes('baggage 2')) stationArms.baggage2 = s.arm;
+        if (s.type === 'fuel') stationArms.fuel = s.arm;
+    });
+
+    const dataToUpdate = {
+        emptyWeight: basicEmpty.weight,
+        emptyWeightMoment: basicEmpty.moment,
+        maxTakeoffWeight: Math.max(...graphConfig.envelope.map(p => p.y)),
+        // The configurator saves envelope as [{x,y}], but aircraft entity expects [[weight, cg]]
+        cgEnvelope: graphConfig.envelope.map(p => [p.y, p.x]),
+        stationArms,
+    };
+
+    updateDocumentNonBlocking(aircraftRef, dataToUpdate);
+
+    toast({
+        title: 'Configuration Assigned',
+        description: `The current W&B configuration has been saved to the selected aircraft.`
+    });
+
+    setIsAssignAircraftDialogOpen(false);
+    setSelectedAircraftId('');
+  }
 
   const allX = [
     ...graphConfig.envelope.map((p) => p.x),
@@ -440,7 +542,43 @@ export function ConfiguratorTab() {
           <Button onClick={handleReset} variant="destructive">
             <RotateCcw size={16} className="mr-2" /> Reset
           </Button>
-          <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+
+           <Dialog open={isAssignAircraftDialogOpen} onOpenChange={setIsAssignAircraftDialogOpen}>
+             <DialogTrigger asChild>
+                <Button variant="outline">
+                    <Plane size={16} className="mr-2" /> Assign to Aircraft
+                </Button>
+             </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Assign Configuration to Aircraft</DialogTitle>
+                    <DialogDescription>
+                        This will overwrite the selected aircraft&apos;s current W&amp;B data with the data from the configurator.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-2">
+                    <Label htmlFor="aircraft-select">Aircraft Registration</Label>
+                    <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
+                        <SelectTrigger id="aircraft-select">
+                            <SelectValue placeholder="Select an aircraft..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {(aircraftList || []).map(a => (
+                                <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button onClick={handleAssignToAircraft} disabled={!selectedAircraftId}>Confirm Assignment</Button>
+                </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isSaveProfileDialogOpen} onOpenChange={setIsSaveProfileDialogOpen}>
              <DialogTrigger asChild>
                 <Button>
                     <Save size={16} className="mr-2" /> Save as Profile
@@ -448,25 +586,36 @@ export function ConfiguratorTab() {
              </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Save W&B Profile</DialogTitle>
+                    <DialogTitle>Save as New Profile</DialogTitle>
                     <DialogDescription>
-                        Enter a name for this aircraft model configuration. This will create a reusable template.
+                        Enter a make and model for this configuration to create a new reusable template.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="py-4 space-y-2">
-                    <Label htmlFor="model-name">Model Name</Label>
-                    <Input 
-                        id="model-name"
-                        value={modelNameForSave}
-                        onChange={(e) => setModelNameForSave(e.target.value)}
-                        placeholder="e.g., Cessna 172S"
-                    />
+                <div className="py-4 grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="make-name">Make</Label>
+                        <Input 
+                            id="make-name"
+                            value={makeForSave}
+                            onChange={(e) => setMakeForSave(e.target.value)}
+                            placeholder="e.g., Cessna"
+                        />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="model-name">Model</Label>
+                        <Input 
+                            id="model-name"
+                            value={modelForSave}
+                            onChange={(e) => setModelForSave(e.target.value)}
+                            placeholder="e.g., 172S"
+                        />
+                    </div>
                 </div>
                 <DialogFooter>
                     <DialogClose asChild>
                         <Button variant="outline">Cancel</Button>
                     </DialogClose>
-                    <Button onClick={saveConfiguration} disabled={!modelNameForSave.trim()}>Save Profile</Button>
+                    <Button onClick={saveAsProfile} disabled={!makeForSave.trim() || !modelForSave.trim()}>Save Profile</Button>
                 </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -592,15 +741,6 @@ export function ConfiguratorTab() {
         <CardContent className="p-6">
         <div className='space-y-4'>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <Label htmlFor="model-name">Template Name</Label>
-                    <Input
-                        id="model-name"
-                        value={modelNameForSave}
-                        onChange={(e) => setModelNameForSave(e.target.value)}
-                        placeholder="e.g., Piper PA 28 180"
-                    />
-                </div>
                  <div>
                     <Label>Load Saved Template</Label>
                     <Select onValueChange={handleLoadTemplate} disabled={isLoadingProfiles}>
@@ -610,6 +750,19 @@ export function ConfiguratorTab() {
                         <SelectContent>
                             {(profiles || []).map(p => (
                                 <SelectItem key={p.id} value={p.id}>{p.make} {p.model}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                 </div>
+                 <div>
+                    <Label>Load from Aircraft Registration</Label>
+                    <Select onValueChange={handleLoadFromAircraft} disabled={isLoadingAircraft}>
+                        <SelectTrigger>
+                            <SelectValue placeholder={isLoadingAircraft ? "Loading aircraft..." : "Select an aircraft"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {(aircraftList || []).map(a => (
+                                <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
