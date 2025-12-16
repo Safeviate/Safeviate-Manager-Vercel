@@ -259,6 +259,7 @@ const SidebarMobileContent = React.forwardRef<
   return (
     <SheetContent
       ref={ref}
+      side="left"
       className={cn(
         "flex w-[--sidebar-width-mobile] flex-col bg-sidebar p-2 text-sidebar-foreground",
         className
