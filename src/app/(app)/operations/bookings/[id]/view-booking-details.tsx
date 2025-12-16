@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import type { Booking } from '@/types/booking';
+import type { Booking, MassAndBalance } from '@/types/booking';
 import type { Aircraft } from '@/app/(app)/assets/page';
 import type { PilotProfile } from '@/app/(app)/users/personnel/page';
 import type { ChecklistResponse } from '@/types/checklist';
@@ -11,6 +11,11 @@ import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { BookingMassBalance } from './booking-mass-balance';
+import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { doc, Timestamp } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Save } from 'lucide-react';
 
 interface ViewBookingDetailsProps {
   booking: Booking;
@@ -78,11 +83,32 @@ const ChecklistDetails = ({ title, checklist, aircraftType }: { title: string, c
 }
 
 export function ViewBookingDetails({ booking, aircraft, pilot, instructor, checklists }: ViewBookingDetailsProps) {
-  
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const tenantId = 'safeviate';
+
+  const [massBalanceData, setMassBalanceData] = useState<Omit<MassAndBalance, 'calculationTime'> | null>(null);
+
   const abbreviation = getBookingTypeAbbreviation(booking.type);
 
   const preFlightChecklist = useMemo(() => checklists.find(c => c.checklistType === 'pre-flight'), [checklists]);
   const postFlightChecklist = useMemo(() => checklists.find(c => c.checklistType === 'post-flight'), [checklists]);
+
+  const handleSaveMassAndBalance = () => {
+    if (!firestore || !booking || !massBalanceData) return;
+
+    const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', booking.id);
+    const dataToSave: MassAndBalance = {
+      ...massBalanceData,
+      calculationTime: Timestamp.now(),
+    }
+    updateDocumentNonBlocking(bookingRef, { massAndBalance: dataToSave });
+
+    toast({
+        title: "Mass & Balance Saved",
+        description: "The calculation has been saved to this booking.",
+    });
+  };
 
   return (
     <div className='space-y-6'>
@@ -131,6 +157,28 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                 </div>
             </CardContent>
         </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Mass &amp; Balance</CardTitle>
+                <CardDescription>Calculate and save the mass and balance for this specific flight.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                 <BookingMassBalance
+                    aircraft={aircraft}
+                    booking={booking}
+                    onCalculationChange={setMassBalanceData}
+                    initialData={booking.massAndBalance}
+                />
+                <div className="flex justify-end pt-4 border-t">
+                    <Button onClick={handleSaveMassAndBalance} disabled={!massBalanceData}>
+                        <Save className='mr-2 h-4 w-4' />
+                        Save Mass & Balance to Booking
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+
     </div>
   );
 }

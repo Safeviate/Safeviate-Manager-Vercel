@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { addHours, format, setHours, setMinutes, addDays, startOfDay, isSameDay, endOfDay, isBefore } from 'date-fns';
+import { addHours, format, setHours, setMinutes, addDays, startOfDay, isSameDay, endOfDay, isBefore, startOfHour } from 'date-fns';
 import { Timestamp, collection, doc, query, where, getDocs, writeBatch, getDoc } from 'firebase/firestore';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -38,7 +38,6 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
@@ -47,10 +46,10 @@ import { deleteBookings, getNextBookingNumber } from './booking-functions';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ChevronsUpDown, AlertCircle, Pencil, Save } from 'lucide-react';
+import { ChevronsUpDown, AlertCircle, Pencil } from 'lucide-react';
 import type { ChecklistResponse, ChecklistItemResponse } from '@/types/checklist';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { BookingMassBalance } from './[id]/booking-mass-balance';
+import { AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface BookingFormProps {
   tenantId: string;
@@ -137,10 +136,6 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const [postFlightLeftOilUplift, setPostFlightLeftOilUplift] = useState('');
   const [postFlightRightOilUplift, setPostFlightRightOilUplift] = useState('');
   
-  // Mass & Balance State
-  const [isMassBalanceOpen, setIsMassBalanceOpen] = useState(true);
-  const [massBalanceData, setMassBalanceData] = useState<Omit<MassAndBalance, 'calculationTime'> | null>(null);
-
 
   const checklistResponsesQuery = useMemoFirebase(
     () => {
@@ -530,23 +525,6 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     
     onClose();
   }
-
-  const handleSaveMassAndBalance = () => {
-    if (!firestore || !initialData?.booking || !massBalanceData) return;
-
-    const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', initialData.booking.id);
-    const dataToSave: MassAndBalance = {
-      ...massBalanceData,
-      calculationTime: Timestamp.now(),
-    }
-    updateDocumentNonBlocking(bookingRef, { massAndBalance: dataToSave });
-
-    toast({
-        title: "Mass & Balance Saved",
-        description: "The calculation has been saved to this booking.",
-    });
-  };
-
   
   if (!initialData) return null;
 
@@ -812,7 +790,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                   </CollapsibleContent>
                 </Collapsible>
                 
-                {isEditing && (
+                {isEditing && initialData.aircraft && (
                     <>
                         <Separator />
                         <Collapsible open={isChecklistOpen} onOpenChange={setIsChecklistOpen} disabled={isPreFlightChecklistDisabled}>
@@ -843,31 +821,6 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                                     </div>
                                 </>
                                 )}
-                            </CollapsibleContent>
-                        </Collapsible>
-
-                        <Separator />
-
-                        <Collapsible open={isMassBalanceOpen} onOpenChange={setIsMassBalanceOpen}>
-                             <CollapsibleTrigger asChild>
-                                <Button variant="ghost" className="flex w-full items-center justify-between px-1">
-                                    <h3 className="text-lg font-semibold">Mass & Balance</h3>
-                                    <ChevronsUpDown className="h-4 w-4" />
-                                </Button>
-                            </CollapsibleTrigger>
-                             <CollapsibleContent className="space-y-4 pt-2">
-                                <BookingMassBalance
-                                    aircraft={initialData.aircraft}
-                                    booking={initialData.booking}
-                                    onCalculationChange={setMassBalanceData}
-                                    initialData={initialData.booking?.massAndBalance}
-                                />
-                                <div className="flex justify-end">
-                                    <Button onClick={handleSaveMassAndBalance} disabled={!massBalanceData}>
-                                        <Save className='mr-2' />
-                                        Save Mass & Balance
-                                    </Button>
-                                </div>
                             </CollapsibleContent>
                         </Collapsible>
                     </>
