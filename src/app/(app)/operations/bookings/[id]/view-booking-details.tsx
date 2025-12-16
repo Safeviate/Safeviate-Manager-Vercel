@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -41,15 +42,16 @@ const getBookingTypeAbbreviation = (type: Booking['type']): string => {
     }
 }
 
-const ChecklistDetails = ({ title, checklist, aircraftType }: { title: string, checklist: ChecklistResponse | undefined, aircraftType?: string }) => {
+const ChecklistDetails = ({ title, checklist, aircraftType, bookingId }: { title: string, checklist: ChecklistResponse | undefined, aircraftType?: string, bookingId: string }) => {
     if (!checklist) {
+        const checklistTypeParam = title.toLowerCase().replace(' ', '-');
         return (
             <div>
                 <h4 className="font-medium text-base mb-2">{title}</h4>
                 <div className='flex flex-col gap-2'>
                   <p className="text-sm text-muted-foreground">Not submitted.</p>
                   <Button asChild variant="outline" size="sm" className="w-fit">
-                    <Link href={`/operations/bookings/${checklist?.bookingId}/checklist?type=${title.toLowerCase().replace(' ', '-')}`}>
+                    <Link href={`/operations/bookings/${bookingId}/checklist?type=${checklistTypeParam}`}>
                       Start {title} Checklist
                     </Link>
                   </Button>
@@ -160,8 +162,8 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
             </CardHeader>
             <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                    <ChecklistDetails title="Pre-Flight" checklist={preFlightChecklist} aircraftType={aircraft.type} />
-                    <ChecklistDetails title="Post-Flight" checklist={postFlightChecklist} aircraftType={aircraft.type} />
+                    <ChecklistDetails title="Pre-Flight" checklist={preFlightChecklist} aircraftType={aircraft.type} bookingId={booking.id}/>
+                    <ChecklistDetails title="Post-Flight" checklist={postFlightChecklist} aircraftType={aircraft.type} bookingId={booking.id}/>
                 </div>
             </CardContent>
         </Card>

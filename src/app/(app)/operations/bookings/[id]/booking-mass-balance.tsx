@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -32,7 +33,6 @@ interface BookingMassBalanceProps {
     initialData?: MassAndBalance | null;
 }
 
-// --- Helper function to check if a point is inside a polygon ---
 function isPointInPolygon(point: { x: number; y: number }, polygon: { x: number; y: number }[]) {
   if (!polygon || polygon.length === 0) return false;
   let isInside = false;
@@ -150,18 +150,13 @@ export function BookingMassBalance({ aircraft, booking, onCalculationChange, ini
 
     if (!aircraft.stationArms || !aircraft.cgEnvelope || aircraft.cgEnvelope.length === 0 || !aircraft.emptyWeight || !aircraft.emptyWeightMoment) {
         return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>Mass & Balance</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center p-6">
-                    <h2 className="text-xl font-semibold text-destructive">Incomplete Aircraft Configuration</h2>
-                    <p className="text-muted-foreground mt-2">This aircraft is missing critical mass & balance information (e.g., station arms, CG envelope, empty weight). Please complete the aircraft's profile in the Assets section.</p>
-                    <Button asChild variant="outline" className="mt-4">
-                        <Link href={`/assets/${aircraft.id}`}>Go to Aircraft Profile</Link>
-                    </Button>
-                </CardContent>
-            </Card>
+            <div className="text-center p-6 border rounded-lg">
+                <h2 className="text-xl font-semibold text-destructive">Incomplete Aircraft Configuration</h2>
+                <p className="text-muted-foreground mt-2">This aircraft is missing critical mass & balance information (e.g., station arms, CG envelope, empty weight). Please complete the aircraft's profile in the Assets section.</p>
+                <Button asChild variant="outline" className="mt-4">
+                    <Link href={`/assets/${aircraft.id}`}>Go to Aircraft Profile</Link>
+                </Button>
+            </div>
         );
     }
     
