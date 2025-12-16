@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ConfiguratorTab } from './configurator-tab';
