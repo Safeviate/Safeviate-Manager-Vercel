@@ -13,24 +13,12 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, CheckSquare, Edit, FileText, PlaneLanding, PlaneTakeoff, Trash2, Ban } from 'lucide-react';
+import { CalendarIcon, PlaneLanding, PlaneTakeoff } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { BookingForm } from './booking-form';
-import { useRouter } from 'next/navigation';
-import { BookingDetailsDialog } from './booking-details-dialog';
-
 
 const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
 const TOTAL_HOURS = 24;
-
-const getBookingTypeAbbreviation = (type: Booking['type']): string => {
-    switch (type) {
-        case 'Student Training': return 'T';
-        case 'Hire and Fly': return 'H';
-        case 'Maintenance Flight': return 'M';
-        default: return '';
-    }
-}
 
 const BookingItem = ({ booking, pilots, selectedDate, children }: { booking: Booking, pilots: PilotProfile[], selectedDate: Date, children: React.ReactNode }) => {
     const startTime = booking.startTime.toDate();
@@ -55,8 +43,6 @@ const BookingItem = ({ booking, pilots, selectedDate, children }: { booking: Boo
     const hasContinuationTop = !startsOnSelectedDay;
     const hasContinuationBottom = !endsOnSelectedDay;
     
-    const abbreviation = getBookingTypeAbbreviation(booking.type);
-
     return (
          <Popover>
             <PopoverTrigger asChild>
@@ -68,7 +54,7 @@ const BookingItem = ({ booking, pilots, selectedDate, children }: { booking: Boo
                     style={{ top: `${top}px`, height: `${height}px` }}
                 >
                     {hasContinuationTop && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-b from-black/20 to-transparent" />}
-                    <p className="font-semibold truncate">{booking.bookingNumber ? `${abbreviation}${booking.bookingNumber} - ` : ''}{booking.type}</p>
+                    <p className="font-semibold truncate">{booking.type}</p>
                     <p className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}</p>
                     {booking.status === 'Cancelled' && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
                     {(booking.status === 'Cancelled with Reason') && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
@@ -157,10 +143,6 @@ const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePositi
             selectedDate={selectedDate}
         >
             <div className="flex flex-col space-y-2">
-                 <Button variant="outline" size="sm" onClick={() => onActionClick('details', booking)}>
-                    <FileText className="mr-2" />
-                    Details
-                </Button>
                 <Button variant="outline" size="sm" onClick={() => onActionClick('pre-flight', booking)}>
                     <PlaneTakeoff className="mr-2" />
                     Pre-Flight Checklist
@@ -168,22 +150,6 @@ const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePositi
                 <Button variant="outline" size="sm" onClick={() => onActionClick('post-flight', booking)}>
                     <PlaneLanding className="mr-2" />
                     Post-Flight Checklist
-                </Button>
-                 <Button variant="outline" size="sm" onClick={() => onActionClick('view', booking)}>
-                    <CheckSquare className="mr-2" />
-                    View
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => onActionClick('edit', booking)}>
-                    <Edit className="mr-2" />
-                    Edit
-                </Button>
-                <Button variant="outline" size="sm" className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => onActionClick('cancel', booking)}>
-                    <Ban className="mr-2" />
-                    Cancel
-                </Button>
-                <Button variant="destructive" size="sm" onClick={() => onActionClick('delete', booking)}>
-                    <Trash2 className="mr-2" />
-                    Delete
                 </Button>
             </div>
         </BookingItem>
@@ -195,7 +161,6 @@ const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePositi
 
 export default function SchedulePage() {
   const firestore = useFirestore();
-  const router = useRouter();
   const tenantId = 'safeviate'; // Hardcoded for now
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -205,10 +170,6 @@ export default function SchedulePage() {
   // State for managing the booking form modal
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formInitialData, setFormInitialData] = useState<any>(null);
-
-  // State for details dialog
-  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
-  const [selectedBookingForDetails, setSelectedBookingForDetails] = useState<Booking | null>(null);
 
   const aircraftQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
@@ -266,8 +227,6 @@ export default function SchedulePage() {
   }, [selectedDate]);
   
   const handleSlotClick = useCallback((aircraft: Aircraft, time: string, booking?: Booking) => {
-    // This function will now only handle creating new bookings.
-    // Clicking an existing booking is handled by the Popover in BookingItem.
     if (booking) {
         return; 
     }
@@ -289,7 +248,7 @@ export default function SchedulePage() {
         aircraft,
         time: startTime,
         date: selectedDate,
-        booking: undefined, // Explicitly undefined for new bookings
+        booking: undefined,
     });
     setIsFormOpen(true);
   }, [selectedDate]);
@@ -303,23 +262,13 @@ export default function SchedulePage() {
     const aircraftForBooking = aircraft?.find(a => a.id === booking.aircraftId);
     if (!aircraftForBooking) return;
 
-    if (action === 'details') {
-        setSelectedBookingForDetails(booking);
-        setIsDetailsDialogOpen(true);
-    } else if (action === 'view') {
-        router.push(`/operations/bookings/${booking.id}`);
-    } else if (action === 'edit' || action === 'pre-flight' || action === 'post-flight') {
-        setFormInitialData({
-            aircraft: aircraftForBooking,
-            time: format(booking.startTime.toDate(), 'HH:mm'),
-            date: booking.startTime.toDate(),
-            booking: booking,
-        });
-        setIsFormOpen(true);
-    } else {
-        // Handle cancel, delete, etc.
-        console.log(`Action "${action}" on booking ${booking.id}`);
-    }
+    setFormInitialData({
+        aircraft: aircraftForBooking,
+        time: format(booking.startTime.toDate(), 'HH:mm'),
+        date: booking.startTime.toDate(),
+        booking: booking,
+    });
+    setIsFormOpen(true);
   };
 
   const extraLanes = ['', '', '', ''];
@@ -421,18 +370,6 @@ export default function SchedulePage() {
             initialData={formInitialData}
             isOpen={isFormOpen}
             onClose={handleCloseForm}
-        />
-      )}
-       {isDetailsDialogOpen && selectedBookingForDetails && (
-        <BookingDetailsDialog
-            booking={selectedBookingForDetails}
-            pilots={pilots || []}
-            aircraftList={aircraft || []}
-            isOpen={isDetailsDialogOpen}
-            onClose={() => {
-                setIsDetailsDialogOpen(false);
-                setSelectedBookingForDetails(null);
-            }}
         />
       )}
     </>
