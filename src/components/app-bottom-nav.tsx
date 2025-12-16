@@ -37,13 +37,13 @@ export function AppBottomNav() {
           <CollapsibleTrigger asChild>
             <Button
               variant="ghost"
-              className="flex w-full items-center justify-between gap-3 p-3 text-base font-medium text-foreground"
+              className="group flex w-full items-center justify-between gap-3 p-3 text-base font-medium text-foreground"
             >
               <div className="flex items-center gap-3">
                 <item.icon className="h-5 w-5" />
                 {item.label}
               </div>
-              <ChevronDown className="h-5 w-5 transition-transform group-data-[state=open]:-rotate-180" />
+              <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -110,8 +110,9 @@ export function AppBottomNav() {
               <SheetTitle>More Options</SheetTitle>
             </SheetHeader>
             <div className="flex flex-col gap-1 py-4">
-              {[...hiddenNavItems, settingsMenuItem].map((item) => (
+              {[...hiddenNavItems, settingsMenuItem].map((item, index) => (
                 <div key={item.href}>
+                  {index > 0 && <Separator />}
                   {renderMenuItem(item)}
                 </div>
               ))}
