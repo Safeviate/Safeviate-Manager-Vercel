@@ -84,7 +84,3 @@ export function TemplatesTab() {
     </div>
   );
 }
-
-    
-
-    
