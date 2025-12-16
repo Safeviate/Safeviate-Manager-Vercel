@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/app/(app)/assets/page';
@@ -10,11 +10,8 @@ import type { ChecklistResponse } from '@/types/checklist';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc, Timestamp } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Save, Scale } from 'lucide-react';
+import { Scale } from 'lucide-react';
 import Link from 'next/link';
 
 interface ViewBookingDetailsProps {
@@ -97,12 +94,6 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
   const preFlightChecklist = useMemo(() => checklists.find(c => c.checklistType === 'pre-flight'), [checklists]);
   const postFlightChecklist = useMemo(() => checklists.find(c => c.checklistType === 'post-flight'), [checklists]);
 
-  const openMassAndBalance = () => {
-    // Construct the URL and open it in a new window.
-    const url = `/assets/mass-balance?aircraftId=${aircraft.id}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
   return (
     <div className='space-y-6'>
         <Card>
@@ -138,9 +129,11 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                 )}
             </CardContent>
              <CardFooter>
-                 <Button onClick={openMassAndBalance} variant="outline">
-                    <Scale className="mr-2 h-4 w-4" />
-                    Mass and Balance
+                 <Button asChild variant="outline">
+                    <Link href={`/assets/mass-balance?aircraftId=${aircraft.id}`}>
+                        <Scale className="mr-2 h-4 w-4" />
+                        Mass and Balance
+                    </Link>
                 </Button>
             </CardFooter>
         </Card>
