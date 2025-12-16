@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -14,8 +15,8 @@ import {
   ReferenceDot,
   Cell,
 } from 'recharts';
-import { collection, doc, query, where, getDocs, getDoc } from 'firebase/firestore';
-import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc, query, where, getDocs, getDoc, addDoc } from 'firebase/firestore';
+import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
 import {
   Save,
@@ -386,6 +387,13 @@ export function ConfiguratorTab() {
   };
 
   const handleLoadTemplate = (templateId: string) => {
+    if (!templateId) return;
+
+    if (templateId === 'reset') {
+        handleReset();
+        return;
+    }
+
     const template = profiles?.find(p => p.id === templateId);
     if (!template) {
         toast({ variant: 'destructive', title: 'Profile Not Found', description: 'Could not find the selected profile.' });
@@ -440,7 +448,7 @@ export function ConfiguratorTab() {
     setSelectedTemplateId('');
   };
 
-  const saveAsProfile = () => {
+  const saveAsProfile = async () => {
     if (!profileNameForSave) {
       toast({ variant: 'destructive', title: 'Profile Name Required' });
       return;
@@ -465,15 +473,25 @@ export function ConfiguratorTab() {
       yMax: graphConfig.yMax,
     };
   
-    const collectionRef = collection(firestore, 'tenants', tenantId, 'massAndBalance');
-    addDocumentNonBlocking(collectionRef, configData);
-  
-    toast({
-      title: 'Profile Saved',
-      description: `The profile "${profileNameForSave}" has been saved.`,
-    });
-  
-    setIsSaveProfileDialogOpen(false);
+    try {
+        const collectionRef = collection(firestore, 'tenants', tenantId, 'massAndBalance');
+        await addDoc(collectionRef, configData);
+        
+        toast({
+          title: 'Profile Saved',
+          description: `The profile "${profileNameForSave}" has been saved.`,
+        });
+        
+        setIsSaveProfileDialogOpen(false);
+        setProfileNameForSave('');
+    } catch (error) {
+        console.error("Error saving profile: ", error);
+        toast({
+            variant: 'destructive',
+            title: 'Save Failed',
+            description: 'Could not save the profile to the database. Check console for details.'
+        });
+    }
   };
 
   const handleAssignToAircraft = () => {
@@ -754,6 +772,7 @@ export function ConfiguratorTab() {
                             <SelectValue placeholder={isLoadingProfiles ? "Loading templates..." : "Select a template"} />
                         </SelectTrigger>
                         <SelectContent>
+                            <SelectItem value="reset">Default Profile</SelectItem>
                             {(profiles || []).map(p => (
                                 <SelectItem key={p.id} value={p.id}>{p.profileName}</SelectItem>
                             ))}
@@ -1039,4 +1058,3 @@ export function ConfiguratorTab() {
 
 export default ConfiguratorTab;
 
-    
