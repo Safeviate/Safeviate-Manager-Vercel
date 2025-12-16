@@ -1091,14 +1091,14 @@ export function ConfiguratorTab() {
             </ScatterChart>
           </ResponsiveContainer>
         </CardContent>
+      </Card>
+      <Card>
         <CardContent className="p-6">
-          <div className="space-y-4">
             <p className="font-extrabold text-red-600 text-center pointer-events-none whitespace-nowrap drop-shadow-md uppercase tracking-widest text-sm md:text-base">
                 CONSULT AIRCRAFT POH BEFORE FLIGHT
             </p>
 
             <Separator className="my-4" />
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Load Saved Profile</Label>
@@ -1152,7 +1152,7 @@ export function ConfiguratorTab() {
               </div>
             </div>
 
-            <Separator />
+            <Separator className='my-6' />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
               <div className="space-y-6">
@@ -1182,9 +1182,10 @@ export function ConfiguratorTab() {
                     )}
                   </div>
                   <div className="grid grid-cols-12 gap-2 text-xs font-bold text-muted-foreground px-1 mb-2">
-                    <div className="col-span-5">Station Name</div>
-                    <div className="col-span-3 text-right">Weight</div>
-                    <div className="col-span-3 text-right">Arm</div>
+                    <div className="col-span-4">Station Name</div>
+                    <div className="col-span-2 text-right">Weight</div>
+                    <div className="col-span-2 text-right">Arm</div>
+                    <div className="col-span-3 text-right">Moment</div>
                   </div>
                   <div className="space-y-2">
                     {/* Basic Empty Weight */}
@@ -1193,7 +1194,7 @@ export function ConfiguratorTab() {
                         value="Basic Empty Weight"
                         readOnly
                         disabled
-                        className="col-span-5 h-8"
+                        className="col-span-4 h-8"
                       />
                       <Input
                         type="number"
@@ -1201,7 +1202,7 @@ export function ConfiguratorTab() {
                         onChange={(e) =>
                           handleBasicEmptyChange('weight', e.target.value)
                         }
-                        className="text-right h-8 col-span-3"
+                        className="text-right h-8 col-span-2"
                         readOnly={isReadOnly}
                       />
                       <Input
@@ -1209,6 +1210,15 @@ export function ConfiguratorTab() {
                         value={basicEmpty.arm}
                         onChange={(e) =>
                           handleBasicEmptyChange('arm', e.target.value)
+                        }
+                        className="text-right h-8 col-span-2"
+                        readOnly={isReadOnly}
+                      />
+                      <Input
+                        type="number"
+                        value={basicEmpty.moment}
+                        onChange={(e) =>
+                          handleBasicEmptyChange('moment', e.target.value)
                         }
                         className="text-right h-8 col-span-3"
                         readOnly={isReadOnly}
@@ -1220,7 +1230,7 @@ export function ConfiguratorTab() {
                         {s.type === 'fuel' ? (
                           <div className="space-y-2">
                             <div className="grid grid-cols-12 gap-2 items-center">
-                              <div className="col-span-5 flex items-center gap-2">
+                              <div className="col-span-4 flex items-center gap-2">
                                 <Input
                                   value={s.name}
                                   onChange={(e) =>
@@ -1230,7 +1240,7 @@ export function ConfiguratorTab() {
                                   readOnly={isReadOnly}
                                 />
                               </div>
-                              <div className="col-span-3">
+                              <div className="col-span-2">
                                 <Input
                                   type="number"
                                   value={s.weight}
@@ -1245,7 +1255,7 @@ export function ConfiguratorTab() {
                                   readOnly={isReadOnly}
                                 />
                               </div>
-                              <div className="col-span-3">
+                              <div className="col-span-2">
                                 <Input
                                   type="number"
                                   value={s.arm}
@@ -1255,6 +1265,15 @@ export function ConfiguratorTab() {
                                   className="text-sm text-right h-8"
                                   readOnly={isReadOnly}
                                 />
+                              </div>
+                              <div className="col-span-3">
+                                  <Input
+                                    type="number"
+                                    value={s.weight * s.arm}
+                                    readOnly
+                                    disabled
+                                    className="text-sm text-right h-8"
+                                  />
                               </div>
                               <div className="col-span-1 flex justify-end">
                                 {!isReadOnly && (
@@ -1271,7 +1290,7 @@ export function ConfiguratorTab() {
                               </div>
                             </div>
                             <div className="grid grid-cols-12 gap-2 items-center">
-                              <div className="col-span-5">
+                              <div className="col-span-4">
                                 <Input
                                   value="Gallons"
                                   readOnly
@@ -1279,7 +1298,7 @@ export function ConfiguratorTab() {
                                   className="text-xs text-muted-foreground h-8 col-span-2"
                                 />
                               </div>
-                              <div className="col-span-3">
+                              <div className="col-span-2">
                                 <Input
                                   id={`gallons-${s.id}`}
                                   type="number"
@@ -1295,7 +1314,7 @@ export function ConfiguratorTab() {
                                   readOnly={isReadOnly}
                                 />
                               </div>
-                              <div className="col-span-3 flex items-center gap-1">
+                              <div className="col-span-2 flex items-center gap-1">
                                 <Label
                                   htmlFor={`max-gallons-${s.id}`}
                                   className="text-xs text-muted-foreground flex-shrink-0"
@@ -1321,7 +1340,7 @@ export function ConfiguratorTab() {
                           </div>
                         ) : (
                           <div className="grid grid-cols-12 gap-2 items-center">
-                            <div className="col-span-5">
+                            <div className="col-span-4">
                               <Input
                                 value={s.name}
                                 onChange={(e) =>
@@ -1332,7 +1351,7 @@ export function ConfiguratorTab() {
                                 readOnly={isReadOnly}
                               />
                             </div>
-                            <div className="col-span-3">
+                            <div className="col-span-2">
                               <Input
                                 type="number"
                                 value={s.weight}
@@ -1343,7 +1362,7 @@ export function ConfiguratorTab() {
                                 readOnly={isReadOnly}
                               />
                             </div>
-                            <div className="col-span-3">
+                            <div className="col-span-2">
                               <Input
                                 type="number"
                                 value={s.arm}
@@ -1354,6 +1373,15 @@ export function ConfiguratorTab() {
                                 readOnly={isReadOnly}
                               />
                             </div>
+                             <div className="col-span-3">
+                                <Input
+                                type="number"
+                                value={s.weight * s.arm}
+                                readOnly
+                                disabled
+                                className="text-sm text-right h-8"
+                                />
+                             </div>
                             <div className="col-span-1 flex justify-end">
                                 {!isReadOnly && (
                                     <Button
@@ -1520,7 +1548,6 @@ export function ConfiguratorTab() {
                 </div>
               </div>
             </div>
-          </div>
         </CardContent>
       </Card>
     </div>
