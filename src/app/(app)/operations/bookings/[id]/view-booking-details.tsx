@@ -129,11 +129,9 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                 )}
             </CardContent>
              <CardFooter>
-                 <Button asChild variant="outline">
-                    <Link href={`/assets/mass-balance?aircraftId=${aircraft.id}`}>
-                        <Scale className="mr-2 h-4 w-4" />
-                        Mass and Balance
-                    </Link>
+                <Button variant="outline">
+                    <Scale className="mr-2 h-4 w-4" />
+                    Mass and Balance
                 </Button>
             </CardFooter>
         </Card>
