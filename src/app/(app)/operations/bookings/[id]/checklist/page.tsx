@@ -134,19 +134,6 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
                                 ))}
                             </div>
                         </div>
-                        
-                        <Separator />
-
-                        <div className="space-y-4">
-                            <h3 className="text-lg font-medium">Mass &amp; Balance</h3>
-                            <p className="text-sm text-muted-foreground">Calculate the aircraft's mass and balance for this flight.</p>
-                            <Button asChild>
-                                <Link href={`/operations/bookings/${bookingId}/mass-and-balance`}>
-                                    <Scale className="mr-2 h-4 w-4" />
-                                    Calculate Mass &amp; Balance
-                                </Link>
-                            </Button>
-                        </div>
                         </>
                     )}
                      {checklistType === 'post-flight' && (
