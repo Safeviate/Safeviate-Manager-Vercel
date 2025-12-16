@@ -106,7 +106,7 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
         };
     }, [aircraft, frontSeatWeight, rearSeatWeight, baggage1Weight, baggage2Weight, fuelGallons]);
 
-    const cgEnvelopePoints = useMemo(() => aircraft?.cgEnvelope?.map(([weight, cg]) => ({ weight, cg })) || [], [aircraft]);
+    const cgEnvelopePoints = useMemo(() => aircraft?.cgEnvelope?.map(p => ({ weight: p.weight, cg: p.cg })) || [], [aircraft]);
     const polygonForCheck = useMemo(() => cgEnvelopePoints.map(p => ({ x: p.cg, y: p.weight })), [cgEnvelopePoints]);
 
     const takeoffPoint = useMemo(() => ({ x: calculation?.takeoffCg || 0, y: calculation?.takeoffWeight || 0 }), [calculation]);

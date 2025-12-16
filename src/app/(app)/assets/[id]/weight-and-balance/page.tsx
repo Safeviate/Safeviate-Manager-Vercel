@@ -101,7 +101,7 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
         };
     }, [aircraft, frontSeatWeight, rearSeatWeight, baggage1Weight, baggage2Weight, fuelGallons]);
 
-    const cgEnvelopePoints = useMemo(() => aircraft?.cgEnvelope?.map(([weight, cg]) => ({ weight, cg })) || [], [aircraft]);
+    const cgEnvelopePoints = useMemo(() => aircraft?.cgEnvelope?.map(p => ({ weight: p.weight, cg: p.cg })) || [], [aircraft]);
     const polygonForCheck = useMemo(() => cgEnvelopePoints.map(p => ({ x: p.cg, y: p.weight })), [cgEnvelopePoints]);
 
     const takeoffPoint = useMemo(() => ({ x: calculation?.takeoffCg || 0, y: calculation?.takeoffWeight || 0 }), [calculation]);
@@ -236,7 +236,8 @@ export default function WeightAndBalancePage({ params }: WeightAndBalancePagePro
                                                     />
                                                 </ReferenceDot>
                                             }
-                                        </ScatterChart>
+                                        </Scatter>
+                                    </ScatterChart>
                                 </ResponsiveContainer>
                                 <div className="absolute top-4 right-4">
                                   <Badge className={cn(isTakeoffOk ? 'bg-green-600 hover:bg-green-600' : 'bg-destructive hover:bg-destructive', 'text-xs text-white px-2 py-0.5')}>

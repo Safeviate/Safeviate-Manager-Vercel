@@ -360,15 +360,13 @@
         },
         "cgEnvelope": {
           "type": "array",
-          "description": "An array of [weight, cg] pairs defining the vertices of the CG envelope polygon.",
+          "description": "An array of {weight, cg} objects defining the vertices of the CG envelope polygon.",
           "items": {
-            "type": "array",
-            "items": [
-              { "type": "number", "description": "Weight (lbs)" },
-              { "type": "number", "description": "Center of Gravity (inches)" }
-            ],
-            "minItems": 2,
-            "maxItems": 2
+            "type": "object",
+            "properties": {
+              "weight": { "type": "number", "description": "Weight (lbs)" },
+              "cg": { "type": "number", "description": "Center of Gravity (inches)" }
+            }
           }
         }
       },
@@ -743,20 +741,6 @@
           "params": [
             { "name": "tenantId", "description": "Tenant ID." },
             { "name": "profileId", "description": "Profile ID." }
-          ]
-        }
-      },
-      {
-        "path": "tenants/{tenantId}/massAndBalance/{configId}",
-        "definition": {
-          "entityName": "AircraftModelProfile",
-          "schema": {
-            "$ref": "#/backend/entities/AircraftModelProfile"
-          },
-          "description": "Stores saved Mass & Balance configurations from the configurator tool.",
-          "params": [
-            { "name": "tenantId", "description": "Tenant ID." },
-            { "name": "configId", "description": "Configuration ID." }
           ]
         }
       },

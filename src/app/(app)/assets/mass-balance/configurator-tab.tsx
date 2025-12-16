@@ -62,6 +62,7 @@ import {
     SelectTrigger,
     SelectValue,
   } from '@/components/ui/select';
+import { useForm } from 'react-hook-form';
 
 const POINT_COLORS = [
   '#ef4444',
@@ -146,6 +147,10 @@ export function ConfiguratorTab() {
   const [makeForSave, setMakeForSave] = useState('');
   const [modelForSave, setModelForSave] = useState('');
   const [selectedAircraftId, setSelectedAircraftId] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+
+
+  const form = useForm();
 
   const [graphConfig, setGraphConfig] = useState({
     xMin: 80,
@@ -324,7 +329,7 @@ export function ConfiguratorTab() {
 
   const handleReset = () => {
     if (window.confirm('Reset to default Piper PA-28 data?')) {
-      setGraphConfig({
+      const defaultData = {
         xMin: 80,
         xMax: 94,
         yMin: 1400,
@@ -337,39 +342,40 @@ export function ConfiguratorTab() {
           { x: 93, y: 1400 },
           { x: 82, y: 1400 },
         ],
-      });
-      setBasicEmpty({ weight: 1416, moment: 120360, arm: 85.0 });
-      setStations([
-        {
-          id: 2,
-          name: 'Pilot & Front Pax',
-          weight: 340,
-          arm: 85.5,
-          type: 'standard',
-        },
-        {
-          id: 3,
-          name: 'Fuel',
-          weight: 288,
-          arm: 95.0,
-          type: 'fuel',
-          gallons: 48,
-          maxGallons: 50,
-        },
-      ]);
+      };
+      const defaultStations = [
+        { id: 2, name: 'Pilot & Front Pax', weight: 340, arm: 85.5, type: 'standard' },
+        { id: 3, name: 'Fuel', weight: 288, arm: 95.0, type: 'fuel', gallons: 48, maxGallons: 50 },
+      ];
+      const defaultBasicEmpty = { weight: 1416, moment: 120360, arm: 85.0 };
+
+      setGraphConfig(defaultData);
+      setStations(defaultStations);
+      setBasicEmpty(defaultBasicEmpty);
       setMakeForSave('Piper');
       setModelForSave('PA-28-180');
+
+      // Also reset react-hook-form if it holds any state from other components
+      form.reset({
+        ...defaultData,
+        stations: defaultStations,
+        emptyWeight: defaultBasicEmpty.weight,
+        emptyWeightMoment: defaultBasicEmpty.moment,
+        modelName: 'Piper PA-28-180'
+      });
+      toast({ title: 'Configurator Reset', description: 'Default data for Piper PA-28 has been loaded.' });
     }
   };
 
   const handleLoadTemplate = (templateId: string) => {
     const template = profiles?.find(p => p.id === templateId);
     if (!template) return;
+    
+    setSelectedTemplateId(templateId); // Keep track of the selected value
 
     setMakeForSave(template.make || '');
     setModelForSave(template.model || '');
     
-    // Separate BEW from other stations if it exists
     const bewStation = template.stations?.find(s => s.name === 'Basic Empty Weight');
     const otherStations = template.stations?.filter(s => s.name !== 'Basic Empty Weight') || [];
 
@@ -392,11 +398,16 @@ export function ConfiguratorTab() {
         title: "Template Loaded",
         description: `Loaded the W&B profile for ${template.make} ${template.model}.`,
     });
+
+    // Reset the dropdown after loading
+    setTimeout(() => setSelectedTemplateId(''), 0);
   };
 
   const handleLoadFromAircraft = (aircraftId: string) => {
     const aircraft = aircraftList?.find(a => a.id === aircraftId);
     if (!aircraft) return;
+
+    setSelectedAircraftId(aircraftId);
 
     setMakeForSave(aircraft.model || ''); // Or derive make if possible
     setModelForSave(aircraft.tailNumber || '');
@@ -407,7 +418,6 @@ export function ConfiguratorTab() {
         arm: (aircraft.emptyWeight && aircraft.emptyWeight > 0) ? (aircraft.emptyWeightMoment || 0) / aircraft.emptyWeight : 0,
     });
     
-    // Reconstruct stations from simple stationArms
     const reconstructedStations: any[] = [];
     if (aircraft.stationArms) {
         if(aircraft.stationArms.frontSeats) reconstructedStations.push({ id: Date.now() + 1, name: 'Front Seats', arm: aircraft.stationArms.frontSeats, weight: 0, type: 'standard' });
@@ -418,9 +428,8 @@ export function ConfiguratorTab() {
     }
     setStations(reconstructedStations);
 
-    const envelope = (aircraft.cgEnvelope || []).map(p => ({ x: p[1], y: p[0] })); // Convert [[weight, cg]] to [{x,y}]
+    const envelope = (aircraft.cgEnvelope || []).map(p => ({ x: p.cg, y: p.weight })); // Convert [{weight, cg}] to [{x,y}]
     setGraphConfig({
-        // Try to auto-detect limits from envelope, with fallbacks
         xMin: Math.min(...envelope.map(p => p.x)) - 2 || 0,
         xMax: Math.max(...envelope.map(p => p.x)) + 2 || 100,
         yMin: Math.min(...envelope.map(p => p.y)) - 200 || 0,
@@ -432,6 +441,9 @@ export function ConfiguratorTab() {
         title: "Aircraft W&B Loaded",
         description: `Loaded configuration for ${aircraft.tailNumber}.`,
     });
+    
+    // Reset the dropdown after loading
+    setTimeout(() => setSelectedAircraftId(''), 0);
   };
 
   const saveAsProfile = () => {
@@ -483,7 +495,6 @@ export function ConfiguratorTab() {
     
     const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', selectedAircraftId);
     
-    // Convert stations back to simple stationArms for the aircraft document
     const stationArms: Record<string, number> = {};
     stations.forEach(s => {
         if (s.name.toLowerCase().includes('front')) stationArms.frontSeats = s.arm;
@@ -497,8 +508,7 @@ export function ConfiguratorTab() {
         emptyWeight: basicEmpty.weight,
         emptyWeightMoment: basicEmpty.moment,
         maxTakeoffWeight: Math.max(...graphConfig.envelope.map(p => p.y)),
-        // The configurator saves envelope as [{x,y}], but aircraft entity expects [[weight, cg]]
-        cgEnvelope: graphConfig.envelope.map(p => [p.y, p.x]),
+        cgEnvelope: graphConfig.envelope.map(p => ({ weight: p.y, cg: p.x })),
         stationArms,
     };
 
@@ -581,7 +591,7 @@ export function ConfiguratorTab() {
           <Dialog open={isSaveProfileDialogOpen} onOpenChange={setIsSaveProfileDialogOpen}>
              <DialogTrigger asChild>
                 <Button>
-                    <Save size={16} className="mr-2" /> Save as Profile
+                    <Save size={16} className="mr-2" /> Save as New Profile
                 </Button>
              </DialogTrigger>
             <DialogContent>
@@ -743,7 +753,7 @@ export function ConfiguratorTab() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div>
                     <Label>Load Saved Template</Label>
-                    <Select onValueChange={handleLoadTemplate} disabled={isLoadingProfiles}>
+                    <Select onValueChange={handleLoadTemplate} value={selectedTemplateId} disabled={isLoadingProfiles}>
                         <SelectTrigger>
                             <SelectValue placeholder={isLoadingProfiles ? "Loading templates..." : "Select a template"} />
                         </SelectTrigger>
@@ -756,7 +766,7 @@ export function ConfiguratorTab() {
                  </div>
                  <div>
                     <Label>Load from Aircraft Registration</Label>
-                    <Select onValueChange={handleLoadFromAircraft} disabled={isLoadingAircraft}>
+                    <Select onValueChange={handleLoadFromAircraft} value={selectedAircraftId} disabled={isLoadingAircraft}>
                         <SelectTrigger>
                             <SelectValue placeholder={isLoadingAircraft ? "Loading aircraft..." : "Select an aircraft"} />
                         </SelectTrigger>
