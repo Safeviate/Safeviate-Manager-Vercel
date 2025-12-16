@@ -10,6 +10,9 @@ import type { ChecklistResponse } from '@/types/checklist';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Scale } from 'lucide-react';
 
 interface ViewBookingDetailsProps {
   booking: Booking;
@@ -138,7 +141,12 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <p className="text-sm text-muted-foreground text-center">Planning tools will be available here.</p>
+                <Button asChild>
+                    <Link href={`/operations/bookings/${booking.id}/mass-and-balance`}>
+                        <Scale className='mr-2 h-4 w-4' />
+                        Calculate Mass & Balance
+                    </Link>
+                </Button>
             </CardContent>
         </Card>
     </div>

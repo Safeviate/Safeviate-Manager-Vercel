@@ -1,7 +1,7 @@
 
 'use client';
 
-import { use, useMemo, useState, useEffect } from 'react';
+import { use, useMemo, useState } from 'react';
 import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Booking } from '@/types/booking';
@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { ArrowLeft, Scale } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -116,19 +116,24 @@ export default function MassAndBalancePage({ params }: MassAndBalancePageProps) 
     const isTakeoffOk = isTakeoffWeightOk && isTakeoffCgOk;
 
     const domain = useMemo(() => {
-        if (cgEnvelopePoints.length === 0) return { x: [0, 100], y: [0, 3000] };
+        if (!aircraft?.cgEnvelope || aircraft.cgEnvelope.length === 0) return { x: [0, 100], y: [0, 3000] };
         
-        const xValues = cgEnvelopePoints.map(p => p.cg);
-        const yValues = cgEnvelopePoints.map(p => p.weight);
+        const xValues = aircraft.cgEnvelope.map(p => p.cg);
+        const yValues = aircraft.cgEnvelope.map(p => p.weight);
 
-        const xPadding = (Math.max(...xValues) - Math.min(...xValues)) * 0.1;
-        const yPadding = (Math.max(...yValues) - Math.min(...yValues)) * 0.1;
+        const minX = Math.min(...xValues);
+        const maxX = Math.max(...xValues);
+        const minY = Math.min(...yValues);
+        const maxY = Math.max(...yValues);
+
+        const xPadding = (maxX - minX) * 0.1;
+        const yPadding = (maxY - minY) * 0.1;
         
         return {
-            x: [Math.min(...xValues) - xPadding, Math.max(...xValues) + xPadding],
-            y: [Math.min(...yValues) - yPadding, Math.max(...yValues) + yPadding],
+            x: [minX - xPadding, maxX + xPadding],
+            y: [minY - yPadding, maxY + yPadding],
         };
-    }, [cgEnvelopePoints]);
+    }, [aircraft?.cgEnvelope]);
 
 
     if (isLoading) {
@@ -139,11 +144,17 @@ export default function MassAndBalancePage({ params }: MassAndBalancePageProps) 
         return <div className="text-destructive text-center p-6">Error: {error?.message || 'Booking or Aircraft data could not be loaded.'}</div>;
     }
 
-    if (!aircraft.stationArms || !aircraft.cgEnvelope || !aircraft.emptyWeight || !aircraft.emptyWeightMoment) {
+    if (!aircraft.stationArms || !aircraft.cgEnvelope || aircraft.cgEnvelope.length === 0 || !aircraft.emptyWeight || !aircraft.emptyWeightMoment) {
         return (
             <div className="max-w-7xl mx-auto space-y-6 text-center p-6">
-                <h2 className="text-xl font-semibold text-destructive">Incomplete Aircraft Configuration</h2>
-                <p className="text-muted-foreground">This aircraft is missing critical mass &amp; balance information (e.g., station arms, CG envelope, empty weight). Please complete the aircraft's profile in the Assets section.</p>
+                 <Button asChild variant="outline" size="sm" className='absolute top-6 left-6'>
+                    <Link href={`/operations/bookings/${bookingId}`}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back to Booking
+                    </Link>
+                </Button>
+                <h2 className="text-xl font-semibold text-destructive pt-16">Incomplete Aircraft Configuration</h2>
+                <p className="text-muted-foreground">This aircraft is missing critical mass & balance information (e.g., station arms, CG envelope, empty weight). Please complete the aircraft's profile in the Assets section.</p>
                 <Button asChild variant="outline" className="mt-4">
                     <Link href={`/assets/${aircraft.id}`}>Go to Aircraft Profile</Link>
                 </Button>
@@ -166,10 +177,10 @@ export default function MassAndBalancePage({ params }: MassAndBalancePageProps) 
         <div className="max-w-7xl mx-auto space-y-6">
             <div>
                 <Button asChild variant="outline" size="sm">
-                <Link href={`/operations/bookings/${bookingId}/checklist`}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Checklist
-                </Link>
+                    <Link href={`/operations/bookings/${bookingId}`}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back to Booking
+                    </Link>
                 </Button>
             </div>
             <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">
@@ -177,7 +188,7 @@ export default function MassAndBalancePage({ params }: MassAndBalancePageProps) 
                     <Card>
                         <CardHeader>
                             <CardTitle>Mass &amp; Balance Summary</CardTitle>
-                            <CardDescription>Review the calculated mass and center of gravity.</CardDescription>
+                            <CardDescription>Review the calculated mass and center of gravity for booking #{booking.bookingNumber} on aircraft {aircraft.tailNumber}.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="border rounded-lg">
@@ -222,7 +233,6 @@ export default function MassAndBalancePage({ params }: MassAndBalancePageProps) 
                                         <Tooltip cursor={{ strokeDasharray: '3 3' }} />
                                         <Area type="linear" dataKey="weight" data={cgEnvelopePoints} name="CG Limit" stroke="#8884d8" fill="#8884d8" fillOpacity={0.2} strokeWidth={2} />
                                         <Scatter name="Takeoff CG" data={[ { weight: takeoffPoint.y, cg: takeoffPoint.x } ]} fill={isTakeoffOk ? "#22c55e" : "#ef4444"}>
-                                            {/* Custom shape rendering for the dot */}
                                             {takeoffPoint &&
                                                 <ReferenceDot
                                                     x={takeoffPoint.x}

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { use, useMemo, useState, useEffect } from 'react';
+import { use, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -11,11 +11,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { ArrowLeft, Scale } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Separator } from '@/components/ui/separator';
 
 interface ChecklistPageProps {
     params: { id: string };
@@ -100,9 +99,9 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
         <div className="max-w-4xl mx-auto space-y-6">
             <div>
                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/operations/bookings`}>
+                    <Link href={`/operations/bookings/${bookingId}`}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Schedule
+                        Back to Booking
                     </Link>
                 </Button>
             </div>
