@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -155,9 +154,8 @@ export function ConfiguratorTab() {
   const tenantId = 'safeviate';
 
   const [isSaveProfileDialogOpen, setIsSaveProfileDialogOpen] = useState(false);
-  const [isAssignAircraftDialogOpen, setIsAssignAircraftDialogOpen] = useState(false);
   const [isClearAircraftDialogOpen, setIsClearAircraftDialogOpen] = useState(false);
-  const [isConfirmClearDialogOpen, setIsConfirmClearDialogOpen] = useState(false);
+  const [showConfirmClear, setShowConfirmClear] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [profileNameForSave, setProfileNameForSave] = useState('');
   const [selectedAircraftId, setSelectedAircraftId] = useState('');
@@ -614,7 +612,7 @@ export function ConfiguratorTab() {
         description: `The current W&B configuration has been saved to the selected aircraft.`
     });
 
-    setIsAssignAircraftDialogOpen(false);
+    //setIsAssignAircraftDialogOpen(false);
   }
 
   const handleClearAircraftWandB = () => {
@@ -645,10 +643,19 @@ export function ConfiguratorTab() {
         description: `The Mass & Balance configuration has been cleared for the selected aircraft.`
     });
     
-    setIsConfirmClearDialogOpen(false);
+    setShowConfirmClear(false);
     setIsClearAircraftDialogOpen(false);
     setSelectedAircraftId('');
   }
+
+  const handleClearDialogOpenChange = (open: boolean) => {
+    setIsClearAircraftDialogOpen(open);
+    if (!open) {
+      // Reset subordinate states when main dialog closes
+      setShowConfirmClear(false);
+      setSelectedAircraftId('');
+    }
+  };
 
 
   const allX = [
@@ -671,6 +678,8 @@ export function ConfiguratorTab() {
   const offScreenStatus = isOffScreen();
 
   const loadedProfileName = loadedProfileId ? profiles?.find(p => p.id === loadedProfileId)?.profileName : null;
+  const selectedAircraftName = selectedAircraftId ? aircraftList?.find(a => a.id === selectedAircraftId)?.tailNumber : '';
+
 
   return (
     <div className="space-y-6">
@@ -703,7 +712,7 @@ export function ConfiguratorTab() {
             <RotateCcw size={16} className="mr-2" /> Reset
           </Button>
 
-           <Dialog open={isAssignAircraftDialogOpen} onOpenChange={setIsAssignAircraftDialogOpen}>
+           <Dialog>
              <DialogTrigger asChild>
                 <Button variant="outline">
                     <Plane size={16} className="mr-2" /> Assign to Aircraft
@@ -738,38 +747,59 @@ export function ConfiguratorTab() {
             </DialogContent>
           </Dialog>
 
-            <Dialog open={isClearAircraftDialogOpen} onOpenChange={setIsClearAircraftDialogOpen}>
+            <Dialog open={isClearAircraftDialogOpen} onOpenChange={handleClearDialogOpenChange}>
                 <DialogTrigger asChild>
                     <Button variant="destructive">
                         <Wrench size={16} className="mr-2" /> Clear Aircraft W&amp;B
                     </Button>
                 </DialogTrigger>
                 <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Clear Aircraft Mass & Balance</DialogTitle>
-                        <DialogDescription>
-                            Select an aircraft to clear its stored W&amp;B configuration. This action cannot be undone.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4 space-y-2">
-                        <Label htmlFor="aircraft-clear-select">Aircraft Registration</Label>
-                        <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
-                            <SelectTrigger id="aircraft-clear-select">
-                                <SelectValue placeholder="Select an aircraft..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {(aircraftList || []).map(a => (
-                                    <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="outline">Cancel</Button>
-                        </DialogClose>
-                        <Button variant='destructive' disabled={!selectedAircraftId} onClick={() => setIsConfirmClearDialogOpen(true)}>Proceed to Clear</Button>
-                    </DialogFooter>
+                    {!showConfirmClear ? (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle>Clear Aircraft Mass & Balance</DialogTitle>
+                                <DialogDescription>
+                                    Select an aircraft to clear its stored W&amp;B configuration. This action cannot be undone.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="py-4 space-y-2">
+                                <Label htmlFor="aircraft-clear-select">Aircraft Registration</Label>
+                                <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
+                                    <SelectTrigger id="aircraft-clear-select">
+                                        <SelectValue placeholder="Select an aircraft..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {(aircraftList || []).map(a => (
+                                            <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <DialogFooter>
+                                <DialogClose asChild>
+                                    <Button variant="outline">Cancel</Button>
+                                </DialogClose>
+                                <Button variant='destructive' disabled={!selectedAircraftId} onClick={() => setShowConfirmClear(true)}>
+                                    Proceed to Clear
+                                </Button>
+                            </DialogFooter>
+                        </>
+                    ) : (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle>Are you absolutely sure?</DialogTitle>
+                                <DialogDescription>
+                                    This will permanently delete the mass and balance data for aircraft <span className='font-bold'>{selectedAircraftName}</span>.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setShowConfirmClear(false)}>Go Back</Button>
+                                <Button onClick={handleClearAircraftWandB} variant="destructive">
+                                    Yes, Clear Data
+                                </Button>
+                            </DialogFooter>
+                        </>
+                    )}
                 </DialogContent>
             </Dialog>
 
@@ -1242,29 +1272,8 @@ export function ConfiguratorTab() {
         </div>
         </CardContent>
       </Card>
-      
-      {/* This dialog is now outside the main component flow, so it won't trap focus */}
-      <AlertDialog open={isConfirmClearDialogOpen} onOpenChange={setIsConfirmClearDialogOpen}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    This will permanently delete the mass and balance data for aircraft <span className='font-bold'>{aircraftList?.find(a => a.id === selectedAircraftId)?.tailNumber}</span>.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleClearAircraftWandB} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-                    Yes, Clear Data
-                </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
 
 export default ConfiguratorTab;
-
-
-
