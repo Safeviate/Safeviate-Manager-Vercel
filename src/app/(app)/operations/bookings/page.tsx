@@ -13,9 +13,10 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, PlaneLanding, PlaneTakeoff } from 'lucide-react';
+import { CalendarIcon, Eye, BookOpen } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { BookingForm } from './booking-form';
+import { useRouter } from 'next/navigation';
 
 const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
 const TOTAL_HOURS = 24;
@@ -68,7 +69,7 @@ const BookingItem = ({ booking, pilots, selectedDate, children }: { booking: Boo
     )
 }
 
-const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePosition, selectedDate, onSlotClick, onActionClick }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; showNowLine: boolean; nowLinePosition: number; selectedDate: Date; onSlotClick: (aircraft: Aircraft, time: string, booking?: Booking) => void; onActionClick: (action: string, booking: Booking) => void; }) => {
+const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePosition, selectedDate, onSlotClick, onActionClick }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; showNowLine: boolean; nowLinePosition: number; selectedDate: Date; onSlotClick: (aircraft: Aircraft, time: string, booking?: Booking) => void; onActionClick: (action: 'view' | 'open', booking: Booking) => void; }) => {
     const today = startOfToday();
     const isSelectedDateToday = isSameDay(selectedDate, today);
     const isSelectedDateInPast = isBefore(selectedDate, today);
@@ -143,13 +144,13 @@ const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePositi
             selectedDate={selectedDate}
         >
             <div className="flex flex-col space-y-2">
-                <Button variant="outline" size="sm" onClick={() => onActionClick('pre-flight', booking)}>
-                    <PlaneTakeoff className="mr-2" />
-                    Pre-Flight Checklist
+                <Button variant="outline" size="sm" onClick={() => onActionClick('view', booking)}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    View Booking
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => onActionClick('post-flight', booking)}>
-                    <PlaneLanding className="mr-2" />
-                    Post-Flight Checklist
+                <Button variant="outline" size="sm" onClick={() => onActionClick('open', booking)}>
+                    <BookOpen className="mr-2 h-4 w-4" />
+                    Open Booking
                 </Button>
             </div>
         </BookingItem>
@@ -161,6 +162,7 @@ const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePositi
 
 export default function SchedulePage() {
   const firestore = useFirestore();
+  const router = useRouter();
   const tenantId = 'safeviate'; // Hardcoded for now
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -170,6 +172,7 @@ export default function SchedulePage() {
   // State for managing the booking form modal
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formInitialData, setFormInitialData] = useState<any>(null);
+  const [checklistTypeToShow, setChecklistTypeToShow] = useState<'pre-flight' | 'post-flight' | undefined>(undefined);
 
   const aircraftQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
@@ -184,7 +187,7 @@ export default function SchedulePage() {
         collection(firestore, 'tenants', tenantId, 'bookings'),
         where('startTime', '<=', end),
     );
-  }, [firestore, tenantId, startOfDay(selectedDate).toISOString()]); // Use stable ISO string for dependency
+  }, [firestore, tenantId, selectedDate]); 
 
   const pilotsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'pilots')) : null),
@@ -202,7 +205,7 @@ export default function SchedulePage() {
     return allBookings.filter(b => 
         b.startTime.toDate() <= dayEnd && b.endTime.toDate() >= dayStart
     );
-  }, [allBookings, startOfDay(selectedDate).toISOString()]); // Use stable ISO string for dependency
+  }, [allBookings, selectedDate]);
 
 
   const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingPilots;
@@ -250,15 +253,22 @@ export default function SchedulePage() {
         date: selectedDate,
         booking: undefined,
     });
+    setChecklistTypeToShow(undefined);
     setIsFormOpen(true);
   }, [selectedDate]);
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
     setFormInitialData(null);
+    setChecklistTypeToShow(undefined);
   };
   
-  const handleActionClick = (action: string, booking: Booking) => {
+  const handleActionClick = (action: 'view' | 'open', booking: Booking) => {
+    if (action === 'open') {
+        router.push(`/operations/bookings/${booking.id}`);
+        return;
+    }
+
     const aircraftForBooking = aircraft?.find(a => a.id === booking.aircraftId);
     if (!aircraftForBooking) return;
 
@@ -268,6 +278,7 @@ export default function SchedulePage() {
         date: booking.startTime.toDate(),
         booking: booking,
     });
+    setChecklistTypeToShow(undefined);
     setIsFormOpen(true);
   };
 
@@ -370,6 +381,7 @@ export default function SchedulePage() {
             initialData={formInitialData}
             isOpen={isFormOpen}
             onClose={handleCloseForm}
+            checklistTypeToShow={checklistTypeToShow}
         />
       )}
     </>
