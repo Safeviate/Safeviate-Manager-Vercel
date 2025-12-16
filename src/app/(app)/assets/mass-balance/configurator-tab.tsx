@@ -3,20 +3,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  ScatterChart,
-  Scatter,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Label as RechartsLabel,
-  ReferenceDot,
-  Cell,
-} from 'recharts';
 import { collection, doc, query, where, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
-import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
 import {
   Save,
@@ -55,7 +43,6 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,6 +62,18 @@ import {
     SelectValue,
   } from '@/components/ui/select';
 import { useForm } from 'react-hook-form';
+import {
+    ScatterChart,
+    Scatter,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+    Label as RechartsLabel,
+    ReferenceDot,
+    Cell,
+  } from 'recharts';
 
 const POINT_COLORS = [
   '#ef4444',
@@ -346,7 +345,6 @@ export function ConfiguratorTab() {
     setProfileNameForSave(template.profileName || '');
     setLoadedAircraftTailNumber(null);
     
-    // The first station is assumed to be Basic Empty Weight
     const bewStation = template.stations?.find(s => s.type === 'bew');
     const otherStations = template.stations?.filter(s => s.type !== 'bew') || [];
 
@@ -377,35 +375,37 @@ export function ConfiguratorTab() {
       return;
     }
     
-    const collectionRef = collection(firestore, 'tenants', tenantId, 'massAndBalance');
-    const q = query(collectionRef, where("profileName", "==", "Default"));
+    // This is a hardcoded representation of the default state
+    const defaultProfileData = {
+        profileName: "Default",
+        stations: [
+            { id: 2, name: 'Pilot & Front Pax', weight: 340, arm: 85.5, type: 'standard' },
+            { id: 3, name: 'Fuel', weight: 288, arm: 95, type: 'fuel', gallons: 48, maxGallons: 50 },
+            { id: 4, name: 'Rear Pax', weight: 0, arm: 118.1, type: 'standard' },
+            { id: 5, name: 'Baggage', weight: 0, arm: 142.8, type: 'standard' },
+        ],
+        cgEnvelope: [
+            { x: 82, y: 1400 },
+            { x: 82, y: 1950 },
+            { x: 86.5, y: 2450 },
+            { x: 93, y: 2450 },
+            { x: 93, y: 1400 },
+            { x: 82, y: 1400 },
+        ],
+        xMin: 80, xMax: 94, yMin: 1400, yMax: 2600,
+        emptyWeight: 1416, emptyWeightMoment: 120360,
+    };
     
-    try {
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        const docSnap = querySnapshot.docs[0];
-        const defaultProfile = { id: docSnap.id, ...docSnap.data() } as AircraftModelProfile;
-        loadProfileData(defaultProfile);
-        setLoadedAircraftTailNumber(null);
-        setSelectedAircraftId('');
-        setSelectedTemplateId('');
-        setLoadedProfileId(docSnap.id);
-      } else {
-        toast({ variant: 'destructive', title: 'Default Profile Not Found', description: 'Could not find a profile named "Default" in the database.' });
-      }
-    } catch (error) {
-      console.error("Error fetching default profile: ", error);
-      toast({ variant: 'destructive', title: 'Error Loading Default', description: 'Failed to fetch the default profile from the database.' });
-    }
+    setLoadedAircraftTailNumber(null);
+    setSelectedAircraftId('');
+    setSelectedTemplateId('');
+    setLoadedProfileId(null);
+    loadProfileData(defaultProfileData as AircraftModelProfile);
+    toast({ title: "Configurator Reset", description: "The configurator has been reset to the default Cessna 172S values."});
   };
 
   const handleLoadTemplate = (templateId: string) => {
     if (!templateId) return;
-
-    if (templateId === 'reset') {
-        handleReset();
-        return;
-    }
 
     const template = profiles?.find(p => p.id === templateId);
     if (!template) {
@@ -416,8 +416,8 @@ export function ConfiguratorTab() {
     setSelectedTemplateId(templateId); 
     setLoadedProfileId(template.id);
     loadProfileData(template);
-    setLoadedAircraftTailNumber(null); // Clear any loaded aircraft
-    setSelectedAircraftId(''); // Clear the aircraft dropdown
+    setLoadedAircraftTailNumber(null);
+    setSelectedAircraftId('');
   };
 
   const handleLoadFromAircraft = (aircraftId: string) => {
@@ -425,8 +425,8 @@ export function ConfiguratorTab() {
     if (!aircraft) return;
 
     setSelectedAircraftId(aircraftId);
-    setLoadedAircraftTailNumber(aircraft.tailNumber); // Set the loaded aircraft name
-    setLoadedProfileId(null); // Clear loaded profile
+    setLoadedAircraftTailNumber(aircraft.tailNumber);
+    setLoadedProfileId(null);
 
     setProfileNameForSave(aircraft.tailNumber || '');
 
@@ -490,13 +490,17 @@ export function ConfiguratorTab() {
     
     try {
         const collectionRef = collection(firestore, 'tenants', tenantId, 'massAndBalance');
-        await addDoc(collectionRef, configData);
+        const docRef = await addDoc(collectionRef, configData);
         
         toast({
             title: 'Profile Saved',
             description: `The profile "${profileNameForSave}" has been saved.`,
         });
         
+        // After saving, load the newly created profile
+        setSelectedTemplateId(docRef.id);
+        setLoadedProfileId(docRef.id);
+
         setIsSaveProfileDialogOpen(false);
         setProfileNameForSave('');
     } catch (error) {
@@ -567,7 +571,6 @@ export function ConfiguratorTab() {
         description: `The profile has been successfully deleted.`,
     });
     
-    // Reset the UI
     await handleReset();
     setIsDeleteDialogOpen(false);
   };
@@ -637,7 +640,7 @@ export function ConfiguratorTab() {
       <div className="flex justify-between items-center">
         <div className='flex items-center gap-4'>
             <h1 className="text-2xl font-bold tracking-tight">
-            W&amp;B Configurator
+            Mass &amp; Balance
             </h1>
             {loadedAircraftTailNumber && (
                 <div className='flex items-center gap-2'>
@@ -648,6 +651,13 @@ export function ConfiguratorTab() {
                         <XCircle className='h-4 w-4'/>
                         <span className='sr-only'>Clear loaded aircraft</span>
                     </Button>
+                </div>
+            )}
+             {loadedProfileName && (
+                <div className='flex items-center gap-2'>
+                    <Badge variant="outline" className='text-base border-primary text-primary'>
+                        {loadedProfileName}
+                    </Badge>
                 </div>
             )}
         </div>
@@ -875,10 +885,10 @@ export function ConfiguratorTab() {
         <div className='space-y-4'>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div>
-                    <Label>Load Saved Template</Label>
+                    <Label>Load Saved Profile</Label>
                     <Select onValueChange={handleLoadTemplate} value={selectedTemplateId} disabled={isLoadingProfiles}>
                         <SelectTrigger>
-                            <SelectValue placeholder={isLoadingProfiles ? "Loading templates..." : "Select a template"} />
+                            <SelectValue placeholder={isLoadingProfiles ? "Loading profiles..." : "Select a profile"} />
                         </SelectTrigger>
                         <SelectContent>
                             {(profiles || []).map(p => (
@@ -1165,4 +1175,3 @@ export function ConfiguratorTab() {
 }
 
 export default ConfiguratorTab;
-
