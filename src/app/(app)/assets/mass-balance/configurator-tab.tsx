@@ -18,6 +18,7 @@ import {
   XCircle,
   Wrench,
   Lock,
+  ArrowLeft,
 } from 'lucide-react';
 import {
   Card,
@@ -80,6 +81,7 @@ import {
   } from 'recharts';
 import { useSearchParams } from 'next/navigation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import Link from 'next/link';
 
 const POINT_COLORS = [
   '#ef4444',
@@ -773,6 +775,13 @@ export function ConfiguratorTab() {
             </h1>
         </div>
         <div className="flex gap-3">
+          {isReadOnly && bookingIdFromUrl && (
+            <Button asChild variant="outline">
+              <Link href={`/operations/bookings/${bookingIdFromUrl}`}>
+                <ArrowLeft size={16} className="mr-2" /> Back to Booking
+              </Link>
+            </Button>
+          )}
           {!isReadOnly && (
              <Button onClick={handleReset} variant="outline">
                 <RotateCcw size={16} className="mr-2" /> Reset
