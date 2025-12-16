@@ -58,6 +58,32 @@
       },
       "required": ["id", "profileName"]
     },
+    "MassAndBalance": {
+      "title": "Mass and Balance",
+      "type": "object",
+      "description": "A snapshot of a mass and balance calculation for a booking.",
+      "properties": {
+        "totalWeight": { "type": "number" },
+        "totalCg": { "type": "number" },
+        "isSafe": { "type": "boolean" },
+        "calculationDate": { "type": "string", "format": "date-time" },
+        "stations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "number" },
+              "name": { "type": "string" },
+              "weight": { "type": "number" },
+              "arm": { "type": "number" },
+              "type": { "type": "string" },
+              "gallons": { "type": "number" },
+              "maxGallons": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
     "Booking": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Booking",
@@ -111,6 +137,9 @@
         "cancellationReason": {
             "type": "string",
             "description": "The reason for the booking cancellation."
+        },
+        "massAndBalance": {
+            "$ref": "#/backend/entities/MassAndBalance"
         }
       },
       "required": ["id", "bookingNumber", "aircraftId", "pilotId", "type", "startTime", "endTime", "status"]

@@ -3,7 +3,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { collection, doc, query, where, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, addDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
 import {
@@ -17,6 +17,7 @@ import {
   Plane,
   XCircle,
   Wrench,
+  Lock,
 } from 'lucide-react';
 import {
   Card,
@@ -56,7 +57,7 @@ import { Badge } from '@/components/ui/badge';
 import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
 import type { AircraftModelProfile } from '@/types/aircraft-wb-profile';
 import type { Aircraft } from '../page';
-import type { Booking } from '@/types/booking';
+import type { Booking, MassAndBalance } from '@/types/booking';
 import {
     Select,
     SelectContent,
@@ -78,6 +79,7 @@ import {
     Cell,
   } from 'recharts';
 import { useSearchParams } from 'next/navigation';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const POINT_COLORS = [
   '#ef4444',
@@ -169,6 +171,7 @@ export function ConfiguratorTab() {
   const aircraftIdFromUrl = searchParams.get('aircraftId');
   const bookingIdFromUrl = searchParams.get('bookingId');
 
+  const [isReadOnly, setIsReadOnly] = useState(false);
   const [isSaveProfileDialogOpen, setIsSaveProfileDialogOpen] = useState(false);
   const [isClearAircraftDialogOpen, setIsClearAircraftDialogOpen] = useState(false);
   const [isConfirmClearDialogOpen, setIsConfirmClearDialogOpen] = useState(false);
@@ -246,13 +249,37 @@ export function ConfiguratorTab() {
   );
   const { data: booking, isLoading: isLoadingBooking } = useDoc<Booking>(bookingDocRef);
 
-
+  // --- Logic for Read-Only Mode & Loading from Booking ---
   useEffect(() => {
-    if (aircraftIdFromUrl && aircraftList) {
-        handleLoadFromAircraft(aircraftIdFromUrl);
+    if (booking?.massAndBalance) {
+        setIsReadOnly(true);
+        // Load the saved M&B data into the configurator state
+        const savedMB = booking.massAndBalance;
+        setResults({
+            cg: savedMB.totalCg,
+            weight: savedMB.totalWeight,
+            isSafe: savedMB.isSafe,
+        });
+
+        // The BEM is implicitly part of the saved stations, let's find it.
+        const bemStation = savedMB.stations.find(s => s.name === 'Basic Empty Weight');
+        if (bemStation) {
+            setBasicEmpty({
+                weight: bemStation.weight || 0,
+                arm: bemStation.arm || 0,
+                moment: (bemStation.weight || 0) * (bemStation.arm || 0),
+            });
+        }
+        setStations(savedMB.stations.filter(s => s.name !== 'Basic Empty Weight'));
+    } else {
+        setIsReadOnly(false);
+        // If not read-only and aircraftId is in URL, proceed with normal loading
+        if (aircraftIdFromUrl && aircraftList && !booking?.massAndBalance) {
+            handleLoadFromAircraft(aircraftIdFromUrl);
+        }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aircraftIdFromUrl, aircraftList]);
+  }, [booking, aircraftIdFromUrl, aircraftList]);
 
   useEffect(() => {
     let totalMom = parseFloat(basicEmpty.moment as any) || 0;
@@ -683,6 +710,33 @@ export function ConfiguratorTab() {
       setSelectedAircraftId('');
     }
   };
+  
+  const handleSaveToBooking = () => {
+    if (!bookingDocRef) {
+        toast({ variant: 'destructive', title: 'Booking Not Found' });
+        return;
+    }
+
+    const massAndBalanceData: MassAndBalance = {
+        totalWeight: results.weight,
+        totalCg: results.cg,
+        isSafe: results.isSafe,
+        calculationDate: Timestamp.now(),
+        stations: [
+            { id: 1, name: 'Basic Empty Weight', weight: basicEmpty.weight, arm: basicEmpty.arm, type: 'bew' },
+            ...stations,
+        ]
+    };
+
+    updateDocumentNonBlocking(bookingDocRef, { massAndBalance: massAndBalanceData });
+
+    toast({
+        title: 'Calculation Saved',
+        description: 'The Mass & Balance calculation has been saved to this booking.',
+    });
+    
+    // The useEffect listening to `booking` will handle the UI switch to read-only
+  };
 
 
   const allX = [
@@ -719,160 +773,176 @@ export function ConfiguratorTab() {
             </h1>
         </div>
         <div className="flex gap-3">
-          <Button onClick={handleReset} variant="outline">
-            <RotateCcw size={16} className="mr-2" /> Reset
-          </Button>
+          {!isReadOnly && (
+             <Button onClick={handleReset} variant="outline">
+                <RotateCcw size={16} className="mr-2" /> Reset
+            </Button>
+          )}
 
-           <Dialog>
-             <DialogTrigger asChild>
-                <Button variant="outline">
-                    <Plane size={16} className="mr-2" /> Assign to Aircraft
-                </Button>
-             </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Assign Configuration to Aircraft</DialogTitle>
-                    <DialogDescription>
-                        This will overwrite the selected aircraft&apos;s current M&amp;B data with the data from the configurator.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="py-4 space-y-2">
-                    <Label htmlFor="aircraft-select">Aircraft Registration</Label>
-                    <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
-                        <SelectTrigger id="aircraft-select">
-                            <SelectValue placeholder="Select an aircraft..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {(aircraftList || []).map(a => (
-                                <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button onClick={handleAssignToAircraft} disabled={!selectedAircraftId}>Confirm Assignment</Button>
-                </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-            <Dialog open={isClearAircraftDialogOpen} onOpenChange={handleClearDialogOpenChange}>
+           {!isReadOnly && (
+            <Dialog>
                 <DialogTrigger asChild>
-                    <Button variant="destructive">
-                        <Wrench size={16} className="mr-2" /> Clear Aircraft M&amp;B
+                    <Button variant="outline">
+                        <Plane size={16} className="mr-2" /> Assign to Aircraft
                     </Button>
-                </DialogTrigger>
-                 <DialogContent>
-                    {!showConfirmClear ? (
-                        <>
-                            <DialogHeader>
-                                <DialogTitle>Clear Aircraft Mass & Balance</DialogTitle>
-                                <DialogDescription>
-                                    Select an aircraft to clear its stored M&amp;B configuration. This action cannot be undone.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="py-4 space-y-2">
-                                <Label htmlFor="aircraft-clear-select">Aircraft Registration</Label>
-                                <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
-                                    <SelectTrigger id="aircraft-clear-select">
-                                        <SelectValue placeholder="Select an aircraft..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {(aircraftList || []).map(a => (
-                                            <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <DialogFooter>
-                                <Button variant="outline" onClick={() => handleClearDialogOpenChange(false)}>Cancel</Button>
-                                <Button variant='destructive' disabled={!selectedAircraftId} onClick={() => setShowConfirmClear(true)}>
-                                    Proceed to Clear
-                                </Button>
-                            </DialogFooter>
-                        </>
-                    ) : (
-                        <>
-                            <DialogHeader>
-                                <DialogTitle>Are you absolutely sure?</DialogTitle>
-                                <DialogDescription>
-                                    This will permanently delete the mass and balance data for aircraft <span className='font-bold'>{selectedAircraftName}</span>.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <DialogFooter>
-                                <Button variant="outline" onClick={() => setShowConfirmClear(false)}>Go Back</Button>
-                                <Button onClick={handleClearAircraftWandB} variant="destructive">
-                                    Yes, Clear Data
-                                </Button>
-                            </DialogFooter>
-                        </>
-                    )}
-                </DialogContent>
-            </Dialog>
-
-            {loadedProfileId ? (
-                <div className='flex gap-2'>
-                    <Button onClick={handleUpdateProfile}>
-                        <Save size={16} className="mr-2" /> Update Profile
-                    </Button>
-                    <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive">
-                                <Trash2 size={16} className="mr-2" />
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the profile for &quot;{loadedProfileName}&quot;.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeleteProfile} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-                                    Delete
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                </div>
-            ) : (
-            <Dialog open={isSaveProfileDialogOpen} onOpenChange={setIsSaveProfileDialogOpen}>
-                <DialogTrigger asChild>
-                <Button>
-                    <Save size={16} className="mr-2" /> Save as New Profile
-                </Button>
                 </DialogTrigger>
                 <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Save as New Profile</DialogTitle>
-                    <DialogDescription>
-                    Enter a name for this configuration to create a new reusable template.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="py-4 grid grid-cols-1 gap-4">
-                    <div className="space-y-2">
-                    <Label htmlFor="profile-name">Profile Name</Label>
-                    <Input
-                        id="profile-name"
-                        value={profileNameForSave}
-                        onChange={(e) => setProfileNameForSave(e.target.value)}
-                        placeholder="e.g., Cessna 172S Standard"
-                    />
+                    <DialogHeader>
+                        <DialogTitle>Assign Configuration to Aircraft</DialogTitle>
+                        <DialogDescription>
+                            This will overwrite the selected aircraft&apos;s current M&amp;B data with the data from the configurator.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-2">
+                        <Label htmlFor="aircraft-select">Aircraft Registration</Label>
+                        <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
+                            <SelectTrigger id="aircraft-select">
+                                <SelectValue placeholder="Select an aircraft..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {(aircraftList || []).map(a => (
+                                    <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild>
-                    <Button variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button onClick={saveAsProfile} disabled={!profileNameForSave.trim()}>Save Profile</Button>
-                </DialogFooter>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button onClick={handleAssignToAircraft} disabled={!selectedAircraftId}>Confirm Assignment</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
-          )}
+           )}
+
+            {!isReadOnly && (
+                 <Dialog open={isClearAircraftDialogOpen} onOpenChange={handleClearDialogOpenChange}>
+                    <DialogTrigger asChild>
+                        <Button variant="destructive">
+                            <Wrench size={16} className="mr-2" /> Clear Aircraft M&amp;B
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        {!showConfirmClear ? (
+                            <>
+                                <DialogHeader>
+                                    <DialogTitle>Clear Aircraft Mass & Balance</DialogTitle>
+                                    <DialogDescription>
+                                        Select an aircraft to clear its stored M&amp;B configuration. This action cannot be undone.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="py-4 space-y-2">
+                                    <Label htmlFor="aircraft-clear-select">Aircraft Registration</Label>
+                                    <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
+                                        <SelectTrigger id="aircraft-clear-select">
+                                            <SelectValue placeholder="Select an aircraft..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {(aircraftList || []).map(a => (
+                                                <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => handleClearDialogOpenChange(false)}>Cancel</Button>
+                                    <Button variant='destructive' disabled={!selectedAircraftId} onClick={() => setShowConfirmClear(true)}>
+                                        Proceed to Clear
+                                    </Button>
+                                </DialogFooter>
+                            </>
+                        ) : (
+                            <>
+                                <DialogHeader>
+                                    <DialogTitle>Are you absolutely sure?</DialogTitle>
+                                    <DialogDescription>
+                                        This will permanently delete the mass and balance data for aircraft <span className='font-bold'>{selectedAircraftName}</span>.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setShowConfirmClear(false)}>Go Back</Button>
+                                    <Button onClick={handleClearAircraftWandB} variant="destructive">
+                                        Yes, Clear Data
+                                    </Button>
+                                </DialogFooter>
+                            </>
+                        )}
+                    </DialogContent>
+                </Dialog>
+            )}
+
+            {!isReadOnly && bookingIdFromUrl && (
+                <Button onClick={handleSaveToBooking}>
+                    <Save size={16} className="mr-2" /> Save to Booking
+                </Button>
+            )}
+
+            {!isReadOnly && !bookingIdFromUrl && (
+                <>
+                    {loadedProfileId ? (
+                        <div className='flex gap-2'>
+                            <Button onClick={handleUpdateProfile}>
+                                <Save size={16} className="mr-2" /> Update Profile
+                            </Button>
+                            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive">
+                                        <Trash2 size={16} className="mr-2" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete the profile for &quot;{loadedProfileName}&quot;.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleDeleteProfile} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                                            Delete
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                    ) : (
+                    <Dialog open={isSaveProfileDialogOpen} onOpenChange={setIsSaveProfileDialogOpen}>
+                        <DialogTrigger asChild>
+                        <Button>
+                            <Save size={16} className="mr-2" /> Save as New Profile
+                        </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Save as New Profile</DialogTitle>
+                            <DialogDescription>
+                            Enter a name for this configuration to create a new reusable template.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4 grid grid-cols-1 gap-4">
+                            <div className="space-y-2">
+                            <Label htmlFor="profile-name">Profile Name</Label>
+                            <Input
+                                id="profile-name"
+                                value={profileNameForSave}
+                                onChange={(e) => setProfileNameForSave(e.target.value)}
+                                placeholder="e.g., Cessna 172S Standard"
+                            />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                            </DialogClose>
+                            <Button onClick={saveAsProfile} disabled={!profileNameForSave.trim()}>Save Profile</Button>
+                        </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                  )}
+                </>
+            )}
         </div>
       </div>
       <Card className="relative">
@@ -914,6 +984,14 @@ export function ConfiguratorTab() {
           </CardDescription>
         </CardHeader>
         <CardContent className="min-h-[500px] flex flex-col justify-center items-center overflow-hidden pt-6">
+            {isReadOnly && (
+                <Alert className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-auto bg-background/80 backdrop-blur-sm">
+                    <Lock className="h-4 w-4" />
+                    <AlertDescription>
+                        This Mass &amp; Balance has been saved to the booking and is now read-only.
+                    </AlertDescription>
+                </Alert>
+            )}
           {offScreenStatus && (
             <OffScreenWarning
               direction={offScreenStatus.dir}
@@ -1015,7 +1093,7 @@ export function ConfiguratorTab() {
                 <Select
                   onValueChange={handleLoadTemplate}
                   value={selectedTemplateId}
-                  disabled={isLoadingProfiles}
+                  disabled={isLoadingProfiles || isReadOnly}
                 >
                   <SelectTrigger>
                     <SelectValue
@@ -1040,7 +1118,7 @@ export function ConfiguratorTab() {
                 <Select
                   onValueChange={handleLoadFromAircraft}
                   value={selectedAircraftId}
-                  disabled={isLoadingAircraft}
+                  disabled={isLoadingAircraft || isReadOnly}
                 >
                   <SelectTrigger>
                     <SelectValue
@@ -1069,25 +1147,27 @@ export function ConfiguratorTab() {
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="text-md font-medium">Loading Stations</h3>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => addStation('fuel')}
-                        variant="outline"
-                        size="sm"
-                        title="Add Fuel Tank"
-                        type="button"
-                      >
-                        <Fuel size={16} className="mr-2" /> Add Fuel
-                      </Button>
-                      <Button
-                        onClick={() => addStation('standard')}
-                        variant="outline"
-                        size="sm"
-                        type="button"
-                      >
-                        <Plus size={16} className="mr-2" /> Add
-                      </Button>
-                    </div>
+                    {!isReadOnly && (
+                        <div className="flex gap-2">
+                        <Button
+                            onClick={() => addStation('fuel')}
+                            variant="outline"
+                            size="sm"
+                            title="Add Fuel Tank"
+                            type="button"
+                        >
+                            <Fuel size={16} className="mr-2" /> Add Fuel
+                        </Button>
+                        <Button
+                            onClick={() => addStation('standard')}
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                        >
+                            <Plus size={16} className="mr-2" /> Add
+                        </Button>
+                        </div>
+                    )}
                   </div>
                   <div className="grid grid-cols-12 gap-2 text-xs font-bold text-muted-foreground px-1 mb-2">
                     <div className="col-span-5">Station Name</div>
@@ -1110,6 +1190,7 @@ export function ConfiguratorTab() {
                           handleBasicEmptyChange('weight', e.target.value)
                         }
                         className="text-right h-8 col-span-3"
+                        readOnly={isReadOnly}
                       />
                       <Input
                         type="number"
@@ -1118,6 +1199,7 @@ export function ConfiguratorTab() {
                           handleBasicEmptyChange('arm', e.target.value)
                         }
                         className="text-right h-8 col-span-3"
+                        readOnly={isReadOnly}
                       />
                     </div>
                     {/* Dynamic Stations */}
@@ -1133,6 +1215,7 @@ export function ConfiguratorTab() {
                                     updateStation(s.id, 'name', e.target.value)
                                   }
                                   className="text-sm font-bold h-8 flex-grow"
+                                  readOnly={isReadOnly}
                                 />
                               </div>
                               <div className="col-span-3">
@@ -1147,6 +1230,7 @@ export function ConfiguratorTab() {
                                     )
                                   }
                                   className="text-sm text-right h-8"
+                                  readOnly={isReadOnly}
                                 />
                               </div>
                               <div className="col-span-3">
@@ -1157,18 +1241,21 @@ export function ConfiguratorTab() {
                                     handleFuelChange(s.id, 'arm', e.target.value)
                                   }
                                   className="text-sm text-right h-8"
+                                  readOnly={isReadOnly}
                                 />
                               </div>
                               <div className="col-span-1 flex justify-end">
-                                <Button
-                                  onClick={() => removeStation(s.id)}
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-muted-foreground hover:text-destructive h-8 w-8"
-                                  type="button"
-                                >
-                                  <Trash2 size={16} />
-                                </Button>
+                                {!isReadOnly && (
+                                    <Button
+                                    onClick={() => removeStation(s.id)}
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-muted-foreground hover:text-destructive h-8 w-8"
+                                    type="button"
+                                    >
+                                    <Trash2 size={16} />
+                                    </Button>
+                                )}
                               </div>
                             </div>
                             <div className="grid grid-cols-12 gap-2 items-center">
@@ -1193,6 +1280,7 @@ export function ConfiguratorTab() {
                                     )
                                   }
                                   className="h-8 text-right"
+                                  readOnly={isReadOnly}
                                 />
                               </div>
                               <div className="col-span-3 flex items-center gap-1">
@@ -1214,6 +1302,7 @@ export function ConfiguratorTab() {
                                     )
                                   }
                                   className="h-8 text-right flex-grow"
+                                  readOnly={isReadOnly}
                                 />
                               </div>
                             </div>
@@ -1228,6 +1317,7 @@ export function ConfiguratorTab() {
                                 }
                                 placeholder="Item Name"
                                 className="h-8"
+                                readOnly={isReadOnly}
                               />
                             </div>
                             <div className="col-span-3">
@@ -1238,6 +1328,7 @@ export function ConfiguratorTab() {
                                   updateStation(s.id, 'weight', e.target.value)
                                 }
                                 className="text-right h-8"
+                                readOnly={isReadOnly}
                               />
                             </div>
                             <div className="col-span-3">
@@ -1248,18 +1339,21 @@ export function ConfiguratorTab() {
                                   updateStation(s.id, 'arm', e.target.value)
                                 }
                                 className="text-right h-8"
+                                readOnly={isReadOnly}
                               />
                             </div>
                             <div className="col-span-1 flex justify-end">
-                              <Button
-                                onClick={() => removeStation(s.id)}
-                                variant="ghost"
-                                size="icon"
-                                className="text-muted-foreground hover:text-destructive h-8 w-8"
-                                type="button"
-                              >
-                                <Trash2 size={16} />
-                              </Button>
+                                {!isReadOnly && (
+                                    <Button
+                                        onClick={() => removeStation(s.id)}
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-muted-foreground hover:text-destructive h-8 w-8"
+                                        type="button"
+                                    >
+                                        <Trash2 size={16} />
+                                    </Button>
+                                )}
                             </div>
                           </div>
                         )}
@@ -1285,6 +1379,7 @@ export function ConfiguratorTab() {
                             xMin: e.target.value as any,
                           })
                         }
+                        readOnly={isReadOnly}
                       />
                     </div>
                     <div>
@@ -1298,6 +1393,7 @@ export function ConfiguratorTab() {
                             xMax: e.target.value as any,
                           })
                         }
+                        readOnly={isReadOnly}
                       />
                     </div>
                     <div>
@@ -1311,6 +1407,7 @@ export function ConfiguratorTab() {
                             yMin: e.target.value as any,
                           })
                         }
+                        readOnly={isReadOnly}
                       />
                     </div>
                     <div>
@@ -1324,18 +1421,21 @@ export function ConfiguratorTab() {
                             yMax: e.target.value as any,
                           })
                         }
+                        readOnly={isReadOnly}
                       />
                     </div>
                   </div>
-                  <Button
-                    onClick={handleAutoFit}
-                    variant="outline"
-                    size="sm"
-                    type="button"
-                    className="w-full"
-                  >
-                    <Maximize size={16} className="mr-2" /> Auto-Fit Axes
-                  </Button>
+                  {!isReadOnly && (
+                    <Button
+                        onClick={handleAutoFit}
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        className="w-full"
+                    >
+                        <Maximize size={16} className="mr-2" /> Auto-Fit Axes
+                    </Button>
+                  )}
                 </div>
 
                 <Separator />
@@ -1343,14 +1443,16 @@ export function ConfiguratorTab() {
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="text-md font-medium">CG Envelope Points</h3>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={addEnvelopePoint}
-                    >
-                      <Plus className="mr-2 h-4 w-4" /> Add
-                    </Button>
+                    {!isReadOnly && (
+                        <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={addEnvelopePoint}
+                        >
+                        <Plus className="mr-2 h-4 w-4" /> Add
+                        </Button>
+                    )}
                   </div>
                   <div className="grid grid-cols-12 gap-2 text-xs font-bold text-muted-foreground px-1 mb-2">
                     <div className="col-span-1"></div>
@@ -1377,6 +1479,7 @@ export function ConfiguratorTab() {
                           }
                           placeholder="CG (X)"
                           className="col-span-5 text-right"
+                          readOnly={isReadOnly}
                         />
                         <Input
                           type="number"
@@ -1386,16 +1489,19 @@ export function ConfiguratorTab() {
                           }
                           placeholder="Weight (Y)"
                           className="col-span-5 text-right"
+                          readOnly={isReadOnly}
                         />
-                        <Button
-                          onClick={() => removeEnvelopePoint(i)}
-                          variant="ghost"
-                          size="icon"
-                          type="button"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive col-span-1"
-                        >
-                          <Trash2 size={16} />
-                        </Button>
+                        {!isReadOnly && (
+                            <Button
+                            onClick={() => removeEnvelopePoint(i)}
+                            variant="ghost"
+                            size="icon"
+                            type="button"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive col-span-1"
+                            >
+                            <Trash2 size={16} />
+                            </Button>
+                        )}
                       </div>
                     ))}
                   </div>
