@@ -1,5 +1,5 @@
 
-export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage';
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'manage-templates' | 'calculate-booking';
 
 export type PermissionResource = {
   id: string;
@@ -32,6 +32,11 @@ export const permissionsConfig: PermissionResource[] = [
     id: 'assets',
     name: 'Assets',
     actions: ['view', 'create', 'edit', 'delete'],
+  },
+  {
+    id: 'mass-balance',
+    name: 'Mass & Balance',
+    actions: ['view', 'manage-templates', 'calculate-booking'],
   },
   {
     id: 'users',

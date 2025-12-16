@@ -172,7 +172,12 @@ export function ConfiguratorTab() {
   const searchParams = useSearchParams();
   const aircraftIdFromUrl = searchParams.get('aircraftId');
   const bookingIdFromUrl = searchParams.get('bookingId');
+  
+  // Hardcoded permissions for now - will be replaced with real auth logic
+  const canManageTemplates = true; // hasPermission('mass-balance-manage-templates')
+  const canCalculateForBooking = true; // hasPermission('mass-balance-calculate-booking')
 
+  const [isBookingCalculation, setIsBookingCalculation] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [isSaveProfileDialogOpen, setIsSaveProfileDialogOpen] = useState(false);
   const [isClearAircraftDialogOpen, setIsClearAircraftDialogOpen] = useState(false);
@@ -253,9 +258,11 @@ export function ConfiguratorTab() {
 
   // --- Logic for Read-Only Mode & Loading from Booking ---
   useEffect(() => {
+    const isForBooking = !!bookingIdFromUrl;
+    setIsBookingCalculation(isForBooking);
+
     if (booking?.massAndBalance) {
-        setIsReadOnly(true);
-        // Load the saved M&B data into the configurator state
+        setIsReadOnly(true); // Saved M&B is always read-only
         const savedMB = booking.massAndBalance;
         setResults({
             cg: savedMB.totalCg,
@@ -263,7 +270,6 @@ export function ConfiguratorTab() {
             isSafe: savedMB.isSafe,
         });
 
-        // The BEM is implicitly part of the saved stations, let's find it.
         const bemStation = savedMB.stations.find(s => s.name === 'Basic Empty Weight');
         if (bemStation) {
             setBasicEmpty({
@@ -273,15 +279,22 @@ export function ConfiguratorTab() {
             });
         }
         setStations(savedMB.stations.filter(s => s.name !== 'Basic Empty Weight'));
+
+    } else if (isForBooking) {
+        // This is a new calculation for a booking
+        setIsReadOnly(!canCalculateForBooking); // Lock if user can't perform calculation
+        if (aircraftIdFromUrl && aircraftList) {
+            handleLoadFromAircraft(aircraftIdFromUrl);
+        }
     } else {
-        setIsReadOnly(false);
-        // If not read-only and aircraftId is in URL, proceed with normal loading
-        if (aircraftIdFromUrl && aircraftList && !booking?.massAndBalance) {
+        // This is the admin/template management view
+        setIsReadOnly(!canManageTemplates);
+        if (aircraftIdFromUrl && aircraftList) {
             handleLoadFromAircraft(aircraftIdFromUrl);
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [booking, aircraftIdFromUrl, aircraftList]);
+  }, [booking, bookingIdFromUrl, aircraftIdFromUrl, aircraftList, canManageTemplates, canCalculateForBooking]);
 
   useEffect(() => {
     let totalMom = parseFloat(basicEmpty.moment as any) || 0;
@@ -775,7 +788,7 @@ export function ConfiguratorTab() {
             </h1>
         </div>
         <div className="flex gap-3">
-          {isReadOnly && bookingIdFromUrl && (
+          {isBookingCalculation && bookingIdFromUrl && (
             <Button asChild variant="outline">
               <Link href={`/operations/bookings/${bookingIdFromUrl}`}>
                 <ArrowLeft size={16} className="mr-2" /> Back to Booking
@@ -788,7 +801,7 @@ export function ConfiguratorTab() {
             </Button>
           )}
 
-           {!isReadOnly && (
+           {canManageTemplates && !isBookingCalculation && (
             <Dialog>
                 <DialogTrigger asChild>
                     <Button variant="outline">
@@ -825,7 +838,7 @@ export function ConfiguratorTab() {
             </Dialog>
            )}
 
-            {!isReadOnly && (
+            {canManageTemplates && !isBookingCalculation && (
                  <Dialog open={isClearAircraftDialogOpen} onOpenChange={handleClearDialogOpenChange}>
                     <DialogTrigger asChild>
                         <Button variant="destructive">
@@ -881,13 +894,13 @@ export function ConfiguratorTab() {
                 </Dialog>
             )}
 
-            {!isReadOnly && bookingIdFromUrl && (
+            {isBookingCalculation && !isReadOnly && canCalculateForBooking && (
                 <Button onClick={handleSaveToBooking}>
                     <Save size={16} className="mr-2" /> Save to Booking
                 </Button>
             )}
 
-            {!isReadOnly && !bookingIdFromUrl && (
+            {!isBookingCalculation && canManageTemplates && (
                 <>
                     {loadedProfileId ? (
                         <div className='flex gap-2'>
@@ -997,7 +1010,7 @@ export function ConfiguratorTab() {
                 <Alert className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-auto bg-background/80 backdrop-blur-sm">
                     <Lock className="h-4 w-4" />
                     <AlertDescription>
-                        This Mass &amp; Balance has been saved to the booking and is now read-only.
+                       {booking?.massAndBalance ? 'This Mass & Balance has been saved to the booking and is read-only.' : 'You do not have permission to perform this action.'}
                     </AlertDescription>
                 </Alert>
             )}
@@ -1098,59 +1111,63 @@ export function ConfiguratorTab() {
                 CONSULT AIRCRAFT POH BEFORE FLIGHT
             </p>
 
-            <Separator className="my-4" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Load Saved Profile</Label>
-                <Select
-                  onValueChange={handleLoadTemplate}
-                  value={selectedTemplateId}
-                  disabled={isLoadingProfiles || isReadOnly}
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        isLoadingProfiles
-                          ? 'Loading profiles...'
-                          : 'Select a profile'
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(profiles || []).map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.profileName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Load from Aircraft Registration</Label>
-                <Select
-                  onValueChange={handleLoadFromAircraft}
-                  value={selectedAircraftId}
-                  disabled={isLoadingAircraft || isReadOnly}
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        isLoadingAircraft
-                          ? 'Loading aircraft...'
-                          : 'Select an aircraft'
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(aircraftList || []).map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.tailNumber}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            {!isBookingCalculation && (
+                <>
+                <Separator className="my-4" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <Label>Load Saved Profile</Label>
+                    <Select
+                    onValueChange={handleLoadTemplate}
+                    value={selectedTemplateId}
+                    disabled={isLoadingProfiles || isReadOnly}
+                    >
+                    <SelectTrigger>
+                        <SelectValue
+                        placeholder={
+                            isLoadingProfiles
+                            ? 'Loading profiles...'
+                            : 'Select a profile'
+                        }
+                        />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {(profiles || []).map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                            {p.profileName}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                </div>
+                <div>
+                    <Label>Load from Aircraft Registration</Label>
+                    <Select
+                    onValueChange={handleLoadFromAircraft}
+                    value={selectedAircraftId}
+                    disabled={isLoadingAircraft || isReadOnly}
+                    >
+                    <SelectTrigger>
+                        <SelectValue
+                        placeholder={
+                            isLoadingAircraft
+                            ? 'Loading aircraft...'
+                            : 'Select an aircraft'
+                        }
+                        />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {(aircraftList || []).map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                            {a.tailNumber}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                </div>
+                </div>
+                </>
+            )}
 
             <Separator className='my-6' />
 
