@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -15,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 import Link from 'next/link';
+import { BookingsConfiguratorTab } from './bookings-configurator-tab';
 
 interface ViewBookingDetailsProps {
   booking: Booking;
@@ -144,6 +146,10 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                 </div>
             </CardContent>
         </Card>
+
+        <BookingsConfiguratorTab aircraft={aircraft} />
     </div>
   );
 }
+
+    
