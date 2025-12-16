@@ -157,7 +157,7 @@ export function ConfiguratorTab() {
 
   const [isSaveProfileDialogOpen, setIsSaveProfileDialogOpen] = useState(false);
   const [isClearAircraftDialogOpen, setIsClearAircraftDialogOpen] = useState(false);
-  const [showConfirmClear, setShowConfirmClear] = useState(false);
+  const [isConfirmClearDialogOpen, setIsConfirmClearDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [profileNameForSave, setProfileNameForSave] = useState('');
   const [selectedAircraftId, setSelectedAircraftId] = useState('');
@@ -615,9 +615,9 @@ export function ConfiguratorTab() {
         title: 'Configuration Assigned',
         description: `The current M&B configuration has been saved to the selected aircraft.`
     });
-
-    //setIsAssignAircraftDialogOpen(false);
   }
+
+  const [showConfirmClear, setShowConfirmClear] = useState(false);
 
   const handleClearAircraftWandB = () => {
     if (!selectedAircraftId) {
@@ -647,9 +647,7 @@ export function ConfiguratorTab() {
         description: `The Mass & Balance configuration has been cleared for the selected aircraft.`
     });
     
-    setShowConfirmClear(false);
-    setIsClearAircraftDialogOpen(false);
-    setSelectedAircraftId('');
+    handleClearDialogOpenChange(false);
   }
 
   const handleClearDialogOpenChange = (open: boolean) => {
@@ -739,7 +737,7 @@ export function ConfiguratorTab() {
                         <Wrench size={16} className="mr-2" /> Clear Aircraft M&amp;B
                     </Button>
                 </DialogTrigger>
-                <DialogContent>
+                 <DialogContent>
                     {!showConfirmClear ? (
                         <>
                             <DialogHeader>
@@ -762,9 +760,7 @@ export function ConfiguratorTab() {
                                 </Select>
                             </div>
                             <DialogFooter>
-                                <DialogClose asChild>
-                                    <Button variant="outline">Cancel</Button>
-                                </DialogClose>
+                                <Button variant="outline" onClick={() => handleClearDialogOpenChange(false)}>Cancel</Button>
                                 <Button variant='destructive' disabled={!selectedAircraftId} onClick={() => setShowConfirmClear(true)}>
                                     Proceed to Clear
                                 </Button>
