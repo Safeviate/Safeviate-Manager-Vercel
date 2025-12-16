@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -26,96 +27,81 @@ import { cn, isPointInPolygon } from '@/lib/utils';
 import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
 
 interface BookingMassBalanceProps {
-    aircraft: Aircraft | null;
-    booking: Booking | null;
+    aircraft: Aircraft;
+    booking: Booking;
     onCalculationChange: (data: Omit<MassAndBalance, 'calculationTime'>) => void;
     initialData?: MassAndBalance | null;
 }
 
 export function BookingMassBalance({ aircraft, booking, onCalculationChange, initialData }: BookingMassBalanceProps) {
-
-    type Station = {
-        name: string;
-        weight: number;
-        arm: number;
-    };
     
     // --- State for Inputs ---
-    const [stations, setStations] = useState<Station[]>([]);
+    const [frontSeatWeight, setFrontSeatWeight] = useState(initialData?.frontSeatWeight || 0);
+    const [rearSeatWeight, setRearSeatWeight] = useState(initialData?.rearSeatWeight || 0);
+    const [baggage1Weight, setBaggage1Weight] = useState(initialData?.baggage1Weight || 0);
+    const [baggage2Weight, setBaggage2Weight] = useState(initialData?.baggage2Weight || 0);
     const [fuelGallons, setFuelGallons] = useState(initialData?.fuelGallons || 0);
 
-    // --- Effect to initialize stations from aircraft data ---
+    // --- Effect to update state if initialData changes ---
     useEffect(() => {
-        if (!aircraft || !aircraft.stationArms) {
-            setStations([]);
-            return;
+        if (initialData) {
+            setFrontSeatWeight(initialData.frontSeatWeight || 0);
+            setRearSeatWeight(initialData.rearSeatWeight || 0);
+            setBaggage1Weight(initialData.baggage1Weight || 0);
+            setBaggage2Weight(initialData.baggage2Weight || 0);
+            setFuelGallons(initialData.fuelGallons || 0);
         }
-
-        const initialStations: Station[] = [];
-        if (aircraft.stationArms.frontSeats) {
-            initialStations.push({ name: 'Front Seats', arm: aircraft.stationArms.frontSeats, weight: initialData?.frontSeatWeight || 0 });
-        }
-        if (aircraft.stationArms.rearSeats) {
-            initialStations.push({ name: 'Rear Seats', arm: aircraft.stationArms.rearSeats, weight: initialData?.rearSeatWeight || 0 });
-        }
-        if (aircraft.stationArms.baggage1) {
-            initialStations.push({ name: 'Baggage 1', arm: aircraft.stationArms.baggage1, weight: initialData?.baggage1Weight || 0 });
-        }
-        if (aircraft.stationArms.baggage2) {
-            initialStations.push({ name: 'Baggage 2', arm: aircraft.stationArms.baggage2, weight: initialData?.baggage2Weight || 0 });
-        }
-        setStations(initialStations);
-        setFuelGallons(initialData?.fuelGallons || 0);
-
-    }, [aircraft, initialData]);
+    }, [initialData]);
     
     // --- Calculations ---
     const calculation = useMemo(() => {
-        if (!aircraft) return null;
+        if (!aircraft || !aircraft.stationArms) return null;
 
         const emptyWeight = aircraft.emptyWeight || 0;
         const emptyMoment = aircraft.emptyWeightMoment || 0;
-        
-        const loadItems = stations.map(s => ({ ...s, moment: s.weight * s.arm }));
+        const arms = aircraft.stationArms;
+
+        const frontSeatMoment = frontSeatWeight * (arms.frontSeats || 0);
+        const rearSeatMoment = rearSeatWeight * (arms.rearSeats || 0);
+        const baggage1Moment = baggage1Weight * (arms.baggage1 || 0);
+        const baggage2Moment = baggage2Weight * (arms.baggage2 || 0);
         
         // Zero Fuel Condition
-        const totalLoadWeight = loadItems.reduce((sum, item) => sum + item.weight, 0);
-        const totalLoadMoment = loadItems.reduce((sum, item) => sum + item.moment, 0);
-
-        const zeroFuelWeight = emptyWeight + totalLoadWeight;
-        const zeroFuelMoment = emptyMoment + totalLoadMoment;
+        const zeroFuelWeight = emptyWeight + frontSeatWeight + rearSeatWeight + baggage1Weight + baggage2Weight;
+        const zeroFuelMoment = emptyMoment + frontSeatMoment + rearSeatMoment + baggage1Moment + baggage2Moment;
         const zeroFuelCg = zeroFuelWeight > 0 ? zeroFuelMoment / zeroFuelWeight : 0;
 
         // Takeoff Condition
         const fuelWeight = fuelGallons * FUEL_WEIGHT_PER_GALLON;
-        const fuelMoment = fuelWeight * (aircraft.stationArms?.fuel || 0);
+        const fuelMoment = fuelWeight * (arms.fuel || 0);
         const takeoffWeight = zeroFuelWeight + fuelWeight;
         const takeoffMoment = zeroFuelMoment + fuelMoment;
         const takeoffCg = takeoffWeight > 0 ? takeoffMoment / takeoffWeight : 0;
 
         return {
-            emptyWeight, emptyMoment,
-            loadItems,
+            emptyWeight, emptyMoment, arms,
+            frontSeatMoment, rearSeatMoment, baggage1Moment, baggage2Moment,
             zeroFuelWeight, zeroFuelCg, zeroFuelMoment,
-            fuelWeight, fuelMoment, fuelArm: aircraft.stationArms?.fuel || 0,
+            fuelWeight, fuelMoment,
             takeoffWeight, takeoffCg, takeoffMoment,
         };
-    }, [aircraft, stations, fuelGallons]);
+    }, [aircraft, frontSeatWeight, rearSeatWeight, baggage1Weight, baggage2Weight, fuelGallons]);
     
     // --- Effect to notify parent of changes ---
     useEffect(() => {
         if (calculation) {
             onCalculationChange({
-                frontSeatWeight: stations.find(s => s.name === 'Front Seats')?.weight || 0,
-                rearSeatWeight: stations.find(s => s.name === 'Rear Seats')?.weight || 0,
-                baggage1Weight: stations.find(s => s.name === 'Baggage 1')?.weight || 0,
-                baggage2Weight: stations.find(s => s.name === 'Baggage 2')?.weight || 0,
+                frontSeatWeight,
+                rearSeatWeight,
+                baggage1Weight,
+                baggage2Weight,
                 fuelGallons,
                 takeoffWeight: calculation.takeoffWeight,
                 takeoffCg: calculation.takeoffCg,
             })
         }
-    }, [calculation, stations, fuelGallons, onCalculationChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [calculation]);
 
 
     const cgEnvelopePoints = useMemo(() => aircraft?.cgEnvelope?.map(p => ({ y: p.weight, x: p.cg })) || [], [aircraft]);
@@ -145,15 +131,7 @@ export function BookingMassBalance({ aircraft, booking, onCalculationChange, ini
             y: [minY - yPadding, maxY + yPadding],
         };
     }, [aircraft?.cgEnvelope]);
-
-    const handleStationWeightChange = (stationName: string, weight: number) => {
-        setStations(prev => prev.map(s => s.name === stationName ? { ...s, weight } : s));
-    };
     
-    if (!aircraft || !booking) {
-        return <Skeleton className="h-96 w-full" />
-    }
-
     if (!aircraft.stationArms || !aircraft.cgEnvelope || aircraft.cgEnvelope.length === 0 || !aircraft.emptyWeight || !aircraft.emptyWeightMoment) {
         return (
             <div className="text-center p-6 border rounded-lg">
@@ -166,7 +144,7 @@ export function BookingMassBalance({ aircraft, booking, onCalculationChange, ini
         );
     }
     
-    const renderRow = (label: string, weight: number, arm: number, moment: number) => {
+    const renderRow = (label: string, weight: number, arm: number | undefined, moment: number | undefined) => {
         const displayArm = arm !== undefined && weight > 0 ? arm.toFixed(2) : 'N/A';
         const displayMoment = moment !== undefined && weight > 0 ? moment.toFixed(1) : '0.0';
         return (
@@ -197,14 +175,17 @@ export function BookingMassBalance({ aircraft, booking, onCalculationChange, ini
                             </div>
                             <div className="divide-y">
                                 {renderRow("Basic Empty Weight", calculation?.emptyWeight || 0, (calculation?.emptyMoment || 0) / (calculation?.emptyWeight || 1), calculation?.emptyMoment || 0)}
-                                {calculation?.loadItems.map(item => renderRow(item.name, item.weight, item.arm, item.moment))}
+                                {calculation?.arms.frontSeats && renderRow("Front Seats", frontSeatWeight, calculation.arms.frontSeats, calculation.frontSeatMoment)}
+                                {calculation?.arms.rearSeats && renderRow("Rear Seats", rearSeatWeight, calculation.arms.rearSeats, calculation.rearSeatMoment)}
+                                {calculation?.arms.baggage1 && renderRow("Baggage 1", baggage1Weight, calculation.arms.baggage1, calculation.baggage1Moment)}
+                                {calculation?.arms.baggage2 && renderRow("Baggage 2", baggage2Weight, calculation.arms.baggage2, calculation.baggage2Moment)}
                                  <div className="grid grid-cols-4 items-center gap-2 font-bold bg-muted/20">
                                     <div className="p-2 text-sm">Zero Fuel Condition</div>
                                     <div className="p-2 text-right text-sm">{calculation?.zeroFuelWeight.toFixed(1)}</div>
                                     <div className="p-2 text-right text-sm">{calculation?.zeroFuelCg.toFixed(2)}</div>
                                     <div className="p-2 text-right text-sm font-mono">{calculation?.zeroFuelMoment.toFixed(1)}</div>
                                 </div>
-                                {renderRow("Fuel", calculation?.fuelWeight || 0, calculation?.fuelArm || 0, calculation?.fuelMoment || 0)}
+                                {renderRow("Fuel", calculation?.fuelWeight || 0, calculation?.arms.fuel, calculation?.fuelMoment || 0)}
                                 <div className="grid grid-cols-4 items-center gap-2 font-bold bg-muted/20 rounded-b-lg">
                                     <div className="p-2 text-sm">Takeoff Condition</div>
                                     <div className="p-2 text-right text-sm">{calculation?.takeoffWeight.toFixed(1)}</div>
@@ -225,7 +206,7 @@ export function BookingMassBalance({ aircraft, booking, onCalculationChange, ini
                                         <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
                                     </YAxis>
                                     <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                    <Area type="linear" dataKey="y" data={cgEnvelopePoints} name="CG Limit" stroke="#8884d8" fill="#8884d8" fillOpacity={0.2} strokeWidth={2} />
+                                    <Area type="linear" dataKey="y" data={cgEnvelopePoints} name="CG Limit" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.2)" strokeWidth={2} />
                                     <Scatter name="Takeoff CG" data={[ { y: takeoffPoint.y, x: takeoffPoint.x } ]} fill={isTakeoffOk ? "#22c55e" : "#ef4444"}>
                                         {takeoffPoint &&
                                             <ReferenceDot
@@ -265,17 +246,50 @@ export function BookingMassBalance({ aircraft, booking, onCalculationChange, ini
                         <CardDescription>Enter the weight for each station.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {stations.map(station => (
-                            <div key={station.name} className="space-y-2">
-                                <Label htmlFor={station.name.replace(/\s+/g, '-')}>{station.name} (lbs)</Label>
+                        {aircraft.stationArms?.frontSeats && (
+                            <div className="space-y-2">
+                                <Label htmlFor="front-seat">Front Seats (lbs)</Label>
                                 <Input 
                                     type="number" 
-                                    id={station.name.replace(/\s+/g, '-')} 
-                                    value={station.weight || ''} 
-                                    onChange={(e) => handleStationWeightChange(station.name, Number(e.target.value))} 
+                                    id="front-seat"
+                                    value={frontSeatWeight || ''}
+                                    onChange={(e) => setFrontSeatWeight(Number(e.target.value))}
                                 />
                             </div>
-                        ))}
+                        )}
+                        {aircraft.stationArms?.rearSeats && (
+                            <div className="space-y-2">
+                                <Label htmlFor="rear-seat">Rear Seats (lbs)</Label>
+                                <Input
+                                    type="number"
+                                    id="rear-seat"
+                                    value={rearSeatWeight || ''}
+                                    onChange={(e) => setRearSeatWeight(Number(e.target.value))}
+                                />
+                            </div>
+                        )}
+                        {aircraft.stationArms?.baggage1 && (
+                            <div className="space-y-2">
+                                <Label htmlFor="baggage-1">Baggage 1 (lbs)</Label>
+                                <Input
+                                    type="number"
+                                    id="baggage-1"
+                                    value={baggage1Weight || ''}
+                                    onChange={(e) => setBaggage1Weight(Number(e.target.value))}
+                                />
+                            </div>
+                        )}
+                        {aircraft.stationArms?.baggage2 && (
+                             <div className="space-y-2">
+                                <Label htmlFor="baggage-2">Baggage 2 (lbs)</Label>
+                                <Input
+                                    type="number"
+                                    id="baggage-2"
+                                    value={baggage2Weight || ''}
+                                    onChange={(e) => setBaggage2Weight(Number(e.target.value))}
+                                />
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
                  <Card>
@@ -286,7 +300,12 @@ export function BookingMassBalance({ aircraft, booking, onCalculationChange, ini
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="fuel-gallons">Fuel (Gallons)</Label>
-                            <Input type="number" id="fuel-gallons" value={fuelGallons || ''} onChange={(e) => setFuelGallons(Number(e.target.value))} />
+                            <Input
+                                type="number"
+                                id="fuel-gallons"
+                                value={fuelGallons || ''}
+                                onChange={(e) => setFuelGallons(Number(e.target.value))}
+                            />
                         </div>
                          <div className="p-2 border rounded-md text-sm text-center bg-muted">
                             Fuel Weight: <strong>{(fuelGallons * FUEL_WEIGHT_PER_GALLON).toFixed(1)} lbs</strong>

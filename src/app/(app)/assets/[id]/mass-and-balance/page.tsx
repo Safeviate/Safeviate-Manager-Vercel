@@ -1,7 +1,7 @@
 
 'use client';
 
-import { use, useMemo, useState, useEffect } from 'react';
+import { use, useMemo, useState } from 'react';
 import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Aircraft } from '@/app/(app)/assets/page';
@@ -25,28 +25,12 @@ import {
   ReferenceDot,
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn, isPointInPolygon } from '@/lib/utils';
 import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
 
 interface MassAndBalancePageProps {
     params: { id: string };
 }
-
-// --- Helper function to check if a point is inside a polygon ---
-function isPointInPolygon(point: { x: number; y: number }, polygon: { x: number; y: number }[]) {
-  if (!polygon || polygon.length === 0) return false;
-  let isInside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i].x, yi = polygon[i].y;
-    const xj = polygon[j].x, yj = polygon[j].y;
-
-    const intersect = ((yi > point.y) !== (yj > point.y))
-        && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
-    if (intersect) isInside = !isInside;
-  }
-  return isInside;
-}
-
 
 export default function MassAndBalancePage({ params }: MassAndBalancePageProps) {
     const resolvedParams = use(params);
@@ -99,13 +83,12 @@ export default function MassAndBalancePage({ params }: MassAndBalancePageProps) 
         };
     }, [aircraft, frontSeatWeight, rearSeatWeight, baggage1Weight, baggage2Weight, fuelGallons]);
 
-    const cgEnvelopePoints = useMemo(() => aircraft?.cgEnvelope?.map(p => ({ weight: p.weight, cg: p.cg })) || [], [aircraft]);
-    const polygonForCheck = useMemo(() => cgEnvelopePoints.map(p => ({ x: p.cg, y: p.weight })), [cgEnvelopePoints]);
+    const cgEnvelopePoints = useMemo(() => aircraft?.cgEnvelope?.map(p => ({ y: p.weight, x: p.cg })) || [], [aircraft]);
 
     const takeoffPoint = useMemo(() => ({ x: calculation?.takeoffCg || 0, y: calculation?.takeoffWeight || 0 }), [calculation]);
 
     const isTakeoffWeightOk = calculation && aircraft?.maxTakeoffWeight ? calculation.takeoffWeight <= aircraft.maxTakeoffWeight : true;
-    const isTakeoffCgOk = calculation ? isPointInPolygon(takeoffPoint, polygonForCheck) : true;
+    const isTakeoffCgOk = calculation ? isPointInPolygon(takeoffPoint, cgEnvelopePoints) : true;
     const isTakeoffOk = isTakeoffWeightOk && isTakeoffCgOk;
 
     const domain = useMemo(() => {
@@ -126,7 +109,7 @@ export default function MassAndBalancePage({ params }: MassAndBalancePageProps) 
             x: [minX - xPadding, maxX + xPadding],
             y: [minY - yPadding, maxY + yPadding],
         };
-    }, [aircraft]);
+    }, [aircraft?.cgEnvelope]);
 
 
     if (isLoading) {
@@ -212,15 +195,15 @@ export default function MassAndBalancePage({ params }: MassAndBalancePageProps) 
                                 <ResponsiveContainer width="100%" height={400}>
                                     <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
                                         <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis type="number" dataKey="cg" name="CG" unit=" in" domain={[domain.x[0], domain.x[1]]} allowDataOverflow={true} tickCount={8}>
+                                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[domain.x[0], domain.x[1]]} allowDataOverflow={true} tickCount={8}>
                                             <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" />
                                         </XAxis>
-                                        <YAxis type="number" dataKey="weight" name="Weight" unit=" lbs" domain={[domain.y[0], domain.y[1]]} allowDataOverflow={true} tickCount={8}>
+                                        <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[domain.y[0], domain.y[1]]} allowDataOverflow={true} tickCount={8}>
                                             <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
                                         </YAxis>
                                         <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                        <Area type="linear" dataKey="weight" data={cgEnvelopePoints} name="CG Limit" stroke="#8884d8" fill="#8884d8" fillOpacity={0.2} strokeWidth={2} />
-                                        <Scatter name="Takeoff CG" data={[ { weight: takeoffPoint.y, cg: takeoffPoint.x } ]} fill={isTakeoffOk ? "#22c55e" : "#ef4444"}>
+                                        <Area type="linear" dataKey="y" data={cgEnvelopePoints} name="CG Limit" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.2)" strokeWidth={2} />
+                                        <Scatter name="Takeoff CG" data={[ { y: takeoffPoint.y, x: takeoffPoint.x } ]} fill={isTakeoffOk ? "#22c55e" : "#ef4444"}>
                                             {/* Custom shape rendering for the dot */}
                                             {takeoffPoint &&
                                                 <ReferenceDot

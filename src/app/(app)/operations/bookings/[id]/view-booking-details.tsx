@@ -180,13 +180,13 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                     onCalculationChange={setMassBalanceData}
                     initialData={booking.massAndBalance}
                 />
-                <div className="flex justify-end pt-4 border-t">
-                    <Button onClick={handleSaveMassAndBalance} disabled={!massBalanceData}>
-                        <Save className='mr-2 h-4 w-4' />
-                        Save Mass & Balance to Booking
-                    </Button>
-                </div>
             </CardContent>
+            <CardFooter className="flex justify-end pt-4 border-t">
+                <Button onClick={handleSaveMassAndBalance} disabled={!massBalanceData}>
+                    <Save className='mr-2 h-4 w-4' />
+                    Save Mass & Balance to Booking
+                </Button>
+            </CardFooter>
         </Card>
 
     </div>
