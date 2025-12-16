@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { SheetHeader, SheetTitle } from './ui/sheet';
 
 
 const SidebarItems = () => {
@@ -124,6 +125,9 @@ export function AppSidebarMobile() {
     return (
       <SidebarMobile open={openMobile} onOpenChange={setOpenMobile}>
         <SidebarMobileContent>
+          <SheetHeader>
+            <SheetTitle className="sr-only">Main Menu</SheetTitle>
+          </SheetHeader>
           <SidebarHeader>
             <div className="flex items-center gap-2">
               <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
