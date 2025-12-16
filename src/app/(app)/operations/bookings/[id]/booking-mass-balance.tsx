@@ -183,7 +183,7 @@ export function BookingMassBalance({ aircraft, booking, onCalculationChange, ini
                                     <div className="p-2 text-right text-sm">{calculation?.zeroFuelCg.toFixed(2)}</div>
                                     <div className="p-2 text-right text-sm font-mono">{calculation?.zeroFuelMoment.toFixed(1)}</div>
                                 </div>
-                                {renderRow("Fuel", calculation?.fuelWeight || 0, calculation?.arms.fuel, calculation?.fuelMoment || 0)}
+                                {calculation?.arms.fuel && renderRow("Fuel", calculation?.fuelWeight || 0, calculation?.arms.fuel, calculation?.fuelMoment || 0)}
                                 <div className="grid grid-cols-4 items-center gap-2 font-bold bg-muted/20 rounded-b-lg">
                                     <div className="p-2 text-sm">Takeoff Condition</div>
                                     <div className="p-2 text-right text-sm">{calculation?.takeoffWeight.toFixed(1)}</div>
