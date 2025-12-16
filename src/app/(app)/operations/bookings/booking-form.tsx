@@ -73,7 +73,7 @@ const bookingSchema = z.object({
   instructorId: z.string().optional(),
   type: z.enum(['Student Training', 'Hire and Fly', 'Maintenance Flight'], { required_error: 'Booking type is required.' }),
   startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.'),
-  endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.'),
+  endTime: z.string().regex(/^([01]\d|2[0-5]\d)$/, 'Invalid time format.'),
   status: z.enum(['Confirmed', 'Pending', 'Cancelled', 'Cancelled with Reason']),
   isOvernight: z.boolean(),
   overnightEndTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.').optional(),
@@ -118,7 +118,6 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const [isDetailsOpen, setIsDetailsOpen] = useState(true);
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [isChecklistOpen, setIsChecklistOpen] = useState(true);
-  const [checklistType, setChecklistType] = useState<'pre-flight' | 'post-flight'>(checklistTypeToShow || 'pre-flight');
 
   // Tacho/Hobbs state
   const [preFlightTacho, setPreFlightTacho] = useState('');
@@ -240,7 +239,6 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
 
   useEffect(() => {
     if (checklistTypeToShow) {
-        setChecklistType(checklistTypeToShow);
         setIsChecklistOpen(true);
         setIsDetailsOpen(false);
     }
@@ -263,8 +261,14 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     setCheckedItems(prev => ({ ...prev, [itemName]: isChecked }));
   };
 
-  const saveChecklist = (bookingId: string, pilotId: string) => {
-    if (!firestore) return;
+  const saveChecklist = (checklistType: 'pre-flight' | 'post-flight') => {
+    if (!firestore || !initialData?.booking) return;
+
+    const pilotId = form.getValues('pilotId');
+    if (!pilotId) {
+        toast({ variant: 'destructive', title: 'Error', description: 'A pilot must be selected to submit a checklist.'});
+        return;
+    }
 
     let responses: ChecklistItemResponse[] = Object.entries(checkedItems).map(([itemId, checked]) => ({
         itemId,
@@ -288,10 +292,13 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
         if(postFlightRightOilUplift) responses.push({ itemId: 'post-flight-right-oil-uplift', checked: false, notes: postFlightRightOilUplift });
     }
 
-    if (responses.length === 0) return; // Don't save empty checklists
+    if (responses.length === 0) {
+      toast({title: "Nothing to Submit", description: "The checklist is empty."});
+      return; 
+    }
 
     const checklistResponse: Omit<ChecklistResponse, 'id'> = {
-        bookingId,
+        bookingId: initialData.booking.id,
         pilotId,
         checklistType,
         submissionTime: Timestamp.now(),
@@ -301,7 +308,8 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     const checklistRef = collection(firestore, 'tenants', tenantId, 'checklistResponses');
     addDocumentNonBlocking(checklistRef, checklistResponse);
 
-    toast({ title: `Checklist Saved`, description: `${checklistType === 'pre-flight' ? 'Pre-flight' : 'Post-flight'} checklist has been submitted.` });
+    toast({ title: `Checklist Submitted`, description: `The ${checklistType === 'pre-flight' ? 'Pre-flight' : 'Post-flight'} checklist has been submitted.` });
+    onClose();
   };
 
 
@@ -314,22 +322,13 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
       } else {
         await handleStandardBooking(data, initialData.booking.id, initialData.booking?.bookingNumber);
       }
-      // Save checklist if editing
-      if (!isPreFlightChecklistDisabled) {
-        saveChecklist(initialData.booking.id, data.pilotId);
-      }
     } else {
       try {
         const bookingNumber = await getNextBookingNumber(firestore, tenantId, data.type);
         if (data.isOvernight) {
           handleOvernightBooking(data, bookingNumber);
         } else {
-          const newBookingId = await handleStandardBooking(data, undefined, bookingNumber);
-          if (newBookingId) {
-             if (!isPreFlightChecklistDisabled) {
-                saveChecklist(newBookingId, data.pilotId);
-             }
-          }
+          await handleStandardBooking(data, undefined, bookingNumber);
         }
       } catch (error) {
         console.error(error);
@@ -341,7 +340,10 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
         return;
       }
     }
-    onClose();
+    // Don't close the form on booking save if it's an edit, so user can still do checklist
+    if (!isEditing) {
+        onClose();
+    }
   };
   
   const handleStandardBooking = async (data: BookingFormValues, existingId?: string, bookingNumber?: number): Promise<string | undefined> => {
@@ -409,11 +411,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     delete (bookingData2 as any).overnightEndTime;
 
     const bookingsRef = collection(firestore, 'tenants', tenantId, 'bookings');
-    addDocumentNonBlocking(bookingsRef, bookingData1).then(docRef => {
-      if (docRef && !isPreFlightChecklistDisabled) {
-        saveChecklist(docRef.id, data.pilotId);
-      }
-    });
+    addDocumentNonBlocking(bookingsRef, bookingData1);
     addDocumentNonBlocking(bookingsRef, bookingData2);
 
     toast({
@@ -531,6 +529,82 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const aircraftType = initialData.aircraft.type;
   const abbreviation = initialData.booking ? getBookingTypeAbbreviation(initialData.booking.type) : '';
 
+  const renderChecklist = (type: 'pre-flight' | 'post-flight') => {
+    const isPreFlight = type === 'pre-flight';
+
+    return (
+        <div className='space-y-4'>
+            <div className="space-y-2">
+                <Label>{isPreFlight ? 'Meter Readings & Uplifts' : 'Final Meter Readings & Uplifts'}</Label>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border p-4">
+                   {isPreFlight && (
+                     <>
+                        <div className='space-y-1'>
+                            <Label htmlFor="prev-hobbs" className='text-xs text-muted-foreground'>Previous Hobbs</Label>
+                            <Input id="prev-hobbs" value={initialData.aircraft.currentHobbs || '0'} readOnly disabled />
+                        </div>
+                        <div className='space-y-1'>
+                            <Label htmlFor="prev-tacho" className='text-xs text-muted-foreground'>Previous Tacho</Label>
+                            <Input id="prev-tacho" value={initialData.aircraft.currentTacho || '0'} readOnly disabled />
+                        </div>
+                     </>
+                   )}
+                    <div className='space-y-1'>
+                        <Label htmlFor={`${type}-hobbs`}>{isPreFlight ? 'Current' : 'Final'} Hobbs</Label>
+                        <Input id={`${type}-hobbs`} type="number" value={isPreFlight ? preFlightHobbs : postFlightHobbs} onChange={e => isPreFlight ? setPreFlightHobbs(e.target.value) : setPostFlightHobbs(e.target.value)} />
+                    </div>
+                    <div className='space-y-1'>
+                        <Label htmlFor={`${type}-tacho`}>{isPreFlight ? 'Current' : 'Final'} Tacho</Label>
+                        <Input id={`${type}-tacho`} type="number" value={isPreFlight ? preFlightTacho : postFlightTacho} onChange={e => isPreFlight ? setPreFlightTacho(e.target.value) : setPostFlightTacho(e.target.value)} />
+                    </div>
+                    <div className='space-y-1 col-span-2'>
+                        <Label htmlFor={`${type}-fuel-uplift`}>Fuel Uplift (Litres)</Label>
+                        <Input id={`${type}-fuel-uplift`} type="number" value={isPreFlight ? fuelUplift : postFlightFuelUplift} onChange={e => isPreFlight ? setFuelUplift(e.target.value) : setPostFlightFuelUplift(e.target.value)} />
+                    </div>
+                    {aircraftType === 'Single-Engine' && (
+                        <div className='space-y-1 col-span-2'>
+                            <Label htmlFor={`${type}-oil-uplift`}>Oil Uplift (Quarts)</Label>
+                            <Input id={`${type}-oil-uplift`} type="number" value={isPreFlight ? oilUplift : postFlightOilUplift} onChange={e => isPreFlight ? setOilUplift(e.target.value) : setPostFlightOilUplift(e.target.value)} />
+                        </div>
+                    )}
+                    {aircraftType === 'Multi-Engine' && (
+                        <>
+                            <div className='space-y-1'>
+                                <Label htmlFor={`${type}-left-oil-uplift`}>Left Engine Oil Uplift</Label>
+                                <Input id={`${type}-left-oil-uplift`} type="number" value={isPreFlight ? leftOilUplift : postFlightLeftOilUplift} onChange={e => isPreFlight ? setLeftOilUplift(e.target.value) : setPostFlightLeftOilUplift(e.target.value)} />
+                            </div>
+                            <div className='space-y-1'>
+                                <Label htmlFor={`${type}-right-oil-uplift`}>Right Engine Oil Uplift</Label>
+                                <Input id={`${type}-right-oil-uplift`} type="number" value={isPreFlight ? rightOilUplift : postFlightRightOilUplift} onChange={e => isPreFlight ? setRightOilUplift(e.target.value) : setPostFlightRightOilUplift(e.target.value)} />
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+            {isPreFlight && (
+              <div className="space-y-2">
+                  <Label>Onboard Documents</Label>
+                  <div className="space-y-3 rounded-lg border p-4">
+                      {allChecklistDocs.map(docName => (
+                          <div key={docName} className="flex items-center space-x-3">
+                              <Checkbox
+                                  id={docName}
+                                  checked={checkedItems[docName] || false}
+                                  onCheckedChange={(checked) => handleCheckboxChange(docName, !!checked)}
+                              />
+                              <Label htmlFor={docName} className="font-normal text-base cursor-pointer">
+                                  {docName}
+                              </Label>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+            )}
+             <Button onClick={() => saveChecklist(type)}>Submit {isPreFlight ? 'Pre-Flight' : 'Post-Flight'} Checklist</Button>
+        </div>
+    );
+};
+
   const FormContent = () => (
      <>
         <DialogHeader className="p-6 pb-0">
@@ -542,7 +616,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
           
           <Form {...form}>
             <ScrollArea className="max-h-[60vh]">
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-6">
+              <div className="space-y-4 p-6">
                 <Collapsible open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
                   <CollapsibleTrigger asChild>
                       <Button variant="ghost" className="flex w-full items-center justify-between px-1">
@@ -705,6 +779,9 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                                 />
                         </div>
                     )}
+                    <div className='flex justify-end pt-2'>
+                        <Button type="button" onClick={form.handleSubmit(onSubmit)}>{isEditing ? 'Save Changes' : 'Create Booking'}</Button>
+                    </div>
                   </CollapsibleContent>
                 </Collapsible>
                 
@@ -714,11 +791,11 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                         <Collapsible open={isChecklistOpen} onOpenChange={setIsChecklistOpen} disabled={isPreFlightChecklistDisabled}>
                             <CollapsibleTrigger asChild disabled={isPreFlightChecklistDisabled}>
                                 <Button variant="ghost" className="flex w-full items-center justify-between px-1 disabled:opacity-50 disabled:cursor-not-allowed">
-                                    <h3 className="text-lg font-semibold capitalize">{checklistType.replace('-', ' ')} Checklist</h3>
+                                    <h3 className="text-lg font-semibold">Checklists</h3>
                                     <ChevronsUpDown className="h-4 w-4" />
                                 </Button>
                             </CollapsibleTrigger>
-                             <CollapsibleContent className="space-y-4 pt-2">
+                             <CollapsibleContent className="space-y-6 pt-2">
                                 {isPreFlightChecklistDisabled ? (
                                     <Alert variant="destructive">
                                         <AlertCircle className="h-4 w-4" />
@@ -728,129 +805,22 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                                     </Alert>
                                 ) : (
                                 <>
-                                    <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-                                        <div className="space-y-0.5">
-                                            <Label>Toggle Checklist (Dev Only)</Label>
-                                            <p className="text-xs text-muted-foreground">Switch between pre and post flight views.</p>
-                                        </div>
-                                        <Switch
-                                            checked={checklistType === 'post-flight'}
-                                            onCheckedChange={(checked) => setChecklistType(checked ? 'post-flight' : 'pre-flight')}
-                                        />
+                                    <div>
+                                        <h4 className='font-medium mb-2'>Pre-Flight Checklist</h4>
+                                        {renderChecklist('pre-flight')}
                                     </div>
-                                    
-                                    {checklistType === 'pre-flight' ? (
-                                        <div className='space-y-4'>
-                                            <div className="space-y-2">
-                                                <Label>Meter Readings & Uplifts</Label>
-                                                <div className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border p-4">
-                                                    <div className='space-y-1'>
-                                                        <Label htmlFor="prev-hobbs" className='text-xs text-muted-foreground'>Previous Hobbs</Label>
-                                                        <Input id="prev-hobbs" value={initialData.aircraft.currentHobbs || '0'} readOnly disabled />
-                                                    </div>
-                                                    <div className='space-y-1'>
-                                                        <Label htmlFor="prev-tacho" className='text-xs text-muted-foreground'>Previous Tacho</Label>
-                                                        <Input id="prev-tacho" value={initialData.aircraft.currentTacho || '0'} readOnly disabled />
-                                                    </div>
-                                                    <div className='space-y-1'>
-                                                        <Label htmlFor="current-hobbs">Current Hobbs</Label>
-                                                        <Input id="current-hobbs" type="number" value={preFlightHobbs} onChange={e => setPreFlightHobbs(e.target.value)} />
-                                                    </div>
-                                                    <div className='space-y-1'>
-                                                        <Label htmlFor="current-tacho">Current Tacho</Label>
-                                                        <Input id="current-tacho" type="number" value={preFlightTacho} onChange={e => setPreFlightTacho(e.target.value)} />
-                                                    </div>
-                                                    <div className='space-y-1 col-span-2'>
-                                                        <Label htmlFor="fuel-uplift">Fuel Uplift (Litres)</Label>
-                                                        <Input id="fuel-uplift" type="number" value={fuelUplift} onChange={e => setFuelUplift(e.target.value)} />
-                                                    </div>
-                                                    {aircraftType === 'Single-Engine' && (
-                                                        <div className='space-y-1 col-span-2'>
-                                                            <Label htmlFor="oil-uplift">Oil Uplift (Quarts)</Label>
-                                                            <Input id="oil-uplift" type="number" value={oilUplift} onChange={e => setOilUplift(e.target.value)} />
-                                                        </div>
-                                                    )}
-                                                    {aircraftType === 'Multi-Engine' && (
-                                                        <>
-                                                            <div className='space-y-1'>
-                                                                <Label htmlFor="left-oil-uplift">Left Engine Oil Uplift (Quarts)</Label>
-                                                                <Input id="left-oil-uplift" type="number" value={leftOilUplift} onChange={e => setLeftOilUplift(e.target.value)} />
-                                                            </div>
-                                                            <div className='space-y-1'>
-                                                                <Label htmlFor="right-oil-uplift">Right Engine Oil Uplift (Quarts)</Label>
-                                                                <Input id="right-oil-uplift" type="number" value={rightOilUplift} onChange={e => setRightOilUplift(e.target.value)} />
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Onboard Documents</Label>
-                                                <div className="space-y-3 rounded-lg border p-4">
-                                                    {allChecklistDocs.map(docName => (
-                                                        <div key={docName} className="flex items-center space-x-3">
-                                                            <Checkbox
-                                                                id={docName}
-                                                                checked={checkedItems[docName] || false}
-                                                                onCheckedChange={(checked) => handleCheckboxChange(docName, !!checked)}
-                                                            />
-                                                            <Label htmlFor={docName} className="font-normal text-base cursor-pointer">
-                                                                {docName}
-                                                            </Label>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label>Final Meter Readings & Uplifts</Label>
-                                                <div className="grid grid-cols-2 gap-4 rounded-lg border p-4">
-                                                    <div className='space-y-1'>
-                                                        <Label htmlFor="final-hobbs">Final Hobbs</Label>
-                                                        <Input id="final-hobbs" type="number" value={postFlightHobbs} onChange={e => setPostFlightHobbs(e.target.value)} />
-                                                    </div>
-                                                    <div className='space-y-1'>
-                                                        <Label htmlFor="final-tacho">Final Tacho</Label>
-                                                        <Input id="final-tacho" type="number" value={postFlightTacho} onChange={e => setPostFlightTacho(e.target.value)} />
-                                                    </div>
-                                                    <div className='space-y-1 col-span-2'>
-                                                        <Label htmlFor="post-fuel-uplift">Fuel Uplift (Litres)</Label>
-                                                        <Input id="post-fuel-uplift" type="number" value={postFlightFuelUplift} onChange={e => setPostFlightFuelUplift(e.target.value)} />
-                                                    </div>
-                                                     {aircraftType === 'Single-Engine' && (
-                                                        <div className='space-y-1 col-span-2'>
-                                                            <Label htmlFor="post-oil-uplift">Oil Uplift (Quarts)</Label>
-                                                            <Input id="post-oil-uplift" type="number" value={postFlightOilUplift} onChange={e => setPostFlightOilUplift(e.target.value)} />
-                                                        </div>
-                                                    )}
-                                                    {aircraftType === 'Multi-Engine' && (
-                                                        <>
-                                                            <div className='space-y-1'>
-                                                                <Label htmlFor="post-left-oil-uplift">Left Engine Oil Uplift (Quarts)</Label>
-                                                                <Input id="post-left-oil-uplift" type="number" value={postFlightLeftOilUplift} onChange={e => setPostFlightLeftOilUplift(e.target.value)} />
-                                                            </div>
-                                                            <div className='space-y-1'>
-                                                                <Label htmlFor="post-right-oil-uplift">Right Engine Oil Uplift (Quarts)</Label>
-                                                                <Input id="post-right-oil-uplift" type="number" value={postFlightRightOilUplift} onChange={e => setPostFlightRightOilUplift(e.target.value)} />
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="space-y-3 rounded-lg border p-4">
-                                                <p className="text-muted-foreground text-sm">Additional post-flight checks (e.g., snag reporting, photo uploads) will go here.</p>
-                                            </div>
-                                        </div>
-                                    )}
+                                    <Separator />
+                                     <div>
+                                        <h4 className='font-medium mb-2'>Post-Flight Checklist</h4>
+                                        {renderChecklist('post-flight')}
+                                    </div>
                                 </>
                                 )}
                             </CollapsibleContent>
                         </Collapsible>
                     </>
                 )}
-              </form>
+              </div>
             </ScrollArea>
           </Form>
           <DialogFooter className="p-6 pt-0 border-t">
@@ -915,9 +885,8 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
                 </div>
                 <div className="flex gap-2">
                     <DialogClose asChild>
-                        <Button variant="outline">Cancel</Button>
+                        <Button variant="outline">Close</Button>
                     </DialogClose>
-                    <Button type="submit" onClick={form.handleSubmit(onSubmit)}>{isEditing ? 'Save Changes' : 'Create Booking'}</Button>
                 </div>
             </div>
           </DialogFooter>
