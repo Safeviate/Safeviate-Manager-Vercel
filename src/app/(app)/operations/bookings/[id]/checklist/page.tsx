@@ -1,7 +1,8 @@
 
 'use client';
 
-import { use, useMemo, useState } from 'react';
+import { use, useMemo, useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Booking } from '@/types/booking';
@@ -31,10 +32,12 @@ const requiredAircraftDocuments = [
 
 export default function ChecklistPage({ params }: ChecklistPageProps) {
     const resolvedParams = use(params);
+    const searchParams = useSearchParams();
     const firestore = useFirestore();
     const { toast } = useToast();
     const tenantId = 'safeviate';
     const bookingId = resolvedParams.id;
+    const checklistType = searchParams.get('type') || 'pre-flight';
     
     const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
 
@@ -105,43 +108,52 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
             </div>
             <Card>
                 <CardHeader>
-                    <CardTitle>Pre-Flight Checklist</CardTitle>
+                    <CardTitle className='capitalize'>{checklistType.replace('-', ' ')} Checklist</CardTitle>
                     <CardDescription>
                         Complete the required checks for booking #{booking.bookingNumber} on aircraft <span className='font-bold'>{aircraft.tailNumber}</span>.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                        <h3 className="text-lg font-medium">Onboard Documents</h3>
-                        <p className="text-sm text-muted-foreground">Confirm that all required documents are present on the aircraft.</p>
-                        <div className="space-y-3 rounded-lg border p-4">
-                            {allChecklistDocs.map(docName => (
-                                <div key={docName} className="flex items-center space-x-3">
-                                    <Checkbox
-                                        id={docName}
-                                        checked={checkedItems[docName] || false}
-                                        onCheckedChange={(checked) => handleCheckboxChange(docName, !!checked)}
-                                    />
-                                    <Label htmlFor={docName} className="font-normal text-base cursor-pointer">
-                                        {docName}
-                                    </Label>
-                                </div>
-                            ))}
+                    {checklistType === 'pre-flight' && (
+                        <>
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-medium">Onboard Documents</h3>
+                            <p className="text-sm text-muted-foreground">Confirm that all required documents are present on the aircraft.</p>
+                            <div className="space-y-3 rounded-lg border p-4">
+                                {allChecklistDocs.map(docName => (
+                                    <div key={docName} className="flex items-center space-x-3">
+                                        <Checkbox
+                                            id={docName}
+                                            checked={checkedItems[docName] || false}
+                                            onCheckedChange={(checked) => handleCheckboxChange(docName, !!checked)}
+                                        />
+                                        <Label htmlFor={docName} className="font-normal text-base cursor-pointer">
+                                            {docName}
+                                        </Label>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                    
-                    <Separator />
+                        
+                        <Separator />
 
-                     <div className="space-y-4">
-                        <h3 className="text-lg font-medium">Mass &amp; Balance</h3>
-                        <p className="text-sm text-muted-foreground">Calculate the aircraft's mass and balance for this flight.</p>
-                        <Button asChild>
-                            <Link href={`/operations/bookings/${bookingId}/mass-and-balance`}>
-                                <Scale className="mr-2 h-4 w-4" />
-                                Calculate Mass &amp; Balance
-                            </Link>
-                        </Button>
-                    </div>
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-medium">Mass &amp; Balance</h3>
+                            <p className="text-sm text-muted-foreground">Calculate the aircraft's mass and balance for this flight.</p>
+                            <Button asChild>
+                                <Link href={`/operations/bookings/${bookingId}/mass-and-balance`}>
+                                    <Scale className="mr-2 h-4 w-4" />
+                                    Calculate Mass &amp; Balance
+                                </Link>
+                            </Button>
+                        </div>
+                        </>
+                    )}
+                     {checklistType === 'post-flight' && (
+                         <div className="space-y-4">
+                            <p className="text-sm text-muted-foreground text-center">Post-flight checklist items will be displayed here.</p>
+                        </div>
+                    )}
                 </CardContent>
                 <CardFooter>
                     <Button onClick={handleSubmit}>Submit Checklist</Button>

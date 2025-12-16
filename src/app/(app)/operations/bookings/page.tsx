@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, PlaneTakeoff, PlaneLanding } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { BookingForm } from './booking-form';
 import { useRouter } from 'next/navigation';
@@ -31,7 +31,7 @@ const getBookingTypeAbbreviation = (type: Booking['type']): string => {
     }
 }
 
-const BookingItem = ({ booking, pilots, selectedDate, onClick }: { booking: Booking, pilots: PilotProfile[], selectedDate: Date, onClick: () => void; }) => {
+const BookingItem = ({ booking, pilots, selectedDate, children }: { booking: Booking, pilots: PilotProfile[], selectedDate: Date, children: React.ReactNode }) => {
     const startTime = booking.startTime.toDate();
     const endTime = booking.endTime.toDate();
 
@@ -57,25 +57,31 @@ const BookingItem = ({ booking, pilots, selectedDate, onClick }: { booking: Book
     const abbreviation = getBookingTypeAbbreviation(booking.type);
 
     return (
-         <div
-            onClick={onClick}
-            className={cn(
-            'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground z-10 min-h-[40px] cursor-pointer border border-gray-400',
-            (booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason') ? 'bg-destructive' : 'bg-primary'
-            )}
-            style={{ top: `${top}px`, height: `${height}px` }}
-        >
-            {hasContinuationTop && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-b from-black/20 to-transparent" />}
-            <p className="font-semibold truncate">{booking.bookingNumber ? `${abbreviation}${booking.bookingNumber} - ` : ''}{booking.type}</p>
-            <p className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}</p>
-            {booking.status === 'Cancelled' && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
-            {(booking.status === 'Cancelled with Reason') && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
-            {hasContinuationBottom && <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-t from-black/20 to-transparent" />}
-        </div>
+         <Popover>
+            <PopoverTrigger asChild>
+                <div
+                    className={cn(
+                    'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground z-10 min-h-[40px] cursor-pointer border border-gray-400',
+                    (booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason') ? 'bg-destructive' : 'bg-primary'
+                    )}
+                    style={{ top: `${top}px`, height: `${height}px` }}
+                >
+                    {hasContinuationTop && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-b from-black/20 to-transparent" />}
+                    <p className="font-semibold truncate">{booking.bookingNumber ? `${abbreviation}${booking.bookingNumber} - ` : ''}{booking.type}</p>
+                    <p className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}</p>
+                    {booking.status === 'Cancelled' && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
+                    {(booking.status === 'Cancelled with Reason') && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
+                    {hasContinuationBottom && <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-t from-black/20 to-transparent" />}
+                </div>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-2">
+                {children}
+            </PopoverContent>
+        </Popover>
     )
 }
 
-const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePosition, selectedDate, onSlotClick }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; showNowLine: boolean; nowLinePosition: number; selectedDate: Date; onSlotClick: (aircraft: Aircraft, time: string, booking?: Booking) => void; }) => {
+const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePosition, selectedDate, onSlotClick, onActionClick }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; showNowLine: boolean; nowLinePosition: number; selectedDate: Date; onSlotClick: (aircraft: Aircraft, time: string, booking?: Booking) => void; onActionClick: (action: string, booking: Booking) => void; }) => {
     const today = startOfToday();
     const isSelectedDateToday = isSameDay(selectedDate, today);
     const isSelectedDateInPast = isBefore(selectedDate, today);
@@ -148,8 +154,18 @@ const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePositi
             booking={booking}
             pilots={pilots}
             selectedDate={selectedDate}
-            onClick={() => aircraft && onSlotClick(aircraft, format(booking.startTime.toDate(), 'HH:mm'), booking)}
-        />
+        >
+            <div className="flex flex-col space-y-2">
+                <Button variant="outline" size="sm" onClick={() => onActionClick('pre-flight', booking)}>
+                    <PlaneTakeoff className="mr-2 h-4 w-4" />
+                    Pre-Flight Checklist
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => onActionClick('post-flight', booking)}>
+                    <PlaneLanding className="mr-2 h-4 w-4" />
+                    Post-Flight Checklist
+                </Button>
+            </div>
+        </BookingItem>
       ))}
     </div>
   );
@@ -225,13 +241,12 @@ export default function SchedulePage() {
   }, [selectedDate]);
   
   const handleSlotClick = useCallback((aircraft: Aircraft, time: string, booking?: Booking) => {
-    // If a booking is clicked, navigate to its page
+    // This function will now only handle creating new bookings.
+    // Clicking an existing booking is handled by the Popover in BookingItem.
     if (booking) {
-        router.push(`/operations/bookings/${booking.id}`);
-        return;
+        return; 
     }
     
-    // Logic for creating a new booking in a dialog
     const now = new Date();
     let startTime = time;
 
@@ -252,13 +267,19 @@ export default function SchedulePage() {
         booking: undefined, // Explicitly undefined for new bookings
     });
     setIsFormOpen(true);
-  }, [selectedDate, router]);
+  }, [selectedDate]);
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
     setFormInitialData(null);
   };
   
+  const handleActionClick = (action: string, booking: Booking) => {
+    if (action === 'pre-flight' || action === 'post-flight') {
+        router.push(`/operations/bookings/${booking.id}/checklist?type=${action}`);
+    }
+  };
+
   const extraLanes = ['', '', '', ''];
 
   return (
@@ -327,6 +348,7 @@ export default function SchedulePage() {
                         nowLinePosition={nowLinePosition}
                         selectedDate={selectedDate}
                         onSlotClick={handleSlotClick}
+                        onActionClick={handleActionClick}
                       />
                     ))}
                     {extraLanes.map((_, index) => (
@@ -338,6 +360,7 @@ export default function SchedulePage() {
                           nowLinePosition={nowLinePosition}
                           selectedDate={selectedDate}
                           onSlotClick={handleSlotClick}
+                          onActionClick={handleActionClick}
                       />
                     ))}
                     {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-4 text-center text-muted-foreground">Please add aircraft to see the schedule.</div>}
