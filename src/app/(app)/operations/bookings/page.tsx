@@ -324,7 +324,7 @@ export default function SchedulePage() {
             )}
             {error && <p className="p-6 text-destructive">Error loading data: {error.message}</p>}
             {!isLoading && !error && (
-              <div className='relative overflow-auto'>
+              <div className='w-full'>
                   <div className="sticky top-0 z-30 flex bg-swimlane-header text-swimlane-header-foreground flex-shrink-0">
                     {(aircraft || []).map((ac) => (
                       <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px]">
