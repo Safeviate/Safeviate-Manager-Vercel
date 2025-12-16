@@ -13,11 +13,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
 import { type AircraftModelProfile } from './template-form';
-import Link from 'next/link';
 import { AssignProfileForm } from './assign-profile-form';
 import type { Aircraft } from '../page';
+import { TemplateActions } from './template-actions';
 
 export function TemplatesTab() {
   const firestore = useFirestore();
@@ -68,9 +67,7 @@ export function TemplatesTab() {
                       <TableCell className="font-medium">{profile.make}</TableCell>
                       <TableCell>{profile.model}</TableCell>
                       <TableCell className="text-right">
-                        <Button asChild variant="outline" size="sm">
-                           <Link href={`/assets/mass-balance/${profile.id}/edit`}>Edit</Link>
-                        </Button>
+                        <TemplateActions tenantId={tenantId} profile={profile} />
                       </TableCell>
                     </TableRow>
                   ))
