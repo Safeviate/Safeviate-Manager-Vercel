@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { collection, doc, query, where, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
-import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
 import {
   Save,
@@ -56,6 +56,7 @@ import { Badge } from '@/components/ui/badge';
 import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
 import type { AircraftModelProfile } from '@/types/aircraft-wb-profile';
 import type { Aircraft } from '../page';
+import type { Booking } from '@/types/booking';
 import {
     Select,
     SelectContent,
@@ -156,6 +157,8 @@ export function ConfiguratorTab() {
   const { toast } = useToast();
   const tenantId = 'safeviate';
   const searchParams = useSearchParams();
+  const aircraftIdFromUrl = searchParams.get('aircraftId');
+  const bookingIdFromUrl = searchParams.get('bookingId');
 
   const [isSaveProfileDialogOpen, setIsSaveProfileDialogOpen] = useState(false);
   const [isClearAircraftDialogOpen, setIsClearAircraftDialogOpen] = useState(false);
@@ -228,14 +231,19 @@ export function ConfiguratorTab() {
   );
   const { data: aircraftList, isLoading: isLoadingAircraft } = useCollection<Aircraft>(aircraftQuery);
 
+  const bookingDocRef = useMemoFirebase(
+    () => (firestore && bookingIdFromUrl ? doc(firestore, 'tenants', tenantId, 'bookings', bookingIdFromUrl) : null),
+    [firestore, bookingIdFromUrl]
+  );
+  const { data: booking, isLoading: isLoadingBooking } = useDoc<Booking>(bookingDocRef);
+
 
   useEffect(() => {
-    const aircraftIdFromUrl = searchParams.get('aircraftId');
     if (aircraftIdFromUrl && aircraftList) {
         handleLoadFromAircraft(aircraftIdFromUrl);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, aircraftList]);
+  }, [aircraftIdFromUrl, aircraftList]);
 
   useEffect(() => {
     let totalMom = parseFloat(basicEmpty.moment as any) || 0;
@@ -689,7 +697,7 @@ export function ConfiguratorTab() {
 
   const loadedProfileName = loadedProfileId ? profiles?.find(p => p.id === loadedProfileId)?.profileName : null;
   const selectedAircraftName = selectedAircraftId ? aircraftList?.find(a => a.id === selectedAircraftId)?.tailNumber : '';
-
+  const bookingNumber = booking?.bookingNumber ? `#${booking.bookingNumber}` : '';
 
   return (
     <div className="space-y-6">
@@ -885,6 +893,7 @@ export function ConfiguratorTab() {
                 <span className="font-semibold text-foreground">
                   {loadedAircraftTailNumber ? `Aircraft: ${loadedAircraftTailNumber}` : `Profile: ${loadedProfileName}`}
                 </span>
+                {bookingNumber && <span className="ml-2">| Booking: {bookingNumber}</span>}
               </p>
             )}
           </div>
