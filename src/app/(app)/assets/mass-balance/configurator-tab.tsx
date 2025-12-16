@@ -997,7 +997,6 @@ export function ConfiguratorTab() {
                             <SelectValue placeholder={isLoadingProfiles ? "Loading profiles..." : "Select a profile"} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="">-- Reset to Default --</SelectItem>
                             {(profiles || []).map(p => (
                                 <SelectItem key={p.id} value={p.id}>{p.profileName}</SelectItem>
                             ))}
