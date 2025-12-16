@@ -111,25 +111,9 @@
         "cancellationReason": {
             "type": "string",
             "description": "The reason for the booking cancellation."
-        },
-        "massAndBalance": { "$ref": "#/backend/entities/MassAndBalance" }
+        }
       },
       "required": ["id", "bookingNumber", "aircraftId", "pilotId", "type", "startTime", "endTime", "status"]
-    },
-    "MassAndBalance": {
-        "title": "Mass and Balance",
-        "type": "object",
-        "description": "A snapshot of the mass and balance calculation for a specific flight.",
-        "properties": {
-            "calculationTime": { "type": "string", "format": "date-time" },
-            "frontSeatWeight": { "type": "number" },
-            "rearSeatWeight": { "type": "number" },
-            "baggage1Weight": { "type": "number" },
-            "baggage2Weight": { "type": "number" },
-            "fuelGallons": { "type": "number" },
-            "takeoffWeight": { "type": "number" },
-            "takeoffCg": { "type": "number" }
-        }
     },
     "PilotProfile": {
       "$schema": "http://json-schema.org/draft-07/schema#",
