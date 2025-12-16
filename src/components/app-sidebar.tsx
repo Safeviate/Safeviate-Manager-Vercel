@@ -116,65 +116,24 @@ const SidebarItems = () => {
     )
 }
 
-export function AppSidebarMobile() {
-    const { openMobile, setOpenMobile } = useSidebar();
-    const isMobile = useIsMobile();
-  
-    if (!isMobile) return null;
-  
+const SidebarFooterContent = () => {
+    const auth = useAuth();
+    const router = useRouter();
+    const { setOpenMobile } = useSidebar();
+
+    const handleSignOut = () => {
+      if (auth) {
+        signOut(auth);
+      }
+      setOpenMobile(false);
+      router.push('/login');
+    };
+
     return (
-      <SidebarMobile open={openMobile} onOpenChange={setOpenMobile}>
-        <SidebarMobileContent>
-          <SheetHeader>
-            <SheetTitle className="sr-only">Main Menu</SheetTitle>
-          </SheetHeader>
-          <SidebarHeader>
-            <div className="flex items-center gap-2">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
-                <Plane className="size-5 text-primary-foreground" />
-              </div>
-              <span className="font-headline text-lg">Safeviate</span>
-            </div>
-          </SidebarHeader>
-          <SidebarSeparator className="my-1" />
-          <SidebarContent>
-            <SidebarItems />
-          </SidebarContent>
-        </SidebarMobileContent>
-      </SidebarMobile>
-    );
-}
-
-export function AppSidebar() {
-  const auth = useAuth();
-  const router = useRouter();
-
-  const handleSignOut = () => {
-    if (auth) {
-      signOut(auth);
-    }
-    router.push('/login');
-  };
-
-  return (
-    <Sidebar>
-      <SidebarHeader>
-        <div className="flex items-center gap-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
-            <Plane className="size-5 text-primary-foreground" />
-          </div>
-          <span className="font-headline text-lg">Safeviate</span>
-        </div>
-      </SidebarHeader>
-      <SidebarSeparator className="my-1" />
-      <SidebarContent>
-        <SidebarItems />
-      </SidebarContent>
-      <SidebarFooter>
         <SidebarGroup>
           <SidebarMenu>
             <SidebarMenuItem>
-                <Link href={settingsMenuItem.href} className="w-full" >
+                <Link href={settingsMenuItem.href} className="w-full" onClick={() => setOpenMobile(false)}>
                     <SidebarMenuButton
                         isActive={usePathname().startsWith(settingsMenuItem.href)}
                         tooltip={settingsMenuItem.label}
@@ -215,6 +174,58 @@ export function AppSidebar() {
               </DropdownMenu>
           </SidebarMenu>
         </SidebarGroup>
+    )
+}
+
+export function AppSidebarMobile() {
+    const { openMobile, setOpenMobile } = useSidebar();
+    const isMobile = useIsMobile();
+  
+    if (!isMobile) return null;
+  
+    return (
+      <SidebarMobile open={openMobile} onOpenChange={setOpenMobile}>
+        <SidebarMobileContent>
+          <SheetHeader>
+            <SheetTitle className="sr-only">Main Menu</SheetTitle>
+          </SheetHeader>
+          <SidebarHeader>
+            <div className="flex items-center gap-2">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
+                <Plane className="size-5 text-primary-foreground" />
+              </div>
+              <span className="font-headline text-lg">Safeviate</span>
+            </div>
+          </SidebarHeader>
+          <SidebarSeparator className="my-1" />
+          <SidebarContent>
+            <SidebarItems />
+          </SidebarContent>
+          <SidebarFooter>
+            <SidebarFooterContent />
+          </SidebarFooter>
+        </SidebarMobileContent>
+      </SidebarMobile>
+    );
+}
+
+export function AppSidebar() {
+  return (
+    <Sidebar>
+      <SidebarHeader>
+        <div className="flex items-center gap-2">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
+            <Plane className="size-5 text-primary-foreground" />
+          </div>
+          <span className="font-headline text-lg">Safeviate</span>
+        </div>
+      </SidebarHeader>
+      <SidebarSeparator className="my-1" />
+      <SidebarContent>
+        <SidebarItems />
+      </SidebarContent>
+      <SidebarFooter>
+        <SidebarFooterContent />
       </SidebarFooter>
     </Sidebar>
   );
