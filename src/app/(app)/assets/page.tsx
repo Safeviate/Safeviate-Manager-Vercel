@@ -42,6 +42,10 @@ export type Aircraft = {
     baggage1?: number;
     baggage2?: number;
   };
+  cgEnvelope?: {
+    weight: number;
+    cg: number;
+  }[];
 };
 
 export default function AssetsPage() {

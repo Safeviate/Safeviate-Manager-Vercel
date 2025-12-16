@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -139,7 +138,7 @@ export function BookingMassBalance({ aircraft, booking, onCalculationChange, ini
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>Mass & Balance</CardTitle>
+                    <CardTitle>Mass &amp; Balance</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <Skeleton className="h-48 w-full" />
@@ -152,7 +151,7 @@ export function BookingMassBalance({ aircraft, booking, onCalculationChange, ini
         return (
             <div className="text-center p-6 border rounded-lg">
                 <h2 className="text-xl font-semibold text-destructive">Incomplete Aircraft Configuration</h2>
-                <p className="text-muted-foreground mt-2">This aircraft is missing critical mass & balance information (e.g., station arms, CG envelope, empty weight). Please complete the aircraft's profile in the Assets section.</p>
+                <p className="text-muted-foreground mt-2">This aircraft is missing critical mass &amp; balance information (e.g., station arms, CG envelope, empty weight). Please complete the aircraft's profile in the Assets section.</p>
                 <Button asChild variant="outline" className="mt-4">
                     <Link href={`/assets/${aircraft.id}`}>Go to Aircraft Profile</Link>
                 </Button>
@@ -161,12 +160,14 @@ export function BookingMassBalance({ aircraft, booking, onCalculationChange, ini
     }
     
     const renderRow = (label: string, weight: number, arm: number | undefined, moment: number | undefined) => {
+        const displayArm = arm !== undefined && weight > 0 ? arm.toFixed(2) : 'N/A';
+        const displayMoment = moment !== undefined && weight > 0 ? moment.toFixed(1) : '0.0';
         return (
              <div className="grid grid-cols-4 items-center gap-2">
                 <div className="p-2 text-sm">{label}</div>
                 <div className="p-2 text-sm text-right">{weight.toFixed(1)}</div>
-                <div className="p-2 text-sm text-right">{arm?.toFixed(2) || 'N/A'}</div>
-                <div className="p-2 text-sm text-right font-mono">{moment?.toFixed(1) || 'N/A'}</div>
+                <div className="p-2 text-sm text-right">{displayArm}</div>
+                <div className="p-2 text-sm text-right font-mono">{displayMoment}</div>
             </div>
         );
     }
@@ -213,10 +214,10 @@ export function BookingMassBalance({ aircraft, booking, onCalculationChange, ini
                             <ResponsiveContainer width="100%" height={400}>
                                 <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
                                     <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis type="number" dataKey="cg" name="CG" unit=" in" domain={domain.x} allowDataOverflow={true} tickCount={8}>
+                                    <XAxis type="number" dataKey="cg" name="CG" unit=" in" domain={[domain.x[0], domain.x[1]]} allowDataOverflow={true} tickCount={8}>
                                         <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" />
                                     </XAxis>
-                                    <YAxis type="number" dataKey="weight" name="Weight" unit=" lbs" domain={domain.y} allowDataOverflow={true} tickCount={8}>
+                                    <YAxis type="number" dataKey="weight" name="Weight" unit=" lbs" domain={[domain.y[0], domain.y[1]]} allowDataOverflow={true} tickCount={8}>
                                         <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
                                     </YAxis>
                                     <Tooltip cursor={{ strokeDasharray: '3 3' }} />

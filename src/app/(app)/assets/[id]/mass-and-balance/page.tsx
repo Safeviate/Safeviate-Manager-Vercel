@@ -4,13 +4,12 @@
 import { use, useMemo, useState, useEffect } from 'react';
 import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/app/(app)/assets/page';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { ArrowLeft, Scale } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -110,19 +109,24 @@ export default function MassAndBalancePage({ params }: MassAndBalancePageProps) 
     const isTakeoffOk = isTakeoffWeightOk && isTakeoffCgOk;
 
     const domain = useMemo(() => {
-        if (cgEnvelopePoints.length === 0) return { x: [0, 100], y: [0, 3000] };
+        if (!aircraft?.cgEnvelope || aircraft.cgEnvelope.length === 0) return { x: [0, 100], y: [0, 3000] };
         
-        const xValues = cgEnvelopePoints.map(p => p.cg);
-        const yValues = cgEnvelopePoints.map(p => p.weight);
+        const xValues = aircraft.cgEnvelope.map(p => p.cg);
+        const yValues = aircraft.cgEnvelope.map(p => p.weight);
 
-        const xPadding = (Math.max(...xValues) - Math.min(...xValues)) * 0.1;
-        const yPadding = (Math.max(...yValues) - Math.min(...yValues)) * 0.1;
+        const minX = Math.min(...xValues);
+        const maxX = Math.max(...xValues);
+        const minY = Math.min(...yValues);
+        const maxY = Math.max(...yValues);
+        
+        const xPadding = (maxX - minX) * 0.1;
+        const yPadding = (maxY - minY) * 0.1;
         
         return {
-            x: [Math.min(...xValues) - xPadding, Math.max(...xValues) + xPadding],
-            y: [Math.min(...yValues) - yPadding, Math.max(...yValues) + yPadding],
+            x: [minX - xPadding, maxX + xPadding],
+            y: [minY - yPadding, maxY + yPadding],
         };
-    }, [cgEnvelopePoints]);
+    }, [aircraft]);
 
 
     if (isLoading) {
@@ -146,12 +150,13 @@ export default function MassAndBalancePage({ params }: MassAndBalancePageProps) 
     }
     
     const renderRow = (label: string, weight: number, arm: number | undefined, moment: number | undefined) => {
+        const displayArm = arm !== undefined && weight !== 0 ? arm.toFixed(2) : 'N/A';
         return (
              <div className="grid grid-cols-4 items-center gap-2">
                 <div className="p-2 text-sm">{label}</div>
                 <div className="p-2 text-sm text-right">{weight.toFixed(1)}</div>
-                <div className="p-2 text-sm text-right">{arm?.toFixed(2) || 'N/A'}</div>
-                <div className="p-2 text-sm text-right font-mono">{moment?.toFixed(1) || 'N/A'}</div>
+                <div className="p-2 text-sm text-right">{displayArm}</div>
+                <div className="p-2 text-sm text-right font-mono">{moment?.toFixed(1) || '0.0'}</div>
             </div>
         );
     }
@@ -207,10 +212,10 @@ export default function MassAndBalancePage({ params }: MassAndBalancePageProps) 
                                 <ResponsiveContainer width="100%" height={400}>
                                     <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 30 }} className="text-xs">
                                         <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis type="number" dataKey="cg" name="CG" unit=" in" domain={domain.x} allowDataOverflow={true} tickCount={8}>
+                                        <XAxis type="number" dataKey="cg" name="CG" unit=" in" domain={[domain.x[0], domain.x[1]]} allowDataOverflow={true} tickCount={8}>
                                             <RechartsLabel value="Center of Gravity (inches)" offset={-25} position="insideBottom" />
                                         </XAxis>
-                                        <YAxis type="number" dataKey="weight" name="Weight" unit=" lbs" domain={domain.y} allowDataOverflow={true} tickCount={8}>
+                                        <YAxis type="number" dataKey="weight" name="Weight" unit=" lbs" domain={[domain.y[0], domain.y[1]]} allowDataOverflow={true} tickCount={8}>
                                             <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
                                         </YAxis>
                                         <Tooltip cursor={{ strokeDasharray: '3 3' }} />
