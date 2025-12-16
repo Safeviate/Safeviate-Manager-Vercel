@@ -77,7 +77,7 @@ export function AppBottomNav() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-20 border-t bg-background/80 backdrop-blur-sm md:hidden">
+    <nav className="sticky bottom-0 z-20 border-t bg-background/80 backdrop-blur-sm md:hidden">
       <div className="flex h-16 items-center justify-around">
         {visibleNavItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
