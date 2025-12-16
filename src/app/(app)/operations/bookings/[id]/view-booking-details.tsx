@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -16,6 +15,7 @@ import { doc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
+import Link from 'next/link';
 
 interface ViewBookingDetailsProps {
   booking: Booking;
@@ -46,7 +46,15 @@ const ChecklistDetails = ({ title, checklist, aircraftType }: { title: string, c
         return (
             <div>
                 <h4 className="font-medium text-base mb-2">{title}</h4>
-                <p className="text-sm text-muted-foreground">Not submitted.</p>
+                <div className='flex flex-col gap-2'>
+                  <p className="text-sm text-muted-foreground">Not submitted.</p>
+                  <Button asChild variant="outline" size="sm" className="w-fit">
+                    <Link href={`/operations/bookings/${checklist?.bookingId}/checklist?type=${title.toLowerCase().replace(' ', '-')}`}>
+                      Start {title} Checklist
+                    </Link>
+                  </Button>
+                </div>
+
             </div>
         )
     }
