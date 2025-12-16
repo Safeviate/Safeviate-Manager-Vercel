@@ -43,6 +43,7 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
+    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -406,7 +407,10 @@ export function ConfiguratorTab() {
   };
 
   const handleLoadTemplate = (templateId: string) => {
-    if (!templateId) return;
+    if (!templateId) {
+        if (templateId === '') handleReset();
+        return;
+    };
 
     const template = profiles?.find(p => p.id === templateId);
     if (!template) {
@@ -993,6 +997,7 @@ export function ConfiguratorTab() {
                             <SelectValue placeholder={isLoadingProfiles ? "Loading profiles..." : "Select a profile"} />
                         </SelectTrigger>
                         <SelectContent>
+                            <SelectItem value="">-- Reset to Default --</SelectItem>
                             {(profiles || []).map(p => (
                                 <SelectItem key={p.id} value={p.id}>{p.profileName}</SelectItem>
                             ))}
