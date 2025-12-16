@@ -1,7 +1,7 @@
 
 import { AppSidebar } from '@/components/app-sidebar';
 import { AppHeader } from '@/components/app-header';
-import { SidebarInset } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AuthGuard } from '@/components/auth-guard';
 import { AppBottomNav } from '@/components/app-bottom-nav';
 
