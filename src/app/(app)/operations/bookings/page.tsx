@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { BookingForm } from './booking-form';
+import { useRouter } from 'next/navigation';
 
 
 const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
@@ -30,7 +31,7 @@ const getBookingTypeAbbreviation = (type: Booking['type']): string => {
     }
 }
 
-const BookingItem = ({ booking, pilots, selectedDate, onClick }: { booking: Booking, pilots: PilotProfile[], selectedDate: Date, onClick: () => void }) => {
+const BookingItem = ({ booking, pilots, selectedDate, onClick }: { booking: Booking, pilots: PilotProfile[], selectedDate: Date, onClick: () => void; }) => {
     const startTime = booking.startTime.toDate();
     const endTime = booking.endTime.toDate();
 
@@ -157,6 +158,7 @@ const AircraftColumn = ({ aircraft, bookings, pilots, showNowLine, nowLinePositi
 
 export default function SchedulePage() {
   const firestore = useFirestore();
+  const router = useRouter();
   const tenantId = 'safeviate'; // Hardcoded for now
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -223,9 +225,9 @@ export default function SchedulePage() {
   }, [selectedDate]);
   
   const handleSlotClick = useCallback((aircraft: Aircraft, time: string, booking?: Booking) => {
-    // If a booking is clicked, open it in a new tab
+    // If a booking is clicked, navigate to its page
     if (booking) {
-        window.open(`/operations/bookings/${booking.id}`, '_blank');
+        router.push(`/operations/bookings/${booking.id}`);
         return;
     }
     
@@ -250,7 +252,7 @@ export default function SchedulePage() {
         booking: undefined, // Explicitly undefined for new bookings
     });
     setIsFormOpen(true);
-  }, [selectedDate]);
+  }, [selectedDate, router]);
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
