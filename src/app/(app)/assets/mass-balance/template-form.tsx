@@ -118,7 +118,6 @@ export interface AircraftModelProfile {
 interface TemplateFormProps {
     tenantId?: string;
     initialData?: AircraftModelProfile | null;
-    mode?: 'template' | 'configurator';
 }
 
 const formSchema = z.object({
@@ -137,53 +136,47 @@ const formSchema = z.object({
     x: z.coerce.number(),
     y: z.coerce.number(),
   })).optional(),
+  // Fields that are useful for profiles but not directly part of this form's interactions
+  emptyWeight: z.coerce.number().optional(),
+  emptyWeightMoment: z.coerce.number().optional(),
+  maxTakeoffWeight: z.coerce.number().optional(),
+  maxLandingWeight: z.coerce.number().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-const defaultConfiguratorValues: FormValues = {
-    modelName: "",
-    stations: [],
-    cgEnvelope: [],
-    xMin: '' as any,
-    xMax: '' as any,
-    yMin: '' as any,
-    yMax: '' as any,
-};
-
-
-const getDefaultValues = (profile?: AircraftModelProfile | null, mode?: TemplateFormProps['mode']): FormValues => {
-    if (mode === 'configurator') {
-        return defaultConfiguratorValues;
-    }
+const getDefaultValues = (profile?: AircraftModelProfile | null): FormValues => {
     return {
         modelName: profile ? `${profile.make} ${profile.model}` : '',
-        xMin: profile?.xMin || 0,
-        xMax: profile?.xMax || 100,
-        yMin: profile?.yMin || 0,
-        yMax: profile?.yMax || 3000,
+        xMin: profile?.xMin ?? 0,
+        xMax: profile?.xMax ?? 100,
+        yMin: profile?.yMin ?? 0,
+        yMax: profile?.yMax ?? 3000,
         stations: profile?.stations ?? [],
         cgEnvelope: profile?.cgEnvelope ?? [],
+        emptyWeight: profile?.emptyWeight ?? 0,
+        emptyWeightMoment: profile?.emptyWeightMoment ?? 0,
+        maxTakeoffWeight: profile?.maxTakeoffWeight ?? 0,
+        maxLandingWeight: profile?.maxLandingWeight ?? 0,
     }
 };
 
 
-export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'template' }: TemplateFormProps) {
+export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
   const isEditing = !!initialData;
-  const isConfiguratorMode = mode === 'configurator';
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: getDefaultValues(initialData, mode),
+    defaultValues: getDefaultValues(initialData),
   });
   
   useEffect(() => {
-    form.reset(getDefaultValues(initialData, mode));
-  }, [initialData, mode, form]);
+    form.reset(getDefaultValues(initialData));
+  }, [initialData, form]);
 
   const watchedStations = useWatch({ control: form.control, name: 'stations' });
   const watchedEnvelope = useWatch({ control: form.control, name: 'cgEnvelope' });
@@ -253,7 +246,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
 
 
   const onSubmit = (data: FormValues) => {
-    if (isConfiguratorMode || !tenantId || !firestore) return;
+    if (!tenantId || !firestore) return;
     
     if (!data.modelName?.trim()) {
         toast({
@@ -287,7 +280,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
   };
 
   const handleDelete = () => {
-    if (isConfiguratorMode || !tenantId || !firestore || !isEditing || !initialData) return;
+    if (!tenantId || !firestore || !isEditing || !initialData) return;
     const docRef = doc(firestore, 'tenants', tenantId, 'aircraftModelProfiles', initialData.id);
     deleteDocumentNonBlocking(docRef);
     toast({ title: 'Profile Deleted', description: `The W&B profile has been deleted.` });
@@ -315,13 +308,6 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
     form.setValue('yMin', Math.floor(Math.min(...yValues) - yPadding));
     form.setValue('yMax', Math.ceil(Math.max(...yValues) + yPadding));
   };
-  
-  const handleResetConfigurator = () => {
-    if (window.confirm("Are you sure you want to reset the configurator to its default state?")) {
-        form.reset(defaultConfiguratorValues);
-        toast({ title: "Configurator Reset", description: "The form has been reset to a blank slate." });
-    }
-  }
 
   const xAxisTicks = generateNiceTicks(watchedXMin || 0, watchedXMax || 0, 8);
   const yAxisTicks = generateNiceTicks(watchedYMin || 0, watchedYMax || 0, 8);
@@ -333,9 +319,9 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
         <div className="order-1">
             <Card>
                 <CardHeader>
-                    <CardTitle>{isConfiguratorMode ? 'Interactive Graph' : (isEditing ? `W&B Graph for ${initialData?.make} ${initialData?.model}` : 'W&B Graph')}</CardTitle>
+                    <CardTitle>{isEditing ? `W&B Graph for ${initialData?.make} ${initialData?.model}` : 'W&B Graph'}</CardTitle>
                     <CardDescription>
-                        {isConfiguratorMode ? "Visualize the aircraft's center of gravity as you configure it." : 'Review the center of gravity based on the loading stations.'}
+                        Review the center of gravity based on the loading stations.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="relative flex flex-col justify-center items-center pt-6">
@@ -377,32 +363,19 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
         <div className="order-2">
             <Card>
                 <CardHeader>
-                <CardTitle>{isConfiguratorMode ? 'Configurator' : (isEditing ? `Edit ${initialData?.make} ${initialData?.model}` : 'Create New W&B Profile')}</CardTitle>
-                <CardDescription>{isConfiguratorMode ? 'Interactively build and test a new template from scratch.' : 'Define the weight and balance parameters for an aircraft model.'}</CardDescription>
+                <CardTitle>{isEditing ? `Edit ${initialData?.make} ${initialData?.model}` : 'Create New W&B Profile'}</CardTitle>
+                <CardDescription>Define the weight and balance parameters for an aircraft model.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    {!isConfiguratorMode && (
-                        <FormField control={form.control} name="modelName" render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Model Name</FormLabel>
-                            <FormControl><Input {...field} placeholder="e.g., Cessna 172S" /></FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )} />
-                    )}
+                    <FormField control={form.control} name="modelName" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Model Name</FormLabel>
+                        <FormControl><Input {...field} placeholder="e.g., Cessna 172S" /></FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
 
-                    {isConfiguratorMode && (
-                        <FormField control={form.control} name="modelName" render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Template Name (For Testing)</FormLabel>
-                            <FormControl><Input {...field} placeholder="e.g., Cessna 172S" /></FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )} />
-                    )}
-
-
-                    {!isConfiguratorMode && <Separator />}
+                    <Separator />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="space-y-6">
@@ -491,43 +464,35 @@ export function MassBalanceTemplateForm({ tenantId, initialData, mode = 'templat
                       </div>
                     </div>
                 </CardContent>
-                {!isConfiguratorMode ? (
-                    <CardFooter className="border-t pt-4 flex items-center justify-between">
-                        <div>
-                            {isEditing && (
-                                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" type="button">Delete Profile</Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                This action cannot be undone. This will permanently delete the W&amp;B profile for {initialData?.model}.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleDelete} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-                                                Delete
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            )}
-                        </div>
-                        <div className='flex gap-2'>
-                            <Button variant="outline" type="button" onClick={() => router.push('/assets/mass-balance')}>Cancel</Button>
-                            <Button type="submit"><Save className='mr-2' /> Save Profile</Button>
-                        </div>
-                    </CardFooter>
-                ) : (
-                    <CardFooter className="border-t pt-4 flex items-center justify-end">
-                        <Button variant="outline" type="button" onClick={handleResetConfigurator}>
-                            <RotateCcw className="mr-2 h-4 w-4" /> Reset
-                        </Button>
-                    </CardFooter>
-                )}
+                <CardFooter className="border-t pt-4 flex items-center justify-between">
+                    <div>
+                        {isEditing && (
+                            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" type="button">Delete Profile</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete the W&amp;B profile for {initialData?.model}.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleDelete} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                                            Delete
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+                    </div>
+                    <div className='flex gap-2'>
+                        <Button variant="outline" type="button" onClick={() => router.push('/assets/mass-balance')}>Cancel</Button>
+                        <Button type="submit"><Save className='mr-2' /> Save Profile</Button>
+                    </div>
+                </CardFooter>
             </Card>
         </div>
       </form>
