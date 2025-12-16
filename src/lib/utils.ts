@@ -55,22 +55,17 @@ export function hexToHsl(hex: string): string {
   return `${h} ${s}% ${l}%`;
 }
 
-// Returns true if the point (cg, weight) is inside the envelope polygon
-export const isPointInPolygon = (point: {x: number, y: number}, vs: {x: number, y: number}[]) => {
-    // point = { x: 85, y: 2000 }
-    // vs = array of envelope points [{x,y}, {x,y}...]
-    
-    let x = point.x, y = point.y;
-    let inside = false;
-    
-    for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-        let xi = vs[i].x, yi = vs[i].y;
-        let xj = vs[j].x, yj = vs[j].y;
-        
-        let intersect = ((yi > y) !== (yj > y))
-            && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-        if (intersect) inside = !inside;
+// Returns true if the point is inside the polygon
+export const isPointInPolygon = (point: {x: number, y: number}, polygon: {x: number, y: number}[]) => {
+    if (!polygon || polygon.length === 0) return false;
+    let isInside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i].x, yi = polygon[i].y;
+        const xj = polygon[j].x, yj = polygon[j].y;
+
+        const intersect = ((yi > point.y) !== (yj > point.y))
+            && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+        if (intersect) isInside = !isInside;
     }
-    
-    return inside;
+    return isInside;
 };
