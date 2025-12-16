@@ -338,9 +338,9 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
                 <div className='flex items-center gap-2'>
                   {!isEditing && (
                     <Button asChild variant="outline">
-                      <Link href={`/assets/${aircraftId}/weight-and-balance`}>
+                      <Link href={`/assets/${aircraftId}/mass-and-balance`}>
                         <Scale className="mr-2 h-4 w-4" />
-                        Weight & Balance
+                        Mass & Balance
                       </Link>
                     </Button>
                   )}
@@ -427,5 +427,3 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
         </div>
     );
 }
-
-    
