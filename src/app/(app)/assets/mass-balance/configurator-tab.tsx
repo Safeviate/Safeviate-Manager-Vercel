@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   Plane,
   XCircle,
+  Wrench,
 } from 'lucide-react';
 import {
   Card,
@@ -52,7 +53,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
-import type { AircraftModelProfile } from './template-form';
+import type { AircraftModelProfile } from '@/types/aircraft-wb-profile';
 import type { Aircraft } from '../page';
 import {
     Select,
@@ -155,6 +156,8 @@ export function ConfiguratorTab() {
 
   const [isSaveProfileDialogOpen, setIsSaveProfileDialogOpen] = useState(false);
   const [isAssignAircraftDialogOpen, setIsAssignAircraftDialogOpen] = useState(false);
+  const [isClearAircraftDialogOpen, setIsClearAircraftDialogOpen] = useState(false);
+  const [isConfirmClearDialogOpen, setIsConfirmClearDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [profileNameForSave, setProfileNameForSave] = useState('');
   const [selectedAircraftId, setSelectedAircraftId] = useState('');
@@ -364,7 +367,7 @@ export function ConfiguratorTab() {
     });
 
     toast({
-        title: "Template Loaded",
+        title: "Profile Loaded",
         description: `Loaded the W&B profile for ${template.profileName}.`,
     });
   }
@@ -614,6 +617,40 @@ export function ConfiguratorTab() {
     setIsAssignAircraftDialogOpen(false);
   }
 
+  const handleClearAircraftWandB = () => {
+    if (!selectedAircraftId) {
+        toast({ variant: 'destructive', title: 'No Aircraft Selected' });
+        return;
+    }
+    if (!firestore) {
+        toast({ variant: 'destructive', title: 'Database not available' });
+        return;
+    }
+
+    const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', selectedAircraftId);
+
+    const dataToClear = {
+        emptyWeight: null,
+        emptyWeightMoment: null,
+        maxTakeoffWeight: null,
+        maxLandingWeight: null,
+        cgEnvelope: [],
+        stationArms: {},
+    };
+
+    updateDocumentNonBlocking(aircraftRef, dataToClear);
+
+    toast({
+        title: 'Aircraft W&B Cleared',
+        description: `The Mass & Balance configuration has been cleared for the selected aircraft.`
+    });
+    
+    setIsConfirmClearDialogOpen(false);
+    setIsClearAircraftDialogOpen(false);
+    setSelectedAircraftId('');
+  }
+
+
   const allX = [
     ...graphConfig.envelope.map((p) => p.x),
     results.cg,
@@ -640,7 +677,7 @@ export function ConfiguratorTab() {
       <div className="flex justify-between items-center">
         <div className='flex items-center gap-4'>
             <h1 className="text-2xl font-bold tracking-tight">
-            Mass &amp; Balance
+            Mass &amp; Balance Configurator
             </h1>
             {loadedAircraftTailNumber && (
                 <div className='flex items-center gap-2'>
@@ -701,6 +738,59 @@ export function ConfiguratorTab() {
             </DialogContent>
           </Dialog>
 
+            <Dialog open={isClearAircraftDialogOpen} onOpenChange={setIsClearAircraftDialogOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="destructive">
+                        <Wrench size={16} className="mr-2" /> Clear Aircraft W&amp;B
+                    </Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Clear Aircraft Mass & Balance</DialogTitle>
+                        <DialogDescription>
+                            Select an aircraft to clear its stored W&amp;B configuration. This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-2">
+                        <Label htmlFor="aircraft-clear-select">Aircraft Registration</Label>
+                        <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
+                            <SelectTrigger id="aircraft-clear-select">
+                                <SelectValue placeholder="Select an aircraft..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {(aircraftList || []).map(a => (
+                                    <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <AlertDialog open={isConfirmClearDialogOpen} onOpenChange={setIsConfirmClearDialogOpen}>
+                            <AlertDialogTrigger asChild>
+                                <Button variant='destructive' disabled={!selectedAircraftId}>Proceed to Clear</Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This will permanently delete the mass and balance data for aircraft <span className='font-bold'>{aircraftList?.find(a => a.id === selectedAircraftId)?.tailNumber}</span>.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleClearAircraftWandB} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                                        Yes, Clear Data
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {loadedProfileId ? (
                 <div className='flex gap-2'>
                     <Button onClick={handleUpdateProfile}>
@@ -709,7 +799,7 @@ export function ConfiguratorTab() {
                     <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                         <AlertDialogTrigger asChild>
                             <Button variant="destructive">
-                                <Trash2 size={16} className="mr-2" /> Delete Profile
+                                <Trash2 size={16} className="mr-2" />
                             </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -1175,3 +1265,4 @@ export function ConfiguratorTab() {
 }
 
 export default ConfiguratorTab;
+
