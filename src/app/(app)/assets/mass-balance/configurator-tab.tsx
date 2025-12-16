@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -27,6 +26,7 @@ import {
   Fuel,
   AlertTriangle,
   Plane,
+  XCircle,
 } from 'lucide-react';
 import {
   Card,
@@ -147,6 +147,9 @@ export function ConfiguratorTab() {
   const [profileNameForSave, setProfileNameForSave] = useState('');
   const [selectedAircraftId, setSelectedAircraftId] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
+
+  // New state to hold the currently loaded aircraft's tail number
+  const [loadedAircraftTailNumber, setLoadedAircraftTailNumber] = useState<string | null>(null);
 
 
   const form = useForm();
@@ -328,9 +331,11 @@ export function ConfiguratorTab() {
 
   const loadProfileData = (template: AircraftModelProfile) => {
     setProfileNameForSave(template.profileName || '');
+    setLoadedAircraftTailNumber(null);
     
-    const bewStation = template.stations?.find(s => s.name === 'Basic Empty Weight');
-    const otherStations = template.stations?.filter(s => s.name !== 'Basic Empty Weight') || [];
+    // The first station is assumed to be Basic Empty Weight
+    const bewStation = template.stations?.[0];
+    const otherStations = template.stations?.slice(1) || [];
 
     setBasicEmpty({
         weight: bewStation?.weight || template.emptyWeight || 0,
@@ -366,6 +371,8 @@ export function ConfiguratorTab() {
         if (docSnap.exists()) {
             const defaultProfile = { id: docSnap.id, ...docSnap.data() } as AircraftModelProfile;
             loadProfileData(defaultProfile);
+            setLoadedAircraftTailNumber(null); // Clear loaded aircraft name
+            setSelectedAircraftId(''); // Clear dropdown
         } else {
             toast({ variant: 'destructive', title: 'Default Profile Not Found', description: 'Could not find a default profile in the database.' });
         }
@@ -386,8 +393,8 @@ export function ConfiguratorTab() {
     
     setSelectedTemplateId(templateId); 
     loadProfileData(template);
-    // Reset the dropdown after loading
-    setTimeout(() => setSelectedTemplateId(''), 0);
+    setLoadedAircraftTailNumber(null); // Clear any loaded aircraft
+    setSelectedAircraftId(''); // Clear the aircraft dropdown
   };
 
   const handleLoadFromAircraft = (aircraftId: string) => {
@@ -395,6 +402,7 @@ export function ConfiguratorTab() {
     if (!aircraft) return;
 
     setSelectedAircraftId(aircraftId);
+    setLoadedAircraftTailNumber(aircraft.tailNumber); // Set the loaded aircraft name
 
     setProfileNameForSave(aircraft.tailNumber || '');
 
@@ -428,8 +436,7 @@ export function ConfiguratorTab() {
         description: `Loaded configuration for ${aircraft.tailNumber}.`,
     });
     
-    // Reset the dropdown after loading
-    setTimeout(() => setSelectedAircraftId(''), 0);
+    setSelectedTemplateId('');
   };
 
   const saveAsProfile = () => {
@@ -447,7 +454,7 @@ export function ConfiguratorTab() {
       emptyWeight: basicEmpty.weight,
       emptyWeightMoment: basicEmpty.moment,
       stations: [
-        { id: 1, name: 'Basic Empty Weight', weight: basicEmpty.weight, arm: basicEmpty.arm },
+        { id: 1, name: 'Basic Empty Weight', weight: basicEmpty.weight, arm: basicEmpty.arm, type: 'bew' },
         ...stations,
       ],
       cgEnvelope: graphConfig.envelope,
@@ -505,7 +512,6 @@ export function ConfiguratorTab() {
     });
 
     setIsAssignAircraftDialogOpen(false);
-    setSelectedAircraftId('');
   }
 
   const allX = [
@@ -530,9 +536,22 @@ export function ConfiguratorTab() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold tracking-tight">
-          W&amp;B Configurator
-        </h1>
+        <div className='flex items-center gap-4'>
+            <h1 className="text-2xl font-bold tracking-tight">
+            W&amp;B Configurator
+            </h1>
+            {loadedAircraftTailNumber && (
+                <div className='flex items-center gap-2'>
+                    <Badge variant="secondary" className='text-base'>
+                        {loadedAircraftTailNumber}
+                    </Badge>
+                    <Button variant="ghost" size="icon" className='h-6 w-6 text-muted-foreground' onClick={handleReset}>
+                        <XCircle className='h-4 w-4'/>
+                        <span className='sr-only'>Clear loaded aircraft</span>
+                    </Button>
+                </div>
+            )}
+        </div>
         <div className="flex gap-3">
           <Button onClick={handleReset} variant="destructive">
             <RotateCcw size={16} className="mr-2" /> Reset
