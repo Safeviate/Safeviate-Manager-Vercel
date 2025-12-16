@@ -852,9 +852,41 @@ export function ConfiguratorTab() {
         </div>
       </div>
       <Card>
-        <CardHeader>
+        <CardHeader className="flex-row items-center justify-between">
+          <div>
             <CardTitle>Interactive Graph</CardTitle>
-            <CardDescription>Visualize the aircraft&apos;s center of gravity based on the configuration below.</CardDescription>
+            <CardDescription>
+              Visualize the aircraft&apos;s center of gravity based on the
+              configuration below.
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-4">
+            {loadedAircraftTailNumber && (
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Aircraft:
+                </p>
+                <span className="font-semibold">{loadedAircraftTailNumber}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground"
+                  onClick={handleReset}
+                >
+                  <XCircle className="h-4 w-4" />
+                  <span className="sr-only">Clear loaded aircraft</span>
+                </Button>
+              </div>
+            )}
+            {loadedProfileName && (
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Profile:
+                </p>
+                <span className="font-semibold">{loadedProfileName}</span>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="relative min-h-[500px] flex flex-col justify-center items-center overflow-hidden pt-6">
           {offScreenStatus && (
@@ -946,42 +978,24 @@ export function ConfiguratorTab() {
               </ReferenceDot>
             </ScatterChart>
           </ResponsiveContainer>
-          <div className='absolute top-4 right-4 flex items-center gap-4'>
-            {loadedAircraftTailNumber && (
-                    <div className='flex items-center gap-2'>
-                        <Badge variant="secondary" className='text-base'>
-                            {loadedAircraftTailNumber}
-                        </Badge>
-                        <Button variant="ghost" size="icon" className='h-6 w-6 text-muted-foreground' onClick={handleReset}>
-                            <XCircle className='h-4 w-4'/>
-                            <span className='sr-only'>Clear loaded aircraft</span>
-                        </Button>
-                    </div>
-                )}
-            {loadedProfileName && (
-                <div className='flex items-center gap-2'>
-                    <Badge variant="outline" className='text-base border-primary text-primary'>
-                        {loadedProfileName}
-                    </Badge>
-                </div>
-            )}
+          <div className="absolute top-4 right-4 flex items-center gap-4">
             <div
-                className={cn(
+              className={cn(
                 'px-3 py-1 rounded-full font-bold shadow-lg flex items-center gap-2',
                 results.isSafe
-                    ? 'bg-green-600/90 text-white'
-                    : 'bg-destructive text-white'
-                )}
+                  ? 'bg-green-600/90 text-white'
+                  : 'bg-destructive text-white'
+              )}
             >
-                <div
+              <div
                 className={cn(
-                    'w-2 h-2 rounded-full',
-                    results.isSafe ? 'bg-white' : 'bg-white animate-pulse'
+                  'w-2 h-2 rounded-full',
+                  results.isSafe ? 'bg-white' : 'bg-white animate-pulse'
                 )}
-                ></div>
-                <span className="text-xs">
+              ></div>
+              <span className="text-xs">
                 {results.isSafe ? 'WITHIN LIMITS' : 'OUT OF LIMITS'}
-                </span>
+              </span>
             </div>
           </div>
           <p className="font-extrabold text-red-600 absolute bottom-4 left-1/2 transform -translate-x-1/2 pointer-events-none whitespace-nowrap drop-shadow-md uppercase tracking-widest text-sm md:text-base">
@@ -989,200 +1003,283 @@ export function ConfiguratorTab() {
           </p>
         </CardContent>
         <CardContent className="p-6">
-        <div className='space-y-4'>
+          <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div>
-                    <Label>Load Saved Profile</Label>
-                    <Select onValueChange={handleLoadTemplate} value={selectedTemplateId} disabled={isLoadingProfiles}>
-                        <SelectTrigger>
-                            <SelectValue placeholder={isLoadingProfiles ? "Loading profiles..." : "Select a profile"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                             {(profiles || []).map(p => (
-                                <SelectItem key={p.id} value={p.id}>{p.profileName}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                 </div>
-                 <div>
-                    <Label>Load from Aircraft Registration</Label>
-                    <Select onValueChange={handleLoadFromAircraft} value={selectedAircraftId} disabled={isLoadingAircraft}>
-                        <SelectTrigger>
-                            <SelectValue placeholder={isLoadingAircraft ? "Loading aircraft..." : "Select an aircraft"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {(aircraftList || []).map(a => (
-                                <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                 </div>
+              <div>
+                <Label>Load Saved Profile</Label>
+                <Select
+                  onValueChange={handleLoadTemplate}
+                  value={selectedTemplateId}
+                  disabled={isLoadingProfiles}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={
+                        isLoadingProfiles
+                          ? 'Loading profiles...'
+                          : 'Select a profile'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(profiles || []).map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.profileName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Load from Aircraft Registration</Label>
+                <Select
+                  onValueChange={handleLoadFromAircraft}
+                  value={selectedAircraftId}
+                  disabled={isLoadingAircraft}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={
+                        isLoadingAircraft
+                          ? 'Loading aircraft...'
+                          : 'Select an aircraft'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(aircraftList || []).map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.tailNumber}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <Separator />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
-                <div className="space-y-6">
-                    <div>
-                        <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-md font-medium">Loading Stations</h3>
-                        <div className="flex gap-2">
-                            <Button
-                                onClick={() => addStation('fuel')}
-                                variant="outline"
-                                size="sm"
-                                title="Add Fuel Tank"
-                                type="button"
-                            >
-                                <Fuel size={16} className="mr-2" /> Add Fuel
-                            </Button>
-                            <Button onClick={() => addStation('standard')} variant="outline" size="sm" type='button'>
-                                <Plus size={16} className="mr-2" /> Add
-                            </Button>
-                        </div>
-                        </div>
-                        <div className="grid grid-cols-12 gap-2 text-xs font-bold text-muted-foreground px-1 mb-2">
-                            <div className="col-span-5">Station Name</div>
-                            <div className="col-span-3 text-right">Weight</div>
-                            <div className="col-span-3 text-right">Arm</div>
-                        </div>
-                        <div className="space-y-2">
-                            {/* Basic Empty Weight */}
-                            <div className="grid grid-cols-12 gap-2 items-center text-sm">
-                                <Input value="Basic Empty Weight" readOnly disabled className="col-span-5 h-8" />
-                                <Input
-                                type="number"
-                                value={basicEmpty.weight}
-                                onChange={(e) => handleBasicEmptyChange('weight', e.target.value)}
-                                className="text-right h-8 col-span-3"
-                                />
-                                <Input
-                                type="number"
-                                value={basicEmpty.arm}
-                                onChange={(e) => handleBasicEmptyChange('arm', e.target.value)}
-                                className="text-right h-8 col-span-3"
-                                />
-                            </div>
-                            {/* Dynamic Stations */}
-                            {stations.map((s) => (
-                                <div key={s.id} className="group relative">
-                                {s.type === 'fuel' ? (
-                                    <div className="space-y-2">
-                                        <div className="grid grid-cols-12 gap-2 items-center">
-                                            <div className="col-span-5 flex items-center gap-2">
-                                            <Input
-                                                value={s.name}
-                                                onChange={(e) => updateStation(s.id, 'name', e.target.value)}
-                                                className="text-sm font-bold h-8 flex-grow"
-                                            />
-                                            </div>
-                                            <div className="col-span-3">
-                                            <Input
-                                                type="number"
-                                                value={s.weight}
-                                                onChange={(e) => handleFuelChange(s.id, 'weight', e.target.value)}
-                                                className="text-sm text-right h-8"
-                                            />
-                                            </div>
-                                            <div className="col-span-3">
-                                            <Input
-                                                type="number"
-                                                value={s.arm}
-                                                onChange={(e) => handleFuelChange(s.id, 'arm', e.target.value)}
-                                                className="text-sm text-right h-8"
-                                            />
-                                            </div>
-                                            <div className="col-span-1 flex justify-end">
-                                            <Button
-                                                onClick={() => removeStation(s.id)}
-                                                variant="ghost"
-                                                size="icon"
-                                                className="text-muted-foreground hover:text-destructive h-8 w-8"
-                                                type="button"
-                                            >
-                                                <Trash2 size={16} />
-                                            </Button>
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-12 gap-2 items-center">
-                                            <div className="col-span-5">
-                                                <Input value="Gallons" readOnly disabled className="text-xs text-muted-foreground h-8 col-span-2"/>
-                                            </div>
-                                            <div className="col-span-3">
-                                                <Input
-                                                    id={`gallons-${s.id}`}
-                                                    type="number"
-                                                    value={s.gallons || 0}
-                                                    onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
-                                                    className="h-8 text-right"
-                                                />
-                                            </div>
-                                            <div className="col-span-3 flex items-center gap-1">
-                                                <Label htmlFor={`max-gallons-${s.id}`} className='text-xs text-muted-foreground flex-shrink-0'>Max:</Label>
-                                                <Input
-                                                    id={`max-gallons-${s.id}`}
-                                                    type="number"
-                                                    value={s.maxGallons || 0}
-                                                    onChange={(e) => updateStation(s.id, 'maxGallons', e.target.value)}
-                                                    className="h-8 text-right flex-grow"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="grid grid-cols-12 gap-2 items-center">
-                                    <div className="col-span-5">
-                                        <Input
-                                        value={s.name}
-                                        onChange={(e) => updateStation(s.id, 'name', e.target.value)}
-                                        placeholder="Item Name"
-                                        className="h-8"
-                                        />
-                                    </div>
-                                    <div className="col-span-3">
-                                        <Input
-                                        type="number"
-                                        value={s.weight}
-                                        onChange={(e) => updateStation(s.id, 'weight', e.target.value)}
-                                        className="text-right h-8"
-                                        />
-                                    </div>
-                                    <div className="col-span-3">
-                                        <Input
-                                        type="number"
-                                        value={s.arm}
-                                        onChange={(e) => updateStation(s.id, 'arm', e.target.value)}
-                                        className="text-right h-8"
-                                        />
-                                    </div>
-                                    <div className="col-span-1 flex justify-end">
-                                        <Button
-                                        onClick={() => removeStation(s.id)}
-                                        variant="ghost"
-                                        size="icon"
-                                        className="text-muted-foreground hover:text-destructive h-8 w-8"
-                                        type="button"
-                                        >
-                                        <Trash2 size={16} />
-                                        </Button>
-                                    </div>
-                                    </div>
-                                )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-md font-medium mb-2">Chart Axis Limits</h3>
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-md font-medium">Loading Stations</h3>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => addStation('fuel')}
+                        variant="outline"
+                        size="sm"
+                        title="Add Fuel Tank"
+                        type="button"
+                      >
+                        <Fuel size={16} className="mr-2" /> Add Fuel
+                      </Button>
+                      <Button
+                        onClick={() => addStation('standard')}
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                      >
+                        <Plus size={16} className="mr-2" /> Add
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-12 gap-2 text-xs font-bold text-muted-foreground px-1 mb-2">
+                    <div className="col-span-5">Station Name</div>
+                    <div className="col-span-3 text-right">Weight</div>
+                    <div className="col-span-3 text-right">Arm</div>
+                  </div>
+                  <div className="space-y-2">
+                    {/* Basic Empty Weight */}
+                    <div className="grid grid-cols-12 gap-2 items-center text-sm">
+                      <Input
+                        value="Basic Empty Weight"
+                        readOnly
+                        disabled
+                        className="col-span-5 h-8"
+                      />
+                      <Input
+                        type="number"
+                        value={basicEmpty.weight}
+                        onChange={(e) =>
+                          handleBasicEmptyChange('weight', e.target.value)
+                        }
+                        className="text-right h-8 col-span-3"
+                      />
+                      <Input
+                        type="number"
+                        value={basicEmpty.arm}
+                        onChange={(e) =>
+                          handleBasicEmptyChange('arm', e.target.value)
+                        }
+                        className="text-right h-8 col-span-3"
+                      />
+                    </div>
+                    {/* Dynamic Stations */}
+                    {stations.map((s) => (
+                      <div key={s.id} className="group relative">
+                        {s.type === 'fuel' ? (
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-12 gap-2 items-center">
+                              <div className="col-span-5 flex items-center gap-2">
+                                <Input
+                                  value={s.name}
+                                  onChange={(e) =>
+                                    updateStation(s.id, 'name', e.target.value)
+                                  }
+                                  className="text-sm font-bold h-8 flex-grow"
+                                />
+                              </div>
+                              <div className="col-span-3">
+                                <Input
+                                  type="number"
+                                  value={s.weight}
+                                  onChange={(e) =>
+                                    handleFuelChange(
+                                      s.id,
+                                      'weight',
+                                      e.target.value
+                                    )
+                                  }
+                                  className="text-sm text-right h-8"
+                                />
+                              </div>
+                              <div className="col-span-3">
+                                <Input
+                                  type="number"
+                                  value={s.arm}
+                                  onChange={(e) =>
+                                    handleFuelChange(s.id, 'arm', e.target.value)
+                                  }
+                                  className="text-sm text-right h-8"
+                                />
+                              </div>
+                              <div className="col-span-1 flex justify-end">
+                                <Button
+                                  onClick={() => removeStation(s.id)}
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-muted-foreground hover:text-destructive h-8 w-8"
+                                  type="button"
+                                >
+                                  <Trash2 size={16} />
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-12 gap-2 items-center">
+                              <div className="col-span-5">
+                                <Input
+                                  value="Gallons"
+                                  readOnly
+                                  disabled
+                                  className="text-xs text-muted-foreground h-8 col-span-2"
+                                />
+                              </div>
+                              <div className="col-span-3">
+                                <Input
+                                  id={`gallons-${s.id}`}
+                                  type="number"
+                                  value={s.gallons || 0}
+                                  onChange={(e) =>
+                                    handleFuelChange(
+                                      s.id,
+                                      'gallons',
+                                      e.target.value
+                                    )
+                                  }
+                                  className="h-8 text-right"
+                                />
+                              </div>
+                              <div className="col-span-3 flex items-center gap-1">
+                                <Label
+                                  htmlFor={`max-gallons-${s.id}`}
+                                  className="text-xs text-muted-foreground flex-shrink-0"
+                                >
+                                  Max:
+                                </Label>
+                                <Input
+                                  id={`max-gallons-${s.id}`}
+                                  type="number"
+                                  value={s.maxGallons || 0}
+                                  onChange={(e) =>
+                                    updateStation(
+                                      s.id,
+                                      'maxGallons',
+                                      e.target.value
+                                    )
+                                  }
+                                  className="h-8 text-right flex-grow"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-12 gap-2 items-center">
+                            <div className="col-span-5">
+                              <Input
+                                value={s.name}
+                                onChange={(e) =>
+                                  updateStation(s.id, 'name', e.target.value)
+                                }
+                                placeholder="Item Name"
+                                className="h-8"
+                              />
+                            </div>
+                            <div className="col-span-3">
+                              <Input
+                                type="number"
+                                value={s.weight}
+                                onChange={(e) =>
+                                  updateStation(s.id, 'weight', e.target.value)
+                                }
+                                className="text-right h-8"
+                              />
+                            </div>
+                            <div className="col-span-3">
+                              <Input
+                                type="number"
+                                value={s.arm}
+                                onChange={(e) =>
+                                  updateStation(s.id, 'arm', e.target.value)
+                                }
+                                className="text-right h-8"
+                              />
+                            </div>
+                            <div className="col-span-1 flex justify-end">
+                              <Button
+                                onClick={() => removeStation(s.id)}
+                                variant="ghost"
+                                size="icon"
+                                className="text-muted-foreground hover:text-destructive h-8 w-8"
+                                type="button"
+                              >
+                                <Trash2 size={16} />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-md font-medium mb-2">
+                    Chart Axis Limits
+                  </h3>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                     <div>
                       <Label>Min CG</Label>
                       <Input
                         type="number"
                         value={graphConfig.xMin}
-                        onChange={(e) => setGraphConfig({ ...graphConfig, xMin: e.target.value as any })}
+                        onChange={(e) =>
+                          setGraphConfig({
+                            ...graphConfig,
+                            xMin: e.target.value as any,
+                          })
+                        }
                       />
                     </div>
                     <div>
@@ -1190,7 +1287,12 @@ export function ConfiguratorTab() {
                       <Input
                         type="number"
                         value={graphConfig.xMax}
-                        onChange={(e) => setGraphConfig({ ...graphConfig, xMax: e.target.value as any })}
+                        onChange={(e) =>
+                          setGraphConfig({
+                            ...graphConfig,
+                            xMax: e.target.value as any,
+                          })
+                        }
                       />
                     </div>
                     <div>
@@ -1198,7 +1300,12 @@ export function ConfiguratorTab() {
                       <Input
                         type="number"
                         value={graphConfig.yMin}
-                        onChange={(e) => setGraphConfig({ ...graphConfig, yMin: e.target.value as any })}
+                        onChange={(e) =>
+                          setGraphConfig({
+                            ...graphConfig,
+                            yMin: e.target.value as any,
+                          })
+                        }
                       />
                     </div>
                     <div>
@@ -1206,29 +1313,45 @@ export function ConfiguratorTab() {
                       <Input
                         type="number"
                         value={graphConfig.yMax}
-                        onChange={(e) => setGraphConfig({ ...graphConfig, yMax: e.target.value as any })}
+                        onChange={(e) =>
+                          setGraphConfig({
+                            ...graphConfig,
+                            yMax: e.target.value as any,
+                          })
+                        }
                       />
                     </div>
                   </div>
-                  <Button onClick={handleAutoFit} variant="outline" size="sm" type="button" className='w-full'>
+                  <Button
+                    onClick={handleAutoFit}
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    className="w-full"
+                  >
                     <Maximize size={16} className="mr-2" /> Auto-Fit Axes
                   </Button>
                 </div>
-                
+
                 <Separator />
-                
-                 <div>
-                    <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-md font-medium">CG Envelope Points</h3>
-                        <Button type="button" size="sm" variant="outline" onClick={addEnvelopePoint}>
-                            <Plus className="mr-2 h-4 w-4" /> Add
-                        </Button>
-                    </div>
-                    <div className="grid grid-cols-12 gap-2 text-xs font-bold text-muted-foreground px-1 mb-2">
-                        <div className="col-span-1"></div>
-                        <div className="col-span-5 text-right">CG (X)</div>
-                        <div className="col-span-5 text-right">Weight (Y)</div>
-                    </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-md font-medium">CG Envelope Points</h3>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={addEnvelopePoint}
+                    >
+                      <Plus className="mr-2 h-4 w-4" /> Add
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-12 gap-2 text-xs font-bold text-muted-foreground px-1 mb-2">
+                    <div className="col-span-1"></div>
+                    <div className="col-span-5 text-right">CG (X)</div>
+                    <div className="col-span-5 text-right">Weight (Y)</div>
+                  </div>
                   <div className="space-y-2 mt-2">
                     {graphConfig.envelope.map((pt, i) => (
                       <div key={i} className="grid grid-cols-12 gap-2 items-center">
@@ -1248,7 +1371,7 @@ export function ConfiguratorTab() {
                             updateEnvelopePoint(i, 'x', e.target.value)
                           }
                           placeholder="CG (X)"
-                          className='col-span-5 text-right'
+                          className="col-span-5 text-right"
                         />
                         <Input
                           type="number"
@@ -1257,14 +1380,14 @@ export function ConfiguratorTab() {
                             updateEnvelopePoint(i, 'y', e.target.value)
                           }
                           placeholder="Weight (Y)"
-                          className='col-span-5 text-right'
+                          className="col-span-5 text-right"
                         />
                         <Button
                           onClick={() => removeEnvelopePoint(i)}
                           variant="ghost"
                           size="icon"
                           type="button"
-                          className='h-8 w-8 text-muted-foreground hover:text-destructive col-span-1'
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive col-span-1"
                         >
                           <Trash2 size={16} />
                         </Button>
@@ -1274,7 +1397,7 @@ export function ConfiguratorTab() {
                 </div>
               </div>
             </div>
-        </div>
+          </div>
         </CardContent>
       </Card>
     </div>
