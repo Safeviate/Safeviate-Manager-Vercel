@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -385,12 +386,11 @@ export function ConfiguratorTab() {
   };
 
   const handleLoadTemplate = (templateId: string) => {
-    if (templateId === 'reset') {
-        handleReset();
+    const template = profiles?.find(p => p.id === templateId);
+    if (!template) {
+        toast({ variant: 'destructive', title: 'Profile Not Found', description: 'Could not find the selected profile.' });
         return;
     }
-    const template = profiles?.find(p => p.id === templateId);
-    if (!template) return;
     
     setSelectedTemplateId(templateId); 
     loadProfileData(template);
@@ -754,7 +754,6 @@ export function ConfiguratorTab() {
                             <SelectValue placeholder={isLoadingProfiles ? "Loading templates..." : "Select a template"} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="reset">Default Profile</SelectItem>
                             {(profiles || []).map(p => (
                                 <SelectItem key={p.id} value={p.id}>{p.profileName}</SelectItem>
                             ))}
