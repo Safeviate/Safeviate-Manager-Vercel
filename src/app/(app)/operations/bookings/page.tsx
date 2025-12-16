@@ -286,7 +286,7 @@ export default function SchedulePage() {
 
   return (
     <>
-      <div className="flex flex-col gap-6 h-full">
+      <div className="flex flex-col gap-6">
         <div className="flex justify-end items-center">
           <Popover>
               <PopoverTrigger asChild>
@@ -304,14 +304,14 @@ export default function SchedulePage() {
           </Popover>
         </div>
 
-        <Card className="flex-grow flex flex-col overflow-hidden">
+        <Card>
           <CardHeader>
             <CardTitle>Daily Schedule</CardTitle>
             <CardDescription>
               A vertical timeline of all bookings for {format(selectedDate, 'PPP')}.
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-0 flex-grow overflow-auto" style={{ height: 'calc(100vh - 20rem)' }}>
+          <CardContent className="p-0">
             {isLoading && (
               <div className="p-6 space-y-4">
                 <Skeleton className="h-8 w-1/2" />
@@ -324,7 +324,7 @@ export default function SchedulePage() {
             )}
             {error && <p className="p-6 text-destructive">Error loading data: {error.message}</p>}
             {!isLoading && !error && (
-              <div className='relative overflow-auto h-full'>
+              <div className='relative overflow-auto'>
                   <div className="sticky top-0 z-30 flex bg-swimlane-header text-swimlane-header-foreground flex-shrink-0">
                     {(aircraft || []).map((ac) => (
                       <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px]">
