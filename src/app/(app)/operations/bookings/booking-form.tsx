@@ -72,11 +72,11 @@ const bookingSchema = z.object({
   pilotId: z.string().min(1, 'Pilot is required.'),
   instructorId: z.string().optional(),
   type: z.enum(['Student Training', 'Hire and Fly', 'Maintenance Flight'], { required_error: 'Booking type is required.' }),
-  startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.'),
-  endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.'),
+  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format.'),
+  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format.'),
   status: z.enum(['Confirmed', 'Pending', 'Cancelled', 'Cancelled with Reason']),
   isOvernight: z.boolean(),
-  overnightEndTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.').optional(),
+  overnightEndTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format.').optional(),
   cancellationReason: z.string().optional(),
 }).refine(data => {
     if (data.isOvernight) return true; // Validation for overnight is handled separately
