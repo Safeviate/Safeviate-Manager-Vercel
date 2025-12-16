@@ -152,6 +152,15 @@ const OffScreenWarning = ({
   </div>
 );
 
+const getBookingTypeAbbreviation = (type: Booking['type']): string => {
+    switch (type) {
+        case 'Student Training': return 'T';
+        case 'Hire and Fly': return 'H';
+        case 'Maintenance Flight': return 'M';
+        default: return '';
+    }
+}
+
 export function ConfiguratorTab() {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -697,7 +706,9 @@ export function ConfiguratorTab() {
 
   const loadedProfileName = loadedProfileId ? profiles?.find(p => p.id === loadedProfileId)?.profileName : null;
   const selectedAircraftName = selectedAircraftId ? aircraftList?.find(a => a.id === selectedAircraftId)?.tailNumber : '';
-  const bookingNumber = booking?.bookingNumber ? `#${booking.bookingNumber}` : '';
+  const bookingNumber = booking?.bookingNumber
+    ? `#${getBookingTypeAbbreviation(booking.type)}${booking.bookingNumber}`
+    : '';
 
   return (
     <div className="space-y-6">
