@@ -368,15 +368,10 @@ export function ConfiguratorTab() {
   };
 
   const handleLoadTemplate = (templateId: string) => {
-    if (templateId === 'default') {
-        handleReset();
-        setSelectedTemplateId(''); // Reset selection
-        return;
-    }
     const template = profiles?.find(p => p.id === templateId);
     if (!template) return;
     
-    setSelectedTemplateId(templateId); // Keep track of the selected value
+    setSelectedTemplateId(templateId); 
 
     setMakeForSave(template.make || '');
     setModelForSave(template.model || '');
@@ -763,8 +758,6 @@ export function ConfiguratorTab() {
                             <SelectValue placeholder={isLoadingProfiles ? "Loading templates..." : "Select a template"} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="default">Default Profile (Piper PA-28)</SelectItem>
-                            <Separator className="my-1" />
                             {(profiles || []).map(p => (
                                 <SelectItem key={p.id} value={p.id}>{p.make} {p.model}</SelectItem>
                             ))}
