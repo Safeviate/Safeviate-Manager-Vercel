@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/app/(app)/assets/page';
@@ -10,9 +10,7 @@ import type { ChecklistResponse } from '@/types/checklist';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { Scale } from 'lucide-react';
+import { BookingMassBalance } from './booking-mass-balance';
 
 interface ViewBookingDetailsProps {
   booking: Booking;
@@ -133,22 +131,8 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                 </div>
             </CardContent>
         </Card>
-        <Card>
-            <CardHeader>
-                <CardTitle>Planning</CardTitle>
-                <CardDescription>
-                    Perform weight & balance calculations for this flight.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Button asChild>
-                    <Link href={`/operations/bookings/${booking.id}/mass-and-balance`}>
-                        <Scale className='mr-2 h-4 w-4' />
-                        Calculate Mass & Balance
-                    </Link>
-                </Button>
-            </CardContent>
-        </Card>
+        
+        <BookingMassBalance aircraft={aircraft} booking={booking} />
     </div>
   );
 }
