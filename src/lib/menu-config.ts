@@ -13,6 +13,7 @@ import {
   CheckSquare,
   BookCopy,
   Scale,
+  ToggleRight,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -135,6 +136,11 @@ export const menuConfig: MenuItem[] = [
         description: 'Manage document expiration dates.',
       },
       {
+        href: '/admin/features',
+        label: 'Features',
+        description: 'Enable or disable application features.',
+      },
+      {
         href: '/admin/database',
         label: 'Database',
         description: 'Manage database seeding and setup.',
@@ -172,3 +178,5 @@ export const settingsMenuItem: MenuItem = {
     },
   ],
 };
+
+    

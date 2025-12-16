@@ -7,11 +7,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { addHours, format, setHours, setMinutes, addDays, startOfDay, isSameDay, endOfDay, isBefore } from 'date-fns';
 import { Timestamp, collection, doc, query, where, getDocs, writeBatch, getDoc } from 'firebase/firestore';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
 import type { Booking } from '@/types/booking';
+import type { FeatureSettings } from '../../admin/features/page';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -37,7 +38,6 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
@@ -63,6 +63,7 @@ interface BookingFormProps {
   } | null;
   isOpen: boolean;
   onClose: () => void;
+  checklistTypeToShow?: 'pre-flight' | 'post-flight';
 }
 
 const bookingSchema = z.object({
@@ -103,7 +104,7 @@ const getBookingTypeAbbreviation = (type: Booking['type']): string => {
     }
 }
 
-export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, initialData, isOpen, onClose }: BookingFormProps) {
+export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, initialData, isOpen, onClose, checklistTypeToShow }: BookingFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const isEditing = !!initialData?.booking;
@@ -116,7 +117,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   const [isDetailsOpen, setIsDetailsOpen] = useState(true);
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [isChecklistOpen, setIsChecklistOpen] = useState(true);
-  const [checklistType, setChecklistType] = useState<'pre-flight' | 'post-flight'>('pre-flight');
+  const [checklistType, setChecklistType] = useState<'pre-flight' | 'post-flight'>(checklistTypeToShow || 'pre-flight');
 
   // Tacho/Hobbs state
   const [preFlightTacho, setPreFlightTacho] = useState('');
@@ -144,7 +145,15 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
   );
   const { data: checklistResponses } = useCollection<ChecklistResponse>(checklistResponsesQuery);
 
+  const featureSettingsRef = useMemoFirebase(
+    () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'features') : null),
+    [firestore, tenantId]
+  );
+  const { data: featureSettings } = useDoc<FeatureSettings>(featureSettingsRef);
+
+
   const isPreFlightChecklistDisabled = useMemo(() => {
+    if (!featureSettings?.preFlightChecklistRequired) return false;
     if (!isEditing || !initialData?.booking || !allBookings || !checklistResponses) return false;
 
     const currentBooking = initialData.booking;
@@ -163,7 +172,7 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     );
     
     return !previousPostFlightChecklist;
-  }, [initialData?.booking, allBookings, checklistResponses, isEditing]);
+  }, [initialData?.booking, allBookings, checklistResponses, isEditing, featureSettings]);
 
 
   const form = useForm<BookingFormValues>({
@@ -227,6 +236,14 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
 
     }
   }, [initialData, form, allBookings]);
+
+  useEffect(() => {
+    if (checklistTypeToShow) {
+        setChecklistType(checklistTypeToShow);
+        setIsChecklistOpen(true);
+        setIsDetailsOpen(false);
+    }
+  }, [checklistTypeToShow]);
   
   const isOvernight = form.watch('isOvernight');
 
@@ -908,3 +925,5 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     </Dialog>
   );
 }
+
+    
