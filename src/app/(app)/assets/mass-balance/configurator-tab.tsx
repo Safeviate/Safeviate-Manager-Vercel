@@ -408,9 +408,7 @@ export function ConfiguratorTab() {
   };
 
   const handleLoadTemplate = (templateId: string) => {
-    if (!templateId) {
-        return;
-    };
+    if (!templateId) return;
 
     const template = profiles?.find(p => p.id === templateId);
     if (!template) {
@@ -848,16 +846,10 @@ export function ConfiguratorTab() {
           )}
         </div>
       </div>
-      <Card>
-        <CardHeader className="flex-row items-center justify-between">
-          <div>
-            <CardTitle>Interactive Graph</CardTitle>
-            <CardDescription>
-              Visualize the aircraft&apos;s center of gravity based on the
-              configuration below.
-            </CardDescription>
-          </div>
+      <Card className="relative">
+        <CardHeader>
           <div className="flex items-center gap-4">
+            <CardTitle>Interactive Graph</CardTitle>
             {(loadedAircraftTailNumber || loadedProfileName) && (
               <p className="text-sm text-muted-foreground">
                 <span className="font-semibold text-foreground">
@@ -866,8 +858,32 @@ export function ConfiguratorTab() {
               </p>
             )}
           </div>
+          <CardDescription>
+            Visualize the aircraft&apos;s center of gravity based on the
+            configuration below.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="relative min-h-[500px] flex flex-col justify-center items-center overflow-hidden pt-6">
+        <div className="absolute top-6 right-6 z-10">
+          <div
+            className={cn(
+              'px-3 py-1 rounded-full font-bold shadow-lg flex items-center gap-2',
+              results.isSafe
+                ? 'bg-green-600/90 text-white'
+                : 'bg-destructive text-white'
+            )}
+          >
+            <div
+              className={cn(
+                'w-2 h-2 rounded-full',
+                results.isSafe ? 'bg-white' : 'bg-white animate-pulse'
+              )}
+            ></div>
+            <span className="text-xs">
+              {results.isSafe ? 'WITHIN LIMITS' : 'OUT OF LIMITS'}
+            </span>
+          </div>
+        </div>
+        <CardContent className="min-h-[500px] flex flex-col justify-center items-center overflow-hidden pt-6">
           {offScreenStatus && (
             <OffScreenWarning
               direction={offScreenStatus.dir}
@@ -875,26 +891,6 @@ export function ConfiguratorTab() {
               label={offScreenStatus.axis === 'x' ? 'CG' : 'Weight'}
             />
           )}
-          <div className="absolute top-4 right-4 z-10">
-            <div
-              className={cn(
-                'px-3 py-1 rounded-full font-bold shadow-lg flex items-center gap-2',
-                results.isSafe
-                  ? 'bg-green-600/90 text-white'
-                  : 'bg-destructive text-white'
-              )}
-            >
-              <div
-                className={cn(
-                  'w-2 h-2 rounded-full',
-                  results.isSafe ? 'bg-white' : 'bg-white animate-pulse'
-                )}
-              ></div>
-              <span className="text-xs">
-                {results.isSafe ? 'WITHIN LIMITS' : 'OUT OF LIMITS'}
-              </span>
-            </div>
-          </div>
           <ResponsiveContainer width="100%" height={500}>
             <ScatterChart
               margin={{ top: 20, right: 30, bottom: 40, left: 40 }}
