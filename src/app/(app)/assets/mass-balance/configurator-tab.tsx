@@ -198,13 +198,13 @@ export function ConfiguratorTab() {
 
   // --- Fetch Data ---
   const profilesQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'tenants', 'safeviate', 'aircraftModelProfiles') : null),
+    () => (firestore ? collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles') : null),
     [firestore]
   );
   const { data: profiles, isLoading: isLoadingProfiles } = useCollection<AircraftModelProfile>(profilesQuery);
   
   const aircraftQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'tenants', 'safeviate', 'aircrafts') : null),
+    () => (firestore ? collection(firestore, 'tenants', tenantId, 'aircrafts') : null),
     [firestore]
   );
   const { data: aircraftList, isLoading: isLoadingAircraft } = useCollection<Aircraft>(aircraftQuery);
@@ -367,7 +367,7 @@ export function ConfiguratorTab() {
     try {
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
-            const defaultProfile = querySnapshot.docs[0].data() as AircraftModelProfile;
+            const defaultProfile = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as AircraftModelProfile;
             loadProfileData(defaultProfile);
         } else {
             toast({ variant: 'destructive', title: 'Default Profile Not Found', description: 'Could not find a default profile in the database.' });
@@ -748,7 +748,7 @@ export function ConfiguratorTab() {
                             <SelectValue placeholder={isLoadingProfiles ? "Loading templates..." : "Select a template"} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="reset">Default Profile (Piper PA-28)</SelectItem>
+                            <SelectItem value="reset">Default Profile</SelectItem>
                             {(profiles || []).map(p => (
                                 <SelectItem key={p.id} value={p.id}>{p.make} {p.model}</SelectItem>
                             ))}
@@ -1033,3 +1033,5 @@ export function ConfiguratorTab() {
 }
 
 export default ConfiguratorTab;
+
+    
