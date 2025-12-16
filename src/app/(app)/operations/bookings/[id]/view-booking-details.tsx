@@ -14,9 +14,8 @@ import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Save } from 'lucide-react';
+import { Save, Scale } from 'lucide-react';
 import Link from 'next/link';
-import { BookingsConfiguratorTab } from './bookings-configurator-tab';
 
 interface ViewBookingDetailsProps {
   booking: Booking;
@@ -98,6 +97,12 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
   const preFlightChecklist = useMemo(() => checklists.find(c => c.checklistType === 'pre-flight'), [checklists]);
   const postFlightChecklist = useMemo(() => checklists.find(c => c.checklistType === 'post-flight'), [checklists]);
 
+  const openMassAndBalance = () => {
+    // Construct the URL and open it in a new window.
+    const url = `/assets/mass-balance?aircraftId=${aircraft.id}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div className='space-y-6'>
         <Card>
@@ -132,6 +137,12 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                     </>
                 )}
             </CardContent>
+             <CardFooter>
+                 <Button onClick={openMassAndBalance} variant="outline">
+                    <Scale className="mr-2 h-4 w-4" />
+                    Mass and Balance
+                </Button>
+            </CardFooter>
         </Card>
         
         <Card>
@@ -146,10 +157,6 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
                 </div>
             </CardContent>
         </Card>
-
-        <BookingsConfiguratorTab aircraft={aircraft} />
     </div>
   );
 }
-
-    

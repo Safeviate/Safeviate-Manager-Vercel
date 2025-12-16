@@ -76,6 +76,7 @@ import {
     ReferenceDot,
     Cell,
   } from 'recharts';
+import { useSearchParams } from 'next/navigation';
 
 const POINT_COLORS = [
   '#ef4444',
@@ -154,6 +155,7 @@ export function ConfiguratorTab() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const tenantId = 'safeviate';
+  const searchParams = useSearchParams();
 
   const [isSaveProfileDialogOpen, setIsSaveProfileDialogOpen] = useState(false);
   const [isClearAircraftDialogOpen, setIsClearAircraftDialogOpen] = useState(false);
@@ -226,6 +228,14 @@ export function ConfiguratorTab() {
   );
   const { data: aircraftList, isLoading: isLoadingAircraft } = useCollection<Aircraft>(aircraftQuery);
 
+
+  useEffect(() => {
+    const aircraftIdFromUrl = searchParams.get('aircraftId');
+    if (aircraftIdFromUrl && aircraftList) {
+        handleLoadFromAircraft(aircraftIdFromUrl);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, aircraftList]);
 
   useEffect(() => {
     let totalMom = parseFloat(basicEmpty.moment as any) || 0;
