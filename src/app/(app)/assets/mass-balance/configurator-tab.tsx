@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -861,30 +862,12 @@ export function ConfiguratorTab() {
             </CardDescription>
           </div>
           <div className="flex items-center gap-4">
-            {loadedAircraftTailNumber && (
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Aircraft:
-                </p>
-                <span className="font-semibold">{loadedAircraftTailNumber}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-muted-foreground"
-                  onClick={handleReset}
-                >
-                  <XCircle className="h-4 w-4" />
-                  <span className="sr-only">Clear loaded aircraft</span>
-                </Button>
-              </div>
-            )}
-            {loadedProfileName && (
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Profile:
-                </p>
-                <span className="font-semibold">{loadedProfileName}</span>
-              </div>
+            {(loadedAircraftTailNumber || loadedProfileName) && (
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">
+                  {loadedAircraftTailNumber ? `Aircraft: ${loadedAircraftTailNumber}` : `Profile: ${loadedProfileName}`}
+                </span>
+              </p>
             )}
           </div>
         </CardHeader>
@@ -896,6 +879,26 @@ export function ConfiguratorTab() {
               label={offScreenStatus.axis === 'x' ? 'CG' : 'Weight'}
             />
           )}
+          <div className="absolute top-4 right-4 z-10">
+            <div
+              className={cn(
+                'px-3 py-1 rounded-full font-bold shadow-lg flex items-center gap-2',
+                results.isSafe
+                  ? 'bg-green-600/90 text-white'
+                  : 'bg-destructive text-white'
+              )}
+            >
+              <div
+                className={cn(
+                  'w-2 h-2 rounded-full',
+                  results.isSafe ? 'bg-white' : 'bg-white animate-pulse'
+                )}
+              ></div>
+              <span className="text-xs">
+                {results.isSafe ? 'WITHIN LIMITS' : 'OUT OF LIMITS'}
+              </span>
+            </div>
+          </div>
           <ResponsiveContainer width="100%" height={500}>
             <ScatterChart
               margin={{ top: 20, right: 30, bottom: 40, left: 40 }}
@@ -978,26 +981,6 @@ export function ConfiguratorTab() {
               </ReferenceDot>
             </ScatterChart>
           </ResponsiveContainer>
-          <div className="absolute top-4 right-4 flex items-center gap-4">
-            <div
-              className={cn(
-                'px-3 py-1 rounded-full font-bold shadow-lg flex items-center gap-2',
-                results.isSafe
-                  ? 'bg-green-600/90 text-white'
-                  : 'bg-destructive text-white'
-              )}
-            >
-              <div
-                className={cn(
-                  'w-2 h-2 rounded-full',
-                  results.isSafe ? 'bg-white' : 'bg-white animate-pulse'
-                )}
-              ></div>
-              <span className="text-xs">
-                {results.isSafe ? 'WITHIN LIMITS' : 'OUT OF LIMITS'}
-              </span>
-            </div>
-          </div>
           <p className="font-extrabold text-red-600 absolute bottom-4 left-1/2 transform -translate-x-1/2 pointer-events-none whitespace-nowrap drop-shadow-md uppercase tracking-widest text-sm md:text-base">
             CONSULT AIRCRAFT POH BEFORE FLIGHT
           </p>
