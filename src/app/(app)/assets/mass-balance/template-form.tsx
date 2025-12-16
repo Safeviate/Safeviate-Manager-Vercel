@@ -94,8 +94,7 @@ export type CgEnvelopePoint = {
 
 export interface AircraftModelProfile {
   id: string;
-  make: string;
-  model: string;
+  profileName: string;
   emptyWeight?: number;
   emptyWeightMoment?: number;
   maxTakeoffWeight?: number;
@@ -121,7 +120,7 @@ interface TemplateFormProps {
 }
 
 const formSchema = z.object({
-  modelName: z.string().optional(),
+  profileName: z.string().min(1, 'Profile Name is required.'),
   xMin: z.coerce.number({invalid_type_error: "Min CG is required"}),
   xMax: z.coerce.number({invalid_type_error: "Max CG is required"}),
   yMin: z.coerce.number({invalid_type_error: "Min Weight is required"}),
@@ -147,7 +146,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 const getDefaultValues = (profile?: AircraftModelProfile | null): FormValues => {
     return {
-        modelName: profile ? `${profile.make} ${profile.model}` : '',
+        profileName: profile?.profileName || '',
         xMin: profile?.xMin ?? 0,
         xMax: profile?.xMax ?? 100,
         yMin: profile?.yMin ?? 0,
@@ -248,33 +247,25 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
   const onSubmit = (data: FormValues) => {
     if (!tenantId || !firestore) return;
     
-    if (!data.modelName?.trim()) {
+    if (!data.profileName?.trim()) {
         toast({
             variant: "destructive",
-            title: "Model Name Required",
-            description: "Please enter a name for the model.",
+            title: "Profile Name Required",
+            description: "Please enter a name for the profile.",
         });
         return;
     }
     
-    const [make, ...modelParts] = data.modelName.split(' ');
-    const model = modelParts.join(' ');
-
-    const dataToSave = { 
-        ...data,
-        make: make || 'Unknown',
-        model: model || data.modelName,
-    };
-    delete (dataToSave as any).modelName;
+    const dataToSave = { ...data };
 
     if (isEditing && initialData) {
       const docRef = doc(firestore, 'tenants', tenantId, 'aircraftModelProfiles', initialData.id);
       updateDocumentNonBlocking(docRef, dataToSave);
-      toast({ title: 'Profile Updated', description: `The W&B profile for ${data.modelName} has been updated.` });
+      toast({ title: 'Profile Updated', description: `The W&B profile for ${data.profileName} has been updated.` });
     } else {
       const collectionRef = collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles');
       addDocumentNonBlocking(collectionRef, dataToSave);
-      toast({ title: 'Profile Created', description: `A new W&B profile for ${data.modelName} has been saved.` });
+      toast({ title: 'Profile Created', description: `A new W&B profile for ${data.profileName} has been saved.` });
     }
     router.push('/assets/mass-balance');
   };
@@ -319,7 +310,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
         <div className="order-1">
             <Card>
                 <CardHeader>
-                    <CardTitle>{isEditing ? `W&B Graph for ${initialData?.make} ${initialData?.model}` : 'W&B Graph'}</CardTitle>
+                    <CardTitle>{isEditing ? `W&B Graph for ${initialData?.profileName}` : 'W&B Graph'}</CardTitle>
                     <CardDescription>
                         Review the center of gravity based on the loading stations.
                     </CardDescription>
@@ -363,13 +354,13 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
         <div className="order-2">
             <Card>
                 <CardHeader>
-                <CardTitle>{isEditing ? `Edit ${initialData?.make} ${initialData?.model}` : 'Create New W&B Profile'}</CardTitle>
+                <CardTitle>{isEditing ? `Edit ${initialData?.profileName}` : 'Create New W&B Profile'}</CardTitle>
                 <CardDescription>Define the weight and balance parameters for an aircraft model.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <FormField control={form.control} name="modelName" render={({ field }) => (
+                    <FormField control={form.control} name="profileName" render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Model Name</FormLabel>
+                        <FormLabel>Profile Name</FormLabel>
                         <FormControl><Input {...field} placeholder="e.g., Cessna 172S" /></FormControl>
                         <FormMessage />
                         </FormItem>
@@ -475,7 +466,7 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            This action cannot be undone. This will permanently delete the W&amp;B profile for {initialData?.model}.
+                                            This action cannot be undone. This will permanently delete the W&amp;B profile for {initialData?.profileName}.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -499,3 +490,5 @@ export function MassBalanceTemplateForm({ tenantId, initialData }: TemplateFormP
     </Form>
   );
 }
+
+    

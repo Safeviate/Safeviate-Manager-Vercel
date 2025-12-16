@@ -55,8 +55,7 @@ export function TemplatesTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Make</TableHead>
-                  <TableHead>Model</TableHead>
+                  <TableHead>Profile Name</TableHead>
                   <TableHead className='text-right'>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -64,8 +63,7 @@ export function TemplatesTab() {
                 {profiles && profiles.length > 0 ? (
                   profiles.map((profile) => (
                     <TableRow key={profile.id}>
-                      <TableCell className="font-medium">{profile.make}</TableCell>
-                      <TableCell>{profile.model}</TableCell>
+                      <TableCell className="font-medium">{profile.profileName}</TableCell>
                       <TableCell className="text-right">
                         <TemplateActions tenantId={tenantId} profile={profile} />
                       </TableCell>
@@ -73,7 +71,7 @@ export function TemplatesTab() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center">
+                    <TableCell colSpan={2} className="h-24 text-center">
                       No profiles found.
                     </TableCell>
                   </TableRow>
@@ -86,3 +84,5 @@ export function TemplatesTab() {
     </div>
   );
 }
+
+    

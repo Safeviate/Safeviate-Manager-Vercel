@@ -54,7 +54,7 @@ export function TemplateActions({ tenantId, profile }: TemplateActionsProps) {
 
     toast({
         title: 'Profile Deleted',
-        description: `The profile "${profile.make} ${profile.model}" is being deleted.`,
+        description: `The profile "${profile.profileName}" is being deleted.`,
     });
     setIsDeleteDialogOpen(false);
   }
@@ -89,7 +89,7 @@ export function TemplateActions({ tenantId, profile }: TemplateActionsProps) {
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
                     This action cannot be undone. This will permanently delete the profile for
-                    &quot;{profile.make} {profile.model}&quot;.
+                    &quot;{profile.profileName}&quot;.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -103,3 +103,5 @@ export function TemplateActions({ tenantId, profile }: TemplateActionsProps) {
   </>
   );
 }
+
+    

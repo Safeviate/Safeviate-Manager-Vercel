@@ -144,8 +144,7 @@ export function ConfiguratorTab() {
 
   const [isSaveProfileDialogOpen, setIsSaveProfileDialogOpen] = useState(false);
   const [isAssignAircraftDialogOpen, setIsAssignAircraftDialogOpen] = useState(false);
-  const [makeForSave, setMakeForSave] = useState('');
-  const [modelForSave, setModelForSave] = useState('');
+  const [profileNameForSave, setProfileNameForSave] = useState('');
   const [selectedAircraftId, setSelectedAircraftId] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
@@ -328,8 +327,7 @@ export function ConfiguratorTab() {
   };
 
   const loadProfileData = (template: AircraftModelProfile) => {
-    setMakeForSave(template.make || '');
-    setModelForSave(template.model || '');
+    setProfileNameForSave(template.profileName || '');
     
     const bewStation = template.stations?.find(s => s.name === 'Basic Empty Weight');
     const otherStations = template.stations?.filter(s => s.name !== 'Basic Empty Weight') || [];
@@ -351,7 +349,7 @@ export function ConfiguratorTab() {
 
     toast({
         title: "Template Loaded",
-        description: `Loaded the W&B profile for ${template.make} ${template.model}.`,
+        description: `Loaded the W&B profile for ${template.profileName}.`,
     });
   }
 
@@ -398,8 +396,7 @@ export function ConfiguratorTab() {
 
     setSelectedAircraftId(aircraftId);
 
-    setMakeForSave(aircraft.model || ''); // Or derive make if possible
-    setModelForSave(aircraft.tailNumber || '');
+    setProfileNameForSave(aircraft.tailNumber || '');
 
     setBasicEmpty({
         weight: aircraft.emptyWeight || 0,
@@ -436,8 +433,8 @@ export function ConfiguratorTab() {
   };
 
   const saveAsProfile = () => {
-    if (!makeForSave || !modelForSave) {
-      toast({ variant: 'destructive', title: 'Make and Model Required' });
+    if (!profileNameForSave) {
+      toast({ variant: 'destructive', title: 'Profile Name Required' });
       return;
     }
     if (!firestore) {
@@ -446,8 +443,7 @@ export function ConfiguratorTab() {
     }
   
     const configData: Partial<AircraftModelProfile> = {
-      make: makeForSave,
-      model: modelForSave,
+      profileName: profileNameForSave,
       emptyWeight: basicEmpty.weight,
       emptyWeightMoment: basicEmpty.moment,
       stations: [
@@ -466,7 +462,7 @@ export function ConfiguratorTab() {
   
     toast({
       title: 'Profile Saved',
-      description: `The profile for "${makeForSave} ${modelForSave}" has been saved.`,
+      description: `The profile "${profileNameForSave}" has been saved.`,
     });
   
     setIsSaveProfileDialogOpen(false);
@@ -587,26 +583,17 @@ export function ConfiguratorTab() {
                 <DialogHeader>
                     <DialogTitle>Save as New Profile</DialogTitle>
                     <DialogDescription>
-                        Enter a make and model for this configuration to create a new reusable template.
+                        Enter a name for this configuration to create a new reusable template.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="py-4 grid grid-cols-2 gap-4">
+                <div className="py-4 grid grid-cols-1 gap-4">
                     <div className="space-y-2">
-                        <Label htmlFor="make-name">Make</Label>
+                        <Label htmlFor="profile-name">Profile Name</Label>
                         <Input 
-                            id="make-name"
-                            value={makeForSave}
-                            onChange={(e) => setMakeForSave(e.target.value)}
-                            placeholder="e.g., Cessna"
-                        />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="model-name">Model</Label>
-                        <Input 
-                            id="model-name"
-                            value={modelForSave}
-                            onChange={(e) => setModelForSave(e.target.value)}
-                            placeholder="e.g., 172S"
+                            id="profile-name"
+                            value={profileNameForSave}
+                            onChange={(e) => setProfileNameForSave(e.target.value)}
+                            placeholder="e.g., Cessna 172S Standard"
                         />
                     </div>
                 </div>
@@ -614,7 +601,7 @@ export function ConfiguratorTab() {
                     <DialogClose asChild>
                         <Button variant="outline">Cancel</Button>
                     </DialogClose>
-                    <Button onClick={saveAsProfile} disabled={!makeForSave.trim() || !modelForSave.trim()}>Save Profile</Button>
+                    <Button onClick={saveAsProfile} disabled={!profileNameForSave.trim()}>Save Profile</Button>
                 </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -749,7 +736,7 @@ export function ConfiguratorTab() {
                         <SelectContent>
                             <SelectItem value="reset">Default Profile</SelectItem>
                             {(profiles || []).map(p => (
-                                <SelectItem key={p.id} value={p.id}>{p.make} {p.model}</SelectItem>
+                                <SelectItem key={p.id} value={p.id}>{p.profileName}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
