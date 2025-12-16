@@ -73,7 +73,7 @@ const bookingSchema = z.object({
   instructorId: z.string().optional(),
   type: z.enum(['Student Training', 'Hire and Fly', 'Maintenance Flight'], { required_error: 'Booking type is required.' }),
   startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.'),
-  endTime: z.string().regex(/^([01]\d|2[0-5]\d)$/, 'Invalid time format.'),
+  endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.'),
   status: z.enum(['Confirmed', 'Pending', 'Cancelled', 'Cancelled with Reason']),
   isOvernight: z.boolean(),
   overnightEndTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.').optional(),
