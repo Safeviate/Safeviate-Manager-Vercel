@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Trash2, Plus, Fuel, AlertTriangle } from 'lucide-react';
+import { Trash2, Plus, Fuel } from 'lucide-react';
 import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
 import { cn, isPointInPolygon } from '@/lib/utils';
 import {
@@ -44,7 +44,6 @@ const POINT_COLORS = [
     '#84cc16',
 ];
   
-
 export function BookingMassBalance({ aircraft }: BookingMassBalanceProps) {
   const [stations, setStations] = useState<any[]>([]);
   const [basicEmpty, setBasicEmpty] = useState({ weight: 0, moment: 0, arm: 0 });
@@ -101,8 +100,8 @@ export function BookingMassBalance({ aircraft }: BookingMassBalanceProps) {
     });
   }, [stations, basicEmpty, cgEnvelope]);
 
-  const updateStationWeight = (id: number, newWeight: string) => {
-    setStations(stations.map(s => s.id === id ? { ...s, weight: parseFloat(newWeight) || 0 } : s));
+  const updateStation = (id: number, field: string, value: string | number) => {
+    setStations(stations.map(s => s.id === id ? { ...s, [field]: value } : s));
   };
   
   const handleFuelChange = (id: number, field: string, value: string) => {
@@ -163,139 +162,326 @@ export function BookingMassBalance({ aircraft }: BookingMassBalanceProps) {
   }
 
   return (
-    <Card>
+    <Card className='relative'>
+       <div className="absolute top-6 right-6 z-10">
+          <div
+            className={cn(
+              'px-3 py-1 rounded-full font-bold shadow-lg flex items-center gap-2',
+              results.isSafe
+                ? 'bg-green-600/90 text-white'
+                : 'bg-destructive text-white'
+            )}
+          >
+            <div
+              className={cn(
+                'w-2 h-2 rounded-full',
+                results.isSafe ? 'bg-white' : 'bg-white animate-pulse'
+              )}
+            ></div>
+            <span className="text-xs">
+              {results.isSafe ? 'WITHIN LIMITS' : 'OUT OF LIMITS'}
+            </span>
+          </div>
+        </div>
       <CardHeader>
-        <div className="flex justify-between items-start">
-            <div>
-                <CardTitle>Mass &amp; Balance</CardTitle>
-                <CardDescription>Calculate the mass and balance for this booking.</CardDescription>
-            </div>
-             <div
-                className={cn(
-                'px-3 py-1 rounded-full font-bold shadow-lg flex items-center gap-2 text-xs',
-                results.isSafe
-                    ? 'bg-green-600/90 text-white'
-                    : 'bg-destructive text-white'
-                )}
-            >
-                <div
-                className={cn(
-                    'w-2 h-2 rounded-full',
-                    results.isSafe ? 'bg-white' : 'bg-white animate-pulse'
-                )}
-                ></div>
-                <span>
-                {results.isSafe ? 'WITHIN LIMITS' : 'OUT OF LIMITS'}
-                </span>
-            </div>
-        </div>
+        <CardTitle>Interactive Graph</CardTitle>
+        <CardDescription>Visualize the aircraft&apos;s center of gravity based on the configuration below.</CardDescription>
       </CardHeader>
+      <CardContent className="min-h-[500px] flex flex-col justify-center items-center overflow-hidden pt-6">
+          <ResponsiveContainer width="100%" height={500}>
+            <ScatterChart
+              margin={{ top: 20, right: 30, bottom: 40, left: 40 }}
+              className="text-xs"
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                type="number"
+                dataKey="x"
+                name="CG"
+                unit=" in"
+                domain={[chartDomain.xMin, chartDomain.xMax]}
+                allowDataOverflow={true}
+                dy={10}
+              >
+                <RechartsLabel
+                  value="CG (inches)"
+                  offset={0}
+                  position="insideBottom"
+                />
+              </XAxis>
+              <YAxis
+                type="number"
+                dataKey="y"
+                name="Weight"
+                unit=" lbs"
+                domain={[chartDomain.yMin, chartDomain.yMax]}
+                allowDataOverflow={true}
+                width={80}
+              >
+                <RechartsLabel
+                  value="Gross Weight (lbs)"
+                  angle={-90}
+                  position="insideLeft"
+                  style={{ textAnchor: 'middle' }}
+                />
+              </YAxis>
+              <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+              <Scatter
+                name="Envelope Line"
+                data={cgEnvelope}
+                fill="transparent"
+                line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }}
+                shape={() => null}
+                isAnimationActive={false}
+              />
+              <Scatter
+                name="Envelope Points"
+                data={cgEnvelope}
+                isAnimationActive={false}
+              >
+                {cgEnvelope.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={POINT_COLORS[index % POINT_COLORS.length]}
+                    stroke="hsl(var(--primary-foreground))"
+                    strokeWidth={1}
+                  />
+                ))}
+              </Scatter>
+              <ReferenceDot
+                x={results.cg}
+                y={results.weight}
+                r={8}
+                fill={
+                  results.isSafe
+                    ? 'hsl(var(--primary))'
+                    : 'hsl(var(--destructive))'
+                }
+                stroke="hsl(var(--primary-foreground))"
+                strokeWidth={2}
+              >
+                <RechartsLabel
+                  value={`(${results.cg}, ${results.weight})`}
+                  position="top"
+                  fill="hsl(var(--foreground))"
+                  fontSize="12"
+                  offset={10}
+                />
+              </ReferenceDot>
+            </ScatterChart>
+          </ResponsiveContainer>
+        </CardContent>
       <CardContent>
-        <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-4">
-             <Card>
-                <CardHeader>
-                    <CardTitle>Mass &amp; Balance Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Empty Weight</p>
-                            <p className="text-xl font-bold">{basicEmpty.weight.toFixed(1)} lbs</p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
+                {/* Left Column */}
+                <div className="space-y-6">
+                    <div>
+                        <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-md font-medium">Loading Stations</h3>
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={() => addStation('fuel')}
+                                variant="outline"
+                                size="sm"
+                                title="Add Fuel Tank"
+                                type="button"
+                            >
+                                <Fuel size={16} className="mr-2" /> Add Fuel
+                            </Button>
+                            <Button
+                                onClick={() => addStation('standard')}
+                                variant="outline"
+                                size="sm"
+                                type="button"
+                            >
+                                <Plus size={16} className="mr-2" /> Add
+                            </Button>
                         </div>
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Total Weight</p>
-                            <p className="text-xl font-bold">{results.weight.toFixed(1)} lbs</p>
                         </div>
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Center of Gravity</p>
-                            <p className="text-xl font-bold">{results.cg.toFixed(2)} in</p>
+                        <div className="grid grid-cols-12 gap-2 text-xs font-bold text-muted-foreground px-1 mb-2">
+                            <div className="col-span-5">Station Name</div>
+                            <div className="col-span-3 text-right">Weight</div>
+                            <div className="col-span-3 text-right">Arm</div>
+                        </div>
+                        <div className="space-y-2">
+                        {/* Basic Empty Weight */}
+                        <div className="grid grid-cols-12 gap-2 items-center text-sm">
+                            <Input
+                                value="Basic Empty Weight"
+                                readOnly
+                                disabled
+                                className="col-span-5 h-8"
+                            />
+                            <Input
+                                type="number"
+                                value={basicEmpty.weight}
+                                readOnly
+                                disabled
+                                className="text-right h-8 col-span-3"
+                            />
+                            <Input
+                                type="number"
+                                value={basicEmpty.arm.toFixed(2)}
+                                readOnly
+                                disabled
+                                className="text-right h-8 col-span-3"
+                            />
+                        </div>
+                        {/* Dynamic Stations */}
+                        {stations.map((s) => (
+                            <div key={s.id} className="group relative">
+                            {s.type === 'fuel' ? (
+                                <div className="space-y-2">
+                                <div className="grid grid-cols-12 gap-2 items-center">
+                                    <div className="col-span-5 flex items-center gap-2">
+                                    <Input
+                                        value={s.name}
+                                        onChange={(e) =>
+                                        updateStation(s.id, 'name', e.target.value)
+                                        }
+                                        className="text-sm font-bold h-8 flex-grow"
+                                    />
+                                    </div>
+                                    <div className="col-span-3">
+                                    <Input
+                                        type="number"
+                                        value={s.weight}
+                                        onChange={(e) =>
+                                        handleFuelChange(
+                                            s.id,
+                                            'weight',
+                                            e.target.value
+                                        )
+                                        }
+                                        className="text-sm text-right h-8"
+                                    />
+                                    </div>
+                                    <div className="col-span-3">
+                                    <Input
+                                        type="number"
+                                        value={s.arm}
+                                        onChange={(e) =>
+                                        handleFuelChange(s.id, 'arm', e.target.value)
+                                        }
+                                        className="text-sm text-right h-8"
+                                        disabled
+                                    />
+                                    </div>
+                                    <div className="col-span-1 flex justify-end">
+                                    <Button
+                                        onClick={() => removeStation(s.id)}
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-muted-foreground hover:text-destructive h-8 w-8"
+                                        type="button"
+                                    >
+                                        <Trash2 size={16} />
+                                    </Button>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-12 gap-2 items-center">
+                                    <div className="col-span-5">
+                                    <Input
+                                        value="Gallons"
+                                        readOnly
+                                        disabled
+                                        className="text-xs text-muted-foreground h-8 col-span-2"
+                                    />
+                                    </div>
+                                    <div className="col-span-3">
+                                    <Input
+                                        id={`gallons-${s.id}`}
+                                        type="number"
+                                        value={s.gallons || 0}
+                                        onChange={(e) =>
+                                        handleFuelChange(
+                                            s.id,
+                                            'gallons',
+                                            e.target.value
+                                        )
+                                        }
+                                        className="h-8 text-right"
+                                    />
+                                    </div>
+                                    <div className="col-span-3 flex items-center gap-1">
+                                    <Label
+                                        htmlFor={`max-gallons-${s.id}`}
+                                        className="text-xs text-muted-foreground flex-shrink-0"
+                                    >
+                                        Max:
+                                    </Label>
+                                    <Input
+                                        id={`max-gallons-${s.id}`}
+                                        type="number"
+                                        value={s.maxGallons || 0}
+                                        onChange={(e) =>
+                                        updateStation(
+                                            s.id,
+                                            'maxGallons',
+                                            e.target.value
+                                        )
+                                        }
+                                        className="h-8 text-right flex-grow"
+                                    />
+                                    </div>
+                                </div>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-12 gap-2 items-center">
+                                <div className="col-span-5">
+                                    <Input
+                                    value={s.name}
+                                    onChange={(e) =>
+                                        updateStation(s.id, 'name', e.target.value)
+                                    }
+                                    placeholder="Item Name"
+                                    className="h-8"
+                                    />
+                                </div>
+                                <div className="col-span-3">
+                                    <Input
+                                    type="number"
+                                    value={s.weight}
+                                    onChange={(e) =>
+                                        updateStation(s.id, 'weight', e.target.value)
+                                    }
+                                    className="text-right h-8"
+                                    />
+                                </div>
+                                <div className="col-span-3">
+                                    <Input
+                                    type="number"
+                                    value={s.arm}
+                                    onChange={(e) =>
+                                        updateStation(s.id, 'arm', e.target.value)
+                                    }
+                                    className="text-right h-8"
+                                    disabled
+                                    />
+                                </div>
+                                <div className="col-span-1 flex justify-end">
+                                    <Button
+                                    onClick={() => removeStation(s.id)}
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-muted-foreground hover:text-destructive h-8 w-8"
+                                    type="button"
+                                    >
+                                    <Trash2 size={16} />
+                                    </Button>
+                                </div>
+                                </div>
+                            )}
+                            </div>
+                        ))}
                         </div>
                     </div>
-                </CardContent>
-            </Card>
-            <Card className='min-h-[400px]'>
-                <CardHeader>
-                    <CardTitle>CG Envelope</CardTitle>
-                </CardHeader>
-                <CardContent>
-                <ResponsiveContainer width="100%" height={350}>
-                    <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 40 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis
-                            type="number"
-                            dataKey="x"
-                            name="CG"
-                            unit=" in"
-                            domain={[chartDomain.xMin, chartDomain.xMax]}
-                            allowDataOverflow={true}
-                        >
-                             <RechartsLabel value="CG (inches)" offset={-25} position="insideBottom" />
-                        </XAxis>
-                        <YAxis
-                            type="number"
-                            dataKey="y"
-                            name="Weight"
-                            unit=" lbs"
-                            domain={[chartDomain.yMin, chartDomain.yMax]}
-                             allowDataOverflow={true}
-                             width={80}
-                        >
-                            <RechartsLabel value="Weight (lbs)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
-                        </YAxis>
-                        <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                        <Scatter name="Envelope" data={cgEnvelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} isAnimationActive={false} />
-                        <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? 'hsl(var(--primary))' : 'hsl(var(--destructive))'} stroke="hsl(var(--primary-foreground))" strokeWidth={2}>
-                             <RechartsLabel value={`(${results.cg}, ${results.weight})`} position="top" fill="hsl(var(--foreground))" fontSize="12" offset={10} />
-                        </ReferenceDot>
-                    </ScatterChart>
-                </ResponsiveContainer>
-                </CardContent>
-            </Card>
-          </div>
-
-          <div className="lg:col-span-1 space-y-4">
-            <Card>
-                <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <CardTitle>Load</CardTitle>
-                        <Button size="sm" variant="outline" onClick={() => addStation('standard')}><Plus className="mr-2 h-4 w-4" /> Add Item</Button>
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                     {stations.filter(s => s.type === 'standard').map(station => (
-                        <div key={station.id} className="space-y-2">
-                             <Label htmlFor={`weight-${station.id}`}>{station.name} (Arm: {station.arm} in)</Label>
-                            <div className="flex items-center gap-2">
-                                <Input id={`weight-${station.id}`} type="number" placeholder="Weight (lbs)" value={station.weight || ''} onChange={(e) => updateStationWeight(station.id, e.target.value)} />
-                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removeStation(station.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                            </div>
-                        </div>
-                    ))}
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Fuel</CardTitle>
-                </CardHeader>
-                 <CardContent className="space-y-3">
-                     {stations.filter(s => s.type === 'fuel').map(station => (
-                        <div key={station.id} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor={`gallons-${station.id}`}>Gallons (Arm: {station.arm} in, Max: {station.maxGallons} gal)</Label>
-                                <Input id={`gallons-${station.id}`} type="number" placeholder="Gallons" value={station.gallons || ''} onChange={(e) => handleFuelChange(station.id, 'gallons', e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor={`weight-${station.id}`}>Weight ({FUEL_WEIGHT_PER_GALLON} lbs/gal)</Label>
-                                <Input id={`weight-${station.id}`} type="number" placeholder="Weight (lbs)" value={station.weight || ''} onChange={(e) => handleFuelChange(station.id, 'weight', e.target.value)} />
-                            </div>
-                        </div>
-                    ))}
-                </CardContent>
-            </Card>
-          </div>
-        </div>
+                </div>
+                {/* Right Column */}
+                <div>
+                  {/* Intentionally empty for this view */}
+                </div>
+            </div>
       </CardContent>
     </Card>
   );
