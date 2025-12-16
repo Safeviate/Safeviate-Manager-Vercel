@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -334,8 +333,8 @@ export function ConfiguratorTab() {
     setLoadedAircraftTailNumber(null);
     
     // The first station is assumed to be Basic Empty Weight
-    const bewStation = template.stations?.[0];
-    const otherStations = template.stations?.slice(1) || [];
+    const bewStation = template.stations?.find(s => s.type === 'bew');
+    const otherStations = template.stations?.filter(s => s.type !== 'bew') || [];
 
     setBasicEmpty({
         weight: bewStation?.weight || template.emptyWeight || 0,
@@ -360,34 +359,32 @@ export function ConfiguratorTab() {
 
   const handleReset = async () => {
     if (!firestore) {
-        toast({ variant: 'destructive', title: 'Firestore not available' });
-        return;
+      toast({ variant: 'destructive', title: 'Firestore not available' });
+      return;
     }
     
-    const profileRef = doc(firestore, 'tenants', tenantId, 'aircraftModelProfiles', 'Default');
+    const collectionRef = collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles');
+    const q = query(collectionRef, where("profileName", "==", "Default"));
     
     try {
-        const docSnap = await getDoc(profileRef);
-        if (docSnap.exists()) {
-            const defaultProfile = { id: docSnap.id, ...docSnap.data() } as AircraftModelProfile;
-            loadProfileData(defaultProfile);
-            setLoadedAircraftTailNumber(null); // Clear loaded aircraft name
-            setSelectedAircraftId(''); // Clear dropdown
-        } else {
-            toast({ variant: 'destructive', title: 'Default Profile Not Found', description: 'Could not find a default profile in the database.' });
-        }
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const docSnap = querySnapshot.docs[0];
+        const defaultProfile = { id: docSnap.id, ...docSnap.data() } as AircraftModelProfile;
+        loadProfileData(defaultProfile);
+        setLoadedAircraftTailNumber(null);
+        setSelectedAircraftId('');
+        setSelectedTemplateId('');
+      } else {
+        toast({ variant: 'destructive', title: 'Default Profile Not Found', description: 'Could not find a profile named "Default" in the database.' });
+      }
     } catch (error) {
-        console.error("Error fetching default profile: ", error);
-        toast({ variant: 'destructive', title: 'Error Loading Default', description: 'Failed to fetch the default profile from the database.' });
+      console.error("Error fetching default profile: ", error);
+      toast({ variant: 'destructive', title: 'Error Loading Default', description: 'Failed to fetch the default profile from the database.' });
     }
-};
+  };
 
   const handleLoadTemplate = (templateId: string) => {
-    if (templateId === 'reset') {
-        handleReset();
-        setSelectedTemplateId('');
-        return;
-    }
     const template = profiles?.find(p => p.id === templateId);
     if (!template) return;
     
@@ -753,7 +750,6 @@ export function ConfiguratorTab() {
                             <SelectValue placeholder={isLoadingProfiles ? "Loading templates..." : "Select a template"} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="reset">Default Profile</SelectItem>
                             {(profiles || []).map(p => (
                                 <SelectItem key={p.id} value={p.id}>{p.profileName}</SelectItem>
                             ))}
@@ -1038,5 +1034,3 @@ export function ConfiguratorTab() {
 }
 
 export default ConfiguratorTab;
-
-    
