@@ -15,7 +15,7 @@ import {
   ReferenceDot,
   Cell,
 } from 'recharts';
-import { collection, doc, query, where, getDocs } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
 import {
@@ -336,8 +336,8 @@ export function ConfiguratorTab() {
 
     setBasicEmpty({
         weight: bewStation?.weight || template.emptyWeight || 0,
-        moment: (bewStation?.weight || template.emptyWeight || 0) * (bewStation?.arm || 0) || template.emptyWeightMoment || 0,
-        arm: bewStation?.arm || 0,
+        moment: (bewStation?.weight || 0) * (bewStation?.arm || 0) || template.emptyWeightMoment || 0,
+        arm: bewStation?.arm || ((template.emptyWeight || 0) > 0 ? (template.emptyWeightMoment || 0) / template.emptyWeight! : 0),
     });
     setStations(otherStations);
 
@@ -361,13 +361,12 @@ export function ConfiguratorTab() {
         return;
     }
     
-    const profilesRef = collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles');
-    const q = query(profilesRef, where("make", "==", "Default"));
+    const profileRef = doc(firestore, 'tenants', tenantId, 'aircraftModelProfiles', 'Default');
     
     try {
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-            const defaultProfile = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as AircraftModelProfile;
+        const docSnap = await getDoc(profileRef);
+        if (docSnap.exists()) {
+            const defaultProfile = { id: docSnap.id, ...docSnap.data() } as AircraftModelProfile;
             loadProfileData(defaultProfile);
         } else {
             toast({ variant: 'destructive', title: 'Default Profile Not Found', description: 'Could not find a default profile in the database.' });
