@@ -23,7 +23,7 @@ export function TemplatesTab() {
   const tenantId = 'safeviate'; // Hardcoded for now
 
   const profilesQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles')) : null),
+    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'massAndBalance')) : null),
     [firestore, tenantId]
   );
   
@@ -84,5 +84,7 @@ export function TemplatesTab() {
     </div>
   );
 }
+
+    
 
     

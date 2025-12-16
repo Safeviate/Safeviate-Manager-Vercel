@@ -730,7 +730,7 @@
   "firestore": {
     "structure": [
       {
-        "path": "tenants/{tenantId}/aircraftModelProfiles/{profileId}",
+        "path": "tenants/{tenantId}/massAndBalance/{profileId}",
         "definition": {
           "entityName": "AircraftModelProfile",
           "schema": {

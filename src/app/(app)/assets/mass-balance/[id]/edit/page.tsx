@@ -20,7 +20,7 @@ export default function EditMassBalanceTemplatePage({ params }: EditTemplatePage
     const profileId = resolvedParams.id;
     
     const profileDocRef = useMemoFirebase(
-        () => (firestore ? doc(firestore, 'tenants', tenantId, 'aircraftModelProfiles', profileId) : null),
+        () => (firestore ? doc(firestore, 'tenants', tenantId, 'massAndBalance', profileId) : null),
         [firestore, tenantId, profileId]
     );
 
@@ -53,3 +53,5 @@ export default function EditMassBalanceTemplatePage({ params }: EditTemplatePage
         </div>
     );
 }
+
+    

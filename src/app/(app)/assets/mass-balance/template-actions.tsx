@@ -49,7 +49,7 @@ export function TemplateActions({ tenantId, profile }: TemplateActionsProps) {
         return;
     }
     
-    const profileRef = doc(firestore, 'tenants', tenantId, 'aircraftModelProfiles', profile.id);
+    const profileRef = doc(firestore, 'tenants', tenantId, 'massAndBalance', profile.id);
     deleteDocumentNonBlocking(profileRef);
 
     toast({
@@ -103,5 +103,7 @@ export function TemplateActions({ tenantId, profile }: TemplateActionsProps) {
   </>
   );
 }
+
+    
 
     

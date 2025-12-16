@@ -199,7 +199,7 @@ export function ConfiguratorTab() {
 
   // --- Fetch Data ---
   const profilesQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles') : null),
+    () => (firestore ? collection(firestore, 'tenants', tenantId, 'massAndBalance') : null),
     [firestore]
   );
   const { data: profiles, isLoading: isLoadingProfiles } = useCollection<AircraftModelProfile>(profilesQuery);
@@ -363,7 +363,7 @@ export function ConfiguratorTab() {
       return;
     }
     
-    const collectionRef = collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles');
+    const collectionRef = collection(firestore, 'tenants', tenantId, 'massAndBalance');
     const q = query(collectionRef, where("profileName", "==", "Default"));
     
     try {
@@ -385,6 +385,10 @@ export function ConfiguratorTab() {
   };
 
   const handleLoadTemplate = (templateId: string) => {
+    if (templateId === 'reset') {
+        handleReset();
+        return;
+    }
     const template = profiles?.find(p => p.id === templateId);
     if (!template) return;
     
@@ -461,7 +465,7 @@ export function ConfiguratorTab() {
       yMax: graphConfig.yMax,
     };
   
-    const collectionRef = collection(firestore, 'tenants', tenantId, 'aircraftModelProfiles');
+    const collectionRef = collection(firestore, 'tenants', tenantId, 'massAndBalance');
     addDocumentNonBlocking(collectionRef, configData);
   
     toast({
@@ -750,6 +754,7 @@ export function ConfiguratorTab() {
                             <SelectValue placeholder={isLoadingProfiles ? "Loading templates..." : "Select a template"} />
                         </SelectTrigger>
                         <SelectContent>
+                            <SelectItem value="reset">Default Profile</SelectItem>
                             {(profiles || []).map(p => (
                                 <SelectItem key={p.id} value={p.id}>{p.profileName}</SelectItem>
                             ))}
@@ -1034,3 +1039,5 @@ export function ConfiguratorTab() {
 }
 
 export default ConfiguratorTab;
+
+    
