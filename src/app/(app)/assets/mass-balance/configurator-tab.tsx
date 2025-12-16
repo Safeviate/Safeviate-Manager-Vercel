@@ -1090,12 +1090,15 @@ export function ConfiguratorTab() {
               </ReferenceDot>
             </ScatterChart>
           </ResponsiveContainer>
-          <p className="font-extrabold text-red-600 absolute bottom-4 left-1/2 transform -translate-x-1/2 pointer-events-none whitespace-nowrap drop-shadow-md uppercase tracking-widest text-sm md:text-base">
-            CONSULT AIRCRAFT POH BEFORE FLIGHT
-          </p>
         </CardContent>
         <CardContent className="p-6">
           <div className="space-y-4">
+            <p className="font-extrabold text-red-600 text-center pointer-events-none whitespace-nowrap drop-shadow-md uppercase tracking-widest text-sm md:text-base">
+                CONSULT AIRCRAFT POH BEFORE FLIGHT
+            </p>
+
+            <Separator className="my-4" />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Load Saved Profile</Label>
