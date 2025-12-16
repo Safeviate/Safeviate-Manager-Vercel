@@ -907,9 +907,18 @@ export function BookingForm({ tenantId, aircraftList, pilotList, allBookings, in
     </>
   );
 
+  if (isEditing) {
+    // When editing on a dedicated page, we render the form directly without a Dialog wrapper around the content
+    return (
+        <div className="sm:max-w-2xl mx-auto">
+            <FormContent />
+        </div>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         <FormContent />
       </DialogContent>
     </Dialog>
