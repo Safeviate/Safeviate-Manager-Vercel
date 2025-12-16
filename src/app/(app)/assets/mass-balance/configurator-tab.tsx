@@ -15,8 +15,8 @@ import {
   ReferenceDot,
   Cell,
 } from 'recharts';
-import { collection, doc, query, where, getDocs, getDoc, addDoc } from 'firebase/firestore';
-import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, doc, query, where, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
+import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
 import {
   Save,
@@ -46,6 +46,17 @@ import {
     DialogTrigger,
     DialogClose,
   } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -145,6 +156,7 @@ export function ConfiguratorTab() {
 
   const [isSaveProfileDialogOpen, setIsSaveProfileDialogOpen] = useState(false);
   const [isAssignAircraftDialogOpen, setIsAssignAircraftDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [profileNameForSave, setProfileNameForSave] = useState('');
   const [selectedAircraftId, setSelectedAircraftId] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
@@ -453,36 +465,36 @@ export function ConfiguratorTab() {
 
   const saveAsProfile = async () => {
     if (!profileNameForSave) {
-      toast({ variant: 'destructive', title: 'Profile Name Required' });
-      return;
+        toast({ variant: 'destructive', title: 'Profile Name Required' });
+        return;
     }
     if (!firestore) {
-      toast({ variant: 'destructive', title: 'Database not available' });
-      return;
+        toast({ variant: 'destructive', title: 'Database not available' });
+        return;
     }
-  
+    
     const configData: Partial<AircraftModelProfile> = {
-      profileName: profileNameForSave,
-      emptyWeight: basicEmpty.weight,
-      emptyWeightMoment: basicEmpty.moment,
-      stations: [
-        { id: 1, name: 'Basic Empty Weight', weight: basicEmpty.weight, arm: basicEmpty.arm, type: 'bew' },
-        ...stations,
-      ],
-      cgEnvelope: graphConfig.envelope,
-      xMin: graphConfig.xMin,
-      xMax: graphConfig.xMax,
-      yMin: graphConfig.yMin,
-      yMax: graphConfig.yMax,
+        profileName: profileNameForSave,
+        emptyWeight: basicEmpty.weight,
+        emptyWeightMoment: basicEmpty.moment,
+        stations: [
+            { id: 1, name: 'Basic Empty Weight', weight: basicEmpty.weight, arm: basicEmpty.arm, type: 'bew' },
+            ...stations,
+        ],
+        cgEnvelope: graphConfig.envelope,
+        xMin: graphConfig.xMin,
+        xMax: graphConfig.xMax,
+        yMin: graphConfig.yMin,
+        yMax: graphConfig.yMax,
     };
-  
+    
     try {
         const collectionRef = collection(firestore, 'tenants', tenantId, 'massAndBalance');
         await addDoc(collectionRef, configData);
         
         toast({
-          title: 'Profile Saved',
-          description: `The profile "${profileNameForSave}" has been saved.`,
+            title: 'Profile Saved',
+            description: `The profile "${profileNameForSave}" has been saved.`,
         });
         
         setIsSaveProfileDialogOpen(false);
@@ -535,6 +547,29 @@ export function ConfiguratorTab() {
         title: 'Profile Updated',
         description: `The profile "${loadedProfile.profileName}" has been updated.`,
     });
+  };
+
+  const handleDeleteProfile = async () => {
+    if (!loadedProfileId) {
+        toast({ variant: 'destructive', title: 'No Profile Loaded', description: 'Please load a profile to delete it.' });
+        return;
+    }
+    if (!firestore) {
+        toast({ variant: 'destructive', title: 'Database not available' });
+        return;
+    }
+
+    const docRef = doc(firestore, 'tenants', tenantId, 'massAndBalance', loadedProfileId);
+    await deleteDoc(docRef);
+
+    toast({
+        title: 'Profile Deleted',
+        description: `The profile has been successfully deleted.`,
+    });
+    
+    // Reset the UI
+    await handleReset();
+    setIsDeleteDialogOpen(false);
   };
 
   const handleAssignToAircraft = () => {
@@ -595,6 +630,8 @@ export function ConfiguratorTab() {
   const isOffScreen = () => { if (results.cg < finalXMin) return { axis: 'x', dir: 'left', val: results.cg }; return null; };
   const offScreenStatus = isOffScreen();
 
+  const loadedProfileName = loadedProfileId ? profiles?.find(p => p.id === loadedProfileId)?.profileName : null;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -615,7 +652,7 @@ export function ConfiguratorTab() {
             )}
         </div>
         <div className="flex gap-3">
-          <Button onClick={handleReset} variant="destructive">
+          <Button onClick={handleReset} variant="outline">
             <RotateCcw size={16} className="mr-2" /> Reset
           </Button>
 
@@ -654,11 +691,34 @@ export function ConfiguratorTab() {
             </DialogContent>
           </Dialog>
 
-          {loadedProfileId ? (
-             <Button onClick={handleUpdateProfile}>
-                <Save size={16} className="mr-2" /> Update Profile
-             </Button>
-          ) : (
+            {loadedProfileId ? (
+                <div className='flex gap-2'>
+                    <Button onClick={handleUpdateProfile}>
+                        <Save size={16} className="mr-2" /> Update Profile
+                    </Button>
+                    <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive">
+                                <Trash2 size={16} className="mr-2" /> Delete Profile
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the profile for &quot;{loadedProfileName}&quot;.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteProfile} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                                    Delete
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+            ) : (
             <Dialog open={isSaveProfileDialogOpen} onOpenChange={setIsSaveProfileDialogOpen}>
                 <DialogTrigger asChild>
                 <Button>
@@ -821,6 +881,7 @@ export function ConfiguratorTab() {
                             <SelectValue placeholder={isLoadingProfiles ? "Loading templates..." : "Select a template"} />
                         </SelectTrigger>
                         <SelectContent>
+                            <SelectItem value="reset">-- Reset to Default --</SelectItem>
                             {(profiles || []).map(p => (
                                 <SelectItem key={p.id} value={p.id}>{p.profileName}</SelectItem>
                             ))}
@@ -1105,3 +1166,4 @@ export function ConfiguratorTab() {
 }
 
 export default ConfiguratorTab;
+
