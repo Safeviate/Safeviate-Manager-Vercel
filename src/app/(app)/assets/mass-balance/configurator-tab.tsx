@@ -149,8 +149,8 @@ export function ConfiguratorTab() {
   const [selectedAircraftId, setSelectedAircraftId] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
-  // New state to hold the currently loaded aircraft's tail number
   const [loadedAircraftTailNumber, setLoadedAircraftTailNumber] = useState<string | null>(null);
+  const [loadedProfileId, setLoadedProfileId] = useState<string | null>(null);
 
 
   const form = useForm();
@@ -377,6 +377,7 @@ export function ConfiguratorTab() {
         setLoadedAircraftTailNumber(null);
         setSelectedAircraftId('');
         setSelectedTemplateId('');
+        setLoadedProfileId(docSnap.id);
       } else {
         toast({ variant: 'destructive', title: 'Default Profile Not Found', description: 'Could not find a profile named "Default" in the database.' });
       }
@@ -401,6 +402,7 @@ export function ConfiguratorTab() {
     }
     
     setSelectedTemplateId(templateId); 
+    setLoadedProfileId(template.id);
     loadProfileData(template);
     setLoadedAircraftTailNumber(null); // Clear any loaded aircraft
     setSelectedAircraftId(''); // Clear the aircraft dropdown
@@ -412,6 +414,7 @@ export function ConfiguratorTab() {
 
     setSelectedAircraftId(aircraftId);
     setLoadedAircraftTailNumber(aircraft.tailNumber); // Set the loaded aircraft name
+    setLoadedProfileId(null); // Clear loaded profile
 
     setProfileNameForSave(aircraft.tailNumber || '');
 
@@ -492,6 +495,46 @@ export function ConfiguratorTab() {
             description: 'Could not save the profile to the database. Check console for details.'
         });
     }
+  };
+
+  const handleUpdateProfile = () => {
+    if (!loadedProfileId) {
+        toast({ variant: 'destructive', title: 'No Profile Loaded' });
+        return;
+    }
+    if (!firestore) {
+        toast({ variant: 'destructive', title: 'Database not available' });
+        return;
+    }
+
+    const loadedProfile = profiles?.find(p => p.id === loadedProfileId);
+    if (!loadedProfile) {
+        toast({ variant: 'destructive', title: 'Loaded profile not found' });
+        return;
+    }
+
+    const configData: Partial<AircraftModelProfile> = {
+        profileName: loadedProfile.profileName,
+        emptyWeight: basicEmpty.weight,
+        emptyWeightMoment: basicEmpty.moment,
+        stations: [
+            { id: 1, name: 'Basic Empty Weight', weight: basicEmpty.weight, arm: basicEmpty.arm, type: 'bew' },
+            ...stations,
+        ],
+        cgEnvelope: graphConfig.envelope,
+        xMin: graphConfig.xMin,
+        xMax: graphConfig.xMax,
+        yMin: graphConfig.yMin,
+        yMax: graphConfig.yMax,
+    };
+
+    const docRef = doc(firestore, 'tenants', tenantId, 'massAndBalance', loadedProfileId);
+    updateDocumentNonBlocking(docRef, configData);
+
+    toast({
+        title: 'Profile Updated',
+        description: `The profile "${loadedProfile.profileName}" has been updated.`,
+    });
   };
 
   const handleAssignToAircraft = () => {
@@ -611,38 +654,44 @@ export function ConfiguratorTab() {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={isSaveProfileDialogOpen} onOpenChange={setIsSaveProfileDialogOpen}>
-             <DialogTrigger asChild>
+          {loadedProfileId ? (
+             <Button onClick={handleUpdateProfile}>
+                <Save size={16} className="mr-2" /> Update Profile
+             </Button>
+          ) : (
+            <Dialog open={isSaveProfileDialogOpen} onOpenChange={setIsSaveProfileDialogOpen}>
+                <DialogTrigger asChild>
                 <Button>
                     <Save size={16} className="mr-2" /> Save as New Profile
                 </Button>
-             </DialogTrigger>
-            <DialogContent>
+                </DialogTrigger>
+                <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Save as New Profile</DialogTitle>
                     <DialogDescription>
-                        Enter a name for this configuration to create a new reusable template.
+                    Enter a name for this configuration to create a new reusable template.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 grid grid-cols-1 gap-4">
                     <div className="space-y-2">
-                        <Label htmlFor="profile-name">Profile Name</Label>
-                        <Input 
-                            id="profile-name"
-                            value={profileNameForSave}
-                            onChange={(e) => setProfileNameForSave(e.target.value)}
-                            placeholder="e.g., Cessna 172S Standard"
-                        />
+                    <Label htmlFor="profile-name">Profile Name</Label>
+                    <Input
+                        id="profile-name"
+                        value={profileNameForSave}
+                        onChange={(e) => setProfileNameForSave(e.target.value)}
+                        placeholder="e.g., Cessna 172S Standard"
+                    />
                     </div>
                 </div>
                 <DialogFooter>
                     <DialogClose asChild>
-                        <Button variant="outline">Cancel</Button>
+                    <Button variant="outline">Cancel</Button>
                     </DialogClose>
                     <Button onClick={saveAsProfile} disabled={!profileNameForSave.trim()}>Save Profile</Button>
                 </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
       <Card>
@@ -1056,4 +1105,3 @@ export function ConfiguratorTab() {
 }
 
 export default ConfiguratorTab;
-
