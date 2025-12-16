@@ -43,6 +43,7 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
+    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -407,7 +408,6 @@ export function ConfiguratorTab() {
 
   const handleLoadTemplate = (templateId: string) => {
     if (!templateId) {
-        if (templateId === '') handleReset();
         return;
     };
 
