@@ -1,0 +1,32 @@
+# --- System & Dependencies ---
+.git/
+.ds_store
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# --- Build Outputs (AI doesn't need to edit compiled code) ---
+dist/
+build/
+out/
+.next/
+.nuxt/
+coverage/
+
+# --- Large Assets (AI can't "read" images well) ---
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.svg
+*.mp4
+*.mov
+public/
+assets/
+
+# --- JS/TS Specific ---
+*.min.js
+*.min.css
+*.map
