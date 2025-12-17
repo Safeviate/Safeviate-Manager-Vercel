@@ -84,6 +84,11 @@ export function BookingForm({
   const [fuel, setFuel] = useState('');
   const [oilLeft, setOilLeft] = useState('');
   const [oilRight, setOilRight] = useState('');
+  
+  const [postFlightOil, setPostFlightOil] = useState('');
+  const [postFlightFuel, setPostFlightFuel] = useState('');
+  const [postFlightOilLeft, setPostFlightOilLeft] = useState('');
+  const [postFlightOilRight, setPostFlightOilRight] = useState('');
 
   useEffect(() => {
     if (startTime) {
@@ -403,6 +408,36 @@ export function BookingForm({
                                 />
                             </div>
                         </div>
+                         <div className="col-span-2 mt-4 space-y-4">
+                          {aircraft.type === 'Single-Engine' && (
+                              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                                  <div className="space-y-2">
+                                      <Label htmlFor="post-flight-oil">Oil</Label>
+                                      <Input id="post-flight-oil" value={postFlightOil} onChange={(e) => setPostFlightOil(e.target.value)} />
+                                  </div>
+                                  <div className="space-y-2">
+                                      <Label htmlFor="post-flight-fuel">Fuel</Label>
+                                      <Input id="post-flight-fuel" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} />
+                                  </div>
+                              </div>
+                          )}
+                          {aircraft.type === 'Multi-Engine' && (
+                              <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                                  <div className="space-y-2">
+                                      <Label htmlFor="post-flight-fuel">Fuel</Label>
+                                      <Input id="post-flight-fuel" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} />
+                                  </div>
+                                  <div className="space-y-2">
+                                      <Label htmlFor="post-flight-oil-left">Oil Left</Label>
+                                      <Input id="post-flight-oil-left" value={postFlightOilLeft} onChange={(e) => setPostFlightOilLeft(e.target.value)} />
+                                  </div>
+                                  <div className="space-y-2">
+                                      <Label htmlFor="post-flight-oil-right">Oil Right</Label>
+                                      <Input id="post-flight-oil-right" value={postFlightOilRight} onChange={(e) => setPostFlightOilRight(e.target.value)} />
+                                  </div>
+                              </div>
+                          )}
+                      </div>
                     </CollapsibleContent>
                 </Collapsible>
             </div>
