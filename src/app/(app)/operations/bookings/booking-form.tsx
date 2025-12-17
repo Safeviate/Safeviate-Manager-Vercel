@@ -12,6 +12,17 @@ import {
   DialogTitle,
   DialogClose,
 } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ChevronsUpDown, AlertCircle, Trash2 } from 'lucide-react';
@@ -38,7 +49,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { createBooking, updateBooking } from './booking-functions';
+import { createBooking, updateBooking, deleteBooking } from './booking-functions';
 
 
 interface BookingFormProps {
@@ -112,7 +123,7 @@ export function BookingForm({
   const [postFlightOilRight, setPostFlightOilRight] = useState<number | string>(existingBooking?.postFlight?.oilRight ?? '');
 
   const isChecklistNeeded = aircraft?.checklistStatus === 'needs-post-flight';
-  const preflightDisabled = !isEditMode && isChecklistNeeded;
+  const preflightDisabled = (!isEditMode && isChecklistNeeded);
 
   useEffect(() => {
     if (startTime && !isEditMode) {
@@ -249,6 +260,17 @@ export function BookingForm({
     }
   };
   
+  const handleDelete = async () => {
+    if (!firestore || !existingBooking) return;
+    try {
+        await deleteBooking(firestore, tenantId, existingBooking.id);
+        toast({ title: 'Booking Deleted', description: `Booking #${existingBooking.bookingNumber} has been deleted.` });
+        setIsOpen(false);
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Delete Failed', description: error.message });
+    }
+  };
+
   const students = useMemo(() => pilots.filter(p => p.userType === 'Student'), [pilots]);
   const instructors = useMemo(() => pilots.filter(p => p.userType === 'Instructor'), [pilots]);
   const privatePilots = useMemo(() => pilots.filter(p => p.userType === 'Private Pilot'), [pilots]);
@@ -526,15 +548,33 @@ export function BookingForm({
             </div>
         </ScrollArea>
         <DialogFooter className='justify-between pt-6'>
-            <Button variant="destructive" className="w-20" disabled={!isEditMode}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-            </Button>
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-20" disabled={!isEditMode}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete booking #{existingBooking?.bookingNumber}.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                            Delete Booking
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
             <div className='flex gap-2'>
                 <DialogClose asChild>
                     <Button variant="outline" className="w-20">Cancel</Button>
                 </DialogClose>
-                <Button onClick={() => handleSave({ closeOnSave: true })} className="w-20">Save</Button>
+                <Button onClick={() => handleSave({ closeOnSave: true })} className="w-20" disabled={preflightDisabled && !isEditMode}>Save</Button>
             </div>
         </DialogFooter>
       </DialogContent>

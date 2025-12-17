@@ -11,7 +11,7 @@ import {
     deleteField,
     writeBatch,
   } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from '@/firebase';
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking as deleteDocNonBlocking } from '@/firebase';
 import type { Booking } from '@/types/booking';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -124,7 +124,8 @@ export const updateBooking = async (
                 }
                 const dotPath = `${key}.${nestedKey}`;
                 if (nestedValue === null) {
-                    flattenedUpdateData[dotPath] = deleteField(); // Delete nested null fields
+                    // Use dot notation with deleteField() for nested null values
+                    flattenedUpdateData[dotPath] = deleteField();
                 } else {
                     flattenedUpdateData[dotPath] = nestedValue;
                 }
@@ -166,3 +167,19 @@ export const updateBooking = async (
         throw error;
     });
 }
+
+/**
+ * Deletes a booking from the database.
+ * @param firestore - The Firestore instance.
+ * @param tenantId - The ID of the tenant.
+ * @param bookingId - The ID of the booking to delete.
+ */
+export const deleteBooking = async (
+    firestore: Firestore,
+    tenantId: string,
+    bookingId: string
+) => {
+    const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, bookingId);
+    // Using the non-blocking delete function from firebase/index
+    return deleteDocNonBlocking(bookingRef);
+};
