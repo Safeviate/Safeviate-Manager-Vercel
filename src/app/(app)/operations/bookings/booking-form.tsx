@@ -69,7 +69,14 @@ export function BookingForm({
                     </div>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                    <p>Booking form fields will go here.</p>
+                    <div className="grid grid-cols-2 gap-4 pt-4">
+                        <div className="col-span-1">
+                            {/* Left column content goes here */}
+                        </div>
+                        <div className="col-span-1">
+                            {/* Right column content goes here */}
+                        </div>
+                    </div>
                 </CollapsibleContent>
             </Collapsible>
 
@@ -84,7 +91,14 @@ export function BookingForm({
                     </div>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                   {/* Pre-flight content will go here */}
+                   <div className="grid grid-cols-2 gap-4 pt-4">
+                        <div className="col-span-1">
+                            {/* Left column content goes here */}
+                        </div>
+                        <div className="col-span-1">
+                            {/* Right column content goes here */}
+                        </div>
+                    </div>
                 </CollapsibleContent>
             </Collapsible>
 
@@ -99,7 +113,14 @@ export function BookingForm({
                     </div>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                    {/* Post-flight content will go here */}
+                    <div className="grid grid-cols-2 gap-4 pt-4">
+                        <div className="col-span-1">
+                            {/* Left column content goes here */}
+                        </div>
+                        <div className="col-span-1">
+                            {/* Right column content goes here */}
+                        </div>
+                    </div>
                 </CollapsibleContent>
             </Collapsible>
         </div>
