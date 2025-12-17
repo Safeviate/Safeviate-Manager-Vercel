@@ -53,15 +53,14 @@ export function BookingForm({
             <p>Booking form fields will go here.</p>
         </div>
         <DialogFooter className='justify-between'>
-            <Button variant="destructive">
-                <Trash2 className="mr-2 h-4 w-4" />
+            <Button variant="destructive" className="w-20">
                 Delete
             </Button>
             <div className='flex gap-2'>
                 <DialogClose asChild>
-                    <Button variant="outline">Cancel</Button>
+                    <Button variant="outline" className="w-20">Cancel</Button>
                 </DialogClose>
-                <Button>Save</Button>
+                <Button className="w-20">Save</Button>
             </div>
         </DialogFooter>
       </DialogContent>
