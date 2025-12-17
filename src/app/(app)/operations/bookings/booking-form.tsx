@@ -64,6 +64,9 @@ export function BookingForm({
   const [returnEndTimeValue, setReturnEndTimeValue] = useState('01:00');
   const [originalEndTime, setOriginalEndTime] = useState('');
 
+  const [actualHobbs, setActualHobbs] = useState<number | string>('');
+  const [actualTacho, setActualTacho] = useState<number | string>('');
+
   useEffect(() => {
     if (startTime) {
       const formattedStartTime = format(startTime, 'HH:mm');
@@ -86,6 +89,13 @@ export function BookingForm({
       setEndTimeValue(originalEndTime);
     }
   }, [isOvernight, originalEndTime]);
+
+  useEffect(() => {
+    if (aircraft) {
+        setActualHobbs(aircraft.currentHobbs || '');
+        setActualTacho(aircraft.currentTacho || '');
+    }
+  }, [aircraft]);
 
   const onOpenChange = (open: boolean) => {
     if (!open) {
@@ -270,6 +280,24 @@ export function BookingForm({
                                 id="current-tacho" 
                                 value={aircraft?.currentTacho || ''} 
                                 readOnly 
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="actual-hobbs">Actual Hobbs</Label>
+                            <Input 
+                                id="actual-hobbs"
+                                type="number"
+                                value={actualHobbs}
+                                onChange={(e) => setActualHobbs(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="actual-tacho">Actual Tacho</Label>
+                            <Input 
+                                id="actual-tacho" 
+                                type="number"
+                                value={actualTacho}
+                                onChange={(e) => setActualTacho(e.target.value)}
                             />
                         </div>
                     </div>
