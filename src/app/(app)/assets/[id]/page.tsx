@@ -395,21 +395,7 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
                             </CardHeader>
                             <CardContent className='flex flex-col gap-4'>
                                 <p className="text-sm text-muted-foreground">No recent checklists found for this aircraft.</p>
-                                {checklistStatus === 'ready' ? (
-                                    <Button asChild className='w-fit'>
-                                        <Link href={`/assets/${aircraftId}/checklist?type=pre-flight`}>
-                                            <ListChecks className="mr-2 h-4 w-4" />
-                                            Start Pre-Flight Check
-                                        </Link>
-                                    </Button>
-                                ) : (
-                                    <Button asChild className='w-fit'>
-                                        <Link href={`/assets/${aircraftId}/checklist?type=post-flight`}>
-                                            <ListChecks className="mr-2 h-4 w-4" />
-                                            Start Post-Flight Check
-                                        </Link>
-                                    </Button>
-                                )}
+                                <p className="text-sm text-muted-foreground">Please start a checklist from a booking page.</p>
                             </CardContent>
                         </Card>
                     )}

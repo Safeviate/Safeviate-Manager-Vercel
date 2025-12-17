@@ -1,8 +1,7 @@
-
 'use client';
 
 import { use, useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { doc, collection, Timestamp, addDoc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import type { Booking } from '@/types/booking';
@@ -18,7 +17,6 @@ import { useToast } from '@/hooks/use-toast';
 import type { ChecklistResponse, ChecklistItemResponse } from '@/types/checklist';
 import { Input } from '@/components/ui/input';
 import type { FeatureSettings } from '@/app/(app)/admin/features/page';
-import { useRouter } from 'next/navigation';
 
 
 interface ChecklistPageProps {
@@ -66,7 +64,10 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
         () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'features') : null),
         [firestore, tenantId]
     );
-    const { data: featureSettings } = useDoc<FeatureSettings>(featureSettingsRef);
+    const { data: featureSettings } = useDoc<FeatureSettings>(featureSettingsRef, {
+        initialData: { id: 'features', preFlightChecklistRequired: true },
+    });
+
 
     useEffect(() => {
         if (checklistType === 'pre-flight' && aircraft) {
@@ -104,6 +105,7 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
         };
 
         try {
+            // Correctly reference the subcollection under the specific aircraft
             const checklistCollectionRef = collection(firestore, aircraftDocRef.path, 'completed-checklists');
             await addDoc(checklistCollectionRef, checklistResponse);
 
@@ -112,12 +114,14 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
                 description: `The ${checklistType.replace('-', ' ')} checklist has been saved.`,
             });
             
+            // Only update aircraft status if the feature is enabled
             if (featureSettings?.preFlightChecklistRequired) {
                 const aircraftUpdateData: Partial<Aircraft> = {
                     currentHobbs: Number(hobbs) || aircraft.currentHobbs,
                     currentTacho: Number(tacho) || aircraft.currentTacho,
                     checklistStatus: checklistType === 'pre-flight' ? 'needs-post-flight' : 'ready'
                 };
+                // Use update, not set, to avoid overwriting the document
                 await updateDocumentNonBlocking(aircraftDocRef, aircraftUpdateData);
             }
 
@@ -151,7 +155,6 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
         return <div className="text-center">Booking or Aircraft not found.</div>;
     }
     
-    // Combine required static docs with docs uploaded to the aircraft
     const allChecklistDocs = Array.from(new Set([...requiredAircraftDocuments, ...(aircraft.documents?.map(d => d.name) || [])]));
 
     return (
