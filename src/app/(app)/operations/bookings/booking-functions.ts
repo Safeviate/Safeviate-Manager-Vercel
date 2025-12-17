@@ -13,6 +13,9 @@ import {
   } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase';
 import type { Booking } from '@/types/booking';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+
 
 type BookingCreationData = Omit<Booking, 'id' | 'bookingNumber' | 'status' | 'startTime' | 'endTime'> & {
     startTime: Date;
@@ -100,34 +103,43 @@ export const updateBooking = async (
 ) => {
     const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, bookingId);
     
-    // Create a clean object to avoid sending undefined/null values that should be deleted
-    const cleanUpdateData: { [key: string]: any } = {};
+    // Create a clean object for the batch update using dot notation for nested fields.
+    const flattenedUpdateData: { [key: string]: any } = {};
+
     for (const key in updateData) {
         const value = updateData[key as keyof typeof updateData];
+
+        if (value === undefined) {
+            continue; // Skip undefined values
+        }
+
         if (value === null) {
-            cleanUpdateData[key] = deleteField();
-        } else if (value !== undefined) {
-             // Handle nested objects
-            if (typeof value === 'object' && !Array.isArray(value) && value !== null) {
-                const nestedCleanData: { [key: string]: any } = {};
-                 for (const nestedKey in value) {
-                    const nestedValue = (value as any)[nestedKey];
-                    if (nestedValue === null) {
-                        nestedCleanData[nestedKey] = deleteField();
-                    } else if (nestedValue !== undefined) {
-                        nestedCleanData[nestedKey] = nestedValue;
-                    }
+            flattenedUpdateData[key] = deleteField(); // Delete top-level null fields
+        } else if (typeof value === 'object' && !Array.isArray(value) && value !== null && !(value instanceof Timestamp)) {
+            // Handle nested objects (like preFlight, postFlight)
+            for (const nestedKey in value) {
+                const nestedValue = (value as any)[nestedKey];
+                if (nestedValue === undefined) {
+                    continue;
                 }
-                cleanUpdateData[key] = nestedCleanData;
-            } else {
-                cleanUpdateData[key] = value;
+                const dotPath = `${key}.${nestedKey}`;
+                if (nestedValue === null) {
+                    flattenedUpdateData[dotPath] = deleteField(); // Delete nested null fields
+                } else {
+                    flattenedUpdateData[dotPath] = nestedValue;
+                }
             }
+        } else {
+            flattenedUpdateData[key] = value; // Handle top-level primitive values
         }
     }
 
     const batch = writeBatch(firestore);
 
-    batch.update(bookingRef, cleanUpdateData);
+    // Only update if there's something to update
+    if (Object.keys(flattenedUpdateData).length > 0) {
+        batch.update(bookingRef, flattenedUpdateData);
+    }
 
     if (markAsReady) {
         const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);
@@ -147,12 +159,10 @@ export const updateBooking = async (
         const contextualError = new FirestorePermissionError({
           operation: 'write',
           path: `tenants/${tenantId}/bookings/${bookingId} (and possibly aircraft)`,
-          requestResourceData: cleanUpdateData,
+          requestResourceData: flattenedUpdateData,
         });
         errorEmitter.emit('permission-error', contextualError);
         // Re-throw the original server error to let the caller handle it
         throw error;
     });
 }
-
-    
