@@ -83,8 +83,6 @@ const AircraftColumn = ({
     const today = startOfToday();
     const isSelectedDateInPast = isBefore(selectedDate, today);
 
-    const isChecklistNeeded = aircraft?.checklistStatus === 'needs-post-flight';
-
   return (
     <div 
         className="flex-1 relative border-r min-w-[150px]"
@@ -95,7 +93,7 @@ const AircraftColumn = ({
         const endOfSlot = endOfHour(slotTime);
         const isPast = isSelectedDateInPast || (isSameDay(selectedDate, new Date()) && isBefore(endOfSlot, new Date()));
         
-        const isDisabled = isPast || isChecklistNeeded;
+        const isDisabled = isPast;
 
         return (
             <div 

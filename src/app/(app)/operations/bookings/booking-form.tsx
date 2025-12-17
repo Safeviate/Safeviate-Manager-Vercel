@@ -169,7 +169,7 @@ export function BookingForm({
         }
 
         // Add post-flight data if it's a post-flight submit or a full save
-        if (options.isPostFlight || !options.isPreFlight) {
+        if (options.isPostFlight || (!options.isPreFlight && !options.isPostFlight)) {
             updateData.postFlight = {
                 actualHobbs: Number(postFlightHobbs) || undefined,
                 actualTacho: Number(postFlightTacho) || undefined,
@@ -181,7 +181,7 @@ export function BookingForm({
         }
         
         // Finalize status on post-flight or full save
-        if (options.isPostFlight || !options.isPreFlight) {
+        if (options.isPostFlight || (!options.isPreFlight && !options.isPostFlight)) {
             const isPostFlightFilled = Number(postFlightHobbs) > 0 && Number(postFlightTacho) > 0;
             if (isPostFlightFilled) {
                 updateData.status = 'Completed';
@@ -189,7 +189,9 @@ export function BookingForm({
                 toast({ title: 'Post-Flight Submitted', description: 'Aircraft is now ready for the next booking.' });
             } else {
                  updateBooking(firestore, tenantId, existingBooking.id, updateData, aircraft.id, false);
-                 toast({ title: 'Booking Updated', description: `Booking #${existingBooking.bookingNumber} has been updated.` });
+                 if (!options.isPreFlight && !options.isPostFlight) {
+                    toast({ title: 'Booking Updated', description: `Booking #${existingBooking.bookingNumber} has been updated.` });
+                 }
             }
         } else if (options.isPreFlight) {
             updateBooking(firestore, tenantId, existingBooking.id, updateData, aircraft.id, false);
