@@ -7,7 +7,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
-import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday } from 'date-fns';
+import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, endOfHour } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -100,7 +100,8 @@ const AircraftColumn = ({
       {/* Hour lines and labels for this column */}
       {Array.from({ length: TOTAL_HOURS }).map((_, hour) => {
         const slotTime = setMinutes(setHours(selectedDate, hour), 0);
-        const isPast = isSelectedDateInPast || (isSameDay(selectedDate, today) && isBefore(slotTime, new Date()));
+        const endOfSlot = endOfHour(slotTime);
+        const isPast = isSelectedDateInPast || (isSameDay(selectedDate, new Date()) && isBefore(endOfSlot, new Date()));
 
         return (
             <div 
