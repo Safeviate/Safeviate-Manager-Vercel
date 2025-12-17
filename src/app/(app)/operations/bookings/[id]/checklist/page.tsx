@@ -122,7 +122,7 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
                     checklistStatus: checklistType === 'pre-flight' ? 'needs-post-flight' : 'ready'
                 };
                 // Use update, not set, to avoid overwriting the document
-                await updateDocumentNonBlocking(aircraftDocRef, aircraftUpdateData);
+                updateDocumentNonBlocking(aircraftDocRef, aircraftUpdateData);
             }
 
             router.push(`/operations/bookings/${booking.id}`);
