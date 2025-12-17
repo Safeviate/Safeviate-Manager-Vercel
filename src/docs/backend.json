@@ -45,6 +45,31 @@
             "type": "string",
             "description": "The status of the booking.",
             "enum": ["Confirmed", "Completed", "Cancelled", "Cancelled with Reason"]
+        },
+        "preFlight": {
+            "type": "object",
+            "description": "Pre-flight checklist data.",
+            "properties": {
+                "actualHobbs": { "type": "number" },
+                "actualTacho": { "type": "number" },
+                "oil": { "type": "number" },
+                "fuel": { "type": "number" },
+                "oilLeft": { "type": "number" },
+                "oilRight": { "type": "number" },
+                "documentsChecked": { "type": "array", "items": { "type": "string" } }
+            }
+        },
+        "postFlight": {
+            "type": "object",
+            "description": "Post-flight checklist data.",
+            "properties": {
+                "actualHobbs": { "type": "number" },
+                "actualTacho": { "type": "number" },
+                "oil": { "type": "number" },
+                "fuel": { "type": "number" },
+                "oilLeft": { "type": "number" },
+                "oilRight": { "type": "number" }
+            }
         }
       },
       "required": ["id", "aircraftId", "pilotId", "type", "startTime", "endTime"]
