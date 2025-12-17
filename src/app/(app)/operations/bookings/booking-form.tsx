@@ -77,6 +77,11 @@ export function BookingForm({
   const [actualHobbs, setActualHobbs] = useState<number | string>('');
   const [actualTacho, setActualTacho] = useState<number | string>('');
 
+  const [oil, setOil] = useState('');
+  const [fuel, setFuel] = useState('');
+  const [oilLeft, setOilLeft] = useState('');
+  const [oilRight, setOilRight] = useState('');
+
   useEffect(() => {
     if (startTime) {
       const formattedStartTime = format(startTime, 'HH:mm');
@@ -313,6 +318,39 @@ export function BookingForm({
                             />
                         </div>
                     </div>
+
+                    <div className="col-span-2 mt-4 space-y-4">
+                      {aircraft.type === 'Single-Engine' && (
+                          <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                              <div className="space-y-2">
+                                  <Label htmlFor="oil">Oil</Label>
+                                  <Input id="oil" value={oil} onChange={(e) => setOil(e.target.value)} />
+                              </div>
+                              <div className="space-y-2">
+                                  <Label htmlFor="fuel">Fuel</Label>
+                                  <Input id="fuel" value={fuel} onChange={(e) => setFuel(e.target.value)} />
+                              </div>
+                          </div>
+                      )}
+                      {aircraft.type === 'Multi-Engine' && (
+                          <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                              <div className="space-y-2">
+                                  <Label htmlFor="fuel">Fuel</Label>
+                                  <Input id="fuel" value={fuel} onChange={(e) => setFuel(e.target.value)} />
+                              </div>
+                              <div className="space-y-2">
+                                  <Label htmlFor="oil-left">Oil Left</Label>
+                                  <Input id="oil-left" value={oilLeft} onChange={(e) => setOilLeft(e.target.value)} />
+                              </div>
+                              <div className="space-y-2">
+                                  <Label htmlFor="oil-right">Oil Right</Label>
+                                  <Input id="oil-right" value={oilRight} onChange={(e) => setOilRight(e.target.value)} />
+                              </div>
+                          </div>
+                      )}
+                  </div>
+
+
                     <div className="col-span-2 mt-4 space-y-2">
                         <Separator />
                         <h4 className="text-sm font-semibold pt-2">Required documents</h4>
@@ -364,5 +402,3 @@ export function BookingForm({
     </Dialog>
   );
 }
-
-    
