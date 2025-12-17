@@ -180,7 +180,7 @@ export default function SchedulePage() {
   );
 
   const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
-  const { data: allBookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(allBookingsQuery);
+  const { data: allBookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
   const { data: pilots, isLoading: isLoadingPilots, error: pilotsError } = useCollection<PilotProfile>(pilotsQuery);
 
   const bookings = useMemo(() => {
