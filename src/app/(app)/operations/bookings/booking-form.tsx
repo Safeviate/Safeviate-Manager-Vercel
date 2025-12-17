@@ -32,6 +32,7 @@ import {
 import { format, addHours, set } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 interface BookingFormProps {
@@ -42,6 +43,15 @@ interface BookingFormProps {
   tenantId: string;
   pilots: PilotProfile[];
 }
+
+const requiredDocumentsList = [
+    { id: 'poh', label: 'POH' },
+    { id: 'cors', label: 'CoRs' },
+    { id: 'coa', label: 'CoA' },
+    { id: 'radio', label: 'Radio' },
+    { id: 'mb', label: 'M&B' },
+    { id: 'insp', label: 'Insp' },
+];
 
 export function BookingForm({
   isOpen,
@@ -306,6 +316,16 @@ export function BookingForm({
                     <div className="col-span-2 mt-4 space-y-2">
                         <Separator />
                         <h4 className="text-sm font-semibold pt-2">Required documents</h4>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
+                            {requiredDocumentsList.map((doc) => (
+                                <div key={doc.id} className="flex items-center space-x-2">
+                                    <Checkbox id={doc.id} />
+                                    <Label htmlFor={doc.id} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                        {doc.label}
+                                    </Label>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </CollapsibleContent>
             </Collapsible>
@@ -344,3 +364,5 @@ export function BookingForm({
     </Dialog>
   );
 }
+
+    
