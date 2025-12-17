@@ -15,6 +15,7 @@ import {
   BookCopy,
   Scale,
   ToggleRight,
+  BookOpen,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -55,6 +56,11 @@ export const menuConfig: MenuItem[] = [
         href: '/operations/bookings-history',
         label: 'Bookings History',
         description: 'View and manage past bookings.',
+      },
+      {
+        href: '/operations/bookings-page',
+        label: 'Bookings',
+        description: 'Create and manage bookings.',
       },
     ],
   },
