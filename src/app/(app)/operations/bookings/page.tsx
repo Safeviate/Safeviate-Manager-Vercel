@@ -318,10 +318,9 @@ export default function SchedulePage() {
             aircraft={bookingFormData.aircraft}
             startTime={bookingFormData.startTime}
             tenantId={tenantId}
+            pilots={pilots || []}
           />
       )}
     </>
   );
 }
-
-    

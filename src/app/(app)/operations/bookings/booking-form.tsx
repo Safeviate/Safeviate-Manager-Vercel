@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Trash2, ChevronsUpDown } from 'lucide-react';
 import type { Aircraft } from '../../assets/page';
+import type { PilotProfile } from '../../users/personnel/page';
 import {
   Collapsible,
   CollapsibleContent,
@@ -36,6 +37,7 @@ interface BookingFormProps {
   aircraft: Aircraft;
   startTime: Date;
   tenantId: string;
+  pilots: PilotProfile[];
 }
 
 export function BookingForm({
@@ -44,10 +46,13 @@ export function BookingForm({
   aircraft,
   startTime,
   tenantId,
+  pilots,
 }: BookingFormProps) {
   const [isBookingInfoOpen, setIsBookingInfoOpen] = useState(true);
   const [isPreFlightOpen, setIsPreFlightOpen] = useState(true);
   const [isPostFlightOpen, setIsPostFlightOpen] = useState(true);
+  
+  const [bookingType, setBookingType] = useState('');
 
   const onOpenChange = (open: boolean) => {
     if (!open) {
@@ -55,6 +60,9 @@ export function BookingForm({
     }
     setIsOpen(open);
   };
+  
+  const students = useMemo(() => pilots.filter(p => p.userType === 'Student'), [pilots]);
+  const instructors = useMemo(() => pilots.filter(p => p.userType === 'Instructor'), [pilots]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -81,15 +89,15 @@ export function BookingForm({
                         <div className="col-span-1 space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="booking-type">Booking Type</Label>
-                                <Select>
+                                <Select onValueChange={setBookingType} value={bookingType}>
                                     <SelectTrigger id="booking-type">
                                         <SelectValue placeholder="Select a flight type" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="training">Training Flight</SelectItem>
-                                        <SelectItem value="private">Private Flight</SelectItem>
-                                        <SelectItem value="reposition">Reposition Flight</SelectItem>
-                                        <SelectItem value="maintenance">Maintenance Flight</SelectItem>
+                                        <SelectItem value="Training Flight">Training Flight</SelectItem>
+                                        <SelectItem value="Private Flight">Private Flight</SelectItem>
+                                        <SelectItem value="Reposition Flight">Reposition Flight</SelectItem>
+                                        <SelectItem value="Maintenance Flight">Maintenance Flight</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -97,6 +105,40 @@ export function BookingForm({
                         <div className="col-span-1">
                             {/* Right column content goes here */}
                         </div>
+                        {bookingType === 'Training Flight' && (
+                            <>
+                                <div className="col-span-1 space-y-2">
+                                    <Label htmlFor="student">Student</Label>
+                                    <Select>
+                                        <SelectTrigger id="student">
+                                            <SelectValue placeholder="Select a student" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {students.map(student => (
+                                                <SelectItem key={student.id} value={student.id}>
+                                                    {student.firstName} {student.lastName}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="col-span-1 space-y-2">
+                                    <Label htmlFor="instructor">Instructor</Label>
+                                    <Select>
+                                        <SelectTrigger id="instructor">
+                                            <SelectValue placeholder="Select an instructor" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {instructors.map(instructor => (
+                                                <SelectItem key={instructor.id} value={instructor.id}>
+                                                    {instructor.firstName} {instructor.lastName}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </CollapsibleContent>
             </Collapsible>
