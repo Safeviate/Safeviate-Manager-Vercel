@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -255,8 +256,21 @@ export function BookingForm({
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                    <div className="grid grid-cols-2 gap-4 pt-4">
-                        <div className="col-span-2">
-                            {/* Left column content goes here */}
+                        <div className="space-y-2">
+                            <Label htmlFor="current-hobbs">Current Hobbs</Label>
+                            <Input 
+                                id="current-hobbs" 
+                                value={aircraft?.currentHobbs || ''} 
+                                readOnly 
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="current-tacho">Current Tacho</Label>
+                            <Input 
+                                id="current-tacho" 
+                                value={aircraft?.currentTacho || ''} 
+                                readOnly 
+                            />
                         </div>
                     </div>
                 </CollapsibleContent>
