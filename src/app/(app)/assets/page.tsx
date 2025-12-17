@@ -46,6 +46,7 @@ export type Aircraft = {
     weight: number;
     cg: number;
   }[];
+  checklistStatus?: 'ready' | 'needs-post-flight';
 };
 
 export default function AssetsPage() {
@@ -94,6 +95,3 @@ export default function AssetsPage() {
     </div>
   );
 }
-
-    
-    

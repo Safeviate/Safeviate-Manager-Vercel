@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Scale, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
 
 interface ViewBookingDetailsProps {
   booking: Booking;
@@ -41,13 +42,24 @@ const getBookingTypeAbbreviation = (type: Booking['type']): string => {
     }
 }
 
-const ChecklistDetails = ({ title, checklist, aircraftType, bookingId, isPreFlightDisabled, previousBookingNumber }: { title: string, checklist: ChecklistResponse | undefined, aircraftType?: string, bookingId: string, isPreFlightDisabled?: boolean, previousBookingNumber?: number }) => {
+const ChecklistDetails = ({ title, checklist, aircraftType, aircraftStatus, bookingId, isPreFlightDisabled, previousBookingNumber }: { title: string, checklist?: ChecklistResponse, aircraftType?: string, aircraftStatus?: 'ready' | 'needs-post-flight', bookingId: string, isPreFlightDisabled?: boolean, previousBookingNumber?: number }) => {
+    
+    const checklistTypeParam = title.toLowerCase().replace(' ', '-');
+    const isPreFlight = checklistTypeParam === 'pre-flight';
+
+    const statusBadge = (
+        <Badge variant={isPreFlight && aircraftStatus === 'needs-post-flight' ? 'destructive' : 'secondary'}>
+            {isPreFlight ? (aircraftStatus === 'needs-post-flight' ? 'Post-Flight Required' : 'Ready') : (checklist ? 'Completed' : 'Pending')}
+        </Badge>
+    );
+
     if (!checklist) {
-        const checklistTypeParam = title.toLowerCase().replace(' ', '-');
-        const isPreFlight = checklistTypeParam === 'pre-flight';
         return (
             <div>
-                <h4 className="font-medium text-base mb-2">{title}</h4>
+                <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-base">{title}</h4>
+                    {isPreFlight && statusBadge}
+                </div>
                 <div className='flex flex-col gap-2'>
                   <p className="text-sm text-muted-foreground">Not submitted.</p>
                   {isPreFlight && isPreFlightDisabled && (
@@ -64,7 +76,6 @@ const ChecklistDetails = ({ title, checklist, aircraftType, bookingId, isPreFlig
                     </Link>
                   </Button>
                 </div>
-
             </div>
         )
     }
@@ -89,7 +100,10 @@ const ChecklistDetails = ({ title, checklist, aircraftType, bookingId, isPreFlig
 
     return (
         <div>
-            <h4 className="font-medium text-base mb-2">{title}</h4>
+             <div className="flex items-center justify-between mb-2">
+                <h4 className="font-medium text-base">{title}</h4>
+                {isPreFlight && statusBadge}
+            </div>
             <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                 <DetailItem label="Tacho" value={findItemValue(`${checklist.checklistType}-tacho`, 'tacho')?.toFixed(2)} />
                 <DetailItem label="Hobbs" value={findItemValue(`${checklist.checklistType}-hobbs`, 'hobbs')?.toFixed(2)} />
@@ -119,13 +133,14 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, allBo
         return { isPreFlightDisabled: false, previousBooking: null }; // No previous booking, so not disabled
     }
 
-    // Check if the previous booking has a post-flight checklist
-    const hasPostFlightChecklist = allChecklists.some(
-        c => c.bookingId === previousBooking.id && c.checklistType === 'post-flight'
-    );
+    // A bit of a workaround - if aircraft status is ready, it means the post-flight was done.
+    if (aircraft?.checklistStatus === 'ready') {
+        return { isPreFlightDisabled: false, previousBooking };
+    }
 
-    return { isPreFlightDisabled: !hasPostFlightChecklist, previousBooking };
-  }, [booking, allBookings, allChecklists]);
+    return { isPreFlightDisabled: true, previousBooking };
+    
+  }, [booking, allBookings, aircraft]);
 
 
   return (
@@ -183,11 +198,17 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, allBo
                         title="Pre-Flight" 
                         checklist={preFlightChecklist} 
                         aircraftType={aircraft.type} 
+                        aircraftStatus={aircraft.checklistStatus}
                         bookingId={booking.id}
                         isPreFlightDisabled={isPreFlightDisabled}
                         previousBookingNumber={previousBooking?.bookingNumber}
                     />
-                    <ChecklistDetails title="Post-Flight" checklist={postFlightChecklist} aircraftType={aircraft.type} bookingId={booking.id}/>
+                    <ChecklistDetails 
+                        title="Post-Flight" 
+                        checklist={postFlightChecklist} 
+                        aircraftType={aircraft.type} 
+                        bookingId={booking.id}
+                    />
                 </div>
             </CardContent>
         </Card>

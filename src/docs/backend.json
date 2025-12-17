@@ -396,6 +396,11 @@
               "cg": { "type": "number", "description": "Center of Gravity (inches)" }
             }
           }
+        },
+        "checklistStatus": {
+            "type": "string",
+            "description": "Indicates the current pre/post flight checklist status of the aircraft.",
+            "enum": ["ready", "needs-post-flight"]
         }
       },
       "required": [

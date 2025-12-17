@@ -31,10 +31,16 @@ export default function BookingPage({ params }: BookingPageProps) {
     const bookingDocRef = useMemoFirebase(() => (firestore ? doc(firestore, 'tenants', tenantId, 'bookings', bookingId) : null), [firestore, tenantId, bookingId]);
     const { data: booking, isLoading: isLoadingBooking, error: bookingError } = useDoc<Booking>(bookingDocRef);
 
-    const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'aircrafts') : null), [firestore, tenantId]);
-    const pilotsQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'pilots') : null), [firestore, tenantId]);
+    const aircraftListQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'aircrafts') : null), [firestore, tenantId]);
+    const { data: aircraftList, isLoading: isLoadingAircraft } = useCollection<Aircraft>(aircraftListQuery);
     
-    const { data: aircraftList, isLoading: isLoadingAircraft } = useCollection<Aircraft>(aircraftQuery);
+    const aircraftDocRef = useMemoFirebase(() => {
+        if (!firestore || !booking) return null;
+        return doc(firestore, 'tenants', tenantId, 'aircrafts', booking.aircraftId);
+    }, [firestore, tenantId, booking]);
+    const { data: singleAircraft, isLoading: isLoadingSingleAircraft } = useDoc<Aircraft>(aircraftDocRef);
+
+    const pilotsQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'pilots') : null), [firestore, tenantId]);
     const { data: pilotList, isLoading: isLoadingPilots } = useCollection<PilotProfile>(pilotsQuery);
     
     const allBookingsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'bookings')) : null), [firestore, tenantId]);
@@ -47,12 +53,8 @@ export default function BookingPage({ params }: BookingPageProps) {
     const { data: allChecklists, isLoading: isLoadingChecklists } = useCollection<ChecklistResponse>(allChecklistsQuery);
 
 
-    const isLoading = isLoadingBooking || isLoadingAircraft || isLoadingPilots || isLoadingAllBookings || isLoadingChecklists;
-
-    const aircraft = useMemo(() => {
-        if (!booking || !aircraftList) return null;
-        return aircraftList.find(a => a.id === booking.aircraftId);
-    }, [booking, aircraftList]);
+    const isLoading = isLoadingBooking || isLoadingAircraft || isLoadingSingleAircraft || isLoadingPilots || isLoadingAllBookings || isLoadingChecklists;
+    const aircraft = singleAircraft;
 
     const pilot = useMemo(() => {
         if (!booking || !pilotList) return null;

@@ -1,10 +1,10 @@
 
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { doc } from 'firebase/firestore';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc, collection, Timestamp } from 'firebase/firestore';
+import { useDoc, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useCollection } from '@/firebase';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/app/(app)/assets/page';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -15,6 +15,10 @@ import { ArrowLeft } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import type { ChecklistResponse, ChecklistItemResponse } from '@/types/checklist';
+import { Input } from '@/components/ui/input';
+import type { FeatureSettings } from '@/app/(app)/admin/features/page';
+
 
 interface ChecklistPageProps {
     params: { id: string };
@@ -39,6 +43,8 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
     const checklistType = searchParams.get('type') || 'pre-flight';
     
     const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+    const [hobbs, setHobbs] = useState('');
+    const [tacho, setTacho] = useState('');
 
     const bookingDocRef = useMemoFirebase(
         () => (firestore ? doc(firestore, 'tenants', tenantId, 'bookings', bookingId) : null),
@@ -54,6 +60,20 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
     
     const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useDoc<Aircraft>(aircraftDocRef);
     
+    const featureSettingsRef = useMemoFirebase(
+        () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'features') : null),
+        [firestore, tenantId]
+    );
+    const { data: featureSettings } = useDoc<FeatureSettings>(featureSettingsRef);
+
+    useEffect(() => {
+        if (checklistType === 'pre-flight' && aircraft) {
+            setHobbs(aircraft.currentHobbs?.toString() || '');
+            setTacho(aircraft.currentTacho?.toString() || '');
+        }
+    }, [checklistType, aircraft]);
+
+
     const isLoading = isLoadingBooking || isLoadingAircraft;
     const error = bookingError || aircraftError;
 
@@ -61,17 +81,54 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
         setCheckedItems(prev => ({ ...prev, [itemName]: isChecked }));
     };
 
-    const handleSubmit = () => {
-        // For now, we'll just log the state. We will implement saving in the next step.
-        console.log('Checklist submission:', {
-            bookingId,
-            aircraftId: aircraft?.id,
-            checkedItems,
-        });
-        toast({
-            title: "Checklist Submitted (Simulation)",
-            description: "The checklist data has been captured and is ready to be saved.",
-        });
+    const handleSubmit = async () => {
+        if (!firestore || !booking || !aircraft) {
+            toast({ variant: "destructive", title: "Error", description: "Missing required data to submit checklist." });
+            return;
+        }
+
+        const responses: ChecklistItemResponse[] = Object.entries(checkedItems)
+            .filter(([, checked]) => checked)
+            .map(([itemId, checked]) => ({ itemId, checked }));
+
+        if(hobbs) responses.push({ itemId: `${checklistType}-hobbs`, checked: false, hobbs: Number(hobbs) });
+        if(tacho) responses.push({ itemId: `${checklistType}-tacho`, checked: false, tacho: Number(tacho) });
+        
+        const checklistResponse: Omit<ChecklistResponse, 'id'> = {
+            bookingId: booking.id,
+            pilotId: booking.pilotId,
+            checklistType: checklistType as 'pre-flight' | 'post-flight',
+            submissionTime: Timestamp.now(),
+            responses,
+        };
+
+        try {
+            const checklistCollectionRef = collection(firestore, 'tenants', tenantId, 'checklistResponses');
+            await addDocumentNonBlocking(checklistCollectionRef, checklistResponse);
+
+            toast({
+                title: "Checklist Submitted",
+                description: `The ${checklistType.replace('-', ' ')} checklist has been saved.`,
+            });
+            
+            // Only update aircraft status if the feature is enabled
+            if (featureSettings?.preFlightChecklistRequired) {
+                const aircraftUpdateData: Partial<Aircraft> = {
+                    currentHobbs: Number(hobbs) || aircraft.currentHobbs,
+                    currentTacho: Number(tacho) || aircraft.currentTacho,
+                    checklistStatus: checklistType === 'pre-flight' ? 'needs-post-flight' : 'ready'
+                };
+                updateDocumentNonBlocking(aircraftDocRef!, aircraftUpdateData);
+            }
+
+        } catch (e) {
+            console.error("Failed to submit checklist:", e);
+            toast({
+                variant: "destructive",
+                title: "Submission Failed",
+                description: "There was an error saving the checklist.",
+            });
+        }
     };
 
     if (isLoading) {
@@ -113,8 +170,17 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="hobbs">Hobbs Reading</Label>
+                            <Input id="hobbs" type="number" value={hobbs} onChange={e => setHobbs(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="tacho">Tacho Reading</Label>
+                            <Input id="tacho" type="number" value={tacho} onChange={e => setTacho(e.target.value)} />
+                        </div>
+                    </div>
                     {checklistType === 'pre-flight' && (
-                        <>
                         <div className="space-y-4">
                             <h3 className="text-lg font-medium">Onboard Documents</h3>
                             <p className="text-sm text-muted-foreground">Confirm that all required documents are present on the aircraft.</p>
@@ -133,11 +199,10 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
                                 ))}
                             </div>
                         </div>
-                        </>
                     )}
                      {checklistType === 'post-flight' && (
                          <div className="space-y-4">
-                            <p className="text-sm text-muted-foreground text-center">Post-flight checklist items will be displayed here.</p>
+                            <p className="text-sm text-muted-foreground text-center">Additional post-flight checklist items will be displayed here.</p>
                         </div>
                     )}
                 </CardContent>
