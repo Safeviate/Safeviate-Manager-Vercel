@@ -40,11 +40,11 @@ export default function BookingPage({ params }: BookingPageProps) {
     const allBookingsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'bookings')) : null), [firestore, tenantId]);
     const { data: allBookings, isLoading: isLoadingAllBookings } = useCollection<Booking>(allBookingsQuery);
 
-    const checklistsQuery = useMemoFirebase(
-      () => (firestore && bookingId ? query(collection(firestore, 'tenants', tenantId, 'checklistResponses'), where('bookingId', '==', bookingId)) : null),
-      [firestore, tenantId, bookingId]
+    const allChecklistsQuery = useMemoFirebase(
+      () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'checklistResponses')) : null),
+      [firestore, tenantId]
     );
-    const { data: checklists, isLoading: isLoadingChecklists } = useCollection<ChecklistResponse>(checklistsQuery);
+    const { data: allChecklists, isLoading: isLoadingChecklists } = useCollection<ChecklistResponse>(allChecklistsQuery);
 
 
     const isLoading = isLoadingBooking || isLoadingAircraft || isLoadingPilots || isLoadingAllBookings || isLoadingChecklists;
@@ -63,6 +63,11 @@ export default function BookingPage({ params }: BookingPageProps) {
         if (!booking || !booking.instructorId || !pilotList) return null;
         return pilotList.find(p => p.id === booking.instructorId);
     }, [booking, pilotList]);
+
+    const checklistsForCurrentBooking = useMemo(() => {
+        if (!allChecklists) return [];
+        return allChecklists.filter(c => c.bookingId === bookingId);
+    }, [allChecklists, bookingId]);
     
     
     if (isLoading) {
@@ -130,7 +135,9 @@ export default function BookingPage({ params }: BookingPageProps) {
                     aircraft={aircraft} 
                     pilot={pilot} 
                     instructor={instructor} 
-                    checklists={checklists || []}
+                    allBookings={allBookings || []}
+                    allChecklists={allChecklists || []}
+                    checklistsForCurrentBooking={checklistsForCurrentBooking}
                 />
             )}
         </div>

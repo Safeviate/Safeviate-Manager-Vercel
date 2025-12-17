@@ -7,19 +7,22 @@ import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/app/(app)/assets/page';
 import type { PilotProfile } from '@/app/(app)/users/personnel/page';
 import type { ChecklistResponse } from '@/types/checklist';
-import { format } from 'date-fns';
+import { format, isBefore } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Scale } from 'lucide-react';
+import { Scale, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ViewBookingDetailsProps {
   booking: Booking;
   aircraft: Aircraft;
   pilot: PilotProfile | null;
   instructor: PilotProfile | null;
-  checklists: ChecklistResponse[];
+  allBookings: Booking[];
+  allChecklists: ChecklistResponse[];
+  checklistsForCurrentBooking: ChecklistResponse[];
 }
 
 const DetailItem = ({ label, value, children }: { label: string; value?: string | number | null, children?: React.ReactNode }) => (
@@ -38,15 +41,24 @@ const getBookingTypeAbbreviation = (type: Booking['type']): string => {
     }
 }
 
-const ChecklistDetails = ({ title, checklist, aircraftType, bookingId }: { title: string, checklist: ChecklistResponse | undefined, aircraftType?: string, bookingId: string }) => {
+const ChecklistDetails = ({ title, checklist, aircraftType, bookingId, isPreFlightDisabled, previousBookingNumber }: { title: string, checklist: ChecklistResponse | undefined, aircraftType?: string, bookingId: string, isPreFlightDisabled?: boolean, previousBookingNumber?: number }) => {
     if (!checklist) {
         const checklistTypeParam = title.toLowerCase().replace(' ', '-');
+        const isPreFlight = checklistTypeParam === 'pre-flight';
         return (
             <div>
                 <h4 className="font-medium text-base mb-2">{title}</h4>
                 <div className='flex flex-col gap-2'>
                   <p className="text-sm text-muted-foreground">Not submitted.</p>
-                  <Button asChild variant="outline" size="sm" className="w-fit">
+                  {isPreFlight && isPreFlightDisabled && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        Post-flight checklist for previous booking #{previousBookingNumber} must be completed first.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  <Button asChild variant="outline" size="sm" className="w-fit" disabled={isPreFlight && isPreFlightDisabled}>
                     <Link href={`/operations/bookings/${bookingId}/checklist?type=${checklistTypeParam}`}>
                       Start {title} Checklist
                     </Link>
@@ -88,11 +100,33 @@ const ChecklistDetails = ({ title, checklist, aircraftType, bookingId }: { title
     )
 }
 
-export function ViewBookingDetails({ booking, aircraft, pilot, instructor, checklists }: ViewBookingDetailsProps) {
+export function ViewBookingDetails({ booking, aircraft, pilot, instructor, allBookings, allChecklists, checklistsForCurrentBooking }: ViewBookingDetailsProps) {
   const abbreviation = getBookingTypeAbbreviation(booking.type);
 
-  const preFlightChecklist = useMemo(() => checklists.find(c => c.checklistType === 'pre-flight'), [checklists]);
-  const postFlightChecklist = useMemo(() => checklists.find(c => c.checklistType === 'post-flight'), [checklists]);
+  const preFlightChecklist = useMemo(() => checklistsForCurrentBooking.find(c => c.checklistType === 'pre-flight'), [checklistsForCurrentBooking]);
+  const postFlightChecklist = useMemo(() => checklistsForCurrentBooking.find(c => c.checklistType === 'post-flight'), [checklistsForCurrentBooking]);
+
+  const { isPreFlightDisabled, previousBooking } = useMemo(() => {
+    // Find all bookings for this aircraft, excluding the current one
+    const aircraftBookings = allBookings
+        .filter(b => b.aircraftId === booking.aircraftId && b.id !== booking.id)
+        .sort((a, b) => b.endTime.toMillis() - a.endTime.toMillis()); // Sort descending by end time
+
+    // Find the most recent booking that ended before the current one started
+    const previousBooking = aircraftBookings.find(b => isBefore(b.endTime.toDate(), booking.startTime.toDate()));
+
+    if (!previousBooking) {
+        return { isPreFlightDisabled: false, previousBooking: null }; // No previous booking, so not disabled
+    }
+
+    // Check if the previous booking has a post-flight checklist
+    const hasPostFlightChecklist = allChecklists.some(
+        c => c.bookingId === previousBooking.id && c.checklistType === 'post-flight'
+    );
+
+    return { isPreFlightDisabled: !hasPostFlightChecklist, previousBooking };
+  }, [booking, allBookings, allChecklists]);
+
 
   return (
     <div className='space-y-6'>
@@ -145,7 +179,14 @@ export function ViewBookingDetails({ booking, aircraft, pilot, instructor, check
             </CardHeader>
             <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                    <ChecklistDetails title="Pre-Flight" checklist={preFlightChecklist} aircraftType={aircraft.type} bookingId={booking.id}/>
+                    <ChecklistDetails 
+                        title="Pre-Flight" 
+                        checklist={preFlightChecklist} 
+                        aircraftType={aircraft.type} 
+                        bookingId={booking.id}
+                        isPreFlightDisabled={isPreFlightDisabled}
+                        previousBookingNumber={previousBooking?.bookingNumber}
+                    />
                     <ChecklistDetails title="Post-Flight" checklist={postFlightChecklist} aircraftType={aircraft.type} bookingId={booking.id}/>
                 </div>
             </CardContent>
