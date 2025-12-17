@@ -4,7 +4,7 @@
 import { use, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { doc, collection, Timestamp } from 'firebase/firestore';
-import { useDoc, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useCollection } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/app/(app)/assets/page';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -82,7 +82,7 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
     };
 
     const handleSubmit = async () => {
-        if (!firestore || !booking || !aircraft) {
+        if (!firestore || !booking || !aircraft || !aircraftDocRef) {
             toast({ variant: "destructive", title: "Error", description: "Missing required data to submit checklist." });
             return;
         }
@@ -103,7 +103,7 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
         };
 
         try {
-            const checklistCollectionRef = collection(firestore, 'tenants', tenantId, 'checklistResponses');
+            const checklistCollectionRef = collection(firestore, aircraftDocRef.path, 'completed-checklists');
             await addDocumentNonBlocking(checklistCollectionRef, checklistResponse);
 
             toast({
@@ -111,14 +111,13 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
                 description: `The ${checklistType.replace('-', ' ')} checklist has been saved.`,
             });
             
-            // Only update aircraft status if the feature is enabled
             if (featureSettings?.preFlightChecklistRequired) {
                 const aircraftUpdateData: Partial<Aircraft> = {
                     currentHobbs: Number(hobbs) || aircraft.currentHobbs,
                     currentTacho: Number(tacho) || aircraft.currentTacho,
                     checklistStatus: checklistType === 'pre-flight' ? 'needs-post-flight' : 'ready'
                 };
-                updateDocumentNonBlocking(aircraftDocRef!, aircraftUpdateData);
+                await updateDocumentNonBlocking(aircraftDocRef, aircraftUpdateData);
             }
 
         } catch (e) {

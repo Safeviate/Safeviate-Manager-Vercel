@@ -7,7 +7,6 @@ import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase
 import type { Aircraft } from '../../../assets/page';
 import type { Booking } from '@/types/booking';
 import type { PilotProfile } from '../../../users/personnel/page';
-import type { ChecklistResponse } from '@/types/checklist';
 import { BookingForm } from '../booking-form';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -46,14 +45,8 @@ export default function BookingPage({ params }: BookingPageProps) {
     const allBookingsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'bookings')) : null), [firestore, tenantId]);
     const { data: allBookings, isLoading: isLoadingAllBookings } = useCollection<Booking>(allBookingsQuery);
 
-    const allChecklistsQuery = useMemoFirebase(
-      () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'checklistResponses')) : null),
-      [firestore, tenantId]
-    );
-    const { data: allChecklists, isLoading: isLoadingChecklists } = useCollection<ChecklistResponse>(allChecklistsQuery);
 
-
-    const isLoading = isLoadingBooking || isLoadingAircraft || isLoadingSingleAircraft || isLoadingPilots || isLoadingAllBookings || isLoadingChecklists;
+    const isLoading = isLoadingBooking || isLoadingAircraft || isLoadingSingleAircraft || isLoadingPilots || isLoadingAllBookings;
     const aircraft = singleAircraft;
 
     const pilot = useMemo(() => {
@@ -65,12 +58,6 @@ export default function BookingPage({ params }: BookingPageProps) {
         if (!booking || !booking.instructorId || !pilotList) return null;
         return pilotList.find(p => p.id === booking.instructorId);
     }, [booking, pilotList]);
-
-    const checklistsForCurrentBooking = useMemo(() => {
-        if (!allChecklists) return [];
-        return allChecklists.filter(c => c.bookingId === bookingId);
-    }, [allChecklists, bookingId]);
-    
     
     if (isLoading) {
         return (
@@ -138,8 +125,6 @@ export default function BookingPage({ params }: BookingPageProps) {
                     pilot={pilot} 
                     instructor={instructor} 
                     allBookings={allBookings || []}
-                    allChecklists={allChecklists || []}
-                    checklistsForCurrentBooking={checklistsForCurrentBooking}
                 />
             )}
         </div>

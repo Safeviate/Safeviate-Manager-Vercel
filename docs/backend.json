@@ -4,11 +4,10 @@
     "AircraftModelProfile": {
       "title": "Aircraft Model Profile",
       "type": "object",
-      "description": "Represents a weight and balance template for a specific aircraft make and model.",
+      "description": "Represents a mass and balance template for a specific aircraft make and model.",
       "properties": {
         "id": { "type": "string", "description": "Unique identifier for the profile." },
-        "make": { "type": "string", "description": "The manufacturer of the aircraft (e.g., Cessna)." },
-        "model": { "type": "string", "description": "The model of the aircraft (e.g., 172S)." },
+        "profileName": { "type": "string", "description": "The unique name for this M&B profile." },
         "emptyWeight": { "type": "number", "description": "The standard empty weight of this aircraft model (in lbs)." },
         "emptyWeightMoment": { "type": "number", "description": "The standard moment of this model at its empty weight (in lbs-in)." },
         "maxTakeoffWeight": { "type": "number", "description": "Maximum allowable takeoff weight (in lbs)." },
@@ -57,7 +56,33 @@
         "yMin": { "type": "number", "description": "Minimum value for the CG chart's Y-axis (Weight)." },
         "yMax": { "type": "number", "description": "Maximum value for the CG chart's Y-axis (Weight)." }
       },
-      "required": ["id", "make", "model"]
+      "required": ["id", "profileName"]
+    },
+    "MassAndBalance": {
+      "title": "Mass and Balance",
+      "type": "object",
+      "description": "A snapshot of a mass and balance calculation for a booking.",
+      "properties": {
+        "totalWeight": { "type": "number" },
+        "totalCg": { "type": "number" },
+        "isSafe": { "type": "boolean" },
+        "calculationDate": { "type": "string", "format": "date-time" },
+        "stations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "number" },
+              "name": { "type": "string" },
+              "weight": { "type": "number" },
+              "arm": { "type": "number" },
+              "type": { "type": "string" },
+              "gallons": { "type": "number" },
+              "maxGallons": { "type": "number" }
+            }
+          }
+        }
+      }
     },
     "Booking": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -112,6 +137,9 @@
         "cancellationReason": {
             "type": "string",
             "description": "The reason for the booking cancellation."
+        },
+        "massAndBalance": {
+            "$ref": "#/backend/entities/MassAndBalance"
         }
       },
       "required": ["id", "bookingNumber", "aircraftId", "pilotId", "type", "startTime", "endTime", "status"]
@@ -368,6 +396,11 @@
               "cg": { "type": "number", "description": "Center of Gravity (inches)" }
             }
           }
+        },
+        "checklistStatus": {
+            "type": "string",
+            "description": "Indicates the current pre/post flight checklist status of the aircraft.",
+            "enum": ["ready", "needs-post-flight"]
         }
       },
       "required": [
@@ -609,6 +642,15 @@
         "tenantId"
       ]
     },
+    "FeatureSettings": {
+      "title": "Feature Settings",
+      "type": "object",
+      "description": "Represents tenant-wide feature flags and settings.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the feature settings document." },
+        "preFlightChecklistRequired": { "type": "boolean", "description": "If true, pre-flight checklists are mandatory and block subsequent bookings if not completed." }
+      }
+    },
     "WarningPeriod": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "title": "WarningPeriod",
@@ -731,13 +773,13 @@
   "firestore": {
     "structure": [
       {
-        "path": "tenants/{tenantId}/aircraftModelProfiles/{profileId}",
+        "path": "tenants/{tenantId}/massAndBalance/{profileId}",
         "definition": {
           "entityName": "AircraftModelProfile",
           "schema": {
             "$ref": "#/backend/entities/AircraftModelProfile"
           },
-          "description": "Stores W&B templates for aircraft models.",
+          "description": "Stores M&B templates for aircraft models.",
           "params": [
             { "name": "tenantId", "description": "Tenant ID." },
             { "name": "profileId", "description": "Profile ID." }
@@ -817,6 +859,21 @@
               "name": "aircraftId",
               "description": "Unique identifier for the aircraft."
             }
+          ]
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/aircrafts/{aircraftId}/completed-checklists/{checklistId}",
+        "definition": {
+          "entityName": "ChecklistResponse",
+          "schema": {
+            "$ref": "#/backend/entities/ChecklistResponse"
+          },
+          "description": "Stores completed checklist responses for a specific aircraft.",
+          "params": [
+            { "name": "tenantId", "description": "Tenant ID." },
+            { "name": "aircraftId", "description": "Aircraft ID." },
+            { "name": "checklistId", "description": "Checklist Response ID." }
           ]
         }
       },
@@ -955,7 +1012,7 @@
           "schema": {
             "$ref": "#/backend/entities/Settings"
           },
-          "description": "Stores the application settings for a tenant. A single document can hold multiple settings, e.g., 'document-expiry'.",
+          "description": "Stores application settings for a tenant. A single document can hold multiple settings, e.g., 'document-expiry' or 'features'.",
           "params": [
             {
               "name": "tenantId",
@@ -963,7 +1020,7 @@
             },
             {
               "name": "settingsId",
-              "description": "Unique identifier for the settings document (e.g., 'theme', 'document-expiry')."
+              "description": "Unique identifier for the settings document (e.g., 'theme', 'document-expiry', 'features')."
             }
           ]
         }
@@ -1004,26 +1061,6 @@
             {
               "name": "counterId",
               "description": "The name of the counter (e.g., 'bookings')."
-            }
-          ]
-        }
-      },
-      {
-        "path": "tenants/{tenantId}/checklistResponses/{responseId}",
-        "definition": {
-          "entityName": "ChecklistResponse",
-          "schema": {
-            "$ref": "#/backend/entities/ChecklistResponse"
-          },
-          "description": "Stores submitted checklist responses for bookings.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "Unique identifier for the tenant."
-            },
-            {
-              "name": "responseId",
-              "description": "Unique identifier for the checklist response."
             }
           ]
         }

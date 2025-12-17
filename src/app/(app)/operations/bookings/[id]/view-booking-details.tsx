@@ -15,6 +15,9 @@ import { Scale, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+
 
 interface ViewBookingDetailsProps {
   booking: Booking;
@@ -22,8 +25,6 @@ interface ViewBookingDetailsProps {
   pilot: PilotProfile | null;
   instructor: PilotProfile | null;
   allBookings: Booking[];
-  allChecklists: ChecklistResponse[];
-  checklistsForCurrentBooking: ChecklistResponse[];
 }
 
 const DetailItem = ({ label, value, children }: { label: string; value?: string | number | null, children?: React.ReactNode }) => (
@@ -114,11 +115,20 @@ const ChecklistDetails = ({ title, checklist, aircraftType, aircraftStatus, book
     )
 }
 
-export function ViewBookingDetails({ booking, aircraft, pilot, instructor, allBookings, allChecklists, checklistsForCurrentBooking }: ViewBookingDetailsProps) {
+export function ViewBookingDetails({ booking, aircraft, pilot, instructor, allBookings }: ViewBookingDetailsProps) {
   const abbreviation = getBookingTypeAbbreviation(booking.type);
+  const firestore = useFirestore();
+  const tenantId = 'safeviate';
 
-  const preFlightChecklist = useMemo(() => checklistsForCurrentBooking.find(c => c.checklistType === 'pre-flight'), [checklistsForCurrentBooking]);
-  const postFlightChecklist = useMemo(() => checklistsForCurrentBooking.find(c => c.checklistType === 'post-flight'), [checklistsForCurrentBooking]);
+  const checklistsQuery = useMemoFirebase(
+    () => (firestore && aircraft ? query(collection(firestore, 'tenants', tenantId, 'aircrafts', aircraft.id, 'completed-checklists'), where('bookingId', '==', booking.id)) : null),
+    [firestore, tenantId, aircraft, booking.id]
+  );
+  const { data: checklistsForCurrentBooking } = useCollection<ChecklistResponse>(checklistsQuery);
+
+
+  const preFlightChecklist = useMemo(() => checklistsForCurrentBooking?.find(c => c.checklistType === 'pre-flight'), [checklistsForCurrentBooking]);
+  const postFlightChecklist = useMemo(() => checklistsForCurrentBooking?.find(c => c.checklistType === 'post-flight'), [checklistsForCurrentBooking]);
 
   const { isPreFlightDisabled, previousBooking } = useMemo(() => {
     // Find all bookings for this aircraft, excluding the current one
