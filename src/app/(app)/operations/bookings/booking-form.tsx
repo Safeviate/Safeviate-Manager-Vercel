@@ -33,6 +33,7 @@ import { format, addHours, set } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 interface BookingFormProps {
@@ -133,261 +134,263 @@ export function BookingForm({
             Create a new booking for {aircraft.tailNumber} on {format(startTime, 'PPP')}.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-            <Collapsible open={isBookingInfoOpen} onOpenChange={setIsBookingInfoOpen} className="space-y-2">
-                <CollapsibleTrigger asChild>
-                    <div className='flex items-center justify-between border-b pb-2 cursor-pointer'>
-                        <h4 className="text-sm font-semibold">Booking Information</h4>
-                        <Button variant="ghost" size="sm" className="w-9 p-0">
-                            <ChevronsUpDown className="h-4 w-4" />
-                            <span className="sr-only">Toggle</span>
-                        </Button>
-                    </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                    <div className="grid grid-cols-2 gap-4 pt-4">
-                        <div className="col-span-2 space-y-2">
-                            <Label htmlFor="booking-type">Booking Type</Label>
-                            <Select onValueChange={setBookingType} value={bookingType}>
-                                <SelectTrigger id="booking-type">
-                                    <SelectValue placeholder="Select a flight type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Training Flight">Training Flight</SelectItem>
-                                    <SelectItem value="Private Flight">Private Flight</SelectItem>
-                                    <SelectItem value="Reposition Flight">Reposition Flight</SelectItem>
-                                    <SelectItem value="Maintenance Flight">Maintenance Flight</SelectItem>
-                                </SelectContent>
-                            </Select>
+        <ScrollArea className="max-h-[60vh] pr-6">
+            <div className="grid gap-4 py-4">
+                <Collapsible open={isBookingInfoOpen} onOpenChange={setIsBookingInfoOpen} className="space-y-2">
+                    <CollapsibleTrigger asChild>
+                        <div className='flex items-center justify-between border-b pb-2 cursor-pointer'>
+                            <h4 className="text-sm font-semibold">Booking Information</h4>
+                            <Button variant="ghost" size="sm" className="w-9 p-0">
+                                <ChevronsUpDown className="h-4 w-4" />
+                                <span className="sr-only">Toggle</span>
+                            </Button>
                         </div>
-                        
-                        {bookingType === 'Training Flight' && (
-                            <>
-                                <div className="col-span-1 space-y-2">
-                                    <Label htmlFor="student">Student</Label>
-                                    <Select>
-                                        <SelectTrigger id="student">
-                                            <SelectValue placeholder="Select a student" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {students.map(student => (
-                                                <SelectItem key={student.id} value={student.id}>
-                                                    {student.firstName} {student.lastName}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="col-span-1 space-y-2">
-                                    <Label htmlFor="instructor">Instructor</Label>
-                                    <Select>
-                                        <SelectTrigger id="instructor">
-                                            <SelectValue placeholder="Select an instructor" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {instructors.map(instructor => (
-                                                <SelectItem key={instructor.id} value={instructor.id}>
-                                                    {instructor.firstName} {instructor.lastName}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </>
-                        )}
-                        {bookingType === 'Private Flight' && (
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                        <div className="grid grid-cols-2 gap-4 pt-4">
                             <div className="col-span-2 space-y-2">
-                                <Label htmlFor="private-pilot">Pilot</Label>
-                                <Select>
-                                    <SelectTrigger id="private-pilot">
-                                        <SelectValue placeholder="Select a pilot" />
+                                <Label htmlFor="booking-type">Booking Type</Label>
+                                <Select onValueChange={setBookingType} value={bookingType}>
+                                    <SelectTrigger id="booking-type">
+                                        <SelectValue placeholder="Select a flight type" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {privatePilots.map(pilot => (
-                                            <SelectItem key={pilot.id} value={pilot.id}>
-                                                {pilot.firstName} {pilot.lastName}
-                                            </SelectItem>
-                                        ))}
+                                        <SelectItem value="Training Flight">Training Flight</SelectItem>
+                                        <SelectItem value="Private Flight">Private Flight</SelectItem>
+                                        <SelectItem value="Reposition Flight">Reposition Flight</SelectItem>
+                                        <SelectItem value="Maintenance Flight">Maintenance Flight</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
-                        )}
-
-                        <div className="space-y-2">
-                            <Label htmlFor="start-time">Start Time</Label>
-                            <Input 
-                                id="start-time" 
-                                type="time"
-                                value={startTimeValue}
-                                onChange={(e) => setStartTimeValue(e.target.value)}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="end-time">End Time</Label>
-                            <Input 
-                                id="end-time" 
-                                type="time" 
-                                value={endTimeValue}
-                                onChange={(e) => setEndTimeValue(e.target.value)}
-                                readOnly={isOvernight}
-                            />
-                        </div>
-
-                        <div className="col-span-2 flex items-center space-x-2 pt-2">
-                            <Switch id="overnight-mode" checked={isOvernight} onCheckedChange={setIsOvernight} />
-                            <Label htmlFor="overnight-mode">Overnight</Label>
-                        </div>
-                        
-                        {isOvernight && (
-                            <div className="col-span-2 space-y-4 pt-2">
-                                <Separator />
-                                <h4 className="text-sm font-semibold">Return Details</h4>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="return-start-time">Start Time</Label>
-                                        <Input
-                                            id="return-start-time"
-                                            type="time"
-                                            value={returnStartTimeValue}
-                                            readOnly
-                                        />
+                            
+                            {bookingType === 'Training Flight' && (
+                                <>
+                                    <div className="col-span-1 space-y-2">
+                                        <Label htmlFor="student">Student</Label>
+                                        <Select>
+                                            <SelectTrigger id="student">
+                                                <SelectValue placeholder="Select a student" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {students.map(student => (
+                                                    <SelectItem key={student.id} value={student.id}>
+                                                        {student.firstName} {student.lastName}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="return-end-time">End Time</Label>
-                                        <Input
-                                            id="return-end-time"
-                                            type="time"
-                                            value={returnEndTimeValue}
-                                            onChange={(e) => setReturnEndTimeValue(e.target.value)}
-                                        />
+                                    <div className="col-span-1 space-y-2">
+                                        <Label htmlFor="instructor">Instructor</Label>
+                                        <Select>
+                                            <SelectTrigger id="instructor">
+                                                <SelectValue placeholder="Select an instructor" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {instructors.map(instructor => (
+                                                    <SelectItem key={instructor.id} value={instructor.id}>
+                                                        {instructor.firstName} {instructor.lastName}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
+                                </>
+                            )}
+                            {bookingType === 'Private Flight' && (
+                                <div className="col-span-2 space-y-2">
+                                    <Label htmlFor="private-pilot">Pilot</Label>
+                                    <Select>
+                                        <SelectTrigger id="private-pilot">
+                                            <SelectValue placeholder="Select a pilot" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {privatePilots.map(pilot => (
+                                                <SelectItem key={pilot.id} value={pilot.id}>
+                                                    {pilot.firstName} {pilot.lastName}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
+                            )}
+
+                            <div className="space-y-2">
+                                <Label htmlFor="start-time">Start Time</Label>
+                                <Input 
+                                    id="start-time" 
+                                    type="time"
+                                    value={startTimeValue}
+                                    onChange={(e) => setStartTimeValue(e.target.value)}
+                                />
                             </div>
-                        )}
+                            <div className="space-y-2">
+                                <Label htmlFor="end-time">End Time</Label>
+                                <Input 
+                                    id="end-time" 
+                                    type="time" 
+                                    value={endTimeValue}
+                                    onChange={(e) => setEndTimeValue(e.target.value)}
+                                    readOnly={isOvernight}
+                                />
+                            </div>
 
-                    </div>
-                </CollapsibleContent>
-            </Collapsible>
-
-            <Collapsible open={isPreFlightOpen} onOpenChange={setIsPreFlightOpen} className="space-y-2">
-                <CollapsibleTrigger asChild>
-                    <div className='flex items-center justify-between border-b pb-2 cursor-pointer'>
-                        <h4 className="text-sm font-semibold">Pre-Flight Checks</h4>
-                        <Button variant="ghost" size="sm" className="w-9 p-0">
-                            <ChevronsUpDown className="h-4 w-4" />
-                            <span className="sr-only">Toggle</span>
-                        </Button>
-                    </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                   <div className="grid grid-cols-2 gap-4 pt-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="current-hobbs">Current Hobbs</Label>
-                            <Input 
-                                id="current-hobbs" 
-                                value={aircraft?.currentHobbs || ''} 
-                                readOnly 
-                                disabled
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="current-tacho">Current Tacho</Label>
-                            <Input 
-                                id="current-tacho" 
-                                value={aircraft?.currentTacho || ''} 
-                                readOnly 
-                                disabled
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="actual-hobbs">Actual Hobbs</Label>
-                            <Input 
-                                id="actual-hobbs"
-                                type="number"
-                                value={actualHobbs}
-                                onChange={(e) => setActualHobbs(e.target.value)}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="actual-tacho">Actual Tacho</Label>
-                            <Input 
-                                id="actual-tacho" 
-                                type="number"
-                                value={actualTacho}
-                                onChange={(e) => setActualTacho(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="col-span-2 mt-4 space-y-4">
-                      {aircraft.type === 'Single-Engine' && (
-                          <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                              <div className="space-y-2">
-                                  <Label htmlFor="oil">Oil</Label>
-                                  <Input id="oil" value={oil} onChange={(e) => setOil(e.target.value)} />
-                              </div>
-                              <div className="space-y-2">
-                                  <Label htmlFor="fuel">Fuel</Label>
-                                  <Input id="fuel" value={fuel} onChange={(e) => setFuel(e.target.value)} />
-                              </div>
-                          </div>
-                      )}
-                      {aircraft.type === 'Multi-Engine' && (
-                          <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-                              <div className="space-y-2">
-                                  <Label htmlFor="fuel">Fuel</Label>
-                                  <Input id="fuel" value={fuel} onChange={(e) => setFuel(e.target.value)} />
-                              </div>
-                              <div className="space-y-2">
-                                  <Label htmlFor="oil-left">Oil Left</Label>
-                                  <Input id="oil-left" value={oilLeft} onChange={(e) => setOilLeft(e.target.value)} />
-                              </div>
-                              <div className="space-y-2">
-                                  <Label htmlFor="oil-right">Oil Right</Label>
-                                  <Input id="oil-right" value={oilRight} onChange={(e) => setOilRight(e.target.value)} />
-                              </div>
-                          </div>
-                      )}
-                  </div>
-
-
-                    <div className="col-span-2 mt-4 space-y-2">
-                        <Separator />
-                        <h4 className="text-sm font-semibold pt-2">Required documents</h4>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
-                            {requiredDocumentsList.map((doc) => (
-                                <div key={doc.id} className="flex items-center space-x-2">
-                                    <Checkbox id={doc.id} />
-                                    <Label htmlFor={doc.id} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                        {doc.label}
-                                    </Label>
+                            <div className="col-span-2 flex items-center space-x-2 pt-2">
+                                <Switch id="overnight-mode" checked={isOvernight} onCheckedChange={setIsOvernight} />
+                                <Label htmlFor="overnight-mode">Overnight</Label>
+                            </div>
+                            
+                            {isOvernight && (
+                                <div className="col-span-2 space-y-4 pt-2">
+                                    <Separator />
+                                    <h4 className="text-sm font-semibold">Return Details</h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="return-start-time">Start Time</Label>
+                                            <Input
+                                                id="return-start-time"
+                                                type="time"
+                                                value={returnStartTimeValue}
+                                                readOnly
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="return-end-time">End Time</Label>
+                                            <Input
+                                                id="return-end-time"
+                                                type="time"
+                                                value={returnEndTimeValue}
+                                                onChange={(e) => setReturnEndTimeValue(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                </CollapsibleContent>
-            </Collapsible>
+                            )}
 
-            <Collapsible open={isPostFlightOpen} onOpenChange={setIsPostFlightOpen} className="space-y-2">
-                <CollapsibleTrigger asChild>
-                    <div className='flex items-center justify-between border-b pb-2 cursor-pointer'>
-                        <h4 className="text-sm font-semibold">Post-Flight Checks</h4>
-                        <Button variant="ghost" size="sm" className="w-9 p-0">
-                            <ChevronsUpDown className="h-4 w-4" />
-                            <span className="sr-only">Toggle</span>
-                        </Button>
-                    </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                    <div className="grid grid-cols-2 gap-4 pt-4">
-                        <div className="col-span-2">
-                            {/* Left column content goes here */}
                         </div>
-                    </div>
-                </CollapsibleContent>
-            </Collapsible>
-        </div>
-        <DialogFooter className='justify-between'>
+                    </CollapsibleContent>
+                </Collapsible>
+
+                <Collapsible open={isPreFlightOpen} onOpenChange={setIsPreFlightOpen} className="space-y-2">
+                    <CollapsibleTrigger asChild>
+                        <div className='flex items-center justify-between border-b pb-2 cursor-pointer'>
+                            <h4 className="text-sm font-semibold">Pre-Flight Checks</h4>
+                            <Button variant="ghost" size="sm" className="w-9 p-0">
+                                <ChevronsUpDown className="h-4 w-4" />
+                                <span className="sr-only">Toggle</span>
+                            </Button>
+                        </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                       <div className="grid grid-cols-2 gap-4 pt-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="current-hobbs">Current Hobbs</Label>
+                                <Input 
+                                    id="current-hobbs" 
+                                    value={aircraft?.currentHobbs || ''} 
+                                    readOnly 
+                                    disabled
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="current-tacho">Current Tacho</Label>
+                                <Input 
+                                    id="current-tacho" 
+                                    value={aircraft?.currentTacho || ''} 
+                                    readOnly 
+                                    disabled
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="actual-hobbs">Actual Hobbs</Label>
+                                <Input 
+                                    id="actual-hobbs"
+                                    type="number"
+                                    value={actualHobbs}
+                                    onChange={(e) => setActualHobbs(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="actual-tacho">Actual Tacho</Label>
+                                <Input 
+                                    id="actual-tacho" 
+                                    type="number"
+                                    value={actualTacho}
+                                    onChange={(e) => setActualTacho(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="col-span-2 mt-4 space-y-4">
+                          {aircraft.type === 'Single-Engine' && (
+                              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                                  <div className="space-y-2">
+                                      <Label htmlFor="oil">Oil</Label>
+                                      <Input id="oil" value={oil} onChange={(e) => setOil(e.target.value)} />
+                                  </div>
+                                  <div className="space-y-2">
+                                      <Label htmlFor="fuel">Fuel</Label>
+                                      <Input id="fuel" value={fuel} onChange={(e) => setFuel(e.target.value)} />
+                                  </div>
+                              </div>
+                          )}
+                          {aircraft.type === 'Multi-Engine' && (
+                              <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                                  <div className="space-y-2">
+                                      <Label htmlFor="fuel">Fuel</Label>
+                                      <Input id="fuel" value={fuel} onChange={(e) => setFuel(e.target.value)} />
+                                  </div>
+                                  <div className="space-y-2">
+                                      <Label htmlFor="oil-left">Oil Left</Label>
+                                      <Input id="oil-left" value={oilLeft} onChange={(e) => setOilLeft(e.target.value)} />
+                                  </div>
+                                  <div className="space-y-2">
+                                      <Label htmlFor="oil-right">Oil Right</Label>
+                                      <Input id="oil-right" value={oilRight} onChange={(e) => setOilRight(e.target.value)} />
+                                  </div>
+                              </div>
+                          )}
+                      </div>
+
+
+                        <div className="col-span-2 mt-4 space-y-2">
+                            <Separator />
+                            <h4 className="text-sm font-semibold pt-2">Required documents</h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
+                                {requiredDocumentsList.map((doc) => (
+                                    <div key={doc.id} className="flex items-center space-x-2">
+                                        <Checkbox id={doc.id} />
+                                        <Label htmlFor={doc.id} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                            {doc.label}
+                                        </Label>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </CollapsibleContent>
+                </Collapsible>
+
+                <Collapsible open={isPostFlightOpen} onOpenChange={setIsPostFlightOpen} className="space-y-2">
+                    <CollapsibleTrigger asChild>
+                        <div className='flex items-center justify-between border-b pb-2 cursor-pointer'>
+                            <h4 className="text-sm font-semibold">Post-Flight Checks</h4>
+                            <Button variant="ghost" size="sm" className="w-9 p-0">
+                                <ChevronsUpDown className="h-4 w-4" />
+                                <span className="sr-only">Toggle</span>
+                            </Button>
+                        </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                        <div className="grid grid-cols-2 gap-4 pt-4">
+                            <div className="col-span-2">
+                                {/* Left column content goes here */}
+                            </div>
+                        </div>
+                    </CollapsibleContent>
+                </Collapsible>
+            </div>
+        </ScrollArea>
+        <DialogFooter className='justify-between pt-6'>
             <Button variant="destructive" className="w-20">
                 Delete
             </Button>
@@ -402,3 +405,5 @@ export function BookingForm({
     </Dialog>
   );
 }
+
+    
