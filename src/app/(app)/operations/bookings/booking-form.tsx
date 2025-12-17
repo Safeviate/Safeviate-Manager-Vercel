@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, ChevronsUpDown } from 'lucide-react';
+import { ChevronsUpDown } from 'lucide-react';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
 import {
@@ -29,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { format, addHours } from 'date-fns';
 
 
 interface BookingFormProps {
@@ -49,10 +49,20 @@ export function BookingForm({
   pilots,
 }: BookingFormProps) {
   const [isBookingInfoOpen, setIsBookingInfoOpen] = useState(true);
-  const [isPreFlightOpen, setIsPreFlightOpen] = useState(true);
-  const [isPostFlightOpen, setIsPostFlightOpen] = useState(true);
+  const [isPreFlightOpen, setIsPreFlightOpen] = useState(false);
+  const [isPostFlightOpen, setIsPostFlightOpen] = useState(false);
   
   const [bookingType, setBookingType] = useState('');
+  const [startTimeValue, setStartTimeValue] = useState('');
+  const [endTimeValue, setEndTimeValue] = useState('');
+
+  useEffect(() => {
+    if (startTime) {
+      setStartTimeValue(format(startTime, 'HH:mm'));
+      const endTimeDate = addHours(startTime, 1);
+      setEndTimeValue(format(endTimeDate, 'HH:mm'));
+    }
+  }, [startTime]);
 
   const onOpenChange = (open: boolean) => {
     if (!open) {
@@ -71,7 +81,7 @@ export function BookingForm({
         <DialogHeader>
           <DialogTitle>Create Booking</DialogTitle>
           <DialogDescription>
-            Create a new booking for {aircraft.tailNumber} at {startTime.toLocaleTimeString()}.
+            Create a new booking for {aircraft.tailNumber} on {format(startTime, 'PPP')}.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -153,6 +163,25 @@ export function BookingForm({
                                 </Select>
                             </div>
                         )}
+
+                        <div className="space-y-2">
+                            <Label htmlFor="start-time">Start Time</Label>
+                            <Input 
+                                id="start-time" 
+                                type="time"
+                                value={startTimeValue}
+                                onChange={(e) => setStartTimeValue(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="end-time">End Time</Label>
+                            <Input 
+                                id="end-time" 
+                                type="time" 
+                                value={endTimeValue}
+                                onChange={(e) => setEndTimeValue(e.target.value)}
+                            />
+                        </div>
                     </div>
                 </CollapsibleContent>
             </Collapsible>
