@@ -396,11 +396,11 @@ export function BookingForm({
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="actual-hobbs">Actual Hobbs</Label>
-                                <Input id="actual-hobbs" type="number" value={preFlightHobbs} onChange={(e) => setPreFlightHobbs(e.target.value)} />
+                                <Input id="actual-hobbs" type="number" value={preFlightHobbs} onChange={(e) => setPreFlightHobbs(e.target.value)} disabled={preflightDisabled} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="actual-tacho">Actual Tacho</Label>
-                                <Input id="actual-tacho" type="number" value={preFlightTacho} onChange={(e) => setPreFlightTacho(e.target.value)} />
+                                <Input id="actual-tacho" type="number" value={preFlightTacho} onChange={(e) => setPreFlightTacho(e.target.value)} disabled={preflightDisabled} />
                             </div>
                         </div>
 
@@ -409,11 +409,11 @@ export function BookingForm({
                               <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                                   <div className="space-y-2">
                                       <Label htmlFor="oil">Oil</Label>
-                                      <Input id="oil" type="number" value={preFlightOil} onChange={(e) => setPreFlightOil(e.target.value)} />
+                                      <Input id="oil" type="number" value={preFlightOil} onChange={(e) => setPreFlightOil(e.target.value)} disabled={preflightDisabled} />
                                   </div>
                                   <div className="space-y-2">
                                       <Label htmlFor="fuel">Fuel</Label>
-                                      <Input id="fuel" type="number" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} />
+                                      <Input id="fuel" type="number" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} disabled={preflightDisabled} />
                                   </div>
                               </div>
                           )}
@@ -421,15 +421,15 @@ export function BookingForm({
                               <div className="grid grid-cols-3 gap-4 pt-4 border-t">
                                   <div className="space-y-2">
                                       <Label htmlFor="fuel">Fuel</Label>
-                                      <Input id="fuel" type="number" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} />
+                                      <Input id="fuel" type="number" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} disabled={preflightDisabled} />
                                   </div>
                                   <div className="space-y-2">
                                       <Label htmlFor="oil-left">Oil Left</Label>
-                                      <Input id="oil-left" type="number" value={preFlightOilLeft} onChange={(e) => setPreFlightOilLeft(e.target.value)} />
+                                      <Input id="oil-left" type="number" value={preFlightOilLeft} onChange={(e) => setPreFlightOilLeft(e.target.value)} disabled={preflightDisabled} />
                                   </div>
                                   <div className="space-y-2">
                                       <Label htmlFor="oil-right">Oil Right</Label>
-                                      <Input id="oil-right" type="number" value={preFlightOilRight} onChange={(e) => setPreFlightOilRight(e.target.value)} />
+                                      <Input id="oil-right" type="number" value={preFlightOilRight} onChange={(e) => setPreFlightOilRight(e.target.value)} disabled={preflightDisabled} />
                                   </div>
                               </div>
                           )}
@@ -448,6 +448,7 @@ export function BookingForm({
                                             onCheckedChange={(checked) => {
                                                 setCheckedDocs(prev => checked ? [...prev, doc.id] : prev.filter(id => id !== doc.id))
                                             }}
+                                            disabled={preflightDisabled}
                                         />
                                         <Label htmlFor={doc.id} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                                             {doc.label}
@@ -458,7 +459,7 @@ export function BookingForm({
                         </div>
                         {isEditMode && 
                             <div className="flex justify-end pt-4">
-                                <Button onClick={() => handleSave({ closeOnSave: false, isPreFlight: true })}>Submit Pre-Flight</Button>
+                                <Button onClick={() => handleSave({ closeOnSave: false, isPreFlight: true })} disabled={preflightDisabled}>Submit Pre-Flight</Button>
                             </div>
                         }
                     </CollapsibleContent>
