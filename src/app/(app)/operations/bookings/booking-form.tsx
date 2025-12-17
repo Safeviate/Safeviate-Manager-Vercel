@@ -243,7 +243,7 @@ export function BookingForm({
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-4">
-            <div className="grid gap-4 py-4">
+            <div className="grid gap-4 py-4 pr-2">
                 {preflightDisabled && (
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
@@ -458,11 +458,11 @@ export function BookingForm({
                         <div className="grid grid-cols-2 gap-4 pt-4">
                            <div className="space-y-2">
                                 <Label htmlFor="post-actual-hobbs">Actual Hobbs</Label>
-                                <Input id="post-actual-hobbs" type="number" value={postFlightHobbs} onChange={(e) => setPostFlightHobbs(e.target.value)} />
+                                <Input id="post-actual-hobbs" type="number" value={postFlightHobbs} onChange={(e) => setPostFlightHobbs(e.target.value)} disabled={!isEditMode} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="post-actual-tacho">Actual Tacho</Label>
-                                <Input id="post-actual-tacho" type="number" value={postFlightTacho} onChange={(e) => setPostFlightTacho(e.target.value)} />
+                                <Input id="post-actual-tacho" type="number" value={postFlightTacho} onChange={(e) => setPostFlightTacho(e.target.value)} disabled={!isEditMode} />
                             </div>
                         </div>
                          <div className="col-span-2 mt-4 space-y-4">
@@ -470,11 +470,11 @@ export function BookingForm({
                               <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                                   <div className="space-y-2">
                                       <Label htmlFor="post-flight-oil">Oil</Label>
-                                      <Input id="post-flight-oil" value={postFlightOil} onChange={(e) => setPostFlightOil(e.target.value)} />
+                                      <Input id="post-flight-oil" value={postFlightOil} onChange={(e) => setPostFlightOil(e.target.value)} disabled={!isEditMode} />
                                   </div>
                                   <div className="space-y-2">
                                       <Label htmlFor="post-flight-fuel">Fuel</Label>
-                                      <Input id="post-flight-fuel" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} />
+                                      <Input id="post-flight-fuel" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} disabled={!isEditMode} />
                                   </div>
                               </div>
                           )}
@@ -482,21 +482,21 @@ export function BookingForm({
                               <div className="grid grid-cols-3 gap-4 pt-4 border-t">
                                   <div className="space-y-2">
                                       <Label htmlFor="post-flight-fuel">Fuel</Label>
-                                      <Input id="post-flight-fuel" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} />
+                                      <Input id="post-flight-fuel" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} disabled={!isEditMode} />
                                   </div>
                                   <div className="space-y-2">
                                       <Label htmlFor="post-flight-oil-left">Oil Left</Label>
-                                      <Input id="post-flight-oil-left" value={postFlightOilLeft} onChange={(e) => setPostFlightOilLeft(e.target.value)} />
+                                      <Input id="post-flight-oil-left" value={postFlightOilLeft} onChange={(e) => setPostFlightOilLeft(e.target.value)} disabled={!isEditMode} />
                                   </div>
                                   <div className="space-y-2">
                                       <Label htmlFor="post-flight-oil-right">Oil Right</Label>
-                                      <Input id="post-flight-oil-right" value={postFlightOilRight} onChange={(e) => setPostFlightOilRight(e.target.value)} />
+                                      <Input id="post-flight-oil-right" value={postFlightOilRight} onChange={(e) => setPostFlightOilRight(e.target.value)} disabled={!isEditMode} />
                                   </div>
                               </div>
                           )}
                       </div>
                       <div className="flex justify-end pt-4">
-                          <Button onClick={() => handleSave({ closeOnSave: false, isPostFlight: true })}>Submit Post-Flight</Button>
+                          <Button onClick={() => handleSave({ closeOnSave: false, isPostFlight: true })} disabled={!isEditMode}>Submit Post-Flight</Button>
                       </div>
                     </CollapsibleContent>
                 </Collapsible>
