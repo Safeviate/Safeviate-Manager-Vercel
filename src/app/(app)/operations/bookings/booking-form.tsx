@@ -13,9 +13,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ChevronsUpDown } from 'lucide-react';
+import { ChevronsUpDown, AlertCircle } from 'lucide-react';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
+import type { Booking } from '@/types/booking';
 import {
   Collapsible,
   CollapsibleContent,
@@ -28,11 +29,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format, addHours, set } from 'date-fns';
+import { format, addHours, set, parse } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useFirestore } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
+import { createBooking, updateBooking } from './booking-functions';
 
 
 interface BookingFormProps {
@@ -42,6 +47,7 @@ interface BookingFormProps {
   startTime: Date;
   tenantId: string;
   pilots: PilotProfile[];
+  existingBooking?: Booking;
 }
 
 const requiredDocumentsList = [
@@ -60,72 +66,134 @@ export function BookingForm({
   startTime,
   tenantId,
   pilots,
+  existingBooking,
 }: BookingFormProps) {
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const isEditMode = !!existingBooking;
+
+  // Collapsible sections state
   const [isBookingInfoOpen, setIsBookingInfoOpen] = useState(true);
-  const [isPreFlightOpen, setIsPreFlightOpen] = useState(false);
+  const [isPreFlightOpen, setIsPreFlightOpen] = useState(isEditMode);
   const [isPostFlightOpen, setIsPostFlightOpen] = useState(false);
-  
-  const [bookingType, setBookingType] = useState('');
+
+  // Form state
+  const [bookingType, setBookingType] = useState(existingBooking?.type || '');
+  const [pilotId, setPilotId] = useState(existingBooking?.pilotId || '');
+  const [instructorId, setInstructorId] = useState(existingBooking?.instructorId || '');
   const [startTimeValue, setStartTimeValue] = useState('');
   const [endTimeValue, setEndTimeValue] = useState('');
-
-  const [isOvernight, setIsOvernight] = useState(false);
-  const [returnStartTimeValue, setReturnStartTimeValue] = useState('00:00');
-  const [returnEndTimeValue, setReturnEndTimeValue] = useState('01:00');
-  const [originalEndTime, setOriginalEndTime] = useState('');
-
-  const [actualHobbs, setActualHobbs] = useState<number | string>('');
-  const [actualTacho, setActualTacho] = useState<number | string>('');
-
-  const [postFlightActualHobbs, setPostFlightActualHobbs] = useState<number | string>('');
-  const [postFlightActualTacho, setPostFlightActualTacho] = useState<number | string>('');
-
-  const [oil, setOil] = useState('');
-  const [fuel, setFuel] = useState('');
-  const [oilLeft, setOilLeft] = useState('');
-  const [oilRight, setOilRight] = useState('');
   
-  const [postFlightOil, setPostFlightOil] = useState('');
-  const [postFlightFuel, setPostFlightFuel] = useState('');
-  const [postFlightOilLeft, setPostFlightOilLeft] = useState('');
-  const [postFlightOilRight, setPostFlightOilRight] = useState('');
+  // Pre-flight state
+  const [preFlightHobbs, setPreFlightHobbs] = useState<number | string>(existingBooking?.preFlight?.actualHobbs || '');
+  const [preFlightTacho, setPreFlightTacho] = useState<number | string>(existingBooking?.preFlight?.actualTacho || '');
+  const [preFlightOil, setPreFlightOil] = useState<number | string>(existingBooking?.preFlight?.oil || '');
+  const [preFlightFuel, setPreFlightFuel] = useState<number | string>(existingBooking?.preFlight?.fuel || '');
+  const [preFlightOilLeft, setPreFlightOilLeft] = useState<number | string>(existingBooking?.preFlight?.oilLeft || '');
+  const [preFlightOilRight, setPreFlightOilRight] = useState<number | string>(existingBooking?.preFlight?.oilRight || '');
+  const [checkedDocs, setCheckedDocs] = useState<string[]>(existingBooking?.preFlight?.documentsChecked || []);
+  
+  // Post-flight state
+  const [postFlightHobbs, setPostFlightHobbs] = useState<number | string>(existingBooking?.postFlight?.actualHobbs || '');
+  const [postFlightTacho, setPostFlightTacho] = useState<number | string>(existingBooking?.postFlight?.actualTacho || '');
+  const [postFlightOil, setPostFlightOil] = useState<number | string>(existingBooking?.postFlight?.oil || '');
+  const [postFlightFuel, setPostFlightFuel] = useState<number | string>(existingBooking?.postFlight?.fuel || '');
+  const [postFlightOilLeft, setPostFlightOilLeft] = useState<number | string>(existingBooking?.postFlight?.oilLeft || '');
+  const [postFlightOilRight, setPostFlightOilRight] = useState<number | string>(existingBooking?.postFlight?.oilRight || '');
+
+  const isChecklistNeeded = aircraft?.checklistStatus === 'needs-post-flight';
+  const preflightDisabled = !isEditMode && isChecklistNeeded;
 
   useEffect(() => {
-    if (startTime) {
+    if (startTime && !isEditMode) {
       const formattedStartTime = format(startTime, 'HH:mm');
       const endTimeDate = addHours(startTime, 1);
       const formattedEndTime = format(endTimeDate, 'HH:mm');
-
       setStartTimeValue(formattedStartTime);
       setEndTimeValue(formattedEndTime);
-      setOriginalEndTime(formattedEndTime); // Store the original end time
     }
-  }, [startTime]);
-
-  useEffect(() => {
-    if (isOvernight) {
-      setEndTimeValue('23:59');
-      setReturnStartTimeValue('00:00');
-      setReturnEndTimeValue('01:00');
-    } else {
-      // Revert to original end time when switch is turned off
-      setEndTimeValue(originalEndTime);
+    if (isEditMode && existingBooking) {
+      setStartTimeValue(format(existingBooking.startTime.toDate(), 'HH:mm'));
+      setEndTimeValue(format(existingBooking.endTime.toDate(), 'HH:mm'));
     }
-  }, [isOvernight, originalEndTime]);
-
-  useEffect(() => {
-    if (aircraft) {
-        setActualHobbs(aircraft.currentHobbs || '');
-        setActualTacho(aircraft.currentTacho || '');
-    }
-  }, [aircraft]);
+  }, [startTime, isEditMode, existingBooking]);
 
   const onOpenChange = (open: boolean) => {
-    if (!open) {
-      // Reset form or state if needed when dialog closes
-      setIsOvernight(false); // Also reset overnight switch on close
-    }
     setIsOpen(open);
+  };
+  
+  const handleSave = async () => {
+    if (!firestore) return;
+
+    if (!bookingType || !pilotId) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Booking Type and Pilot are required.' });
+      return;
+    }
+
+    if (bookingType === 'Training Flight' && !instructorId) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Instructor is required for Training Flights.' });
+        return;
+    }
+    
+    const startDate = existingBooking ? existingBooking.startTime.toDate() : startTime;
+    const parsedStartTime = parse(startTimeValue, 'HH:mm', startDate);
+    const parsedEndTime = parse(endTimeValue, 'HH:mm', startDate);
+
+    if (isEditMode && existingBooking) {
+        // Update logic
+        const updateData: Partial<Booking> = {
+          preFlight: {
+            actualHobbs: Number(preFlightHobbs),
+            actualTacho: Number(preFlightTacho),
+            oil: Number(preFlightOil),
+            fuel: Number(preFlightFuel),
+            oilLeft: Number(preFlightOilLeft),
+            oilRight: Number(preFlightOilRight),
+            documentsChecked: checkedDocs,
+          },
+          postFlight: {
+            actualHobbs: Number(postFlightHobbs),
+            actualTacho: Number(postFlightTacho),
+            oil: Number(postFlightOil),
+            fuel: Number(postFlightFuel),
+            oilLeft: Number(postFlightOilLeft),
+            oilRight: Number(postFlightOilRight),
+          },
+          status: 'Completed', // Or some other logic to determine status
+        };
+        
+        const isPostFlightFilled = Number(postFlightHobbs) > 0 && Number(postFlightTacho) > 0;
+        updateBooking(firestore, tenantId, existingBooking.id, updateData, aircraft.id, isPostFlightFilled);
+        toast({ title: 'Booking Updated', description: `Booking #${existingBooking.bookingNumber} has been updated.` });
+
+    } else {
+        // Create logic
+        const bookingData = {
+            aircraftId: aircraft.id,
+            pilotId,
+            instructorId: instructorId || undefined,
+            type: bookingType as Booking['type'],
+            startTime: parsedStartTime,
+            endTime: parsedEndTime,
+            preFlight: {
+                actualHobbs: Number(preFlightHobbs),
+                actualTacho: Number(preFlightTacho),
+                oil: Number(preFlightOil),
+                fuel: Number(preFlightFuel),
+                oilLeft: Number(preFlightOilLeft),
+                oilRight: Number(preFlightOilRight),
+                documentsChecked: checkedDocs,
+            }
+        };
+
+        try {
+            await createBooking(firestore, tenantId, bookingData);
+            toast({ title: 'Booking Created', description: 'The new booking has been saved successfully.' });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
+        }
+    }
+    setIsOpen(false);
   };
   
   const students = useMemo(() => pilots.filter(p => p.userType === 'Student'), [pilots]);
@@ -136,13 +204,22 @@ export function BookingForm({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Create Booking</DialogTitle>
+          <DialogTitle>{isEditMode ? `Edit Booking #${existingBooking.bookingNumber}` : 'Create Booking'}</DialogTitle>
           <DialogDescription>
-            Create a new booking for {aircraft.tailNumber} on {format(startTime, 'PPP')}.
+            For {aircraft.tailNumber} on {format(startTime, 'PPP')}.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-6">
             <div className="grid gap-4 py-4">
+                {preflightDisabled && (
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Pre-Flight Unavailable</AlertTitle>
+                        <AlertDescription>
+                            A post-flight checklist for this aircraft must be completed before a new pre-flight can be started.
+                        </AlertDescription>
+                    </Alert>
+                )}
                 <Collapsible open={isBookingInfoOpen} onOpenChange={setIsBookingInfoOpen} className="space-y-2">
                     <CollapsibleTrigger asChild>
                         <div className='flex items-center justify-between border-b pb-2 cursor-pointer'>
@@ -157,7 +234,7 @@ export function BookingForm({
                         <div className="grid grid-cols-2 gap-4 pt-4">
                             <div className="col-span-2 space-y-2">
                                 <Label htmlFor="booking-type">Booking Type</Label>
-                                <Select onValueChange={setBookingType} value={bookingType}>
+                                <Select onValueChange={v => setBookingType(v as Booking['type'])} value={bookingType} disabled={isEditMode}>
                                     <SelectTrigger id="booking-type">
                                         <SelectValue placeholder="Select a flight type" />
                                     </SelectTrigger>
@@ -174,7 +251,7 @@ export function BookingForm({
                                 <>
                                     <div className="col-span-1 space-y-2">
                                         <Label htmlFor="student">Student</Label>
-                                        <Select>
+                                        <Select onValueChange={setPilotId} value={pilotId} disabled={isEditMode}>
                                             <SelectTrigger id="student">
                                                 <SelectValue placeholder="Select a student" />
                                             </SelectTrigger>
@@ -189,7 +266,7 @@ export function BookingForm({
                                     </div>
                                     <div className="col-span-1 space-y-2">
                                         <Label htmlFor="instructor">Instructor</Label>
-                                        <Select>
+                                        <Select onValueChange={setInstructorId} value={instructorId} disabled={isEditMode}>
                                             <SelectTrigger id="instructor">
                                                 <SelectValue placeholder="Select an instructor" />
                                             </SelectTrigger>
@@ -207,7 +284,7 @@ export function BookingForm({
                             {bookingType === 'Private Flight' && (
                                 <div className="col-span-2 space-y-2">
                                     <Label htmlFor="private-pilot">Pilot</Label>
-                                    <Select>
+                                     <Select onValueChange={setPilotId} value={pilotId} disabled={isEditMode}>
                                         <SelectTrigger id="private-pilot">
                                             <SelectValue placeholder="Select a pilot" />
                                         </SelectTrigger>
@@ -229,6 +306,7 @@ export function BookingForm({
                                     type="time"
                                     value={startTimeValue}
                                     onChange={(e) => setStartTimeValue(e.target.value)}
+                                    readOnly={isEditMode}
                                 />
                             </div>
                             <div className="space-y-2">
@@ -238,49 +316,16 @@ export function BookingForm({
                                     type="time" 
                                     value={endTimeValue}
                                     onChange={(e) => setEndTimeValue(e.target.value)}
-                                    readOnly={isOvernight}
+                                    readOnly={isEditMode}
                                 />
                             </div>
-
-                            <div className="col-span-2 flex items-center space-x-2 pt-2">
-                                <Switch id="overnight-mode" checked={isOvernight} onCheckedChange={setIsOvernight} />
-                                <Label htmlFor="overnight-mode">Overnight</Label>
-                            </div>
-                            
-                            {isOvernight && (
-                                <div className="col-span-2 space-y-4 pt-2">
-                                    <Separator />
-                                    <h4 className="text-sm font-semibold">Return Details</h4>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="return-start-time">Start Time</Label>
-                                            <Input
-                                                id="return-start-time"
-                                                type="time"
-                                                value={returnStartTimeValue}
-                                                readOnly
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="return-end-time">End Time</Label>
-                                            <Input
-                                                id="return-end-time"
-                                                type="time"
-                                                value={returnEndTimeValue}
-                                                onChange={(e) => setReturnEndTimeValue(e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
                         </div>
                     </CollapsibleContent>
                 </Collapsible>
 
-                <Collapsible open={isPreFlightOpen} onOpenChange={setIsPreFlightOpen} className="space-y-2">
-                    <CollapsibleTrigger asChild>
-                        <div className='flex items-center justify-between border-b pb-2 cursor-pointer'>
+                <Collapsible open={isPreFlightOpen} onOpenChange={setIsPreFlightOpen} disabled={preflightDisabled}>
+                    <CollapsibleTrigger asChild disabled={preflightDisabled}>
+                        <div className='flex items-center justify-between border-b pb-2 cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'>
                             <h4 className="text-sm font-semibold">Pre-Flight Checks</h4>
                             <Button variant="ghost" size="sm" className="w-9 p-0">
                                 <ChevronsUpDown className="h-4 w-4" />
@@ -292,39 +337,19 @@ export function BookingForm({
                        <div className="grid grid-cols-2 gap-4 pt-4">
                             <div className="space-y-2">
                                 <Label htmlFor="current-hobbs">Current Hobbs</Label>
-                                <Input 
-                                    id="current-hobbs" 
-                                    value={aircraft?.currentHobbs || ''} 
-                                    readOnly 
-                                    disabled
-                                />
+                                <Input id="current-hobbs" value={aircraft?.currentHobbs || ''} readOnly disabled />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="current-tacho">Current Tacho</Label>
-                                <Input 
-                                    id="current-tacho" 
-                                    value={aircraft?.currentTacho || ''} 
-                                    readOnly 
-                                    disabled
-                                />
+                                <Input id="current-tacho" value={aircraft?.currentTacho || ''} readOnly disabled />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="actual-hobbs">Actual Hobbs</Label>
-                                <Input 
-                                    id="actual-hobbs"
-                                    type="number"
-                                    value={actualHobbs}
-                                    onChange={(e) => setActualHobbs(e.target.value)}
-                                />
+                                <Input id="actual-hobbs" type="number" value={preFlightHobbs} onChange={(e) => setPreFlightHobbs(e.target.value)} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="actual-tacho">Actual Tacho</Label>
-                                <Input 
-                                    id="actual-tacho" 
-                                    type="number"
-                                    value={actualTacho}
-                                    onChange={(e) => setActualTacho(e.target.value)}
-                                />
+                                <Input id="actual-tacho" type="number" value={preFlightTacho} onChange={(e) => setPreFlightTacho(e.target.value)} />
                             </div>
                         </div>
 
@@ -333,11 +358,11 @@ export function BookingForm({
                               <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                                   <div className="space-y-2">
                                       <Label htmlFor="oil">Oil</Label>
-                                      <Input id="oil" value={oil} onChange={(e) => setOil(e.target.value)} />
+                                      <Input id="oil" value={preFlightOil} onChange={(e) => setPreFlightOil(e.target.value)} />
                                   </div>
                                   <div className="space-y-2">
                                       <Label htmlFor="fuel">Fuel</Label>
-                                      <Input id="fuel" value={fuel} onChange={(e) => setFuel(e.target.value)} />
+                                      <Input id="fuel" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} />
                                   </div>
                               </div>
                           )}
@@ -345,15 +370,15 @@ export function BookingForm({
                               <div className="grid grid-cols-3 gap-4 pt-4 border-t">
                                   <div className="space-y-2">
                                       <Label htmlFor="fuel">Fuel</Label>
-                                      <Input id="fuel" value={fuel} onChange={(e) => setFuel(e.target.value)} />
+                                      <Input id="fuel" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} />
                                   </div>
                                   <div className="space-y-2">
                                       <Label htmlFor="oil-left">Oil Left</Label>
-                                      <Input id="oil-left" value={oilLeft} onChange={(e) => setOilLeft(e.target.value)} />
+                                      <Input id="oil-left" value={preFlightOilLeft} onChange={(e) => setPreFlightOilLeft(e.target.value)} />
                                   </div>
                                   <div className="space-y-2">
                                       <Label htmlFor="oil-right">Oil Right</Label>
-                                      <Input id="oil-right" value={oilRight} onChange={(e) => setOilRight(e.target.value)} />
+                                      <Input id="oil-right" value={preFlightOilRight} onChange={(e) => setPreFlightOilRight(e.target.value)} />
                                   </div>
                               </div>
                           )}
@@ -366,7 +391,13 @@ export function BookingForm({
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
                                 {requiredDocumentsList.map((doc) => (
                                     <div key={doc.id} className="flex items-center space-x-2">
-                                        <Checkbox id={doc.id} />
+                                        <Checkbox 
+                                            id={doc.id} 
+                                            checked={checkedDocs.includes(doc.id)}
+                                            onCheckedChange={(checked) => {
+                                                setCheckedDocs(prev => checked ? [...prev, doc.id] : prev.filter(id => id !== doc.id))
+                                            }}
+                                        />
                                         <Label htmlFor={doc.id} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                                             {doc.label}
                                         </Label>
@@ -377,9 +408,9 @@ export function BookingForm({
                     </CollapsibleContent>
                 </Collapsible>
 
-                <Collapsible open={isPostFlightOpen} onOpenChange={setIsPostFlightOpen} className="space-y-2">
-                    <CollapsibleTrigger asChild>
-                        <div className='flex items-center justify-between border-b pb-2 cursor-pointer'>
+                <Collapsible open={isPostFlightOpen} onOpenChange={setIsPostFlightOpen} disabled={!isEditMode}>
+                    <CollapsibleTrigger asChild disabled={!isEditMode}>
+                        <div className='flex items-center justify-between border-b pb-2 cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'>
                             <h4 className="text-sm font-semibold">Post-Flight Checks</h4>
                             <Button variant="ghost" size="sm" className="w-9 p-0">
                                 <ChevronsUpDown className="h-4 w-4" />
@@ -391,21 +422,11 @@ export function BookingForm({
                         <div className="grid grid-cols-2 gap-4 pt-4">
                            <div className="space-y-2">
                                 <Label htmlFor="post-actual-hobbs">Actual Hobbs</Label>
-                                <Input 
-                                    id="post-actual-hobbs"
-                                    type="number"
-                                    value={postFlightActualHobbs}
-                                    onChange={(e) => setPostFlightActualHobbs(e.target.value)}
-                                />
+                                <Input id="post-actual-hobbs" type="number" value={postFlightHobbs} onChange={(e) => setPostFlightHobbs(e.target.value)} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="post-actual-tacho">Actual Tacho</Label>
-                                <Input 
-                                    id="post-actual-tacho" 
-                                    type="number"
-                                    value={postFlightActualTacho}
-                                    onChange={(e) => setPostFlightActualTacho(e.target.value)}
-                                />
+                                <Input id="post-actual-tacho" type="number" value={postFlightTacho} onChange={(e) => setPostFlightTacho(e.target.value)} />
                             </div>
                         </div>
                          <div className="col-span-2 mt-4 space-y-4">
@@ -443,14 +464,14 @@ export function BookingForm({
             </div>
         </ScrollArea>
         <DialogFooter className='justify-between pt-6'>
-            <Button variant="destructive" className="w-20">
+            <Button variant="destructive" className="w-20" disabled={!isEditMode}>
                 Delete
             </Button>
             <div className='flex gap-2'>
                 <DialogClose asChild>
                     <Button variant="outline" className="w-20">Cancel</Button>
                 </DialogClose>
-                <Button className="w-20">Save</Button>
+                <Button onClick={handleSave} className="w-20" disabled={preflightDisabled}>Save</Button>
             </div>
         </DialogFooter>
       </DialogContent>

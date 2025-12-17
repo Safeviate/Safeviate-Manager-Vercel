@@ -15,16 +15,7 @@ import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
 import { useRouter } from 'next/navigation';
 import { Timestamp } from 'firebase/firestore';
-
-// A temporary type until the real one is restored
-type Booking = {
-  id: string;
-  aircraftId: string;
-  pilotId: string;
-  type: 'Student Training' | 'Private Flight' | 'Maintenance Flight';
-  startTime: Timestamp;
-  bookingNumber?: number;
-};
+import type { Booking } from '@/types/booking';
 
 // A consolidated type for display
 type EnrichedBooking = Booking & {
@@ -34,9 +25,10 @@ type EnrichedBooking = Booking & {
 
 const getBookingTypeAbbreviation = (type: Booking['type']): string => {
     switch (type) {
-        case 'Student Training': return 'T';
+        case 'Training Flight': return 'T';
         case 'Private Flight': return 'P';
         case 'Maintenance Flight': return 'M';
+        case 'Reposition Flight': return 'R';
         default: return '';
     }
 }
@@ -113,7 +105,7 @@ export default function BookingsHistoryPage() {
     });
   }, [bookings, aircraft, pilots]);
 
-  const trainingBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Student Training'), [enrichedBookings]);
+  const trainingBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Training Flight'), [enrichedBookings]);
   const privateBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Private Flight'), [enrichedBookings]);
   const maintenanceBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Maintenance Flight'), [enrichedBookings]);
 

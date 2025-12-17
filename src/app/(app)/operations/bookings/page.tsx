@@ -7,32 +7,19 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
-import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, endOfHour, startOfHour } from 'date-fns';
+import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, endOfHour } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, AlertCircle } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { useRouter } from 'next/navigation';
 import { BookingForm } from './booking-form';
-
-const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
-const TOTAL_HOURS = 24;
-
-// A temporary type until the real one is restored
-type Booking = {
-  id: string;
-  aircraftId: string;
-  pilotId: string;
-  type: string;
-  startTime: Timestamp;
-  endTime: Timestamp;
-  status: string;
-};
+import type { Booking } from '@/types/booking';
 
 
-const BookingItem = ({ booking, pilots, selectedDate }: { booking: Booking, pilots: PilotProfile[], selectedDate: Date }) => {
+const BookingItem = ({ booking, pilots, selectedDate, onBookingClick }: { booking: Booking, pilots: PilotProfile[], selectedDate: Date, onBookingClick: (booking: Booking) => void }) => {
     const startTime = booking.startTime.toDate();
     const endTime = booking.endTime.toDate();
 
@@ -58,10 +45,11 @@ const BookingItem = ({ booking, pilots, selectedDate }: { booking: Booking, pilo
     return (
         <div
             className={cn(
-            'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground z-10 min-h-[40px] border border-gray-400',
+            'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground z-10 min-h-[40px] border border-gray-400 cursor-pointer hover:opacity-90 transition-opacity',
             (booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason') ? 'bg-destructive' : 'bg-primary'
             )}
             style={{ top: `${top}px`, height: `${height}px` }}
+            onClick={() => onBookingClick(booking)}
         >
             {hasContinuationTop && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-b from-black/20 to-transparent" />}
             <p className="font-semibold truncate">{booking.type}</p>
@@ -80,7 +68,8 @@ const AircraftColumn = ({
     showNowLine, 
     nowLinePosition, 
     selectedDate,
-    onSlotClick 
+    onSlotClick,
+    onBookingClick,
 }: { 
     aircraft?: Aircraft; 
     bookings: Booking[]; 
@@ -89,9 +78,12 @@ const AircraftColumn = ({
     nowLinePosition: number; 
     selectedDate: Date; 
     onSlotClick: (aircraft: Aircraft, time: Date) => void;
+    onBookingClick: (booking: Booking) => void;
 }) => {
     const today = startOfToday();
     const isSelectedDateInPast = isBefore(selectedDate, today);
+
+    const isChecklistNeeded = aircraft?.checklistStatus === 'needs-post-flight';
 
   return (
     <div 
@@ -102,16 +94,18 @@ const AircraftColumn = ({
         const slotTime = setMinutes(setHours(selectedDate, hour), 0);
         const endOfSlot = endOfHour(slotTime);
         const isPast = isSelectedDateInPast || (isSameDay(selectedDate, new Date()) && isBefore(endOfSlot, new Date()));
+        
+        const isDisabled = isPast || isChecklistNeeded;
 
         return (
             <div 
                 key={hour} 
                 className={cn(
                     "relative border-t",
-                    isPast ? "bg-muted/30" : "cursor-pointer hover:bg-accent/50 transition-colors"
+                    isDisabled ? "bg-muted/30" : "cursor-pointer hover:bg-accent/50 transition-colors"
                 )} 
                 style={{ height: `${HOUR_HEIGHT_PX}px` }}
-                onClick={() => !isPast && aircraft && onSlotClick(aircraft, slotTime)}
+                onClick={() => !isDisabled && aircraft && onSlotClick(aircraft, slotTime)}
             >
                 <span className="absolute top-1 left-1 text-xs text-muted-foreground pointer-events-none">
                     {format(new Date(0, 0, 0, hour), 'HH:mm')}
@@ -142,11 +136,15 @@ const AircraftColumn = ({
             booking={booking}
             pilots={pilots}
             selectedDate={selectedDate}
+            onBookingClick={onBookingClick}
         />
       ))}
     </div>
   );
 };
+
+const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
+const TOTAL_HOURS = 24;
 
 
 export default function SchedulePage() {
@@ -159,7 +157,7 @@ export default function SchedulePage() {
   const [showNowLine, setShowNowLine] = useState(false);
   
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
-  const [bookingFormData, setBookingFormData] = useState<{ aircraft: Aircraft; startTime: Date } | null>(null);
+  const [bookingFormData, setBookingFormData] = useState<{ aircraft: Aircraft; startTime: Date; booking?: Booking } | null>(null);
 
   const aircraftQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
@@ -225,6 +223,14 @@ export default function SchedulePage() {
     setIsBookingFormOpen(true);
   };
   
+  const handleBookingClick = (booking: Booking) => {
+    const aircraftForBooking = aircraft?.find(a => a.id === booking.aircraftId);
+    if (aircraftForBooking) {
+      setBookingFormData({ aircraft: aircraftForBooking, startTime: booking.startTime.toDate(), booking });
+      setIsBookingFormOpen(true);
+    }
+  };
+  
   const extraLanes = ['', '', '', ''];
 
   return (
@@ -270,7 +276,8 @@ export default function SchedulePage() {
               <div className='w-full overflow-x-auto'>
                   <div className="sticky top-0 z-30 flex bg-swimlane-header text-swimlane-header-foreground flex-shrink-0">
                     {(aircraft || []).map((ac) => (
-                      <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px]">
+                      <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px] flex items-center justify-center gap-2">
+                        {ac.checklistStatus === 'needs-post-flight' && <AlertCircle className="h-4 w-4 text-amber-500" title="Post-flight checklist needed" />}
                         {ac.tailNumber}
                       </div>
                     ))}
@@ -293,6 +300,7 @@ export default function SchedulePage() {
                         nowLinePosition={nowLinePosition}
                         selectedDate={selectedDate}
                         onSlotClick={handleSlotClick}
+                        onBookingClick={handleBookingClick}
                       />
                     ))}
                     {extraLanes.map((_, index) => (
@@ -303,10 +311,8 @@ export default function SchedulePage() {
                           showNowLine={showNowLine}
                           nowLinePosition={nowLinePosition}
                           selectedDate={selectedDate}
-                          onSlotClick={(ac, time) => {
-                            // This is an empty lane, so we can't create a booking.
-                            // In a real scenario, you might have a different interaction here.
-                          }}
+                          onSlotClick={() => {}}
+                          onBookingClick={() => {}}
                       />
                     ))}
                     {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-4 text-center text-muted-foreground">Please add aircraft to see the schedule.</div>}
@@ -324,6 +330,7 @@ export default function SchedulePage() {
             startTime={bookingFormData.startTime}
             tenantId={tenantId}
             pilots={pilots || []}
+            existingBooking={bookingFormData.booking}
           />
       )}
     </>
