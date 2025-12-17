@@ -31,12 +31,12 @@ type BookingCreationData = Omit<Booking, 'id' | 'bookingNumber' | 'status' | 'st
 export const createBooking = async (
     firestore: Firestore,
     tenantId: string,
-    bookingData: BookingCreationData
+    bookingData: Partial<BookingCreationData>
 ): Promise<string> => {
 
     const counterRef = doc(firestore, `tenants/${tenantId}/counters`, 'bookings');
     const bookingsRef = collection(firestore, `tenants/${tenantId}`, 'bookings');
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, bookingData.aircraftId);
+    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, bookingData.aircraftId!);
 
     try {
         const newBookingId = await runTransaction(firestore, async (transaction) => {
@@ -57,8 +57,10 @@ export const createBooking = async (
                 id: newBookingRef.id,
                 bookingNumber: newBookingNumber,
                 status: 'Confirmed',
-                startTime: Timestamp.fromDate(bookingData.startTime),
-                endTime: Timestamp.fromDate(bookingData.endTime),
+                startTime: Timestamp.fromDate(bookingData.startTime!),
+                endTime: Timestamp.fromDate(bookingData.endTime!),
+                preFlight: {}, // Initialize with empty object
+                postFlight: {}, // Initialize with empty object
             };
 
             // Conditionally add instructorId to avoid 'undefined' error
@@ -68,12 +70,6 @@ export const createBooking = async (
             
             transaction.set(newBookingRef, payload);
             
-            // 3. Update the aircraft status to needs-post-flight after pre-flight is done
-            const preFlightSubmitted = bookingData.preFlight && (bookingData.preFlight.actualHobbs || bookingData.preFlight.actualTacho);
-            if (preFlightSubmitted) {
-                transaction.update(aircraftRef, { checklistStatus: 'needs-post-flight' });
-            }
-
             return newBookingRef.id;
         });
 

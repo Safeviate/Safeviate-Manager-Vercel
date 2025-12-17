@@ -238,8 +238,6 @@ export function BookingForm({
             type: bookingType as Booking['type'],
             startTime: parsedStartTime,
             endTime: parsedEndTime,
-            preFlight: getPreFlightData(),
-            postFlight: getPostFlightData(), // Also save empty post-flight object
         };
         
         if (instructorId) {
@@ -396,185 +394,193 @@ export function BookingForm({
                     </CollapsibleContent>
                 </Collapsible>
 
-                <Collapsible open={isPreFlightOpen} onOpenChange={setIsPreFlightOpen} disabled={preflightDisabled}>
-                    <CollapsibleTrigger asChild disabled={preflightDisabled}>
-                        <div className='flex items-center justify-between border-b pb-2 cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'>
-                            <h4 className="text-sm font-semibold">Pre-Flight Checks</h4>
-                            <Button variant="ghost" size="sm" className="w-9 p-0">
-                                <ChevronsUpDown className="h-4 w-4" />
-                                <span className="sr-only">Toggle</span>
-                            </Button>
-                        </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                       <div className="grid grid-cols-2 gap-4 pt-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="current-hobbs">Current Hobbs</Label>
-                                <Input id="current-hobbs" value={aircraft?.currentHobbs || ''} readOnly disabled />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="current-tacho">Current Tacho</Label>
-                                <Input id="current-tacho" value={aircraft?.currentTacho || ''} readOnly disabled />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="actual-hobbs">Actual Hobbs</Label>
-                                <Input id="actual-hobbs" type="number" value={preFlightHobbs} onChange={(e) => setPreFlightHobbs(e.target.value)} disabled={preflightDisabled} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="actual-tacho">Actual Tacho</Label>
-                                <Input id="actual-tacho" type="number" value={preFlightTacho} onChange={(e) => setPreFlightTacho(e.target.value)} disabled={preflightDisabled} />
-                            </div>
-                        </div>
-
-                        <div className="col-span-2 mt-4 space-y-4">
-                          {aircraft.type === 'Single-Engine' && (
-                              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                                  <div className="space-y-2">
-                                      <Label htmlFor="oil">Oil</Label>
-                                      <Input id="oil" type="number" value={preFlightOil} onChange={(e) => setPreFlightOil(e.target.value)} disabled={preflightDisabled} />
-                                  </div>
-                                  <div className="space-y-2">
-                                      <Label htmlFor="fuel">Fuel</Label>
-                                      <Input id="fuel" type="number" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} disabled={preflightDisabled} />
-                                  </div>
-                              </div>
-                          )}
-                          {aircraft.type === 'Multi-Engine' && (
-                              <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-                                  <div className="space-y-2">
-                                      <Label htmlFor="fuel">Fuel</Label>
-                                      <Input id="fuel" type="number" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} disabled={preflightDisabled} />
-                                  </div>
-                                  <div className="space-y-2">
-                                      <Label htmlFor="oil-left">Oil Left</Label>
-                                      <Input id="oil-left" type="number" value={preFlightOilLeft} onChange={(e) => setPreFlightOilLeft(e.target.value)} disabled={preflightDisabled} />
-                                  </div>
-                                  <div className="space-y-2">
-                                      <Label htmlFor="oil-right">Oil Right</Label>
-                                      <Input id="oil-right" type="number" value={preFlightOilRight} onChange={(e) => setPreFlightOilRight(e.target.value)} disabled={preflightDisabled} />
-                                  </div>
-                              </div>
-                          )}
-                      </div>
-
-
-                        <div className="col-span-2 mt-4 space-y-2">
-                            <Separator />
-                            <h4 className="text-sm font-semibold pt-2">Required documents</h4>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
-                                {requiredDocumentsList.map((doc) => (
-                                    <div key={doc.id} className="flex items-center space-x-2">
-                                        <Checkbox 
-                                            id={doc.id} 
-                                            checked={checkedDocs.includes(doc.id)}
-                                            onCheckedChange={(checked) => {
-                                                setCheckedDocs(prev => checked ? [...prev, doc.id] : prev.filter(id => id !== doc.id))
-                                            }}
-                                            disabled={preflightDisabled}
-                                        />
-                                        <Label htmlFor={doc.id} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                            {doc.label}
-                                        </Label>
+                {isEditMode && (
+                    <>
+                        <Collapsible open={isPreFlightOpen} onOpenChange={setIsPreFlightOpen} disabled={preflightDisabled}>
+                            <CollapsibleTrigger asChild disabled={preflightDisabled}>
+                                <div className='flex items-center justify-between border-b pb-2 cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'>
+                                    <h4 className="text-sm font-semibold">Pre-Flight Checks</h4>
+                                    <Button variant="ghost" size="sm" className="w-9 p-0">
+                                        <ChevronsUpDown className="h-4 w-4" />
+                                        <span className="sr-only">Toggle</span>
+                                    </Button>
+                                </div>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                               <div className="grid grid-cols-2 gap-4 pt-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="current-hobbs">Current Hobbs</Label>
+                                        <Input id="current-hobbs" value={aircraft?.currentHobbs || ''} readOnly disabled />
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                        {isEditMode && 
-                            <div className="flex justify-end pt-4">
-                                <Button onClick={() => handleSave({ closeOnSave: false, isPreFlight: true })} disabled={preflightDisabled}>Submit Pre-Flight</Button>
-                            </div>
-                        }
-                    </CollapsibleContent>
-                </Collapsible>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="current-tacho">Current Tacho</Label>
+                                        <Input id="current-tacho" value={aircraft?.currentTacho || ''} readOnly disabled />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="actual-hobbs">Actual Hobbs</Label>
+                                        <Input id="actual-hobbs" type="number" value={preFlightHobbs} onChange={(e) => setPreFlightHobbs(e.target.value)} disabled={preflightDisabled} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="actual-tacho">Actual Tacho</Label>
+                                        <Input id="actual-tacho" type="number" value={preFlightTacho} onChange={(e) => setPreFlightTacho(e.target.value)} disabled={preflightDisabled} />
+                                    </div>
+                                </div>
 
-                <Collapsible open={isPostFlightOpen} onOpenChange={setIsPostFlightOpen} disabled={!isEditMode}>
-                    <CollapsibleTrigger asChild disabled={!isEditMode}>
-                        <div className='flex items-center justify-between border-b pb-2 cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'>
-                            <h4 className="text-sm font-semibold">Post-Flight Checks</h4>
-                            <Button variant="ghost" size="sm" className="w-9 p-0">
-                                <ChevronsUpDown className="h-4 w-4" />
-                                <span className="sr-only">Toggle</span>
-                            </Button>
-                        </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                        <div className="grid grid-cols-2 gap-4 pt-4">
-                           <div className="space-y-2">
-                                <Label htmlFor="post-actual-hobbs">Actual Hobbs</Label>
-                                <Input id="post-actual-hobbs" type="number" value={postFlightHobbs} onChange={(e) => setPostFlightHobbs(e.target.value)} disabled={!isEditMode} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="post-actual-tacho">Actual Tacho</Label>
-                                <Input id="post-actual-tacho" type="number" value={postFlightTacho} onChange={(e) => setPostFlightTacho(e.target.value)} disabled={!isEditMode} />
-                            </div>
-                        </div>
-                         <div className="col-span-2 mt-4 space-y-4">
-                          {aircraft.type === 'Single-Engine' && (
-                              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                                  <div className="space-y-2">
-                                      <Label htmlFor="post-flight-oil">Oil</Label>
-                                      <Input id="post-flight-oil" type="number" value={postFlightOil} onChange={(e) => setPostFlightOil(e.target.value)} disabled={!isEditMode} />
-                                  </div>
-                                  <div className="space-y-2">
-                                      <Label htmlFor="post-flight-fuel">Fuel</Label>
-                                      <Input id="post-flight-fuel" type="number" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} disabled={!isEditMode} />
-                                  </div>
+                                <div className="col-span-2 mt-4 space-y-4">
+                                  {aircraft.type === 'Single-Engine' && (
+                                      <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                                          <div className="space-y-2">
+                                              <Label htmlFor="oil">Oil</Label>
+                                              <Input id="oil" type="number" value={preFlightOil} onChange={(e) => setPreFlightOil(e.target.value)} disabled={preflightDisabled} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="fuel">Fuel</Label>
+                                              <Input id="fuel" type="number" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} disabled={preflightDisabled} />
+                                          </div>
+                                      </div>
+                                  )}
+                                  {aircraft.type === 'Multi-Engine' && (
+                                      <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                                          <div className="space-y-2">
+                                              <Label htmlFor="fuel">Fuel</Label>
+                                              <Input id="fuel" type="number" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} disabled={preflightDisabled} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="oil-left">Oil Left</Label>
+                                              <Input id="oil-left" type="number" value={preFlightOilLeft} onChange={(e) => setPreFlightOilLeft(e.target.value)} disabled={preflightDisabled} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="oil-right">Oil Right</Label>
+                                              <Input id="oil-right" type="number" value={preFlightOilRight} onChange={(e) => setPreFlightOilRight(e.target.value)} disabled={preflightDisabled} />
+                                          </div>
+                                      </div>
+                                  )}
                               </div>
-                          )}
-                          {aircraft.type === 'Multi-Engine' && (
-                              <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-                                  <div className="space-y-2">
-                                      <Label htmlFor="post-flight-fuel">Fuel</Label>
-                                      <Input id="post-flight-fuel" type="number" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} disabled={!isEditMode} />
-                                  </div>
-                                  <div className="space-y-2">
-                                      <Label htmlFor="post-flight-oil-left">Oil Left</Label>
-                                      <Input id="post-flight-oil-left" type="number" value={postFlightOilLeft} onChange={(e) => setPostFlightOilLeft(e.target.value)} disabled={!isEditMode} />
-                                  </div>
-                                  <div className="space-y-2">
-                                      <Label htmlFor="post-flight-oil-right">Oil Right</Label>
-                                      <Input id="post-flight-oil-right" type="number" value={postFlightOilRight} onChange={(e) => setPostFlightOilRight(e.target.value)} disabled={!isEditMode} />
-                                  </div>
+
+
+                                <div className="col-span-2 mt-4 space-y-2">
+                                    <Separator />
+                                    <h4 className="text-sm font-semibold pt-2">Required documents</h4>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
+                                        {requiredDocumentsList.map((doc) => (
+                                            <div key={doc.id} className="flex items-center space-x-2">
+                                                <Checkbox 
+                                                    id={doc.id} 
+                                                    checked={checkedDocs.includes(doc.id)}
+                                                    onCheckedChange={(checked) => {
+                                                        setCheckedDocs(prev => checked ? [...prev, doc.id] : prev.filter(id => id !== doc.id))
+                                                    }}
+                                                    disabled={preflightDisabled}
+                                                />
+                                                <Label htmlFor={doc.id} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                                    {doc.label}
+                                                </Label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                {isEditMode && 
+                                    <div className="flex justify-end pt-4">
+                                        <Button onClick={() => handleSave({ closeOnSave: false, isPreFlight: true })} disabled={preflightDisabled}>Submit Pre-Flight</Button>
+                                    </div>
+                                }
+                            </CollapsibleContent>
+                        </Collapsible>
+
+                        <Collapsible open={isPostFlightOpen} onOpenChange={setIsPostFlightOpen} disabled={!isEditMode}>
+                            <CollapsibleTrigger asChild disabled={!isEditMode}>
+                                <div className='flex items-center justify-between border-b pb-2 cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'>
+                                    <h4 className="text-sm font-semibold">Post-Flight Checks</h4>
+                                    <Button variant="ghost" size="sm" className="w-9 p-0">
+                                        <ChevronsUpDown className="h-4 w-4" />
+                                        <span className="sr-only">Toggle</span>
+                                    </Button>
+                                </div>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                                <div className="grid grid-cols-2 gap-4 pt-4">
+                                   <div className="space-y-2">
+                                        <Label htmlFor="post-actual-hobbs">Actual Hobbs</Label>
+                                        <Input id="post-actual-hobbs" type="number" value={postFlightHobbs} onChange={(e) => setPostFlightHobbs(e.target.value)} disabled={!isEditMode} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="post-actual-tacho">Actual Tacho</Label>
+                                        <Input id="post-actual-tacho" type="number" value={postFlightTacho} onChange={(e) => setPostFlightTacho(e.target.value)} disabled={!isEditMode} />
+                                    </div>
+                                </div>
+                                 <div className="col-span-2 mt-4 space-y-4">
+                                  {aircraft.type === 'Single-Engine' && (
+                                      <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                                          <div className="space-y-2">
+                                              <Label htmlFor="post-flight-oil">Oil</Label>
+                                              <Input id="post-flight-oil" type="number" value={postFlightOil} onChange={(e) => setPostFlightOil(e.target.value)} disabled={!isEditMode} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="post-flight-fuel">Fuel</Label>
+                                              <Input id="post-flight-fuel" type="number" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} disabled={!isEditMode} />
+                                          </div>
+                                      </div>
+                                  )}
+                                  {aircraft.type === 'Multi-Engine' && (
+                                      <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                                          <div className="space-y-2">
+                                              <Label htmlFor="post-flight-fuel">Fuel</Label>
+                                              <Input id="post-flight-fuel" type="number" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} disabled={!isEditMode} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="post-flight-oil-left">Oil Left</Label>
+                                              <Input id="post-flight-oil-left" type="number" value={postFlightOilLeft} onChange={(e) => setPostFlightOilLeft(e.target.value)} disabled={!isEditMode} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="post-flight-oil-right">Oil Right</Label>
+                                              <Input id="post-flight-oil-right" type="number" value={postFlightOilRight} onChange={(e) => setPostFlightOilRight(e.target.value)} disabled={!isEditMode} />
+                                          </div>
+                                      </div>
+                                  )}
                               </div>
-                          )}
-                      </div>
-                      {isEditMode &&
-                        <div className="flex justify-end pt-4">
-                            <Button onClick={() => handleSave({ closeOnSave: false, isPostFlight: true })} disabled={!isEditMode}>Submit Post-Flight</Button>
-                        </div>
-                      }
-                    </CollapsibleContent>
-                </Collapsible>
+                              {isEditMode &&
+                                <div className="flex justify-end pt-4">
+                                    <Button onClick={() => handleSave({ closeOnSave: false, isPostFlight: true })} disabled={!isEditMode}>Submit Post-Flight</Button>
+                                </div>
+                              }
+                            </CollapsibleContent>
+                        </Collapsible>
+                    </>
+                )}
             </div>
         </ScrollArea>
         <DialogFooter className='justify-between pt-6'>
-            <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="destructive" className="w-20" disabled={!isEditMode}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete booking #{existingBooking?.bookingNumber}.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-                            Delete Booking
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+          {isEditMode ? (
+              <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                      <Button variant="destructive" className="w-20" disabled={!isEditMode}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                      </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                      <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete booking #{existingBooking?.bookingNumber}.
+                          </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDelete} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                              Delete Booking
+                          </AlertDialogAction>
+                      </AlertDialogFooter>
+                  </AlertDialogContent>
+              </AlertDialog>
+          ) : (
+            <div></div> // Placeholder for layout
+          )}
             <div className='flex gap-2'>
                 <DialogClose asChild>
                     <Button variant="outline" className="w-20">Cancel</Button>
                 </DialogClose>
-                <Button onClick={() => handleSave({ closeOnSave: true })} className="w-20" disabled={preflightDisabled && !isEditMode}>Save</Button>
+                <Button onClick={() => handleSave({ closeOnSave: true })} className="w-20">Save</Button>
             </div>
         </DialogFooter>
       </DialogContent>
