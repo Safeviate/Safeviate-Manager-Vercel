@@ -470,6 +470,9 @@ export function BookingForm({
                               </div>
                           )}
                       </div>
+                      <div className="flex justify-end pt-4">
+                          <Button onClick={() => handleSave(false)}>Submit Post-Flight</Button>
+                      </div>
                     </CollapsibleContent>
                 </Collapsible>
             </div>
