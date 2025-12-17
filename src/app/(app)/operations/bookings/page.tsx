@@ -7,7 +7,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
-import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, endOfHour } from 'date-fns';
+import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, endOfHour, startOfHour } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -217,7 +217,11 @@ export default function SchedulePage() {
   }, [selectedDate]);
   
   const handleSlotClick = (aircraft: Aircraft, time: Date) => {
-    setBookingFormData({ aircraft, startTime: time });
+    const now = new Date();
+    const isCurrentHourSlot = isSameDay(time, now) && getHours(time) === getHours(now);
+    const startTime = isCurrentHourSlot ? now : time;
+
+    setBookingFormData({ aircraft, startTime });
     setIsBookingFormOpen(true);
   };
   
