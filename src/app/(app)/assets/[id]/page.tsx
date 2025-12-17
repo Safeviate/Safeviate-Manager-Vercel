@@ -170,7 +170,7 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
   
     const handleDocumentDelete = (docNameToDelete: string) => {
       if (!aircraft) return;
-      const currentDocs = aircraft.documents || [];
+      const currentDocs = user.documents || [];
       const updatedDocs = currentDocs.filter(doc => doc.name !== docNameToDelete);
       handleDocumentUpdate(updatedDocs);
       toast({
@@ -331,6 +331,8 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
       </CardContent>
   );
 
+  const checklistStatus = aircraft.checklistStatus || 'ready';
+
     return (
         <div className='space-y-6'>
              <div className="flex justify-between items-center">
@@ -338,7 +340,7 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
                 <div className='flex items-center gap-2'>
                   {!isEditing && (
                     <Button asChild variant="outline">
-                      <Link href={`/assets/${aircraftId}/mass-and-balance`}>
+                      <Link href={`/assets/mass-balance?aircraftId=${aircraftId}`}>
                         <Scale className="mr-2 h-4 w-4" />
                         Mass & Balance
                       </Link>
@@ -393,12 +395,21 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
                             </CardHeader>
                             <CardContent className='flex flex-col gap-4'>
                                 <p className="text-sm text-muted-foreground">No recent checklists found for this aircraft.</p>
-                                <Button asChild className='w-fit'>
-                                    <Link href={`/assets/${aircraftId}/checklist`}>
-                                        <ListChecks className="mr-2 h-4 w-4" />
-                                        Start Pre-Flight Check
-                                    </Link>
-                                </Button>
+                                {checklistStatus === 'ready' ? (
+                                    <Button asChild className='w-fit'>
+                                        <Link href={`/assets/${aircraftId}/checklist?type=pre-flight`}>
+                                            <ListChecks className="mr-2 h-4 w-4" />
+                                            Start Pre-Flight Check
+                                        </Link>
+                                    </Button>
+                                ) : (
+                                    <Button asChild className='w-fit'>
+                                        <Link href={`/assets/${aircraftId}/checklist?type=post-flight`}>
+                                            <ListChecks className="mr-2 h-4 w-4" />
+                                            Start Post-Flight Check
+                                        </Link>
+                                    </Button>
+                                )}
                             </CardContent>
                         </Card>
                     )}
