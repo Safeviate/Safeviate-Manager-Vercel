@@ -169,7 +169,7 @@ export default function AircraftProfilePage({ params }: AircraftProfilePageProps
     };
   
     const handleDocumentDelete = (docNameToDelete: string) => {
-      if (!aircraft) return;
+      if (!aircraft || !user.documents) return;
       const currentDocs = user.documents || [];
       const updatedDocs = currentDocs.filter(doc => doc.name !== docNameToDelete);
       handleDocumentUpdate(updatedDocs);

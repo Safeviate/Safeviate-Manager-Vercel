@@ -3,8 +3,8 @@
 
 import { use, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { doc, collection, Timestamp } from 'firebase/firestore';
-import { useDoc, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { doc, collection, Timestamp, addDoc } from 'firebase/firestore';
+import { useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/app/(app)/assets/page';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { ChecklistResponse, ChecklistItemResponse } from '@/types/checklist';
 import { Input } from '@/components/ui/input';
 import type { FeatureSettings } from '@/app/(app)/admin/features/page';
+import { useRouter } from 'next/navigation';
 
 
 interface ChecklistPageProps {
@@ -37,6 +38,7 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
     const resolvedParams = use(params);
     const searchParams = useSearchParams();
     const firestore = useFirestore();
+    const router = useRouter();
     const { toast } = useToast();
     const tenantId = 'safeviate';
     const bookingId = resolvedParams.id;
@@ -88,7 +90,6 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
         }
 
         const responses: ChecklistItemResponse[] = Object.entries(checkedItems)
-            .filter(([, checked]) => checked)
             .map(([itemId, checked]) => ({ itemId, checked }));
 
         if(hobbs) responses.push({ itemId: `${checklistType}-hobbs`, checked: false, hobbs: Number(hobbs) });
@@ -104,7 +105,7 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
 
         try {
             const checklistCollectionRef = collection(firestore, aircraftDocRef.path, 'completed-checklists');
-            await addDocumentNonBlocking(checklistCollectionRef, checklistResponse);
+            await addDoc(checklistCollectionRef, checklistResponse);
 
             toast({
                 title: "Checklist Submitted",
@@ -119,6 +120,8 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
                 };
                 await updateDocumentNonBlocking(aircraftDocRef, aircraftUpdateData);
             }
+
+            router.push(`/operations/bookings/${booking.id}`);
 
         } catch (e) {
             console.error("Failed to submit checklist:", e);

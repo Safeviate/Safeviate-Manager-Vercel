@@ -1,7 +1,7 @@
 
 'use client';
 
-import { use, useMemo, useState } from 'react';
+import { use, useMemo, useState, useEffect } from 'react';
 import { doc, collection, addDoc, Timestamp } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import type { Aircraft } from '../../../page';
@@ -13,7 +13,9 @@ import { ArrowLeft } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import type { ChecklistResponse, ChecklistItemResponse } from '@/types/checklist';
+import type { FeatureSettings } from '@/app/(app)/admin/features/page';
 
 interface ChecklistPageProps {
     params: { id: string };
@@ -31,11 +33,13 @@ const requiredAircraftDocuments = [
 export default function ChecklistPage({ params }: ChecklistPageProps) {
     const resolvedParams = use(params);
     const firestore = useFirestore();
+    const router = useRouter();
     const { toast } = useToast();
     const searchParams = useSearchParams();
     const tenantId = 'safeviate';
     const aircraftId = resolvedParams.id;
     const checklistType = searchParams.get('type') || 'pre-flight';
+    const bookingId = searchParams.get('bookingId');
     
     const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
 
@@ -46,40 +50,58 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
 
     const { data: aircraft, isLoading, error } = useDoc<Aircraft>(aircraftDocRef);
     
+     const featureSettingsRef = useMemoFirebase(
+        () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'features') : null),
+        [firestore, tenantId]
+    );
+    const { data: featureSettings } = useDoc<FeatureSettings>(featureSettingsRef);
+
     const handleCheckboxChange = (itemName: string, isChecked: boolean) => {
         setCheckedItems(prev => ({ ...prev, [itemName]: isChecked }));
     };
 
     const handleSubmit = async () => {
-        if (!aircraftDocRef || !firestore) {
+        if (!aircraftDocRef || !firestore || !bookingId) {
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: 'Database connection not available.',
+                description: 'Database connection or booking ID not available.',
             });
             return;
         }
 
-        const checklistData = {
-            aircraftId,
-            checklistType,
+        const responses: ChecklistItemResponse[] = Object.entries(checkedItems).map(([itemId, checked]) => ({
+            itemId,
+            checked,
+        }));
+        
+        const checklistResponse: Omit<ChecklistResponse, 'id'> = {
+            bookingId: bookingId,
+            pilotId: 'placeholder-pilot-id', // Replace with actual pilot ID from auth
+            checklistType: checklistType as 'pre-flight' | 'post-flight',
             submissionTime: Timestamp.now(),
-            checkedItems,
+            responses,
         };
+        
 
         try {
             // 1. Save the checklist
             const checklistCollectionRef = collection(firestore, aircraftDocRef.path, 'completed-checklists');
-            await addDoc(checklistCollectionRef, checklistData);
+            await addDoc(checklistCollectionRef, checklistResponse);
 
-            // 2. Update the aircraft status
-            const newStatus = checklistType === 'pre-flight' ? 'needs-post-flight' : 'ready';
-            await updateDocumentNonBlocking(aircraftDocRef, { checklistStatus: newStatus });
-            
             toast({
                 title: "Checklist Submitted",
                 description: `The ${checklistType.replace('-', ' ')} checklist has been saved.`,
             });
+            
+            // 2. Update the aircraft status if feature is enabled
+            if (featureSettings?.preFlightChecklistRequired) {
+                const newStatus = checklistType === 'pre-flight' ? 'needs-post-flight' : 'ready';
+                await updateDocumentNonBlocking(aircraftDocRef, { checklistStatus: newStatus });
+            }
+
+            router.push(`/assets/${aircraftId}`);
+
         } catch (e) {
             console.error("Error submitting checklist: ", e);
             toast({
@@ -156,7 +178,7 @@ export default function ChecklistPage({ params }: ChecklistPageProps) {
                      )}
                 </CardContent>
                 <CardFooter>
-                    <Button onClick={handleSubmit}>Submit Checklist</Button>
+                    <Button onClick={handleSubmit} disabled={!bookingId}>Submit Checklist</Button>
                 </CardFooter>
             </Card>
         </div>
