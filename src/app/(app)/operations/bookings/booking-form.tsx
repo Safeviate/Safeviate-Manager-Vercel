@@ -63,6 +63,7 @@ export function BookingForm({
   
   const students = useMemo(() => pilots.filter(p => p.userType === 'Student'), [pilots]);
   const instructors = useMemo(() => pilots.filter(p => p.userType === 'Instructor'), [pilots]);
+  const privatePilots = useMemo(() => pilots.filter(p => p.userType === 'Private Pilot'), [pilots]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -86,25 +87,21 @@ export function BookingForm({
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                     <div className="grid grid-cols-2 gap-4 pt-4">
-                        <div className="col-span-1 space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="booking-type">Booking Type</Label>
-                                <Select onValueChange={setBookingType} value={bookingType}>
-                                    <SelectTrigger id="booking-type">
-                                        <SelectValue placeholder="Select a flight type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Training Flight">Training Flight</SelectItem>
-                                        <SelectItem value="Private Flight">Private Flight</SelectItem>
-                                        <SelectItem value="Reposition Flight">Reposition Flight</SelectItem>
-                                        <SelectItem value="Maintenance Flight">Maintenance Flight</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                        <div className="col-span-2 space-y-2">
+                            <Label htmlFor="booking-type">Booking Type</Label>
+                            <Select onValueChange={setBookingType} value={bookingType}>
+                                <SelectTrigger id="booking-type">
+                                    <SelectValue placeholder="Select a flight type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Training Flight">Training Flight</SelectItem>
+                                    <SelectItem value="Private Flight">Private Flight</SelectItem>
+                                    <SelectItem value="Reposition Flight">Reposition Flight</SelectItem>
+                                    <SelectItem value="Maintenance Flight">Maintenance Flight</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
-                        <div className="col-span-1">
-                            {/* Right column content goes here */}
-                        </div>
+                        
                         {bookingType === 'Training Flight' && (
                             <>
                                 <div className="col-span-1 space-y-2">
@@ -138,6 +135,23 @@ export function BookingForm({
                                     </Select>
                                 </div>
                             </>
+                        )}
+                        {bookingType === 'Private Flight' && (
+                            <div className="col-span-2 space-y-2">
+                                <Label htmlFor="private-pilot">Pilot</Label>
+                                <Select>
+                                    <SelectTrigger id="private-pilot">
+                                        <SelectValue placeholder="Select a pilot" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {privatePilots.map(pilot => (
+                                            <SelectItem key={pilot.id} value={pilot.id}>
+                                                {pilot.firstName} {pilot.lastName}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         )}
                     </div>
                 </CollapsibleContent>
