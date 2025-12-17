@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -122,7 +123,7 @@ export function BookingForm({
     setIsOpen(open);
   };
   
-  const handleSave = async () => {
+  const handleSave = async (isPreFlightSubmit = false) => {
     if (!firestore) return;
 
     if (!bookingType || !pilotId) {
@@ -159,10 +160,13 @@ export function BookingForm({
             oilLeft: Number(postFlightOilLeft),
             oilRight: Number(postFlightOilRight),
           },
-          status: 'Completed', // Or some other logic to determine status
         };
         
-        const isPostFlightFilled = Number(postFlightHobbs) > 0 && Number(postFlightTacho) > 0;
+        if (!isPreFlightSubmit) {
+            updateData.status = 'Completed'; // Or some other logic to determine status
+        }
+        
+        const isPostFlightFilled = !isPreFlightSubmit && Number(postFlightHobbs) > 0 && Number(postFlightTacho) > 0;
         updateBooking(firestore, tenantId, existingBooking.id, updateData, aircraft.id, isPostFlightFilled);
         toast({ title: 'Booking Updated', description: `Booking #${existingBooking.bookingNumber} has been updated.` });
 
@@ -193,7 +197,11 @@ export function BookingForm({
             toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
         }
     }
-    setIsOpen(false);
+
+    // Only close the form if it's the final save, not just a pre-flight submit
+    if (!isPreFlightSubmit) {
+      setIsOpen(false);
+    }
   };
   
   const students = useMemo(() => pilots.filter(p => p.userType === 'Student'), [pilots]);
@@ -210,7 +218,7 @@ export function BookingForm({
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh]">
-            <div className="grid gap-4 py-4 pr-6">
+            <div className="grid gap-4 py-4 pr-4">
                 {preflightDisabled && (
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
@@ -405,6 +413,9 @@ export function BookingForm({
                                 ))}
                             </div>
                         </div>
+                        <div className="flex justify-end pt-4">
+                            <Button onClick={() => handleSave(true)}>Submit Pre-Flight</Button>
+                        </div>
                     </CollapsibleContent>
                 </Collapsible>
 
@@ -471,7 +482,7 @@ export function BookingForm({
                 <DialogClose asChild>
                     <Button variant="outline" className="w-20">Cancel</Button>
                 </DialogClose>
-                <Button onClick={handleSave} className="w-20" disabled={preflightDisabled}>Save</Button>
+                <Button onClick={() => handleSave(false)} className="w-20" disabled={preflightDisabled}>Save</Button>
             </div>
         </DialogFooter>
       </DialogContent>
