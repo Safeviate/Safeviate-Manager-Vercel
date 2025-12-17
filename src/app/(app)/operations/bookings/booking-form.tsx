@@ -303,6 +303,10 @@ export function BookingForm({
                             />
                         </div>
                     </div>
+                    <div className="col-span-2 mt-4 space-y-2">
+                        <Separator />
+                        <h4 className="text-sm font-semibold pt-2">Required documents</h4>
+                    </div>
                 </CollapsibleContent>
             </Collapsible>
 
