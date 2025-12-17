@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -58,7 +57,6 @@ import { Badge } from '@/components/ui/badge';
 import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
 import type { AircraftModelProfile } from '@/types/aircraft-wb-profile';
 import type { Aircraft } from '../page';
-import type { Booking, MassAndBalance } from '@/types/booking';
 import {
     Select,
     SelectContent,
@@ -156,28 +154,16 @@ const OffScreenWarning = ({
   </div>
 );
 
-const getBookingTypeAbbreviation = (type: Booking['type']): string => {
-    switch (type) {
-        case 'Student Training': return 'T';
-        case 'Hire and Fly': return 'H';
-        case 'Maintenance Flight': return 'M';
-        default: return '';
-    }
-}
-
 export function ConfiguratorTab() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const tenantId = 'safeviate';
   const searchParams = useSearchParams();
   const aircraftIdFromUrl = searchParams.get('aircraftId');
-  const bookingIdFromUrl = searchParams.get('bookingId');
   
   // Hardcoded permissions for now - will be replaced with real auth logic
-  const canManageTemplates = true; // hasPermission('mass-balance-manage-templates')
-  const canCalculateForBooking = true; // hasPermission('mass-balance-calculate-booking')
+  const canManageTemplates = true; 
 
-  const [isBookingCalculation, setIsBookingCalculation] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [isSaveProfileDialogOpen, setIsSaveProfileDialogOpen] = useState(false);
   const [isClearAircraftDialogOpen, setIsClearAircraftDialogOpen] = useState(false);
@@ -250,51 +236,15 @@ export function ConfiguratorTab() {
   );
   const { data: aircraftList, isLoading: isLoadingAircraft } = useCollection<Aircraft>(aircraftQuery);
 
-  const bookingDocRef = useMemoFirebase(
-    () => (firestore && bookingIdFromUrl ? doc(firestore, 'tenants', tenantId, 'bookings', bookingIdFromUrl) : null),
-    [firestore, bookingIdFromUrl]
-  );
-  const { data: booking, isLoading: isLoadingBooking } = useDoc<Booking>(bookingDocRef);
 
-  // --- Logic for Read-Only Mode & Loading from Booking ---
+  // --- Logic for Read-Only Mode & Loading ---
   useEffect(() => {
-    const isForBooking = !!bookingIdFromUrl;
-    setIsBookingCalculation(isForBooking);
-
-    if (booking?.massAndBalance) {
-        setIsReadOnly(true); // Saved M&B is always read-only
-        const savedMB = booking.massAndBalance;
-        setResults({
-            cg: savedMB.totalCg,
-            weight: savedMB.totalWeight,
-            isSafe: savedMB.isSafe,
-        });
-
-        const bemStation = savedMB.stations.find(s => s.name === 'Basic Empty Weight');
-        if (bemStation) {
-            setBasicEmpty({
-                weight: bemStation.weight || 0,
-                arm: bemStation.arm || 0,
-                moment: (bemStation.weight || 0) * (bemStation.arm || 0),
-            });
-        }
-        setStations(savedMB.stations.filter(s => s.name !== 'Basic Empty Weight'));
-
-    } else if (isForBooking) {
-        // This is a new calculation for a booking
-        setIsReadOnly(!canCalculateForBooking); // Lock if user can't perform calculation
-        if (aircraftIdFromUrl && aircraftList) {
-            handleLoadFromAircraft(aircraftIdFromUrl);
-        }
-    } else {
-        // This is the admin/template management view
-        setIsReadOnly(!canManageTemplates);
-        if (aircraftIdFromUrl && aircraftList) {
-            handleLoadFromAircraft(aircraftIdFromUrl);
-        }
+    setIsReadOnly(!canManageTemplates);
+    if (aircraftIdFromUrl && aircraftList) {
+        handleLoadFromAircraft(aircraftIdFromUrl);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [booking, bookingIdFromUrl, aircraftIdFromUrl, aircraftList, canManageTemplates, canCalculateForBooking]);
+  }, [aircraftIdFromUrl, aircraftList, canManageTemplates]);
 
   useEffect(() => {
     let totalMom = parseFloat(basicEmpty.moment as any) || 0;
@@ -725,34 +675,6 @@ export function ConfiguratorTab() {
       setSelectedAircraftId('');
     }
   };
-  
-  const handleSaveToBooking = () => {
-    if (!bookingDocRef) {
-        toast({ variant: 'destructive', title: 'Booking Not Found' });
-        return;
-    }
-
-    const massAndBalanceData: MassAndBalance = {
-        totalWeight: results.weight,
-        totalCg: results.cg,
-        isSafe: results.isSafe,
-        calculationDate: Timestamp.now(),
-        stations: [
-            { id: 1, name: 'Basic Empty Weight', weight: basicEmpty.weight, arm: basicEmpty.arm, type: 'bew' },
-            ...stations,
-        ]
-    };
-
-    updateDocumentNonBlocking(bookingDocRef, { massAndBalance: massAndBalanceData });
-
-    toast({
-        title: 'Calculation Saved',
-        description: 'The Mass & Balance calculation has been saved to this booking.',
-    });
-    
-    // The useEffect listening to `booking` will handle the UI switch to read-only
-  };
-
 
   const allX = [
     ...graphConfig.envelope.map((p) => p.x),
@@ -775,10 +697,7 @@ export function ConfiguratorTab() {
 
   const loadedProfileName = loadedProfileId ? profiles?.find(p => p.id === loadedProfileId)?.profileName : null;
   const selectedAircraftName = selectedAircraftId ? aircraftList?.find(a => a.id === selectedAircraftId)?.tailNumber : '';
-  const bookingNumber = booking?.bookingNumber
-    ? `#${getBookingTypeAbbreviation(booking.type)}${booking.bookingNumber}`
-    : '';
-
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -788,20 +707,13 @@ export function ConfiguratorTab() {
             </h1>
         </div>
         <div className="flex gap-3">
-          {isBookingCalculation && bookingIdFromUrl && (
-            <Button asChild variant="outline">
-              <Link href={`/operations/bookings/${bookingIdFromUrl}`}>
-                <ArrowLeft size={16} className="mr-2" /> Back to Booking
-              </Link>
-            </Button>
-          )}
           {!isReadOnly && (
              <Button onClick={handleReset} variant="outline">
                 <RotateCcw size={16} className="mr-2" /> Reset
             </Button>
           )}
 
-           {canManageTemplates && !isBookingCalculation && (
+           {canManageTemplates && (
             <Dialog>
                 <DialogTrigger asChild>
                     <Button variant="outline">
@@ -838,7 +750,7 @@ export function ConfiguratorTab() {
             </Dialog>
            )}
 
-            {canManageTemplates && !isBookingCalculation && (
+            {canManageTemplates && (
                  <Dialog open={isClearAircraftDialogOpen} onOpenChange={handleClearDialogOpenChange}>
                     <DialogTrigger asChild>
                         <Button variant="destructive">
@@ -894,13 +806,7 @@ export function ConfiguratorTab() {
                 </Dialog>
             )}
 
-            {isBookingCalculation && !isReadOnly && canCalculateForBooking && (
-                <Button onClick={handleSaveToBooking}>
-                    <Save size={16} className="mr-2" /> Save to Booking
-                </Button>
-            )}
-
-            {!isBookingCalculation && canManageTemplates && (
+            {canManageTemplates && (
                 <>
                     {loadedProfileId ? (
                         <div className='flex gap-2'>
@@ -996,7 +902,6 @@ export function ConfiguratorTab() {
                 <span className="font-semibold text-foreground">
                   {loadedAircraftTailNumber ? `Aircraft: ${loadedAircraftTailNumber}` : `Profile: ${loadedProfileName}`}
                 </span>
-                {bookingNumber && <span className="ml-2">| Booking: {bookingNumber}</span>}
               </p>
             )}
           </div>
@@ -1010,7 +915,7 @@ export function ConfiguratorTab() {
                 <Alert className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-auto bg-background/80 backdrop-blur-sm">
                     <Lock className="h-4 w-4" />
                     <AlertDescription>
-                       {booking?.massAndBalance ? 'This Mass & Balance has been saved to the booking and is read-only.' : 'You do not have permission to perform this action.'}
+                       {'You do not have permission to perform this action.'}
                     </AlertDescription>
                 </Alert>
             )}
@@ -1111,8 +1016,7 @@ export function ConfiguratorTab() {
                 CONSULT AIRCRAFT POH BEFORE FLIGHT
             </p>
 
-            {!isBookingCalculation && (
-                <>
+            
                 <Separator className="my-4" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -1166,8 +1070,7 @@ export function ConfiguratorTab() {
                     </Select>
                 </div>
                 </div>
-                </>
-            )}
+                
 
             <Separator className='my-6' />
 

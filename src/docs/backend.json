@@ -58,92 +58,6 @@
       },
       "required": ["id", "profileName"]
     },
-    "MassAndBalance": {
-      "title": "Mass and Balance",
-      "type": "object",
-      "description": "A snapshot of a mass and balance calculation for a booking.",
-      "properties": {
-        "totalWeight": { "type": "number" },
-        "totalCg": { "type": "number" },
-        "isSafe": { "type": "boolean" },
-        "calculationDate": { "type": "string", "format": "date-time" },
-        "stations": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "number" },
-              "name": { "type": "string" },
-              "weight": { "type": "number" },
-              "arm": { "type": "number" },
-              "type": { "type": "string" },
-              "gallons": { "type": "number" },
-              "maxGallons": { "type": "number" }
-            }
-          }
-        }
-      }
-    },
-    "Booking": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Booking",
-      "type": "object",
-      "description": "Represents a booking for an aircraft.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Booking."
-        },
-        "bookingNumber": {
-          "type": "number",
-          "description": "Sequential booking number."
-        },
-        "aircraftId": {
-          "type": "string",
-          "description": "Reference to the booked Aircraft."
-        },
-        "pilotId": {
-          "type": "string",
-          "description": "Reference to the Pilot making the booking."
-        },
-        "instructorId": {
-          "type": "string",
-          "description": "Reference to the Instructor for training sessions."
-        },
-        "type": {
-          "type": "string",
-          "description": "Type of booking.",
-          "enum": ["Student Training", "Hire and Fly", "Maintenance Flight"]
-        },
-        "startTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The start time of the booking."
-        },
-        "endTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The end time of the booking."
-        },
-        "status": {
-          "type": "string",
-          "description": "The status of the booking.",
-          "enum": ["Confirmed", "Pending", "Cancelled", "Cancelled with Reason"]
-        },
-        "overnightId": {
-          "type": "string",
-          "description": "A unique ID to link parts of an overnight booking."
-        },
-        "cancellationReason": {
-            "type": "string",
-            "description": "The reason for the booking cancellation."
-        },
-        "massAndBalance": {
-            "$ref": "#/backend/entities/MassAndBalance"
-        }
-      },
-      "required": ["id", "bookingNumber", "aircraftId", "pilotId", "type", "startTime", "endTime", "status"]
-    },
     "PilotProfile": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "PilotProfile",
@@ -728,40 +642,6 @@
         }
       },
       "required": ["id", "currentNumber"]
-    },
-    "ChecklistResponse": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ChecklistResponse",
-      "type": "object",
-      "description": "Represents a single submission of a pre-flight or post-flight checklist for a specific booking.",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the checklist response." },
-        "bookingId": { "type": "string", "description": "Reference to the associated Booking." },
-        "pilotId": { "type": "string", "description": "Reference to the Pilot who submitted the checklist." },
-        "checklistType": { "type": "string", "description": "The type of checklist.", "enum": ["pre-flight", "post-flight"] },
-        "submissionTime": { "type": "string", "format": "date-time", "description": "Timestamp of when the checklist was submitted." },
-        "responses": {
-          "type": "array",
-          "description": "An array of responses for each checklist item.",
-          "items": { "$ref": "#/backend/entities/ChecklistItemResponse" }
-        }
-      },
-      "required": ["id", "bookingId", "pilotId", "checklistType", "submissionTime"]
-    },
-    "ChecklistItemResponse": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ChecklistItemResponse",
-      "type": "object",
-      "description": "Represents a response to a single item within a checklist.",
-      "properties": {
-        "itemId": { "type": "string", "description": "Identifier for the checklist item (e.g., 'doc_cert_of_reg' or 'photo_left_wing')." },
-        "checked": { "type": "boolean", "description": "Indicates if the item was checked/confirmed by the pilot." },
-        "notes": { "type": "string", "description": "Any notes or comments provided by the pilot for this item." },
-        "photoUrl": { "type": "string", "format": "uri", "description": "URL of the uploaded photo for this item, if applicable." },
-        "tacho": { "type": "number", "description": "The tacho reading for this item." },
-        "hobbs": { "type": "number", "description": "The Hobbs meter reading for this item." }
-      },
-      "required": ["itemId", "checked"]
     }
   },
   "auth": {
@@ -882,26 +762,6 @@
             {
               "name": "maintenanceLogId",
               "description": "Unique identifier for the maintenance log entry."
-            }
-          ]
-        }
-      },
-      {
-        "path": "tenants/{tenantId}/bookings/{bookingId}",
-        "definition": {
-          "entityName": "Booking",
-          "schema": {
-            "$ref": "#/backend/entities/Booking"
-          },
-          "description": "Stores booking information, scoped to a specific tenant.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "Unique identifier for the tenant."
-            },
-            {
-              "name": "bookingId",
-              "description": "Unique identifier for the booking."
             }
           ]
         }
@@ -1046,26 +906,6 @@
             {
               "name": "counterId",
               "description": "The name of the counter (e.g., 'bookings')."
-            }
-          ]
-        }
-      },
-      {
-        "path": "tenants/{tenantId}/checklistResponses/{responseId}",
-        "definition": {
-          "entityName": "ChecklistResponse",
-          "schema": {
-            "$ref": "#/backend/entities/ChecklistResponse"
-          },
-          "description": "Stores submitted checklist responses for bookings.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "Unique identifier for the tenant."
-            },
-            {
-              "name": "responseId",
-              "description": "Unique identifier for the checklist response."
             }
           ]
         }
