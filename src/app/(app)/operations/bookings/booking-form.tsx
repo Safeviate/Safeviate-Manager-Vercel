@@ -123,7 +123,7 @@ export function BookingForm({
     setIsOpen(open);
   };
   
-  const handleSave = async (isPreFlightSubmit = false) => {
+  const handleSave = async (options: { closeOnSave: boolean, isPreFlight?: boolean, isPostFlight?: boolean } = { closeOnSave: true }) => {
     if (!firestore) return;
 
     if (!bookingType || !pilotId) {
@@ -141,37 +141,63 @@ export function BookingForm({
     const parsedEndTime = parse(endTimeValue, 'HH:mm', startDate);
 
     if (isEditMode && existingBooking) {
-        // Update logic
-        const updateData: Partial<Booking> = {
-          preFlight: {
-            actualHobbs: Number(preFlightHobbs),
-            actualTacho: Number(preFlightTacho),
-            oil: Number(preFlightOil),
-            fuel: Number(preFlightFuel),
-            oilLeft: Number(preFlightOilLeft),
-            oilRight: Number(preFlightOilRight),
-            documentsChecked: checkedDocs,
-          },
-          postFlight: {
-            actualHobbs: Number(postFlightHobbs),
-            actualTacho: Number(postFlightTacho),
-            oil: Number(postFlightOil),
-            fuel: Number(postFlightFuel),
-            oilLeft: Number(postFlightOilLeft),
-            oilRight: Number(postFlightOilRight),
-          },
-        };
+        // --- UPDATE LOGIC ---
+        const updateData: Partial<Booking> = {};
         
-        if (!isPreFlightSubmit) {
-            updateData.status = 'Completed'; // Or some other logic to determine status
+        // Always include booking details on a full save
+        if (!options.isPreFlight && !options.isPostFlight) {
+            Object.assign(updateData, {
+                type: bookingType as Booking['type'],
+                pilotId,
+                instructorId: instructorId || undefined,
+                startTime: parsedStartTime,
+                endTime: parsedEndTime,
+            });
         }
         
-        const isPostFlightFilled = !isPreFlightSubmit && Number(postFlightHobbs) > 0 && Number(postFlightTacho) > 0;
-        updateBooking(firestore, tenantId, existingBooking.id, updateData, aircraft.id, isPostFlightFilled);
-        toast({ title: 'Booking Updated', description: `Booking #${existingBooking.bookingNumber} has been updated.` });
+        // Add pre-flight data if it's a pre-flight submit or a full save
+        if (options.isPreFlight || !options.isPostFlight) {
+            updateData.preFlight = {
+                actualHobbs: Number(preFlightHobbs) || undefined,
+                actualTacho: Number(preFlightTacho) || undefined,
+                oil: Number(preFlightOil) || undefined,
+                fuel: Number(preFlightFuel) || undefined,
+                oilLeft: Number(preFlightOilLeft) || undefined,
+                oilRight: Number(preFlightOilRight) || undefined,
+                documentsChecked: checkedDocs,
+            };
+        }
+
+        // Add post-flight data if it's a post-flight submit or a full save
+        if (options.isPostFlight || !options.isPreFlight) {
+            updateData.postFlight = {
+                actualHobbs: Number(postFlightHobbs) || undefined,
+                actualTacho: Number(postFlightTacho) || undefined,
+                oil: Number(postFlightOil) || undefined,
+                fuel: Number(postFlightFuel) || undefined,
+                oilLeft: Number(postFlightOilLeft) || undefined,
+                oilRight: Number(postFlightOilRight) || undefined,
+            };
+        }
+        
+        // Finalize status on post-flight or full save
+        if (options.isPostFlight || !options.isPreFlight) {
+            const isPostFlightFilled = Number(postFlightHobbs) > 0 && Number(postFlightTacho) > 0;
+            if (isPostFlightFilled) {
+                updateData.status = 'Completed';
+                updateBooking(firestore, tenantId, existingBooking.id, updateData, aircraft.id, true);
+                toast({ title: 'Post-Flight Submitted', description: 'Aircraft is now ready for the next booking.' });
+            } else {
+                 updateBooking(firestore, tenantId, existingBooking.id, updateData, aircraft.id, false);
+                 toast({ title: 'Booking Updated', description: `Booking #${existingBooking.bookingNumber} has been updated.` });
+            }
+        } else if (options.isPreFlight) {
+            updateBooking(firestore, tenantId, existingBooking.id, updateData, aircraft.id, false);
+            toast({ title: 'Pre-Flight Submitted', description: `Booking #${existingBooking.bookingNumber} is ready for flight.` });
+        }
 
     } else {
-        // Create logic
+        // --- CREATE LOGIC ---
         const bookingData = {
             aircraftId: aircraft.id,
             pilotId,
@@ -198,8 +224,7 @@ export function BookingForm({
         }
     }
 
-    // Only close the form if it's the final save, not just a pre-flight submit
-    if (!isPreFlightSubmit) {
+    if (options.closeOnSave) {
       setIsOpen(false);
     }
   };
@@ -217,8 +242,8 @@ export function BookingForm({
             For {aircraft.tailNumber} on {format(startTime, 'PPP')}.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[60vh]">
-            <div className="grid gap-4 py-4 pr-4">
+        <ScrollArea className="max-h-[60vh] pr-4">
+            <div className="grid gap-4 py-4">
                 {preflightDisabled && (
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
@@ -414,7 +439,7 @@ export function BookingForm({
                             </div>
                         </div>
                         <div className="flex justify-end pt-4">
-                            <Button onClick={() => handleSave(true)}>Submit Pre-Flight</Button>
+                            <Button onClick={() => handleSave({ closeOnSave: false, isPreFlight: true })}>Submit Pre-Flight</Button>
                         </div>
                     </CollapsibleContent>
                 </Collapsible>
@@ -471,7 +496,7 @@ export function BookingForm({
                           )}
                       </div>
                       <div className="flex justify-end pt-4">
-                          <Button onClick={() => handleSave(false)}>Submit Post-Flight</Button>
+                          <Button onClick={() => handleSave({ closeOnSave: false, isPostFlight: true })}>Submit Post-Flight</Button>
                       </div>
                     </CollapsibleContent>
                 </Collapsible>
@@ -485,7 +510,7 @@ export function BookingForm({
                 <DialogClose asChild>
                     <Button variant="outline" className="w-20">Cancel</Button>
                 </DialogClose>
-                <Button onClick={() => handleSave(false)} className="w-20" disabled={preflightDisabled}>Save</Button>
+                <Button onClick={() => handleSave({ closeOnSave: true })} className="w-20" disabled={preflightDisabled}>Save</Button>
             </div>
         </DialogFooter>
       </DialogContent>
