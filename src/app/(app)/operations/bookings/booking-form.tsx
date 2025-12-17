@@ -55,18 +55,16 @@ export function BookingForm({
         <DialogFooter className='justify-between'>
             <Button variant="destructive">
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete Booking
+                Delete
             </Button>
             <div className='flex gap-2'>
                 <DialogClose asChild>
-                    <Button variant="outline">Cancel Booking</Button>
+                    <Button variant="outline">Cancel</Button>
                 </DialogClose>
-                <Button>Save Booking</Button>
+                <Button>Save</Button>
             </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-    
