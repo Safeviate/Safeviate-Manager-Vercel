@@ -48,7 +48,7 @@ export const menuConfig: MenuItem[] = [
       {
         href: '/operations/bookings',
         label: 'Schedule',
-        description: 'Schedule and manage aircraft bookings.',
+        description: 'View the aircraft booking schedule.',
       },
       {
         href: '/operations/bookings-history',
@@ -178,5 +178,3 @@ export const settingsMenuItem: MenuItem = {
     },
   ],
 };
-
-    
