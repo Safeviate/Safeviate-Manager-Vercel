@@ -28,7 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format, addHours } from 'date-fns';
+import { format, addHours, set } from 'date-fns';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
 
 
 interface BookingFormProps {
@@ -56,17 +58,38 @@ export function BookingForm({
   const [startTimeValue, setStartTimeValue] = useState('');
   const [endTimeValue, setEndTimeValue] = useState('');
 
+  const [isOvernight, setIsOvernight] = useState(false);
+  const [returnStartTimeValue, setReturnStartTimeValue] = useState('00:00');
+  const [returnEndTimeValue, setReturnEndTimeValue] = useState('01:00');
+  const [originalEndTime, setOriginalEndTime] = useState('');
+
   useEffect(() => {
     if (startTime) {
-      setStartTimeValue(format(startTime, 'HH:mm'));
+      const formattedStartTime = format(startTime, 'HH:mm');
       const endTimeDate = addHours(startTime, 1);
-      setEndTimeValue(format(endTimeDate, 'HH:mm'));
+      const formattedEndTime = format(endTimeDate, 'HH:mm');
+
+      setStartTimeValue(formattedStartTime);
+      setEndTimeValue(formattedEndTime);
+      setOriginalEndTime(formattedEndTime); // Store the original end time
     }
   }, [startTime]);
+
+  useEffect(() => {
+    if (isOvernight) {
+      setEndTimeValue('23:59');
+      setReturnStartTimeValue('00:00');
+      setReturnEndTimeValue('01:00');
+    } else {
+      // Revert to original end time when switch is turned off
+      setEndTimeValue(originalEndTime);
+    }
+  }, [isOvernight, originalEndTime]);
 
   const onOpenChange = (open: boolean) => {
     if (!open) {
       // Reset form or state if needed when dialog closes
+      setIsOvernight(false); // Also reset overnight switch on close
     }
     setIsOpen(open);
   };
@@ -180,8 +203,42 @@ export function BookingForm({
                                 type="time" 
                                 value={endTimeValue}
                                 onChange={(e) => setEndTimeValue(e.target.value)}
+                                readOnly={isOvernight}
                             />
                         </div>
+
+                        <div className="col-span-2 flex items-center space-x-2 pt-2">
+                            <Switch id="overnight-mode" checked={isOvernight} onCheckedChange={setIsOvernight} />
+                            <Label htmlFor="overnight-mode">Overnight</Label>
+                        </div>
+                        
+                        {isOvernight && (
+                            <div className="col-span-2 space-y-4 pt-2">
+                                <Separator />
+                                <h4 className="text-sm font-semibold">Return Details</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="return-start-time">Start Time</Label>
+                                        <Input
+                                            id="return-start-time"
+                                            type="time"
+                                            value={returnStartTimeValue}
+                                            readOnly
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="return-end-time">End Time</Label>
+                                        <Input
+                                            id="return-end-time"
+                                            type="time"
+                                            value={returnEndTimeValue}
+                                            onChange={(e) => setReturnEndTimeValue(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                     </div>
                 </CollapsibleContent>
             </Collapsible>
@@ -198,11 +255,8 @@ export function BookingForm({
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                    <div className="grid grid-cols-2 gap-4 pt-4">
-                        <div className="col-span-1">
+                        <div className="col-span-2">
                             {/* Left column content goes here */}
-                        </div>
-                        <div className="col-span-1">
-                            {/* Right column content goes here */}
                         </div>
                     </div>
                 </CollapsibleContent>
@@ -220,11 +274,8 @@ export function BookingForm({
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                     <div className="grid grid-cols-2 gap-4 pt-4">
-                        <div className="col-span-1">
+                        <div className="col-span-2">
                             {/* Left column content goes here */}
-                        </div>
-                        <div className="col-span-1">
-                            {/* Right column content goes here */}
                         </div>
                     </div>
                 </CollapsibleContent>
