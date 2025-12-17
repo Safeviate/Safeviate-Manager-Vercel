@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -45,7 +46,8 @@ export const createBooking = async (
 
             // 2. Create the new booking document
             const newBookingRef = doc(bookingsRef); // Create a new doc reference with a generated ID
-            const newBookingPayload: Booking = {
+            
+            const payload: any = {
                 ...bookingData,
                 id: newBookingRef.id,
                 bookingNumber: newBookingNumber,
@@ -53,7 +55,15 @@ export const createBooking = async (
                 startTime: Timestamp.fromDate(bookingData.startTime),
                 endTime: Timestamp.fromDate(bookingData.endTime),
             };
-            transaction.set(newBookingRef, newBookingPayload);
+
+            // Conditionally add instructorId to avoid 'undefined' error
+            if (bookingData.instructorId) {
+                payload.instructorId = bookingData.instructorId;
+            } else {
+                delete payload.instructorId;
+            }
+            
+            transaction.set(newBookingRef, payload);
             
             // 3. Update the aircraft status to needs-post-flight after pre-flight is done
             transaction.update(aircraftRef, { checklistStatus: 'needs-post-flight' });
@@ -86,7 +96,16 @@ export const updateBooking = (
     markAsReady: boolean
 ) => {
     const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, bookingId);
-    updateDocumentNonBlocking(bookingRef, updateData);
+    
+    // Create a clean object to avoid sending undefined values
+    const cleanUpdateData: { [key: string]: any } = {};
+    for (const key in updateData) {
+        if (updateData[key as keyof typeof updateData] !== undefined) {
+            cleanUpdateData[key] = updateData[key as keyof typeof updateData];
+        }
+    }
+
+    updateDocumentNonBlocking(bookingRef, cleanUpdateData);
 
     if (markAsReady) {
         const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);

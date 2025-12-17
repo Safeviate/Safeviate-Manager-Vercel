@@ -149,10 +149,12 @@ export function BookingForm({
             Object.assign(updateData, {
                 type: bookingType as Booking['type'],
                 pilotId,
-                instructorId: instructorId || undefined,
                 startTime: parsedStartTime,
                 endTime: parsedEndTime,
             });
+            if (instructorId) {
+                updateData.instructorId = instructorId;
+            }
         }
         
         // Add pre-flight data if it's a pre-flight submit or a full save
@@ -200,10 +202,9 @@ export function BookingForm({
 
     } else {
         // --- CREATE LOGIC ---
-        const bookingData = {
+        const bookingData: any = {
             aircraftId: aircraft.id,
             pilotId,
-            instructorId: instructorId || undefined,
             type: bookingType as Booking['type'],
             startTime: parsedStartTime,
             endTime: parsedEndTime,
@@ -217,6 +218,10 @@ export function BookingForm({
                 documentsChecked: checkedDocs,
             }
         };
+        
+        if (instructorId) {
+            bookingData.instructorId = instructorId;
+        }
 
         try {
             await createBooking(firestore, tenantId, bookingData);
