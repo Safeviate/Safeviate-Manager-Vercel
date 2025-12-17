@@ -209,8 +209,8 @@ export function BookingForm({
             For {aircraft.tailNumber} on {format(startTime, 'PPP')}.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[60vh] pr-6">
-            <div className="grid gap-4 py-4">
+        <ScrollArea className="max-h-[60vh]">
+            <div className="grid gap-4 py-4 pr-6">
                 {preflightDisabled && (
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
