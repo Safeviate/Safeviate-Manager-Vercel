@@ -20,7 +20,15 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+} from "@/components/ui/collapsible";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 
 interface BookingFormProps {
   isOpen: boolean;
@@ -70,8 +78,21 @@ export function BookingForm({
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                     <div className="grid grid-cols-2 gap-4 pt-4">
-                        <div className="col-span-1">
-                            {/* Left column content goes here */}
+                        <div className="col-span-1 space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="booking-type">Booking Type</Label>
+                                <Select>
+                                    <SelectTrigger id="booking-type">
+                                        <SelectValue placeholder="Select a flight type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="training">Training Flight</SelectItem>
+                                        <SelectItem value="private">Private Flight</SelectItem>
+                                        <SelectItem value="reposition">Reposition Flight</SelectItem>
+                                        <SelectItem value="maintenance">Maintenance Flight</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                         <div className="col-span-1">
                             {/* Right column content goes here */}
