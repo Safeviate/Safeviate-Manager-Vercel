@@ -57,11 +57,6 @@ export const menuConfig: MenuItem[] = [
         label: 'Bookings History',
         description: 'View and manage past bookings.',
       },
-      {
-        href: '/operations/bookings-page',
-        label: 'Bookings',
-        description: 'Create and manage bookings.',
-      },
     ],
   },
   {
