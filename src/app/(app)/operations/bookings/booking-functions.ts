@@ -8,6 +8,7 @@ import {
     runTransaction,
     serverTimestamp,
     Timestamp,
+    deleteField,
   } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase';
 import type { Booking } from '@/types/booking';
@@ -59,14 +60,15 @@ export const createBooking = async (
             // Conditionally add instructorId to avoid 'undefined' error
             if (bookingData.instructorId) {
                 payload.instructorId = bookingData.instructorId;
-            } else {
-                delete payload.instructorId;
             }
             
             transaction.set(newBookingRef, payload);
             
             // 3. Update the aircraft status to needs-post-flight after pre-flight is done
-            transaction.update(aircraftRef, { checklistStatus: 'needs-post-flight' });
+            const preFlightSubmitted = bookingData.preFlight && (bookingData.preFlight.actualHobbs || bookingData.preFlight.actualTacho);
+            if (preFlightSubmitted) {
+                transaction.update(aircraftRef, { checklistStatus: 'needs-post-flight' });
+            }
 
             return newBookingRef.id;
         });
@@ -100,8 +102,12 @@ export const updateBooking = (
     // Create a clean object to avoid sending undefined values
     const cleanUpdateData: { [key: string]: any } = {};
     for (const key in updateData) {
-        if (updateData[key as keyof typeof updateData] !== undefined) {
-            cleanUpdateData[key] = updateData[key as keyof typeof updateData];
+        const value = updateData[key as keyof typeof updateData];
+        if (value !== undefined) {
+            cleanUpdateData[key] = value;
+        }
+        if (key === 'instructorId' && (value === '' || value === null)) {
+            cleanUpdateData[key] = deleteField();
         }
     }
 
@@ -110,5 +116,13 @@ export const updateBooking = (
     if (markAsReady) {
         const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);
         updateDocumentNonBlocking(aircraftRef, { checklistStatus: 'ready' });
+    } else {
+        const preFlightSubmitted = updateData.preFlight && (updateData.preFlight.actualHobbs || updateData.preFlight.actualTacho);
+        if (preFlightSubmitted) {
+            const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);
+            updateDocumentNonBlocking(aircraftRef, { checklistStatus: 'needs-post-flight' });
+        }
     }
 }
+
+    

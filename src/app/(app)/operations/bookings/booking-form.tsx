@@ -60,6 +60,12 @@ const requiredDocumentsList = [
     { id: 'insp', label: 'Insp' },
 ];
 
+const toNumberOrUndefined = (value: string | number) => {
+    const num = Number(value);
+    return isNaN(num) || value === '' ? undefined : num;
+};
+
+
 export function BookingForm({
   isOpen,
   setIsOpen,
@@ -144,7 +150,6 @@ export function BookingForm({
         // --- UPDATE LOGIC ---
         const updateData: Partial<Booking> = {};
         
-        // Always include booking details on a full save
         if (!options.isPreFlight && !options.isPostFlight) {
             Object.assign(updateData, {
                 type: bookingType as Booking['type'],
@@ -154,35 +159,34 @@ export function BookingForm({
             });
             if (instructorId) {
                 updateData.instructorId = instructorId;
+            } else {
+                updateData.instructorId = ''; // Send empty string to remove it
             }
         }
         
-        // Add pre-flight data if it's a pre-flight submit or a full save
         if (options.isPreFlight || !options.isPostFlight) {
             updateData.preFlight = {
-                actualHobbs: Number(preFlightHobbs) || undefined,
-                actualTacho: Number(preFlightTacho) || undefined,
-                oil: Number(preFlightOil) || undefined,
-                fuel: Number(preFlightFuel) || undefined,
-                oilLeft: Number(preFlightOilLeft) || undefined,
-                oilRight: Number(preFlightOilRight) || undefined,
+                actualHobbs: toNumberOrUndefined(preFlightHobbs),
+                actualTacho: toNumberOrUndefined(preFlightTacho),
+                oil: toNumberOrUndefined(preFlightOil),
+                fuel: toNumberOrUndefined(preFlightFuel),
+                oilLeft: toNumberOrUndefined(preFlightOilLeft),
+                oilRight: toNumberOrUndefined(preFlightOilRight),
                 documentsChecked: checkedDocs,
             };
         }
 
-        // Add post-flight data if it's a post-flight submit or a full save
         if (options.isPostFlight || (!options.isPreFlight && !options.isPostFlight)) {
             updateData.postFlight = {
-                actualHobbs: Number(postFlightHobbs) || undefined,
-                actualTacho: Number(postFlightTacho) || undefined,
-                oil: Number(postFlightOil) || undefined,
-                fuel: Number(postFlightFuel) || undefined,
-                oilLeft: Number(postFlightOilLeft) || undefined,
-                oilRight: Number(postFlightOilRight) || undefined,
+                actualHobbs: toNumberOrUndefined(postFlightHobbs),
+                actualTacho: toNumberOrUndefined(postFlightTacho),
+                oil: toNumberOrUndefined(postFlightOil),
+                fuel: toNumberOrUndefined(postFlightFuel),
+                oilLeft: toNumberOrUndefined(postFlightOilLeft),
+                oilRight: toNumberOrUndefined(postFlightOilRight),
             };
         }
         
-        // Finalize status on post-flight or full save
         if (options.isPostFlight || (!options.isPreFlight && !options.isPostFlight)) {
             const isPostFlightFilled = Number(postFlightHobbs) > 0 && Number(postFlightTacho) > 0;
             if (isPostFlightFilled) {
@@ -209,12 +213,12 @@ export function BookingForm({
             startTime: parsedStartTime,
             endTime: parsedEndTime,
             preFlight: {
-                actualHobbs: Number(preFlightHobbs),
-                actualTacho: Number(preFlightTacho),
-                oil: Number(preFlightOil),
-                fuel: Number(preFlightFuel),
-                oilLeft: Number(preFlightOilLeft),
-                oilRight: Number(preFlightOilRight),
+                actualHobbs: toNumberOrUndefined(preFlightHobbs),
+                actualTacho: toNumberOrUndefined(preFlightTacho),
+                oil: toNumberOrUndefined(preFlightOil),
+                fuel: toNumberOrUndefined(preFlightFuel),
+                oilLeft: toNumberOrUndefined(preFlightOilLeft),
+                oilRight: toNumberOrUndefined(preFlightOilRight),
                 documentsChecked: checkedDocs,
             }
         };
@@ -524,3 +528,5 @@ export function BookingForm({
     </Dialog>
   );
 }
+
+    
