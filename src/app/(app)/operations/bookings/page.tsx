@@ -52,7 +52,7 @@ const BookingItem = ({ booking, pilots, selectedDate, onBookingClick }: { bookin
             onClick={() => onBookingClick(booking)}
         >
             {hasContinuationTop && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-b from-black/20 to-transparent" />}
-            <p className="font-semibold truncate">{booking.type}</p>
+            <p className="font-semibold truncate">#{booking.bookingNumber} - {booking.type}</p>
             <p className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}</p>
             {booking.status === 'Cancelled' && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
             {(booking.status === 'Cancelled with Reason') && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
@@ -180,7 +180,7 @@ export default function SchedulePage() {
   );
 
   const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
-  const { data: allBookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
+  const { data: allBookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(allBookingsQuery);
   const { data: pilots, isLoading: isLoadingPilots, error: pilotsError } = useCollection<PilotProfile>(pilotsQuery);
 
   const bookings = useMemo(() => {
