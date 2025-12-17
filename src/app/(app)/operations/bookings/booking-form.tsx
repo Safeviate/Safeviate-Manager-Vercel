@@ -533,12 +533,10 @@ export function BookingForm({
                 <DialogClose asChild>
                     <Button variant="outline" className="w-20">Cancel</Button>
                 </DialogClose>
-                <Button onClick={() => handleSave({ closeOnSave: true })} className="w-20" disabled={preflightDisabled}>Save</Button>
+                <Button onClick={() => handleSave({ closeOnSave: true })} className="w-20">Save</Button>
             </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-    
