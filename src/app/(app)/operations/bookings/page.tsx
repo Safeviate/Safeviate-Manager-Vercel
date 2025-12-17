@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { useRouter } from 'next/navigation';
+import { BookingForm } from './booking-form';
 
 const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
 const TOTAL_HOURS = 24;
@@ -72,7 +73,23 @@ const BookingItem = ({ booking, pilots, selectedDate }: { booking: Booking, pilo
     )
 }
 
-const AircraftColumn = ({ bookings, pilots, showNowLine, nowLinePosition, selectedDate }: { aircraft?: Aircraft; bookings: Booking[]; pilots: PilotProfile[]; showNowLine: boolean; nowLinePosition: number; selectedDate: Date; }) => {
+const AircraftColumn = ({ 
+    aircraft,
+    bookings, 
+    pilots, 
+    showNowLine, 
+    nowLinePosition, 
+    selectedDate,
+    onSlotClick 
+}: { 
+    aircraft?: Aircraft; 
+    bookings: Booking[]; 
+    pilots: PilotProfile[]; 
+    showNowLine: boolean; 
+    nowLinePosition: number; 
+    selectedDate: Date; 
+    onSlotClick: (aircraft: Aircraft, time: Date) => void;
+}) => {
     const today = startOfToday();
     const isSelectedDateInPast = isBefore(selectedDate, today);
 
@@ -87,12 +104,13 @@ const AircraftColumn = ({ bookings, pilots, showNowLine, nowLinePosition, select
 
         return (
             <div 
-            key={hour} 
-            className={cn(
-                "relative border-t",
-                isPast && "bg-muted/30"
-            )} 
-            style={{ height: `${HOUR_HEIGHT_PX}px` }}
+                key={hour} 
+                className={cn(
+                    "relative border-t",
+                    isPast ? "bg-muted/30" : "cursor-pointer hover:bg-accent/50 transition-colors"
+                )} 
+                style={{ height: `${HOUR_HEIGHT_PX}px` }}
+                onClick={() => !isPast && aircraft && onSlotClick(aircraft, slotTime)}
             >
                 <span className="absolute top-1 left-1 text-xs text-muted-foreground pointer-events-none">
                     {format(new Date(0, 0, 0, hour), 'HH:mm')}
@@ -138,6 +156,9 @@ export default function SchedulePage() {
 
   const [nowLinePosition, setNowLinePosition] = useState(0);
   const [showNowLine, setShowNowLine] = useState(false);
+  
+  const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
+  const [bookingFormData, setBookingFormData] = useState<{ aircraft: Aircraft; startTime: Date } | null>(null);
 
   const aircraftQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
@@ -193,6 +214,11 @@ export default function SchedulePage() {
     const interval = setInterval(calculateNowLine, 60000); // Update every minute
     return () => clearInterval(interval);
   }, [selectedDate]);
+  
+  const handleSlotClick = (aircraft: Aircraft, time: Date) => {
+    setBookingFormData({ aircraft, startTime: time });
+    setIsBookingFormOpen(true);
+  };
   
   const extraLanes = ['', '', '', ''];
 
@@ -261,6 +287,7 @@ export default function SchedulePage() {
                         showNowLine={showNowLine}
                         nowLinePosition={nowLinePosition}
                         selectedDate={selectedDate}
+                        onSlotClick={handleSlotClick}
                       />
                     ))}
                     {extraLanes.map((_, index) => (
@@ -271,6 +298,10 @@ export default function SchedulePage() {
                           showNowLine={showNowLine}
                           nowLinePosition={nowLinePosition}
                           selectedDate={selectedDate}
+                          onSlotClick={(ac, time) => {
+                            // This is an empty lane, so we can't create a booking.
+                            // In a real scenario, you might have a different interaction here.
+                          }}
                       />
                     ))}
                     {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-4 text-center text-muted-foreground">Please add aircraft to see the schedule.</div>}
@@ -280,6 +311,17 @@ export default function SchedulePage() {
           </CardContent>
         </Card>
       </div>
+      {bookingFormData && (
+          <BookingForm 
+            isOpen={isBookingFormOpen}
+            setIsOpen={setIsBookingFormOpen}
+            aircraft={bookingFormData.aircraft}
+            startTime={bookingFormData.startTime}
+            tenantId={tenantId}
+          />
+      )}
     </>
   );
 }
+
+    
