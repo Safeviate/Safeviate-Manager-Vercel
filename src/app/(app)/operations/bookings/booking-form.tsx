@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -77,6 +76,9 @@ export function BookingForm({
 
   const [actualHobbs, setActualHobbs] = useState<number | string>('');
   const [actualTacho, setActualTacho] = useState<number | string>('');
+
+  const [postFlightActualHobbs, setPostFlightActualHobbs] = useState<number | string>('');
+  const [postFlightActualTacho, setPostFlightActualTacho] = useState<number | string>('');
 
   const [oil, setOil] = useState('');
   const [fuel, setFuel] = useState('');
@@ -382,8 +384,23 @@ export function BookingForm({
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                         <div className="grid grid-cols-2 gap-4 pt-4">
-                            <div className="col-span-2">
-                                {/* Left column content goes here */}
+                           <div className="space-y-2">
+                                <Label htmlFor="post-actual-hobbs">Actual Hobbs</Label>
+                                <Input 
+                                    id="post-actual-hobbs"
+                                    type="number"
+                                    value={postFlightActualHobbs}
+                                    onChange={(e) => setPostFlightActualHobbs(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="post-actual-tacho">Actual Tacho</Label>
+                                <Input 
+                                    id="post-actual-tacho" 
+                                    type="number"
+                                    value={postFlightActualTacho}
+                                    onChange={(e) => setPostFlightActualTacho(e.target.value)}
+                                />
                             </div>
                         </div>
                     </CollapsibleContent>
@@ -405,5 +422,3 @@ export function BookingForm({
     </Dialog>
   );
 }
-
-    
