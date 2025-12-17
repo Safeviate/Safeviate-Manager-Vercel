@@ -272,6 +272,7 @@ export function BookingForm({
                                 id="current-hobbs" 
                                 value={aircraft?.currentHobbs || ''} 
                                 readOnly 
+                                disabled
                             />
                         </div>
                         <div className="space-y-2">
@@ -280,6 +281,7 @@ export function BookingForm({
                                 id="current-tacho" 
                                 value={aircraft?.currentTacho || ''} 
                                 readOnly 
+                                disabled
                             />
                         </div>
                         <div className="space-y-2">
