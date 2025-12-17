@@ -14,8 +14,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2 } from 'lucide-react';
+import { Trash2, ChevronsUpDown } from 'lucide-react';
 import type { Aircraft } from '../../assets/page';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 
 interface BookingFormProps {
   isOpen: boolean;
@@ -32,6 +37,9 @@ export function BookingForm({
   startTime,
   tenantId,
 }: BookingFormProps) {
+  const [isBookingInfoOpen, setIsBookingInfoOpen] = useState(true);
+  const [isPreFlightOpen, setIsPreFlightOpen] = useState(true);
+  const [isPostFlightOpen, setIsPostFlightOpen] = useState(true);
 
   const onOpenChange = (open: boolean) => {
     if (!open) {
@@ -50,7 +58,50 @@ export function BookingForm({
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-            <p>Booking form fields will go here.</p>
+            <Collapsible open={isBookingInfoOpen} onOpenChange={setIsBookingInfoOpen} className="space-y-2">
+                <CollapsibleTrigger asChild>
+                    <div className='flex items-center justify-between border-b pb-2 cursor-pointer'>
+                        <h4 className="text-sm font-semibold">Booking Information</h4>
+                        <Button variant="ghost" size="sm" className="w-9 p-0">
+                            <ChevronsUpDown className="h-4 w-4" />
+                            <span className="sr-only">Toggle</span>
+                        </Button>
+                    </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                    <p>Booking form fields will go here.</p>
+                </CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible open={isPreFlightOpen} onOpenChange={setIsPreFlightOpen} className="space-y-2">
+                <CollapsibleTrigger asChild>
+                    <div className='flex items-center justify-between border-b pb-2 cursor-pointer'>
+                        <h4 className="text-sm font-semibold">Pre-Flight Checks</h4>
+                        <Button variant="ghost" size="sm" className="w-9 p-0">
+                            <ChevronsUpDown className="h-4 w-4" />
+                            <span className="sr-only">Toggle</span>
+                        </Button>
+                    </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                   {/* Pre-flight content will go here */}
+                </CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible open={isPostFlightOpen} onOpenChange={setIsPostFlightOpen} className="space-y-2">
+                <CollapsibleTrigger asChild>
+                    <div className='flex items-center justify-between border-b pb-2 cursor-pointer'>
+                        <h4 className="text-sm font-semibold">Post-Flight Checks</h4>
+                        <Button variant="ghost" size="sm" className="w-9 p-0">
+                            <ChevronsUpDown className="h-4 w-4" />
+                            <span className="sr-only">Toggle</span>
+                        </Button>
+                    </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                    {/* Post-flight content will go here */}
+                </CollapsibleContent>
+            </Collapsible>
         </div>
         <DialogFooter className='justify-between'>
             <Button variant="destructive" className="w-20">
