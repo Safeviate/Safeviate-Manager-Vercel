@@ -21,7 +21,7 @@ type Booking = {
   id: string;
   aircraftId: string;
   pilotId: string;
-  type: 'Student Training' | 'Hire and Fly' | 'Maintenance Flight';
+  type: 'Student Training' | 'Private Flight' | 'Maintenance Flight';
   startTime: Timestamp;
   bookingNumber?: number;
 };
@@ -35,7 +35,7 @@ type EnrichedBooking = Booking & {
 const getBookingTypeAbbreviation = (type: Booking['type']): string => {
     switch (type) {
         case 'Student Training': return 'T';
-        case 'Hire and Fly': return 'H';
+        case 'Private Flight': return 'P';
         case 'Maintenance Flight': return 'M';
         default: return '';
     }
@@ -114,7 +114,7 @@ export default function BookingsHistoryPage() {
   }, [bookings, aircraft, pilots]);
 
   const trainingBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Student Training'), [enrichedBookings]);
-  const hireAndFlyBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Hire and Fly'), [enrichedBookings]);
+  const privateBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Private Flight'), [enrichedBookings]);
   const maintenanceBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Maintenance Flight'), [enrichedBookings]);
 
 
@@ -133,7 +133,7 @@ export default function BookingsHistoryPage() {
             <TabsList>
                 <TabsTrigger value="all">All Bookings</TabsTrigger>
                 <TabsTrigger value="training">Training</TabsTrigger>
-                <TabsTrigger value="hire-and-fly">Hire & Fly</TabsTrigger>
+                <TabsTrigger value="private">Private</TabsTrigger>
                 <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
             </TabsList>
         </div>
@@ -145,8 +145,8 @@ export default function BookingsHistoryPage() {
                 <TabsContent value="training" className='m-0'>
                     <BookingsTable bookings={trainingBookings} />
                 </TabsContent>
-                <TabsContent value="hire-and-fly" className='m-0'>
-                    <BookingsTable bookings={hireAndFlyBookings} />
+                <TabsContent value="private" className='m-0'>
+                    <BookingsTable bookings={privateBookings} />
                 </TabsContent>
                 <TabsContent value="maintenance" className='m-0'>
                     <BookingsTable bookings={maintenanceBookings} />
