@@ -41,7 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format, addHours, set, parse } from 'date-fns';
+import { format, addHours, set, parse, isBefore } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -156,9 +156,17 @@ export function BookingForm({
         return;
     }
     
-    const startDate = existingBooking ? existingBooking.startTime.toDate() : startTime;
-    const parsedStartTime = parse(startTimeValue, 'HH:mm', startDate);
-    const parsedEndTime = parse(endTimeValue, 'HH:mm', startDate);
+    const baseDate = existingBooking ? existingBooking.startTime.toDate() : startTime;
+    const [startHours, startMinutes] = startTimeValue.split(':').map(Number);
+    const [endHours, endMinutes] = endTimeValue.split(':').map(Number);
+    
+    let parsedStartTime = set(baseDate, { hours: startHours, minutes: startMinutes, seconds: 0, milliseconds: 0 });
+    let parsedEndTime = set(baseDate, { hours: endHours, minutes: endMinutes, seconds: 0, milliseconds: 0 });
+
+    if (isBefore(parsedEndTime, parsedStartTime)) {
+        parsedEndTime = addHours(parsedEndTime, 24); // Assume it's the next day
+    }
+
 
     const getPreFlightData = () => ({
         actualHobbs: toNumberOrNull(preFlightHobbs),
@@ -181,15 +189,16 @@ export function BookingForm({
 
     if (isEditMode && existingBooking) {
         // --- UPDATE LOGIC ---
-        const updateData: Partial<Booking> = {};
+        const updateData: Partial<Booking> = {
+            startTime: parsedStartTime,
+            endTime: parsedEndTime,
+            type: bookingType as Booking['type'],
+            pilotId: pilotId
+        };
         
         // This is a general save, update everything
         if (!options.isPreFlight && !options.isPostFlight) {
             Object.assign(updateData, {
-                type: bookingType as Booking['type'],
-                pilotId,
-                startTime: parsedStartTime,
-                endTime: parsedEndTime,
                 preFlight: getPreFlightData(),
                 postFlight: getPostFlightData(),
             });
@@ -501,11 +510,11 @@ export function BookingForm({
                                 <div className="grid grid-cols-2 gap-4 pt-4">
                                    <div className="space-y-2">
                                         <Label htmlFor="post-actual-hobbs">Actual Hobbs</Label>
-                                        <Input id="post-actual-hobbs" type="number" value={postFlightHobbs} onChange={(e) => setPostFlightHobbs(e.target.value)} disabled={!isEditMode} />
+                                        <Input id="post-actual-hobbs" type="number" value={postFlightHobbs} onChange={(e) => setPostFlightHobbs(e.target.value)} disabled={!isEditMode || preflightDisabled} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="post-actual-tacho">Actual Tacho</Label>
-                                        <Input id="post-actual-tacho" type="number" value={postFlightTacho} onChange={(e) => setPostFlightTacho(e.target.value)} disabled={!isEditMode} />
+                                        <Input id="post-actual-tacho" type="number" value={postFlightTacho} onChange={(e) => setPostFlightTacho(e.target.value)} disabled={!isEditMode || preflightDisabled} />
                                     </div>
                                 </div>
                                  <div className="col-span-2 mt-4 space-y-4">
@@ -513,11 +522,11 @@ export function BookingForm({
                                       <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                                           <div className="space-y-2">
                                               <Label htmlFor="post-flight-oil">Oil</Label>
-                                              <Input id="post-flight-oil" type="number" value={postFlightOil} onChange={(e) => setPostFlightOil(e.target.value)} disabled={!isEditMode} />
+                                              <Input id="post-flight-oil" type="number" value={postFlightOil} onChange={(e) => setPostFlightOil(e.target.value)} disabled={!isEditMode || preflightDisabled} />
                                           </div>
                                           <div className="space-y-2">
                                               <Label htmlFor="post-flight-fuel">Fuel</Label>
-                                              <Input id="post-flight-fuel" type="number" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} disabled={!isEditMode} />
+                                              <Input id="post-flight-fuel" type="number" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} disabled={!isEditMode || preflightDisabled} />
                                           </div>
                                       </div>
                                   )}
@@ -525,22 +534,22 @@ export function BookingForm({
                                       <div className="grid grid-cols-3 gap-4 pt-4 border-t">
                                           <div className="space-y-2">
                                               <Label htmlFor="post-flight-fuel">Fuel</Label>
-                                              <Input id="post-flight-fuel" type="number" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} disabled={!isEditMode} />
+                                              <Input id="post-flight-fuel" type="number" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} disabled={!isEditMode || preflightDisabled} />
                                           </div>
                                           <div className="space-y-2">
                                               <Label htmlFor="post-flight-oil-left">Oil Left</Label>
-                                              <Input id="post-flight-oil-left" type="number" value={postFlightOilLeft} onChange={(e) => setPostFlightOilLeft(e.target.value)} disabled={!isEditMode} />
+                                              <Input id="post-flight-oil-left" type="number" value={postFlightOilLeft} onChange={(e) => setPostFlightOilLeft(e.target.value)} disabled={!isEditMode || preflightDisabled} />
                                           </div>
                                           <div className="space-y-2">
                                               <Label htmlFor="post-flight-oil-right">Oil Right</Label>
-                                              <Input id="post-flight-oil-right" type="number" value={postFlightOilRight} onChange={(e) => setPostFlightOilRight(e.target.value)} disabled={!isEditMode} />
+                                              <Input id="post-flight-oil-right" type="number" value={postFlightOilRight} onChange={(e) => setPostFlightOilRight(e.target.value)} disabled={!isEditMode || preflightDisabled} />
                                           </div>
                                       </div>
                                   )}
                               </div>
                               {isEditMode &&
                                 <div className="flex justify-end pt-4">
-                                    <Button onClick={() => handleSave({ closeOnSave: false, isPostFlight: true })} disabled={!isEditMode}>Submit Post-Flight</Button>
+                                    <Button onClick={() => handleSave({ closeOnSave: false, isPostFlight: true })} disabled={!isEditMode || preflightDisabled}>Submit Post-Flight</Button>
                                 </div>
                               }
                             </CollapsibleContent>
@@ -580,7 +589,7 @@ export function BookingForm({
                 <DialogClose asChild>
                     <Button variant="outline" className="w-20">Cancel</Button>
                 </DialogClose>
-                <Button onClick={() => handleSave({ closeOnSave: true })} className="w-20">Save</Button>
+                <Button onClick={() => handleSave({ closeOnSave: true })} className="w-20" disabled={preflightDisabled}>Save</Button>
             </div>
         </DialogFooter>
       </DialogContent>
