@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ChevronsUpDown, AlertCircle } from 'lucide-react';
+import { ChevronsUpDown, AlertCircle, Trash2 } from 'lucide-react';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
 import type { Booking } from '@/types/booking';
@@ -60,9 +60,12 @@ const requiredDocumentsList = [
     { id: 'insp', label: 'Insp' },
 ];
 
-const toNumberOrUndefined = (value: string | number) => {
+const toNumberOrNull = (value: string | number | null | undefined): number | null => {
+    if (value === null || value === undefined || value === '') {
+        return null;
+    }
     const num = Number(value);
-    return isNaN(num) || value === '' ? undefined : num;
+    return isNaN(num) ? null : num;
 };
 
 
@@ -92,21 +95,21 @@ export function BookingForm({
   const [endTimeValue, setEndTimeValue] = useState('');
   
   // Pre-flight state
-  const [preFlightHobbs, setPreFlightHobbs] = useState<number | string>(existingBooking?.preFlight?.actualHobbs || '');
-  const [preFlightTacho, setPreFlightTacho] = useState<number | string>(existingBooking?.preFlight?.actualTacho || '');
-  const [preFlightOil, setPreFlightOil] = useState<number | string>(existingBooking?.preFlight?.oil || '');
-  const [preFlightFuel, setPreFlightFuel] = useState<number | string>(existingBooking?.preFlight?.fuel || '');
-  const [preFlightOilLeft, setPreFlightOilLeft] = useState<number | string>(existingBooking?.preFlight?.oilLeft || '');
-  const [preFlightOilRight, setPreFlightOilRight] = useState<number | string>(existingBooking?.preFlight?.oilRight || '');
+  const [preFlightHobbs, setPreFlightHobbs] = useState<number | string>(existingBooking?.preFlight?.actualHobbs ?? '');
+  const [preFlightTacho, setPreFlightTacho] = useState<number | string>(existingBooking?.preFlight?.actualTacho ?? '');
+  const [preFlightOil, setPreFlightOil] = useState<number | string>(existingBooking?.preFlight?.oil ?? '');
+  const [preFlightFuel, setPreFlightFuel] = useState<number | string>(existingBooking?.preFlight?.fuel ?? '');
+  const [preFlightOilLeft, setPreFlightOilLeft] = useState<number | string>(existingBooking?.preFlight?.oilLeft ?? '');
+  const [preFlightOilRight, setPreFlightOilRight] = useState<number | string>(existingBooking?.preFlight?.oilRight ?? '');
   const [checkedDocs, setCheckedDocs] = useState<string[]>(existingBooking?.preFlight?.documentsChecked || []);
   
   // Post-flight state
-  const [postFlightHobbs, setPostFlightHobbs] = useState<number | string>(existingBooking?.postFlight?.actualHobbs || '');
-  const [postFlightTacho, setPostFlightTacho] = useState<number | string>(existingBooking?.postFlight?.actualTacho || '');
-  const [postFlightOil, setPostFlightOil] = useState<number | string>(existingBooking?.postFlight?.oil || '');
-  const [postFlightFuel, setPostFlightFuel] = useState<number | string>(existingBooking?.postFlight?.fuel || '');
-  const [postFlightOilLeft, setPostFlightOilLeft] = useState<number | string>(existingBooking?.postFlight?.oilLeft || '');
-  const [postFlightOilRight, setPostFlightOilRight] = useState<number | string>(existingBooking?.postFlight?.oilRight || '');
+  const [postFlightHobbs, setPostFlightHobbs] = useState<number | string>(existingBooking?.postFlight?.actualHobbs ?? '');
+  const [postFlightTacho, setPostFlightTacho] = useState<number | string>(existingBooking?.postFlight?.actualTacho ?? '');
+  const [postFlightOil, setPostFlightOil] = useState<number | string>(existingBooking?.postFlight?.oil ?? '');
+  const [postFlightFuel, setPostFlightFuel] = useState<number | string>(existingBooking?.postFlight?.fuel ?? '');
+  const [postFlightOilLeft, setPostFlightOilLeft] = useState<number | string>(existingBooking?.postFlight?.oilLeft ?? '');
+  const [postFlightOilRight, setPostFlightOilRight] = useState<number | string>(existingBooking?.postFlight?.oilRight ?? '');
 
   const isChecklistNeeded = aircraft?.checklistStatus === 'needs-post-flight';
   const preflightDisabled = !isEditMode && isChecklistNeeded;
@@ -146,62 +149,74 @@ export function BookingForm({
     const parsedStartTime = parse(startTimeValue, 'HH:mm', startDate);
     const parsedEndTime = parse(endTimeValue, 'HH:mm', startDate);
 
+    const getPreFlightData = () => ({
+        actualHobbs: toNumberOrNull(preFlightHobbs),
+        actualTacho: toNumberOrNull(preFlightTacho),
+        oil: toNumberOrNull(preFlightOil),
+        fuel: toNumberOrNull(preFlightFuel),
+        oilLeft: toNumberOrNull(preFlightOilLeft),
+        oilRight: toNumberOrNull(preFlightOilRight),
+        documentsChecked: checkedDocs,
+    });
+
+    const getPostFlightData = () => ({
+        actualHobbs: toNumberOrNull(postFlightHobbs),
+        actualTacho: toNumberOrNull(postFlightTacho),
+        oil: toNumberOrNull(postFlightOil),
+        fuel: toNumberOrNull(postFlightFuel),
+        oilLeft: toNumberOrNull(postFlightOilLeft),
+        oilRight: toNumberOrNull(postFlightOilRight),
+    });
+
     if (isEditMode && existingBooking) {
         // --- UPDATE LOGIC ---
         const updateData: Partial<Booking> = {};
         
+        // This is a general save, update everything
         if (!options.isPreFlight && !options.isPostFlight) {
             Object.assign(updateData, {
                 type: bookingType as Booking['type'],
                 pilotId,
                 startTime: parsedStartTime,
                 endTime: parsedEndTime,
+                preFlight: getPreFlightData(),
+                postFlight: getPostFlightData(),
             });
             if (instructorId) {
                 updateData.instructorId = instructorId;
             } else {
-                updateData.instructorId = ''; // Send empty string to remove it
+                updateData.instructorId = null; // Send null to be deleted by update function
             }
         }
         
-        if (options.isPreFlight || !options.isPostFlight) {
-            updateData.preFlight = {
-                actualHobbs: toNumberOrUndefined(preFlightHobbs),
-                actualTacho: toNumberOrUndefined(preFlightTacho),
-                oil: toNumberOrUndefined(preFlightOil),
-                fuel: toNumberOrUndefined(preFlightFuel),
-                oilLeft: toNumberOrUndefined(preFlightOilLeft),
-                oilRight: toNumberOrUndefined(preFlightOilRight),
-                documentsChecked: checkedDocs,
-            };
+        // This is just a pre-flight submission
+        if (options.isPreFlight) {
+            updateData.preFlight = getPreFlightData();
         }
 
-        if (options.isPostFlight || (!options.isPreFlight && !options.isPostFlight)) {
-            updateData.postFlight = {
-                actualHobbs: toNumberOrUndefined(postFlightHobbs),
-                actualTacho: toNumberOrUndefined(postFlightTacho),
-                oil: toNumberOrUndefined(postFlightOil),
-                fuel: toNumberOrUndefined(postFlightFuel),
-                oilLeft: toNumberOrUndefined(postFlightOilLeft),
-                oilRight: toNumberOrUndefined(postFlightOilRight),
-            };
+        // This is just a post-flight submission
+        if (options.isPostFlight) {
+            updateData.postFlight = getPostFlightData();
         }
         
-        if (options.isPostFlight || (!options.isPreFlight && !options.isPostFlight)) {
+        try {
             const isPostFlightFilled = Number(postFlightHobbs) > 0 && Number(postFlightTacho) > 0;
-            if (isPostFlightFilled) {
-                updateData.status = 'Completed';
-                updateBooking(firestore, tenantId, existingBooking.id, updateData, aircraft.id, true);
-                toast({ title: 'Post-Flight Submitted', description: 'Aircraft is now ready for the next booking.' });
+            const finalStatus = isPostFlightFilled ? 'Completed' : (updateData.status || existingBooking.status);
+            updateData.status = finalStatus;
+
+            await updateBooking(firestore, tenantId, existingBooking.id, updateData, aircraft.id, isPostFlightFilled);
+            
+            if (options.isPreFlight) {
+                toast({ title: 'Pre-Flight Submitted', description: `Booking #${existingBooking.bookingNumber} is ready for flight.` });
+            } else if (options.isPostFlight) {
+                 toast({ title: 'Post-Flight Submitted', description: 'Aircraft is now ready for the next booking.' });
             } else {
-                 updateBooking(firestore, tenantId, existingBooking.id, updateData, aircraft.id, false);
-                 if (!options.isPreFlight && !options.isPostFlight) {
-                    toast({ title: 'Booking Updated', description: `Booking #${existingBooking.bookingNumber} has been updated.` });
-                 }
+                 toast({ title: 'Booking Updated', description: `Booking #${existingBooking.bookingNumber} has been updated.` });
             }
-        } else if (options.isPreFlight) {
-            updateBooking(firestore, tenantId, existingBooking.id, updateData, aircraft.id, false);
-            toast({ title: 'Pre-Flight Submitted', description: `Booking #${existingBooking.bookingNumber} is ready for flight.` });
+
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Update Failed', description: error.message });
+            return; // Stop execution if update fails
         }
 
     } else {
@@ -212,15 +227,8 @@ export function BookingForm({
             type: bookingType as Booking['type'],
             startTime: parsedStartTime,
             endTime: parsedEndTime,
-            preFlight: {
-                actualHobbs: toNumberOrUndefined(preFlightHobbs),
-                actualTacho: toNumberOrUndefined(preFlightTacho),
-                oil: toNumberOrUndefined(preFlightOil),
-                fuel: toNumberOrUndefined(preFlightFuel),
-                oilLeft: toNumberOrUndefined(preFlightOilLeft),
-                oilRight: toNumberOrUndefined(preFlightOilRight),
-                documentsChecked: checkedDocs,
-            }
+            preFlight: getPreFlightData(),
+            postFlight: getPostFlightData(), // Also save empty post-flight object
         };
         
         if (instructorId) {
@@ -232,6 +240,7 @@ export function BookingForm({
             toast({ title: 'Booking Created', description: 'The new booking has been saved successfully.' });
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
+            return; // Stop execution if create fails
         }
     }
 
@@ -278,7 +287,7 @@ export function BookingForm({
                         <div className="grid grid-cols-2 gap-4 pt-4">
                             <div className="col-span-2 space-y-2">
                                 <Label htmlFor="booking-type">Booking Type</Label>
-                                <Select onValueChange={v => setBookingType(v as Booking['type'])} value={bookingType} disabled={isEditMode}>
+                                <Select onValueChange={v => setBookingType(v as Booking['type'])} value={bookingType}>
                                     <SelectTrigger id="booking-type">
                                         <SelectValue placeholder="Select a flight type" />
                                     </SelectTrigger>
@@ -295,7 +304,7 @@ export function BookingForm({
                                 <>
                                     <div className="col-span-1 space-y-2">
                                         <Label htmlFor="student">Student</Label>
-                                        <Select onValueChange={setPilotId} value={pilotId} disabled={isEditMode}>
+                                        <Select onValueChange={setPilotId} value={pilotId}>
                                             <SelectTrigger id="student">
                                                 <SelectValue placeholder="Select a student" />
                                             </SelectTrigger>
@@ -310,7 +319,7 @@ export function BookingForm({
                                     </div>
                                     <div className="col-span-1 space-y-2">
                                         <Label htmlFor="instructor">Instructor</Label>
-                                        <Select onValueChange={setInstructorId} value={instructorId} disabled={isEditMode}>
+                                        <Select onValueChange={setInstructorId} value={instructorId}>
                                             <SelectTrigger id="instructor">
                                                 <SelectValue placeholder="Select an instructor" />
                                             </SelectTrigger>
@@ -328,7 +337,7 @@ export function BookingForm({
                             {bookingType === 'Private Flight' && (
                                 <div className="col-span-2 space-y-2">
                                     <Label htmlFor="private-pilot">Pilot</Label>
-                                     <Select onValueChange={setPilotId} value={pilotId} disabled={isEditMode}>
+                                     <Select onValueChange={setPilotId} value={pilotId}>
                                         <SelectTrigger id="private-pilot">
                                             <SelectValue placeholder="Select a pilot" />
                                         </SelectTrigger>
@@ -350,7 +359,6 @@ export function BookingForm({
                                     type="time"
                                     value={startTimeValue}
                                     onChange={(e) => setStartTimeValue(e.target.value)}
-                                    readOnly={isEditMode}
                                 />
                             </div>
                             <div className="space-y-2">
@@ -360,7 +368,6 @@ export function BookingForm({
                                     type="time" 
                                     value={endTimeValue}
                                     onChange={(e) => setEndTimeValue(e.target.value)}
-                                    readOnly={isEditMode}
                                 />
                             </div>
                         </div>
@@ -402,11 +409,11 @@ export function BookingForm({
                               <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                                   <div className="space-y-2">
                                       <Label htmlFor="oil">Oil</Label>
-                                      <Input id="oil" value={preFlightOil} onChange={(e) => setPreFlightOil(e.target.value)} />
+                                      <Input id="oil" type="number" value={preFlightOil} onChange={(e) => setPreFlightOil(e.target.value)} />
                                   </div>
                                   <div className="space-y-2">
                                       <Label htmlFor="fuel">Fuel</Label>
-                                      <Input id="fuel" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} />
+                                      <Input id="fuel" type="number" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} />
                                   </div>
                               </div>
                           )}
@@ -414,15 +421,15 @@ export function BookingForm({
                               <div className="grid grid-cols-3 gap-4 pt-4 border-t">
                                   <div className="space-y-2">
                                       <Label htmlFor="fuel">Fuel</Label>
-                                      <Input id="fuel" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} />
+                                      <Input id="fuel" type="number" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} />
                                   </div>
                                   <div className="space-y-2">
                                       <Label htmlFor="oil-left">Oil Left</Label>
-                                      <Input id="oil-left" value={preFlightOilLeft} onChange={(e) => setPreFlightOilLeft(e.target.value)} />
+                                      <Input id="oil-left" type="number" value={preFlightOilLeft} onChange={(e) => setPreFlightOilLeft(e.target.value)} />
                                   </div>
                                   <div className="space-y-2">
                                       <Label htmlFor="oil-right">Oil Right</Label>
-                                      <Input id="oil-right" value={preFlightOilRight} onChange={(e) => setPreFlightOilRight(e.target.value)} />
+                                      <Input id="oil-right" type="number" value={preFlightOilRight} onChange={(e) => setPreFlightOilRight(e.target.value)} />
                                   </div>
                               </div>
                           )}
@@ -449,9 +456,11 @@ export function BookingForm({
                                 ))}
                             </div>
                         </div>
-                        <div className="flex justify-end pt-4">
-                            <Button onClick={() => handleSave({ closeOnSave: false, isPreFlight: true })}>Submit Pre-Flight</Button>
-                        </div>
+                        {isEditMode && 
+                            <div className="flex justify-end pt-4">
+                                <Button onClick={() => handleSave({ closeOnSave: false, isPreFlight: true })}>Submit Pre-Flight</Button>
+                            </div>
+                        }
                     </CollapsibleContent>
                 </Collapsible>
 
@@ -481,11 +490,11 @@ export function BookingForm({
                               <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                                   <div className="space-y-2">
                                       <Label htmlFor="post-flight-oil">Oil</Label>
-                                      <Input id="post-flight-oil" value={postFlightOil} onChange={(e) => setPostFlightOil(e.target.value)} disabled={!isEditMode} />
+                                      <Input id="post-flight-oil" type="number" value={postFlightOil} onChange={(e) => setPostFlightOil(e.target.value)} disabled={!isEditMode} />
                                   </div>
                                   <div className="space-y-2">
                                       <Label htmlFor="post-flight-fuel">Fuel</Label>
-                                      <Input id="post-flight-fuel" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} disabled={!isEditMode} />
+                                      <Input id="post-flight-fuel" type="number" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} disabled={!isEditMode} />
                                   </div>
                               </div>
                           )}
@@ -493,28 +502,31 @@ export function BookingForm({
                               <div className="grid grid-cols-3 gap-4 pt-4 border-t">
                                   <div className="space-y-2">
                                       <Label htmlFor="post-flight-fuel">Fuel</Label>
-                                      <Input id="post-flight-fuel" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} disabled={!isEditMode} />
+                                      <Input id="post-flight-fuel" type="number" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} disabled={!isEditMode} />
                                   </div>
                                   <div className="space-y-2">
                                       <Label htmlFor="post-flight-oil-left">Oil Left</Label>
-                                      <Input id="post-flight-oil-left" value={postFlightOilLeft} onChange={(e) => setPostFlightOilLeft(e.target.value)} disabled={!isEditMode} />
+                                      <Input id="post-flight-oil-left" type="number" value={postFlightOilLeft} onChange={(e) => setPostFlightOilLeft(e.target.value)} disabled={!isEditMode} />
                                   </div>
                                   <div className="space-y-2">
                                       <Label htmlFor="post-flight-oil-right">Oil Right</Label>
-                                      <Input id="post-flight-oil-right" value={postFlightOilRight} onChange={(e) => setPostFlightOilRight(e.target.value)} disabled={!isEditMode} />
+                                      <Input id="post-flight-oil-right" type="number" value={postFlightOilRight} onChange={(e) => setPostFlightOilRight(e.target.value)} disabled={!isEditMode} />
                                   </div>
                               </div>
                           )}
                       </div>
-                      <div className="flex justify-end pt-4">
-                          <Button onClick={() => handleSave({ closeOnSave: false, isPostFlight: true })} disabled={!isEditMode}>Submit Post-Flight</Button>
-                      </div>
+                      {isEditMode &&
+                        <div className="flex justify-end pt-4">
+                            <Button onClick={() => handleSave({ closeOnSave: false, isPostFlight: true })} disabled={!isEditMode}>Submit Post-Flight</Button>
+                        </div>
+                      }
                     </CollapsibleContent>
                 </Collapsible>
             </div>
         </ScrollArea>
         <DialogFooter className='justify-between pt-6'>
             <Button variant="destructive" className="w-20" disabled={!isEditMode}>
+                <Trash2 className="mr-2 h-4 w-4" />
                 Delete
             </Button>
             <div className='flex gap-2'>

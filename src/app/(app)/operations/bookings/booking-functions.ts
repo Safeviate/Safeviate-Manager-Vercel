@@ -9,6 +9,7 @@ import {
     serverTimestamp,
     Timestamp,
     deleteField,
+    writeBatch,
   } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase';
 import type { Booking } from '@/types/booking';
@@ -89,7 +90,7 @@ export const createBooking = async (
  * @param aircraftId - The ID of the associated aircraft.
  * @param markAsReady - Whether to set the aircraft checklistStatus to 'ready'.
  */
-export const updateBooking = (
+export const updateBooking = async (
     firestore: Firestore,
     tenantId: string,
     bookingId: string,
@@ -99,30 +100,59 @@ export const updateBooking = (
 ) => {
     const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, bookingId);
     
-    // Create a clean object to avoid sending undefined values
+    // Create a clean object to avoid sending undefined/null values that should be deleted
     const cleanUpdateData: { [key: string]: any } = {};
     for (const key in updateData) {
         const value = updateData[key as keyof typeof updateData];
-        if (value !== undefined) {
-            cleanUpdateData[key] = value;
-        }
-        if (key === 'instructorId' && (value === '' || value === null)) {
+        if (value === null) {
             cleanUpdateData[key] = deleteField();
+        } else if (value !== undefined) {
+             // Handle nested objects
+            if (typeof value === 'object' && !Array.isArray(value) && value !== null) {
+                const nestedCleanData: { [key: string]: any } = {};
+                 for (const nestedKey in value) {
+                    const nestedValue = (value as any)[nestedKey];
+                    if (nestedValue === null) {
+                        nestedCleanData[nestedKey] = deleteField();
+                    } else if (nestedValue !== undefined) {
+                        nestedCleanData[nestedKey] = nestedValue;
+                    }
+                }
+                cleanUpdateData[key] = nestedCleanData;
+            } else {
+                cleanUpdateData[key] = value;
+            }
         }
     }
 
-    updateDocumentNonBlocking(bookingRef, cleanUpdateData);
+    const batch = writeBatch(firestore);
+
+    batch.update(bookingRef, cleanUpdateData);
 
     if (markAsReady) {
         const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);
-        updateDocumentNonBlocking(aircraftRef, { checklistStatus: 'ready' });
+        batch.update(aircraftRef, { checklistStatus: 'ready' });
     } else {
         const preFlightSubmitted = updateData.preFlight && (updateData.preFlight.actualHobbs || updateData.preFlight.actualTacho);
         if (preFlightSubmitted) {
             const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);
-            updateDocumentNonBlocking(aircraftRef, { checklistStatus: 'needs-post-flight' });
+            batch.update(aircraftRef, { checklistStatus: 'needs-post-flight' });
         }
     }
+
+    // Using a batch write with non-blocking error handling
+    batch.commit().catch(error => {
+        // Since we can't easily determine which write failed, we create a generic error
+        // A more complex implementation could try to infer the path.
+        const contextualError = new FirestorePermissionError({
+          operation: 'write',
+          path: `tenants/${tenantId}/bookings/${bookingId} (and possibly aircraft)`,
+          requestResourceData: cleanUpdateData,
+        });
+        errorEmitter.emit('permission-error', contextualError);
+        // Re-throw the original server error to let the caller handle it
+        throw error;
+    });
 }
 
     
