@@ -1,3 +1,4 @@
+
 import {
   LayoutDashboard,
   Users,
@@ -101,10 +102,6 @@ export const menuConfig: MenuItem[] = [
         label: 'Instructors',
       },
       {
-        href: '/users/private-pilots',
-        label: 'Private Pilots',
-      },
-      {
         href: '/users/students',
         label: 'Students',
       },
@@ -156,11 +153,6 @@ export const menuConfig: MenuItem[] = [
         href: '/development/database',
         label: 'Tenant Creator',
         description: 'Create new tenants with custom branding.',
-      },
-      {
-        href: '/development/test',
-        label: 'Test Page',
-        description: 'A test page for development purposes.',
       },
     ],
   },
