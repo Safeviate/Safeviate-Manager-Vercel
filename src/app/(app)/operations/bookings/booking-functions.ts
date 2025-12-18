@@ -57,10 +57,19 @@ export const createBooking = async (
                 preFlight: {}, // Initialize with empty object
                 postFlight: {}, // Initialize with empty object
             };
-
-            // Conditionally add instructorId to avoid 'undefined' error
+            
+            // Conditionally add optional fields to avoid 'undefined'
             if (bookingData.instructorId) {
                 payload.instructorId = bookingData.instructorId;
+            }
+            if (bookingData.isOvernight) {
+                payload.isOvernight = bookingData.isOvernight;
+            }
+            if (bookingData.overnightBookingDate) {
+                payload.overnightBookingDate = bookingData.overnightBookingDate;
+            }
+            if (bookingData.overnightEndTime) {
+                payload.overnightEndTime = bookingData.overnightEndTime;
             }
             
             transaction.set(newBookingRef, payload);
