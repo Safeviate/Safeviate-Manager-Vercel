@@ -49,12 +49,11 @@ export const createBooking = async (
             // 2. Create the new booking document
             const newBookingRef = doc(bookingsRef); // Create a new doc reference with a generated ID
             
-            const payload: Partial<Booking> & { id: string; bookingNumber: number; status: string } = {
+            // Construct the payload carefully, excluding undefined or empty objects
+            const payload: any = {
                 id: newBookingRef.id,
                 bookingNumber: newBookingNumber,
                 status: 'Confirmed',
-                preFlight: {},
-                postFlight: {},
                 aircraftId: bookingData.aircraftId,
                 pilotId: bookingData.pilotId,
                 type: bookingData.type,
@@ -63,7 +62,9 @@ export const createBooking = async (
                 endTime: bookingData.endTime,
             };
             
-            if (bookingData.instructorId) payload.instructorId = bookingData.instructorId;
+            if (bookingData.instructorId) {
+                payload.instructorId = bookingData.instructorId;
+            }
             if (bookingData.isOvernight) {
                 payload.isOvernight = bookingData.isOvernight;
                 payload.overnightBookingDate = bookingData.overnightBookingDate;
@@ -117,19 +118,16 @@ export const updateBooking = async (
             flattenedUpdateData[key] = deleteField(); // Delete top-level null fields
         } else if (typeof value === 'object' && !Array.isArray(value) && value !== null && !(value instanceof Timestamp)) {
             // Handle nested objects (like preFlight, postFlight)
+            let hasData = false;
             for (const nestedKey in value) {
                 const nestedValue = (value as any)[nestedKey];
-                if (nestedValue === undefined) {
-                    continue;
-                }
-                const dotPath = `${key}.${nestedKey}`;
-                if (nestedValue === null) {
-                    // Use dot notation with deleteField() for nested null values
-                    flattenedUpdateData[dotPath] = deleteField();
-                } else {
+                if (nestedValue !== undefined && nestedValue !== null && nestedValue !== '' && (!Array.isArray(nestedValue) || nestedValue.length > 0)) {
+                    hasData = true;
+                    const dotPath = `${key}.${nestedKey}`;
                     flattenedUpdateData[dotPath] = nestedValue;
                 }
             }
+            // If the object has no valid data, we don't add it to the update.
         } else {
             flattenedUpdateData[key] = value; // Handle top-level primitive values
         }
