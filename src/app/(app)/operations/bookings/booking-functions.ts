@@ -21,7 +21,7 @@ import { format } from 'date-fns';
 type BookingCreationData = Omit<Booking, 'id' | 'bookingNumber' | 'status'>;
 
 /**
- * Creates a new booking with a sequential number and updates the aircraft status.
+ * Creates a new booking with a sequential number. Does not change aircraft status.
  * @param firestore - The Firestore instance.
  * @param tenantId - The ID of the tenant.
  * @param bookingData - The data for the new booking.
@@ -74,10 +74,8 @@ export const createBooking = async (
             
             transaction.set(newBookingRef, payload);
             
-            // 3. Mark the aircraft as needing a post-flight from the *previous* booking
-            // This is a placeholder action. A real system would have a more complex state machine.
-            const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, bookingData.aircraftId!);
-            transaction.update(aircraftRef, { checklistStatus: 'Post-Flight Required' });
+            // NOTE: We no longer update the aircraft status on booking creation.
+            // Status is only changed when pre-flight or post-flight checks are submitted.
 
             return newBookingRef.id;
         });
@@ -184,5 +182,3 @@ export const deleteBooking = async (
     // Using the non-blocking delete function from firebase/index
     return deleteDocNonBlocking(bookingRef);
 };
-
-    
