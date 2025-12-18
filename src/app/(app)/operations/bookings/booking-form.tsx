@@ -122,7 +122,7 @@ export function BookingForm({
   useEffect(() => {
     if (isOvernight) {
         setEndTimeValue('23:59');
-    } else if (!isEditMode) {
+    } else if (!isEditMode && startTimeValue) { // Check if startTimeValue is valid
         setEndTimeValue(format(addHours(parse(startTimeValue, 'HH:mm', baseDate), 1), 'HH:mm'));
     }
   }, [isOvernight, isEditMode, startTimeValue, baseDate]);
