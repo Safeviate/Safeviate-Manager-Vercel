@@ -60,6 +60,8 @@ export const createBooking = async (
                 bookingDate: bookingData.bookingDate,
                 startTime: bookingData.startTime,
                 endTime: bookingData.endTime,
+                preFlight: {}, // Create empty object
+                postFlight: {}, // Create empty object
             };
             
             if (bookingData.instructorId) {
