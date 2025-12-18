@@ -207,7 +207,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                                 <DetailItem label="Photos">
                                     {preFlight.photos && preFlight.photos.length > 0 ? (
                                         <PhotoGrid photos={preFlight.photos} />
-                                    ) : 'No photos submitted.'}
+                                    ) : <p className="text-sm text-muted-foreground">No photos submitted.</p>}
                                 </DetailItem>
                             </>
                         ) : (
@@ -232,7 +232,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                                 <DetailItem label="Photos">
                                     {postFlight.photos && postFlight.photos.length > 0 ? (
                                         <PhotoGrid photos={postFlight.photos} />
-                                    ) : 'No photos submitted.'}
+                                    ) : <p className="text-sm text-muted-foreground">No photos submitted.</p>}
                                 </DetailItem>
                             </>
                         ) : (
