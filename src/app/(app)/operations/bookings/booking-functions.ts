@@ -20,6 +20,7 @@ import {
 import type { Booking } from '@/types/booking';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { parse } from 'date-fns';
 
 type BookingCreationData = Omit<Booking, 'id' | 'bookingNumber' | 'status'>;
 
@@ -44,6 +45,10 @@ export const createBooking = async (
             // --- ALL READS MUST HAPPEN FIRST ---
             const counterDoc = await transaction.get(counterRef);
             const aircraftDoc = await transaction.get(aircraftRef);
+
+            if (!aircraftDoc.exists()) {
+                throw new Error("Aircraft not found. Cannot create booking.");
+            }
 
             // --- ALL WRITES HAPPEN AFTER READS ---
             let newBookingNumber = 1;
@@ -75,7 +80,7 @@ export const createBooking = async (
             transaction.set(newBookingRef, payload);
 
             // Write 3 (Conditional): Update aircraft status if it is currently 'Ready'.
-            if (aircraftDoc.exists() && aircraftDoc.data().checklistStatus === 'Ready') {
+            if (aircraftDoc.data().checklistStatus === 'Ready') {
                 transaction.update(aircraftRef, {
                     checklistStatus: 'needs-pre-flight',
                     currentBookingId: newBookingRef.id
@@ -124,7 +129,8 @@ export const updateBooking = async (
         const bookingsCol = collection(firestore, `tenants/${tenantId}/bookings`);
         const currentBookingDoc = await getDoc(bookingRef);
         const currentBookingData = currentBookingDoc.data() as Booking;
-        
+        const currentBookingStart = parse(`${currentBookingData.bookingDate}T${currentBookingData.startTime}`, 'yyyy-MM-dd\'T\'HH:mm', new Date());
+
         const nextBookingQuery = query(
             bookingsCol,
             where('aircraftId', '==', aircraftId),
@@ -132,22 +138,22 @@ export const updateBooking = async (
             where('bookingDate', '>=', currentBookingData.bookingDate),
             orderBy('bookingDate'),
             orderBy('startTime'),
-            limit(2) // Get current and next one
+            limit(20) // Look ahead a reasonable number of bookings
         );
 
         const nextBookingSnapshot = await getDocs(nextBookingQuery);
         let nextBookingId: string | null = null;
         
-        // Find the actual next booking after the current one
+        // Find the actual next chronological booking after the current one
         for (const doc of nextBookingSnapshot.docs) {
-            if (doc.id !== bookingId) {
-                const booking = doc.data() as Booking;
-                const bookingStart = new Date(`${booking.bookingDate}T${booking.startTime}`);
-                const currentStart = new Date(`${currentBookingData.bookingDate}T${currentBookingData.startTime}`);
-                if (bookingStart > currentStart) {
-                    nextBookingId = doc.id;
-                    break;
-                }
+            if (doc.id === bookingId) continue;
+            
+            const booking = doc.data() as Booking;
+            const bookingStart = parse(`${booking.bookingDate}T${booking.startTime}`, 'yyyy-MM-dd\'T\'HH:mm', new Date());
+            
+            if (bookingStart > currentBookingStart) {
+                nextBookingId = doc.id;
+                break; // Found the very next one
             }
         }
 

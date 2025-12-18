@@ -192,10 +192,10 @@ export function BookingForm({
 
   const preFlightSubmitted = !!(existingBooking?.preFlight && Object.keys(existingBooking.preFlight).length > 0);
   
-  const isCorrectBookingForPreFlight = (aircraft.checklistStatus === 'needs-pre-flight' && aircraft.currentBookingId === existingBooking?.id);
+  const isCorrectBookingForPreFlight = aircraft.checklistStatus === 'needs-pre-flight' && aircraft.currentBookingId === existingBooking?.id;
   const isCorrectBookingForPostFlight = aircraft.checklistStatus === 'needs-post-flight' && aircraft.currentBookingId === existingBooking?.id;
   
-  const isPreFlightDisabled = !isCorrectBookingForPreFlight;
+  const isPreFlightDisabled = !isCorrectBookingForPreFlight && aircraft.checklistStatus !== 'Ready';
   const isPostFlightDisabled = !preFlightSubmitted || !isCorrectBookingForPostFlight;
 
   const showPendingActionWarning = (aircraft.checklistStatus === 'needs-pre-flight' || aircraft.checklistStatus === 'needs-post-flight') && aircraft.currentBookingId !== existingBooking?.id;
