@@ -20,9 +20,7 @@ import type { Booking } from '@/types/booking';
 
 
 const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
-    // Check for invalid inputs, though Firestore data should be reliable
     if (!dateStr || !timeStr) {
-        // Return an invalid date, which can be handled downstream
         return new Date('invalid');
     }
     return parse(`${dateStr} ${timeStr}`, 'yyyy-MM-dd HH:mm', new Date());
@@ -32,47 +30,32 @@ const BookingItem = ({ booking, pilots, onBookingClick, selectedDate }: { bookin
     
     const pilot = pilots.find(p => p.id === booking.pilotId);
     
-    // Create an array of segments to render. For a normal booking, it's one. For overnight, it's two.
     const segments = [];
 
     // First segment (always exists)
     segments.push({
         date: booking.bookingDate,
         startTime: booking.startTime,
-        endTime: booking.isOvernight ? '23:59' : booking.endTime
+        endTime: '23:59'
     });
-
-    // Second segment for overnight bookings
-    if (booking.isOvernight && booking.overnightBookingDate && booking.overnightEndTime) {
-        segments.push({
-            date: booking.overnightBookingDate,
-            startTime: '00:00',
-            endTime: booking.overnightEndTime
-        });
-    }
     
     const formattedSelectedDate = format(selectedDate, 'yyyy-MM-dd');
     
     return (
       <>
         {segments.map((segment, index) => {
-            // Only render the segment if it's for the currently selected date
             if (segment.date !== formattedSelectedDate) {
                 return null;
             }
 
             const startTime = combineDateAndTime(segment.date, segment.startTime);
-            const endTime = combineDateAndTime(segment.date, segment.endTime);
+            const endTime = combineDateAndTime(segment.date, booking.endTime);
 
             if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) return null;
 
             const top = (getHours(startTime) * 60 + getMinutes(startTime)) * (HOUR_HEIGHT_PX / 60);
             const durationMinutes = differenceInMinutes(endTime, startTime);
             const height = Math.max(durationMinutes, 0) * (HOUR_HEIGHT_PX / 60);
-
-            // Add continuation indicators for overnight bookings
-            const hasContinuationTop = index > 0;
-            const hasContinuationBottom = index < segments.length - 1;
             
             return (
                 <div
@@ -84,12 +67,10 @@ const BookingItem = ({ booking, pilots, onBookingClick, selectedDate }: { bookin
                     style={{ top: `${top}px`, height: `${height}px` }}
                     onClick={() => onBookingClick(booking)}
                 >
-                    {hasContinuationTop && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-b from-black/20 to-transparent" />}
                     <p className="font-semibold truncate">#{booking.bookingNumber} - {booking.type}</p>
                     <p className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}</p>
                     {booking.status === 'Cancelled' && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
                     {(booking.status === 'Cancelled with Reason') && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
-                    {hasContinuationBottom && <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-t from-black/20 to-transparent" />}
                 </div>
             )
         })}
@@ -119,17 +100,12 @@ const AircraftColumn = ({
     const today = startOfToday();
     const isSelectedDateInPast = isBefore(selectedDate, today);
 
-    // Filter bookings to only those relevant for this column on the selected date
-    const relevantBookings = bookings.filter(b => 
-      b.bookingDate === format(selectedDate, 'yyyy-MM-dd') || 
-      b.overnightBookingDate === format(selectedDate, 'yyyy-MM-dd')
-    );
+    const relevantBookings = bookings.filter(b => b.bookingDate === format(selectedDate, 'yyyy-MM-dd'));
 
   return (
     <div 
         className="flex-1 relative border-r min-w-[150px]"
     >
-      {/* Hour lines and labels for this column */}
       {Array.from({ length: TOTAL_HOURS }).map((_, hour) => {
         const slotTime = setMinutes(setHours(selectedDate, hour), 0);
         const endOfSlot = endOfHour(slotTime);
@@ -154,7 +130,6 @@ const AircraftColumn = ({
         )
       })}
       
-      {/* "Past" Shadow */}
       {showNowLine && (
         <div 
           className="absolute top-0 left-0 right-0 bg-destructive/20 z-0 pointer-events-none"
@@ -162,14 +137,12 @@ const AircraftColumn = ({
         />
       )}
 
-      {/* "Now" Line */}
       {showNowLine && (
         <div className="absolute left-0 right-0 h-0.5 bg-red-500 z-20 pointer-events-none" style={{ top: `${nowLinePosition}px` }}>
           <div className="absolute -left-1.5 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full" />
         </div>
       )}
 
-      {/* Booking blocks */}
       {relevantBookings.map((booking) => (
         <BookingItem 
             key={booking.id} 
@@ -183,14 +156,14 @@ const AircraftColumn = ({
   );
 };
 
-const HOUR_HEIGHT_PX = 60; // Represents 60 minutes
+const HOUR_HEIGHT_PX = 60;
 const TOTAL_HOURS = 24;
 
 
 export default function SchedulePage() {
   const firestore = useFirestore();
   const router = useRouter();
-  const tenantId = 'safeviate'; // Hardcoded for now
+  const tenantId = 'safeviate';
   const [selectedDate, setSelectedDate] = useState(startOfToday());
 
   const [nowLinePosition, setNowLinePosition] = useState(0);
@@ -207,12 +180,10 @@ export default function SchedulePage() {
   const bookingsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     const dateFilter = format(selectedDate, 'yyyy-MM-dd');
-    const prevDateFilter = format(subDays(selectedDate, 1), 'yyyy-MM-dd');
     
-    // We need to fetch bookings from the selected day, and also overnight bookings from the previous day.
     return query(
         collection(firestore, 'tenants', tenantId, 'bookings'),
-        where('bookingDate', 'in', [prevDateFilter, dateFilter]),
+        where('bookingDate', '==', dateFilter),
     );
   }, [firestore, tenantId, selectedDate]); 
 
@@ -368,5 +339,3 @@ export default function SchedulePage() {
     </>
   );
 }
-
-    
