@@ -55,6 +55,7 @@ interface BookingFormProps {
   pilots: PilotProfile[];
   allBookingsForAircraft: Booking[];
   existingBooking?: Booking;
+  refreshBookings: () => void;
 }
 
 export function BookingForm({
@@ -66,6 +67,7 @@ export function BookingForm({
   pilots,
   allBookingsForAircraft,
   existingBooking,
+  refreshBookings,
 }: BookingFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -106,6 +108,9 @@ export function BookingForm({
 
 
   const onOpenChange = (open: boolean) => {
+    if (!open) {
+      refreshBookings();
+    }
     setIsOpen(open);
   };
   
@@ -173,6 +178,7 @@ export function BookingForm({
     }
 
     setIsOpen(false);
+    refreshBookings();
   };
   
   const handleDelete = async () => {
@@ -181,6 +187,7 @@ export function BookingForm({
         await deleteBooking(firestore, tenantId, existingBooking.id);
         toast({ title: 'Booking Deleted', description: `Booking #${existingBooking.bookingNumber} has been deleted.` });
         setIsOpen(false);
+        refreshBookings();
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'Delete Failed', description: error.message });
     }
@@ -404,6 +411,10 @@ export function BookingForm({
                 booking={existingBooking}
                 aircraft={aircraft}
                 tenantId={tenantId}
+                onChecklistSubmitted={() => {
+                  setIsOpen(false); // Close main form
+                  refreshBookings(); // Trigger refresh on schedule page
+                }}
             />
             <PostFlightChecklistDialog
                 isOpen={isPostFlightOpen}
@@ -411,6 +422,10 @@ export function BookingForm({
                 booking={existingBooking}
                 aircraft={aircraft}
                 tenantId={tenantId}
+                 onChecklistSubmitted={() => {
+                  setIsOpen(false);
+                  refreshBookings();
+                }}
             />
         </>
       )}

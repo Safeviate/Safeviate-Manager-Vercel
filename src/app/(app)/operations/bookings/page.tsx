@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -173,6 +173,7 @@ export default function SchedulePage() {
   
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
   const [bookingFormData, setBookingFormData] = useState<{ aircraft: Aircraft; startTime: Date; allBookingsForAircraft: Booking[]; booking?: Booking } | null>(null);
+  const [dataVersion, setDataVersion] = useState(0);
 
   const aircraftQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
@@ -187,11 +188,11 @@ export default function SchedulePage() {
         collection(firestore, 'tenants', tenantId, 'bookings'),
         where('bookingDate', '==', dateFilter),
     );
-  }, [firestore, tenantId, selectedDate]); 
+  }, [firestore, tenantId, selectedDate, dataVersion]); 
 
   const allBookingsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'bookings')) : null),
-    [firestore, tenantId]
+    [firestore, tenantId, dataVersion]
   );
 
   const pilotsQuery = useMemoFirebase(
@@ -206,6 +207,10 @@ export default function SchedulePage() {
 
   const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingPilots || isLoadingAllBookings;
   const error = aircraftError || bookingsError || pilotsError || allBookingsError;
+
+  const refreshBookings = useCallback(() => {
+    setDataVersion(v => v + 1);
+  }, []);
 
   useEffect(() => {
     const calculateNowLine = () => {
@@ -239,7 +244,8 @@ export default function SchedulePage() {
     const aircraftForBooking = aircraft?.find(a => a.id === booking.aircraftId);
     if (aircraftForBooking) {
       const allBookingsForAircraft = allBookings?.filter(b => b.aircraftId === aircraftForBooking.id) || [];
-      setBookingFormData({ aircraft: aircraftForBooking, startTime: combineDateAndTime(booking.bookingDate, booking.startTime), allBookingsForAircraft, booking });
+      const updatedBooking = allBookings?.find(b => b.id === booking.id) || booking;
+      setBookingFormData({ aircraft: aircraftForBooking, startTime: combineDateAndTime(updatedBooking.bookingDate, updatedBooking.startTime), allBookingsForAircraft, booking: updatedBooking });
       setIsBookingFormOpen(true);
     }
   };
@@ -344,6 +350,7 @@ export default function SchedulePage() {
             pilots={pilots || []}
             allBookingsForAircraft={bookingFormData.allBookingsForAircraft}
             existingBooking={bookingFormData.booking}
+            refreshBookings={refreshBookings}
           />
       )}
     </>

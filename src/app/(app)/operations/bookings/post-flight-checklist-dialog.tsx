@@ -27,6 +27,7 @@ interface PostFlightChecklistDialogProps {
   booking: Booking;
   aircraft: Aircraft;
   tenantId: string;
+  onChecklistSubmitted: () => void;
 }
 
 const photoSchema = z.object({
@@ -44,7 +45,7 @@ const postFlightSchema = z.object({
 
 type PostFlightFormValues = z.infer<typeof postFlightSchema>;
 
-export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft, tenantId }: PostFlightChecklistDialogProps) {
+export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft, tenantId, onChecklistSubmitted }: PostFlightChecklistDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
@@ -53,11 +54,11 @@ export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft
   const form = useForm<PostFlightFormValues>({
     resolver: zodResolver(postFlightSchema),
     defaultValues: {
-      actualHobbs: aircraft.currentHobbs || 0,
-      actualTacho: aircraft.currentTacho || 0,
-      oil: '' as any,
-      fuel: '' as any,
-      photos: [],
+      actualHobbs: booking.postFlight?.actualHobbs ?? aircraft.currentHobbs ?? 0,
+      actualTacho: booking.postFlight?.actualTacho ?? aircraft.currentTacho ?? 0,
+      oil: booking.postFlight?.oil ?? '' as any,
+      fuel: booking.postFlight?.fuel ?? '' as any,
+      photos: booking.postFlight?.photos ?? [],
     },
   });
 
@@ -69,14 +70,14 @@ export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft
   useEffect(() => {
     if (isOpen) {
       form.reset({
-        actualHobbs: aircraft.currentHobbs || 0,
-        actualTacho: aircraft.currentTacho || 0,
-        oil: '' as any,
-        fuel: '' as any,
-        photos: [],
+        actualHobbs: booking.postFlight?.actualHobbs ?? aircraft.currentHobbs ?? 0,
+        actualTacho: booking.postFlight?.actualTacho ?? aircraft.currentTacho ?? 0,
+        oil: booking.postFlight?.oil ?? '' as any,
+        fuel: booking.postFlight?.fuel ?? '' as any,
+        photos: booking.postFlight?.photos ?? [],
       });
     }
-  }, [isOpen, aircraft, form]);
+  }, [isOpen, aircraft, booking, form]);
 
 
   const onSubmit = async (values: PostFlightFormValues) => {
@@ -96,6 +97,7 @@ export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft
         description: 'The post-flight checklist has been saved.',
       });
       setIsOpen(false);
+      onChecklistSubmitted();
     } catch (error: any) {
       toast({
         variant: 'destructive',

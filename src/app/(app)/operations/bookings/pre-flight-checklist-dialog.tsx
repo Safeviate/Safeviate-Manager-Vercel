@@ -27,6 +27,7 @@ interface PreFlightChecklistDialogProps {
   booking: Booking;
   aircraft: Aircraft;
   tenantId: string;
+  onChecklistSubmitted: () => void;
 }
 
 const photoSchema = z.object({
@@ -55,7 +56,7 @@ const documents = [
     { id: 'techlog', label: 'Tech Log' },
 ];
 
-export function PreFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft, tenantId }: PreFlightChecklistDialogProps) {
+export function PreFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft, tenantId, onChecklistSubmitted }: PreFlightChecklistDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
@@ -64,12 +65,12 @@ export function PreFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft,
   const form = useForm<PreFlightFormValues>({
     resolver: zodResolver(preFlightSchema),
     defaultValues: {
-      actualHobbs: aircraft.currentHobbs || 0,
-      actualTacho: aircraft.currentTacho || 0,
-      oil: '' as any,
-      fuel: '' as any,
-      documentsChecked: [],
-      photos: [],
+      actualHobbs: booking.preFlight?.actualHobbs ?? aircraft.currentHobbs ?? 0,
+      actualTacho: booking.preFlight?.actualTacho ?? aircraft.currentTacho ?? 0,
+      oil: booking.preFlight?.oil ?? '' as any,
+      fuel: booking.preFlight?.fuel ?? '' as any,
+      documentsChecked: booking.preFlight?.documentsChecked ?? [],
+      photos: booking.preFlight?.photos ?? [],
     },
   });
 
@@ -81,15 +82,15 @@ export function PreFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft,
   useEffect(() => {
     if (isOpen) {
       form.reset({
-        actualHobbs: aircraft.currentHobbs || 0,
-        actualTacho: aircraft.currentTacho || 0,
-        oil: '' as any,
-        fuel: '' as any,
-        documentsChecked: [],
-        photos: [],
+        actualHobbs: booking.preFlight?.actualHobbs ?? aircraft.currentHobbs ?? 0,
+        actualTacho: booking.preFlight?.actualTacho ?? aircraft.currentTacho ?? 0,
+        oil: booking.preFlight?.oil ?? '' as any,
+        fuel: booking.preFlight?.fuel ?? '' as any,
+        documentsChecked: booking.preFlight?.documentsChecked ?? [],
+        photos: booking.preFlight?.photos ?? [],
       });
     }
-  }, [isOpen, aircraft, form]);
+  }, [isOpen, aircraft, booking, form]);
 
 
   const onSubmit = async (values: PreFlightFormValues) => {
@@ -108,6 +109,7 @@ export function PreFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft,
         description: 'The pre-flight checklist has been saved.',
       });
       setIsOpen(false);
+      onChecklistSubmitted();
     } catch (error: any) {
       toast({
         variant: 'destructive',
