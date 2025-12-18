@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -43,6 +42,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { createBooking, updateBooking, deleteBooking } from './booking-functions';
+import Link from 'next/link';
 
 
 interface BookingFormProps {
@@ -367,13 +367,17 @@ export function BookingForm({
               </div>
               {isEditMode && (
                 <div className="grid grid-cols-2 gap-4 pt-6">
-                  <Button variant="outline">
-                    <PlaneTakeoff className="mr-2 h-4 w-4" />
-                    Pre-Flight Checklist
+                  <Button asChild variant="outline">
+                    <Link href={`/operations/bookings/${existingBooking.id}/pre-flight`}>
+                      <PlaneTakeoff className="mr-2 h-4 w-4" />
+                      Pre-Flight Checklist
+                    </Link>
                   </Button>
-                  <Button variant="outline">
-                    <LandPlot className="mr-2 h-4 w-4" />
-                    Post-Flight Checklist
+                  <Button asChild variant="outline">
+                    <Link href={`/operations/bookings/${existingBooking.id}/post-flight`}>
+                      <LandPlot className="mr-2 h-4 w-4" />
+                      Post-Flight Checklist
+                    </Link>
                   </Button>
                 </div>
               )}
