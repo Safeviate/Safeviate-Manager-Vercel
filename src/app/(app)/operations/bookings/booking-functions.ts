@@ -19,7 +19,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 type BookingCreationData = Omit<Booking, 'id' | 'bookingNumber' | 'status'>;
 
 /**
- * Creates a new booking with a sequential number and updates aircraft status.
+ * Creates a new booking with a sequential number. Does not affect aircraft status.
  * @param firestore - The Firestore instance.
  * @param tenantId - The ID of the tenant.
  * @param bookingData - The data for the new booking.
@@ -32,7 +32,6 @@ export const createBooking = async (
 
     const counterRef = doc(firestore, `tenants/${tenantId}/counters`, 'bookings');
     const bookingsRef = collection(firestore, `tenants/${tenantId}`, 'bookings');
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, bookingData.aircraftId!);
     
     try {
         const newBookingId = await runTransaction(firestore, async (transaction) => {
@@ -63,12 +62,16 @@ export const createBooking = async (
             }
             
             transaction.set(newBookingRef, payload);
-            
-            // Set aircraft status to needs-pre-flight
-            transaction.update(aircraftRef, { 
-                checklistStatus: 'needs-pre-flight',
-                currentBookingId: newBookingRef.id 
-            });
+
+            // Check if aircraft is 'Ready' and set it to 'needs-pre-flight'
+            const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, bookingData.aircraftId!);
+            const aircraftDoc = await transaction.get(aircraftRef);
+            if (aircraftDoc.exists() && aircraftDoc.data().checklistStatus === 'Ready') {
+                transaction.update(aircraftRef, {
+                    checklistStatus: 'needs-pre-flight',
+                    currentBookingId: newBookingRef.id
+                });
+            }
 
             return newBookingRef.id;
         });
@@ -94,14 +97,9 @@ export const updateBooking = async (
 ) => {
     const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, bookingId);
     
-    // Create a clean object for the batch update.
-    const finalUpdateData: { [key: string]: any } = {};
-
-    // Use a Record to safely build the update object
     const updatePayload: Record<string, any> = { ...updateData };
 
     if (updatePayload.instructorId === '' || updatePayload.instructorId === null) {
-        // Explicitly set to null to remove or use deleteField()
         updatePayload.instructorId = deleteField();
     }
     
@@ -117,7 +115,6 @@ export const updateBooking = async (
     } else if (isSubmittingPreFlight) {
         batch.update(aircraftRef, { checklistStatus: 'needs-post-flight' });
     } else if (isCancelling) {
-        // Only reset aircraft status if this cancelled booking was the one holding the status
         const aircraftDoc = await getDoc(aircraftRef);
         if (aircraftDoc.exists() && aircraftDoc.data().currentBookingId === bookingId) {
              batch.update(aircraftRef, { checklistStatus: 'Ready', currentBookingId: null });
@@ -157,7 +154,6 @@ export const deleteBooking = async (
 
             const aircraftDoc = await transaction.get(aircraftRef);
             
-            // If the deleted booking was the one holding the aircraft's status, reset it.
             if(aircraftDoc.exists() && aircraftDoc.data().currentBookingId === bookingId) {
                 transaction.update(aircraftRef, { checklistStatus: 'Ready', currentBookingId: null });
             }
