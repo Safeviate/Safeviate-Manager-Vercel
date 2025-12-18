@@ -17,8 +17,10 @@ import { useRouter } from 'next/navigation';
 import { Timestamp } from 'firebase/firestore';
 import type { Booking } from '@/types/booking';
 import { Button } from '@/components/ui/button';
-import { Eye } from 'lucide-react';
+import { Eye, CheckCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 // A consolidated type for display
 type EnrichedBooking = Booking & {
@@ -34,6 +36,18 @@ const getBookingTypeAbbreviation = (type: Booking['type']): string => {
         case 'Maintenance Flight': return 'M';
         case 'Reposition Flight': return 'R';
         default: return '';
+    }
+}
+
+const getStatusBadgeVariant = (status: Booking['status']): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status) {
+        case 'Completed':
+            return 'default';
+        case 'Cancelled':
+        case 'Cancelled with Reason':
+            return 'destructive';
+        default:
+            return 'secondary';
     }
 }
 
@@ -56,16 +70,20 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                 <TableHead>Aircraft</TableHead>
                 <TableHead>Pilot</TableHead>
                 <TableHead>Start Time</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className='text-right'>Actions</TableHead>
             </TableRow>
             </TableHeader>
             <TableBody>
                 {bookings.map(b => (
-                    <TableRow key={b.id}>
+                    <TableRow key={b.id} className={cn((b.status === 'Cancelled' || b.status === 'Cancelled with Reason') && 'text-muted-foreground')}>
                         <TableCell className="font-medium">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
                         <TableCell>{b.aircraftTailNumber}</TableCell>
                         <TableCell>{b.pilotName}</TableCell>
                         <TableCell>{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
+                        <TableCell>
+                            <Badge variant={getStatusBadgeVariant(b.status)}>{b.status}</Badge>
+                        </TableCell>
                         <TableCell className='text-right'>
                             <Button asChild variant="outline" size="sm">
                                 <Link href={`/operations/bookings-history/${b.id}`}>
