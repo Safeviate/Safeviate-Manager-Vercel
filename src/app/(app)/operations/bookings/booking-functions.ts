@@ -49,13 +49,19 @@ export const createBooking = async (
             // 2. Create the new booking document
             const newBookingRef = doc(bookingsRef); // Create a new doc reference with a generated ID
             
+            // Build the payload selectively to avoid 'undefined' values
             const payload: any = {
-                ...bookingData,
                 id: newBookingRef.id,
                 bookingNumber: newBookingNumber,
                 status: 'Confirmed',
                 preFlight: {}, // Initialize with empty object
                 postFlight: {}, // Initialize with empty object
+                aircraftId: bookingData.aircraftId,
+                pilotId: bookingData.pilotId,
+                type: bookingData.type,
+                bookingDate: bookingData.bookingDate,
+                startTime: bookingData.startTime,
+                endTime: bookingData.endTime,
             };
             
             // Conditionally add optional fields to avoid 'undefined'
