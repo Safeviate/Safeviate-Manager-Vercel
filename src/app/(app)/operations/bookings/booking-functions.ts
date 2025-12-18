@@ -10,6 +10,7 @@ import {
     Timestamp,
     deleteField,
     writeBatch,
+    getDoc,
   } from 'firebase/firestore';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking as deleteDocNonBlocking } from '@/firebase';
 import type { Booking } from '@/types/booking';
@@ -142,11 +143,26 @@ export const updateBooking = async (
     }
     
     const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);
+    const isCancelling = updateData.status === 'Cancelled' || updateData.status === 'Cancelled with Reason';
 
     if (isSubmittingPostFlight) {
         batch.update(aircraftRef, { checklistStatus: 'Ready' });
     } else if (isSubmittingPreFlight) {
         batch.update(aircraftRef, { checklistStatus: 'Needs Post-Flight' });
+    } else if (isCancelling) {
+        // If we are cancelling a booking, check if we need to reset the aircraft status.
+        // This is a safety net in case the booking was the one holding the 'Needs Post-Flight' status.
+        const bookingDoc = await getDoc(bookingRef);
+        if (bookingDoc.exists()) {
+            const bookingData = bookingDoc.data() as Booking;
+            const wasPreFlightSubmitted = !!(bookingData.preFlight && Object.keys(bookingData.preFlight).length > 0);
+            const wasPostFlightSubmitted = !!(bookingData.postFlight && Object.keys(bookingData.postFlight).length > 0);
+            
+            // If pre-flight was done but post-flight was not, this booking was holding the status.
+            if (wasPreFlightSubmitted && !wasPostFlightSubmitted) {
+                batch.update(aircraftRef, { checklistStatus: 'Ready' });
+            }
+        }
     }
 
     // Using a batch write with non-blocking error handling
@@ -165,7 +181,7 @@ export const updateBooking = async (
 }
 
 /**
- * Deletes a booking from the database.
+ * Deletes a booking from the database and resets the aircraft status if needed.
  * @param firestore - The Firestore instance.
  * @param tenantId - The ID of the tenant.
  * @param bookingId - The ID of the booking to delete.
@@ -176,6 +192,40 @@ export const deleteBooking = async (
     bookingId: string
 ) => {
     const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, bookingId);
-    // Using the non-blocking delete function from firebase/index
-    return deleteDocNonBlocking(bookingRef);
+    
+    try {
+        await runTransaction(firestore, async (transaction) => {
+            const bookingDoc = await transaction.get(bookingRef);
+            if (!bookingDoc.exists()) {
+                throw new Error("Booking does not exist.");
+            }
+            
+            const bookingData = bookingDoc.data() as Booking;
+            const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, bookingData.aircraftId);
+            
+            const wasPreFlightSubmitted = !!(bookingData.preFlight && (bookingData.preFlight.actualHobbs || bookingData.preFlight.actualTacho));
+            const wasPostFlightSubmitted = !!(bookingData.postFlight && (bookingData.postFlight.actualHobbs || bookingData.postFlight.actualTacho));
+
+            // If the deleted booking had a pre-flight but no post-flight, it was holding the aircraft's status.
+            // We must reset the aircraft's status to 'Ready'.
+            if (wasPreFlightSubmitted && !wasPostFlightSubmitted) {
+                transaction.update(aircraftRef, { checklistStatus: 'Ready' });
+            }
+            
+            // Delete the booking itself
+            transaction.delete(bookingRef);
+        });
+    } catch (error) {
+        console.error("Booking deletion transaction failed: ", error);
+        
+        // Emit a generic error for the UI, as transactions can be complex
+        const contextualError = new FirestorePermissionError({
+          operation: 'delete',
+          path: bookingRef.path,
+        });
+        errorEmitter.emit('permission-error', contextualError);
+        
+        // Rethrow so the caller can handle the failed promise
+        throw new Error("Failed to delete booking.");
+    }
 };
