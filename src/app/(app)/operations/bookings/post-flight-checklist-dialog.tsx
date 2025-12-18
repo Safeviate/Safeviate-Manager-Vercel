@@ -139,17 +139,26 @@ export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft
                   <Separator />
 
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <FormLabel className="text-base">Photos</FormLabel>
-                      <DocumentUploader
-                          onDocumentUploaded={handlePhotoUploaded}
-                          trigger={(openDialog) => (
-                            <Button type="button" size="sm" variant="outline" onClick={() => openDialog('camera')}>
-                                  <PlusCircle className="mr-2 h-4 w-4" /> Add Photo
-                              </Button>
-                          )}
-                      />
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="photos"
+                      render={() => (
+                        <FormItem>
+                           <div className="flex items-center justify-between">
+                            <FormLabel className="text-base">Photos</FormLabel>
+                            <DocumentUploader
+                                onDocumentUploaded={handlePhotoUploaded}
+                                trigger={(openDialog) => (
+                                  <Button type="button" size="sm" variant="outline" onClick={() => openDialog('camera')}>
+                                        <PlusCircle className="mr-2 h-4 w-4" /> Add Photo
+                                    </Button>
+                                )}
+                            />
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <div className="space-y-4">
                       {fields.map((field, index) => (
                         <div key={field.id} className="flex items-start gap-4 p-4 border rounded-lg">
@@ -178,15 +187,6 @@ export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft
                     {fields.length === 0 && (
                         <p className="text-sm text-muted-foreground text-center py-4">No photos added.</p>
                     )}
-                    <FormField
-                        control={form.control}
-                        name="photos"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
                   </div>
                 </div>
               </ScrollArea>
@@ -221,5 +221,3 @@ export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft
     </>
   );
 }
-
-    
