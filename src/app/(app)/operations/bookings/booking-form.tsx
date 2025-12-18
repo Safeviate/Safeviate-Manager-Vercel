@@ -148,13 +148,15 @@ export function BookingForm({
   }, [existingBooking]);
 
   const isPreFlightDisabled = useMemo(() => {
-    // A different booking has the aircraft locked.
-    if (aircraft?.checklistStatus === 'Needs Post-Flight' && !preflightSubmitted) {
-        return true;
+    // Disable if another booking has the aircraft locked or if this one is already done
+    if (aircraft?.checklistStatus === 'needs-post-flight' || aircraft?.checklistStatus === 'needs-pre-flight') {
+        // If this aircraft needs a post-flight, only the booking that caused it can proceed.
+        // We assume for now that if the status is locked, and we are opening an existing booking, it's the correct one.
+        // A more robust check might involve storing the locking booking's ID on the aircraft.
+        if (!existingBooking) return true;
     }
-    // This booking's pre-flight is already done.
     return preflightSubmitted;
-  }, [aircraft?.checklistStatus, preflightSubmitted]);
+  }, [aircraft?.checklistStatus, preflightSubmitted, existingBooking]);
 
 
   useEffect(() => {
@@ -385,6 +387,16 @@ export function BookingForm({
   const instructors = useMemo(() => pilots.filter(p => p.userType === 'Instructor'), [pilots]);
   const privatePilots = useMemo(() => pilots.filter(p => p.userType === 'Private Pilot'), [pilots]);
 
+  const preFlightAlertMessage = () => {
+    if (aircraft.checklistStatus === 'needs-post-flight') {
+        return 'A post-flight checklist for this aircraft must be completed before a new pre-flight can be started.';
+    }
+    if (aircraft.checklistStatus === 'needs-pre-flight' && !isEditMode) {
+        return 'This aircraft requires a pre-flight check for a previous booking.';
+    }
+    return 'Pre-flight checklist is currently unavailable.';
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -396,12 +408,12 @@ export function BookingForm({
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-4">
             <div className="grid gap-4 py-4 pr-2">
-                {isEditMode && aircraft.checklistStatus === 'Needs Post-Flight' && !preflightSubmitted && (
+                {isPreFlightDisabled && isEditMode && (
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Pre-Flight Unavailable</AlertTitle>
                         <AlertDescription>
-                            A post-flight checklist for this aircraft must be completed before a new pre-flight can be started.
+                            {preFlightAlertMessage()}
                         </AlertDescription>
                     </Alert>
                 )}

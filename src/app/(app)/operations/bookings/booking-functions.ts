@@ -35,6 +35,7 @@ export const createBooking = async (
 
     const counterRef = doc(firestore, `tenants/${tenantId}/counters`, 'bookings');
     const bookingsRef = collection(firestore, `tenants/${tenantId}`, 'bookings');
+    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, bookingData.aircraftId!);
     
     try {
         const newBookingId = await runTransaction(firestore, async (transaction) => {
@@ -74,6 +75,9 @@ export const createBooking = async (
             }
             
             transaction.set(newBookingRef, payload);
+            
+            // 3. Update aircraft status
+            transaction.update(aircraftRef, { checklistStatus: 'needs-pre-flight' });
 
             return newBookingRef.id;
         });
@@ -148,10 +152,10 @@ export const updateBooking = async (
     if (isSubmittingPostFlight) {
         batch.update(aircraftRef, { checklistStatus: 'Ready' });
     } else if (isSubmittingPreFlight) {
-        batch.update(aircraftRef, { checklistStatus: 'Needs Post-Flight' });
+        batch.update(aircraftRef, { checklistStatus: 'needs-post-flight' });
     } else if (isCancelling) {
         // If we are cancelling a booking, check if we need to reset the aircraft status.
-        // This is a safety net in case the booking was the one holding the 'Needs Post-Flight' status.
+        // This is a safety net in case the booking was the one holding the status.
         const bookingDoc = await getDoc(bookingRef);
         if (bookingDoc.exists()) {
             const bookingData = bookingDoc.data() as Booking;
@@ -208,7 +212,7 @@ export const deleteBooking = async (
 
             // If the deleted booking had a pre-flight but no post-flight, it was holding the aircraft's status.
             // We must reset the aircraft's status to 'Ready'.
-            if (wasPreFlightSubmitted && !wasPostFlightSubmitted) {
+            if ((wasPreFlightSubmitted && !wasPostFlightSubmitted) || bookingData.status === 'Confirmed') {
                 transaction.update(aircraftRef, { checklistStatus: 'Ready' });
             }
             
