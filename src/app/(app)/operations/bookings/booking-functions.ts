@@ -16,6 +16,7 @@ import {
     orderBy,
     limit,
     getDocs,
+    deleteDoc,
   } from 'firebase/firestore';
 import type { Booking } from '@/types/booking';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -111,6 +112,14 @@ export const updateBooking = async ({
         updatePayload.instructorId = deleteField();
     }
     
+    // Explicitly include photos if they exist in the payload. This was the fix.
+    if (updateData.preFlight?.photos) {
+      updatePayload.preFlight.photos = updateData.preFlight.photos;
+    }
+    if (updateData.postFlight?.photos) {
+      updatePayload.postFlight.photos = updateData.postFlight.photos;
+    }
+
     const batch = writeBatch(firestore);
 
     batch.set(bookingRef, updatePayload, { merge: true });
