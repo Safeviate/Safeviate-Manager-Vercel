@@ -41,7 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format, addHours, set, parse, isBefore } from 'date-fns';
+import { format, addHours, set, parse, isBefore, addDays } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -104,10 +104,11 @@ export function BookingForm({
   const [instructorId, setInstructorId] = useState(existingBooking?.instructorId || '');
   const [startTimeValue, setStartTimeValue] = useState('');
   const [endTimeValue, setEndTimeValue] = useState('');
-  const [isOvernight, setIsOvernight] = useState(false);
-  const [returnStartTimeValue, setReturnStartTimeValue] = useState('');
-  const [returnEndTimeValue, setReturnEndTimeValue] = useState('');
+  const [isOvernight, setIsOvernight] = useState(existingBooking?.isOvernight || false);
   
+  const [overnightBookingDate, setOvernightBookingDate] = useState<string | undefined>(existingBooking?.overnightBookingDate);
+  const [overnightEndTime, setOvernightEndTime] = useState(existingBooking?.overnightEndTime || '');
+
   // Pre-flight state
   const [preFlightHobbs, setPreFlightHobbs] = useState<number | string>(existingBooking?.preFlight?.actualHobbs ?? '');
   const [preFlightTacho, setPreFlightTacho] = useState<number | string>(existingBooking?.preFlight?.actualTacho ?? '');
@@ -128,10 +129,36 @@ export function BookingForm({
   const isChecklistNeeded = aircraft?.checklistStatus === 'needs-post-flight';
   const preflightDisabled = (!isEditMode && isChecklistNeeded);
 
+  const baseDate = existingBooking ? parse(existingBooking.bookingDate, 'yyyy-MM-dd', new Date()) : initialStartTime;
+  const originalEndTime = useMemo(() => format(addHours(baseDate, 1), 'HH:mm'), [baseDate]);
+
+
+  useEffect(() => {
+    if (isOvernight) {
+      setEndTimeValue('23:59');
+      const nextDay = addDays(baseDate, 1);
+      setOvernightBookingDate(format(nextDay, 'yyyy-MM-dd'));
+      // The second start time is implicitly 00:00, so we just need an end time.
+    } else {
+      // Restore original end time if it exists, otherwise default to one hour after start
+      if (existingBooking) {
+          setEndTimeValue(existingBooking.endTime);
+      } else {
+          setEndTimeValue(originalEndTime);
+      }
+      setOvernightBookingDate(undefined);
+      setOvernightEndTime('');
+    }
+  }, [isOvernight, existingBooking, originalEndTime, baseDate]);
+
+
   useEffect(() => {
     if (isEditMode && existingBooking) {
       setStartTimeValue(existingBooking.startTime);
       setEndTimeValue(existingBooking.endTime);
+      setIsOvernight(existingBooking.isOvernight || false);
+      setOvernightBookingDate(existingBooking.overnightBookingDate);
+      setOvernightEndTime(existingBooking.overnightEndTime || '');
     } else if (initialStartTime) {
       const formattedStartTime = format(initialStartTime, 'HH:mm');
       const endTimeDate = addHours(initialStartTime, 1);
@@ -158,7 +185,6 @@ export function BookingForm({
         return;
     }
     
-    const baseDate = existingBooking ? parse(existingBooking.bookingDate, 'yyyy-MM-dd', new Date()) : initialStartTime;
     const bookingDate = format(baseDate, 'yyyy-MM-dd');
 
     const getPreFlightData = () => ({
@@ -187,7 +213,10 @@ export function BookingForm({
             startTime: startTimeValue,
             endTime: endTimeValue,
             type: bookingType as Booking['type'],
-            pilotId: pilotId
+            pilotId: pilotId,
+            isOvernight,
+            overnightBookingDate,
+            overnightEndTime,
         };
         
         // This is a general save, update everything
@@ -242,6 +271,9 @@ export function BookingForm({
             bookingDate: bookingDate,
             startTime: startTimeValue,
             endTime: endTimeValue,
+            isOvernight,
+            overnightBookingDate,
+            overnightEndTime,
         };
         
         if (instructorId) {
@@ -392,6 +424,7 @@ export function BookingForm({
                                     type="time" 
                                     value={endTimeValue}
                                     onChange={(e) => setEndTimeValue(e.target.value)}
+                                    readOnly={isOvernight}
                                 />
                             </div>
                             <div className="col-span-2 flex items-center space-x-2 pt-2">
@@ -400,25 +433,22 @@ export function BookingForm({
                             </div>
                              {isOvernight && (
                                 <>
-                                    <div className="col-span-2">
-                                        <p className="text-sm text-muted-foreground">Return times for the next day.</p>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="return-start-time">Start Time</Label>
+                                    <div className="col-span-1 space-y-2">
+                                        <Label htmlFor="overnight-start-time">Start Time</Label>
                                         <Input
-                                            id="return-start-time"
+                                            id="overnight-start-time"
                                             type="time"
-                                            value={returnStartTimeValue}
-                                            onChange={(e) => setReturnStartTimeValue(e.target.value)}
+                                            value="00:00"
+                                            readOnly
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="return-end-time">End Time</Label>
+                                    <div className="col-span-1 space-y-2">
+                                        <Label htmlFor="overnight-end-time">End Time</Label>
                                         <Input
-                                            id="return-end-time"
+                                            id="overnight-end-time"
                                             type="time"
-                                            value={returnEndTimeValue}
-                                            onChange={(e) => setReturnEndTimeValue(e.target.value)}
+                                            value={overnightEndTime}
+                                            onChange={(e) => setOvernightEndTime(e.target.value)}
                                         />
                                     </div>
                                 </>
@@ -620,7 +650,3 @@ export function BookingForm({
     </Dialog>
   );
 }
-
-    
-
-    

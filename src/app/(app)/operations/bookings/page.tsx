@@ -20,53 +20,73 @@ import type { Booking } from '@/types/booking';
 
 
 const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
+    // Check for invalid inputs, though Firestore data should be reliable
+    if (!dateStr || !timeStr) {
+        // Return an invalid date, which can be handled downstream
+        return new Date('invalid');
+    }
     return parse(`${dateStr} ${timeStr}`, 'yyyy-MM-dd HH:mm', new Date());
 };
 
-const BookingItem = ({ booking, pilots, selectedDate, onBookingClick }: { booking: Booking, pilots: PilotProfile[], selectedDate: Date, onBookingClick: (booking: Booking) => void }) => {
-    const startTime = combineDateAndTime(booking.bookingDate, booking.startTime);
-    const endTime = combineDateAndTime(booking.bookingDate, booking.endTime);
-
-    // Handle overnight bookings
-    if (isBefore(endTime, startTime)) {
-        endTime.setDate(endTime.getDate() + 1);
-    }
-
-    const startsOnSelectedDay = isSameDay(startTime, selectedDate);
-    const endsOnSelectedDay = isSameDay(endTime, selectedDate);
-
-    // Calculate top position based on start time or midnight if it's a continuing booking
-    const top = startsOnSelectedDay 
-        ? (getHours(startTime) * 60 + getMinutes(startTime)) * (HOUR_HEIGHT_PX / 60)
-        : 0;
-
-    // Calculate duration and height
-    const effectiveStartTime = startsOnSelectedDay ? startTime : startOfDay(selectedDate);
-    const effectiveEndTime = endsOnSelectedDay ? endTime : endOfDay(selectedDate);
-    const durationMinutes = differenceInMinutes(effectiveEndTime, effectiveStartTime);
-    const height = durationMinutes * (HOUR_HEIGHT_PX / 60);
-
+const BookingItem = ({ booking, pilots, onBookingClick }: { booking: Booking, pilots: PilotProfile[], onBookingClick: (booking: Booking) => void }) => {
+    
     const pilot = pilots.find(p => p.id === booking.pilotId);
     
-    const hasContinuationTop = !startsOnSelectedDay;
-    const hasContinuationBottom = !endsOnSelectedDay;
+    // Create an array of segments to render. For a normal booking, it's one. For overnight, it's two.
+    const segments = [];
+
+    // First segment (always exists)
+    segments.push({
+        date: booking.bookingDate,
+        startTime: booking.startTime,
+        endTime: booking.isOvernight ? '23:59' : booking.endTime
+    });
+
+    // Second segment for overnight bookings
+    if (booking.isOvernight && booking.overnightBookingDate && booking.overnightEndTime) {
+        segments.push({
+            date: booking.overnightBookingDate,
+            startTime: '00:00',
+            endTime: booking.overnightEndTime
+        });
+    }
     
     return (
-        <div
-            className={cn(
-            'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground z-10 min-h-[40px] border border-gray-400 cursor-pointer hover:opacity-90 transition-opacity',
-            (booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason') ? 'bg-destructive' : 'bg-primary'
-            )}
-            style={{ top: `${top}px`, height: `${height}px` }}
-            onClick={() => onBookingClick(booking)}
-        >
-            {hasContinuationTop && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-b from-black/20 to-transparent" />}
-            <p className="font-semibold truncate">#{booking.bookingNumber} - {booking.type}</p>
-            <p className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}</p>
-            {booking.status === 'Cancelled' && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
-            {(booking.status === 'Cancelled with Reason') && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
-            {hasContinuationBottom && <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-t from-black/20 to-transparent" />}
-        </div>
+      <>
+        {segments.map((segment, index) => {
+            const startTime = combineDateAndTime(segment.date, segment.startTime);
+            const endTime = combineDateAndTime(segment.date, segment.endTime);
+
+            if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) return null;
+
+            const top = (getHours(startTime) * 60 + getMinutes(startTime)) * (HOUR_HEIGHT_PX / 60);
+            const durationMinutes = differenceInMinutes(endTime, startTime);
+            const height = Math.max(durationMinutes, 0) * (HOUR_HEIGHT_PX / 60);
+
+            // Add continuation indicators for overnight bookings
+            const hasContinuationTop = index > 0;
+            const hasContinuationBottom = index < segments.length - 1;
+            
+            return (
+                <div
+                    key={`${booking.id}-${index}`}
+                    className={cn(
+                        'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground z-10 min-h-[40px] border border-gray-400 cursor-pointer hover:opacity-90 transition-opacity',
+                        (booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason') ? 'bg-destructive' : 'bg-primary'
+                    )}
+                    style={{ top: `${top}px`, height: `${height}px` }}
+                    onClick={() => onBookingClick(booking)}
+                >
+                    {hasContinuationTop && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-b from-black/20 to-transparent" />}
+                    <p className="font-semibold truncate">#{booking.bookingNumber} - {booking.type}</p>
+                    <p className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}</p>
+                    {booking.status === 'Cancelled' && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
+                    {(booking.status === 'Cancelled with Reason') && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
+                    {hasContinuationBottom && <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-t from-black/20 to-transparent" />}
+                </div>
+            )
+        })}
+      </>
     )
 }
 
@@ -91,6 +111,12 @@ const AircraftColumn = ({
 }) => {
     const today = startOfToday();
     const isSelectedDateInPast = isBefore(selectedDate, today);
+
+    // Filter bookings to only those relevant for this column on the selected date
+    const relevantBookings = bookings.filter(b => 
+      b.bookingDate === format(selectedDate, 'yyyy-MM-dd') || 
+      b.overnightBookingDate === format(selectedDate, 'yyyy-MM-dd')
+    );
 
   return (
     <div 
@@ -137,12 +163,11 @@ const AircraftColumn = ({
       )}
 
       {/* Booking blocks */}
-      {bookings.map((booking) => (
+      {relevantBookings.map((booking) => (
         <BookingItem 
             key={booking.id} 
             booking={booking}
             pilots={pilots}
-            selectedDate={selectedDate}
             onBookingClick={onBookingClick}
         />
       ))}
@@ -158,7 +183,7 @@ export default function SchedulePage() {
   const firestore = useFirestore();
   const router = useRouter();
   const tenantId = 'safeviate'; // Hardcoded for now
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(startOfToday());
 
   const [nowLinePosition, setNowLinePosition] = useState(0);
   const [showNowLine, setShowNowLine] = useState(false);
@@ -174,12 +199,12 @@ export default function SchedulePage() {
   const bookingsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     const dateFilter = format(selectedDate, 'yyyy-MM-dd');
-    const nextDateFilter = format(addDays(selectedDate, 1), 'yyyy-MM-dd');
+    const prevDateFilter = format(subDays(selectedDate, 1), 'yyyy-MM-dd');
     
+    // We need to fetch bookings from the selected day, and also overnight bookings from the previous day.
     return query(
         collection(firestore, 'tenants', tenantId, 'bookings'),
-        where('bookingDate', '>=', dateFilter),
-        where('bookingDate', '<=', nextDateFilter)
+        where('bookingDate', 'in', [prevDateFilter, dateFilter]),
     );
   }, [firestore, tenantId, selectedDate]); 
 
@@ -246,7 +271,7 @@ export default function SchedulePage() {
               <PopoverContent className="w-auto p-0">
                   <CustomCalendar 
                       selectedDate={selectedDate}
-                      onDateSelect={(date) => date && setSelectedDate(date)}
+                      onDateSelect={(date) => date && setSelectedDate(startOfDay(date))}
                   />
               </PopoverContent>
           </Popover>

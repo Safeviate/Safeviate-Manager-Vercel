@@ -11,6 +11,9 @@ export interface Booking {
     startTime: string;   // HH:mm
     endTime: string;     // HH:mm
     status: 'Confirmed' | 'Completed' | 'Cancelled' | 'Cancelled with Reason';
+    isOvernight?: boolean;
+    overnightBookingDate?: string; // YYYY-MM-DD for the next day
+    overnightEndTime?: string; // HH:mm for the end time on the next day
     // Pre-flight data
     preFlight?: {
         actualHobbs?: number;

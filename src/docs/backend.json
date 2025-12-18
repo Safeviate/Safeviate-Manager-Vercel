@@ -49,6 +49,19 @@
             "description": "The status of the booking.",
             "enum": ["Confirmed", "Completed", "Cancelled", "Cancelled with Reason"]
         },
+        "isOvernight": {
+            "type": "boolean",
+            "description": "Flag to indicate if the booking spans across midnight."
+        },
+        "overnightBookingDate": {
+            "type": "string",
+            "format": "date",
+            "description": "The date for the second part of an overnight booking (YYYY-MM-DD)."
+        },
+        "overnightEndTime": {
+            "type": "string",
+            "description": "The end time for the second part of an overnight booking (HH:mm)."
+        },
         "preFlight": {
             "type": "object",
             "description": "Pre-flight checklist data.",
