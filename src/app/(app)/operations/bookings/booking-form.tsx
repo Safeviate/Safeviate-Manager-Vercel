@@ -99,41 +99,105 @@ export function BookingForm({
   const [isPostFlightOpen, setIsPostFlightOpen] = useState(false);
 
   // Form state
-  const [bookingType, setBookingType] = useState(existingBooking?.type || '');
-  const [pilotId, setPilotId] = useState(existingBooking?.pilotId || '');
-  const [instructorId, setInstructorId] = useState(existingBooking?.instructorId || '');
+  const [bookingType, setBookingType] = useState('');
+  const [pilotId, setPilotId] = useState('');
+  const [instructorId, setInstructorId] = useState('');
   const [startTimeValue, setStartTimeValue] = useState('');
   const [endTimeValue, setEndTimeValue] = useState('');
-  const [isOvernight, setIsOvernight] = useState(existingBooking?.isOvernight || false);
+  const [isOvernight, setIsOvernight] = useState(false);
   
-  const [overnightBookingDate, setOvernightBookingDate] = useState<string | undefined>(existingBooking?.overnightBookingDate);
-  const [overnightEndTime, setOvernightEndTime] = useState(existingBooking?.overnightEndTime || '');
+  const [overnightBookingDate, setOvernightBookingDate] = useState<string | undefined>(undefined);
+  const [overnightEndTime, setOvernightEndTime] = useState('');
 
   // Pre-flight state
-  const [preFlightHobbs, setPreFlightHobbs] = useState<number | string>(existingBooking?.preFlight?.actualHobbs ?? '');
-  const [preFlightTacho, setPreFlightTacho] = useState<number | string>(existingBooking?.preFlight?.actualTacho ?? '');
-  const [preFlightOil, setPreFlightOil] = useState<number | string>(existingBooking?.preFlight?.oil ?? '');
-  const [preFlightFuel, setPreFlightFuel] = useState<number | string>(existingBooking?.preFlight?.fuel ?? '');
-  const [preFlightOilLeft, setPreFlightOilLeft] = useState<number | string>(existingBooking?.preFlight?.oilLeft ?? '');
-  const [preFlightOilRight, setPreFlightOilRight] = useState<number | string>(existingBooking?.preFlight?.oilRight ?? '');
-  const [checkedDocs, setCheckedDocs] = useState<string[]>(existingBooking?.preFlight?.documentsChecked || []);
+  const [preFlightHobbs, setPreFlightHobbs] = useState<number | string>('');
+  const [preFlightTacho, setPreFlightTacho] = useState<number | string>('');
+  const [preFlightOil, setPreFlightOil] = useState<number | string>('');
+  const [preFlightFuel, setPreFlightFuel] = useState<number | string>('');
+  const [preFlightOilLeft, setPreFlightOilLeft] = useState<number | string>('');
+  const [preFlightOilRight, setPreFlightOilRight] = useState<number | string>('');
+  const [checkedDocs, setCheckedDocs] = useState<string[]>([]);
   
   // Post-flight state
-  const [postFlightHobbs, setPostFlightHobbs] = useState<number | string>(existingBooking?.postFlight?.actualHobbs ?? '');
-  const [postFlightTacho, setPostFlightTacho] = useState<number | string>(existingBooking?.postFlight?.actualTacho ?? '');
-  const [postFlightOil, setPostFlightOil] = useState<number | string>(existingBooking?.postFlight?.oil ?? '');
-  const [postFlightFuel, setPostFlightFuel] = useState<number | string>(existingBooking?.postFlight?.fuel ?? '');
-  const [postFlightOilLeft, setPostFlightOilLeft] = useState<number | string>(existingBooking?.postFlight?.oilLeft ?? '');
-  const [postFlightOilRight, setPostFlightOilRight] = useState<number | string>(existingBooking?.postFlight?.oilRight ?? '');
-
+  const [postFlightHobbs, setPostFlightHobbs] = useState<number | string>('');
+  const [postFlightTacho, setPostFlightTacho] = useState<number | string>('');
+  const [postFlightOil, setPostFlightOil] = useState<number | string>('');
+  const [postFlightFuel, setPostFlightFuel] = useState<number | string>('');
+  const [postFlightOilLeft, setPostFlightOilLeft] = useState<number | string>('');
+  const [postFlightOilRight, setPostFlightOilRight] = useState<number | string>('');
+  
+  const baseDate = existingBooking ? parse(existingBooking.bookingDate, 'yyyy-MM-dd', new Date()) : initialStartTime;
+  
   const isChecklistNeeded = aircraft?.checklistStatus === 'needs-post-flight';
   const preflightSubmitted = !!existingBooking?.preFlight?.actualHobbs;
   const postflightSubmitted = !!existingBooking?.postFlight?.actualHobbs;
   const preflightDisabled = (isEditMode && isChecklistNeeded && !preflightSubmitted) || preflightSubmitted;
 
-  const baseDate = existingBooking ? parse(existingBooking.bookingDate, 'yyyy-MM-dd', new Date()) : initialStartTime;
-  const originalEndTime = useMemo(() => format(addHours(baseDate, 1), 'HH:mm'), [baseDate]);
 
+  useEffect(() => {
+    // This effect now resets the entire form state when a new booking is opened.
+    if (existingBooking) {
+        // --- EDIT MODE ---
+        setBookingType(existingBooking.type || '');
+        setPilotId(existingBooking.pilotId || '');
+        setInstructorId(existingBooking.instructorId || '');
+        setStartTimeValue(existingBooking.startTime);
+        setEndTimeValue(existingBooking.endTime);
+        setIsOvernight(existingBooking.isOvernight || false);
+        setOvernightBookingDate(existingBooking.overnightBookingDate);
+        setOvernightEndTime(existingBooking.overnightEndTime || '');
+
+        // Reset and set pre-flight data
+        setPreFlightHobbs(existingBooking.preFlight?.actualHobbs ?? '');
+        setPreFlightTacho(existingBooking.preFlight?.actualTacho ?? '');
+        setPreFlightOil(existingBooking.preFlight?.oil ?? '');
+        setPreFlightFuel(existingBooking.preFlight?.fuel ?? '');
+        setPreFlightOilLeft(existingBooking.preFlight?.oilLeft ?? '');
+        setPreFlightOilRight(existingBooking.preFlight?.oilRight ?? '');
+        setCheckedDocs(existingBooking.preFlight?.documentsChecked || []);
+
+        // Reset and set post-flight data
+        setPostFlightHobbs(existingBooking.postFlight?.actualHobbs ?? '');
+        setPostFlightTacho(existingBooking.postFlight?.actualTacho ?? '');
+        setPostFlightOil(existingBooking.postFlight?.oil ?? '');
+        setPostFlightFuel(existingBooking.postFlight?.fuel ?? '');
+        setPostFlightOilLeft(existingBooking.postFlight?.oilLeft ?? '');
+        setPostFlightOilRight(existingBooking.postFlight?.oilRight ?? '');
+
+    } else {
+        // --- CREATE MODE ---
+        // Reset all fields to default for a new booking
+        const formattedStartTime = format(initialStartTime, 'HH:mm');
+        const formattedEndTime = format(addHours(initialStartTime, 1), 'HH:mm');
+        
+        setBookingType('');
+        setPilotId('');
+        setInstructorId('');
+        setStartTimeValue(formattedStartTime);
+        setEndTimeValue(formattedEndTime);
+        setIsOvernight(false);
+        setOvernightBookingDate(undefined);
+        setOvernightEndTime('');
+        
+        setPreFlightHobbs('');
+        setPreFlightTacho('');
+        setPreFlightOil('');
+        setPreFlightFuel('');
+        setPreFlightOilLeft('');
+        setPreFlightOilRight('');
+        setCheckedDocs([]);
+
+        setPostFlightHobbs('');
+        setPostFlightTacho('');
+        setPostFlightOil('');
+        setPostFlightFuel('');
+        setPostFlightOilLeft('');
+        setPostFlightOilRight('');
+    }
+  }, [existingBooking, initialStartTime]);
+
+  
+  const originalEndTime = useMemo(() => format(addHours(baseDate, 1), 'HH:mm'), [baseDate]);
 
   useEffect(() => {
     if (isOvernight) {
@@ -143,9 +207,9 @@ export function BookingForm({
       // The second start time is implicitly 00:00, so we just need an end time.
     } else {
       // Restore original end time if it exists, otherwise default to one hour after start
-      if (existingBooking) {
+      if (existingBooking && !existingBooking.isOvernight) {
           setEndTimeValue(existingBooking.endTime);
-      } else {
+      } else if (!existingBooking) {
           setEndTimeValue(originalEndTime);
       }
       setOvernightBookingDate(undefined);
@@ -153,22 +217,6 @@ export function BookingForm({
     }
   }, [isOvernight, existingBooking, originalEndTime, baseDate]);
 
-
-  useEffect(() => {
-    if (isEditMode && existingBooking) {
-      setStartTimeValue(existingBooking.startTime);
-      setEndTimeValue(existingBooking.endTime);
-      setIsOvernight(existingBooking.isOvernight || false);
-      setOvernightBookingDate(existingBooking.overnightBookingDate);
-      setOvernightEndTime(existingBooking.overnightEndTime || '');
-    } else if (initialStartTime) {
-      const formattedStartTime = format(initialStartTime, 'HH:mm');
-      const endTimeDate = addHours(initialStartTime, 1);
-      const formattedEndTime = format(endTimeDate, 'HH:mm');
-      setStartTimeValue(formattedStartTime);
-      setEndTimeValue(formattedEndTime);
-    }
-  }, [initialStartTime, isEditMode, existingBooking]);
 
   const onOpenChange = (open: boolean) => {
     setIsOpen(open);
@@ -379,7 +427,7 @@ export function BookingForm({
                                     </div>
                                 </>
                             )}
-                            {bookingType === 'Private Flight' && (
+                            {(bookingType === 'Private Flight' || bookingType === 'Maintenance Flight' || bookingType === 'Reposition Flight') && (
                                 <div className="col-span-2 space-y-2">
                                     <Label htmlFor="private-pilot">Pilot</Label>
                                      <Select onValueChange={setPilotId} value={pilotId}>
@@ -641,3 +689,5 @@ export function BookingForm({
     </Dialog>
   );
 }
+
+    
