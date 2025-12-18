@@ -403,7 +403,7 @@
         "checklistStatus": {
             "type": "string",
             "description": "Indicates the current pre/post flight checklist status of the aircraft.",
-            "enum": ["ready", "needs-post-flight"]
+            "enum": ["Ready", "Needs Post-Flight"]
         }
       },
       "required": [

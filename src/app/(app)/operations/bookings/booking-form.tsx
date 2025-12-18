@@ -128,7 +128,16 @@ export function BookingForm({
   
   const baseDate = existingBooking ? parse(existingBooking.bookingDate, 'yyyy-MM-dd', new Date()) : initialStartTime;
   
-  const isChecklistBlocked = aircraft?.checklistStatus === 'Post-Flight Required';
+  const isPreFlightDisabled = useMemo(() => {
+    // Disable if another booking has the aircraft locked
+    if (aircraft?.checklistStatus === 'Needs Post-Flight' && existingBooking?.status !== 'Confirmed') {
+        // Exception: allow editing the booking that IS holding the lock
+        return true;
+    }
+    // Disable if this booking's pre-flight is already done
+    return !!(existingBooking?.preFlight && (existingBooking.preFlight.actualHobbs || existingBooking.preFlight.actualTacho));
+  }, [aircraft?.checklistStatus, existingBooking]);
+
   
   const preflightSubmitted = useMemo(() => 
     !!(existingBooking?.preFlight && (existingBooking.preFlight.actualHobbs || existingBooking.preFlight.actualTacho)), 
@@ -380,7 +389,7 @@ export function BookingForm({
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-4">
             <div className="grid gap-4 py-4 pr-2">
-                {isEditMode && isChecklistBlocked && !preflightSubmitted && (
+                {isEditMode && isPreFlightDisabled && !preflightSubmitted && (
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Pre-Flight Unavailable</AlertTitle>
@@ -519,8 +528,8 @@ export function BookingForm({
 
                 {isEditMode && (
                     <>
-                        <Collapsible open={isPreFlightOpen} onOpenChange={setIsPreFlightOpen} disabled={isChecklistBlocked || preflightSubmitted}>
-                            <CollapsibleTrigger asChild disabled={isChecklistBlocked || preflightSubmitted}>
+                        <Collapsible open={isPreFlightOpen} onOpenChange={setIsPreFlightOpen} disabled={isPreFlightDisabled}>
+                            <CollapsibleTrigger asChild disabled={isPreFlightDisabled}>
                                 <div className='flex items-center justify-between border-b pb-2 cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'>
                                     <h4 className="text-sm font-semibold">Pre-Flight Checks</h4>
                                     <Button variant="ghost" size="sm" className="w-9 p-0">
@@ -606,7 +615,7 @@ export function BookingForm({
                                 </div>
                                 {isEditMode && !preflightSubmitted &&
                                     <div className="flex justify-end pt-4">
-                                        <Button onClick={() => handleSave({ closeOnSave: false, isPreFlight: true })} disabled={isChecklistBlocked}>Submit Pre-Flight</Button>
+                                        <Button onClick={() => handleSave({ closeOnSave: false, isPreFlight: true })} disabled={isPreFlightDisabled}>Submit Pre-Flight</Button>
                                     </div>
                                 }
                             </CollapsibleContent>

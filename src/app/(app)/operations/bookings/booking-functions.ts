@@ -155,8 +155,8 @@ export const updateBooking = async (
         const bookingDoc = await getDoc(bookingRef);
         if (bookingDoc.exists()) {
             const bookingData = bookingDoc.data() as Booking;
-            const wasPreFlightSubmitted = !!(bookingData.preFlight && Object.keys(bookingData.preFlight).length > 0);
-            const wasPostFlightSubmitted = !!(bookingData.postFlight && Object.keys(bookingData.postFlight).length > 0);
+            const wasPreFlightSubmitted = !!(bookingData.preFlight && (bookingData.preFlight.actualHobbs || bookingData.preFlight.actualTacho));
+            const wasPostFlightSubmitted = !!(bookingData.postFlight && (bookingData.postFlight.actualHobbs || bookingData.postFlight.actualTacho));
             
             // If pre-flight was done but post-flight was not, this booking was holding the status.
             if (wasPreFlightSubmitted && !wasPostFlightSubmitted) {
@@ -229,3 +229,5 @@ export const deleteBooking = async (
         throw new Error("Failed to delete booking.");
     }
 };
+
+    
