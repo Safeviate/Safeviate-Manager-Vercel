@@ -1,7 +1,5 @@
-
 'use client';
 
-import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,6 +12,7 @@ import { updateBooking } from './booking-functions';
 import { useFirestore } from '@/firebase';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '../../assets/page';
+import { useEffect } from 'react';
 
 interface PostFlightChecklistDialogProps {
   isOpen: boolean;
@@ -38,13 +37,26 @@ export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft
 
   const form = useForm<PostFlightFormValues>({
     resolver: zodResolver(postFlightSchema),
-    defaultValues: useMemo(() => ({
-        actualHobbs: booking.postFlight?.actualHobbs || aircraft.currentHobbs || 0,
-        actualTacho: booking.postFlight?.actualTacho || aircraft.currentTacho || 0,
-        oil: booking.postFlight?.oil || 0,
-        fuel: booking.postFlight?.fuel || 0,
-    }), [booking.postFlight, aircraft]),
+    defaultValues: {
+      actualHobbs: aircraft.currentHobbs || 0,
+      actualTacho: aircraft.currentTacho || 0,
+      oil: undefined, // Start blank
+      fuel: undefined, // Start blank
+    },
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      // When the dialog opens, reset the form to its clean default state
+      form.reset({
+        actualHobbs: aircraft.currentHobbs || 0,
+        actualTacho: aircraft.currentTacho || 0,
+        oil: undefined,
+        fuel: undefined,
+      });
+    }
+  }, [isOpen, aircraft, form]);
+
 
   const onSubmit = async (values: PostFlightFormValues) => {
     if (!booking || !firestore) return;
@@ -91,7 +103,7 @@ export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft
                   <FormItem>
                     <FormLabel>Actual Hobbs</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input type="number" placeholder="Enter Hobbs reading" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -104,7 +116,7 @@ export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft
                   <FormItem>
                     <FormLabel>Actual Tacho</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input type="number" placeholder="Enter Tacho reading" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -117,7 +129,7 @@ export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft
                   <FormItem>
                     <FormLabel>Oil (lts)</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input type="number" placeholder="Enter oil quantity" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -130,7 +142,7 @@ export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft
                   <FormItem>
                     <FormLabel>Fuel (lts)</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input type="number" placeholder="Enter fuel quantity" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

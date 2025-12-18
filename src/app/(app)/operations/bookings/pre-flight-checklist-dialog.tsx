@@ -1,7 +1,5 @@
-
 'use client';
 
-import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -15,6 +13,7 @@ import { updateBooking } from './booking-functions';
 import { useFirestore } from '@/firebase';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '../../assets/page';
+import { useEffect } from 'react';
 
 interface PreFlightChecklistDialogProps {
   isOpen: boolean;
@@ -50,14 +49,28 @@ export function PreFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft,
 
   const form = useForm<PreFlightFormValues>({
     resolver: zodResolver(preFlightSchema),
-    defaultValues: useMemo(() => ({
-        actualHobbs: booking.preFlight?.actualHobbs || aircraft.currentHobbs || 0,
-        actualTacho: booking.preFlight?.actualTacho || aircraft.currentTacho || 0,
-        oil: booking.preFlight?.oil || 0,
-        fuel: booking.preFlight?.fuel || 0,
-        documentsChecked: booking.preFlight?.documentsChecked || [],
-    }), [booking.preFlight, aircraft]),
+    defaultValues: {
+      actualHobbs: aircraft.currentHobbs || 0,
+      actualTacho: aircraft.currentTacho || 0,
+      oil: undefined, // Start blank
+      fuel: undefined, // Start blank
+      documentsChecked: [], // Start unchecked
+    },
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      // When the dialog opens, reset the form to its clean default state
+      form.reset({
+        actualHobbs: aircraft.currentHobbs || 0,
+        actualTacho: aircraft.currentTacho || 0,
+        oil: undefined,
+        fuel: undefined,
+        documentsChecked: [],
+      });
+    }
+  }, [isOpen, aircraft, form]);
+
 
   const onSubmit = async (values: PreFlightFormValues) => {
     if (!booking || !firestore) return;
@@ -97,10 +110,10 @@ export function PreFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft,
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField control={form.control} name="actualHobbs" render={({ field }) => ( <FormItem><FormLabel>Actual Hobbs</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="actualTacho" render={({ field }) => ( <FormItem><FormLabel>Actual Tacho</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="oil" render={({ field }) => ( <FormItem><FormLabel>Oil (lts)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="fuel" render={({ field }) => ( <FormItem><FormLabel>Fuel (lts)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="actualHobbs" render={({ field }) => ( <FormItem><FormLabel>Actual Hobbs</FormLabel><FormControl><Input type="number" placeholder="Enter Hobbs reading" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="actualTacho" render={({ field }) => ( <FormItem><FormLabel>Actual Tacho</FormLabel><FormControl><Input type="number" placeholder="Enter Tacho reading" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="oil" render={({ field }) => ( <FormItem><FormLabel>Oil (lts)</FormLabel><FormControl><Input type="number" placeholder="Enter oil quantity" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="fuel" render={({ field }) => ( <FormItem><FormLabel>Fuel (lts)</FormLabel><FormControl><Input type="number" placeholder="Enter fuel quantity" {...field} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             
             <FormField
