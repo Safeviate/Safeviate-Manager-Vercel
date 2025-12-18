@@ -39,7 +39,7 @@ const postFlightSchema = z.object({
   actualTacho: z.number({ coerce: true }).min(0, "Tacho must be positive"),
   oil: z.number({ coerce: true }).min(0, "Oil must be positive"),
   fuel: z.number({ coerce: true }).min(0, "Fuel must be positive"),
-  photos: z.array(photoSchema).min(4, 'A minimum of 4 photos are required.'),
+  photos: z.array(photoSchema),
 });
 
 type PostFlightFormValues = z.infer<typeof postFlightSchema>;
