@@ -195,14 +195,14 @@ export function BookingForm({
   const privatePilots = useMemo(() => pilots.filter(p => p.userType === 'Private Pilot'), [pilots]);
 
   const preFlightSubmitted = !!(existingBooking?.preFlight && Object.keys(existingBooking.preFlight).length > 0);
-  const postFlightSubmitted = !!(existingBooking?.postFlight && Object.keys(existingBooking.postFlight).length > 0);
+  
+  const isCorrectBookingForPreFlight = aircraft.currentBookingId === existingBooking?.id && aircraft.checklistStatus === 'needs-pre-flight';
+  const isCorrectBookingForPostFlight = aircraft.currentBookingId === existingBooking?.id && aircraft.checklistStatus === 'needs-post-flight';
 
-  // Disable pre-flight if status is 'needs-post-flight' and this isn't the booking that needs it.
-  const isCorrectBookingForPostFlight = aircraft.currentBookingId === existingBooking?.id;
   const isPreFlightDisabled = aircraft.checklistStatus === 'needs-post-flight' && !isCorrectBookingForPostFlight;
+  const isPostFlightDisabled = !preFlightSubmitted || aircraft.checklistStatus !== 'needs-post-flight';
 
-  // Disable post-flight if pre-flight isn't done, or if post-flight is already submitted.
-  const isPostFlightDisabled = !preFlightSubmitted || postFlightSubmitted;
+  const showPendingPostFlightWarning = aircraft.checklistStatus === 'needs-post-flight' && aircraft.currentBookingId !== existingBooking?.id;
 
   return (
     <>
@@ -216,6 +216,15 @@ export function BookingForm({
           </DialogHeader>
           <ScrollArea className="max-h-[60vh] pr-4">
               <div className="grid gap-4 py-4 pr-2">
+                {showPendingPostFlightWarning && (
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Action Required</AlertTitle>
+                        <AlertDescription>
+                           A post-flight checklist for a previous booking on this aircraft must be completed before a pre-flight can be initiated.
+                        </AlertDescription>
+                    </Alert>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2 space-y-2">
                         <Label htmlFor="booking-type">Booking Type</Label>
