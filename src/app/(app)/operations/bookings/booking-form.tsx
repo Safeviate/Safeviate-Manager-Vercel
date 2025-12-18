@@ -128,7 +128,7 @@ export function BookingForm({
   
   const baseDate = existingBooking ? parse(existingBooking.bookingDate, 'yyyy-MM-dd', new Date()) : initialStartTime;
   
-  const isChecklistNeeded = aircraft?.checklistStatus === 'needs-post-flight';
+  const isChecklistBlocked = aircraft?.checklistStatus === 'Post-Flight Required';
   
   const preflightSubmitted = useMemo(() => 
     !!(existingBooking?.preFlight && (existingBooking.preFlight.actualHobbs || existingBooking.preFlight.actualTacho)), 
@@ -327,6 +327,8 @@ export function BookingForm({
             startTime: startTimeValue,
             endTime: endTimeValue,
             isOvernight,
+            preFlight: {},
+            postFlight: {},
         };
         
         if(isOvernight) {
@@ -378,7 +380,7 @@ export function BookingForm({
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-4">
             <div className="grid gap-4 py-4 pr-2">
-                {isEditMode && isChecklistNeeded && !preflightSubmitted && (
+                {isEditMode && isChecklistBlocked && !preflightSubmitted && (
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Pre-Flight Unavailable</AlertTitle>
@@ -517,8 +519,8 @@ export function BookingForm({
 
                 {isEditMode && (
                     <>
-                        <Collapsible open={isPreFlightOpen} onOpenChange={setIsPreFlightOpen} disabled={(isChecklistNeeded && !preflightSubmitted) || preflightSubmitted}>
-                            <CollapsibleTrigger asChild disabled={(isChecklistNeeded && !preflightSubmitted) || preflightSubmitted}>
+                        <Collapsible open={isPreFlightOpen} onOpenChange={setIsPreFlightOpen} disabled={isChecklistBlocked || preflightSubmitted}>
+                            <CollapsibleTrigger asChild disabled={isChecklistBlocked || preflightSubmitted}>
                                 <div className='flex items-center justify-between border-b pb-2 cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'>
                                     <h4 className="text-sm font-semibold">Pre-Flight Checks</h4>
                                     <Button variant="ghost" size="sm" className="w-9 p-0">
@@ -604,7 +606,7 @@ export function BookingForm({
                                 </div>
                                 {isEditMode && !preflightSubmitted &&
                                     <div className="flex justify-end pt-4">
-                                        <Button onClick={() => handleSave({ closeOnSave: false, isPreFlight: true })} disabled={(isChecklistNeeded && !preflightSubmitted)}>Submit Pre-Flight</Button>
+                                        <Button onClick={() => handleSave({ closeOnSave: false, isPreFlight: true })} disabled={isChecklistBlocked}>Submit Pre-Flight</Button>
                                     </div>
                                 }
                             </CollapsibleContent>

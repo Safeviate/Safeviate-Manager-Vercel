@@ -74,6 +74,11 @@ export const createBooking = async (
             
             transaction.set(newBookingRef, payload);
             
+            // 3. Mark the aircraft as needing a post-flight from the *previous* booking
+            // This is a placeholder action. A real system would have a more complex state machine.
+            const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, bookingData.aircraftId!);
+            transaction.update(aircraftRef, { checklistStatus: 'Post-Flight Required' });
+
             return newBookingRef.id;
         });
 
@@ -144,9 +149,9 @@ export const updateBooking = async (
     const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);
 
     if (isSubmittingPostFlight) {
-        batch.update(aircraftRef, { checklistStatus: 'Needs Pre Flight' });
+        batch.update(aircraftRef, { checklistStatus: 'Ready' });
     } else if (isSubmittingPreFlight) {
-        batch.update(aircraftRef, { checklistStatus: 'needs-post-flight' });
+        batch.update(aircraftRef, { checklistStatus: 'Needs Post-Flight' });
     }
 
     // Using a batch write with non-blocking error handling

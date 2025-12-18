@@ -309,7 +309,7 @@ export default function SchedulePage() {
                   <div className="sticky top-0 z-30 flex bg-swimlane-header text-swimlane-header-foreground flex-shrink-0">
                     {(aircraft || []).map((ac) => (
                       <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px] flex items-center justify-center gap-2">
-                        {ac.checklistStatus === 'needs-post-flight' && <AlertCircle className="h-4 w-4 text-amber-500" title="Post-flight checklist needed" />}
+                        {ac.checklistStatus !== 'Ready' && <AlertCircle className="h-4 w-4 text-amber-500" title={`Status: ${ac.checklistStatus}`} />}
                         {ac.tailNumber}
                       </div>
                     ))}
