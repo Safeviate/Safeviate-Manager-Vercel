@@ -404,7 +404,7 @@ export function BookingForm({
                                         <p className="text-sm text-muted-foreground">Return times for the next day.</p>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="return-start-time">Start Time (Return)</Label>
+                                        <Label htmlFor="return-start-time">Start Time</Label>
                                         <Input
                                             id="return-start-time"
                                             type="time"
@@ -413,7 +413,7 @@ export function BookingForm({
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="return-end-time">End Time (Return)</Label>
+                                        <Label htmlFor="return-end-time">End Time</Label>
                                         <Input
                                             id="return-end-time"
                                             type="time"
@@ -620,5 +620,7 @@ export function BookingForm({
     </Dialog>
   );
 }
+
+    
 
     
