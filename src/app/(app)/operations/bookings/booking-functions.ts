@@ -20,7 +20,7 @@ import {
 import type { Booking } from '@/types/booking';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { parse, isAfter } from 'date-fns';
+import { parse, isAfter, format, startOfToday } from 'date-fns';
 import type { Aircraft } from '../../assets/page';
 
 type BookingCreationData = Omit<Booking, 'id' | 'bookingNumber' | 'status'>;
@@ -39,21 +39,18 @@ export const createBooking = async (
 
     const counterRef = doc(firestore, `tenants/${tenantId}/counters`, 'bookings');
     const bookingsRef = collection(firestore, `tenants/${tenantId}`, 'bookings');
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, bookingData.aircraftId!);
     
     try {
         const newBookingId = await runTransaction(firestore, async (transaction) => {
+            // Read operations first
             const counterDoc = await transaction.get(counterRef);
-            const aircraftDoc = await transaction.get(aircraftRef);
-
-            if (!aircraftDoc.exists()) {
-                throw new Error("Aircraft not found. Cannot create booking.");
-            }
 
             let newBookingNumber = 1;
             if (counterDoc.exists()) {
                 newBookingNumber = counterDoc.data().currentNumber + 1;
             }
+
+            // Write operations
             transaction.set(counterRef, { currentNumber: newBookingNumber }, { merge: true });
 
             const newBookingRef = doc(bookingsRef);
@@ -75,15 +72,6 @@ export const createBooking = async (
             }
             
             transaction.set(newBookingRef, payload);
-
-            // Only set the aircraft to needs-pre-flight if it's currently ready.
-            // This prevents a new booking from hijacking the status from an existing one.
-            if (aircraftDoc.data().checklistStatus === 'Ready') {
-                transaction.update(aircraftRef, {
-                    checklistStatus: 'needs-pre-flight',
-                    currentBookingId: newBookingRef.id
-                });
-            }
 
             return newBookingRef.id;
         });
@@ -145,11 +133,12 @@ export const updateBooking = async ({
         const currentBookingData = currentBookingDoc.data() as Booking;
         const currentBookingStart = parse(`${currentBookingData.bookingDate}T${currentBookingData.startTime}`, 'yyyy-MM-dd\'T\'HH:mm', new Date());
 
-        // Simplified query to avoid composite index
+        // More robust query: Get all future bookings for the aircraft and sort in code
         const nextBookingQuery = query(
             bookingsCol,
             where('aircraftId', '==', aircraft.id),
-            where('status', '==', 'Confirmed')
+            where('status', '==', 'Confirmed'),
+            where('bookingDate', '>=', format(currentBookingStart, 'yyyy-MM-dd'))
         );
 
         const querySnapshot = await getDocs(nextBookingQuery);
@@ -158,7 +147,8 @@ export const updateBooking = async ({
             .map(doc => doc.data() as Booking)
             .filter(booking => {
                 const bookingStart = parse(`${booking.bookingDate}T${booking.startTime}`, 'yyyy-MM-dd\'T\'HH:mm', new Date());
-                return isAfter(bookingStart, currentBookingStart);
+                // Filter out the current booking and any bookings that started before it
+                return booking.id !== bookingId && isAfter(bookingStart, currentBookingStart);
             })
             .sort((a, b) => {
                 const aStart = parse(`${a.bookingDate}T${a.startTime}`, 'yyyy-MM-dd\'T\'HH:mm', new Date());
@@ -220,6 +210,9 @@ export const deleteBooking = async (
             const aircraftDoc = await transaction.get(aircraftRef);
             
             if(aircraftDoc.exists() && aircraftDoc.data().currentBookingId === bookingId) {
+                // This logic is now handled by the post-flight completion flow,
+                // but we keep a simplified version here as a fallback for cancellations.
+                // A more robust implementation might search for the next booking here as well.
                 transaction.update(aircraftRef, { checklistStatus: 'Ready', currentBookingId: null });
             }
             
