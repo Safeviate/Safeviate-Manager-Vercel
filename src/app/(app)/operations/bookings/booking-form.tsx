@@ -128,26 +128,33 @@ export function BookingForm({
   
   const baseDate = existingBooking ? parse(existingBooking.bookingDate, 'yyyy-MM-dd', new Date()) : initialStartTime;
   
+  
+  const preflightSubmitted = useMemo(() => {
+    if (!existingBooking || !existingBooking.preFlight) return false;
+    // A pre-flight is considered submitted if it has actualHobbs or actualTacho data.
+    return (
+      (typeof existingBooking.preFlight.actualHobbs === 'number' && existingBooking.preFlight.actualHobbs > 0) ||
+      (typeof existingBooking.preFlight.actualTacho === 'number' && existingBooking.preFlight.actualTacho > 0)
+    );
+  }, [existingBooking]);
+  
+  const postflightSubmitted = useMemo(() => {
+    if (!existingBooking || !existingBooking.postFlight) return false;
+    // A post-flight is considered submitted if it has actualHobbs or actualTacho data.
+    return (
+      (typeof existingBooking.postFlight.actualHobbs === 'number' && existingBooking.postFlight.actualHobbs > 0) ||
+      (typeof existingBooking.postFlight.actualTacho === 'number' && existingBooking.postFlight.actualTacho > 0)
+    );
+  }, [existingBooking]);
+
   const isPreFlightDisabled = useMemo(() => {
-    // Disable if another booking has the aircraft locked
-    if (aircraft?.checklistStatus === 'Needs Post-Flight' && existingBooking?.status !== 'Confirmed') {
-        // Exception: allow editing the booking that IS holding the lock
+    // A different booking has the aircraft locked.
+    if (aircraft?.checklistStatus === 'Needs Post-Flight' && !preflightSubmitted) {
         return true;
     }
-    // Disable if this booking's pre-flight is already done
-    return !!(existingBooking?.preFlight && (existingBooking.preFlight.actualHobbs || existingBooking.preFlight.actualTacho));
-  }, [aircraft?.checklistStatus, existingBooking]);
-
-  
-  const preflightSubmitted = useMemo(() => 
-    !!(existingBooking?.preFlight && (existingBooking.preFlight.actualHobbs || existingBooking.preFlight.actualTacho)), 
-    [existingBooking]
-  );
-  
-  const postflightSubmitted = useMemo(() => 
-    !!(existingBooking?.postFlight && (existingBooking.postFlight.actualHobbs || existingBooking.postFlight.actualTacho)),
-    [existingBooking]
-  );
+    // This booking's pre-flight is already done.
+    return preflightSubmitted;
+  }, [aircraft?.checklistStatus, preflightSubmitted]);
 
 
   useEffect(() => {
@@ -389,7 +396,7 @@ export function BookingForm({
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-4">
             <div className="grid gap-4 py-4 pr-2">
-                {isEditMode && isPreFlightDisabled && !preflightSubmitted && (
+                {isEditMode && aircraft.checklistStatus === 'Needs Post-Flight' && !preflightSubmitted && (
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Pre-Flight Unavailable</AlertTitle>
