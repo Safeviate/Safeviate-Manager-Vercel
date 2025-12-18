@@ -142,64 +142,66 @@ export function BookingForm({
 
 
   useEffect(() => {
-    // This effect now resets the entire form state when a new booking is opened.
-    if (existingBooking) {
-        // --- EDIT MODE ---
-        setBookingType(existingBooking.type || '');
-        setPilotId(existingBooking.pilotId || '');
-        setInstructorId(existingBooking.instructorId || '');
-        setStartTimeValue(existingBooking.startTime);
-        setEndTimeValue(existingBooking.endTime);
-        setIsOvernight(existingBooking.isOvernight || false);
-        setOvernightBookingDate(existingBooking.overnightBookingDate);
-        setOvernightEndTime(existingBooking.overnightEndTime || '');
+    // This effect now resets the entire form state when a new booking is opened or mode changes.
+    if (isOpen) {
+        if (existingBooking) {
+            // --- EDIT MODE ---
+            setBookingType(existingBooking.type || '');
+            setPilotId(existingBooking.pilotId || '');
+            setInstructorId(existingBooking.instructorId || '');
+            setStartTimeValue(existingBooking.startTime);
+            setEndTimeValue(existingBooking.endTime);
+            setIsOvernight(existingBooking.isOvernight || false);
+            setOvernightBookingDate(existingBooking.overnightBookingDate);
+            setOvernightEndTime(existingBooking.overnightEndTime || '');
 
-        // Reset and set pre-flight data
-        setPreFlightHobbs(existingBooking.preFlight?.actualHobbs ?? '');
-        setPreFlightTacho(existingBooking.preFlight?.actualTacho ?? '');
-        setPreFlightOil(existingBooking.preFlight?.oil ?? '');
-        setPreFlightFuel(existingBooking.preFlight?.fuel ?? '');
-        setPreFlightOilLeft(existingBooking.preFlight?.oilLeft ?? '');
-        setPreFlightOilRight(existingBooking.preFlight?.oilRight ?? '');
-        setCheckedDocs(existingBooking.preFlight?.documentsChecked || []);
+            // Reset and set pre-flight data
+            setPreFlightHobbs(existingBooking.preFlight?.actualHobbs ?? '');
+            setPreFlightTacho(existingBooking.preFlight?.actualTacho ?? '');
+            setPreFlightOil(existingBooking.preFlight?.oil ?? '');
+            setPreFlightFuel(existingBooking.preFlight?.fuel ?? '');
+            setPreFlightOilLeft(existingBooking.preFlight?.oilLeft ?? '');
+            setPreFlightOilRight(existingBooking.preFlight?.oilRight ?? '');
+            setCheckedDocs(existingBooking.preFlight?.documentsChecked || []);
 
-        // Reset and set post-flight data
-        setPostFlightHobbs(existingBooking.postFlight?.actualHobbs ?? '');
-        setPostFlightTacho(existingBooking.postFlight?.actualTacho ?? '');
-        setPostFlightOil(existingBooking.postFlight?.oil ?? '');
-        setPostFlightFuel(existingBooking.postFlight?.fuel ?? '');
-        setPostFlightOilLeft(existingBooking.postFlight?.oilLeft ?? '');
-        setPostFlightOilRight(existingBooking.postFlight?.oilRight ?? '');
+            // Reset and set post-flight data
+            setPostFlightHobbs(existingBooking.postFlight?.actualHobbs ?? '');
+            setPostFlightTacho(existingBooking.postFlight?.actualTacho ?? '');
+            setPostFlightOil(existingBooking.postFlight?.oil ?? '');
+            setPostFlightFuel(existingBooking.postFlight?.fuel ?? '');
+            setPostFlightOilLeft(existingBooking.postFlight?.oilLeft ?? '');
+            setPostFlightOilRight(existingBooking.postFlight?.oilRight ?? '');
 
-    } else {
-        // --- CREATE MODE ---
-        // Reset all fields to default for a new booking
-        const formattedStartTime = format(initialStartTime, 'HH:mm');
-        const formattedEndTime = format(addHours(initialStartTime, 1), 'HH:mm');
-        
-        setBookingType('');
-        setPilotId('');
-        setInstructorId('');
-        setStartTimeValue(formattedStartTime);
-        setEndTimeValue(formattedEndTime);
-        setIsOvernight(false);
-        setOvernightBookingDate(undefined);
-        setOvernightEndTime('');
-        
-        setPreFlightHobbs('');
-        setPreFlightTacho('');
-        setPreFlightOil('');
-        setPreFlightFuel('');
-        setPreFlightOilLeft('');
-        setPreFlightOilRight('');
-        setCheckedDocs([]);
+        } else {
+            // --- CREATE MODE ---
+            // Reset all fields to default for a new booking
+            const formattedStartTime = format(initialStartTime, 'HH:mm');
+            const formattedEndTime = format(addHours(initialStartTime, 1), 'HH:mm');
+            
+            setBookingType('');
+            setPilotId('');
+            setInstructorId('');
+            setStartTimeValue(formattedStartTime);
+            setEndTimeValue(formattedEndTime);
+            setIsOvernight(false);
+            setOvernightBookingDate(undefined);
+            setOvernightEndTime('');
+            
+            setPreFlightHobbs('');
+            setPreFlightTacho('');
+            setPreFlightOil('');
+            setPreFlightFuel('');
+            setPreFlightOilLeft('');
+            setPreFlightOilRight('');
+            setCheckedDocs([]);
 
-        setPostFlightHobbs('');
-        setPostFlightTacho('');
-        setPostFlightOil('');
-        setPostFlightFuel('');
-        setPostFlightOilLeft('');
-        setPostFlightOilRight('');
+            setPostFlightHobbs('');
+            setPostFlightTacho('');
+            setPostFlightOil('');
+            setPostFlightFuel('');
+            setPostFlightOilLeft('');
+            setPostFlightOilRight('');
+        }
     }
   }, [existingBooking, initialStartTime, isOpen]);
 
@@ -516,7 +518,7 @@ export function BookingForm({
                 {isEditMode && (
                     <>
                         <Collapsible open={isPreFlightOpen} onOpenChange={setIsPreFlightOpen} disabled={(isChecklistNeeded && !preflightSubmitted) || preflightSubmitted}>
-                            <CollapsibleTrigger asChild disabled={(isChecklistNeeded && !preflightSubmitted) || preflightSubmitted}>
+                            <CollapsibleTrigger asChild disabled={(isChecklistNeeded && !preflightSubmitted)}>
                                 <div className='flex items-center justify-between border-b pb-2 cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'>
                                     <h4 className="text-sm font-semibold">Pre-Flight Checks</h4>
                                     <Button variant="ghost" size="sm" className="w-9 p-0">
