@@ -70,7 +70,18 @@
                 "actualTacho": { "type": "number" },
                 "oil": { "type": "number" },
                 "fuel": { "type": "number" },
-                "documentsChecked": { "type": "array", "items": { "type": "string" } }
+                "documentsChecked": { "type": "array", "items": { "type": "string" } },
+                "photos": {
+                    "type": "array",
+                    "description": "Photos taken during pre-flight.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "url": { "type": "string", "description": "Data URL of the photo." },
+                            "description": { "type": "string", "description": "A brief description of the photo." }
+                        }
+                    }
+                }
             }
         },
         "postFlight": {
@@ -80,7 +91,18 @@
                 "actualHobbs": { "type": "number" },
                 "actualTacho": { "type": "number" },
                 "oil": { "type": "number" },
-                "fuel": { "type": "number" }
+                "fuel": { "type": "number" },
+                "photos": {
+                    "type": "array",
+                    "description": "Photos taken during post-flight.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "url": { "type": "string", "description": "Data URL of the photo." },
+                            "description": { "type": "string", "description": "A brief description of the photo." }
+                        }
+                    }
+                }
             }
         }
       },
@@ -395,15 +417,6 @@
               "cg": { "type": "number", "description": "Center of Gravity (inches)" }
             }
           }
-        },
-        "checklistStatus": {
-            "type": "string",
-            "description": "Indicates the current pre/post flight checklist status of the aircraft.",
-            "enum": ["Ready", "needs-pre-flight", "needs-post-flight"]
-        },
-        "currentBookingId": {
-            "type": "string",
-            "description": "The ID of the booking that currently requires a checklist action."
         }
       },
       "required": [

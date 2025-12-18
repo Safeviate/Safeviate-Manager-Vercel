@@ -1,5 +1,10 @@
 import type { Timestamp } from "firebase/firestore";
 
+export interface Photo {
+    url: string;
+    description: string;
+}
+
 export interface Booking {
     id: string;
     bookingNumber: number;
@@ -18,6 +23,7 @@ export interface Booking {
         oil?: number;
         fuel?: number;
         documentsChecked?: string[]; // e.g., ['poh', 'cors']
+        photos?: Photo[];
     };
     // Post-flight data
     postFlight?: {
@@ -25,5 +31,6 @@ export interface Booking {
         actualTacho?: number;
         oil?: number;
         fuel?: number;
+        photos?: Photo[];
     };
 }
