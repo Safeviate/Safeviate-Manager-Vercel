@@ -127,7 +127,9 @@ export function BookingForm({
   const [postFlightOilRight, setPostFlightOilRight] = useState<number | string>(existingBooking?.postFlight?.oilRight ?? '');
 
   const isChecklistNeeded = aircraft?.checklistStatus === 'needs-post-flight';
-  const preflightDisabled = isChecklistNeeded;
+  const preflightSubmitted = !!existingBooking?.preFlight?.actualHobbs;
+  const postflightSubmitted = !!existingBooking?.postFlight?.actualHobbs;
+  const preflightDisabled = (isEditMode && isChecklistNeeded && !preflightSubmitted) || preflightSubmitted;
 
   const baseDate = existingBooking ? parse(existingBooking.bookingDate, 'yyyy-MM-dd', new Date()) : initialStartTime;
   const originalEndTime = useMemo(() => format(addHours(baseDate, 1), 'HH:mm'), [baseDate]);
@@ -320,7 +322,7 @@ export function BookingForm({
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-4">
             <div className="grid gap-4 py-4 pr-2">
-                {preflightDisabled && isEditMode && (
+                {isEditMode && isChecklistNeeded && !preflightSubmitted && (
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Pre-Flight Unavailable</AlertTitle>
@@ -481,11 +483,11 @@ export function BookingForm({
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="actual-hobbs">Actual Hobbs</Label>
-                                        <Input id="actual-hobbs" type="number" value={preFlightHobbs} onChange={(e) => setPreFlightHobbs(e.target.value)} disabled={preflightDisabled} />
+                                        <Input id="actual-hobbs" type="number" value={preFlightHobbs} onChange={(e) => setPreFlightHobbs(e.target.value)} disabled={preflightDisabled} readOnly={preflightSubmitted} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="actual-tacho">Actual Tacho</Label>
-                                        <Input id="actual-tacho" type="number" value={preFlightTacho} onChange={(e) => setPreFlightTacho(e.target.value)} disabled={preflightDisabled} />
+                                        <Input id="actual-tacho" type="number" value={preFlightTacho} onChange={(e) => setPreFlightTacho(e.target.value)} disabled={preflightDisabled} readOnly={preflightSubmitted} />
                                     </div>
                                 </div>
 
@@ -494,11 +496,11 @@ export function BookingForm({
                                       <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                                           <div className="space-y-2">
                                               <Label htmlFor="oil">Oil</Label>
-                                              <Input id="oil" type="number" value={preFlightOil} onChange={(e) => setPreFlightOil(e.target.value)} disabled={preflightDisabled} />
+                                              <Input id="oil" type="number" value={preFlightOil} onChange={(e) => setPreFlightOil(e.target.value)} disabled={preflightDisabled} readOnly={preflightSubmitted} />
                                           </div>
                                           <div className="space-y-2">
                                               <Label htmlFor="fuel">Fuel</Label>
-                                              <Input id="fuel" type="number" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} disabled={preflightDisabled} />
+                                              <Input id="fuel" type="number" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} disabled={preflightDisabled} readOnly={preflightSubmitted} />
                                           </div>
                                       </div>
                                   )}
@@ -506,15 +508,15 @@ export function BookingForm({
                                       <div className="grid grid-cols-3 gap-4 pt-4 border-t">
                                           <div className="space-y-2">
                                               <Label htmlFor="fuel">Fuel</Label>
-                                              <Input id="fuel" type="number" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} disabled={preflightDisabled} />
+                                              <Input id="fuel" type="number" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} disabled={preflightDisabled} readOnly={preflightSubmitted} />
                                           </div>
                                           <div className="space-y-2">
                                               <Label htmlFor="oil-left">Oil Left</Label>
-                                              <Input id="oil-left" type="number" value={preFlightOilLeft} onChange={(e) => setPreFlightOilLeft(e.target.value)} disabled={preflightDisabled} />
+                                              <Input id="oil-left" type="number" value={preFlightOilLeft} onChange={(e) => setPreFlightOilLeft(e.target.value)} disabled={preflightDisabled} readOnly={preflightSubmitted} />
                                           </div>
                                           <div className="space-y-2">
                                               <Label htmlFor="oil-right">Oil Right</Label>
-                                              <Input id="oil-right" type="number" value={preFlightOilRight} onChange={(e) => setPreFlightOilRight(e.target.value)} disabled={preflightDisabled} />
+                                              <Input id="oil-right" type="number" value={preFlightOilRight} onChange={(e) => setPreFlightOilRight(e.target.value)} disabled={preflightDisabled} readOnly={preflightSubmitted} />
                                           </div>
                                       </div>
                                   )}
@@ -531,9 +533,11 @@ export function BookingForm({
                                                     id={doc.id} 
                                                     checked={checkedDocs.includes(doc.id)}
                                                     onCheckedChange={(checked) => {
-                                                        setCheckedDocs(prev => checked ? [...prev, doc.id] : prev.filter(id => id !== doc.id))
+                                                        if (!preflightSubmitted) {
+                                                            setCheckedDocs(prev => checked ? [...prev, doc.id] : prev.filter(id => id !== doc.id))
+                                                        }
                                                     }}
-                                                    disabled={preflightDisabled}
+                                                    disabled={preflightDisabled || preflightSubmitted}
                                                 />
                                                 <Label htmlFor={doc.id} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                                                     {doc.label}
@@ -542,7 +546,7 @@ export function BookingForm({
                                         ))}
                                     </div>
                                 </div>
-                                {isEditMode && 
+                                {isEditMode && !preflightSubmitted &&
                                     <div className="flex justify-end pt-4">
                                         <Button onClick={() => handleSave({ closeOnSave: false, isPreFlight: true })} disabled={preflightDisabled}>Submit Pre-Flight</Button>
                                     </div>
@@ -550,8 +554,8 @@ export function BookingForm({
                             </CollapsibleContent>
                         </Collapsible>
 
-                        <Collapsible open={isPostFlightOpen} onOpenChange={setIsPostFlightOpen} disabled={!isEditMode || !existingBooking.preFlight?.actualHobbs}>
-                            <CollapsibleTrigger asChild disabled={!isEditMode || !existingBooking.preFlight?.actualHobbs}>
+                        <Collapsible open={isPostFlightOpen} onOpenChange={setIsPostFlightOpen} disabled={!preflightSubmitted || postflightSubmitted}>
+                            <CollapsibleTrigger asChild disabled={!preflightSubmitted || postflightSubmitted}>
                                 <div className='flex items-center justify-between border-b pb-2 cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'>
                                     <h4 className="text-sm font-semibold">Post-Flight Checks</h4>
                                     <Button variant="ghost" size="sm" className="w-9 p-0">
@@ -564,11 +568,11 @@ export function BookingForm({
                                 <div className="grid grid-cols-2 gap-4 pt-4">
                                    <div className="space-y-2">
                                         <Label htmlFor="post-actual-hobbs">Actual Hobbs</Label>
-                                        <Input id="post-actual-hobbs" type="number" value={postFlightHobbs} onChange={(e) => setPostFlightHobbs(e.target.value)} />
+                                        <Input id="post-actual-hobbs" type="number" value={postFlightHobbs} onChange={(e) => setPostFlightHobbs(e.target.value)} readOnly={postflightSubmitted} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="post-actual-tacho">Actual Tacho</Label>
-                                        <Input id="post-actual-tacho" type="number" value={postFlightTacho} onChange={(e) => setPostFlightTacho(e.target.value)} />
+                                        <Input id="post-actual-tacho" type="number" value={postFlightTacho} onChange={(e) => setPostFlightTacho(e.target.value)} readOnly={postflightSubmitted} />
                                     </div>
                                 </div>
                                  <div className="col-span-2 mt-4 space-y-4">
@@ -576,11 +580,11 @@ export function BookingForm({
                                       <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                                           <div className="space-y-2">
                                               <Label htmlFor="post-flight-oil">Oil</Label>
-                                              <Input id="post-flight-oil" type="number" value={postFlightOil} onChange={(e) => setPostFlightOil(e.target.value)} />
+                                              <Input id="post-flight-oil" type="number" value={postFlightOil} onChange={(e) => setPostFlightOil(e.target.value)} readOnly={postflightSubmitted} />
                                           </div>
                                           <div className="space-y-2">
                                               <Label htmlFor="post-flight-fuel">Fuel</Label>
-                                              <Input id="post-flight-fuel" type="number" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} />
+                                              <Input id="post-flight-fuel" type="number" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} readOnly={postflightSubmitted} />
                                           </div>
                                       </div>
                                   )}
@@ -588,20 +592,20 @@ export function BookingForm({
                                       <div className="grid grid-cols-3 gap-4 pt-4 border-t">
                                           <div className="space-y-2">
                                               <Label htmlFor="post-flight-fuel">Fuel</Label>
-                                              <Input id="post-flight-fuel" type="number" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} />
+                                              <Input id="post-flight-fuel" type="number" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} readOnly={postflightSubmitted} />
                                           </div>
                                           <div className="space-y-2">
                                               <Label htmlFor="post-flight-oil-left">Oil Left</Label>
-                                              <Input id="post-flight-oil-left" type="number" value={postFlightOilLeft} onChange={(e) => setPostFlightOilLeft(e.target.value)} />
+                                              <Input id="post-flight-oil-left" type="number" value={postFlightOilLeft} onChange={(e) => setPostFlightOilLeft(e.target.value)} readOnly={postflightSubmitted} />
                                           </div>
                                           <div className="space-y-2">
                                               <Label htmlFor="post-flight-oil-right">Oil Right</Label>
-                                              <Input id="post-flight-oil-right" type="number" value={postFlightOilRight} onChange={(e) => setPostFlightOilRight(e.target.value)} />
+                                              <Input id="post-flight-oil-right" type="number" value={postFlightOilRight} onChange={(e) => setPostFlightOilRight(e.target.value)} readOnly={postflightSubmitted} />
                                           </div>
                                       </div>
                                   )}
                               </div>
-                              {isEditMode &&
+                              {isEditMode && !postflightSubmitted &&
                                 <div className="flex justify-end pt-4">
                                     <Button onClick={() => handleSave({ closeOnSave: false, isPostFlight: true })}>Submit Post-Flight</Button>
                                 </div>
