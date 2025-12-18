@@ -41,7 +41,7 @@ const preFlightSchema = z.object({
   documentsChecked: z.array(z.string()).refine(value => value.length > 0, {
     message: "At least one document must be checked.",
   }),
-  photos: z.array(photoSchema).optional(),
+  photos: z.array(photoSchema).min(4, 'A minimum of 4 photos are required.').optional(),
 });
 
 type PreFlightFormValues = z.infer<typeof preFlightSchema>;
@@ -128,7 +128,7 @@ export function PreFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft,
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Pre-Flight Checklist</DialogTitle>
             <DialogDescription>

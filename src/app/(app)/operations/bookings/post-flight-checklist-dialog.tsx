@@ -38,7 +38,7 @@ const postFlightSchema = z.object({
   actualTacho: z.number({ coerce: true }).min(0, "Tacho must be positive"),
   oil: z.number({ coerce: true }).min(0, "Oil must be positive"),
   fuel: z.number({ coerce: true }).min(0, "Fuel must be positive"),
-  photos: z.array(photoSchema).optional(),
+  photos: z.array(photoSchema).min(4, 'A minimum of 4 photos are required.').optional(),
 });
 
 type PostFlightFormValues = z.infer<typeof postFlightSchema>;
@@ -117,7 +117,7 @@ export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Post-Flight Checklist</DialogTitle>
             <DialogDescription>
