@@ -62,8 +62,10 @@ const BookingItem = ({ booking, pilots, onBookingClick, selectedDate }: { bookin
                     key={`${booking.id}-${index}`}
                     className={cn(
                         'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground z-10 min-h-[40px] border border-gray-400 cursor-pointer hover:opacity-90 transition-opacity',
-                        (booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason') ? 'bg-destructive' : 'bg-primary',
-                         booking.status === 'Completed' && 'bg-green-600',
+                        (booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason') && 'bg-destructive',
+                        booking.status === 'Completed' && 'bg-green-600',
+                        booking.status === 'Confirmed' && booking.preFlight && !booking.postFlight && 'bg-amber-500',
+                        booking.status === 'Confirmed' && !booking.preFlight && 'bg-primary'
                     )}
                     style={{ top: `${top}px`, height: `${height}px` }}
                     onClick={() => onBookingClick(booking)}
