@@ -45,9 +45,6 @@ import { createBooking, updateBooking, deleteBooking } from './booking-functions
 import { PreFlightChecklistDialog } from './pre-flight-checklist-dialog';
 import { PostFlightChecklistDialog } from './post-flight-checklist-dialog';
 import { Switch } from '@/components/ui/switch';
-import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
 
 
 interface BookingFormProps {
@@ -84,7 +81,6 @@ export function BookingForm({
   const [startTimeValue, setStartTimeValue] = useState('');
   const [endTimeValue, setEndTimeValue] = useState('');
   const [isOvernight, setIsOvernight] = useState(false);
-  const [overnightBookingDate, setOvernightBookingDate] = useState<Date | undefined>(undefined);
   const [overnightEndTime, setOvernightEndTime] = useState('');
   
   const baseDate = existingBooking ? parse(existingBooking.bookingDate, 'yyyy-MM-dd', new Date()) : initialStartTime;
@@ -101,7 +97,6 @@ export function BookingForm({
             setStartTimeValue(existingBooking.startTime);
             setEndTimeValue(existingBooking.endTime);
             setIsOvernight(existingBooking.isOvernight || false);
-            setOvernightBookingDate(existingBooking.overnightBookingDate ? parse(existingBooking.overnightBookingDate, 'yyyy-MM-dd', new Date()) : addDays(baseDate, 1));
             setOvernightEndTime(existingBooking.overnightEndTime || '09:00');
         } else {
             const formattedStartTime = format(initialStartTime, 'HH:mm');
@@ -113,7 +108,6 @@ export function BookingForm({
             setStartTimeValue(formattedStartTime);
             setEndTimeValue(formattedEndTime);
             setIsOvernight(false);
-            setOvernightBookingDate(addDays(baseDate, 1));
             setOvernightEndTime('09:00');
         }
     }
@@ -148,12 +142,13 @@ export function BookingForm({
         return;
     }
     
-    if (isOvernight && (!overnightBookingDate || !overnightEndTime)) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Overnight end date and time are required.' });
+    if (isOvernight && !overnightEndTime) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Overnight end time is required.' });
         return;
     }
     
     const bookingDate = format(baseDate, 'yyyy-MM-dd');
+    const overnightBookingDate = addDays(baseDate, 1);
 
     const commonData: Partial<Booking> = {
         bookingDate,
@@ -166,7 +161,7 @@ export function BookingForm({
     
     if (isOvernight) {
         commonData.endTime = '23:59';
-        commonData.overnightBookingDate = format(overnightBookingDate!, 'yyyy-MM-dd');
+        commonData.overnightBookingDate = format(overnightBookingDate, 'yyyy-MM-dd');
         commonData.overnightEndTime = overnightEndTime;
     } else {
         commonData.endTime = endTimeValue;
@@ -314,7 +309,7 @@ export function BookingForm({
                         <>
                             <div className="col-span-1 space-y-2">
                                 <Label htmlFor="student">Student</Label>
-                                <Select onValuechange={setPilotId} value={pilotId}>
+                                <Select onValueChange={setPilotId} value={pilotId}>
                                     <SelectTrigger id="student">
                                         <SelectValue placeholder="Select a student" />
                                     </SelectTrigger>
@@ -329,7 +324,7 @@ export function BookingForm({
                             </div>
                             <div className="col-span-1 space-y-2">
                                 <Label htmlFor="instructor">Instructor</Label>
-                                <Select onValuechange={setInstructorId} value={instructorId}>
+                                <Select onValueChange={setInstructorId} value={instructorId}>
                                     <SelectTrigger id="instructor">
                                         <SelectValue placeholder="Select an instructor" />
                                     </SelectTrigger>
@@ -347,7 +342,7 @@ export function BookingForm({
                     {(bookingType === 'Private Flight' || bookingType === 'Maintenance Flight' || bookingType === 'Reposition Flight') && (
                         <div className="col-span-2 space-y-2">
                             <Label htmlFor="private-pilot">Pilot</Label>
-                              <Select onValuechange={setPilotId} value={pilotId}>
+                              <Select onValueChange={setPilotId} value={pilotId}>
                                 <SelectTrigger id="private-pilot">
                                     <SelectValue placeholder="Select a pilot" />
                                 </SelectTrigger>
@@ -382,34 +377,15 @@ export function BookingForm({
                         />
                     </div>
                     {isOvernight && (
-                        <>
-                           <div className="space-y-2">
-                                <Label htmlFor="overnight-date">Overnight End Date</Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className='w-full justify-start font-normal'>
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {overnightBookingDate ? format(overnightBookingDate, 'PPP') : 'Select date'}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                        <CustomCalendar 
-                                            selectedDate={overnightBookingDate}
-                                            onDateSelect={setOvernightBookingDate}
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                           </div>
-                           <div className="space-y-2">
-                                <Label htmlFor="overnight-end-time">Overnight End Time</Label>
-                                <Input 
-                                    id="overnight-end-time" 
-                                    type="time" 
-                                    value={overnightEndTime}
-                                    onChange={(e) => setOvernightEndTime(e.target.value)}
-                                />
-                           </div>
-                        </>
+                        <div className="col-span-2 space-y-2">
+                            <Label htmlFor="overnight-end-time">Overnight End Time (Next Day)</Label>
+                            <Input 
+                                id="overnight-end-time" 
+                                type="time" 
+                                value={overnightEndTime}
+                                onChange={(e) => setOvernightEndTime(e.target.value)}
+                            />
+                       </div>
                     )}
                 </div>
                 {isEditMode && (

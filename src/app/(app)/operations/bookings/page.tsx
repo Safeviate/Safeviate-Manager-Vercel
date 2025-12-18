@@ -202,12 +202,15 @@ export default function SchedulePage() {
   
   const bookingsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    const yesterday = format(subDays(selectedDate, 1), 'yyyy-MM-dd');
     const today = format(selectedDate, 'yyyy-MM-dd');
+    const tomorrow = format(addDays(selectedDate, 1), 'yyyy-MM-dd');
     
+    // This query is tricky with Firestore limitations. We can't do an OR query on two different fields.
+    // A better approach is often to fetch a wider range and filter client-side if the dataset is manageable.
+    // Here, we fetch for the selected day and the next day to catch overnight bookings.
     return query(
         collection(firestore, 'tenants', tenantId, 'bookings'),
-        where('bookingDate', 'in', [yesterday, today]),
+        where('bookingDate', 'in', [today, tomorrow]),
     );
   }, [firestore, tenantId, selectedDate, dataVersion]); 
 
