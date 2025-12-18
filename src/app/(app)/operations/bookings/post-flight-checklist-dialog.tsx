@@ -40,8 +40,8 @@ export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft
     defaultValues: {
       actualHobbs: aircraft.currentHobbs || 0,
       actualTacho: aircraft.currentTacho || 0,
-      oil: undefined, // Start blank
-      fuel: undefined, // Start blank
+      oil: '' as any,
+      fuel: '' as any,
     },
   });
 
@@ -51,8 +51,8 @@ export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft
       form.reset({
         actualHobbs: aircraft.currentHobbs || 0,
         actualTacho: aircraft.currentTacho || 0,
-        oil: undefined,
-        fuel: undefined,
+        oil: '' as any,
+        fuel: '' as any,
       });
     }
   }, [isOpen, aircraft, form]);
