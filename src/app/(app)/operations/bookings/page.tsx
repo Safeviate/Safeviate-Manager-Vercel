@@ -66,23 +66,24 @@ const BookingItem = ({ booking, pilots, onBookingClick, selectedDate }: { bookin
             const durationMinutes = differenceInMinutes(endTime, startTime);
             const height = Math.max(durationMinutes, 0) * (HOUR_HEIGHT_PX / 60);
             
+            const isCancelled = booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason';
+
             return (
                 <div
                     key={`${booking.id}-${index}`}
                     className={cn(
-                        'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground z-10 min-h-[40px] border border-gray-400 cursor-pointer hover:opacity-90 transition-opacity',
-                        (booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason') && 'bg-destructive',
-                        booking.status === 'Completed' && 'bg-green-600',
-                        booking.status === 'Confirmed' && booking.preFlight && !booking.postFlight && 'bg-amber-500',
-                        booking.status === 'Confirmed' && !booking.preFlight && 'bg-primary'
+                        'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center z-10 min-h-[40px] border border-gray-400/50 cursor-pointer hover:opacity-90 transition-opacity',
+                        isCancelled && 'bg-muted text-muted-foreground opacity-60',
+                        booking.status === 'Completed' && 'bg-green-600 text-primary-foreground',
+                        booking.status === 'Confirmed' && booking.preFlight && !booking.postFlight && 'bg-amber-500 text-primary-foreground',
+                        booking.status === 'Confirmed' && !booking.preFlight && 'bg-primary text-primary-foreground'
                     )}
                     style={{ top: `${top}px`, height: `${height}px` }}
                     onClick={() => onBookingClick(booking)}
                 >
                     <p className="font-semibold truncate">#{booking.bookingNumber} - {booking.type}</p>
                     <p className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}</p>
-                    {booking.status === 'Cancelled' && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
-                    {(booking.status === 'Cancelled with Reason') && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
+                    {isCancelled && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
                     {booking.status === 'Completed' && <p className="font-bold uppercase text-[9px] mt-0.5">Completed</p>}
                 </div>
             )
@@ -203,14 +204,12 @@ export default function SchedulePage() {
   const bookingsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     const today = format(selectedDate, 'yyyy-MM-dd');
-    const tomorrow = format(addDays(selectedDate, 1), 'yyyy-MM-dd');
+    const yesterday = format(subDays(selectedDate, 1), 'yyyy-MM-dd');
     
-    // This query is tricky with Firestore limitations. We can't do an OR query on two different fields.
-    // A better approach is often to fetch a wider range and filter client-side if the dataset is manageable.
-    // Here, we fetch for the selected day and the next day to catch overnight bookings.
+    // We query for the selected day AND the previous day to catch overnight bookings that started the day before.
     return query(
         collection(firestore, 'tenants', tenantId, 'bookings'),
-        where('bookingDate', 'in', [today, tomorrow]),
+        where('bookingDate', 'in', [today, yesterday]),
     );
   }, [firestore, tenantId, selectedDate, dataVersion]); 
 
@@ -382,3 +381,5 @@ export default function SchedulePage() {
     </>
   );
 }
+
+    
