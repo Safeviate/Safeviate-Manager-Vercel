@@ -21,19 +21,13 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ChevronsUpDown, AlertCircle, Trash2 } from 'lucide-react';
+import { AlertCircle, Trash2, PlaneTakeoff, LandPlot } from 'lucide-react';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
 import type { Booking } from '@/types/booking';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   Select,
   SelectContent,
@@ -43,8 +37,6 @@ import {
 } from "@/components/ui/select";
 import { format, addHours, set, parse, isBefore, addDays } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useFirestore } from '@/firebase';
@@ -62,24 +54,6 @@ interface BookingFormProps {
   existingBooking?: Booking;
 }
 
-const requiredDocumentsList = [
-    { id: 'poh', label: 'POH' },
-    { id: 'cors', label: 'CoRs' },
-    { id: 'coa', label: 'CoA' },
-    { id: 'radio', label: 'Radio' },
-    { id: 'mb', label: 'M&B' },
-    { id: 'insp', label: 'Insp' },
-];
-
-const toNumberOrNull = (value: string | number | null | undefined): number | null => {
-    if (value === null || value === undefined || value === '') {
-        return null;
-    }
-    const num = Number(value);
-    return isNaN(num) ? null : num;
-};
-
-
 export function BookingForm({
   isOpen,
   setIsOpen,
@@ -93,11 +67,6 @@ export function BookingForm({
   const { toast } = useToast();
   const isEditMode = !!existingBooking;
 
-  // Collapsible sections state
-  const [isBookingInfoOpen, setIsBookingInfoOpen] = useState(true);
-  const [isPreFlightOpen, setIsPreFlightOpen] = useState(isEditMode);
-  const [isPostFlightOpen, setIsPostFlightOpen] = useState(false);
-
   // Form state
   const [bookingType, setBookingType] = useState('');
   const [pilotId, setPilotId] = useState('');
@@ -109,61 +78,8 @@ export function BookingForm({
   const [overnightBookingDate, setOvernightBookingDate] = useState<string | undefined>(undefined);
   const [overnightEndTime, setOvernightEndTime] = useState('');
 
-  // Pre-flight state
-  const [preFlightHobbs, setPreFlightHobbs] = useState<number | string>('');
-  const [preFlightTacho, setPreFlightTacho] = useState<number | string>('');
-  const [preFlightOil, setPreFlightOil] = useState<number | string>('');
-  const [preFlightFuel, setPreFlightFuel] = useState<number | string>('');
-  const [preFlightOilLeft, setPreFlightOilLeft] = useState<number | string>('');
-  const [preFlightOilRight, setPreFlightOilRight] = useState<number | string>('');
-  const [checkedDocs, setCheckedDocs] = useState<string[]>([]);
-  
-  // Post-flight state
-  const [postFlightHobbs, setPostFlightHobbs] = useState<number | string>('');
-  const [postFlightTacho, setPostFlightTacho] = useState<number | string>('');
-  const [postFlightOil, setPostFlightOil] = useState<number | string>('');
-  const [postFlightFuel, setPostFlightFuel] = useState<number | string>('');
-  const [postFlightOilLeft, setPostFlightOilLeft] = useState<number | string>('');
-  const [postFlightOilRight, setPostFlightOilRight] = useState<number | string>('');
-  
   const baseDate = existingBooking ? parse(existingBooking.bookingDate, 'yyyy-MM-dd', new Date()) : initialStartTime;
   
-  
-  const preflightSubmitted = useMemo(() => {
-    if (!existingBooking) return false;
-    return (
-      (typeof existingBooking.preFlight?.actualHobbs === 'number' && existingBooking.preFlight.actualHobbs > 0) ||
-      (typeof existingBooking.preFlight?.actualTacho === 'number' && existingBooking.preFlight.actualTacho > 0)
-    );
-  }, [existingBooking]);
-  
-  const postflightSubmitted = useMemo(() => {
-    if (!existingBooking) return false;
-    return (
-      (typeof existingBooking.postFlight?.actualHobbs === 'number' && existingBooking.postFlight.actualHobbs > 0) ||
-      (typeof existingBooking.postFlight?.actualTacho === 'number' && existingBooking.postFlight.actualTacho > 0)
-    );
-  }, [existingBooking]);
-
-  const isPreFlightDisabled = useMemo(() => {
-    if (preflightSubmitted) return true; // Already done for this booking
-    
-    // Disable if another booking has the aircraft locked
-    if (aircraft?.checklistStatus === 'needs-post-flight') {
-        // We can only start a pre-flight if the status is 'needs-pre-flight' AND we are editing that specific booking.
-        // A more robust check might involve storing the locking booking's ID on the aircraft. For now we assume if a booking is opened, it's the right one.
-        // So, if status is locked and we are CREATING a new booking, it's disabled.
-        if (!isEditMode) return true;
-    }
-
-    return false;
-  }, [aircraft?.checklistStatus, preflightSubmitted, isEditMode]);
-
-  const isPostFlightDisabled = useMemo(() => {
-    return aircraft?.checklistStatus === 'needs-pre-flight' || !preflightSubmitted || postflightSubmitted;
-  }, [aircraft?.checklistStatus, preflightSubmitted, postflightSubmitted]);
-
-
   useEffect(() => {
     // This effect now resets the entire form state when a new booking is opened or mode changes.
     if (isOpen) {
@@ -177,24 +93,6 @@ export function BookingForm({
             setIsOvernight(existingBooking.isOvernight || false);
             setOvernightBookingDate(existingBooking.overnightBookingDate);
             setOvernightEndTime(existingBooking.overnightEndTime || '');
-
-            // Reset and set pre-flight data
-            setPreFlightHobbs(existingBooking.preFlight?.actualHobbs ?? '');
-            setPreFlightTacho(existingBooking.preFlight?.actualTacho ?? '');
-            setPreFlightOil(existingBooking.preFlight?.oil ?? '');
-            setPreFlightFuel(existingBooking.preFlight?.fuel ?? '');
-            setPreFlightOilLeft(existingBooking.preFlight?.oilLeft ?? '');
-            setPreFlightOilRight(existingBooking.preFlight?.oilRight ?? '');
-            setCheckedDocs(existingBooking.preFlight?.documentsChecked || []);
-
-            // Reset and set post-flight data
-            setPostFlightHobbs(existingBooking.postFlight?.actualHobbs ?? '');
-            setPostFlightTacho(existingBooking.postFlight?.actualTacho ?? '');
-            setPostFlightOil(existingBooking.postFlight?.oil ?? '');
-            setPostFlightFuel(existingBooking.postFlight?.fuel ?? '');
-            setPostFlightOilLeft(existingBooking.postFlight?.oilLeft ?? '');
-            setPostFlightOilRight(existingBooking.postFlight?.oilRight ?? '');
-
         } else {
             // --- CREATE MODE ---
             // Reset all fields to default for a new booking
@@ -209,21 +107,6 @@ export function BookingForm({
             setIsOvernight(false);
             setOvernightBookingDate(undefined);
             setOvernightEndTime('');
-            
-            setPreFlightHobbs('');
-            setPreFlightTacho('');
-            setPreFlightOil('');
-            setPreFlightFuel('');
-            setPreFlightOilLeft('');
-            setPreFlightOilRight('');
-            setCheckedDocs([]);
-
-            setPostFlightHobbs('');
-            setPostFlightTacho('');
-            setPostFlightOil('');
-            setPostFlightFuel('');
-            setPostFlightOilLeft('');
-            setPostFlightOilRight('');
         }
     }
   }, [existingBooking, initialStartTime, isOpen]);
@@ -255,7 +138,7 @@ export function BookingForm({
     setIsOpen(open);
   };
   
-  const handleSave = async (options: { closeOnSave: boolean, isPreFlight?: boolean, isPostFlight?: boolean } = { closeOnSave: true }) => {
+  const handleSave = async (options: { closeOnSave: boolean } = { closeOnSave: true }) => {
     if (!firestore) return;
 
     if (!bookingType || !pilotId) {
@@ -270,25 +153,6 @@ export function BookingForm({
     
     const bookingDate = format(baseDate, 'yyyy-MM-dd');
 
-    const getPreFlightData = () => ({
-        actualHobbs: toNumberOrNull(preFlightHobbs),
-        actualTacho: toNumberOrNull(preFlightTacho),
-        oil: toNumberOrNull(preFlightOil),
-        fuel: toNumberOrNull(preFlightFuel),
-        oilLeft: toNumberOrNull(preFlightOilLeft),
-        oilRight: toNumberOrNull(preFlightOilRight),
-        documentsChecked: checkedDocs,
-    });
-
-    const getPostFlightData = () => ({
-        actualHobbs: toNumberOrNull(postFlightHobbs),
-        actualTacho: toNumberOrNull(postFlightTacho),
-        oil: toNumberOrNull(postFlightOil),
-        fuel: toNumberOrNull(postFlightFuel),
-        oilLeft: toNumberOrNull(postFlightOilLeft),
-        oilRight: toNumberOrNull(postFlightOilRight),
-    });
-
     if (isEditMode && existingBooking) {
         // --- UPDATE LOGIC ---
         const updateData: Partial<Booking> = {
@@ -302,10 +166,6 @@ export function BookingForm({
             overnightEndTime,
         };
         
-        // This is a general save, update everything
-        updateData.preFlight = getPreFlightData();
-        updateData.postFlight = getPostFlightData();
-        
         if (instructorId) {
             updateData.instructorId = instructorId;
         } else {
@@ -313,27 +173,16 @@ export function BookingForm({
         }
         
         try {
-            const isPostFlightFilled = Number(postFlightHobbs) > 0 && Number(postFlightTacho) > 0;
-            const finalStatus = isPostFlightFilled ? 'Completed' : (updateData.status || existingBooking.status);
-            updateData.status = finalStatus;
-
             await updateBooking(
                 firestore, 
                 tenantId, 
                 existingBooking.id, 
                 updateData, 
                 aircraft.id, 
-                !!options.isPreFlight, 
-                !!options.isPostFlight
+                false, 
+                false
             );
-            
-            if (options.isPreFlight) {
-                toast({ title: 'Pre-Flight Submitted', description: `Booking #${existingBooking.bookingNumber} is ready for flight.` });
-            } else if (options.isPostFlight) {
-                 toast({ title: 'Post-Flight Submitted', description: 'Aircraft is now ready for the next booking.' });
-            } else {
-                 toast({ title: 'Booking Updated', description: `Booking #${existingBooking.bookingNumber} has been updated.` });
-            }
+            toast({ title: 'Booking Updated', description: `Booking #${existingBooking.bookingNumber} has been updated.` });
 
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Update Failed', description: error.message });
@@ -350,8 +199,6 @@ export function BookingForm({
             startTime: startTimeValue,
             endTime: endTimeValue,
             isOvernight,
-            preFlight: {},
-            postFlight: {},
         };
         
         if(isOvernight) {
@@ -392,16 +239,6 @@ export function BookingForm({
   const instructors = useMemo(() => pilots.filter(p => p.userType === 'Instructor'), [pilots]);
   const privatePilots = useMemo(() => pilots.filter(p => p.userType === 'Private Pilot'), [pilots]);
 
-  const preFlightAlertMessage = () => {
-    if (aircraft.checklistStatus === 'needs-post-flight') {
-        return 'A post-flight checklist for this aircraft must be completed before a new pre-flight can be started.';
-    }
-    if (aircraft.checklistStatus === 'needs-pre-flight' && !isEditMode) {
-        return 'This aircraft requires a pre-flight check for a previous booking.';
-    }
-    return 'Pre-flight checklist is currently unavailable.';
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -413,298 +250,132 @@ export function BookingForm({
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-4">
             <div className="grid gap-4 py-4 pr-2">
-                {isPreFlightDisabled && !preflightSubmitted && (
-                    <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Pre-Flight Unavailable</AlertTitle>
-                        <AlertDescription>
-                            {preFlightAlertMessage()}
-                        </AlertDescription>
-                    </Alert>
-                )}
-                <Collapsible open={isBookingInfoOpen} onOpenChange={setIsBookingInfoOpen} className="space-y-2">
-                    <CollapsibleTrigger asChild>
-                        <div className='flex items-center justify-between border-b pb-2 cursor-pointer'>
-                            <h4 className="text-sm font-semibold">Booking Information</h4>
-                            <Button variant="ghost" size="sm" className="w-9 p-0">
-                                <ChevronsUpDown className="h-4 w-4" />
-                                <span className="sr-only">Toggle</span>
-                            </Button>
-                        </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                        <div className="grid grid-cols-2 gap-4 pt-4">
-                            <div className="col-span-2 space-y-2">
-                                <Label htmlFor="booking-type">Booking Type</Label>
-                                <Select onValueChange={v => setBookingType(v as Booking['type'])} value={bookingType}>
-                                    <SelectTrigger id="booking-type">
-                                        <SelectValue placeholder="Select a flight type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Training Flight">Training Flight</SelectItem>
-                                        <SelectItem value="Private Flight">Private Flight</SelectItem>
-                                        <SelectItem value="Reposition Flight">Reposition Flight</SelectItem>
-                                        <SelectItem value="Maintenance Flight">Maintenance Flight</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            
-                            {bookingType === 'Training Flight' && (
-                                <>
-                                    <div className="col-span-1 space-y-2">
-                                        <Label htmlFor="student">Student</Label>
-                                        <Select onValueChange={setPilotId} value={pilotId}>
-                                            <SelectTrigger id="student">
-                                                <SelectValue placeholder="Select a student" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {students.map(student => (
-                                                    <SelectItem key={student.id} value={student.id}>
-                                                        {student.firstName} {student.lastName}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="col-span-1 space-y-2">
-                                        <Label htmlFor="instructor">Instructor</Label>
-                                        <Select onValueChange={setInstructorId} value={instructorId}>
-                                            <SelectTrigger id="instructor">
-                                                <SelectValue placeholder="Select an instructor" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {instructors.map(instructor => (
-                                                    <SelectItem key={instructor.id} value={instructor.id}>
-                                                        {instructor.firstName} {instructor.lastName}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </>
-                            )}
-                            {(bookingType === 'Private Flight' || bookingType === 'Maintenance Flight' || bookingType === 'Reposition Flight') && (
-                                <div className="col-span-2 space-y-2">
-                                    <Label htmlFor="private-pilot">Pilot</Label>
-                                     <Select onValueChange={setPilotId} value={pilotId}>
-                                        <SelectTrigger id="private-pilot">
-                                            <SelectValue placeholder="Select a pilot" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {privatePilots.map(pilot => (
-                                                <SelectItem key={pilot.id} value={pilot.id}>
-                                                    {pilot.firstName} {pilot.lastName}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
+              <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2 space-y-2">
+                      <Label htmlFor="booking-type">Booking Type</Label>
+                      <Select onValueChange={v => setBookingType(v as Booking['type'])} value={bookingType}>
+                          <SelectTrigger id="booking-type">
+                              <SelectValue placeholder="Select a flight type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="Training Flight">Training Flight</SelectItem>
+                              <SelectItem value="Private Flight">Private Flight</SelectItem>
+                              <SelectItem value="Reposition Flight">Reposition Flight</SelectItem>
+                              <SelectItem value="Maintenance Flight">Maintenance Flight</SelectItem>
+                          </SelectContent>
+                      </Select>
+                  </div>
+                  
+                  {bookingType === 'Training Flight' && (
+                      <>
+                          <div className="col-span-1 space-y-2">
+                              <Label htmlFor="student">Student</Label>
+                              <Select onValueChange={setPilotId} value={pilotId}>
+                                  <SelectTrigger id="student">
+                                      <SelectValue placeholder="Select a student" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                      {students.map(student => (
+                                          <SelectItem key={student.id} value={student.id}>
+                                              {student.firstName} {student.lastName}
+                                          </SelectItem>
+                                      ))}
+                                  </SelectContent>
+                              </Select>
+                          </div>
+                          <div className="col-span-1 space-y-2">
+                              <Label htmlFor="instructor">Instructor</Label>
+                              <Select onValueChange={setInstructorId} value={instructorId}>
+                                  <SelectTrigger id="instructor">
+                                      <SelectValue placeholder="Select an instructor" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                      {instructors.map(instructor => (
+                                          <SelectItem key={instructor.id} value={instructor.id}>
+                                              {instructor.firstName} {instructor.lastName}
+                                          </SelectItem>
+                                      ))}
+                                  </SelectContent>
+                              </Select>
+                          </div>
+                      </>
+                  )}
+                  {(bookingType === 'Private Flight' || bookingType === 'Maintenance Flight' || bookingType === 'Reposition Flight') && (
+                      <div className="col-span-2 space-y-2">
+                          <Label htmlFor="private-pilot">Pilot</Label>
+                            <Select onValueChange={setPilotId} value={pilotId}>
+                              <SelectTrigger id="private-pilot">
+                                  <SelectValue placeholder="Select a pilot" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  {privatePilots.map(pilot => (
+                                      <SelectItem key={pilot.id} value={pilot.id}>
+                                          {pilot.firstName} {pilot.lastName}
+                                      </SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                      </div>
+                  )}
 
-                            <div className="space-y-2">
-                                <Label htmlFor="start-time">Start Time</Label>
-                                <Input 
-                                    id="start-time" 
-                                    type="time"
-                                    value={startTimeValue}
-                                    onChange={(e) => setStartTimeValue(e.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="end-time">End Time</Label>
-                                <Input 
-                                    id="end-time" 
-                                    type="time" 
-                                    value={endTimeValue}
-                                    onChange={(e) => setEndTimeValue(e.target.value)}
-                                    readOnly={isOvernight}
-                                />
-                            </div>
-                            <div className="col-span-2 flex items-center space-x-2 pt-2">
-                                <Switch id="overnight-booking" checked={isOvernight} onCheckedChange={setIsOvernight} />
-                                <Label htmlFor="overnight-booking">Overnight Booking</Label>
-                            </div>
-                             {isOvernight && (
-                                <>
-                                    <div className="col-span-1 space-y-2">
-                                        <Label htmlFor="overnight-start-time">Start Time</Label>
-                                        <Input
-                                            id="overnight-start-time"
-                                            type="time"
-                                            value="00:00"
-                                            readOnly
-                                        />
-                                    </div>
-                                    <div className="col-span-1 space-y-2">
-                                        <Label htmlFor="overnight-end-time">End Time</Label>
-                                        <Input
-                                            id="overnight-end-time"
-                                            type="time"
-                                            value={overnightEndTime}
-                                            onChange={(e) => setOvernightEndTime(e.target.value)}
-                                        />
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </CollapsibleContent>
-                </Collapsible>
-
-                {isEditMode && (
-                    <>
-                        <Collapsible open={isPreFlightOpen} onOpenChange={setIsPreFlightOpen} disabled={isPreFlightDisabled}>
-                            <CollapsibleTrigger asChild disabled={isPreFlightDisabled}>
-                                <div className='flex items-center justify-between border-b pb-2 cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'>
-                                    <h4 className="text-sm font-semibold">Pre-Flight Checks</h4>
-                                    <Button variant="ghost" size="sm" className="w-9 p-0">
-                                        <ChevronsUpDown className="h-4 w-4" />
-                                        <span className="sr-only">Toggle</span>
-                                    </Button>
-                                </div>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                               <div className="grid grid-cols-2 gap-4 pt-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="current-hobbs">Current Hobbs</Label>
-                                        <Input id="current-hobbs" value={aircraft?.currentHobbs || ''} readOnly disabled />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="current-tacho">Current Tacho</Label>
-                                        <Input id="current-tacho" value={aircraft?.currentTacho || ''} readOnly disabled />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="actual-hobbs">Actual Hobbs</Label>
-                                        <Input id="actual-hobbs" type="number" value={preFlightHobbs} onChange={(e) => setPreFlightHobbs(e.target.value)} readOnly={preflightSubmitted} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="actual-tacho">Actual Tacho</Label>
-                                        <Input id="actual-tacho" type="number" value={preFlightTacho} onChange={(e) => setPreFlightTacho(e.target.value)} readOnly={preflightSubmitted} />
-                                    </div>
-                                </div>
-
-                                <div className="col-span-2 mt-4 space-y-4">
-                                  {aircraft.type === 'Single-Engine' && (
-                                      <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                                          <div className="space-y-2">
-                                              <Label htmlFor="oil">Oil</Label>
-                                              <Input id="oil" type="number" value={preFlightOil} onChange={(e) => setPreFlightOil(e.target.value)} readOnly={preflightSubmitted} />
-                                          </div>
-                                          <div className="space-y-2">
-                                              <Label htmlFor="fuel">Fuel</Label>
-                                              <Input id="fuel" type="number" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} readOnly={preflightSubmitted} />
-                                          </div>
-                                      </div>
-                                  )}
-                                  {aircraft.type === 'Multi-Engine' && (
-                                      <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-                                          <div className="space-y-2">
-                                              <Label htmlFor="fuel">Fuel</Label>
-                                              <Input id="fuel" type="number" value={preFlightFuel} onChange={(e) => setPreFlightFuel(e.target.value)} readOnly={preflightSubmitted} />
-                                          </div>
-                                          <div className="space-y-2">
-                                              <Label htmlFor="oil-left">Oil Left</Label>
-                                              <Input id="oil-left" type="number" value={preFlightOilLeft} onChange={(e) => setPreFlightOilLeft(e.target.value)} readOnly={preflightSubmitted} />
-                                          </div>
-                                          <div className="space-y-2">
-                                              <Label htmlFor="oil-right">Oil Right</Label>
-                                              <Input id="oil-right" type="number" value={preFlightOilRight} onChange={(e) => setPreFlightOilRight(e.target.value)} readOnly={preflightSubmitted} />
-                                          </div>
-                                      </div>
-                                  )}
-                              </div>
-
-
-                                <div className="col-span-2 mt-4 space-y-2">
-                                    <Separator />
-                                    <h4 className="text-sm font-semibold pt-2">Required documents</h4>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
-                                        {requiredDocumentsList.map((doc) => (
-                                            <div key={doc.id} className="flex items-center space-x-2">
-                                                <Checkbox 
-                                                    id={doc.id} 
-                                                    checked={checkedDocs.includes(doc.id)}
-                                                    onCheckedChange={(checked) => {
-                                                        if (!preflightSubmitted) {
-                                                            setCheckedDocs(prev => checked ? [...prev, doc.id] : prev.filter(id => id !== doc.id))
-                                                        }
-                                                    }}
-                                                    disabled={preflightSubmitted}
-                                                />
-                                                <Label htmlFor={doc.id} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                                    {doc.label}
-                                                </Label>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                {isEditMode && !preflightSubmitted &&
-                                    <div className="flex justify-end pt-4">
-                                        <Button onClick={() => handleSave({ closeOnSave: false, isPreFlight: true })} disabled={isPreFlightDisabled}>Submit Pre-Flight</Button>
-                                    </div>
-                                }
-                            </CollapsibleContent>
-                        </Collapsible>
-
-                        <Collapsible open={isPostFlightOpen} onOpenChange={setIsPostFlightOpen} disabled={isPostFlightDisabled}>
-                            <CollapsibleTrigger asChild disabled={isPostFlightDisabled}>
-                                <div className='flex items-center justify-between border-b pb-2 cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'>
-                                    <h4 className="text-sm font-semibold">Post-Flight Checks</h4>
-                                    <Button variant="ghost" size="sm" className="w-9 p-0">
-                                        <ChevronsUpDown className="h-4 w-4" />
-                                        <span className="sr-only">Toggle</span>
-                                    </Button>
-                                </div>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                                <div className="grid grid-cols-2 gap-4 pt-4">
-                                   <div className="space-y-2">
-                                        <Label htmlFor="post-actual-hobbs">Actual Hobbs</Label>
-                                        <Input id="post-actual-hobbs" type="number" value={postFlightHobbs} onChange={(e) => setPostFlightHobbs(e.target.value)} readOnly={postflightSubmitted} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="post-actual-tacho">Actual Tacho</Label>
-                                        <Input id="post-actual-tacho" type="number" value={postFlightTacho} onChange={(e) => setPostFlightTacho(e.target.value)} readOnly={postflightSubmitted} />
-                                    </div>
-                                </div>
-                                 <div className="col-span-2 mt-4 space-y-4">
-                                  {aircraft.type === 'Single-Engine' && (
-                                      <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                                          <div className="space-y-2">
-                                              <Label htmlFor="post-flight-oil">Oil</Label>
-                                              <Input id="post-flight-oil" type="number" value={postFlightOil} onChange={(e) => setPostFlightOil(e.target.value)} readOnly={postflightSubmitted} />
-                                          </div>
-                                          <div className="space-y-2">
-                                              <Label htmlFor="post-flight-fuel">Fuel</Label>
-                                              <Input id="post-flight-fuel" type="number" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} readOnly={postflightSubmitted} />
-                                          </div>
-                                      </div>
-                                  )}
-                                  {aircraft.type === 'Multi-Engine' && (
-                                      <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-                                          <div className="space-y-2">
-                                              <Label htmlFor="post-flight-fuel">Fuel</Label>
-                                              <Input id="post-flight-fuel" type="number" value={postFlightFuel} onChange={(e) => setPostFlightFuel(e.target.value)} readOnly={postflightSubmitted} />
-                                          </div>
-                                          <div className="space-y-2">
-                                              <Label htmlFor="post-flight-oil-left">Oil Left</Label>
-                                              <Input id="post-flight-oil-left" type="number" value={postFlightOilLeft} onChange={(e) => setPostFlightOilLeft(e.target.value)} readOnly={postflightSubmitted} />
-                                          </div>
-                                          <div className="space-y-2">
-                                              <Label htmlFor="post-flight-oil-right">Oil Right</Label>
-                                              <Input id="post-flight-oil-right" type="number" value={postFlightOilRight} onChange={(e) => setPostFlightOilRight(e.target.value)} readOnly={postflightSubmitted} />
-                                          </div>
-                                      </div>
-                                  )}
-                              </div>
-                              {isEditMode && !postflightSubmitted &&
-                                <div className="flex justify-end pt-4">
-                                    <Button onClick={() => handleSave({ closeOnSave: false, isPostFlight: true })}>Submit Post-Flight</Button>
-                                </div>
-                              }
-                            </CollapsibleContent>
-                        </Collapsible>
-                    </>
-                )}
+                  <div className="space-y-2">
+                      <Label htmlFor="start-time">Start Time</Label>
+                      <Input 
+                          id="start-time" 
+                          type="time"
+                          value={startTimeValue}
+                          onChange={(e) => setStartTimeValue(e.target.value)}
+                      />
+                  </div>
+                  <div className="space-y-2">
+                      <Label htmlFor="end-time">End Time</Label>
+                      <Input 
+                          id="end-time" 
+                          type="time" 
+                          value={endTimeValue}
+                          onChange={(e) => setEndTimeValue(e.target.value)}
+                          readOnly={isOvernight}
+                      />
+                  </div>
+                  <div className="col-span-2 flex items-center space-x-2 pt-2">
+                      <Switch id="overnight-booking" checked={isOvernight} onCheckedChange={setIsOvernight} />
+                      <Label htmlFor="overnight-booking">Overnight Booking</Label>
+                  </div>
+                    {isOvernight && (
+                      <>
+                          <div className="col-span-1 space-y-2">
+                              <Label htmlFor="overnight-start-time">Start Time</Label>
+                              <Input
+                                  id="overnight-start-time"
+                                  type="time"
+                                  value="00:00"
+                                  readOnly
+                              />
+                          </div>
+                          <div className="col-span-1 space-y-2">
+                              <Label htmlFor="overnight-end-time">End Time</Label>
+                              <Input
+                                  id="overnight-end-time"
+                                  type="time"
+                                  value={overnightEndTime}
+                                  onChange={(e) => setOvernightEndTime(e.target.value)}
+                              />
+                          </div>
+                      </>
+                  )}
+              </div>
+              {isEditMode && (
+                <div className="grid grid-cols-2 gap-4 pt-6">
+                  <Button variant="outline">
+                    <PlaneTakeoff className="mr-2 h-4 w-4" />
+                    Pre-Flight Checklist
+                  </Button>
+                  <Button variant="outline">
+                    <LandPlot className="mr-2 h-4 w-4" />
+                    Post-Flight Checklist
+                  </Button>
+                </div>
+              )}
             </div>
         </ScrollArea>
         <DialogFooter className='justify-between pt-6'>
@@ -745,3 +416,4 @@ export function BookingForm({
     </Dialog>
   );
 }
+
