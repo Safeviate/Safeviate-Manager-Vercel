@@ -192,6 +192,8 @@ export default function SchedulePage() {
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
   const [bookingFormData, setBookingFormData] = useState<{ aircraft: Aircraft; startTime: Date; allBookingsForAircraft: Booking[]; booking?: Booking } | null>(null);
   const [dataVersion, setDataVersion] = useState(0);
+  const tenantId = 'safeviate'; // Hardcoded for now
+
 
   const aircraftQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
