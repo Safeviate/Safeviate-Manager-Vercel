@@ -292,7 +292,15 @@ export function BookingForm({
             const finalStatus = isPostFlightFilled ? 'Completed' : (updateData.status || existingBooking.status);
             updateData.status = finalStatus;
 
-            await updateBooking(firestore, tenantId, existingBooking.id, updateData, aircraft.id, isPostFlightFilled);
+            await updateBooking(
+                firestore, 
+                tenantId, 
+                existingBooking.id, 
+                updateData, 
+                aircraft.id, 
+                !!options.isPreFlight, 
+                !!options.isPostFlight
+            );
             
             if (options.isPreFlight) {
                 toast({ title: 'Pre-Flight Submitted', description: `Booking #${existingBooking.bookingNumber} is ready for flight.` });

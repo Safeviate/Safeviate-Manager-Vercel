@@ -49,13 +49,12 @@ export const createBooking = async (
             // 2. Create the new booking document
             const newBookingRef = doc(bookingsRef); // Create a new doc reference with a generated ID
             
-            // Build the payload selectively to avoid 'undefined' values
-            const payload: any = {
+            const payload: Partial<Booking> & { id: string; bookingNumber: number; status: string } = {
                 id: newBookingRef.id,
                 bookingNumber: newBookingNumber,
                 status: 'Confirmed',
-                preFlight: {}, // Initialize with empty object
-                postFlight: {}, // Initialize with empty object
+                preFlight: {},
+                postFlight: {},
                 aircraftId: bookingData.aircraftId,
                 pilotId: bookingData.pilotId,
                 type: bookingData.type,
@@ -64,17 +63,10 @@ export const createBooking = async (
                 endTime: bookingData.endTime,
             };
             
-            // Conditionally add optional fields to avoid 'undefined'
-            if (bookingData.instructorId) {
-                payload.instructorId = bookingData.instructorId;
-            }
+            if (bookingData.instructorId) payload.instructorId = bookingData.instructorId;
             if (bookingData.isOvernight) {
                 payload.isOvernight = bookingData.isOvernight;
-            }
-            if (bookingData.overnightBookingDate) {
                 payload.overnightBookingDate = bookingData.overnightBookingDate;
-            }
-            if (bookingData.overnightEndTime) {
                 payload.overnightEndTime = bookingData.overnightEndTime;
             }
             
@@ -97,7 +89,8 @@ export const createBooking = async (
  * @param bookingId - The ID of the booking to update.
  * @param updateData - The data to update.
  * @param aircraftId - The ID of the associated aircraft.
- * @param markAsReady - Whether to set the aircraft checklistStatus to 'ready'.
+ * @param isSubmittingPreFlight - Whether a pre-flight is being submitted.
+ * @param isSubmittingPostFlight - Whether a post-flight is being submitted.
  */
 export const updateBooking = async (
     firestore: Firestore,
@@ -105,7 +98,8 @@ export const updateBooking = async (
     bookingId: string,
     updateData: Partial<Booking>,
     aircraftId: string,
-    markAsReady: boolean
+    isSubmittingPreFlight: boolean,
+    isSubmittingPostFlight: boolean
 ) => {
     const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, bookingId);
     
@@ -147,16 +141,13 @@ export const updateBooking = async (
     if (Object.keys(flattenedUpdateData).length > 0) {
         batch.update(bookingRef, flattenedUpdateData);
     }
+    
+    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);
 
-    if (markAsReady) {
-        const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);
+    if (isSubmittingPostFlight) {
         batch.update(aircraftRef, { checklistStatus: 'ready' });
-    } else {
-        const preFlightSubmitted = updateData.preFlight && (updateData.preFlight.actualHobbs || updateData.preFlight.actualTacho);
-        if (preFlightSubmitted) {
-            const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);
-            batch.update(aircraftRef, { checklistStatus: 'needs-post-flight' });
-        }
+    } else if (isSubmittingPreFlight) {
+        batch.update(aircraftRef, { checklistStatus: 'needs-post-flight' });
     }
 
     // Using a batch write with non-blocking error handling
