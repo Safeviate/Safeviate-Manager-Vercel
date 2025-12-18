@@ -391,6 +391,10 @@ export function BookingForm({
                                     onChange={(e) => setEndTimeValue(e.target.value)}
                                 />
                             </div>
+                             <div className="col-span-2 flex items-center space-x-2 pt-2">
+                                <Switch id="overnight-booking" />
+                                <Label htmlFor="overnight-booking">Overnight Booking</Label>
+                            </div>
                         </div>
                     </CollapsibleContent>
                 </Collapsible>
@@ -588,3 +592,5 @@ export function BookingForm({
     </Dialog>
   );
 }
+
+    
