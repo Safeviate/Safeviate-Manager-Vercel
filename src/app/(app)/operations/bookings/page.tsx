@@ -62,7 +62,8 @@ const BookingItem = ({ booking, pilots, onBookingClick, selectedDate }: { bookin
                     key={`${booking.id}-${index}`}
                     className={cn(
                         'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center text-primary-foreground z-10 min-h-[40px] border border-gray-400 cursor-pointer hover:opacity-90 transition-opacity',
-                        (booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason') ? 'bg-destructive' : 'bg-primary'
+                        (booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason') ? 'bg-destructive' : 'bg-primary',
+                         booking.status === 'Completed' && 'bg-green-600',
                     )}
                     style={{ top: `${top}px`, height: `${height}px` }}
                     onClick={() => onBookingClick(booking)}
@@ -71,6 +72,7 @@ const BookingItem = ({ booking, pilots, onBookingClick, selectedDate }: { bookin
                     <p className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}</p>
                     {booking.status === 'Cancelled' && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
                     {(booking.status === 'Cancelled with Reason') && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
+                    {booking.status === 'Completed' && <p className="font-bold uppercase text-[9px] mt-0.5">Completed</p>}
                 </div>
             )
         })}
@@ -170,7 +172,7 @@ export default function SchedulePage() {
   const [showNowLine, setShowNowLine] = useState(false);
   
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
-  const [bookingFormData, setBookingFormData] = useState<{ aircraft: Aircraft; startTime: Date; booking?: Booking } | null>(null);
+  const [bookingFormData, setBookingFormData] = useState<{ aircraft: Aircraft; startTime: Date; allBookingsForAircraft: Booking[]; booking?: Booking } | null>(null);
 
   const aircraftQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
@@ -187,6 +189,11 @@ export default function SchedulePage() {
     );
   }, [firestore, tenantId, selectedDate]); 
 
+  const allBookingsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'bookings')) : null),
+    [firestore, tenantId]
+  );
+
   const pilotsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'pilots')) : null),
     [firestore, tenantId]
@@ -194,10 +201,11 @@ export default function SchedulePage() {
 
   const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
   const { data: bookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
+  const { data: allBookings, isLoading: isLoadingAllBookings, error: allBookingsError } = useCollection<Booking>(allBookingsQuery);
   const { data: pilots, isLoading: isLoadingPilots, error: pilotsError } = useCollection<PilotProfile>(pilotsQuery);
 
-  const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingPilots;
-  const error = aircraftError || bookingsError || pilotsError;
+  const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingPilots || isLoadingAllBookings;
+  const error = aircraftError || bookingsError || pilotsError || allBookingsError;
 
   useEffect(() => {
     const calculateNowLine = () => {
@@ -221,15 +229,17 @@ export default function SchedulePage() {
     const now = new Date();
     const isCurrentHourSlot = isSameDay(time, now) && getHours(time) === getHours(now);
     const startTime = isCurrentHourSlot ? now : time;
+    const allBookingsForAircraft = allBookings?.filter(b => b.aircraftId === aircraft.id) || [];
 
-    setBookingFormData({ aircraft, startTime });
+    setBookingFormData({ aircraft, startTime, allBookingsForAircraft });
     setIsBookingFormOpen(true);
   };
   
   const handleBookingClick = (booking: Booking) => {
     const aircraftForBooking = aircraft?.find(a => a.id === booking.aircraftId);
     if (aircraftForBooking) {
-      setBookingFormData({ aircraft: aircraftForBooking, startTime: combineDateAndTime(booking.bookingDate, booking.startTime), booking });
+      const allBookingsForAircraft = allBookings?.filter(b => b.aircraftId === aircraftForBooking.id) || [];
+      setBookingFormData({ aircraft: aircraftForBooking, startTime: combineDateAndTime(booking.bookingDate, booking.startTime), allBookingsForAircraft, booking });
       setIsBookingFormOpen(true);
     }
   };
@@ -280,7 +290,6 @@ export default function SchedulePage() {
                   <div className="sticky top-0 z-30 flex bg-swimlane-header text-swimlane-header-foreground flex-shrink-0">
                     {(aircraft || []).map((ac) => (
                       <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px] flex items-center justify-center gap-2">
-                        {ac.checklistStatus !== 'Ready' && <AlertCircle className="h-4 w-4 text-amber-500" title={`Status: ${ac.checklistStatus}`} />}
                         {ac.tailNumber}
                       </div>
                     ))}
@@ -333,6 +342,7 @@ export default function SchedulePage() {
             startTime={bookingFormData.startTime}
             tenantId={tenantId}
             pilots={pilots || []}
+            allBookingsForAircraft={bookingFormData.allBookingsForAircraft}
             existingBooking={bookingFormData.booking}
           />
       )}

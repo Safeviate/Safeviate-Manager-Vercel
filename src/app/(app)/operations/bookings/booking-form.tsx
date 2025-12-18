@@ -53,6 +53,7 @@ interface BookingFormProps {
   startTime: Date;
   tenantId: string;
   pilots: PilotProfile[];
+  allBookingsForAircraft: Booking[];
   existingBooking?: Booking;
 }
 
@@ -63,6 +64,7 @@ export function BookingForm({
   startTime: initialStartTime,
   tenantId,
   pilots,
+  allBookingsForAircraft,
   existingBooking,
 }: BookingFormProps) {
   const firestore = useFirestore();
@@ -188,14 +190,52 @@ export function BookingForm({
   const instructors = useMemo(() => pilots.filter(p => p.userType === 'Instructor'), [pilots]);
   const privatePilots = useMemo(() => pilots.filter(p => p.userType === 'Private Pilot'), [pilots]);
 
-  const preFlightSubmitted = !!(existingBooking?.preFlight && Object.keys(existingBooking.preFlight).length > 0);
-  
-  const isCorrectBookingForAction = aircraft.currentBookingId === existingBooking?.id;
+  const { isPreFlightDisabled, isPostFlightDisabled, warningMessage } = useMemo(() => {
+    if (!isEditMode || !existingBooking) {
+        return { isPreFlightDisabled: true, isPostFlightDisabled: true, warningMessage: null };
+    }
 
-  const isPreFlightDisabled = !(isCorrectBookingForAction && (aircraft.checklistStatus === 'needs-pre-flight' || aircraft.checklistStatus === 'Ready'));
-  const isPostFlightDisabled = !(isCorrectBookingForAction && preFlightSubmitted && aircraft.checklistStatus === 'needs-post-flight');
+    const preFlightSubmitted = !!existingBooking.preFlight;
+    const postFlightSubmitted = !!existingBooking.postFlight;
 
-  const showPendingActionWarning = (aircraft.checklistStatus === 'needs-pre-flight' || aircraft.checklistStatus === 'needs-post-flight') && aircraft.currentBookingId !== existingBooking?.id;
+    // Find the booking immediately preceding this one for the same aircraft
+    const previousBooking = allBookingsForAircraft
+        .filter(b => {
+            const bEnd = parse(`${b.bookingDate}T${b.endTime}`, 'yyyy-MM-dd\'T\'HH:mm', new Date());
+            const thisStart = parse(`${existingBooking.bookingDate}T${existingBooking.startTime}`, 'yyyy-MM-dd\'T\'HH:mm', new Date());
+            return b.id !== existingBooking.id && bEnd <= thisStart;
+        })
+        .sort((a, b) => {
+            const aEnd = parse(`${a.bookingDate}T${a.endTime}`, 'yyyy-MM-dd\'T\'HH:mm', new Date());
+            const bEnd = parse(`${b.bookingDate}T${b.endTime}`, 'yyyy-MM-dd\'T\'HH:mm', new Date());
+            return bEnd.getTime() - aEnd.getTime();
+        })[0];
+        
+    let preFlightDisabled = false;
+    let postFlightDisabled = true;
+    let warning = null;
+    
+    // A pre-flight can be done if there is no previous booking, OR if the previous booking is 'Completed'.
+    if (previousBooking && previousBooking.status !== 'Completed') {
+        preFlightDisabled = true;
+        warning = `Cannot start pre-flight until booking #${previousBooking.bookingNumber} is completed.`;
+    }
+    
+    // If pre-flight has been submitted for *this* booking, disable pre-flight button and enable post-flight
+    if(preFlightSubmitted) {
+        preFlightDisabled = true;
+        postFlightDisabled = false;
+    }
+    
+    // If post-flight has been submitted for this booking, disable both
+    if (postFlightSubmitted) {
+        preFlightDisabled = true;
+        postFlightDisabled = true;
+    }
+    
+    return { isPreFlightDisabled: preFlightDisabled, isPostFlightDisabled: postFlightDisabled, warningMessage: warning };
+
+  }, [existingBooking, isEditMode, allBookingsForAircraft]);
 
   return (
     <>
@@ -209,12 +249,12 @@ export function BookingForm({
           </DialogHeader>
           <ScrollArea className="max-h-[60vh] pr-4">
               <div className="grid gap-4 py-4 pr-2">
-                {showPendingActionWarning && (
+                {warningMessage && (
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Action Required on Another Booking</AlertTitle>
+                        <AlertTitle>Action Required</AlertTitle>
                         <AlertDescription>
-                           A pre-flight or post-flight checklist for a previous booking on this aircraft must be completed first.
+                          {warningMessage}
                         </AlertDescription>
                     </Alert>
                 )}
