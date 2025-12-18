@@ -712,5 +712,3 @@ export function BookingForm({
 }
 
     
-
-    

@@ -49,7 +49,6 @@ export const createBooking = async (
             // 2. Create the new booking document
             const newBookingRef = doc(bookingsRef); // Create a new doc reference with a generated ID
             
-            // Construct the payload carefully, excluding undefined or empty objects
             const payload: any = {
                 id: newBookingRef.id,
                 bookingNumber: newBookingNumber,
@@ -60,8 +59,8 @@ export const createBooking = async (
                 bookingDate: bookingData.bookingDate,
                 startTime: bookingData.startTime,
                 endTime: bookingData.endTime,
-                preFlight: {}, // Create empty object
-                postFlight: {}, // Create empty object
+                preFlight: {},
+                postFlight: {},
             };
             
             if (bookingData.instructorId) {
@@ -145,7 +144,7 @@ export const updateBooking = async (
     const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);
 
     if (isSubmittingPostFlight) {
-        batch.update(aircraftRef, { checklistStatus: 'ready' });
+        batch.update(aircraftRef, { checklistStatus: 'Needs Pre Flight' });
     } else if (isSubmittingPreFlight) {
         batch.update(aircraftRef, { checklistStatus: 'needs-post-flight' });
     }
@@ -180,3 +179,5 @@ export const deleteBooking = async (
     // Using the non-blocking delete function from firebase/index
     return deleteDocNonBlocking(bookingRef);
 };
+
+    
