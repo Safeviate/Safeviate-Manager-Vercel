@@ -192,13 +192,13 @@ export function BookingForm({
 
   const preFlightSubmitted = !!(existingBooking?.preFlight && Object.keys(existingBooking.preFlight).length > 0);
   
-  const isCorrectBookingForPreFlight = aircraft.currentBookingId === existingBooking?.id && aircraft.checklistStatus === 'needs-pre-flight';
-  const isCorrectBookingForPostFlight = aircraft.currentBookingId === existingBooking?.id && aircraft.checklistStatus === 'needs-post-flight';
+  const isCorrectBookingForPreFlight = (aircraft.checklistStatus === 'needs-pre-flight' && aircraft.currentBookingId === existingBooking?.id);
+  const isCorrectBookingForPostFlight = aircraft.checklistStatus === 'needs-post-flight' && aircraft.currentBookingId === existingBooking?.id;
   
   const isPreFlightDisabled = !isCorrectBookingForPreFlight;
   const isPostFlightDisabled = !preFlightSubmitted || !isCorrectBookingForPostFlight;
 
-  const showPendingPostFlightWarning = aircraft.checklistStatus === 'needs-post-flight' && aircraft.currentBookingId !== existingBooking?.id;
+  const showPendingActionWarning = (aircraft.checklistStatus === 'needs-pre-flight' || aircraft.checklistStatus === 'needs-post-flight') && aircraft.currentBookingId !== existingBooking?.id;
 
   return (
     <>
@@ -212,12 +212,12 @@ export function BookingForm({
           </DialogHeader>
           <ScrollArea className="max-h-[60vh] pr-4">
               <div className="grid gap-4 py-4 pr-2">
-                {showPendingPostFlightWarning && (
+                {showPendingActionWarning && (
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Action Required</AlertTitle>
+                        <AlertTitle>Action Required on Another Booking</AlertTitle>
                         <AlertDescription>
-                           A post-flight checklist for a previous booking on this aircraft must be completed before a pre-flight can be initiated.
+                           A pre-flight or post-flight checklist for a previous booking on this aircraft must be completed first.
                         </AlertDescription>
                     </Alert>
                 )}

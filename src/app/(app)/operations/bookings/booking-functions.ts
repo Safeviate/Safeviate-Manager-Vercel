@@ -11,6 +11,11 @@ import {
     deleteField,
     writeBatch,
     getDoc,
+    query,
+    where,
+    orderBy,
+    limit,
+    getDocs,
   } from 'firebase/firestore';
 import type { Booking } from '@/types/booking';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -115,9 +120,50 @@ export const updateBooking = async (
     const isCancelling = updateData.status === 'Cancelled' || updateData.status === 'Cancelled with Reason';
 
     if (isSubmittingPostFlight) {
-        batch.update(aircraftRef, { checklistStatus: 'Ready', currentBookingId: null });
+        // Find the next booking to activate
+        const bookingsCol = collection(firestore, `tenants/${tenantId}/bookings`);
+        const currentBookingDoc = await getDoc(bookingRef);
+        const currentBookingData = currentBookingDoc.data() as Booking;
+        
+        const nextBookingQuery = query(
+            bookingsCol,
+            where('aircraftId', '==', aircraftId),
+            where('status', '==', 'Confirmed'),
+            where('bookingDate', '>=', currentBookingData.bookingDate),
+            orderBy('bookingDate'),
+            orderBy('startTime'),
+            limit(2) // Get current and next one
+        );
+
+        const nextBookingSnapshot = await getDocs(nextBookingQuery);
+        let nextBookingId: string | null = null;
+        
+        // Find the actual next booking after the current one
+        for (const doc of nextBookingSnapshot.docs) {
+            if (doc.id !== bookingId) {
+                const booking = doc.data() as Booking;
+                const bookingStart = new Date(`${booking.bookingDate}T${booking.startTime}`);
+                const currentStart = new Date(`${currentBookingData.bookingDate}T${currentBookingData.startTime}`);
+                if (bookingStart > currentStart) {
+                    nextBookingId = doc.id;
+                    break;
+                }
+            }
+        }
+
+        if (nextBookingId) {
+            batch.update(aircraftRef, {
+                checklistStatus: 'needs-pre-flight',
+                currentBookingId: nextBookingId,
+            });
+        } else {
+            batch.update(aircraftRef, {
+                checklistStatus: 'Ready',
+                currentBookingId: null,
+            });
+        }
     } else if (isSubmittingPreFlight) {
-        batch.update(aircraftRef, { checklistStatus: 'needs-post-flight' });
+        batch.update(aircraftRef, { checklistStatus: 'needs-post-flight', currentBookingId: bookingId });
     } else if (isCancelling) {
         const aircraftDoc = await getDoc(aircraftRef);
         if (aircraftDoc.exists() && aircraftDoc.data().currentBookingId === bookingId) {
@@ -125,7 +171,7 @@ export const updateBooking = async (
         }
     }
 
-    batch.commit().catch(error => {
+    await batch.commit().catch(error => {
         const contextualError = new FirestorePermissionError({
           operation: 'write',
           path: `tenants/${tenantId}/bookings/${bookingId} (and possibly aircraft)`,
