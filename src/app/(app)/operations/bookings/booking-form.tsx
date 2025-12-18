@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format, addHours, parse } from 'date-fns';
+import { format, addHours, parse, addDays } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useFirestore } from '@/firebase';
@@ -44,6 +44,10 @@ import { useToast } from '@/hooks/use-toast';
 import { createBooking, updateBooking, deleteBooking } from './booking-functions';
 import { PreFlightChecklistDialog } from './pre-flight-checklist-dialog';
 import { PostFlightChecklistDialog } from './post-flight-checklist-dialog';
+import { Switch } from '@/components/ui/switch';
+import { CustomCalendar } from '@/components/ui/custom-calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
 
 
 interface BookingFormProps {
@@ -79,6 +83,9 @@ export function BookingForm({
   const [instructorId, setInstructorId] = useState('');
   const [startTimeValue, setStartTimeValue] = useState('');
   const [endTimeValue, setEndTimeValue] = useState('');
+  const [isOvernight, setIsOvernight] = useState(false);
+  const [overnightBookingDate, setOvernightBookingDate] = useState<Date | undefined>(undefined);
+  const [overnightEndTime, setOvernightEndTime] = useState('');
   
   const baseDate = existingBooking ? parse(existingBooking.bookingDate, 'yyyy-MM-dd', new Date()) : initialStartTime;
   
@@ -93,6 +100,9 @@ export function BookingForm({
             setInstructorId(existingBooking.instructorId || '');
             setStartTimeValue(existingBooking.startTime);
             setEndTimeValue(existingBooking.endTime);
+            setIsOvernight(existingBooking.isOvernight || false);
+            setOvernightBookingDate(existingBooking.overnightBookingDate ? parse(existingBooking.overnightBookingDate, 'yyyy-MM-dd', new Date()) : addDays(baseDate, 1));
+            setOvernightEndTime(existingBooking.overnightEndTime || '09:00');
         } else {
             const formattedStartTime = format(initialStartTime, 'HH:mm');
             const formattedEndTime = format(addHours(initialStartTime, 1), 'HH:mm');
@@ -102,9 +112,20 @@ export function BookingForm({
             setInstructorId('');
             setStartTimeValue(formattedStartTime);
             setEndTimeValue(formattedEndTime);
+            setIsOvernight(false);
+            setOvernightBookingDate(addDays(baseDate, 1));
+            setOvernightEndTime('09:00');
         }
     }
-  }, [existingBooking, initialStartTime, isOpen]);
+  }, [existingBooking, initialStartTime, baseDate, isOpen]);
+
+  useEffect(() => {
+    if (isOvernight) {
+        setEndTimeValue('23:59');
+    } else if (!isEditMode) {
+        setEndTimeValue(format(addHours(parse(startTimeValue, 'HH:mm', baseDate), 1), 'HH:mm'));
+    }
+  }, [isOvernight, isEditMode, startTimeValue, baseDate]);
 
 
   const onOpenChange = (open: boolean) => {
@@ -127,24 +148,39 @@ export function BookingForm({
         return;
     }
     
+    if (isOvernight && (!overnightBookingDate || !overnightEndTime)) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Overnight end date and time are required.' });
+        return;
+    }
+    
     const bookingDate = format(baseDate, 'yyyy-MM-dd');
 
+    const commonData: Partial<Booking> = {
+        bookingDate,
+        startTime: startTimeValue,
+        type: bookingType as Booking['type'],
+        pilotId,
+        instructorId: bookingType === 'Training Flight' ? instructorId : '',
+        isOvernight,
+    };
+    
+    if (isOvernight) {
+        commonData.endTime = '23:59';
+        commonData.overnightBookingDate = format(overnightBookingDate!, 'yyyy-MM-dd');
+        commonData.overnightEndTime = overnightEndTime;
+    } else {
+        commonData.endTime = endTimeValue;
+        commonData.overnightBookingDate = null;
+        commonData.overnightEndTime = null;
+    }
+
     if (isEditMode && existingBooking) {
-        const updateData: Partial<Booking> = {
-            bookingDate,
-            startTime: startTimeValue,
-            endTime: endTimeValue,
-            type: bookingType as Booking['type'],
-            pilotId,
-            instructorId: bookingType === 'Training Flight' ? instructorId : '',
-        };
-        
         try {
             await updateBooking({
                 firestore, 
                 tenantId, 
                 bookingId: existingBooking.id, 
-                updateData, 
+                updateData: commonData, 
                 aircraft
             });
             toast({ title: 'Booking Updated', description: `Booking #${existingBooking.bookingNumber} has been updated.` });
@@ -155,21 +191,8 @@ export function BookingForm({
         }
 
     } else {
-        const bookingData: any = {
-            aircraftId: aircraft.id,
-            pilotId,
-            type: bookingType as Booking['type'],
-            bookingDate,
-            startTime: startTimeValue,
-            endTime: endTimeValue,
-        };
-
-        if (instructorId) {
-            bookingData.instructorId = instructorId;
-        }
-
         try {
-            await createBooking(firestore, tenantId, bookingData);
+            await createBooking(firestore, tenantId, { aircraftId: aircraft.id, ...commonData } as Booking);
             toast({ title: 'Booking Created', description: 'The new booking has been saved successfully.' });
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
@@ -265,6 +288,12 @@ export function BookingForm({
                         </AlertDescription>
                     </Alert>
                 )}
+                
+                <div className="flex items-center space-x-2">
+                    <Switch id="overnight-mode" checked={isOvernight} onCheckedChange={setIsOvernight} />
+                    <Label htmlFor="overnight-mode">Overnight Booking</Label>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2 space-y-2">
                         <Label htmlFor="booking-type">Booking Type</Label>
@@ -285,7 +314,7 @@ export function BookingForm({
                         <>
                             <div className="col-span-1 space-y-2">
                                 <Label htmlFor="student">Student</Label>
-                                <Select onValueChange={setPilotId} value={pilotId}>
+                                <Select onValuechange={setPilotId} value={pilotId}>
                                     <SelectTrigger id="student">
                                         <SelectValue placeholder="Select a student" />
                                     </SelectTrigger>
@@ -300,7 +329,7 @@ export function BookingForm({
                             </div>
                             <div className="col-span-1 space-y-2">
                                 <Label htmlFor="instructor">Instructor</Label>
-                                <Select onValueChange={setInstructorId} value={instructorId}>
+                                <Select onValuechange={setInstructorId} value={instructorId}>
                                     <SelectTrigger id="instructor">
                                         <SelectValue placeholder="Select an instructor" />
                                     </SelectTrigger>
@@ -318,7 +347,7 @@ export function BookingForm({
                     {(bookingType === 'Private Flight' || bookingType === 'Maintenance Flight' || bookingType === 'Reposition Flight') && (
                         <div className="col-span-2 space-y-2">
                             <Label htmlFor="private-pilot">Pilot</Label>
-                              <Select onValueChange={setPilotId} value={pilotId}>
+                              <Select onValuechange={setPilotId} value={pilotId}>
                                 <SelectTrigger id="private-pilot">
                                     <SelectValue placeholder="Select a pilot" />
                                 </SelectTrigger>
@@ -349,8 +378,39 @@ export function BookingForm({
                             type="time" 
                             value={endTimeValue}
                             onChange={(e) => setEndTimeValue(e.target.value)}
+                            disabled={isOvernight}
                         />
                     </div>
+                    {isOvernight && (
+                        <>
+                           <div className="space-y-2">
+                                <Label htmlFor="overnight-date">Overnight End Date</Label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className='w-full justify-start font-normal'>
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {overnightBookingDate ? format(overnightBookingDate, 'PPP') : 'Select date'}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                        <CustomCalendar 
+                                            selectedDate={overnightBookingDate}
+                                            onDateSelect={setOvernightBookingDate}
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                           </div>
+                           <div className="space-y-2">
+                                <Label htmlFor="overnight-end-time">Overnight End Time</Label>
+                                <Input 
+                                    id="overnight-end-time" 
+                                    type="time" 
+                                    value={overnightEndTime}
+                                    onChange={(e) => setOvernightEndTime(e.target.value)}
+                                />
+                           </div>
+                        </>
+                    )}
                 </div>
                 {isEditMode && (
                   <div className="grid grid-cols-2 gap-4 pt-6">

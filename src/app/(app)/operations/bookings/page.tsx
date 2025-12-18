@@ -7,7 +7,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
-import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, endOfHour, parse } from 'date-fns';
+import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, endOfHour, parse, isAfter } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -36,9 +36,18 @@ const BookingItem = ({ booking, pilots, onBookingClick, selectedDate }: { bookin
     segments.push({
         date: booking.bookingDate,
         startTime: booking.startTime,
-        endTime: '23:59'
+        endTime: booking.isOvernight ? '23:59' : booking.endTime
     });
     
+    // Second segment for overnight booking
+    if (booking.isOvernight && booking.overnightBookingDate && booking.overnightEndTime) {
+        segments.push({
+            date: booking.overnightBookingDate,
+            startTime: '00:00',
+            endTime: booking.overnightEndTime
+        });
+    }
+
     const formattedSelectedDate = format(selectedDate, 'yyyy-MM-dd');
     
     return (
@@ -49,7 +58,7 @@ const BookingItem = ({ booking, pilots, onBookingClick, selectedDate }: { bookin
             }
 
             const startTime = combineDateAndTime(segment.date, segment.startTime);
-            const endTime = combineDateAndTime(segment.date, booking.endTime);
+            const endTime = combineDateAndTime(segment.date, segment.endTime);
 
             if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) return null;
 
@@ -104,7 +113,15 @@ const AircraftColumn = ({
     const today = startOfToday();
     const isSelectedDateInPast = isBefore(selectedDate, today);
 
-    const relevantBookings = bookings.filter(b => b.bookingDate === format(selectedDate, 'yyyy-MM-dd'));
+    const relevantBookings = useMemo(() => {
+        return bookings.filter(b => {
+          if (b.isOvernight) {
+            // Include if selectedDate is the start date or the overnight end date
+            return b.bookingDate === format(selectedDate, 'yyyy-MM-dd') || b.overnightBookingDate === format(selectedDate, 'yyyy-MM-dd');
+          }
+          return b.bookingDate === format(selectedDate, 'yyyy-MM-dd');
+        });
+      }, [bookings, selectedDate]);
 
   return (
     <div 
@@ -167,7 +184,6 @@ const TOTAL_HOURS = 24;
 export default function SchedulePage() {
   const firestore = useFirestore();
   const router = useRouter();
-  const tenantId = 'safeviate';
   const [selectedDate, setSelectedDate] = useState(startOfToday());
 
   const [nowLinePosition, setNowLinePosition] = useState(0);
@@ -184,11 +200,12 @@ export default function SchedulePage() {
   
   const bookingsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    const dateFilter = format(selectedDate, 'yyyy-MM-dd');
+    const yesterday = format(subDays(selectedDate, 1), 'yyyy-MM-dd');
+    const today = format(selectedDate, 'yyyy-MM-dd');
     
     return query(
         collection(firestore, 'tenants', tenantId, 'bookings'),
-        where('bookingDate', '==', dateFilter),
+        where('bookingDate', 'in', [yesterday, today]),
     );
   }, [firestore, tenantId, selectedDate, dataVersion]); 
 
@@ -235,7 +252,7 @@ export default function SchedulePage() {
   const handleSlotClick = (aircraft: Aircraft, time: Date) => {
     const now = new Date();
     const isCurrentHourSlot = isSameDay(time, now) && getHours(time) === getHours(now);
-    const startTime = isCurrentHourSlot ? now : time;
+    const startTime = isCurrentHourSlot && isAfter(now, time) ? now : time;
     const allBookingsForAircraft = allBookings?.filter(b => b.aircraftId === aircraft.id) || [];
 
     setBookingFormData({ aircraft, startTime, allBookingsForAircraft });
@@ -257,7 +274,8 @@ export default function SchedulePage() {
   return (
     <>
       <div className="flex flex-col gap-6">
-        <div className="flex justify-end items-center">
+        <div className="flex justify-end items-center gap-4">
+          <Button variant="outline" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>Previous Day</Button>
           <Popover>
               <PopoverTrigger asChild>
                   <Button variant="outline">
@@ -272,6 +290,7 @@ export default function SchedulePage() {
                   />
               </PopoverContent>
           </Popover>
+          <Button variant="outline" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>Next Day</Button>
         </div>
 
         <Card>

@@ -1,3 +1,4 @@
+
 import type { Timestamp } from "firebase/firestore";
 
 export interface Photo {
@@ -16,6 +17,9 @@ export interface Booking {
     startTime: string;   // HH:mm
     endTime: string;     // HH:mm
     status: 'Confirmed' | 'Completed' | 'Cancelled' | 'Cancelled with Reason';
+    isOvernight?: boolean;
+    overnightBookingDate?: string | null; // YYYY-MM-DD
+    overnightEndTime?: string | null; // HH:mm
     // Pre-flight data
     preFlight?: {
         actualHobbs?: number;

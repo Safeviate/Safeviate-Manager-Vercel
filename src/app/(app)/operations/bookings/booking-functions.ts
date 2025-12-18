@@ -57,21 +57,20 @@ export const createBooking = async (
             const newBookingRef = doc(bookingsRef);
             
             const payload: Partial<Booking> = {
+                ...bookingData,
                 id: newBookingRef.id,
                 bookingNumber: newBookingNumber,
                 status: 'Confirmed',
-                aircraftId: bookingData.aircraftId!,
-                pilotId: bookingData.pilotId!,
-                type: bookingData.type!,
-                bookingDate: bookingData.bookingDate!,
-                startTime: bookingData.startTime!,
-                endTime: bookingData.endTime!,
             };
 
-            if (bookingData.instructorId) {
-                payload.instructorId = bookingData.instructorId;
+            if (bookingData.instructorId === '' || bookingData.instructorId === null) {
+                delete payload.instructorId;
             }
-            
+            if (!bookingData.isOvernight) {
+                delete payload.overnightBookingDate;
+                delete payload.overnightEndTime;
+            }
+
             transaction.set(newBookingRef, payload);
 
             return newBookingRef.id;
@@ -108,8 +107,13 @@ export const updateBooking = async ({
     
     const updatePayload: Record<string, any> = { ...updateData };
 
-    if (updatePayload.instructorId === '' || updatePayload.instructorId === null) {
+    if (updateData.instructorId === '' || updateData.instructorId === null) {
         updatePayload.instructorId = deleteField();
+    }
+
+    if (!updateData.isOvernight) {
+        updatePayload.overnightBookingDate = deleteField();
+        updatePayload.overnightEndTime = deleteField();
     }
     
     // Explicitly include photos if they exist in the payload. This was the fix.
