@@ -32,15 +32,20 @@ export const createBooking = async (
 
     const counterRef = doc(firestore, `tenants/${tenantId}/counters`, 'bookings');
     const bookingsRef = collection(firestore, `tenants/${tenantId}`, 'bookings');
+    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, bookingData.aircraftId!);
     
     try {
         const newBookingId = await runTransaction(firestore, async (transaction) => {
+            // --- ALL READS MUST HAPPEN FIRST ---
             const counterDoc = await transaction.get(counterRef);
-            
+            const aircraftDoc = await transaction.get(aircraftRef);
+
+            // --- ALL WRITES HAPPEN AFTER READS ---
             let newBookingNumber = 1;
             if (counterDoc.exists()) {
                 newBookingNumber = counterDoc.data().currentNumber + 1;
             }
+            // Write 1: Update counter
             transaction.set(counterRef, { currentNumber: newBookingNumber }, { merge: true });
 
             const newBookingRef = doc(bookingsRef);
@@ -61,11 +66,10 @@ export const createBooking = async (
                 payload.instructorId = bookingData.instructorId;
             }
             
+            // Write 2: Create the new booking
             transaction.set(newBookingRef, payload);
 
-            // Check if aircraft is 'Ready' and set it to 'needs-pre-flight'
-            const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, bookingData.aircraftId!);
-            const aircraftDoc = await transaction.get(aircraftRef);
+            // Write 3 (Conditional): Update aircraft status if it is currently 'Ready'.
             if (aircraftDoc.exists() && aircraftDoc.data().checklistStatus === 'Ready') {
                 transaction.update(aircraftRef, {
                     checklistStatus: 'needs-pre-flight',
