@@ -46,7 +46,7 @@ export const createBooking = async (
 
             const newBookingRef = doc(bookingsRef);
             
-            const payload: Booking = {
+            const payload: Partial<Booking> = {
                 id: newBookingRef.id,
                 bookingNumber: newBookingNumber,
                 status: 'Confirmed',
@@ -56,8 +56,11 @@ export const createBooking = async (
                 bookingDate: bookingData.bookingDate!,
                 startTime: bookingData.startTime!,
                 endTime: bookingData.endTime!,
-                instructorId: bookingData.instructorId,
             };
+
+            if (bookingData.instructorId) {
+                payload.instructorId = bookingData.instructorId;
+            }
             
             transaction.set(newBookingRef, payload);
             
@@ -94,23 +97,17 @@ export const updateBooking = async (
     // Create a clean object for the batch update.
     const finalUpdateData: { [key: string]: any } = {};
 
-    for (const key in updateData) {
-        const value = updateData[key as keyof typeof updateData];
+    // Use a Record to safely build the update object
+    const updatePayload: Record<string, any> = { ...updateData };
 
-        if (value === undefined) continue;
-
-        if (value === null) {
-            finalUpdateData[key] = deleteField();
-        } else {
-            finalUpdateData[key] = value;
-        }
+    if (updatePayload.instructorId === '' || updatePayload.instructorId === null) {
+        // Explicitly set to null to remove or use deleteField()
+        updatePayload.instructorId = deleteField();
     }
-
+    
     const batch = writeBatch(firestore);
 
-    if (Object.keys(finalUpdateData).length > 0) {
-        batch.set(bookingRef, finalUpdateData, { merge: true });
-    }
+    batch.set(bookingRef, updatePayload, { merge: true });
     
     const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);
     const isCancelling = updateData.status === 'Cancelled' || updateData.status === 'Cancelled with Reason';
@@ -131,7 +128,7 @@ export const updateBooking = async (
         const contextualError = new FirestorePermissionError({
           operation: 'write',
           path: `tenants/${tenantId}/bookings/${bookingId} (and possibly aircraft)`,
-          requestResourceData: finalUpdateData,
+          requestResourceData: updatePayload,
         });
         errorEmitter.emit('permission-error', contextualError);
         throw error;
