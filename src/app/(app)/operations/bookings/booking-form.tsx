@@ -129,9 +129,29 @@ export function BookingForm({
   const baseDate = existingBooking ? parse(existingBooking.bookingDate, 'yyyy-MM-dd', new Date()) : initialStartTime;
   
   const isChecklistNeeded = aircraft?.checklistStatus === 'needs-post-flight';
-  const preflightSubmitted = !!(existingBooking?.preFlight && (existingBooking.preFlight.actualHobbs || existingBooking.preFlight.actualTacho));
-  const postflightSubmitted = !!(existingBooking?.postFlight && (existingBooking.postFlight.actualHobbs || existingBooking.postFlight.actualTacho));
-  const preflightDisabled = (isEditMode && isChecklistNeeded && !preflightSubmitted) || preflightSubmitted;
+  
+  const preflightSubmitted = useMemo(() => 
+    !!(existingBooking?.preFlight && (existingBooking.preFlight.actualHobbs || existingBooking.preFlight.actualTacho)), 
+    [existingBooking]
+  );
+  
+  const postflightSubmitted = useMemo(() => 
+    !!(existingBooking?.postFlight && (existingBooking.postFlight.actualHobbs || existingBooking.postFlight.actualTacho)),
+    [existingBooking]
+  );
+
+  const preflightDisabled = useMemo(() => {
+    if (isEditMode) {
+      // Disable if a post-flight from a PREVIOUS booking is needed, but only if THIS booking's preflight isn't already done.
+      if (isChecklistNeeded && !preflightSubmitted) {
+        return true;
+      }
+      // If this booking's preflight is already submitted, it should be read-only.
+      return preflightSubmitted;
+    }
+    // Pre-flight is not available in create mode
+    return false;
+  }, [isEditMode, isChecklistNeeded, preflightSubmitted]);
 
 
   useEffect(() => {
@@ -194,12 +214,13 @@ export function BookingForm({
         setPostFlightOilLeft('');
         setPostFlightOilRight('');
     }
-  }, [existingBooking, initialStartTime]);
+  }, [existingBooking, initialStartTime, isOpen]);
 
   
   const originalEndTime = useMemo(() => format(addHours(baseDate, 1), 'HH:mm'), [baseDate]);
 
   useEffect(() => {
+    if (!isOpen) return;
     if (isOvernight) {
       setEndTimeValue('23:59');
       const nextDay = addDays(baseDate, 1);
@@ -215,7 +236,7 @@ export function BookingForm({
       setOvernightBookingDate(undefined);
       setOvernightEndTime('');
     }
-  }, [isOvernight, existingBooking, originalEndTime, baseDate]);
+  }, [isOvernight, existingBooking, originalEndTime, baseDate, isOpen]);
 
 
   const onOpenChange = (open: boolean) => {
@@ -309,10 +330,13 @@ export function BookingForm({
             startTime: startTimeValue,
             endTime: endTimeValue,
             isOvernight,
-            overnightBookingDate,
-            overnightEndTime,
         };
         
+        if(isOvernight) {
+            bookingData.overnightBookingDate = overnightBookingDate;
+            bookingData.overnightEndTime = overnightEndTime;
+        }
+
         if (instructorId) {
             bookingData.instructorId = instructorId;
         }
@@ -689,3 +713,5 @@ export function BookingForm({
     </Dialog>
   );
 }
+
+    
