@@ -73,9 +73,6 @@ export const createBooking = async (
             }
             
             transaction.set(newBookingRef, payload);
-            
-            // NOTE: We no longer update the aircraft status on booking creation.
-            // Status is only changed when pre-flight or post-flight checks are submitted.
 
             return newBookingRef.id;
         });
