@@ -16,6 +16,9 @@ import type { PilotProfile } from '../../users/personnel/page';
 import { useRouter } from 'next/navigation';
 import { Timestamp } from 'firebase/firestore';
 import type { Booking } from '@/types/booking';
+import { Button } from '@/components/ui/button';
+import { Eye } from 'lucide-react';
+import Link from 'next/link';
 
 // A consolidated type for display
 type EnrichedBooking = Booking & {
@@ -53,6 +56,7 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                 <TableHead>Aircraft</TableHead>
                 <TableHead>Pilot</TableHead>
                 <TableHead>Start Time</TableHead>
+                <TableHead className='text-right'>Actions</TableHead>
             </TableRow>
             </TableHeader>
             <TableBody>
@@ -62,6 +66,14 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                         <TableCell>{b.aircraftTailNumber}</TableCell>
                         <TableCell>{b.pilotName}</TableCell>
                         <TableCell>{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
+                        <TableCell className='text-right'>
+                            <Button asChild variant="outline" size="sm">
+                                <Link href={`/operations/bookings-history/${b.id}`}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View
+                                </Link>
+                            </Button>
+                        </TableCell>
                     </TableRow>
                 ))}
             </TableBody>
