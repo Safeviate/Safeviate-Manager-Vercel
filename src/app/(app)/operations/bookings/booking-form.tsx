@@ -131,7 +131,6 @@ export function BookingForm({
   
   const preflightSubmitted = useMemo(() => {
     if (!existingBooking) return false;
-    // A pre-flight is considered submitted if it has actualHobbs or actualTacho data.
     return (
       (typeof existingBooking.preFlight?.actualHobbs === 'number' && existingBooking.preFlight.actualHobbs > 0) ||
       (typeof existingBooking.preFlight?.actualTacho === 'number' && existingBooking.preFlight.actualTacho > 0)
@@ -140,7 +139,6 @@ export function BookingForm({
   
   const postflightSubmitted = useMemo(() => {
     if (!existingBooking) return false;
-    // A post-flight is considered submitted if it has actualHobbs or actualTacho data.
     return (
       (typeof existingBooking.postFlight?.actualHobbs === 'number' && existingBooking.postFlight.actualHobbs > 0) ||
       (typeof existingBooking.postFlight?.actualTacho === 'number' && existingBooking.postFlight.actualTacho > 0)
@@ -151,7 +149,7 @@ export function BookingForm({
     if (preflightSubmitted) return true; // Already done for this booking
     
     // Disable if another booking has the aircraft locked
-    if (aircraft?.checklistStatus === 'needs-post-flight' || aircraft?.checklistStatus === 'needs-pre-flight') {
+    if (aircraft?.checklistStatus === 'needs-post-flight') {
         // We can only start a pre-flight if the status is 'needs-pre-flight' AND we are editing that specific booking.
         // A more robust check might involve storing the locking booking's ID on the aircraft. For now we assume if a booking is opened, it's the right one.
         // So, if status is locked and we are CREATING a new booking, it's disabled.
@@ -162,8 +160,8 @@ export function BookingForm({
   }, [aircraft?.checklistStatus, preflightSubmitted, isEditMode]);
 
   const isPostFlightDisabled = useMemo(() => {
-    return !preflightSubmitted || postflightSubmitted;
-  }, [preflightSubmitted, postflightSubmitted]);
+    return aircraft?.checklistStatus === 'needs-pre-flight' || !preflightSubmitted || postflightSubmitted;
+  }, [aircraft?.checklistStatus, preflightSubmitted, postflightSubmitted]);
 
 
   useEffect(() => {
@@ -747,7 +745,3 @@ export function BookingForm({
     </Dialog>
   );
 }
-
-    
-
-    
