@@ -111,13 +111,20 @@ export function BookingForm({
             setOvernightEndTime('09:00');
         }
     }
-  }, [existingBooking, initialStartTime, baseDate, isOpen]);
+  }, [existingBooking, initialStartTime, isOpen]);
 
   useEffect(() => {
     if (isOvernight) {
         setEndTimeValue('23:59');
-    } else if (!isEditMode && startTimeValue) { // Check if startTimeValue is valid
-        setEndTimeValue(format(addHours(parse(startTimeValue, 'HH:mm', baseDate), 1), 'HH:mm'));
+    } else if (!isEditMode && startTimeValue) {
+        try {
+            const parsedStartTime = parse(startTimeValue, 'HH:mm', baseDate);
+            if (!isNaN(parsedStartTime.getTime())) {
+                setEndTimeValue(format(addHours(parsedStartTime, 1), 'HH:mm'));
+            }
+        } catch (e) {
+            // Ignore parse errors if startTimeValue is not yet valid
+        }
     }
   }, [isOvernight, isEditMode, startTimeValue, baseDate]);
 
@@ -148,7 +155,6 @@ export function BookingForm({
     }
     
     const bookingDate = format(baseDate, 'yyyy-MM-dd');
-    const overnightBookingDate = addDays(baseDate, 1);
 
     const commonData: Partial<Booking> = {
         bookingDate,
@@ -160,6 +166,7 @@ export function BookingForm({
     };
     
     if (isOvernight) {
+        const overnightBookingDate = addDays(baseDate, 1);
         commonData.endTime = '23:59';
         commonData.overnightBookingDate = format(overnightBookingDate, 'yyyy-MM-dd');
         commonData.overnightEndTime = overnightEndTime;
@@ -468,3 +475,5 @@ export function BookingForm({
     </>
   );
 }
+
+    
