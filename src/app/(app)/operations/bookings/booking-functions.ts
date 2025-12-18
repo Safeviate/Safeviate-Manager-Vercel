@@ -15,12 +15,10 @@ import { updateDocumentNonBlocking, deleteDocumentNonBlocking as deleteDocNonBlo
 import type { Booking } from '@/types/booking';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { format } from 'date-fns';
 
 
-type BookingCreationData = Omit<Booking, 'id' | 'bookingNumber' | 'status' | 'startTime' | 'endTime'> & {
-    startTime: Date;
-    endTime: Date;
-};
+type BookingCreationData = Omit<Booking, 'id' | 'bookingNumber' | 'status'>;
 
 /**
  * Creates a new booking with a sequential number and updates the aircraft status.
@@ -36,8 +34,7 @@ export const createBooking = async (
 
     const counterRef = doc(firestore, `tenants/${tenantId}/counters`, 'bookings');
     const bookingsRef = collection(firestore, `tenants/${tenantId}`, 'bookings');
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, bookingData.aircraftId!);
-
+    
     try {
         const newBookingId = await runTransaction(firestore, async (transaction) => {
             // 1. Get and increment the booking number
@@ -57,8 +54,6 @@ export const createBooking = async (
                 id: newBookingRef.id,
                 bookingNumber: newBookingNumber,
                 status: 'Confirmed',
-                startTime: Timestamp.fromDate(bookingData.startTime!),
-                endTime: Timestamp.fromDate(bookingData.endTime!),
                 preFlight: {}, // Initialize with empty object
                 postFlight: {}, // Initialize with empty object
             };

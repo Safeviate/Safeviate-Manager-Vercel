@@ -7,8 +7,9 @@ export interface Booking {
     pilotId: string;
     instructorId?: string;
     type: 'Training Flight' | 'Private Flight' | 'Reposition Flight' | 'Maintenance Flight';
-    startTime: Timestamp;
-    endTime: Timestamp;
+    bookingDate: string; // YYYY-MM-DD
+    startTime: string;   // HH:mm
+    endTime: string;     // HH:mm
     status: 'Confirmed' | 'Completed' | 'Cancelled' | 'Cancelled with Reason';
     // Pre-flight data
     preFlight?: {

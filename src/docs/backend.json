@@ -31,15 +31,18 @@
           "description": "The type of booking.",
           "enum": ["Training Flight", "Private Flight", "Reposition Flight", "Maintenance Flight"]
         },
+        "bookingDate": {
+          "type": "string",
+          "format": "date",
+          "description": "The date of the booking (YYYY-MM-DD)."
+        },
         "startTime": {
           "type": "string",
-          "format": "date-time",
-          "description": "The start time of the booking."
+          "description": "The start time of the booking (HH:mm)."
         },
         "endTime": {
           "type": "string",
-          "format": "date-time",
-          "description": "The end time of the booking."
+          "description": "The end time of the booking (HH:mm)."
         },
         "status": {
             "type": "string",
@@ -72,7 +75,7 @@
             }
         }
       },
-      "required": ["id", "aircraftId", "pilotId", "type", "startTime", "endTime"]
+      "required": ["id", "aircraftId", "pilotId", "type", "bookingDate", "startTime", "endTime"]
     },
     "AircraftModelProfile": {
       "title": "Aircraft Model Profile",

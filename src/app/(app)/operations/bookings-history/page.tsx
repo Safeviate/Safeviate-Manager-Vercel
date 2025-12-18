@@ -7,7 +7,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -21,6 +21,7 @@ import type { Booking } from '@/types/booking';
 type EnrichedBooking = Booking & {
   aircraftTailNumber?: string;
   pilotName?: string;
+  fullStartTime?: Date;
 };
 
 const getBookingTypeAbbreviation = (type: Booking['type']): string => {
@@ -60,7 +61,7 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                         <TableCell className="font-medium">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
                         <TableCell>{b.aircraftTailNumber}</TableCell>
                         <TableCell>{b.pilotName}</TableCell>
-                        <TableCell>{format(b.startTime.toDate(), 'PPP HH:mm')}</TableCell>
+                        <TableCell>{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
                     </TableRow>
                 ))}
             </TableBody>
@@ -96,11 +97,13 @@ export default function BookingsHistoryPage() {
 
     return bookings.map(b => {
       const bookingAircraft = aircraftMap.get(b.aircraftId);
+      const fullStartTime = b.bookingDate && b.startTime ? parse(`${b.bookingDate} ${b.startTime}`, 'yyyy-MM-dd HH:mm', new Date()) : undefined;
       
       return {
         ...b,
         aircraftTailNumber: bookingAircraft?.tailNumber || 'Unknown Aircraft',
         pilotName: pilotMap.get(b.pilotId) || 'Unknown Pilot',
+        fullStartTime: fullStartTime,
       };
     });
   }, [bookings, aircraft, pilots]);

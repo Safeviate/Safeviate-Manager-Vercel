@@ -7,7 +7,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
-import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, endOfHour } from 'date-fns';
+import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, endOfHour, parse } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -19,9 +19,18 @@ import { BookingForm } from './booking-form';
 import type { Booking } from '@/types/booking';
 
 
+const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
+    return parse(`${dateStr} ${timeStr}`, 'yyyy-MM-dd HH:mm', new Date());
+};
+
 const BookingItem = ({ booking, pilots, selectedDate, onBookingClick }: { booking: Booking, pilots: PilotProfile[], selectedDate: Date, onBookingClick: (booking: Booking) => void }) => {
-    const startTime = booking.startTime.toDate();
-    const endTime = booking.endTime.toDate();
+    const startTime = combineDateAndTime(booking.bookingDate, booking.startTime);
+    const endTime = combineDateAndTime(booking.bookingDate, booking.endTime);
+
+    // Handle overnight bookings
+    if (isBefore(endTime, startTime)) {
+        endTime.setDate(endTime.getDate() + 1);
+    }
 
     const startsOnSelectedDay = isSameDay(startTime, selectedDate);
     const endsOnSelectedDay = isSameDay(endTime, selectedDate);
@@ -164,11 +173,13 @@ export default function SchedulePage() {
   
   const bookingsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    const start = Timestamp.fromDate(startOfDay(subDays(selectedDate, 1))); // Fetch from start of previous day
-    const end = Timestamp.fromDate(endOfDay(addDays(selectedDate, 1))); // Fetch until end of next day
+    const dateFilter = format(selectedDate, 'yyyy-MM-dd');
+    const nextDateFilter = format(addDays(selectedDate, 1), 'yyyy-MM-dd');
+    
     return query(
         collection(firestore, 'tenants', tenantId, 'bookings'),
-        where('startTime', '<=', end),
+        where('bookingDate', '>=', dateFilter),
+        where('bookingDate', '<=', nextDateFilter)
     );
   }, [firestore, tenantId, selectedDate]); 
 
@@ -178,18 +189,8 @@ export default function SchedulePage() {
   );
 
   const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
-  const { data: allBookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
+  const { data: bookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
   const { data: pilots, isLoading: isLoadingPilots, error: pilotsError } = useCollection<PilotProfile>(pilotsQuery);
-
-  const bookings = useMemo(() => {
-    if (!allBookings) return [];
-    const dayStart = startOfDay(selectedDate);
-    const dayEnd = endOfDay(selectedDate);
-    return allBookings.filter(b => 
-        b.startTime.toDate() <= dayEnd && b.endTime.toDate() >= dayStart
-    );
-  }, [allBookings, selectedDate]);
-
 
   const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingPilots;
   const error = aircraftError || bookingsError || pilotsError;
@@ -224,7 +225,7 @@ export default function SchedulePage() {
   const handleBookingClick = (booking: Booking) => {
     const aircraftForBooking = aircraft?.find(a => a.id === booking.aircraftId);
     if (aircraftForBooking) {
-      setBookingFormData({ aircraft: aircraftForBooking, startTime: booking.startTime.toDate(), booking });
+      setBookingFormData({ aircraft: aircraftForBooking, startTime: combineDateAndTime(booking.bookingDate, booking.startTime), booking });
       setIsBookingFormOpen(true);
     }
   };

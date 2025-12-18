@@ -84,7 +84,7 @@ export function BookingForm({
   isOpen,
   setIsOpen,
   aircraft,
-  startTime,
+  startTime: initialStartTime,
   tenantId,
   pilots,
   existingBooking,
@@ -126,18 +126,17 @@ export function BookingForm({
   const preflightDisabled = (!isEditMode && isChecklistNeeded);
 
   useEffect(() => {
-    if (startTime && !isEditMode) {
-      const formattedStartTime = format(startTime, 'HH:mm');
-      const endTimeDate = addHours(startTime, 1);
+    if (isEditMode && existingBooking) {
+      setStartTimeValue(existingBooking.startTime);
+      setEndTimeValue(existingBooking.endTime);
+    } else if (initialStartTime) {
+      const formattedStartTime = format(initialStartTime, 'HH:mm');
+      const endTimeDate = addHours(initialStartTime, 1);
       const formattedEndTime = format(endTimeDate, 'HH:mm');
       setStartTimeValue(formattedStartTime);
       setEndTimeValue(formattedEndTime);
     }
-    if (isEditMode && existingBooking) {
-      setStartTimeValue(format(existingBooking.startTime.toDate(), 'HH:mm'));
-      setEndTimeValue(format(existingBooking.endTime.toDate(), 'HH:mm'));
-    }
-  }, [startTime, isEditMode, existingBooking]);
+  }, [initialStartTime, isEditMode, existingBooking]);
 
   const onOpenChange = (open: boolean) => {
     setIsOpen(open);
@@ -156,17 +155,8 @@ export function BookingForm({
         return;
     }
     
-    const baseDate = existingBooking ? existingBooking.startTime.toDate() : startTime;
-    const [startHours, startMinutes] = startTimeValue.split(':').map(Number);
-    const [endHours, endMinutes] = endTimeValue.split(':').map(Number);
-    
-    let parsedStartTime = set(baseDate, { hours: startHours, minutes: startMinutes, seconds: 0, milliseconds: 0 });
-    let parsedEndTime = set(baseDate, { hours: endHours, minutes: endMinutes, seconds: 0, milliseconds: 0 });
-
-    if (isBefore(parsedEndTime, parsedStartTime)) {
-        parsedEndTime = addHours(parsedEndTime, 24); // Assume it's the next day
-    }
-
+    const baseDate = existingBooking ? parse(existingBooking.bookingDate, 'yyyy-MM-dd', new Date()) : initialStartTime;
+    const bookingDate = format(baseDate, 'yyyy-MM-dd');
 
     const getPreFlightData = () => ({
         actualHobbs: toNumberOrNull(preFlightHobbs),
@@ -190,8 +180,9 @@ export function BookingForm({
     if (isEditMode && existingBooking) {
         // --- UPDATE LOGIC ---
         const updateData: Partial<Booking> = {
-            startTime: parsedStartTime,
-            endTime: parsedEndTime,
+            bookingDate: bookingDate,
+            startTime: startTimeValue,
+            endTime: endTimeValue,
             type: bookingType as Booking['type'],
             pilotId: pilotId
         };
@@ -245,8 +236,9 @@ export function BookingForm({
             aircraftId: aircraft.id,
             pilotId,
             type: bookingType as Booking['type'],
-            startTime: parsedStartTime,
-            endTime: parsedEndTime,
+            bookingDate: bookingDate,
+            startTime: startTimeValue,
+            endTime: endTimeValue,
         };
         
         if (instructorId) {
@@ -288,7 +280,7 @@ export function BookingForm({
         <DialogHeader>
           <DialogTitle>{isEditMode ? `Edit Booking #${existingBooking.bookingNumber}` : 'Create Booking'}</DialogTitle>
           <DialogDescription>
-            For {aircraft.tailNumber} on {format(startTime, 'PPP')}.
+            For {aircraft.tailNumber} on {format(initialStartTime, 'PPP')}.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-4">
