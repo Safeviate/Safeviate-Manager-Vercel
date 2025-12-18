@@ -222,26 +222,13 @@ export function BookingForm({
         };
         
         // This is a general save, update everything
-        if (!options.isPreFlight && !options.isPostFlight) {
-            Object.assign(updateData, {
-                preFlight: getPreFlightData(),
-                postFlight: getPostFlightData(),
-            });
-            if (instructorId) {
-                updateData.instructorId = instructorId;
-            } else {
-                updateData.instructorId = null; // Send null to be deleted by update function
-            }
-        }
+        updateData.preFlight = getPreFlightData();
+        updateData.postFlight = getPostFlightData();
         
-        // This is just a pre-flight submission
-        if (options.isPreFlight) {
-            updateData.preFlight = getPreFlightData();
-        }
-
-        // This is just a post-flight submission
-        if (options.isPostFlight) {
-            updateData.postFlight = getPostFlightData();
+        if (instructorId) {
+            updateData.instructorId = instructorId;
+        } else {
+            updateData.instructorId = null; // Send null to be deleted by update function
         }
         
         try {
