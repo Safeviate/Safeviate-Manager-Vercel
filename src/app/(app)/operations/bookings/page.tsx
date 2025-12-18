@@ -28,7 +28,7 @@ const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
     return parse(`${dateStr} ${timeStr}`, 'yyyy-MM-dd HH:mm', new Date());
 };
 
-const BookingItem = ({ booking, pilots, onBookingClick }: { booking: Booking, pilots: PilotProfile[], onBookingClick: (booking: Booking) => void }) => {
+const BookingItem = ({ booking, pilots, onBookingClick, selectedDate }: { booking: Booking, pilots: PilotProfile[], onBookingClick: (booking: Booking) => void, selectedDate: Date }) => {
     
     const pilot = pilots.find(p => p.id === booking.pilotId);
     
@@ -51,9 +51,16 @@ const BookingItem = ({ booking, pilots, onBookingClick }: { booking: Booking, pi
         });
     }
     
+    const formattedSelectedDate = format(selectedDate, 'yyyy-MM-dd');
+    
     return (
       <>
         {segments.map((segment, index) => {
+            // Only render the segment if it's for the currently selected date
+            if (segment.date !== formattedSelectedDate) {
+                return null;
+            }
+
             const startTime = combineDateAndTime(segment.date, segment.startTime);
             const endTime = combineDateAndTime(segment.date, segment.endTime);
 
@@ -169,6 +176,7 @@ const AircraftColumn = ({
             booking={booking}
             pilots={pilots}
             onBookingClick={onBookingClick}
+            selectedDate={selectedDate}
         />
       ))}
     </div>
