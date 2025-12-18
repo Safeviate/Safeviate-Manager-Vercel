@@ -75,7 +75,14 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
     if (isOpen && uploadMode === 'camera' && !capturedImage) {
       const getCameraPermission = async () => {
         try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          // Request a lower resolution to reduce file size
+          const constraints = {
+            video: {
+              width: { ideal: 640 },
+              height: { ideal: 480 }
+            }
+          };
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
           setHasCameraPermission(true);
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
@@ -119,7 +126,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
         const context = canvas.getContext('2d');
         if (context) {
             context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-            const dataUrl = canvas.toDataURL('image/png');
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8); // Use jpeg with compression
             setCapturedImage(dataUrl);
             cleanupCamera(); // Turn off camera after capture
         }
