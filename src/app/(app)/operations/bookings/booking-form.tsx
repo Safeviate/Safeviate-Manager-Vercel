@@ -130,33 +130,40 @@ export function BookingForm({
   
   
   const preflightSubmitted = useMemo(() => {
-    if (!existingBooking || !existingBooking.preFlight) return false;
+    if (!existingBooking) return false;
     // A pre-flight is considered submitted if it has actualHobbs or actualTacho data.
     return (
-      (typeof existingBooking.preFlight.actualHobbs === 'number' && existingBooking.preFlight.actualHobbs > 0) ||
-      (typeof existingBooking.preFlight.actualTacho === 'number' && existingBooking.preFlight.actualTacho > 0)
+      (typeof existingBooking.preFlight?.actualHobbs === 'number' && existingBooking.preFlight.actualHobbs > 0) ||
+      (typeof existingBooking.preFlight?.actualTacho === 'number' && existingBooking.preFlight.actualTacho > 0)
     );
   }, [existingBooking]);
   
   const postflightSubmitted = useMemo(() => {
-    if (!existingBooking || !existingBooking.postFlight) return false;
+    if (!existingBooking) return false;
     // A post-flight is considered submitted if it has actualHobbs or actualTacho data.
     return (
-      (typeof existingBooking.postFlight.actualHobbs === 'number' && existingBooking.postFlight.actualHobbs > 0) ||
-      (typeof existingBooking.postFlight.actualTacho === 'number' && existingBooking.postFlight.actualTacho > 0)
+      (typeof existingBooking.postFlight?.actualHobbs === 'number' && existingBooking.postFlight.actualHobbs > 0) ||
+      (typeof existingBooking.postFlight?.actualTacho === 'number' && existingBooking.postFlight.actualTacho > 0)
     );
   }, [existingBooking]);
 
   const isPreFlightDisabled = useMemo(() => {
-    // Disable if another booking has the aircraft locked or if this one is already done
+    if (preflightSubmitted) return true; // Already done for this booking
+    
+    // Disable if another booking has the aircraft locked
     if (aircraft?.checklistStatus === 'needs-post-flight' || aircraft?.checklistStatus === 'needs-pre-flight') {
-        // If this aircraft needs a post-flight, only the booking that caused it can proceed.
-        // We assume for now that if the status is locked, and we are opening an existing booking, it's the correct one.
-        // A more robust check might involve storing the locking booking's ID on the aircraft.
-        if (!existingBooking) return true;
+        // We can only start a pre-flight if the status is 'needs-pre-flight' AND we are editing that specific booking.
+        // A more robust check might involve storing the locking booking's ID on the aircraft. For now we assume if a booking is opened, it's the right one.
+        // So, if status is locked and we are CREATING a new booking, it's disabled.
+        if (!isEditMode) return true;
     }
-    return preflightSubmitted;
-  }, [aircraft?.checklistStatus, preflightSubmitted, existingBooking]);
+
+    return false;
+  }, [aircraft?.checklistStatus, preflightSubmitted, isEditMode]);
+
+  const isPostFlightDisabled = useMemo(() => {
+    return !preflightSubmitted || postflightSubmitted;
+  }, [preflightSubmitted, postflightSubmitted]);
 
 
   useEffect(() => {
@@ -408,7 +415,7 @@ export function BookingForm({
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-4">
             <div className="grid gap-4 py-4 pr-2">
-                {isPreFlightDisabled && isEditMode && (
+                {isPreFlightDisabled && !preflightSubmitted && (
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Pre-Flight Unavailable</AlertTitle>
@@ -640,8 +647,8 @@ export function BookingForm({
                             </CollapsibleContent>
                         </Collapsible>
 
-                        <Collapsible open={isPostFlightOpen} onOpenChange={setIsPostFlightOpen} disabled={!preflightSubmitted || postflightSubmitted}>
-                            <CollapsibleTrigger asChild disabled={!preflightSubmitted || postflightSubmitted}>
+                        <Collapsible open={isPostFlightOpen} onOpenChange={setIsPostFlightOpen} disabled={isPostFlightDisabled}>
+                            <CollapsibleTrigger asChild disabled={isPostFlightDisabled}>
                                 <div className='flex items-center justify-between border-b pb-2 cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'>
                                     <h4 className="text-sm font-semibold">Post-Flight Checks</h4>
                                     <Button variant="ghost" size="sm" className="w-9 p-0">
@@ -740,5 +747,7 @@ export function BookingForm({
     </Dialog>
   );
 }
+
+    
 
     
