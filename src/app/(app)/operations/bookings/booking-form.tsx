@@ -518,7 +518,7 @@ export function BookingForm({
                 {isEditMode && (
                     <>
                         <Collapsible open={isPreFlightOpen} onOpenChange={setIsPreFlightOpen} disabled={(isChecklistNeeded && !preflightSubmitted) || preflightSubmitted}>
-                            <CollapsibleTrigger asChild disabled={(isChecklistNeeded && !preflightSubmitted)}>
+                            <CollapsibleTrigger asChild disabled={(isChecklistNeeded && !preflightSubmitted) || preflightSubmitted}>
                                 <div className='flex items-center justify-between border-b pb-2 cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'>
                                     <h4 className="text-sm font-semibold">Pre-Flight Checks</h4>
                                     <Button variant="ghost" size="sm" className="w-9 p-0">
@@ -710,3 +710,5 @@ export function BookingForm({
     </Dialog>
   );
 }
+
+    
