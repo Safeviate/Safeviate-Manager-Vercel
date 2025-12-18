@@ -129,8 +129,8 @@ export function BookingForm({
   const baseDate = existingBooking ? parse(existingBooking.bookingDate, 'yyyy-MM-dd', new Date()) : initialStartTime;
   
   const isChecklistNeeded = aircraft?.checklistStatus === 'needs-post-flight';
-  const preflightSubmitted = !!existingBooking?.preFlight?.actualHobbs;
-  const postflightSubmitted = !!existingBooking?.postFlight?.actualHobbs;
+  const preflightSubmitted = !!(existingBooking?.preFlight && (existingBooking.preFlight.actualHobbs || existingBooking.preFlight.actualTacho));
+  const postflightSubmitted = !!(existingBooking?.postFlight && (existingBooking.postFlight.actualHobbs || existingBooking.postFlight.actualTacho));
   const preflightDisabled = (isEditMode && isChecklistNeeded && !preflightSubmitted) || preflightSubmitted;
 
 
@@ -689,5 +689,3 @@ export function BookingForm({
     </Dialog>
   );
 }
-
-    
