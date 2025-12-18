@@ -17,6 +17,7 @@ export interface Booking {
     startTime: string;   // HH:mm
     endTime: string;     // HH:mm
     status: 'Confirmed' | 'Completed' | 'Cancelled' | 'Cancelled with Reason';
+    cancellationReason?: string;
     isOvernight?: boolean;
     overnightBookingDate?: string | null; // YYYY-MM-DD
     overnightEndTime?: string | null; // HH:mm

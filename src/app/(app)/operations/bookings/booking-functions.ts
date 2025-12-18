@@ -17,6 +17,7 @@ import {
     limit,
     getDocs,
     deleteDoc,
+    updateDoc,
   } from 'firebase/firestore';
 import type { Booking } from '@/types/booking';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -170,5 +171,37 @@ export const deleteBooking = async (
         errorEmitter.emit('permission-error', contextualError);
         
         throw new Error("Failed to delete booking.");
+    }
+};
+
+/**
+ * Cancels a booking by updating its status and adding a reason.
+ */
+export const cancelBooking = async (
+    firestore: Firestore,
+    tenantId: string,
+    bookingId: string,
+    reason: string
+) => {
+    const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, bookingId);
+    
+    const updatePayload = {
+        status: reason ? 'Cancelled with Reason' : 'Cancelled',
+        cancellationReason: reason,
+    };
+
+    try {
+        await updateDoc(bookingRef, updatePayload);
+    } catch (error) {
+        console.error("Booking cancellation failed: ", error);
+        
+        const contextualError = new FirestorePermissionError({
+          operation: 'update',
+          path: bookingRef.path,
+          requestResourceData: updatePayload
+        });
+        errorEmitter.emit('permission-error', contextualError);
+        
+        throw new Error("Failed to cancel booking.");
     }
 };

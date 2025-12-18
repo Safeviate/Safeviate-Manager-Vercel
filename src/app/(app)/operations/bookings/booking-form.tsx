@@ -21,11 +21,10 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Trash2, PlaneTakeoff, LandPlot } from 'lucide-react';
+import { AlertCircle, Trash2, PlaneTakeoff, LandPlot, Ban } from 'lucide-react';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
 import type { Booking } from '@/types/booking';
@@ -41,10 +40,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { createBooking, updateBooking, deleteBooking } from './booking-functions';
+import { createBooking, updateBooking, deleteBooking, cancelBooking } from './booking-functions';
 import { PreFlightChecklistDialog } from './pre-flight-checklist-dialog';
 import { PostFlightChecklistDialog } from './post-flight-checklist-dialog';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 
 
 interface BookingFormProps {
@@ -81,12 +81,14 @@ export function BookingForm({
   const [startTimeValue, setStartTimeValue] = useState('');
   const [endTimeValue, setEndTimeValue] = useState('');
   const [isOvernight, setIsOvernight] = useState(false);
-  const [overnightEndTime, setOvernightEndTime] = useState('');
+  const [overnightEndTime, setOvernightEndTime] = useState('09:00');
+  const [cancellationReason, setCancellationReason] = useState('');
   
   const baseDate = existingBooking ? parse(existingBooking.bookingDate, 'yyyy-MM-dd', new Date()) : initialStartTime;
   
   const [isPreFlightOpen, setIsPreFlightOpen] = useState(false);
   const [isPostFlightOpen, setIsPostFlightOpen] = useState(false);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   
   useEffect(() => {
     if (isOpen) {
@@ -206,15 +208,16 @@ export function BookingForm({
     refreshBookings();
   };
   
-  const handleDelete = async () => {
+  const handleCancelBooking = async () => {
     if (!firestore || !existingBooking) return;
     try {
-        await deleteBooking(firestore, tenantId, existingBooking.id);
-        toast({ title: 'Booking Deleted', description: `Booking #${existingBooking.bookingNumber} has been deleted.` });
+        await cancelBooking(firestore, tenantId, existingBooking.id, cancellationReason);
+        toast({ title: 'Booking Cancelled', description: `Booking #${existingBooking.bookingNumber} has been cancelled.` });
+        setIsCancelDialogOpen(false);
         setIsOpen(false);
         refreshBookings();
     } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Delete Failed', description: error.message });
+        toast({ variant: 'destructive', title: 'Cancellation Failed', description: error.message });
     }
   };
 
@@ -411,28 +414,44 @@ export function BookingForm({
           </ScrollArea>
           <DialogFooter className='justify-between pt-6'>
             {isEditMode ? (
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive" className="w-20" disabled={!isEditMode}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
+                <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="destructive" className="w-auto">
+                            <Ban className="mr-2 h-4 w-4" />
+                            Cancel Booking
                         </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete booking #{existingBooking?.bookingNumber}.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDelete} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-                                Delete Booking
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Cancel Booking #{existingBooking?.bookingNumber}</DialogTitle>
+                            <DialogDescription>
+                                Please provide a reason for cancelling this booking. This action cannot be undone.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                            <Label htmlFor="cancellation-reason">Reason for Cancellation</Label>
+                            <Textarea
+                                id="cancellation-reason"
+                                value={cancellationReason}
+                                onChange={(e) => setCancellationReason(e.target.value)}
+                                placeholder="e.g., Aircraft maintenance, pilot illness, weather conditions."
+                                className="mt-2"
+                            />
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button variant="outline">Back</Button>
+                            </DialogClose>
+                            <Button
+                                variant="destructive"
+                                onClick={handleCancelBooking}
+                                disabled={!cancellationReason.trim()}
+                            >
+                                Confirm Cancellation
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             ) : (
               <div></div>
             )}
@@ -454,10 +473,7 @@ export function BookingForm({
                 booking={existingBooking}
                 aircraft={aircraft}
                 tenantId={tenantId}
-                onChecklistSubmitted={() => {
-                  setIsOpen(false); // Close main form
-                  refreshBookings(); // Trigger refresh on schedule page
-                }}
+                onChecklistSubmitted={refreshBookings}
             />
             <PostFlightChecklistDialog
                 isOpen={isPostFlightOpen}
@@ -465,15 +481,10 @@ export function BookingForm({
                 booking={existingBooking}
                 aircraft={aircraft}
                 tenantId={tenantId}
-                 onChecklistSubmitted={() => {
-                  setIsOpen(false);
-                  refreshBookings();
-                }}
+                onChecklistSubmitted={refreshBookings}
             />
         </>
       )}
     </>
   );
 }
-
-    

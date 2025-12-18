@@ -49,6 +49,10 @@
             "description": "The status of the booking.",
             "enum": ["Confirmed", "Completed", "Cancelled", "Cancelled with Reason"]
         },
+        "cancellationReason": {
+            "type": "string",
+            "description": "The reason a booking was cancelled."
+        },
         "isOvernight": {
             "type": "boolean",
             "description": "Flag to indicate if the booking spans across midnight."
