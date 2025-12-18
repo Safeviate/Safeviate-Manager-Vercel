@@ -20,7 +20,7 @@ import {
 import type { Booking } from '@/types/booking';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { parse } from 'date-fns';
+import { parse, isAfter } from 'date-fns';
 import type { Aircraft } from '../../assets/page';
 
 type BookingCreationData = Omit<Booking, 'id' | 'bookingNumber' | 'status'>;
@@ -43,7 +43,6 @@ export const createBooking = async (
     
     try {
         const newBookingId = await runTransaction(firestore, async (transaction) => {
-            // --- ALL READS MUST HAPPEN FIRST ---
             const counterDoc = await transaction.get(counterRef);
             const aircraftDoc = await transaction.get(aircraftRef);
 
@@ -51,12 +50,10 @@ export const createBooking = async (
                 throw new Error("Aircraft not found. Cannot create booking.");
             }
 
-            // --- ALL WRITES HAPPEN AFTER READS ---
             let newBookingNumber = 1;
             if (counterDoc.exists()) {
                 newBookingNumber = counterDoc.data().currentNumber + 1;
             }
-            // Write 1: Update counter
             transaction.set(counterRef, { currentNumber: newBookingNumber }, { merge: true });
 
             const newBookingRef = doc(bookingsRef);
@@ -77,10 +74,10 @@ export const createBooking = async (
                 payload.instructorId = bookingData.instructorId;
             }
             
-            // Write 2: Create the new booking
             transaction.set(newBookingRef, payload);
 
-            // Write 3 (Conditional): Update aircraft status if it is currently 'Ready'.
+            // Only set the aircraft to needs-pre-flight if it's currently ready.
+            // This prevents a new booking from hijacking the status from an existing one.
             if (aircraftDoc.data().checklistStatus === 'Ready') {
                 transaction.update(aircraftRef, {
                     checklistStatus: 'needs-pre-flight',
@@ -148,35 +145,32 @@ export const updateBooking = async ({
         const currentBookingData = currentBookingDoc.data() as Booking;
         const currentBookingStart = parse(`${currentBookingData.bookingDate}T${currentBookingData.startTime}`, 'yyyy-MM-dd\'T\'HH:mm', new Date());
 
+        // Simplified query to avoid composite index
         const nextBookingQuery = query(
             bookingsCol,
             where('aircraftId', '==', aircraft.id),
-            where('status', '==', 'Confirmed'),
-            where('bookingDate', '>=', currentBookingData.bookingDate),
-            orderBy('bookingDate'),
-            orderBy('startTime'),
-            limit(20) // Look ahead a reasonable number of bookings
+            where('status', '==', 'Confirmed')
         );
 
-        const nextBookingSnapshot = await getDocs(nextBookingQuery);
-        let nextBookingId: string | null = null;
+        const querySnapshot = await getDocs(nextBookingQuery);
         
-        // Find the actual next chronological booking after the current one
-        for (const doc of nextBookingSnapshot.docs) {
-            if (doc.id === bookingId) continue;
-            
-            const booking = doc.data() as Booking;
-            const bookingStart = parse(`${booking.bookingDate}T${booking.startTime}`, 'yyyy-MM-dd\'T\'HH:mm', new Date());
-            
-            if (bookingStart > currentBookingStart) {
-                nextBookingId = doc.id;
-                break; // Found the very next one
-            }
-        }
+        const futureBookings = querySnapshot.docs
+            .map(doc => doc.data() as Booking)
+            .filter(booking => {
+                const bookingStart = parse(`${booking.bookingDate}T${booking.startTime}`, 'yyyy-MM-dd\'T\'HH:mm', new Date());
+                return isAfter(bookingStart, currentBookingStart);
+            })
+            .sort((a, b) => {
+                const aStart = parse(`${a.bookingDate}T${a.startTime}`, 'yyyy-MM-dd\'T\'HH:mm', new Date());
+                const bStart = parse(`${b.bookingDate}T${b.startTime}`, 'yyyy-MM-dd\'T\'HH:mm', new Date());
+                return aStart.getTime() - bStart.getTime();
+            });
 
-        if (nextBookingId) {
+        const nextBooking = futureBookings[0];
+
+        if (nextBooking) {
             aircraftUpdates.checklistStatus = 'needs-pre-flight';
-            aircraftUpdates.currentBookingId = nextBookingId;
+            aircraftUpdates.currentBookingId = nextBooking.id;
         } else {
             aircraftUpdates.checklistStatus = 'Ready';
             aircraftUpdates.currentBookingId = null;
