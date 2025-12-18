@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -41,7 +42,7 @@ const preFlightSchema = z.object({
   documentsChecked: z.array(z.string()).refine(value => value.length > 0, {
     message: "At least one document must be checked.",
   }),
-  photos: z.array(photoSchema).min(4, 'A minimum of 4 photos are required.').optional(),
+  photos: z.array(photoSchema).min(4, 'A minimum of 4 photos are required.'),
 });
 
 type PreFlightFormValues = z.infer<typeof preFlightSchema>;
@@ -222,6 +223,15 @@ export function PreFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft,
                   {fields.length === 0 && (
                       <p className="text-sm text-muted-foreground text-center py-4">No photos added.</p>
                   )}
+                   <FormField
+                        control={form.control}
+                        name="photos"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
                 </div>
               </div>
              </ScrollArea>
@@ -254,3 +264,5 @@ export function PreFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft,
     </>
   );
 }
+
+    

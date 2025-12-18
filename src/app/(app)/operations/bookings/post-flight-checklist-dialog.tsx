@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -38,7 +39,7 @@ const postFlightSchema = z.object({
   actualTacho: z.number({ coerce: true }).min(0, "Tacho must be positive"),
   oil: z.number({ coerce: true }).min(0, "Oil must be positive"),
   fuel: z.number({ coerce: true }).min(0, "Fuel must be positive"),
-  photos: z.array(photoSchema).min(4, 'A minimum of 4 photos are required.').optional(),
+  photos: z.array(photoSchema).min(4, 'A minimum of 4 photos are required.'),
 });
 
 type PostFlightFormValues = z.infer<typeof postFlightSchema>;
@@ -177,6 +178,15 @@ export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft
                     {fields.length === 0 && (
                         <p className="text-sm text-muted-foreground text-center py-4">No photos added.</p>
                     )}
+                    <FormField
+                        control={form.control}
+                        name="photos"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
                   </div>
                 </div>
               </ScrollArea>
@@ -211,3 +221,5 @@ export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft
     </>
   );
 }
+
+    
