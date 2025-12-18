@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -38,26 +39,25 @@ export function PostFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft
   const form = useForm<PostFlightFormValues>({
     resolver: zodResolver(postFlightSchema),
     defaultValues: useMemo(() => ({
-        actualHobbs: booking.postFlight?.actualHobbs || 0,
-        actualTacho: booking.postFlight?.actualTacho || 0,
+        actualHobbs: booking.postFlight?.actualHobbs || aircraft.currentHobbs || 0,
+        actualTacho: booking.postFlight?.actualTacho || aircraft.currentTacho || 0,
         oil: booking.postFlight?.oil || 0,
         fuel: booking.postFlight?.fuel || 0,
-    }), [booking.postFlight]),
+    }), [booking.postFlight, aircraft]),
   });
 
   const onSubmit = async (values: PostFlightFormValues) => {
     if (!booking || !firestore) return;
 
     try {
-      await updateBooking(
+      await updateBooking({
         firestore,
         tenantId,
-        booking.id,
-        { postFlight: values, status: 'Completed' },
-        booking.aircraftId,
-        false,
-        true
-      );
+        bookingId: booking.id,
+        updateData: { postFlight: values, status: 'Completed' },
+        aircraft,
+        isSubmittingPostFlight: true,
+      });
       toast({
         title: 'Post-Flight Submitted',
         description: 'The post-flight checklist has been saved.',

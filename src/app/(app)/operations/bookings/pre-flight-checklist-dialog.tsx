@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -50,27 +51,26 @@ export function PreFlightChecklistDialog({ isOpen, setIsOpen, booking, aircraft,
   const form = useForm<PreFlightFormValues>({
     resolver: zodResolver(preFlightSchema),
     defaultValues: useMemo(() => ({
-        actualHobbs: booking.preFlight?.actualHobbs || 0,
-        actualTacho: booking.preFlight?.actualTacho || 0,
+        actualHobbs: booking.preFlight?.actualHobbs || aircraft.currentHobbs || 0,
+        actualTacho: booking.preFlight?.actualTacho || aircraft.currentTacho || 0,
         oil: booking.preFlight?.oil || 0,
         fuel: booking.preFlight?.fuel || 0,
         documentsChecked: booking.preFlight?.documentsChecked || [],
-    }), [booking.preFlight]),
+    }), [booking.preFlight, aircraft]),
   });
 
   const onSubmit = async (values: PreFlightFormValues) => {
     if (!booking || !firestore) return;
 
     try {
-      await updateBooking(
+      await updateBooking({
         firestore,
         tenantId,
-        booking.id,
-        { preFlight: values },
-        booking.aircraftId,
-        true,
-        false
-      );
+        bookingId: booking.id,
+        updateData: { preFlight: values },
+        aircraft,
+        isSubmittingPreFlight: true,
+      });
       toast({
         title: 'Pre-Flight Submitted',
         description: 'The pre-flight checklist has been saved.',

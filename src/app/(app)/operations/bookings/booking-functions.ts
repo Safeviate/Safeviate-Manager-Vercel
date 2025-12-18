@@ -21,6 +21,7 @@ import type { Booking } from '@/types/booking';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { parse } from 'date-fns';
+import type { Aircraft } from '../../assets/page';
 
 type BookingCreationData = Omit<Booking, 'id' | 'bookingNumber' | 'status'>;
 
@@ -97,18 +98,28 @@ export const createBooking = async (
     }
 };
 
+type UpdateBookingParams = {
+    firestore: Firestore;
+    tenantId: string;
+    bookingId: string;
+    updateData: Partial<Booking>;
+    aircraft: Aircraft;
+    isSubmittingPreFlight?: boolean;
+    isSubmittingPostFlight?: boolean;
+};
+
 /**
  * Updates an existing booking, e.g., with checklist data, and manages aircraft status.
  */
-export const updateBooking = async (
-    firestore: Firestore,
-    tenantId: string,
-    bookingId: string,
-    updateData: Partial<Booking>,
-    aircraftId: string,
-    isSubmittingPreFlight: boolean,
-    isSubmittingPostFlight: boolean
-) => {
+export const updateBooking = async ({
+    firestore,
+    tenantId,
+    bookingId,
+    updateData,
+    aircraft,
+    isSubmittingPreFlight = false,
+    isSubmittingPostFlight = false,
+}: UpdateBookingParams) => {
     const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, bookingId);
     
     const updatePayload: Record<string, any> = { ...updateData };
@@ -121,10 +132,16 @@ export const updateBooking = async (
 
     batch.set(bookingRef, updatePayload, { merge: true });
     
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);
+    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
     const isCancelling = updateData.status === 'Cancelled' || updateData.status === 'Cancelled with Reason';
 
     if (isSubmittingPostFlight) {
+        // Update aircraft's Hobbs and Tacho from post-flight data
+        const aircraftUpdates: Partial<Aircraft> = {
+            currentHobbs: updateData.postFlight?.actualHobbs,
+            currentTacho: updateData.postFlight?.actualTacho,
+        };
+
         // Find the next booking to activate
         const bookingsCol = collection(firestore, `tenants/${tenantId}/bookings`);
         const currentBookingDoc = await getDoc(bookingRef);
@@ -133,7 +150,7 @@ export const updateBooking = async (
 
         const nextBookingQuery = query(
             bookingsCol,
-            where('aircraftId', '==', aircraftId),
+            where('aircraftId', '==', aircraft.id),
             where('status', '==', 'Confirmed'),
             where('bookingDate', '>=', currentBookingData.bookingDate),
             orderBy('bookingDate'),
@@ -158,16 +175,14 @@ export const updateBooking = async (
         }
 
         if (nextBookingId) {
-            batch.update(aircraftRef, {
-                checklistStatus: 'needs-pre-flight',
-                currentBookingId: nextBookingId,
-            });
+            aircraftUpdates.checklistStatus = 'needs-pre-flight';
+            aircraftUpdates.currentBookingId = nextBookingId;
         } else {
-            batch.update(aircraftRef, {
-                checklistStatus: 'Ready',
-                currentBookingId: null,
-            });
+            aircraftUpdates.checklistStatus = 'Ready';
+            aircraftUpdates.currentBookingId = null;
         }
+        batch.update(aircraftRef, aircraftUpdates as Record<string, any>);
+
     } else if (isSubmittingPreFlight) {
         batch.update(aircraftRef, { checklistStatus: 'needs-post-flight', currentBookingId: bookingId });
     } else if (isCancelling) {

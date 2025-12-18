@@ -133,15 +133,13 @@ export function BookingForm({
         };
         
         try {
-            await updateBooking(
+            await updateBooking({
                 firestore, 
                 tenantId, 
-                existingBooking.id, 
+                bookingId: existingBooking.id, 
                 updateData, 
-                aircraft.id,
-                false,
-                false
-            );
+                aircraft
+            });
             toast({ title: 'Booking Updated', description: `Booking #${existingBooking.bookingNumber} has been updated.` });
 
         } catch (error: any) {
@@ -192,11 +190,10 @@ export function BookingForm({
 
   const preFlightSubmitted = !!(existingBooking?.preFlight && Object.keys(existingBooking.preFlight).length > 0);
   
-  const isCorrectBookingForPreFlight = aircraft.checklistStatus === 'needs-pre-flight' && aircraft.currentBookingId === existingBooking?.id;
-  const isCorrectBookingForPostFlight = aircraft.checklistStatus === 'needs-post-flight' && aircraft.currentBookingId === existingBooking?.id;
-  
-  const isPreFlightDisabled = !isCorrectBookingForPreFlight && aircraft.checklistStatus !== 'Ready';
-  const isPostFlightDisabled = !preFlightSubmitted || !isCorrectBookingForPostFlight;
+  const isCorrectBookingForAction = aircraft.currentBookingId === existingBooking?.id;
+
+  const isPreFlightDisabled = !(isCorrectBookingForAction && (aircraft.checklistStatus === 'needs-pre-flight' || aircraft.checklistStatus === 'Ready'));
+  const isPostFlightDisabled = !(isCorrectBookingForAction && preFlightSubmitted && aircraft.checklistStatus === 'needs-post-flight');
 
   const showPendingActionWarning = (aircraft.checklistStatus === 'needs-pre-flight' || aircraft.checklistStatus === 'needs-post-flight') && aircraft.currentBookingId !== existingBooking?.id;
 
