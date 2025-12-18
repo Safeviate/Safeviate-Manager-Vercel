@@ -104,6 +104,9 @@ export function BookingForm({
   const [instructorId, setInstructorId] = useState(existingBooking?.instructorId || '');
   const [startTimeValue, setStartTimeValue] = useState('');
   const [endTimeValue, setEndTimeValue] = useState('');
+  const [isOvernight, setIsOvernight] = useState(false);
+  const [returnStartTimeValue, setReturnStartTimeValue] = useState('');
+  const [returnEndTimeValue, setReturnEndTimeValue] = useState('');
   
   // Pre-flight state
   const [preFlightHobbs, setPreFlightHobbs] = useState<number | string>(existingBooking?.preFlight?.actualHobbs ?? '');
@@ -391,10 +394,35 @@ export function BookingForm({
                                     onChange={(e) => setEndTimeValue(e.target.value)}
                                 />
                             </div>
-                             <div className="col-span-2 flex items-center space-x-2 pt-2">
-                                <Switch id="overnight-booking" />
+                            <div className="col-span-2 flex items-center space-x-2 pt-2">
+                                <Switch id="overnight-booking" checked={isOvernight} onCheckedChange={setIsOvernight} />
                                 <Label htmlFor="overnight-booking">Overnight Booking</Label>
                             </div>
+                             {isOvernight && (
+                                <>
+                                    <div className="col-span-2">
+                                        <p className="text-sm text-muted-foreground">Return times for the next day.</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="return-start-time">Start Time (Return)</Label>
+                                        <Input
+                                            id="return-start-time"
+                                            type="time"
+                                            value={returnStartTimeValue}
+                                            onChange={(e) => setReturnStartTimeValue(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="return-end-time">End Time (Return)</Label>
+                                        <Input
+                                            id="return-end-time"
+                                            type="time"
+                                            value={returnEndTimeValue}
+                                            onChange={(e) => setReturnEndTimeValue(e.target.value)}
+                                        />
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </CollapsibleContent>
                 </Collapsible>
