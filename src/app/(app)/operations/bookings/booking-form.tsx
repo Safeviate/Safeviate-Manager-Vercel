@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -128,13 +129,8 @@ export function BookingForm({
             endTime: endTimeValue,
             type: bookingType as Booking['type'],
             pilotId,
+            instructorId: bookingType === 'Training Flight' ? instructorId : '',
         };
-        
-        if (instructorId) {
-            updateData.instructorId = instructorId;
-        } else {
-            updateData.instructorId = undefined;
-        }
         
         try {
             await updateBooking(
@@ -198,9 +194,9 @@ export function BookingForm({
   
   const isCorrectBookingForPreFlight = aircraft.currentBookingId === existingBooking?.id && aircraft.checklistStatus === 'needs-pre-flight';
   const isCorrectBookingForPostFlight = aircraft.currentBookingId === existingBooking?.id && aircraft.checklistStatus === 'needs-post-flight';
-
-  const isPreFlightDisabled = aircraft.checklistStatus === 'needs-post-flight' && !isCorrectBookingForPostFlight;
-  const isPostFlightDisabled = !preFlightSubmitted || aircraft.checklistStatus !== 'needs-post-flight';
+  
+  const isPreFlightDisabled = !isCorrectBookingForPreFlight;
+  const isPostFlightDisabled = !preFlightSubmitted || !isCorrectBookingForPostFlight;
 
   const showPendingPostFlightWarning = aircraft.checklistStatus === 'needs-post-flight' && aircraft.currentBookingId !== existingBooking?.id;
 
@@ -211,7 +207,7 @@ export function BookingForm({
           <DialogHeader>
             <DialogTitle>{isEditMode ? `Edit Booking #${existingBooking.bookingNumber}` : 'Create Booking'}</DialogTitle>
             <DialogDescription>
-              For {aircraft.tailNumber} on {format(initialStartTime, 'PPP')}.
+              For {aircraft.tailNumber} on {format(baseDate, 'PPP')}.
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh] pr-4">
