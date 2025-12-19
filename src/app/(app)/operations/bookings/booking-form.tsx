@@ -91,7 +91,6 @@ export function BookingForm({
   const [isPreFlightOpen, setIsPreFlightOpen] = useState(false);
   const [isPostFlightOpen, setIsPostFlightOpen] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-  const [isMassBalanceOpen, setIsMassBalanceOpen] = useState(false);
   
   useEffect(() => {
     if (isOpen) {
@@ -102,18 +101,23 @@ export function BookingForm({
             setStartTimeValue(existingBooking.startTime);
             setEndTimeValue(existingBooking.endTime);
             setIsOvernight(existingBooking.isOvernight || false);
-            setOvernightEndTime(existingBooking.overnightEndTime || '09:00');
+            // Only set overnight end time from booking if it exists, otherwise keep default
+            if (existingBooking.overnightEndTime) {
+                setOvernightEndTime(existingBooking.overnightEndTime);
+            } else {
+                setOvernightEndTime('09:00');
+            }
         } else {
+            // New booking
             const formattedStartTime = format(initialStartTime, 'HH:mm');
-            const formattedEndTime = format(addHours(initialStartTime, 1), 'HH:mm');
             
             setBookingType('');
             setPilotId('');
             setInstructorId('');
             setStartTimeValue(formattedStartTime);
-            setEndTimeValue(formattedEndTime);
             setIsOvernight(false);
             setOvernightEndTime('09:00');
+            // setEndTimeValue is handled by the next useEffect
         }
     }
   }, [existingBooking, initialStartTime, isOpen]);
@@ -402,11 +406,7 @@ export function BookingForm({
                     )}
                 </div>
                 {isEditMode && (
-                  <div className="grid grid-cols-3 gap-4 pt-6">
-                    <Button onClick={() => setIsMassBalanceOpen(true)} className="col-span-1">
-                      <Scale className="mr-2 h-4 w-4" />
-                      M&B
-                    </Button>
+                  <div className="grid grid-cols-2 gap-4 pt-6">
                     <Button onClick={() => setIsPreFlightOpen(true)} disabled={isPreFlightDisabled}>
                       <PlaneTakeoff className="mr-2 h-4 w-4" />
                       Pre-Flight
@@ -474,26 +474,6 @@ export function BookingForm({
       
       {existingBooking && (
         <>
-            <Dialog open={isMassBalanceOpen} onOpenChange={setIsMassBalanceOpen}>
-                <DialogContent className="max-w-4xl">
-                    <DialogHeader>
-                        <DialogTitle>Mass & Balance Calculator</DialogTitle>
-                        <DialogDescription>
-                            For Booking #{existingBooking.bookingNumber} - {aircraft.tailNumber}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <MassBalanceCalculator 
-                        aircraft={aircraft} 
-                        booking={existingBooking}
-                        tenantId={tenantId}
-                        onSave={() => {
-                            setIsMassBalanceOpen(false);
-                            refreshBookings();
-                        }}
-                    />
-                </DialogContent>
-            </Dialog>
-
             <PreFlightChecklistDialog
                 isOpen={isPreFlightOpen}
                 setIsOpen={setIsPreFlightOpen}

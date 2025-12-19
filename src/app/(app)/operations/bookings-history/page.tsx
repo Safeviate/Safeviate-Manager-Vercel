@@ -17,16 +17,18 @@ import { useRouter } from 'next/navigation';
 import { Timestamp } from 'firebase/firestore';
 import type { Booking } from '@/types/booking';
 import { Button } from '@/components/ui/button';
-import { Eye, CheckCircle, XCircle } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Scale } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { MassBalanceActions } from '../mass-balance/mass-balance-actions';
 
 // A consolidated type for display
 type EnrichedBooking = Booking & {
   aircraftTailNumber?: string;
   pilotName?: string;
   fullStartTime?: Date;
+  aircraft?: Aircraft;
 };
 
 const getBookingTypeAbbreviation = (type: Booking['type']): string => {
@@ -51,7 +53,7 @@ const getStatusBadgeVariant = (status: Booking['status']): "default" | "secondar
     }
 }
 
-const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
+const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], tenantId: string }) => {
     const router = useRouter();
 
     if (bookings.length === 0) {
@@ -71,6 +73,7 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                 <TableHead>Pilot</TableHead>
                 <TableHead>Start Time</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>M&B</TableHead>
                 <TableHead className='text-right'>Actions</TableHead>
             </TableRow>
             </TableHeader>
@@ -83,6 +86,15 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                         <TableCell>{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
                         <TableCell>
                             <Badge variant={getStatusBadgeVariant(b.status)}>{b.status}</Badge>
+                        </TableCell>
+                        <TableCell>
+                            {b.aircraft && (
+                                <MassBalanceActions
+                                    booking={b}
+                                    aircraft={b.aircraft}
+                                    tenantId={tenantId}
+                                />
+                            )}
                         </TableCell>
                         <TableCell className='text-right'>
                             <Button asChild variant="outline" size="sm">
@@ -134,6 +146,7 @@ export default function BookingsHistoryPage() {
         aircraftTailNumber: bookingAircraft?.tailNumber || 'Unknown Aircraft',
         pilotName: pilotMap.get(b.pilotId) || 'Unknown Pilot',
         fullStartTime: fullStartTime,
+        aircraft: bookingAircraft,
       };
     });
   }, [bookings, aircraft, pilots]);
@@ -165,16 +178,16 @@ export default function BookingsHistoryPage() {
         <CardContent className='p-0'>
             <ScrollArea className="h-[calc(100vh-17rem)]">
                 <TabsContent value="all" className='m-0'>
-                    <BookingsTable bookings={enrichedBookings} />
+                    <BookingsTable bookings={enrichedBookings} tenantId={tenantId} />
                 </TabsContent>
                 <TabsContent value="training" className='m-0'>
-                    <BookingsTable bookings={trainingBookings} />
+                    <BookingsTable bookings={trainingBookings} tenantId={tenantId} />
                 </TabsContent>
                 <TabsContent value="private" className='m-0'>
-                    <BookingsTable bookings={privateBookings} />
+                    <BookingsTable bookings={privateBookings} tenantId={tenantId} />
                 </TabsContent>
                 <TabsContent value="maintenance" className='m-0'>
-                    <BookingsTable bookings={maintenanceBookings} />
+                    <BookingsTable bookings={maintenanceBookings} tenantId={tenantId} />
                 </TabsContent>
             </ScrollArea>
         </CardContent>
