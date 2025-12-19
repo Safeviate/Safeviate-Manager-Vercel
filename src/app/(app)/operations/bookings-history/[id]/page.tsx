@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { format, parse } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Check, Plane, User, FileText, Camera, ZoomIn } from 'lucide-react';
+import { ArrowLeft, Check, Plane, User, FileText, Camera, ZoomIn, Scale } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -112,7 +112,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
 
         return {
             ...booking,
-            aircraftTailNumber: aircraft?.tailNumber,
+            aircraft,
             pilotName: pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot',
             instructorName: instructor ? `${instructor.firstName} ${instructor.lastName}` : null,
             fullStartTime: parse(`${booking.bookingDate} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date()),
@@ -123,6 +123,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
     if (isLoading) {
         return <div className="space-y-6">
             <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-64 w-full" />
             <Skeleton className="h-64 w-full" />
             <Skeleton className="h-64 w-full" />
         </div>;
@@ -138,6 +139,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
     
     const preFlight = enrichedBooking.preFlight;
     const postFlight = enrichedBooking.postFlight;
+    const massAndBalance = enrichedBooking.massAndBalance;
 
     return (
         <div className="space-y-6">
@@ -162,7 +164,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                      <DetailItem label="Aircraft">
                         <div className="flex items-center gap-2">
                            <Plane className="h-4 w-4 text-muted-foreground" />
-                           <span>{enrichedBooking.aircraftTailNumber}</span>
+                           <span>{enrichedBooking.aircraft?.tailNumber}</span>
                         </div>
                     </DetailItem>
                     <DetailItem label="Pilot">
@@ -180,6 +182,28 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                         </DetailItem>
                     )}
                     <DetailItem label="Booking Type" value={enrichedBooking.type} />
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Planning</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {massAndBalance ? (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                            <DetailItem label="Total Weight" value={`${massAndBalance.totalWeight.toFixed(2)} lbs`} />
+                            <DetailItem label="Center of Gravity" value={`${massAndBalance.centerOfGravity.toFixed(2)} in`} />
+                            <DetailItem label="Calculated At" value={format(new Date(massAndBalance.calculatedAt), 'PPp')} />
+                            <DetailItem label="Status">
+                                <Badge variant={massAndBalance.isWithinLimits ? 'default' : 'destructive'}>
+                                    {massAndBalance.isWithinLimits ? 'Within Limits' : 'Out of Limits'}
+                                </Badge>
+                            </DetailItem>
+                        </div>
+                    ) : (
+                        <p className="text-muted-foreground">No Mass & Balance calculation has been saved for this booking.</p>
+                    )}
                 </CardContent>
             </Card>
 

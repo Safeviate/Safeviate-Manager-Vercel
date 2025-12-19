@@ -108,6 +108,22 @@
                     }
                 }
             }
+        },
+        "massAndBalance": {
+            "type": "object",
+            "description": "Mass and Balance calculation data for the flight.",
+            "properties": {
+                "stationWeights": {
+                    "type": "object",
+                    "description": "A map of station IDs to their weights for this flight.",
+                    "additionalProperties": { "type": "number" }
+                },
+                "totalWeight": { "type": "number" },
+                "totalMoment": { "type": "number" },
+                "centerOfGravity": { "type": "number" },
+                "isWithinLimits": { "type": "boolean" },
+                "calculatedAt": { "type": "string", "format": "date-time" }
+            }
         }
       },
       "required": ["id", "aircraftId", "pilotId", "type", "bookingDate", "startTime", "endTime"]

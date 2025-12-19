@@ -6,6 +6,15 @@ export interface Photo {
     description: string;
 }
 
+export interface MassAndBalance {
+    stationWeights: { [stationId: string]: number };
+    totalWeight: number;
+    totalMoment: number;
+    centerOfGravity: number;
+    isWithinLimits: boolean;
+    calculatedAt: string; // ISO string
+}
+
 export interface Booking {
     id: string;
     bookingNumber: number;
@@ -38,4 +47,6 @@ export interface Booking {
         fuel?: number;
         photos?: Photo[];
     };
+    // Mass and Balance data
+    massAndBalance?: MassAndBalance;
 }

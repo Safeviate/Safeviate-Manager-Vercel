@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Trash2, PlaneTakeoff, LandPlot, Ban } from 'lucide-react';
+import { AlertCircle, Trash2, PlaneTakeoff, LandPlot, Ban, Scale } from 'lucide-react';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile } from '../../users/personnel/page';
 import type { Booking } from '@/types/booking';
@@ -46,6 +46,7 @@ import { PreFlightChecklistDialog } from './pre-flight-checklist-dialog';
 import { PostFlightChecklistDialog } from './post-flight-checklist-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { MassBalanceCalculator } from '../mass-balance/mass-balance-calculator';
 
 
 interface BookingFormProps {
@@ -90,6 +91,7 @@ export function BookingForm({
   const [isPreFlightOpen, setIsPreFlightOpen] = useState(false);
   const [isPostFlightOpen, setIsPostFlightOpen] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [isMassBalanceOpen, setIsMassBalanceOpen] = useState(false);
   
   useEffect(() => {
     if (isOpen) {
@@ -400,14 +402,18 @@ export function BookingForm({
                     )}
                 </div>
                 {isEditMode && (
-                  <div className="grid grid-cols-2 gap-4 pt-6">
+                  <div className="grid grid-cols-3 gap-4 pt-6">
+                    <Button onClick={() => setIsMassBalanceOpen(true)} className="col-span-1">
+                      <Scale className="mr-2 h-4 w-4" />
+                      M&B
+                    </Button>
                     <Button onClick={() => setIsPreFlightOpen(true)} disabled={isPreFlightDisabled}>
                       <PlaneTakeoff className="mr-2 h-4 w-4" />
-                      Pre-Flight Checklist
+                      Pre-Flight
                     </Button>
                     <Button onClick={() => setIsPostFlightOpen(true)} disabled={isPostFlightDisabled}>
                       <LandPlot className="mr-2 h-4 w-4" />
-                      Post-Flight Checklist
+                      Post-Flight
                     </Button>
                   </div>
                 )}
@@ -468,6 +474,26 @@ export function BookingForm({
       
       {existingBooking && (
         <>
+            <Dialog open={isMassBalanceOpen} onOpenChange={setIsMassBalanceOpen}>
+                <DialogContent className="max-w-4xl">
+                    <DialogHeader>
+                        <DialogTitle>Mass & Balance Calculator</DialogTitle>
+                        <DialogDescription>
+                            For Booking #{existingBooking.bookingNumber} - {aircraft.tailNumber}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <MassBalanceCalculator 
+                        aircraft={aircraft} 
+                        booking={existingBooking}
+                        tenantId={tenantId}
+                        onSave={() => {
+                            setIsMassBalanceOpen(false);
+                            refreshBookings();
+                        }}
+                    />
+                </DialogContent>
+            </Dialog>
+
             <PreFlightChecklistDialog
                 isOpen={isPreFlightOpen}
                 setIsOpen={setIsPreFlightOpen}
