@@ -19,6 +19,7 @@ import {
   GitBranch,
   Library,
   LineChart,
+  ShieldAlert,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -71,6 +72,11 @@ export const menuConfig: MenuItem[] = [
         href: '/safety/safety-reports',
         label: 'Safety Reports',
         description: 'View and manage safety reports.',
+      },
+      {
+        href: '/safety/risk-register',
+        label: 'Risk Register',
+        description: 'View the organizational risk register.',
       },
       {
         href: '/safety/safety-indicators',

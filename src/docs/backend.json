@@ -1,6 +1,278 @@
 
 {
   "entities": {
+    "Risk": {
+      "title": "Risk",
+      "type": "object",
+      "description": "Represents an identified organizational risk.",
+      "properties": {
+        "id": { "type": "string" },
+        "hazard": { "type": "string" },
+        "risk": { "type": "string" },
+        "hazardArea": { "type": "string" },
+        "likelihood": { "type": "number" },
+        "severity": { "type": "number" },
+        "riskScore": { "type": "number" },
+        "residualLikelihood": { "type": "number" },
+        "residualSeverity": { "type": "number" },
+        "residualRiskScore": { "type": "number" },
+        "status": { "type": "string", "enum": ["Open", "Closed", "Archived"] },
+        "mitigation": { "type": "string" }
+      },
+      "required": ["id", "hazard", "risk", "hazardArea", "likelihood", "severity", "riskScore", "status"]
+    },
+    "SafetyReport": {
+      "title": "Safety Report",
+      "type": "object",
+      "description": "Represents a single safety report, from initial filing to final closure.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the safety report." },
+        "reportNumber": { "type": "string", "description": "A unique, sequential, human-readable report number (e.g., FLT-001)." },
+        "reportType": {
+          "type": "string",
+          "description": "The category of the event being reported.",
+          "enum": ["Flight Operations", "Aircraft Defect", "Ground Operations", "General Safety Concern"]
+        },
+        "status": {
+          "type": "string",
+          "description": "The current stage of the report in its lifecycle.",
+          "enum": ["Open", "Under Review", "Awaiting Action", "Closed"]
+        },
+        "submittedBy": { "type": "string", "description": "The user ID of the person who filed the report." },
+        "submittedByName": { "type": "string", "description": "The name of the user who filed the report." },
+        "submittedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the report was submitted." },
+        "closedDate": { "type": "string", "format": "date-time", "description": "Timestamp of when the report was closed." },
+        "isAnonymous": { "type": "boolean", "description": "If true, the submitter's identity is hidden." },
+        "eventDate": { "type": "string", "format": "date", "description": "The date the event occurred." },
+        "eventTime": { "type": "string", "description": "The time the event occurred." },
+        "location": { "type": "string", "description": "The location where the event occurred." },
+        "aircraftId": { "type": "string", "description": "The ID of the aircraft involved, if any." },
+        "description": { "type": "string", "description": "A detailed narrative of the event." },
+        "phaseOfFlight": { "type": "string", "description": "For flight operations, the phase of flight when the event occurred." },
+        "systemOrComponent": { "type": "string", "description": "For defect reports, the specific system or component involved." },
+        "departmentId": { "type": "string", "description": "The department ID responsible for handling the report." },
+        "occurrenceCategory": { "type": "string", "description": "The official ICAO occurrence category assigned during triage." },
+        "eventClassification": {
+          "type": "string",
+          "description": "The final classification of the event.",
+          "enum": ["Hazard", "Incident", "Accident"]
+        },
+        "investigationTeam": {
+          "type": "array",
+          "description": "List of personnel assigned to investigate the report.",
+          "items": { "$ref": "#/backend/entities/InvestigationMember" }
+        },
+        "initialHazards": {
+          "type": "array",
+          "description": "Hazards identified during the initial risk assessment.",
+          "items": { "$ref": "#/backend/entities/ReportHazard" }
+        },
+        "investigationTasks": {
+          "type": "array",
+          "description": "A list of tasks for the investigation team.",
+          "items": { "$ref": "#/backend/entities/InvestigationTask" }
+        },
+        "investigationNotes": { "type": "string", "description": "A summary of the investigation findings and root cause." },
+        "discussion": {
+          "type": "array",
+          "description": "The discussion forum for the investigation team.",
+          "items": { "$ref": "#/backend/entities/ReportDiscussionItem" }
+        },
+        "correctiveActions": {
+          "type": "array",
+          "description": "The corrective action plan (CAP) to address the root cause.",
+          "items": { "$ref": "#/backend/entities/CorrectiveAction" }
+        },
+        "mitigatedHazards": {
+            "type": "array",
+            "description": "Re-assessed hazards after corrective actions are implemented.",
+            "items": { "$ref": "#/backend/entities/ReportHazard" }
+        },
+        "signatures": {
+          "type": "array",
+          "description": "Digital signatures for report closure.",
+          "items": { "$ref": "#/backend/entities/ReportSignature" }
+        }
+      },
+      "required": ["id", "reportNumber", "reportType", "status", "submittedAt", "eventDate", "description"]
+    },
+    "InvestigationMember": {
+      "title": "Investigation Member",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["Lead Investigator", "Team Member", "Technical Expert", "Observer"] }
+      },
+      "required": ["userId", "name", "role"]
+    },
+    "ReportHazard": {
+      "title": "Report Hazard",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "riskAssessment": { "$ref": "#/backend/entities/RiskAssessment" }
+      },
+      "required": ["id", "description"]
+    },
+    "RiskAssessment": {
+      "title": "Risk Assessment",
+      "type": "object",
+      "properties": {
+        "severity": { "type": "number", "description": "Severity score (1-5)" },
+        "likelihood": { "type": "number", "description": "Likelihood score (1-5)" },
+        "riskScore": { "type": "number", "description": "Calculated risk score (Severity * Likelihood)" },
+        "riskLevel": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] }
+      },
+      "required": ["severity", "likelihood", "riskScore", "riskLevel"]
+    },
+    "InvestigationTask": {
+      "title": "Investigation Task",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "assigneeId": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Open", "In Progress", "Completed"] }
+      },
+      "required": ["id", "description", "assigneeId", "status"]
+    },
+    "ReportDiscussionItem": {
+      "title": "Report Discussion Item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "userName", "message", "timestamp"]
+    },
+    "CorrectiveAction": {
+      "title": "Corrective Action",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "responsiblePersonId": { "type": "string" },
+        "deadline": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Open", "In Progress", "Closed", "Cancelled"] }
+      },
+      "required": ["id", "description", "responsiblePersonId", "status"]
+    },
+    "ReportSignature": {
+      "title": "Report Signature",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "role": { "type": "string", "description": "Role at time of signing (e.g., Safety Manager)" },
+        "signatureUrl": { "type": "string", "format": "uri", "description": "Data URL of the signature image." },
+        "signedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "role", "signatureUrl", "signedAt"]
+    },
+    "ManagementOfChange": {
+      "title": "Management of Change",
+      "type": "object",
+      "description": "Represents a Management of Change (MOC) record.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the MOC." },
+        "mocNumber": { "type": "string", "description": "A unique, sequential, human-readable MOC number (e.g., MOC-001)." },
+        "title": { "type": "string", "description": "A clear, concise title for the change." },
+        "description": { "type": "string", "description": "A detailed explanation of what is changing." },
+        "reason": { "type": "string", "description": "The reason why the change is being made." },
+        "scope": { "type": "string", "description": "Who and what will be affected by the change." },
+        "proposingDepartmentId": { "type": "string", "description": "The ID of the department proposing the change." },
+        "responsiblePersonId": { "type": "string", "description": "The ID of the person responsible for the proposal." },
+        "proposedBy": { "type": "string", "description": "The user ID of the person who initiated the change." },
+        "proposalDate": { "type": "string", "format": "date-time", "description": "Timestamp of when the MOC was proposed." },
+        "status": {
+          "type": "string",
+          "enum": ["Proposed", "Under Review", "Approved", "In Progress", "Closed", "Cancelled"]
+        },
+        "phases": {
+          "type": "array",
+          "description": "The major stages of implementing the change.",
+          "items": { "$ref": "#/backend/entities/MocPhase" }
+        },
+        "signatures": {
+          "type": "array",
+          "description": "Digital signatures for MOC approval.",
+          "items": { "$ref": "#/backend/entities/MocSignature" }
+        }
+      },
+      "required": ["id", "mocNumber", "title", "status", "proposalDate", "proposingDepartmentId"]
+    },
+    "MocPhase": {
+      "title": "MOC Phase",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "steps": { "type": "array", "items": { "$ref": "#/backend/entities/MocStep" } }
+      },
+      "required": ["id", "title"]
+    },
+    "MocStep": {
+      "title": "MOC Step",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "hazards": { "type": "array", "items": { "$ref": "#/backend/entities/MocHazard" } }
+      },
+      "required": ["id", "description"]
+    },
+    "MocHazard": {
+      "title": "MOC Hazard",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "risks": { "type": "array", "items": { "$ref": "#/backend/entities/MocRisk" } }
+      },
+      "required": ["id", "description"]
+    },
+    "MocRisk": {
+      "title": "MOC Risk",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "initialRiskAssessment": { "$ref": "#/backend/entities/RiskAssessment" },
+        "mitigations": { "type": "array", "items": { "$ref": "#/backend/entities/MocMitigation" } }
+      },
+      "required": ["id", "description"]
+    },
+    "MocMitigation": {
+      "title": "MOC Mitigation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "responsiblePersonId": { "type": "string" },
+        "completionDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Open", "In Progress", "Closed", "Cancelled"] },
+        "residualRiskAssessment": { "$ref": "#/backend/entities/RiskAssessment" }
+      },
+      "required": ["id", "description", "status"]
+    },
+    "MocSignature": {
+      "title": "MOC Signature",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "role": { "type": "string", "description": "Role at time of signing" },
+        "signatureUrl": { "type": "string", "format": "uri" },
+        "signedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "role", "signatureUrl", "signedAt"]
+    },
     "Booking": {
       "title": "Booking",
       "type": "object",
@@ -480,38 +752,6 @@
         "description"
       ]
     },
-    "SafetyProtocol": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "SafetyProtocol",
-      "type": "object",
-      "description": "Represents a safety protocol.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the SafetyProtocol entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the safety protocol."
-        },
-        "description": {
-          "type": "string",
-          "description": "Detailed description of the safety protocol."
-        },
-        "complianceChecks": {
-          "type": "array",
-          "description": "References to ComplianceCheck entries. (Relationship: SafetyProtocol 1:N ComplianceCheck)",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "description"
-      ]
-    },
     "ComplianceCheck": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ComplianceCheck",
@@ -588,9 +828,7 @@
         "permissions": {
           "type": "array",
           "description": "An array of permission IDs (strings) associated with this role.",
-          "items": {
-            "type": "string"
-          }
+          "items": { "type": "string" }
         },
         "requiredDocuments": {
             "type": "array",
@@ -774,6 +1012,48 @@
   },
   "firestore": {
     "structure": [
+      {
+        "path": "tenants/{tenantId}/risks/{riskId}",
+        "definition": {
+          "entityName": "Risk",
+          "schema": {
+            "$ref": "#/backend/entities/Risk"
+          },
+          "description": "Stores organizational risks for each tenant.",
+          "params": [
+            { "name": "tenantId", "description": "Tenant ID." },
+            { "name": "riskId", "description": "Risk ID." }
+          ]
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/safety-reports/{reportId}",
+        "definition": {
+          "entityName": "SafetyReport",
+          "schema": {
+            "$ref": "#/backend/entities/SafetyReport"
+          },
+          "description": "Stores safety reports for each tenant.",
+          "params": [
+            { "name": "tenantId", "description": "Tenant ID." },
+            { "name": "reportId", "description": "Safety Report ID." }
+          ]
+        }
+      },
+       {
+        "path": "tenants/{tenantId}/management-of-change/{mocId}",
+        "definition": {
+          "entityName": "ManagementOfChange",
+          "schema": {
+            "$ref": "#/backend/entities/ManagementOfChange"
+          },
+          "description": "Stores Management of Change records for each tenant.",
+          "params": [
+            { "name": "tenantId", "description": "Tenant ID." },
+            { "name": "mocId", "description": "MOC ID." }
+          ]
+        }
+      },
        {
         "path": "tenants/{tenantId}/bookings/{bookingId}",
         "definition": {
@@ -898,50 +1178,6 @@
             {
               "name": "maintenanceLogId",
               "description": "Unique identifier for the maintenance log entry."
-            }
-          ]
-        }
-      },
-      {
-        "path": "tenants/{tenantId}/safetyProtocols/{safetyProtocolId}",
-        "definition": {
-          "entityName": "SafetyProtocol",
-          "schema": {
-            "$ref": "#/backend/entities/SafetyProtocol"
-          },
-          "description": "Stores safety protocols, scoped to a specific tenant.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "Unique identifier for the tenant."
-            },
-            {
-              "name": "safetyProtocolId",
-              "description": "Unique identifier for the safety protocol."
-            }
-          ]
-        }
-      },
-      {
-        "path": "tenants/{tenantId}/safetyProtocols/{safetyProtocolId}/complianceChecks/{complianceCheckId}",
-        "definition": {
-          "entityName": "ComplianceCheck",
-          "schema": {
-            "$ref": "#/backend/entities/ComplianceCheck"
-          },
-          "description": "Stores compliance checks for a specific safety protocol, scoped to a specific tenant.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "Unique identifier for the tenant."
-            },
-            {
-              "name": "safetyProtocolId",
-              "description": "Unique identifier for the safety protocol."
-            },
-            {
-              "name": "complianceCheckId",
-              "description": "Unique identifier for the compliance check."
             }
           ]
         }
