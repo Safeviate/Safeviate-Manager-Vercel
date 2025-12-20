@@ -78,8 +78,8 @@ export const menuConfig: MenuItem[] = [
         description: 'View and manage the risk register.',
       },
       {
-        href: '/safety/safety-performance-indicators',
-        label: 'Safety Performance Indicators',
+        href: '/safety/safety-indicators',
+        label: 'Safety Indicators',
         description: 'Track and analyze key safety metrics.',
       },
       {
