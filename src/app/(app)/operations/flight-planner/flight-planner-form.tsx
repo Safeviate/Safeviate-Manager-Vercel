@@ -64,7 +64,12 @@ export function FlightPlannerForm({ aircrafts, pilots, bookings }: FlightPlanner
   const form = useForm<FlightPlannerFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      bookingId: '',
+      departure: '',
+      destination: '',
+      alternate: '',
       flightRules: 'VFR',
+      cruisingAltitude: 0,
       waypoints: [],
       cruiseSpeed: 100,
       windDirection: 0,
