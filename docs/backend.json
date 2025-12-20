@@ -154,6 +154,24 @@
       },
       "required": ["userId", "userName", "role", "signatureUrl", "signedAt"]
     },
+    "Risk": {
+      "title": "Risk",
+      "type": "object",
+      "description": "Represents an organizational risk in the risk register.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the risk." },
+        "hazard": { "type": "string", "description": "A description of the hazard." },
+        "risk": { "type": "string", "description": "The potential negative consequence of the hazard." },
+        "hazardArea": { "type": "string", "description": "The broad category where the risk originates (e.g., Flight Operations)." },
+        "process": { "type": "string", "description": "The specific process or activity involved (e.g., Flight Dispatch)." },
+        "initialRiskAssessment": { "$ref": "#/backend/entities/RiskAssessment" },
+        "mitigationControls": { "type": "string", "description": "Specific controls in place to mitigate the risk." },
+        "mitigatedRiskAssessment": { "$ref": "#/backend/entities/RiskAssessment" },
+        "riskOwnerId": { "type": "string", "description": "The user ID of the person responsible for managing the risk." },
+        "status": { "type": "string", "enum": ["Open", "Mitigated", "Closed"], "description": "The current status of the risk." }
+      },
+      "required": ["id", "hazard", "risk", "hazardArea", "status"]
+    },
     "Booking": {
       "title": "Booking",
       "type": "object",
@@ -908,6 +926,20 @@
         }
       },
        {
+        "path": "tenants/{tenantId}/risks/{riskId}",
+        "definition": {
+          "entityName": "Risk",
+          "schema": {
+            "$ref": "#/backend/entities/Risk"
+          },
+          "description": "Stores organizational risks for the risk register.",
+          "params": [
+            { "name": "tenantId", "description": "Tenant ID." },
+            { "name": "riskId", "description": "Risk ID." }
+          ]
+        }
+      },
+       {
         "path": "tenants/{tenantId}/bookings/{bookingId}",
         "definition": {
           "entityName": "Booking",
@@ -1139,5 +1171,3 @@
     "reasoning": "The Firestore structure is designed to support a multi-tenant aviation academy management application, focusing on security, scalability, and ease of debugging. Authorization Independence is achieved through denormalization where needed, especially for collaborative data. Structural Segregation ensures that each collection has a homogeneous security posture. Access Modeling follows consistent patterns, utilizing path-based ownership for user-specific data and membership maps for collaborative entities. The structure is multi-tenant, where tenants are isolated from each other. The structure uses the tenants collection to keep a list of tenants and provides a tenant id for all other collections in the database. This strategy allows the application to manage multiple academies within the same system, each with its own set of data and settings.\\n\\n*   **Tenants:** The root level collection `tenants` stores individual tenant documents. Each tenant has its own unique ID and associated settings.\\n*   **Users:** User data is now split into `personnel` (non-flying staff) and `pilots` (students, instructors, private pilots) under each tenant to better segregate data models and security rules.\\n*   **Settings:** A generic `settings` collection is added under each tenant. This allows for storing various configuration documents, such as `document-expiry`, in a structured and scalable way without creating new top-level collections for each setting type.\\n*   **ChecklistResponses:** A new collection to store the completed checklists, linked to a tenant.\\n\\nQAPs (Rules are not Filters) is addressed by:\\n\\n*   Segregating data into collections with homogeneous security requirements.\\n*   Using path-based ownership for private data.\\n*   Employing membership maps for collaborative data, and storing these maps directly within the documents to avoid `get()` calls in security rules.\\n\\nSpecifically, the following denormalization strategies are used:\\n\\n*   Authorization context (e.g., members, ownerId) is copied into subcollection documents to avoid hierarchical dependencies.\\n*   Tenant ID is included in all documents to support multi-tenancy access control.\\n\\nThis design enables robust security rules that are simple to write, easy to understand, and highly performant."
   }
 }
-
-    
