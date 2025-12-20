@@ -20,7 +20,7 @@ export default function AppLayout({
         <div className="flex flex-col flex-1">
           <AppHeader />
           <SidebarInset className="p-4 lg:p-6 flex-1 overflow-auto md:pb-4">
-            <div className="w-full max-w-7xl mx-auto">
+            <div className="w-full max-w-[1100px] mx-auto">
               {children}
             </div>
           </SidebarInset>
