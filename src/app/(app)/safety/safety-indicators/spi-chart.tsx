@@ -1,7 +1,8 @@
+
 'use client';
 
-import { Bar, BarChart, Line, LineChart, ReferenceLine, XAxis, YAxis, Tooltip, Legend } from 'recharts';
-import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
+import { Bar, BarChart, Line, LineChart, ReferenceLine, XAxis, YAxis } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import type { MonthlySpiData } from './use-spi-data';
 import type { SpiConfig } from './edit-spi-form';
 
