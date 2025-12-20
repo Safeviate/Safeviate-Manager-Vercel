@@ -11,6 +11,7 @@ import type { SafetyReport } from '@/types/safety-report';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { TriageForm } from './triage-form';
 
 interface SafetyReportDetailPageProps {
   params: { reportId: string };
@@ -90,18 +91,13 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
       
       <Tabs defaultValue="triage">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="triage">Report &amp; Triage</TabsTrigger>
+          <TabsTrigger value="triage">Report & Triage</TabsTrigger>
           <TabsTrigger value="investigation">Investigation</TabsTrigger>
           <TabsTrigger value="cap">Corrective Actions</TabsTrigger>
           <TabsTrigger value="review">Final Review</TabsTrigger>
         </TabsList>
         <TabsContent value="triage">
-          <Card>
-            <CardHeader><CardTitle>Report & Triage</CardTitle></CardHeader>
-            <CardContent>
-              <p>Triage and initial risk assessment tools will be here.</p>
-            </CardContent>
-          </Card>
+            <TriageForm report={report} tenantId={tenantId} />
         </TabsContent>
         <TabsContent value="investigation">
           <Card>
