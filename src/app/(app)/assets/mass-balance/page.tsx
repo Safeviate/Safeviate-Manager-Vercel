@@ -18,6 +18,7 @@ import {
   Wrench,
   Lock,
   ArrowLeft,
+  User,
 } from 'lucide-react';
 import {
   Card,
@@ -46,7 +47,6 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,6 +58,8 @@ import { Badge } from '@/components/ui/badge';
 import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
 import type { AircraftModelProfile } from '@/types/aircraft-wb-profile';
 import type { Aircraft } from '../page';
+import type { Booking } from '@/types/booking';
+import type { PilotProfile } from '../../users/personnel/page';
 import {
     Select,
     SelectContent,
@@ -161,6 +163,7 @@ export function ConfiguratorTab() {
   const tenantId = 'safeviate';
   const searchParams = useSearchParams();
   const aircraftIdFromUrl = searchParams.get('aircraftId');
+  const bookingIdFromUrl = searchParams.get('bookingId');
   
   // Hardcoded permissions for now - will be replaced with real auth logic
   const canManageTemplates = true; 
@@ -236,16 +239,40 @@ export function ConfiguratorTab() {
     [firestore]
   );
   const { data: aircraftList, isLoading: isLoadingAircraft } = useCollection<Aircraft>(aircraftQuery);
+  
+  const bookingDocRef = useMemoFirebase(
+    () => (firestore && bookingIdFromUrl ? doc(firestore, 'tenants', tenantId, 'bookings', bookingIdFromUrl) : null),
+    [firestore, bookingIdFromUrl]
+  );
+  const { data: loadedBooking, isLoading: isLoadingBooking } = useDoc<Booking>(bookingDocRef);
+
+  const pilotsQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'tenants', tenantId, 'pilots') : null),
+    [firestore]
+  );
+  const { data: pilots, isLoading: isLoadingPilots } = useCollection<PilotProfile>(pilotsQuery);
 
 
   // --- Logic for Read-Only Mode & Loading ---
   useEffect(() => {
-    setIsReadOnly(!canManageTemplates);
-    if (aircraftIdFromUrl && aircraftList) {
+    if (bookingIdFromUrl) {
+        setIsReadOnly(false); // If we're editing a booking, it should be editable.
+    } else {
+        setIsReadOnly(!canManageTemplates);
+    }
+
+    if (aircraftIdFromUrl && aircraftList && !bookingIdFromUrl) {
         handleLoadFromAircraft(aircraftIdFromUrl);
     }
+    
+    if (loadedBooking && aircraftList) {
+        const aircraft = aircraftList.find(a => a.id === loadedBooking.aircraftId);
+        if (aircraft) {
+            handleLoadFromAircraft(aircraft.id, loadedBooking);
+        }
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aircraftIdFromUrl, aircraftList, canManageTemplates]);
+  }, [aircraftIdFromUrl, aircraftList, canManageTemplates, bookingIdFromUrl, loadedBooking]);
 
   useEffect(() => {
     let totalMom = parseFloat(basicEmpty.moment as any) || 0;
@@ -443,7 +470,7 @@ export function ConfiguratorTab() {
     setSelectedAircraftId('');
   };
 
-  const handleLoadFromAircraft = (aircraftId: string) => {
+  const handleLoadFromAircraft = (aircraftId: string, booking?: Booking) => {
     const aircraft = aircraftList?.find(a => a.id === aircraftId);
     if (!aircraft) return;
 
@@ -459,15 +486,32 @@ export function ConfiguratorTab() {
         arm: (aircraft.emptyWeight && aircraft.emptyWeight > 0) ? (aircraft.emptyWeightMoment || 0) / aircraft.emptyWeight : 0,
     });
     
-    const reconstructedStations: any[] = [];
-    if (aircraft.stationArms) {
-        if(aircraft.stationArms.frontSeats) reconstructedStations.push({ id: Date.now() + 1, name: 'Front Seats', arm: aircraft.stationArms.frontSeats, weight: 0, type: 'standard' });
-        if(aircraft.stationArms.rearSeats) reconstructedStations.push({ id: Date.now() + 2, name: 'Rear Seats', arm: aircraft.stationArms.rearSeats, weight: 0, type: 'standard' });
-        if(aircraft.stationArms.baggage1) reconstructedStations.push({ id: Date.now() + 3, name: 'Baggage 1', arm: aircraft.stationArms.baggage1, weight: 0, type: 'standard' });
-        if(aircraft.stationArms.baggage2) reconstructedStations.push({ id: Date.now() + 4, name: 'Baggage 2', arm: aircraft.stationArms.baggage2, weight: 0, type: 'standard' });
-        if(aircraft.stationArms.fuel) reconstructedStations.push({ id: Date.now() + 5, name: 'Fuel', arm: aircraft.stationArms.fuel, weight: 0, type: 'fuel', gallons: 0, maxGallons: 50 }); // Assume max 50 gal
+    // If booking data is provided, load its weights, otherwise use default empty stations
+    if (booking?.massAndBalance) {
+        const bookedStations = (booking.massAndBalance.stationWeights || {});
+        
+        const loadedStations = stations.map(s => {
+            const newWeight = bookedStations[s.id] || 0;
+            if (s.type === 'fuel') {
+                const gallons = parseFloat((newWeight / FUEL_WEIGHT_PER_GALLON).toFixed(1));
+                return {...s, weight: newWeight, gallons };
+            }
+            return {...s, weight: newWeight };
+        });
+        setStations(loadedStations);
+
+    } else {
+        const reconstructedStations: any[] = [];
+        if (aircraft.stationArms) {
+            if(aircraft.stationArms.frontSeats) reconstructedStations.push({ id: Date.now() + 1, name: 'Front Seats', arm: aircraft.stationArms.frontSeats, weight: 0, type: 'standard' });
+            if(aircraft.stationArms.rearSeats) reconstructedStations.push({ id: Date.now() + 2, name: 'Rear Seats', arm: aircraft.stationArms.rearSeats, weight: 0, type: 'standard' });
+            if(aircraft.stationArms.baggage1) reconstructedStations.push({ id: Date.now() + 3, name: 'Baggage 1', arm: aircraft.stationArms.baggage1, weight: 0, type: 'standard' });
+            if(aircraft.stationArms.baggage2) reconstructedStations.push({ id: Date.now() + 4, name: 'Baggage 2', arm: aircraft.stationArms.baggage2, weight: 0, type: 'standard' });
+            if(aircraft.stationArms.fuel) reconstructedStations.push({ id: Date.now() + 5, name: 'Fuel', arm: aircraft.stationArms.fuel, weight: 0, type: 'fuel', gallons: 0, maxGallons: 50 }); // Assume max 50 gal
+        }
+        setStations(reconstructedStations);
     }
-    setStations(reconstructedStations);
+
 
     const envelope = (aircraft.cgEnvelope || []).map(p => ({ x: p.cg, y: p.weight })); // Convert [{weight, cg}] to [{x,y}]
     setGraphConfig({
@@ -635,6 +679,42 @@ export function ConfiguratorTab() {
     });
   }
 
+  const handleSaveToBooking = () => {
+    if (!bookingIdFromUrl) {
+        toast({ variant: 'destructive', title: 'No Booking Loaded' });
+        return;
+    }
+    if (!firestore) {
+        toast({ variant: 'destructive', title: 'Database not available' });
+        return;
+    }
+
+    const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', bookingIdFromUrl);
+
+    const stationWeights: Record<string, number> = {};
+    stations.forEach(s => {
+        stationWeights[s.id] = s.weight;
+    });
+    
+    const dataToUpdate = {
+        massAndBalance: {
+            stationWeights,
+            totalWeight: results.weight,
+            totalMoment: results.weight * results.cg,
+            centerOfGravity: results.cg,
+            isWithinLimits: results.isSafe,
+            calculatedAt: new Date().toISOString(),
+        }
+    };
+
+    updateDocumentNonBlocking(bookingRef, dataToUpdate);
+
+    toast({
+        title: 'Mass & Balance Saved',
+        description: `The calculation has been saved to booking #${loadedBooking?.bookingNumber}.`
+    });
+  }
+
   const [showConfirmClear, setShowConfirmClear] = useState(false);
 
   const handleClearAircraftWandB = () => {
@@ -699,52 +779,91 @@ export function ConfiguratorTab() {
   const loadedProfileName = loadedProfileId ? profiles?.find(p => p.id === loadedProfileId)?.profileName : null;
   const selectedAircraftName = selectedAircraftId ? aircraftList?.find(a => a.id === selectedAircraftId)?.tailNumber : '';
   
+  const pilotName = useMemo(() => {
+    if (!loadedBooking || !pilots) return '...';
+    const pilot = pilots.find(p => p.id === loadedBooking.pilotId);
+    return pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot';
+  }, [loadedBooking, pilots]);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className='flex items-center gap-4'>
-            <h1 className="text-2xl font-bold tracking-tight">
-            Mass &amp; Balance Configurator
-            </h1>
+            {bookingIdFromUrl ? (
+                <Button asChild variant="outline">
+                    <Link href={`/operations/bookings-history/${bookingIdFromUrl}`}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back to Booking
+                    </Link>
+                </Button>
+            ) : (
+                <h1 className="text-2xl font-bold tracking-tight">
+                Mass &amp; Balance Configurator
+                </h1>
+            )}
         </div>
       </div>
       <Card className="relative">
         <CardHeader>
-            <div className="flex justify-between items-start">
-                <div>
-                    <CardTitle>Interactive Graph</CardTitle>
-                    <CardDescription>
-                    Visualize the aircraft&apos;s center of gravity based on the
-                    configuration below.
-                    </CardDescription>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                    <Button>
-                        <Save size={16} className="mr-2" /> Save to Booking
-                    </Button>
-                    <div
-                        className={cn(
-                        'px-3 py-1 rounded-full font-bold shadow-lg flex items-center gap-2',
-                        results.isSafe
-                            ? 'bg-green-600/90 text-white'
-                            : 'bg-destructive text-white'
-                        )}
-                    >
-                        <div
-                        className={cn(
-                            'w-2 h-2 rounded-full',
-                            results.isSafe ? 'bg-white' : 'bg-white animate-pulse'
-                        )}
-                        ></div>
-                        <span className="text-xs">
-                        {results.isSafe ? 'WITHIN LIMITS' : 'OUT OF LIMITS'}
-                        </span>
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-2">
+                <CardTitle>Interactive Graph</CardTitle>
+                <div className='flex items-center gap-4 text-sm text-muted-foreground'>
+                {(loadedBooking || loadedAircraftTailNumber) && (
+                    <div className="flex items-center gap-2">
+                        <Plane size={16} />
+                        <span className="font-semibold text-foreground">{loadedAircraftTailNumber}</span>
                     </div>
+                )}
+                 {loadedBooking && (
+                     <>
+                        <Separator orientation='vertical' className='h-4' />
+                        <div className="flex items-center gap-2">
+                            <span>Booking #{loadedBooking.bookingNumber}</span>
+                        </div>
+                        <Separator orientation='vertical' className='h-4' />
+                        <div className="flex items-center gap-2">
+                            <User size={16} />
+                            <span>{pilotName}</span>
+                        </div>
+                     </>
+                )}
+                {loadedProfileName && (
+                    <p>
+                        <span className="font-semibold text-foreground">Profile: {loadedProfileName}</span>
+                    </p>
+                )}
                 </div>
             </div>
+            <div className='flex flex-col items-end gap-2'>
+                {bookingIdFromUrl && (
+                    <Button onClick={handleSaveToBooking} disabled={!bookingIdFromUrl}>
+                        <Save size={16} className="mr-2" /> Save to Booking
+                    </Button>
+                )}
+                <div
+                    className={cn(
+                    'px-3 py-1 rounded-full font-bold shadow-lg flex items-center gap-2',
+                    results.isSafe
+                        ? 'bg-green-600/90 text-white'
+                        : 'bg-destructive text-white'
+                    )}
+                >
+                    <div
+                    className={cn(
+                        'w-2 h-2 rounded-full',
+                        results.isSafe ? 'bg-white' : 'bg-white animate-pulse'
+                    )}
+                    ></div>
+                    <span className="text-xs">
+                    {results.isSafe ? 'WITHIN LIMITS' : 'OUT OF LIMITS'}
+                    </span>
+                </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="min-h-[500px] flex flex-col justify-center items-center overflow-hidden pt-6">
-            {isReadOnly && (
+            {isReadOnly && !bookingIdFromUrl && (
                 <Alert className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-auto bg-background/80 backdrop-blur-sm">
                     <Lock className="h-4 w-4" />
                     <AlertDescription>
@@ -880,7 +999,7 @@ export function ConfiguratorTab() {
                 <div>
                     <Label>Load from Aircraft Registration</Label>
                     <Select
-                    onValueChange={handleLoadFromAircraft}
+                    onValueChange={(id) => handleLoadFromAircraft(id, undefined)}
                     value={selectedAircraftId}
                     disabled={isLoadingAircraft || isReadOnly}
                     >
@@ -1302,101 +1421,107 @@ export function ConfiguratorTab() {
               </div>
             </div>
         </CardContent>
-        <CardFooter className="border-t pt-6 flex justify-end gap-2">
-             {canManageTemplates && (
-                <div className="flex gap-2">
-                    {!isReadOnly && (
-                        <Button onClick={handleReset} variant="outline">
-                            <RotateCcw size={16} className="mr-2" /> Reset
+         <CardFooter className="border-t pt-6 flex justify-end gap-2">
+            {!isReadOnly && (
+             <Button onClick={handleReset} variant="outline">
+                <RotateCcw size={16} className="mr-2" /> Reset to Default
+            </Button>
+          )}
+           {canManageTemplates && (
+            <Dialog>
+                <DialogTrigger asChild>
+                    <Button variant="outline">
+                        <Plane size={16} className="mr-2" /> Assign to Aircraft
+                    </Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Assign Configuration to Aircraft</DialogTitle>
+                        <DialogDescription>
+                            This will overwrite the selected aircraft&apos;s current M&amp;B data with the data from the configurator.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-2">
+                        <Label htmlFor="aircraft-select">Aircraft Registration</Label>
+                        <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
+                            <SelectTrigger id="aircraft-select">
+                                <SelectValue placeholder="Select an aircraft..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {(aircraftList || []).map(a => (
+                                    <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button onClick={handleAssignToAircraft} disabled={!selectedAircraftId}>Confirm Assignment</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+           )}
+
+            {canManageTemplates && (
+                 <Dialog open={isClearAircraftDialogOpen} onOpenChange={handleClearDialogOpenChange}>
+                    <DialogTrigger asChild>
+                        <Button variant="destructive">
+                            <Wrench size={16} className="mr-2" /> Clear Aircraft M&amp;B
                         </Button>
-                    )}
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button variant="outline">
-                                <Plane size={16} className="mr-2" /> Assign to Aircraft
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Assign Configuration to Aircraft</DialogTitle>
-                                <DialogDescription>
-                                    This will overwrite the selected aircraft&apos;s current M&amp;B data with the data from the configurator.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="py-4 space-y-2">
-                                <Label htmlFor="aircraft-select">Aircraft Registration</Label>
-                                <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
-                                    <SelectTrigger id="aircraft-select">
-                                        <SelectValue placeholder="Select an aircraft..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {(aircraftList || []).map(a => (
-                                            <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <DialogFooter>
-                                <DialogClose asChild>
-                                    <Button variant="outline">Cancel</Button>
-                                </DialogClose>
-                                <Button onClick={handleAssignToAircraft} disabled={!selectedAircraftId}>Confirm Assignment</Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
-                    <Dialog open={isClearAircraftDialogOpen} onOpenChange={handleClearDialogOpenChange}>
-                        <DialogTrigger asChild>
-                            <Button variant="destructive">
-                                <Wrench size={16} className="mr-2" /> Clear Aircraft M&amp;B
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            {!showConfirmClear ? (
-                                <>
-                                    <DialogHeader>
-                                        <DialogTitle>Clear Aircraft Mass & Balance</DialogTitle>
-                                        <DialogDescription>
-                                            Select an aircraft to clear its stored M&amp;B configuration. This action cannot be undone.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="py-4 space-y-2">
-                                        <Label htmlFor="aircraft-clear-select">Aircraft Registration</Label>
-                                        <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
-                                            <SelectTrigger id="aircraft-clear-select">
-                                                <SelectValue placeholder="Select an aircraft..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {(aircraftList || []).map(a => (
-                                                    <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <DialogFooter>
-                                        <Button variant="outline" onClick={() => handleClearDialogOpenChange(false)}>Cancel</Button>
-                                        <Button variant='destructive' disabled={!selectedAircraftId} onClick={() => setShowConfirmClear(true)}>
-                                            Proceed to Clear
-                                        </Button>
-                                    </DialogFooter>
-                                </>
-                            ) : (
-                                <>
-                                    <DialogHeader>
-                                        <DialogTitle>Are you absolutely sure?</DialogTitle>
-                                        <DialogDescription>
-                                            This will permanently delete the mass and balance data for aircraft <span className='font-bold'>{selectedAircraftName}</span>.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <DialogFooter>
-                                        <Button variant="outline" onClick={() => setShowConfirmClear(false)}>Go Back</Button>
-                                        <Button onClick={handleClearAircraftWandB} variant="destructive">
-                                            Yes, Clear Data
-                                        </Button>
-                                    </DialogFooter>
-                                </>
-                            )}
-                        </DialogContent>
-                    </Dialog>
+                    </DialogTrigger>
+                    <DialogContent>
+                        {!showConfirmClear ? (
+                            <>
+                                <DialogHeader>
+                                    <DialogTitle>Clear Aircraft Mass & Balance</DialogTitle>
+                                    <DialogDescription>
+                                        Select an aircraft to clear its stored M&amp;B configuration. This action cannot be undone.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="py-4 space-y-2">
+                                    <Label htmlFor="aircraft-clear-select">Aircraft Registration</Label>
+                                    <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
+                                        <SelectTrigger id="aircraft-clear-select">
+                                            <SelectValue placeholder="Select an aircraft..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {(aircraftList || []).map(a => (
+                                                <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => handleClearDialogOpenChange(false)}>Cancel</Button>
+                                    <Button variant='destructive' disabled={!selectedAircraftId} onClick={() => setShowConfirmClear(true)}>
+                                        Proceed to Clear
+                                    </Button>
+                                </DialogFooter>
+                            </>
+                        ) : (
+                            <>
+                                <DialogHeader>
+                                    <DialogTitle>Are you absolutely sure?</DialogTitle>
+                                    <DialogDescription>
+                                        This will permanently delete the mass and balance data for aircraft <span className='font-bold'>{selectedAircraftName}</span>.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setShowConfirmClear(false)}>Go Back</Button>
+                                    <Button onClick={handleClearAircraftWandB} variant="destructive">
+                                        Yes, Clear Data
+                                    </Button>
+                                </DialogFooter>
+                            </>
+                        )}
+                    </DialogContent>
+                </Dialog>
+            )}
+
+            {canManageTemplates && (
+                <>
                     {loadedProfileId ? (
                         <div className='flex gap-2'>
                             <Button onClick={handleUpdateProfile}>
@@ -1458,7 +1583,7 @@ export function ConfiguratorTab() {
                         </DialogContent>
                     </Dialog>
                   )}
-                </div>
+                </>
             )}
         </CardFooter>
       </Card>
@@ -1467,3 +1592,5 @@ export function ConfiguratorTab() {
 }
 
 export default ConfiguratorTab;
+
+    
