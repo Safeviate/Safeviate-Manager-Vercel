@@ -49,10 +49,9 @@ type RiskFormValues = z.infer<typeof riskSchema>;
 
 interface RiskFormProps {
     existingRisk?: Risk;
-    onFormSuccess?: () => void;
 }
 
-export function RiskForm({ existingRisk, onFormSuccess }: RiskFormProps) {
+export function RiskForm({ existingRisk }: RiskFormProps) {
   const firestore = useFirestore();
   const { user } = useUser();
   const router = useRouter();
@@ -139,7 +138,6 @@ export function RiskForm({ existingRisk, onFormSuccess }: RiskFormProps) {
           title: 'Risk Updated',
           description: 'The risk has been successfully updated.',
         });
-        if (onFormSuccess) onFormSuccess();
         router.push('/safety/risk-register');
       } else {
         const risksRef = collection(firestore, 'tenants', tenantId, 'risks');
@@ -148,8 +146,7 @@ export function RiskForm({ existingRisk, onFormSuccess }: RiskFormProps) {
             title: 'Risk Added',
             description: 'The new organizational risk has been added to the register.',
         });
-        if (onFormSuccess) onFormSuccess();
-        else router.push('/safety/risk-register');
+        router.push('/safety/risk-register');
       }
 
     } catch (error: any) {
@@ -165,11 +162,7 @@ export function RiskForm({ existingRisk, onFormSuccess }: RiskFormProps) {
   };
 
   const handleCancel = () => {
-    if (onFormSuccess) {
-      onFormSuccess();
-    } else {
-      router.push('/safety/risk-register');
-    }
+    router.push('/safety/risk-register');
   };
 
   return (
@@ -216,18 +209,18 @@ export function RiskForm({ existingRisk, onFormSuccess }: RiskFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="w-56">
-                              <SelectValue placeholder="Set status" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Open">Open</SelectItem>
-                            <SelectItem value="Mitigated">Mitigated</SelectItem>
-                            <SelectItem value="Closed">Closed</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="w-56">
+                            <SelectValue placeholder="Set status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Open">Open</SelectItem>
+                          <SelectItem value="Mitigated">Mitigated</SelectItem>
+                          <SelectItem value="Closed">Closed</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
