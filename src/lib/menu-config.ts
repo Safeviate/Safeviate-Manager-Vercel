@@ -18,6 +18,7 @@ import {
   BookOpen,
   GitBranch,
   Library,
+  LineChart,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -75,6 +76,11 @@ export const menuConfig: MenuItem[] = [
         href: '/safety/risk-register',
         label: 'Risk Register',
         description: 'View and manage the risk register.',
+      },
+      {
+        href: '/safety/safety-performance-indicators',
+        label: 'Safety Performance Indicators',
+        description: 'Track and analyze key safety metrics.',
       },
     ],
   },
