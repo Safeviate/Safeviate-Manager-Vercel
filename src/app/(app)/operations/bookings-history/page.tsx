@@ -21,7 +21,6 @@ import { Eye, CheckCircle, XCircle, Scale } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-// import { MassBalanceActions } from '../mass-balance/mass-balance-actions';
 
 // A consolidated type for display
 type EnrichedBooking = Booking & {
@@ -73,7 +72,6 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
                 <TableHead>Pilot</TableHead>
                 <TableHead>Start Time</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>M&B</TableHead>
                 <TableHead className='text-right'>Actions</TableHead>
             </TableRow>
             </TableHeader>
@@ -86,15 +84,6 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
                         <TableCell>{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
                         <TableCell>
                             <Badge variant={getStatusBadgeVariant(b.status)}>{b.status}</Badge>
-                        </TableCell>
-                        <TableCell>
-                            {/* {b.aircraft && (
-                                <MassBalanceActions
-                                    booking={b}
-                                    aircraft={b.aircraft}
-                                    tenantId={tenantId}
-                                />
-                            )} */}
                         </TableCell>
                         <TableCell className='text-right'>
                             <Button asChild variant="outline" size="sm">

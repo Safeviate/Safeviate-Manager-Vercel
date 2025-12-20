@@ -46,7 +46,6 @@ import { PreFlightChecklistDialog } from './pre-flight-checklist-dialog';
 import { PostFlightChecklistDialog } from './post-flight-checklist-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { MassBalanceCalculator } from '../mass-balance/mass-balance-calculator';
 
 
 interface BookingFormProps {
