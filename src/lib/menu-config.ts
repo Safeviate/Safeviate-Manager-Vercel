@@ -63,6 +63,13 @@ export const menuConfig: MenuItem[] = [
     href: '/safety',
     label: 'Safety',
     icon: AlertTriangle,
+    subItems: [
+      {
+        href: '/safety/safety-reports',
+        label: 'Safety Reports',
+        description: 'View and manage safety reports.',
+      },
+    ],
   },
   {
     href: '/quality',
