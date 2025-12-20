@@ -98,7 +98,7 @@ export function FlightPlannerForm({ aircrafts, pilots, bookings }: FlightPlanner
             const fromPoint = debouncedWaypoints[i];
             const toPoint = debouncedWaypoints[i+1];
 
-            if (!fromPoint || !toPoint) continue;
+            if (!fromPoint || !toPoint || fromPoint.lat === undefined || fromPoint.lon === undefined || toPoint.lat === undefined || toPoint.lon === undefined) continue;
             
             const distance = getDistance(fromPoint, toPoint);
             const trueCourse = getBearing(fromPoint, toPoint);
