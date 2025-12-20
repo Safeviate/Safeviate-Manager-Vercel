@@ -153,9 +153,7 @@ export function FlightPlannerForm({ aircrafts, pilots, bookings }: FlightPlanner
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Form Inputs */}
-          <div className="lg:col-span-1 space-y-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>Route</CardTitle>
@@ -187,68 +185,43 @@ export function FlightPlannerForm({ aircrafts, pilots, bookings }: FlightPlanner
                   )}
                 />
                  <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="departure" render={({ field }) => (<FormItem><FormLabel>Departure</FormLabel><FormControl><Input placeholder="ICAO" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="destination" render={({ field }) => (<FormItem><FormLabel>Destination</FormLabel><FormControl><Input placeholder="ICAO" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="departure" render={({ field }) => (<FormItem><FormLabel>Departure</FormLabel><FormControl><Input placeholder="ICAO" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="destination" render={({ field }) => (<FormItem><FormLabel>Destination</FormLabel><FormControl><Input placeholder="ICAO" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
                 </div>
-                 <FormField control={form.control} name="alternate" render={({ field }) => (<FormItem><FormLabel>Alternate</FormLabel><FormControl><Input placeholder="ICAO (Optional)" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="alternate" render={({ field }) => (<FormItem><FormLabel>Alternate</FormLabel><FormControl><Input placeholder="ICAO (Optional)" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
                 
                 <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="flightRules" render={({ field }) => ( <FormItem><FormLabel>Flight Rules</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="VFR">VFR</SelectItem><SelectItem value="IFR">IFR</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="cruisingAltitude" render={({ field }) => (<FormItem><FormLabel>Altitude (ft)</FormLabel><FormControl><Input type="number" placeholder="e.g., 5500" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="cruisingAltitude" render={({ field }) => (<FormItem><FormLabel>Altitude (ft)</FormLabel><FormControl><Input type="number" placeholder="e.g., 5500" {...field} value={field.value || 0} /></FormControl><FormMessage /></FormItem>)} />
                 </div>
               </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Waypoints</CardTitle>
-                    <CardDescription>Enter waypoints in order. Calculations are updated live.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {fields.map((field, index) => (
-                        <div key={field.id} className="flex items-end gap-2 p-2 border rounded-md">
-                           <FormField control={form.control} name={`waypoints.${index}.name`} render={({ field }) => (<FormItem className="flex-1"><FormLabel>Name</FormLabel><FormControl><Input placeholder="e.g., KSQL" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                           <FormField control={form.control} name={`waypoints.${index}.lat`} render={({ field }) => (<FormItem className="w-24"><FormLabel>Lat</FormLabel><FormControl><Input type="number" step="any" placeholder="37.51" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                           <FormField control={form.control} name={`waypoints.${index}.lon`} render={({ field }) => (<FormItem className="w-24"><FormLabel>Lon</FormLabel><FormControl><Input type="number" step="any" placeholder="-122.25" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                           <FormField control={form.control} name={`waypoints.${index}.altitude`} render={({ field }) => (<FormItem className="w-24"><FormLabel>Altitude</FormLabel><FormControl><Input type="number" placeholder="5500" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                           <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}>
-                                <Trash2 className="h-4 w-4" />
-                           </Button>
-                        </div>
-                    ))}
-                    <Button type="button" variant="outline" className="w-full" onClick={() => append({ name: '', lat: 0, lon: 0, altitude: form.getValues('cruisingAltitude') })}>
-                        <PlusCircle className="mr-2" /> Add Waypoint
-                    </Button>
-                </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
                 <CardTitle>Performance &amp; Fuel</CardTitle>
+                <CardDescription>Enter aircraft performance and wind conditions.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="cruiseSpeed" render={({ field }) => (<FormItem><FormLabel>TAS (kts)</FormLabel><FormControl><Input type="number" placeholder="100" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="fuelBurnRate" render={({ field }) => (<FormItem><FormLabel>Fuel Burn (gal/hr)</FormLabel><FormControl><Input type="number" placeholder="8.0" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="windDirection" render={({ field }) => (<FormItem><FormLabel>Wind Dir (°)</FormLabel><FormControl><Input type="number" placeholder="270" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="windSpeed" render={({ field }) => (<FormItem><FormLabel>Wind Spd (kts)</FormLabel><FormControl><Input type="number" placeholder="15" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="cruiseSpeed" render={({ field }) => (<FormItem><FormLabel>TAS (kts)</FormLabel><FormControl><Input type="number" placeholder="100" {...field} value={field.value || 0} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="fuelBurnRate" render={({ field }) => (<FormItem><FormLabel>Fuel Burn (gal/hr)</FormLabel><FormControl><Input type="number" placeholder="8.0" {...field} value={field.value || 0} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="windDirection" render={({ field }) => (<FormItem><FormLabel>Wind Dir (°)</FormLabel><FormControl><Input type="number" placeholder="270" {...field} value={field.value || 0} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="windSpeed" render={({ field }) => (<FormItem><FormLabel>Wind Spd (kts)</FormLabel><FormControl><Input type="number" placeholder="15" {...field} value={field.value || 0} /></FormControl><FormMessage /></FormItem>)} />
               </CardContent>
             </Card>
-
-          </div>
-
-          {/* Right Column: Nav Log */}
-          <div className="lg:col-span-2">
-            <Card className="sticky top-20">
-              <CardHeader>
+        </div>
+        
+        <Card>
+            <CardHeader>
                 <div className='flex justify-between items-center'>
                     <div>
                         <CardTitle>Navigation Log</CardTitle>
-                        <CardDescription>Summary of your flight plan.</CardDescription>
+                        <CardDescription>Summary of your flight plan. Calculated automatically.</CardDescription>
                     </div>
                     <Button type="button" variant="outline">Print Nav Log</Button>
                 </div>
-              </CardHeader>
-              <CardContent>
+            </CardHeader>
+            <CardContent>
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -265,32 +238,53 @@ export function FlightPlannerForm({ aircrafts, pilots, bookings }: FlightPlanner
                     </TableHeader>
                     <TableBody>
                         {navLog.length > 0 ? (
-                           navLog.map((leg, index) => (
-                               <TableRow key={index}>
-                                   <TableCell>{leg.from}</TableCell>
-                                   <TableCell>{leg.to}</TableCell>
-                                   <TableCell>{leg.altitude} ft</TableCell>
-                                   <TableCell>{leg.track}°</TableCell>
-                                   <TableCell>{leg.heading}°</TableCell>
-                                   <TableCell>{leg.distance} NM</TableCell>
-                                   <TableCell>{leg.groundSpeed} kts</TableCell>
-                                   <TableCell>{leg.ete} min</TableCell>
-                                   <TableCell>{leg.fuel} gal</TableCell>
-                               </TableRow>
-                           ))
+                            navLog.map((leg, index) => (
+                                <TableRow key={index}>
+                                    <TableCell>{leg.from}</TableCell>
+                                    <TableCell>{leg.to}</TableCell>
+                                    <TableCell>{leg.altitude} ft</TableCell>
+                                    <TableCell>{leg.track}°</TableCell>
+                                    <TableCell>{leg.heading}°</TableCell>
+                                    <TableCell>{leg.distance} NM</TableCell>
+                                    <TableCell>{leg.groundSpeed} kts</TableCell>
+                                    <TableCell>{leg.ete} min</TableCell>
+                                    <TableCell>{leg.fuel} gal</TableCell>
+                                </TableRow>
+                            ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={9} className="h-96 text-center text-muted-foreground">
-                                    Add at least two waypoints to generate the navigation log.
+                                <TableCell colSpan={9} className="h-48 text-center text-muted-foreground">
+                                    Add at least two waypoints below to generate the navigation log.
                                 </TableCell>
                             </TableRow>
                         )}
                     </TableBody>
                 </Table>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+            </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Waypoints</CardTitle>
+                <CardDescription>Enter waypoints in order. Calculations are updated live.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {fields.map((field, index) => (
+                    <div key={field.id} className="flex items-end gap-2 p-2 border rounded-md">
+                        <FormField control={form.control} name={`waypoints.${index}.name`} render={({ field }) => (<FormItem className="flex-1"><FormLabel>Name</FormLabel><FormControl><Input placeholder="e.g., KSQL" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name={`waypoints.${index}.lat`} render={({ field }) => (<FormItem className="w-24"><FormLabel>Lat</FormLabel><FormControl><Input type="number" step="any" placeholder="37.51" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name={`waypoints.${index}.lon`} render={({ field }) => (<FormItem className="w-24"><FormLabel>Lon</FormLabel><FormControl><Input type="number" step="any" placeholder="-122.25" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name={`waypoints.${index}.altitude`} render={({ field }) => (<FormItem className="w-24"><FormLabel>Altitude</FormLabel><FormControl><Input type="number" placeholder="5500" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                ))}
+                <Button type="button" variant="outline" className="w-full" onClick={() => append({ name: '', lat: 0, lon: 0, altitude: form.getValues('cruisingAltitude') })}>
+                    <PlusCircle className="mr-2" /> Add Waypoint
+                </Button>
+            </CardContent>
+        </Card>
 
         <div className="flex justify-end gap-2">
             <Button type="button" variant="outline">Reset Form</Button>
