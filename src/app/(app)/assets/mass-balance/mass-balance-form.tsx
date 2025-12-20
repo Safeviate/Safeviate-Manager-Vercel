@@ -1,455 +1,303 @@
+
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Trash2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Aircraft } from '../../assets/page';
-import type { AircraftModelProfile } from '../new/page';
-import type { Booking } from '@/types/booking';
-import {
-  ResponsiveContainer,
-  ScatterChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Scatter,
-  Area,
-} from 'recharts';
+import type { AircraftModelProfile, Station } from '@/types/aircraft';
+import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
 import { isPointInPolygon } from '@/lib/utils';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
+import { Area, AreaChart, CartesianGrid, Legend, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ReferenceLine } from 'recharts';
+import { useToast } from '@/hooks/use-toast';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useSearchParams, useRouter } from 'next/navigation';
+import type { Booking } from '@/types/booking';
 
-const stationSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  type: z.string(),
-  arm: z.number(),
-  weight: z.number().min(0).optional(),
-  maxGallons: z.number().optional(),
-});
-
-const formSchema = z.object({
-  stations: z.array(stationSchema),
-  emptyWeight: z.number(),
-  emptyWeightMoment: z.number(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
-interface MassAndBalanceFormProps {
+interface MassBalanceFormProps {
   aircrafts: Aircraft[];
   profiles: AircraftModelProfile[];
-  booking?: Booking | null;
   tenantId: string;
 }
 
-const CustomTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-background border p-2 rounded-md shadow-md">
-        <p className="font-bold">{`${payload[0].payload.name}`}</p>
-        <p>{`Weight: ${payload[0].value.toLocaleString()} lbs`}</p>
-        <p>{`CG: ${payload[1].value.toFixed(2)} in`}</p>
-      </div>
-    );
-  }
-  return null;
-};
+interface StationWeight extends Station {
+  currentWeight: number;
+}
 
-export function MassAndBalanceForm({ aircrafts, profiles, booking, tenantId }: MassAndBalanceFormProps) {
+const calculateMoment = (weight: number, arm: number) => weight * arm;
+
+export function MassBalanceForm({ aircrafts, profiles, tenantId }: MassBalanceFormProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const firestore = useFirestore();
 
+  const bookingId = searchParams.get('bookingId');
+  const initialAircraftId = searchParams.get('aircraftId');
+
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
-  const [selectedAircraftId, setSelectedAircraftId] = useState<string | null>(
-    booking?.aircraftId || null
-  );
-
-  const [cgPoints, setCgPoints] = useState<any[]>([]);
-  const [isWithinLimits, setIsWithinLimits] = useState<boolean | null>(null);
+  const [selectedAircraftId, setSelectedAircraftId] = useState<string | null>(initialAircraftId);
   
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      stations: [],
-      emptyWeight: 0,
-      emptyWeightMoment: 0,
-    },
-  });
-
-  const { fields, replace } = useFieldArray({
-    control: form.control,
-    name: 'stations',
-  });
-  
-  const stationValues = form.watch('stations');
-  const emptyWeight = form.watch('emptyWeight');
-  const emptyWeightMoment = form.watch('emptyWeightMoment');
-
-  const selectedProfile = useMemo(
-    () => profiles.find((p) => p.id === selectedProfileId),
-    [profiles, selectedProfileId]
+  const bookingRef = useMemoFirebase(
+    () => (firestore && bookingId ? doc(firestore, 'tenants', tenantId, 'bookings', bookingId) : null),
+    [firestore, tenantId, bookingId]
   );
+  const { data: booking } = useDoc<Booking>(bookingRef);
 
-  const selectedAircraft = useMemo(
-    () => aircrafts.find((a) => a.id === selectedAircraftId),
-    [aircrafts, selectedAircraftId]
-  );
+  const [profile, setProfile] = useState<AircraftModelProfile | null>(null);
+  const [stations, setStations] = useState<StationWeight[]>([]);
+  const [totalWeight, setTotalWeight] = useState(0);
+  const [totalMoment, setTotalMoment] = useState(0);
+  const [centerOfGravity, setCenterOfGravity] = useState(0);
+  const [isWithinLimits, setIsWithinLimits] = useState(false);
   
-  useEffect(() => {
-    if (booking && aircrafts.length > 0) {
-        setSelectedAircraftId(booking.aircraftId);
-    }
-  }, [booking, aircrafts]);
+  const [calculationHistory, setCalculationHistory] = useState<{ x: number, y: number, name: string }[]>([]);
+
+  const loadProfile = useCallback((profileData: AircraftModelProfile | Aircraft) => {
+    const emptyWeight = profileData.emptyWeight || 0;
+    const emptyWeightMoment = profileData.emptyWeightMoment || 0;
+
+    const initialStations: StationWeight[] = (profileData.stations || []).map((s: Station) => ({
+      ...s,
+      currentWeight: s.weight || 0,
+    }));
+
+    setProfile(profileData as AircraftModelProfile);
+    setStations(initialStations);
+    setTotalWeight(emptyWeight);
+    setTotalMoment(emptyWeightMoment);
+  }, []);
 
   useEffect(() => {
-    let profileToLoad: AircraftModelProfile | Aircraft | undefined;
-    if (selectedProfileId) {
-      profileToLoad = profiles.find((p) => p.id === selectedProfileId);
-    } else if (selectedAircraftId) {
-      profileToLoad = aircrafts.find((a) => a.id === selectedAircraftId);
+    if (booking?.massAndBalance && stations.length > 0) {
+      const updatedStations = stations.map(station => ({
+        ...station,
+        currentWeight: booking.massAndBalance?.stationWeights[station.id] || station.weight || 0
+      }));
+      setStations(updatedStations);
     }
-
-    if (profileToLoad) {
-      form.setValue('emptyWeight', profileToLoad.emptyWeight || 0);
-      form.setValue('emptyWeightMoment', profileToLoad.emptyWeightMoment || 0);
-
-      const profileStations =
-        profileToLoad.stations?.map((s) => ({
-          id: s.id.toString(),
-          name: s.name,
-          type: s.type,
-          arm: s.arm,
-          weight: s.weight,
-          maxGallons: s.maxGallons,
-        })) || [];
-      replace(profileStations);
-    } else {
-       // Clear form if no profile or aircraft is selected
-        form.reset({
-            stations: [],
-            emptyWeight: 0,
-            emptyWeightMoment: 0,
-        });
-    }
-  }, [selectedProfileId, selectedAircraftId, profiles, aircrafts, form, replace]);
-
+  }, [booking, stations.length]);
+  
   useEffect(() => {
-    if (booking?.massAndBalance?.stationWeights) {
-      const newStations = stationValues.map(station => {
-        const savedWeight = booking.massAndBalance?.stationWeights[station.id];
-        return {
-          ...station,
-          weight: savedWeight !== undefined ? savedWeight : station.weight,
-        };
-      });
-      form.setValue('stations', newStations);
+    if (selectedAircraftId) {
+      const aircraft = aircrafts.find(a => a.id === selectedAircraftId);
+      if (aircraft) {
+        loadProfile(aircraft);
+        setSelectedProfileId(null);
+      }
+    } else if (selectedProfileId) {
+      const selectedProf = profiles.find(p => p.id === selectedProfileId);
+      if (selectedProf) {
+        loadProfile(selectedProf);
+        setSelectedAircraftId(null);
+      }
     }
-  }, [booking?.massAndBalance, selectedAircraftId, selectedProfileId]); // Rerun when profile changes
+  }, [selectedProfileId, selectedAircraftId, aircrafts, profiles, loadProfile]);
+  
 
-
-  const totals = useMemo(() => {
-    const momentValues = stationValues.map(
-      (s) => (s.weight || 0) * s.arm
+  const handleStationWeightChange = (id: number, newWeight: number) => {
+    setStations(
+      stations.map((s) => (s.id === id ? { ...s, currentWeight: newWeight } : s))
     );
-    const totalWeight =
-      emptyWeight + stationValues.reduce((acc, s) => acc + (s.weight || 0), 0);
-    const totalMoment =
-      emptyWeightMoment + momentValues.reduce((acc, m) => acc + m, 0);
-    const centerOfGravity = totalWeight > 0 ? totalMoment / totalWeight : 0;
-    return { totalWeight, totalMoment, centerOfGravity };
-  }, [stationValues, emptyWeight, emptyWeightMoment]);
+  };
+  
+  const handleStationGallonsChange = (id: number, newGallons: number) => {
+    const maxGallons = stations.find(s => s.id === id)?.maxGallons || 0;
+    const clampedGallons = Math.max(0, Math.min(newGallons, maxGallons));
+    setStations(
+      stations.map((s) => (s.id === id ? { ...s, gallons: clampedGallons, currentWeight: clampedGallons * FUEL_WEIGHT_PER_GALLON } : s))
+    );
+  };
 
   const handleCalculate = () => {
-    const newPoints = [
-      { name: 'Zero Fuel', weight: totals.totalWeight, cg: totals.centerOfGravity },
-    ];
-    setCgPoints(newPoints);
+    if (!profile) return;
+    let currentTotalWeight = profile.emptyWeight || 0;
+    let currentTotalMoment = profile.emptyWeightMoment || 0;
+
+    stations.forEach((station) => {
+      currentTotalWeight += station.currentWeight;
+      currentTotalMoment += calculateMoment(station.currentWeight, station.arm);
+    });
+
+    const cg = currentTotalWeight > 0 ? currentTotalMoment / currentTotalWeight : 0;
+    const point = { x: cg, y: currentTotalWeight };
+    const envelope = profile.cgEnvelope || [];
     
-    const envelope = selectedProfile?.cgEnvelope || selectedAircraft?.cgEnvelope || [];
-    const point = { y: totals.totalWeight, x: totals.centerOfGravity };
     const inLimits = isPointInPolygon(point, envelope);
+
+    setTotalWeight(currentTotalWeight);
+    setTotalMoment(currentTotalMoment);
+    setCenterOfGravity(cg);
     setIsWithinLimits(inLimits);
+
+    const newHistoryPoint = { x: cg, y: currentTotalWeight, name: 'Current CG' };
+    setCalculationHistory([newHistoryPoint]);
+
+    toast({
+        title: 'Calculation Complete',
+        description: `CG is ${cg.toFixed(2)} inches, Total Weight is ${currentTotalWeight.toFixed(2)} lbs.`,
+        variant: inLimits ? 'default' : 'destructive',
+    });
   };
-  
+
   const handleSaveToBooking = () => {
-    if (!booking || !firestore || !selectedAircraftId) {
-        toast({ variant: "destructive", title: "Error", description: "No booking or aircraft selected." });
-        return;
-    }
+    if (!firestore || !bookingId || !profile) return;
+    
+    const bookingDocRef = doc(firestore, 'tenants', tenantId, 'bookings', bookingId);
+    
+    const stationWeights = stations.reduce((acc, station) => {
+        acc[station.id] = station.currentWeight;
+        return acc;
+    }, {} as {[key: string]: number});
     
     const massAndBalanceData = {
-        stationWeights: stationValues.reduce((acc, station) => {
-            acc[station.id] = station.weight || 0;
-            return acc;
-        }, {} as Record<string, number>),
-        totalWeight: totals.totalWeight,
-        totalMoment: totals.totalMoment,
-        centerOfGravity: totals.centerOfGravity,
-        isWithinLimits: isWithinLimits ?? false,
+        stationWeights,
+        totalWeight,
+        totalMoment,
+        centerOfGravity,
+        isWithinLimits,
         calculatedAt: new Date().toISOString(),
     };
-    
-    const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', booking.id);
-    updateDocumentNonBlocking(bookingRef, { massAndBalance: massAndBalanceData });
-    
-    toast({ title: "Saved", description: "Mass & Balance data has been saved to the booking." });
-  };
-  
-  const currentEnvelope = selectedProfile?.cgEnvelope || selectedAircraft?.cgEnvelope;
+
+    setDocumentNonBlocking(bookingDocRef, { massAndBalance: massAndBalanceData }, { merge: true });
+
+    toast({
+        title: "Saved to Booking",
+        description: "The mass and balance calculation has been saved to the current booking.",
+    });
+  }
+
+  const chartData = useMemo(() => {
+    if (!profile || !profile.cgEnvelope) return [];
+    return profile.cgEnvelope.map(p => ({ x: p.x, y: p.y }));
+  }, [profile]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Mass & Balance Calculator</CardTitle>
-        <CardDescription>
-          Load an aircraft or profile, enter weights, and calculate the center
-          of gravity.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* --- Left Column: Chart --- */}
-            <div className="h-96 w-full p-4 border rounded-lg">
-              <ResponsiveContainer>
-                <ScatterChart
-                  margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    type="number"
-                    dataKey="x"
-                    name="cg"
-                    label={{
-                      value: 'Center of Gravity (in)',
-                      position: 'insideBottom',
-                      offset: -10,
-                    }}
-                    domain={[currentEnvelope?.[0].x * 0.95, currentEnvelope?.[2].x * 1.05]}
-                    tickCount={8}
-                    tickFormatter={(val) => val.toFixed(1)}
-                  />
-                  <YAxis
-                    type="number"
-                    dataKey="y"
-                    name="weight"
-                    label={{
-                      value: 'Weight (lbs)',
-                      angle: -90,
-                      position: 'insideLeft',
-                    }}
-                    domain={[currentEnvelope?.[0].y * 0.9, currentEnvelope?.[3].y * 1.1]}
-                    tickCount={10}
-                  />
-                  <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
-
-                  {currentEnvelope && (
-                    <Area
-                      type="linear"
-                      dataKey="y"
-                      data={currentEnvelope}
-                      stroke="hsl(var(--foreground))"
-                      fill="hsl(var(--primary) / 0.2)"
-                      isAnimationActive={false}
-                    />
-                  )}
-
-                  <Scatter name="CG Points" data={cgPoints} fill="hsl(var(--destructive))" />
-                </ScatterChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* --- Right Column: Form --- */}
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <Select
-                  onValueChange={(id) => {
-                    setSelectedProfileId(id);
-                    setSelectedAircraftId(null);
-                  }}
-                  value={selectedProfileId || ''}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Load Saved Profile" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {profiles.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.profileName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle>Mass & Balance Calculator</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={400}>
+            <ScatterChart
+                margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                <CartesianGrid />
+                <XAxis type="number" dataKey="x" name="CG (inches)" unit="in" domain={[profile?.xMin || 75, profile?.xMax || 95]} />
+                <YAxis type="number" dataKey="y" name="Weight (lbs)" unit="lbs" domain={[profile?.yMin || 1800, profile?.yMax || 2600]} />
+                <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                <Legend />
+                <Area type="monotone" dataKey="y" data={chartData} stroke="hsl(var(--foreground))" fill="hsl(var(--primary) / 0.2)" name="CG Envelope" />
+                <Scatter name="Current CG" data={calculationHistory} fill="#8884d8" />
+                 {profile?.maxTakeoffWeight && (
+                    <ReferenceLine y={profile.maxTakeoffWeight} label={{ value: `Max TO (${profile.maxTakeoffWeight} lbs)`, position: 'insideTopRight' }} stroke="red" strokeDasharray="3 3" />
+                )}
+            </ScatterChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+      
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle>Configuration</CardTitle>
+          <CardDescription>
+            Load a profile or manually enter weights. All weights are in lbs.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+             <div className='flex gap-4 mb-6'>
+                <Select onValueChange={setSelectedProfileId} value={selectedProfileId || ''}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Load Saved Profile" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {profiles.map(p => <SelectItem key={p.id} value={p.id}>{p.profileName}</SelectItem>)}
+                    </SelectContent>
                 </Select>
-                <Select
-                  onValueChange={(id) => {
-                    setSelectedAircraftId(id);
-                    setSelectedProfileId(null);
-                  }}
-                  value={selectedAircraftId || ''}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Load from Aircraft" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {aircrafts.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.tailNumber} ({a.model})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId || ''}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Load from Aircraft Registration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {aircrafts.map(a => <SelectItem key={a.id} value={a.id}>{a.tailNumber} ({a.model})</SelectItem>)}
+                    </SelectContent>
                 </Select>
-              </div>
-
-              <div className="border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Station</TableHead>
-                      <TableHead className="text-right">Weight (lbs)</TableHead>
-                      <TableHead className="text-right">Arm (in)</TableHead>
-                      <TableHead className="text-right">Moment (lb-in)</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>Basic Empty Weight</TableCell>
-                      <TableCell className="text-right">
-                        {emptyWeight.toLocaleString()}
-                      </TableCell>
-                      <TableCell></TableCell>
-                      <TableCell className="text-right">
-                        {emptyWeightMoment.toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                    {fields.map((field, index) => (
-                      <TableRow key={field.id}>
-                        <TableCell>
-                          <p>{field.name}</p>
-                          {field.type === 'fuel' && (
-                             <Controller
-                                control={form.control}
-                                name={`stations.${index}.weight`}
-                                render={({ field: { onChange, ...props } }) => (
-                                    <div className='flex items-center gap-2 mt-1'>
-                                        <Input
-                                            type="number"
-                                            className='h-8 w-24'
-                                            placeholder='Gallons'
-                                            onChange={(e) => {
-                                                const gallons = parseFloat(e.target.value);
-                                                const weight = isNaN(gallons) ? 0 : gallons * FUEL_WEIGHT_PER_GALLON;
-                                                onChange(weight);
-                                            }}
-                                            // Calculate gallons from weight for display
-                                            value={props.value ? (props.value / FUEL_WEIGHT_PER_GALLON).toFixed(1) : ''}
-                                        />
-                                        <span className='text-xs text-muted-foreground'>
-                                            / {field.maxGallons} gal
-                                        </span>
-                                    </div>
-                                )}
-                            />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                           {field.type !== 'fuel' && (
-                             <Controller
-                                control={form.control}
-                                name={`stations.${index}.weight`}
-                                render={({ field }) => (
-                                  <Input
+             </div>
+             
+             {profile && (
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {stations.map(station => (
+                        <div key={station.id} className="space-y-2">
+                            <Label htmlFor={`station-${station.id}`}>{station.name} (Arm: {station.arm}in)</Label>
+                            {station.type === 'fuel' ? (
+                                <div className="flex items-center gap-2">
+                                     <Input
+                                        id={`station-gallons-${station.id}`}
+                                        type="number"
+                                        value={station.gallons || ''}
+                                        onChange={(e) => handleStationGallonsChange(station.id, parseFloat(e.target.value))}
+                                        placeholder="Gallons"
+                                    />
+                                    <Input
+                                        id={`station-${station.id}`}
+                                        type="number"
+                                        value={station.currentWeight}
+                                        onChange={(e) => handleStationWeightChange(station.id, parseFloat(e.target.value))}
+                                        readOnly
+                                        className="bg-muted"
+                                    />
+                                </div>
+                            ) : (
+                                <Input
+                                    id={`station-${station.id}`}
                                     type="number"
-                                    className="h-8 text-right"
-                                    {...field}
-                                    value={field.value ?? ''}
-                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                  />
-                                )}
-                              />
-                           )}
-                           {field.type === 'fuel' && (
-                                <p>{(stationValues[index]?.weight || 0).toFixed(1)}</p>
-                           )}
-                        </TableCell>
-                        <TableCell className="text-right">{field.arm}</TableCell>
-                        <TableCell className="text-right">
-                          {((stationValues[index]?.weight || 0) * field.arm).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                        </TableCell>
-                      </TableRow>
+                                    value={station.currentWeight}
+                                    onChange={(e) => handleStationWeightChange(station.id, parseFloat(e.target.value))}
+                                    placeholder="Weight (lbs)"
+                                />
+                            )}
+                        </div>
                     ))}
-                  </TableBody>
-                  <TableFooter>
-                    <TableRow>
-                      <TableCell>Totals</TableCell>
-                      <TableCell className="text-right font-bold">
-                        {totals.totalWeight.toLocaleString(undefined, { maximumFractionDigits: 1 })}
-                      </TableCell>
-                      <TableCell className="text-right font-bold">
-                         {totals.centerOfGravity.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right font-bold">
-                        {totals.totalMoment.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                      </TableCell>
-                    </TableRow>
-                  </TableFooter>
-                </Table>
-              </div>
-                {isWithinLimits !== null && (
-                    <div className={`p-4 rounded-md text-center font-bold ${isWithinLimits ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                        {isWithinLimits ? 'Center of Gravity is WITHIN limits.' : 'Center of Gravity is OUTSIDE limits.'}
-                    </div>
-                )}
-              <div className="flex justify-end gap-2">
-                <Button type="button" onClick={handleCalculate} disabled={!selectedProfileId && !selectedAircraftId}>Calculate</Button>
-                {booking && (
-                    <Button type="button" onClick={handleSaveToBooking} variant="outline" disabled={cgPoints.length === 0}>
-                        Save to Booking
-                    </Button>
-                )}
-              </div>
+                 </div>
+             )}
+            <div className="flex justify-end items-center gap-4 pt-4 border-t">
+                {bookingId && <Button onClick={handleSaveToBooking} variant="secondary">Save to Booking</Button>}
+                <Button onClick={handleCalculate} disabled={!profile}>Calculate</Button>
             </div>
+
+            {profile && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 p-4 border rounded-lg">
+                    <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Total Weight</p>
+                        <p className="text-2xl font-bold">{totalWeight.toFixed(2)} lbs</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Total Moment</p>
+                        <p className="text-2xl font-bold">{totalMoment.toFixed(2)}</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Center of Gravity</p>
+                        <p className="text-2xl font-bold">{centerOfGravity.toFixed(2)} in</p>
+                    </div>
+                     <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Status</p>
+                        <p className={`text-2xl font-bold ${isWithinLimits ? 'text-green-600' : 'text-red-600'}`}>
+                            {isWithinLimits ? 'In Limits' : 'Out of Limits'}
+                        </p>
+                    </div>
+                </div>
+            )}
           </div>
-        </Form>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
+
+    
