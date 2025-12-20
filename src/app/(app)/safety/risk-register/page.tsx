@@ -1,11 +1,69 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle } from 'lucide-react';
 import Link from 'next/link';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query } from 'firebase/firestore';
+import type { RiskAssessment } from '@/types/safety-report';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+
+export type Risk = {
+    id: string;
+    hazard: string;
+    risk: string;
+    hazardArea: string;
+    process?: string;
+    initialRiskAssessment: RiskAssessment;
+    mitigationControls: string;
+    mitigatedRiskAssessment: RiskAssessment;
+    riskOwnerId: string;
+    status: 'Open' | 'Mitigated' | 'Closed';
+}
+
+const getRiskLevelVariant = (level: Risk['initialRiskAssessment']['riskLevel']) => {
+    switch (level) {
+        case 'Critical':
+        case 'High':
+            return 'destructive';
+        case 'Medium':
+            return 'secondary';
+        case 'Low':
+            return 'default';
+        default:
+            return 'outline';
+    }
+}
+
+const getStatusVariant = (status: Risk['status']) => {
+    switch (status) {
+        case 'Open':
+            return 'destructive';
+        case 'Mitigated':
+            return 'secondary';
+        case 'Closed':
+            return 'default';
+        default:
+            return 'outline';
+    }
+}
+
 
 export default function RiskRegisterPage() {
+    const firestore = useFirestore();
+    const tenantId = 'safeviate';
+
+    const risksQuery = useMemoFirebase(
+        () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'risks')) : null),
+        [firestore, tenantId]
+    );
+
+    const { data: risks, isLoading, error } = useCollection<Risk>(risksQuery);
+
   return (
     <div className="flex flex-col gap-6 h-full">
         <div className="flex justify-between items-center">
@@ -30,9 +88,44 @@ export default function RiskRegisterPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-48 flex items-center justify-center text-muted-foreground">
-            <p>Risk register table will be displayed here.</p>
-          </div>
+            {isLoading && <p>Loading risks...</p>}
+            {error && <p className="text-destructive">Error loading risks: {error.message}</p>}
+            {!isLoading && risks && (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Hazard</TableHead>
+                            <TableHead>Risk</TableHead>
+                            <TableHead>Initial Score</TableHead>
+                            <TableHead>Status</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {risks.length > 0 ? (
+                            risks.map(risk => (
+                                <TableRow key={risk.id}>
+                                    <TableCell className="max-w-xs truncate">{risk.hazard}</TableCell>
+                                    <TableCell className="max-w-xs truncate">{risk.risk}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={getRiskLevelVariant(risk.initialRiskAssessment.riskLevel)}>
+                                            {risk.initialRiskAssessment.riskLevel} ({risk.initialRiskAssessment.riskScore})
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant={getStatusVariant(risk.status)}>{risk.status}</Badge>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={4} className="h-24 text-center">
+                                    No risks have been added to the register.
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            )}
         </CardContent>
       </Card>
     </div>
