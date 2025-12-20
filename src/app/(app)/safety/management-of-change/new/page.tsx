@@ -1,14 +1,16 @@
+
 'use client';
 
 import { useState } from 'react';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { addDoc, collection, doc, runTransaction } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NewMocForm, type NewMocFormValues } from './new-moc-form';
 import type { ManagementOfChange } from '@/types/moc';
-
+import type { Department } from '@/app/(app)/admin/department/page';
+import type { Personnel } from '@/app/(app)/users/personnel/page';
 
 const getMocPrefix = (): string => 'MOC';
 
@@ -19,6 +21,19 @@ export default function NewMocPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const tenantId = 'safeviate'; // Hardcoded for now
+
+  // Fetch departments and personnel for the form dropdowns
+  const departmentsQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'tenants', tenantId, 'departments') : null),
+    [firestore]
+  );
+  const personnelQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'tenants', tenantId, 'personnel') : null),
+    [firestore]
+  );
+
+  const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
+  const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
 
   const handleNewMoc = async (values: NewMocFormValues) => {
     if (!firestore || !user) {
@@ -82,13 +97,19 @@ export default function NewMocPage() {
     }
   };
   
-  // NOTE: This component needs to fetch departments and personnel for the form dropdowns
-  // For now, we will pass empty arrays. This will be part of a future step.
-  if (!user) {
+  if (!user || isLoadingDepts || isLoadingPersonnel) {
     return (
-        <div className="space-y-6">
-            <Skeleton className="h-48 w-full" />
-            <Skeleton className="h-64 w-full" />
+        <div className="max-w-4xl mx-auto space-y-8">
+            <div className="space-y-6">
+                <Skeleton className="h-10 w-1/3" />
+                <Skeleton className="h-4 w-2/3" />
+            </div>
+            <div className="space-y-6">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-12 w-full" />
+            </div>
         </div>
     )
   }
@@ -97,8 +118,8 @@ export default function NewMocPage() {
     <NewMocForm 
         onSubmit={handleNewMoc}
         isSubmitting={isSubmitting}
-        departments={[]} // Placeholder
-        personnel={[]} // Placeholder
+        departments={departments || []}
+        personnel={personnel || []}
     />
   );
 }
