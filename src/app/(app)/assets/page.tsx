@@ -4,31 +4,37 @@
 import { useMemo } from 'react';
 import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AircraftForm } from './aircraft-form';
 import { AircraftTable } from './aircraft-table';
-import { MassBalanceTemplates } from './mass-balance/mass-balance-templates';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export type Aircraft = {
   id: string;
   tailNumber: string;
   model: string;
-  type: 'Single-Engine' | 'Multi-Engine';
   abbreviation: string;
-  frameHours?: number;
-  engineHours?: number;
-  initialHobbs?: number;
-  currentHobbs?: number;
-  initialTacho?: number;
-  currentTacho?: number;
-  tachoAtNext50Inspection?: number;
-  tachoAtNext100Inspection?: number;
+  type: 'Single-Engine' | 'Multi-Engine';
+  frameHours: number;
+  engineHours: number;
+  initialHobbs: number;
+  currentHobbs: number;
+  initialTacho: number;
+  currentTacho: number;
+  tachoAtNext50Inspection: number;
+  tachoAtNext100Inspection: number;
   emptyWeight: number;
   emptyWeightMoment: number;
   maxTakeoffWeight: number;
   maxLandingWeight: number;
+  stationArms: {
+    frontSeats: number;
+    rearSeats: number;
+    fuel: number;
+    baggage1: number;
+    baggage2: number;
+  };
   cgEnvelope: { x: number; y: number }[];
 };
 
@@ -44,64 +50,34 @@ export default function AssetsPage() {
     [firestore]
   );
   
-  const {
-    data: aircraft,
-    isLoading,
-    error,
-  } = useCollection<Aircraft>(aircraftQuery);
-
-  const renderContent = () => {
-    if (isLoading) {
-      return (
-        <div className="p-4 space-y-4">
-            <div className="flex justify-between items-center">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-10 w-24" />
-            </div>
-            <Skeleton className="h-64 w-full" />
-        </div>
-      );
-    }
-
-    if (error) {
-      return <div className="text-destructive p-4">Error loading aircraft: {error.message}</div>;
-    }
-    
-    // Only render the table if aircraft data is available.
-    if (aircraft) {
-        return <AircraftTable aircraft={aircraft} tenantId={tenantId} />;
-    }
-
-    // Fallback while waiting for data (even if isLoading is briefly false)
-    return (
-        <div className="p-4 text-center text-muted-foreground">
-            Loading aircraft data...
-        </div>
-    );
-  };
-
+  const { data: aircraft, isLoading, error } = useCollection<Aircraft>(aircraftQuery);
 
   return (
     <div className="flex flex-col gap-6 h-full">
-      <Tabs defaultValue="aircraft">
-        <div className="flex justify-between items-center px-1">
-          <TabsList>
-            <TabsTrigger value="aircraft">Aircraft</TabsTrigger>
-            <TabsTrigger value="mass-balance">Mass & Balance</TabsTrigger>
-          </TabsList>
-          <AircraftForm tenantId={tenantId} />
+        <div className="flex justify-between items-center">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Aircraft</h1>
+                <p className="text-muted-foreground">Manage all aircraft in your fleet.</p>
+            </div>
+            <AircraftForm tenantId={tenantId} />
         </div>
-        <Card>
-            <CardContent className="p-0">
-                <TabsContent value="aircraft" className='m-0'>
-                    {renderContent()}
-                </TabsContent>
-                <TabsContent value="mass-balance" className='m-0'>
-                    <MassBalanceTemplates tenantId={tenantId} />
-                </TabsContent>
-            </CardContent>
-        </Card>
-      </Tabs>
+      <Card>
+        <CardContent className="p-0">
+          {isLoading && (
+              <div className="text-center p-8">
+                <p className="text-muted-foreground">Loading aircraft...</p>
+              </div>
+            )}
+            {!isLoading && error && (
+              <div className="text-center p-8 text-destructive">
+                Error: {error.message}
+              </div>
+            )}
+            {!isLoading && !error && aircraft && (
+              <AircraftTable aircraft={aircraft} tenantId={tenantId} />
+            )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
