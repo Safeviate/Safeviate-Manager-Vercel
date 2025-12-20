@@ -193,18 +193,18 @@ export function RiskForm({ existingRisk }: RiskFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status</FormLabel>
-                      <FormControl>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
                             <SelectTrigger className='w-56'>
                                 <SelectValue placeholder="Set status" />
                             </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Open">Open</SelectItem>
-                                <SelectItem value="Mitigated">Mitigated</SelectItem>
-                                <SelectItem value="Closed">Closed</SelectItem>
-                            </SelectContent>
+                          </FormControl>
+                          <SelectContent>
+                              <SelectItem value="Open">Open</SelectItem>
+                              <SelectItem value="Mitigated">Mitigated</SelectItem>
+                              <SelectItem value="Closed">Closed</SelectItem>
+                          </SelectContent>
                         </Select>
-                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
