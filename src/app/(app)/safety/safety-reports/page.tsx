@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import Link from 'next/link';
 
 export default function SafetyReportsPage() {
   return (
@@ -14,9 +15,11 @@ export default function SafetyReportsPage() {
             View and manage all filed safety reports.
           </p>
         </div>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          File Safety Report
+        <Button asChild>
+            <Link href="/safety/new-report">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                File Safety Report
+            </Link>
         </Button>
       </div>
 
