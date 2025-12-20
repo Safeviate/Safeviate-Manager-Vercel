@@ -20,6 +20,7 @@ import {
   Library,
   LineChart,
   ShieldAlert,
+  Map,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -55,6 +56,11 @@ export const menuConfig: MenuItem[] = [
         href: '/operations/bookings',
         label: 'Schedule',
         description: 'View the aircraft booking schedule.',
+      },
+      {
+        href: '/operations/flight-planner',
+        label: 'Flight Planner',
+        description: 'Create and manage flight plans.',
       },
       {
         href: '/operations/bookings-history',

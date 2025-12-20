@@ -30,6 +30,7 @@ export interface Booking {
     isOvernight?: boolean;
     overnightBookingDate?: string | null; // YYYY-MM-DD
     overnightEndTime?: string | null; // HH:mm
+    flightPlanId?: string; // Link to a flight plan document
     // Pre-flight data
     preFlight?: {
         actualHobbs?: number;

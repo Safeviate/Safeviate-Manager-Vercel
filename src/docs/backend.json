@@ -1,6 +1,75 @@
 
 {
   "entities": {
+    "FlightPlan": {
+      "title": "Flight Plan",
+      "type": "object",
+      "description": "Represents a comprehensive flight plan including route, W&B, and performance calculations.",
+      "properties": {
+        "id": { "type": "string" },
+        "bookingId": { "type": "string", "description": "The booking this flight plan is associated with." },
+        "pilotId": { "type": "string" },
+        "aircraftId": { "type": "string" },
+        "departure": { "type": "string" },
+        "destination": { "type": "string" },
+        "alternate": { "type": "string" },
+        "flightRules": { "type": "string", "enum": ["VFR", "IFR"] },
+        "cruisingAltitude": { "type": "number" },
+        "waypoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "type": { "type": "string", "enum": ["Airport", "VOR", "NDB", "GPS"] },
+              "lat": { "type": "number" },
+              "lon": { "type": "number" }
+            }
+          }
+        },
+        "massAndBalance": { "$ref": "#/backend/entities/MassAndBalance" },
+        "performance": {
+          "type": "object",
+          "properties": {
+            "cruiseSpeed": { "type": "number" },
+            "fuelBurnRate": { "type": "number" },
+            "windDirection": { "type": "number" },
+            "windSpeed": { "type": "number" }
+          }
+        },
+        "navLog": {
+          "type": "array",
+          "description": "Calculated navigation log for each leg of the journey.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": { "type": "string" },
+              "to": { "type": "string" },
+              "track": { "type": "number" },
+              "windCorrectionAngle": { "type": "number" },
+              "heading": { "type": "number" },
+              "distance": { "type": "number" },
+              "groundSpeed": { "type": "number" },
+              "ete": { "type": "number" },
+              "fuel": { "type": "number" }
+            }
+          }
+        },
+        "fuelPlan": {
+            "type": "object",
+            "properties": {
+                "tripFuel": { "type": "number" },
+                "contingencyFuel": { "type": "number" },
+                "alternateFuel": { "type": "number" },
+                "finalReserveFuel": { "type": "number" },
+                "extraFuel": { "type": "number" },
+                "totalFuelRequired": { "type": "number" }
+            }
+        }
+      },
+       "required": ["id", "pilotId", "aircraftId", "departure", "destination"]
+    },
     "Risk": {
       "title": "Risk",
       "type": "object",
@@ -281,6 +350,10 @@
         "id": {
           "type": "string",
           "description": "Unique identifier for the booking."
+        },
+        "flightPlanId": {
+          "type": "string",
+          "description": "The ID of the flight plan associated with this booking."
         },
         "bookingNumber": {
             "type": "number",
@@ -1012,6 +1085,20 @@
   },
   "firestore": {
     "structure": [
+       {
+        "path": "tenants/{tenantId}/flight-plans/{flightPlanId}",
+        "definition": {
+          "entityName": "FlightPlan",
+          "schema": {
+            "$ref": "#/backend/entities/FlightPlan"
+          },
+          "description": "Stores flight plans for each tenant.",
+          "params": [
+            { "name": "tenantId", "description": "Tenant ID." },
+            { "name": "flightPlanId", "description": "Flight Plan ID." }
+          ]
+        }
+      },
       {
         "path": "tenants/{tenantId}/risks/{riskId}",
         "definition": {
