@@ -30,6 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import type { Risk } from './page';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 const riskSchema = z.object({
   hazard: z.string().min(1, 'Hazard description is required.'),
@@ -62,7 +63,13 @@ export function RiskForm({ existingRisk, onFormSuccess }: RiskFormProps) {
 
   const form = useForm<RiskFormValues>({
     resolver: zodResolver(riskSchema),
-    defaultValues: isEditMode && existingRisk ? existingRisk : {
+    defaultValues: isEditMode && existingRisk ? {
+      ...existingRisk,
+      initialRiskAssessment: {
+        severity: existingRisk.initialRiskAssessment.severity || 1,
+        likelihood: existingRisk.initialRiskAssessment.likelihood || 1,
+      }
+    } : {
       hazard: '',
       risk: '',
       hazardArea: '',
@@ -78,7 +85,13 @@ export function RiskForm({ existingRisk, onFormSuccess }: RiskFormProps) {
 
   useEffect(() => {
     if (isEditMode && existingRisk) {
-        form.reset(existingRisk);
+        form.reset({
+          ...existingRisk,
+           initialRiskAssessment: {
+            severity: existingRisk.initialRiskAssessment.severity || 1,
+            likelihood: existingRisk.initialRiskAssessment.likelihood || 1,
+          }
+        });
     }
   }, [isEditMode, existingRisk, form]);
 
@@ -127,7 +140,7 @@ export function RiskForm({ existingRisk, onFormSuccess }: RiskFormProps) {
           description: 'The risk has been successfully updated.',
         });
         if (onFormSuccess) onFormSuccess();
-        router.push('/safety/risk-register'); // Ensure user is on main page
+        router.push('/safety/risk-register');
       } else {
         const risksRef = collection(firestore, 'tenants', tenantId, 'risks');
         await addDocumentNonBlocking(risksRef, riskData);
@@ -136,6 +149,7 @@ export function RiskForm({ existingRisk, onFormSuccess }: RiskFormProps) {
             description: 'The new organizational risk has been added to the register.',
         });
         if (onFormSuccess) onFormSuccess();
+        else router.push('/safety/risk-register');
       }
 
     } catch (error: any) {
@@ -162,7 +176,14 @@ export function RiskForm({ existingRisk, onFormSuccess }: RiskFormProps) {
     <div className='max-w-4xl mx-auto'>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="space-y-6">
+          <Card>
+             <CardHeader>
+                <CardTitle>{isEditMode ? 'Edit Risk' : 'Add New Risk'}</CardTitle>
+                <CardDescription>
+                    {isEditMode ? 'Update the details for this risk.' : 'Manually add a new organizational risk to the register.'}
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
                 <FormField control={form.control} name="hazard" render={({ field }) => ( <FormItem> <FormLabel>Hazard</FormLabel> <FormControl> <Textarea placeholder="e.g., Frequent short-notice changes to the flight schedule" {...field} /> </FormControl> <FormDescription>A description of the condition or situation that has the potential to cause harm.</FormDescription> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="risk" render={({ field }) => ( <FormItem> <FormLabel>Risk</FormLabel> <FormControl> <Textarea placeholder="e.g., Increased likelihood of crew fatigue and planning errors" {...field} /> </FormControl> <FormDescription>The potential negative consequence if the hazard is not managed.</FormDescription> <FormMessage /> </FormItem> )} />
                 
@@ -195,31 +216,32 @@ export function RiskForm({ existingRisk, onFormSuccess }: RiskFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="w-56">
-                            <SelectValue placeholder="Set status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Open">Open</SelectItem>
-                          <SelectItem value="Mitigated">Mitigated</SelectItem>
-                          <SelectItem value="Closed">Closed</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="w-56">
+                              <SelectValue placeholder="Set status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Open">Open</SelectItem>
+                            <SelectItem value="Mitigated">Mitigated</SelectItem>
+                            <SelectItem value="Closed">Closed</SelectItem>
+                          </SelectContent>
+                        </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-            </div>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : 'Save Risk'}
-            </Button>
-          </div>
+            </CardContent>
+             <CardFooter className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving...' : 'Save Risk'}
+                </Button>
+            </CardFooter>
+          </Card>
         </form>
       </Form>
     </div>

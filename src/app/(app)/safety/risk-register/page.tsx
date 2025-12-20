@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, Edit } from 'lucide-react';
@@ -11,8 +12,6 @@ import type { RiskAssessment } from '@/types/safety-report';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { RiskForm } from './risk-form';
 
 export type Risk = {
     id: string;
@@ -58,7 +57,6 @@ const getStatusVariant = (status: Risk['status']) => {
 export default function RiskRegisterPage() {
     const firestore = useFirestore();
     const tenantId = 'safeviate';
-    const [isNewRiskOpen, setIsNewRiskOpen] = useState(false);
 
     const risksQuery = useMemoFirebase(
         () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'risks')) : null),
@@ -66,10 +64,6 @@ export default function RiskRegisterPage() {
     );
 
     const { data: risks, isLoading, error } = useCollection<Risk>(risksQuery);
-
-    const handleFormSuccess = () => {
-        setIsNewRiskOpen(false);
-    };
 
   return (
     <div className="flex flex-col gap-6 h-full">
@@ -80,22 +74,11 @@ export default function RiskRegisterPage() {
                     A central repository for all identified organizational risks.
                 </p>
             </div>
-             <Dialog open={isNewRiskOpen} onOpenChange={setIsNewRiskOpen}>
-                <DialogTrigger asChild>
-                    <Button>
-                        <PlusCircle className="mr-2 h-4 w-4" /> New Risk
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-4xl">
-                    <DialogHeader>
-                        <DialogTitle>Add New Risk</DialogTitle>
-                        <DialogDescription>
-                            Manually add a new, ongoing organizational risk to the central register.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <RiskForm onFormSuccess={handleFormSuccess} />
-                </DialogContent>
-            </Dialog>
+            <Button asChild>
+                <Link href="/safety/risk-register/new">
+                    <PlusCircle className="mr-2 h-4 w-4" /> New Risk
+                </Link>
+            </Button>
         </div>
       <Card>
         <CardHeader>
