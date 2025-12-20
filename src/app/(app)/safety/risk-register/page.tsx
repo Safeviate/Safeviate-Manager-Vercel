@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Edit } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
@@ -98,6 +98,7 @@ export default function RiskRegisterPage() {
                             <TableHead>Risk</TableHead>
                             <TableHead>Initial Score</TableHead>
                             <TableHead>Status</TableHead>
+                            <TableHead className='text-right'>Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -114,11 +115,18 @@ export default function RiskRegisterPage() {
                                     <TableCell>
                                         <Badge variant={getStatusVariant(risk.status)}>{risk.status}</Badge>
                                     </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button asChild variant="outline" size="sm">
+                                            <Link href={`/safety/risk-register/${risk.id}/edit`}>
+                                                <Edit className="mr-2 h-4 w-4" /> Edit
+                                            </Link>
+                                        </Button>
+                                    </TableCell>
                                 </TableRow>
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center">
+                                <TableCell colSpan={5} className="h-24 text-center">
                                     No risks have been added to the register.
                                 </TableCell>
                             </TableRow>
