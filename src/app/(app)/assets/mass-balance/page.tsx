@@ -709,44 +709,39 @@ export function ConfiguratorTab() {
         </div>
       </div>
       <Card className="relative">
-        <div className="absolute top-6 right-6 z-10">
-          <div
-            className={cn(
-              'px-3 py-1 rounded-full font-bold shadow-lg flex items-center gap-2',
-              results.isSafe
-                ? 'bg-green-600/90 text-white'
-                : 'bg-destructive text-white'
-            )}
-          >
-            <div
-              className={cn(
-                'w-2 h-2 rounded-full',
-                results.isSafe ? 'bg-white' : 'bg-white animate-pulse'
-              )}
-            ></div>
-            <span className="text-xs">
-              {results.isSafe ? 'WITHIN LIMITS' : 'OUT OF LIMITS'}
-            </span>
-          </div>
-        </div>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className='flex items-center gap-4'>
-                <CardTitle>Interactive Graph</CardTitle>
-                {(loadedAircraftTailNumber || loadedProfileName) && (
-                <p className="text-sm text-muted-foreground">
-                    <span className="font-semibold text-foreground">
-                    {loadedAircraftTailNumber ? `Aircraft: ${loadedAircraftTailNumber}` : `Profile: ${loadedProfileName}`}
-                    </span>
-                </p>
-                )}
+            <div className="flex justify-between items-start">
+                <div>
+                    <CardTitle>Interactive Graph</CardTitle>
+                    <CardDescription>
+                    Visualize the aircraft&apos;s center of gravity based on the
+                    configuration below.
+                    </CardDescription>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                    <Button>
+                        <Save size={16} className="mr-2" /> Save to Booking
+                    </Button>
+                    <div
+                        className={cn(
+                        'px-3 py-1 rounded-full font-bold shadow-lg flex items-center gap-2',
+                        results.isSafe
+                            ? 'bg-green-600/90 text-white'
+                            : 'bg-destructive text-white'
+                        )}
+                    >
+                        <div
+                        className={cn(
+                            'w-2 h-2 rounded-full',
+                            results.isSafe ? 'bg-white' : 'bg-white animate-pulse'
+                        )}
+                        ></div>
+                        <span className="text-xs">
+                        {results.isSafe ? 'WITHIN LIMITS' : 'OUT OF LIMITS'}
+                        </span>
+                    </div>
+                </div>
             </div>
-            <Button>Save to Booking</Button>
-          </div>
-          <CardDescription>
-            Visualize the aircraft&apos;s center of gravity based on the
-            configuration below.
-          </CardDescription>
         </CardHeader>
         <CardContent className="min-h-[500px] flex flex-col justify-center items-center overflow-hidden pt-6">
             {isReadOnly && (
@@ -1307,18 +1302,52 @@ export function ConfiguratorTab() {
               </div>
             </div>
         </CardContent>
-        <CardFooter className="flex justify-between items-center border-t pt-6">
-            <div className="flex gap-2">
-                {!isReadOnly && (
-                    <Button onClick={handleReset} variant="outline">
-                        <RotateCcw size={16} className="mr-2" /> Reset
-                    </Button>
-                )}
-                {canManageTemplates && (
+        <CardFooter className="border-t pt-6 flex justify-end gap-2">
+             {canManageTemplates && (
+                <div className="flex gap-2">
+                    {!isReadOnly && (
+                        <Button onClick={handleReset} variant="outline">
+                            <RotateCcw size={16} className="mr-2" /> Reset
+                        </Button>
+                    )}
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="outline">
+                                <Plane size={16} className="mr-2" /> Assign to Aircraft
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Assign Configuration to Aircraft</DialogTitle>
+                                <DialogDescription>
+                                    This will overwrite the selected aircraft&apos;s current M&amp;B data with the data from the configurator.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="py-4 space-y-2">
+                                <Label htmlFor="aircraft-select">Aircraft Registration</Label>
+                                <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
+                                    <SelectTrigger id="aircraft-select">
+                                        <SelectValue placeholder="Select an aircraft..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {(aircraftList || []).map(a => (
+                                            <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <DialogFooter>
+                                <DialogClose asChild>
+                                    <Button variant="outline">Cancel</Button>
+                                </DialogClose>
+                                <Button onClick={handleAssignToAircraft} disabled={!selectedAircraftId}>Confirm Assignment</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                     <Dialog open={isClearAircraftDialogOpen} onOpenChange={handleClearDialogOpenChange}>
                         <DialogTrigger asChild>
                             <Button variant="destructive">
-                                <Wrench size={16} className="mr-2" /> Clear Aircraft M&B
+                                <Wrench size={16} className="mr-2" /> Clear Aircraft M&amp;B
                             </Button>
                         </DialogTrigger>
                         <DialogContent>
@@ -1327,7 +1356,7 @@ export function ConfiguratorTab() {
                                     <DialogHeader>
                                         <DialogTitle>Clear Aircraft Mass & Balance</DialogTitle>
                                         <DialogDescription>
-                                            Select an aircraft to clear its stored M&B configuration. This action cannot be undone.
+                                            Select an aircraft to clear its stored M&amp;B configuration. This action cannot be undone.
                                         </DialogDescription>
                                     </DialogHeader>
                                     <div className="py-4 space-y-2">
@@ -1368,112 +1397,69 @@ export function ConfiguratorTab() {
                             )}
                         </DialogContent>
                     </Dialog>
-                )}
-            </div>
-            <div className="flex gap-3">
-                {canManageTemplates && (
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button variant="outline">
-                                <Plane size={16} className="mr-2" /> Assign to Aircraft
+                    {loadedProfileId ? (
+                        <div className='flex gap-2'>
+                            <Button onClick={handleUpdateProfile}>
+                                <Save size={16} className="mr-2" /> Update Profile
                             </Button>
+                            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive">
+                                        <Trash2 size={16} className="mr-2" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete the profile for &quot;{loadedProfileName}&quot;.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleDeleteProfile} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                                            Delete
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                    ) : (
+                    <Dialog open={isSaveProfileDialogOpen} onOpenChange={setIsSaveProfileDialogOpen}>
+                        <DialogTrigger asChild>
+                        <Button>
+                            <Save size={16} className="mr-2" /> Save as New Profile
+                        </Button>
                         </DialogTrigger>
                         <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Assign Configuration to Aircraft</DialogTitle>
-                                <DialogDescription>
-                                    This will overwrite the selected aircraft&apos;s current M&B data with the data from the configurator.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="py-4 space-y-2">
-                                <Label htmlFor="aircraft-select">Aircraft Registration</Label>
-                                <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
-                                    <SelectTrigger id="aircraft-select">
-                                        <SelectValue placeholder="Select an aircraft..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {(aircraftList || []).map(a => (
-                                            <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                        <DialogHeader>
+                            <DialogTitle>Save as New Profile</DialogTitle>
+                            <DialogDescription>
+                            Enter a name for this configuration to create a new reusable template.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4 grid grid-cols-1 gap-4">
+                            <div className="space-y-2">
+                            <Label htmlFor="profile-name">Profile Name</Label>
+                            <Input
+                                id="profile-name"
+                                value={profileNameForSave}
+                                onChange={(e) => setProfileNameForSave(e.target.value)}
+                                placeholder="e.g., Cessna 172S Standard"
+                            />
                             </div>
-                            <DialogFooter>
-                                <DialogClose asChild>
-                                    <Button variant="outline">Cancel</Button>
-                                </DialogClose>
-                                <Button onClick={handleAssignToAircraft} disabled={!selectedAircraftId}>Confirm Assignment</Button>
-                            </DialogFooter>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                            </DialogClose>
+                            <Button onClick={saveAsProfile} disabled={!profileNameForSave.trim()}>Save Profile</Button>
+                        </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                )}
-
-                {canManageTemplates && (
-                    <>
-                        {loadedProfileId ? (
-                            <div className='flex gap-2'>
-                                <Button onClick={handleUpdateProfile}>
-                                    <Save size={16} className="mr-2" /> Update Profile
-                                </Button>
-                                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive">
-                                            <Trash2 size={16} className="mr-2" />
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                This action cannot be undone. This will permanently delete the profile for &quot;{loadedProfileName}&quot;.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleDeleteProfile} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-                                                Delete
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </div>
-                        ) : (
-                        <Dialog open={isSaveProfileDialogOpen} onOpenChange={setIsSaveProfileDialogOpen}>
-                            <DialogTrigger asChild>
-                            <Button>
-                                <Save size={16} className="mr-2" /> Save as New Profile
-                            </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Save as New Profile</DialogTitle>
-                                <DialogDescription>
-                                Enter a name for this configuration to create a new reusable template.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="py-4 grid grid-cols-1 gap-4">
-                                <div className="space-y-2">
-                                <Label htmlFor="profile-name">Profile Name</Label>
-                                <Input
-                                    id="profile-name"
-                                    value={profileNameForSave}
-                                    onChange={(e) => setProfileNameForSave(e.target.value)}
-                                    placeholder="e.g., Cessna 172S Standard"
-                                />
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <DialogClose asChild>
-                                <Button variant="outline">Cancel</Button>
-                                </DialogClose>
-                                <Button onClick={saveAsProfile} disabled={!profileNameForSave.trim()}>Save Profile</Button>
-                            </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-                    )}
-                    </>
-                )}
-            </div>
+                  )}
+                </div>
+            )}
         </CardFooter>
       </Card>
     </div>
