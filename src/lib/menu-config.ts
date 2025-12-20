@@ -16,6 +16,8 @@ import {
   Scale,
   ToggleRight,
   BookOpen,
+  GitBranch,
+  Library,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -69,7 +71,17 @@ export const menuConfig: MenuItem[] = [
         label: 'Safety Reports',
         description: 'View and manage safety reports.',
       },
+      {
+        href: '/safety/risk-register',
+        label: 'Risk Register',
+        description: 'View and manage the risk register.',
+      },
     ],
+  },
+  {
+    href: '/management-of-change',
+    label: 'Management of Change',
+    icon: GitBranch,
   },
   {
     href: '/quality',
