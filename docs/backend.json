@@ -173,6 +173,104 @@
       },
       "required": ["id", "hazard", "risk", "hazardArea", "status"]
     },
+    "ManagementOfChange": {
+      "title": "Management of Change",
+      "type": "object",
+      "description": "Represents a Management of Change (MOC) record.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the MOC." },
+        "mocNumber": { "type": "string", "description": "A unique, sequential, human-readable MOC number (e.g., MOC-001)." },
+        "title": { "type": "string", "description": "A clear, concise title for the change." },
+        "description": { "type": "string", "description": "A detailed explanation of what is changing." },
+        "reason": { "type": "string", "description": "The reason why the change is being made." },
+        "scope": { "type": "string", "description": "Who and what will be affected by the change." },
+        "proposingDepartmentId": { "type": "string", "description": "The ID of the department proposing the change." },
+        "responsiblePersonId": { "type": "string", "description": "The ID of the person responsible for the proposal." },
+        "proposedBy": { "type": "string", "description": "The user ID of the person who initiated the change." },
+        "proposalDate": { "type": "string", "format": "date-time", "description": "Timestamp of when the MOC was proposed." },
+        "status": {
+          "type": "string",
+          "enum": ["Proposed", "Under Review", "Approved", "In Progress", "Closed", "Cancelled"]
+        },
+        "phases": {
+          "type": "array",
+          "description": "The major stages of implementing the change.",
+          "items": { "$ref": "#/backend/entities/MocPhase" }
+        },
+        "signatures": {
+          "type": "array",
+          "description": "Digital signatures for MOC approval.",
+          "items": { "$ref": "#/backend/entities/MocSignature" }
+        }
+      },
+      "required": ["id", "mocNumber", "title", "status", "proposalDate", "proposingDepartmentId"]
+    },
+    "MocPhase": {
+      "title": "MOC Phase",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "steps": { "type": "array", "items": { "$ref": "#/backend/entities/MocStep" } }
+      },
+      "required": ["id", "title"]
+    },
+    "MocStep": {
+      "title": "MOC Step",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "hazards": { "type": "array", "items": { "$ref": "#/backend/entities/MocHazard" } }
+      },
+      "required": ["id", "description"]
+    },
+    "MocHazard": {
+      "title": "MOC Hazard",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "risks": { "type": "array", "items": { "$ref": "#/backend/entities/MocRisk" } }
+      },
+      "required": ["id", "description"]
+    },
+    "MocRisk": {
+      "title": "MOC Risk",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "initialRiskAssessment": { "$ref": "#/backend/entities/RiskAssessment" },
+        "mitigations": { "type": "array", "items": { "$ref": "#/backend/entities/MocMitigation" } }
+      },
+      "required": ["id", "description"]
+    },
+    "MocMitigation": {
+      "title": "MOC Mitigation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "responsiblePersonId": { "type": "string" },
+        "completionDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Open", "In Progress", "Closed", "Cancelled"] },
+        "residualRiskAssessment": { "$ref": "#/backend/entities/RiskAssessment" }
+      },
+      "required": ["id", "description", "status"]
+    },
+    "MocSignature": {
+      "title": "MOC Signature",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "role": { "type": "string", "description": "Role at time of signing" },
+        "signatureUrl": { "type": "string", "format": "uri" },
+        "signedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "role", "signatureUrl", "signedAt"]
+    },
     "Booking": {
       "title": "Booking",
       "type": "object",
@@ -937,6 +1035,20 @@
           "params": [
             { "name": "tenantId", "description": "Tenant ID." },
             { "name": "riskId", "description": "Risk ID." }
+          ]
+        }
+      },
+       {
+        "path": "tenants/{tenantId}/management-of-change/{mocId}",
+        "definition": {
+          "entityName": "ManagementOfChange",
+          "schema": {
+            "$ref": "#/backend/entities/ManagementOfChange"
+          },
+          "description": "Stores Management of Change records for each tenant.",
+          "params": [
+            { "name": "tenantId", "description": "Tenant ID." },
+            { "name": "mocId", "description": "MOC ID." }
           ]
         }
       },
