@@ -16,13 +16,14 @@ import type { Booking } from '@/types/booking';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useEffect, useState } from 'react';
-import { calculateWindTriangle, getBearing, getDistance } from '@/lib/e6b';
+import { calculateWindTriangle, getBearing, getDistance, calculateEte } from '@/lib/e6b';
 import { useDebounce } from '@/hooks/use-debounce';
 
 const waypointSchema = z.object({
     name: z.string().min(1, 'Required'),
     lat: z.number({ coerce: true }),
     lon: z.number({ coerce: true }),
+    altitude: z.number({ coerce: true }).min(0, "Must be positive"),
 });
 
 const formSchema = z.object({
@@ -35,6 +36,7 @@ const formSchema = z.object({
   waypoints: z.array(waypointSchema),
   // Performance
   cruiseSpeed: z.number({ coerce: true }).min(1, "Required"),
+  fuelBurnRate: z.number({ coerce: true }).min(0, "Required"),
   windDirection: z.number({ coerce: true }).min(0).max(360),
   windSpeed: z.number({ coerce: true }).min(0),
 });
@@ -45,10 +47,13 @@ type Waypoint = z.infer<typeof waypointSchema>;
 interface NavLogLeg {
     from: string;
     to: string;
+    altitude: number;
     track: number;
     heading: number;
     distance: number;
     groundSpeed: number;
+    ete: number; // Estimated Time En-route in minutes
+    fuel: number; // Fuel consumed for the leg
 }
 
 interface FlightPlannerFormProps {
@@ -72,6 +77,7 @@ export function FlightPlannerForm({ aircrafts, pilots, bookings }: FlightPlanner
       cruisingAltitude: 0,
       waypoints: [],
       cruiseSpeed: 100,
+      fuelBurnRate: 8,
       windDirection: 0,
       windSpeed: 0,
     },
@@ -84,12 +90,13 @@ export function FlightPlannerForm({ aircrafts, pilots, bookings }: FlightPlanner
 
   const watchedFields = useWatch({
       control: form.control,
-      name: ['waypoints', 'cruiseSpeed', 'windDirection', 'windSpeed']
+      name: ['waypoints', 'cruiseSpeed', 'windDirection', 'windSpeed', 'fuelBurnRate']
   });
   const debouncedWaypoints = useDebounce(watchedFields[0], 500);
   const debouncedCruiseSpeed = useDebounce(watchedFields[1], 500);
   const debouncedWindDirection = useDebounce(watchedFields[2], 500);
   const debouncedWindSpeed = useDebounce(watchedFields[3], 500);
+  const debouncedFuelBurnRate = useDebounce(watchedFields[4], 500);
 
   useEffect(() => {
     const calculateNavLog = () => {
@@ -115,13 +122,19 @@ export function FlightPlannerForm({ aircrafts, pilots, bookings }: FlightPlanner
                 windSpeed: debouncedWindSpeed || 0
             });
             
+            const eteMinutes = calculateEte(distance, groundSpeed);
+            const fuelConsumed = (eteMinutes / 60) * (debouncedFuelBurnRate || 0);
+            
             newNavLog.push({
                 from: fromPoint.name,
                 to: toPoint.name,
+                altitude: toPoint.altitude,
                 track: Math.round(trueCourse),
                 heading: Math.round(heading),
                 distance: Math.round(distance),
                 groundSpeed: Math.round(groundSpeed),
+                ete: Math.round(eteMinutes),
+                fuel: parseFloat(fuelConsumed.toFixed(1)),
             });
         }
         setNavLog(newNavLog);
@@ -129,7 +142,7 @@ export function FlightPlannerForm({ aircrafts, pilots, bookings }: FlightPlanner
 
     calculateNavLog();
 
-  }, [debouncedWaypoints, debouncedCruiseSpeed, debouncedWindDirection, debouncedWindSpeed]);
+  }, [debouncedWaypoints, debouncedCruiseSpeed, debouncedWindDirection, debouncedWindSpeed, debouncedFuelBurnRate]);
 
 
   const onSubmit = (values: FlightPlannerFormValues) => {
@@ -195,14 +208,15 @@ export function FlightPlannerForm({ aircrafts, pilots, bookings }: FlightPlanner
                     {fields.map((field, index) => (
                         <div key={field.id} className="flex items-end gap-2 p-2 border rounded-md">
                            <FormField control={form.control} name={`waypoints.${index}.name`} render={({ field }) => (<FormItem className="flex-1"><FormLabel>Name</FormLabel><FormControl><Input placeholder="e.g., KSQL" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                           <FormField control={form.control} name={`waypoints.${index}.lat`} render={({ field }) => (<FormItem><FormLabel>Lat</FormLabel><FormControl><Input type="number" step="any" placeholder="37.51" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                           <FormField control={form.control} name={`waypoints.${index}.lon`} render={({ field }) => (<FormItem><FormLabel>Lon</FormLabel><FormControl><Input type="number" step="any" placeholder="-122.25" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                           <FormField control={form.control} name={`waypoints.${index}.lat`} render={({ field }) => (<FormItem className="w-24"><FormLabel>Lat</FormLabel><FormControl><Input type="number" step="any" placeholder="37.51" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                           <FormField control={form.control} name={`waypoints.${index}.lon`} render={({ field }) => (<FormItem className="w-24"><FormLabel>Lon</FormLabel><FormControl><Input type="number" step="any" placeholder="-122.25" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                           <FormField control={form.control} name={`waypoints.${index}.altitude`} render={({ field }) => (<FormItem className="w-24"><FormLabel>Altitude</FormLabel><FormControl><Input type="number" placeholder="5500" {...field} /></FormControl><FormMessage /></FormItem>)} />
                            <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}>
                                 <Trash2 className="h-4 w-4" />
                            </Button>
                         </div>
                     ))}
-                    <Button type="button" variant="outline" className="w-full" onClick={() => append({ name: '', lat: 0, lon: 0 })}>
+                    <Button type="button" variant="outline" className="w-full" onClick={() => append({ name: '', lat: 0, lon: 0, altitude: form.getValues('cruisingAltitude') })}>
                         <PlusCircle className="mr-2" /> Add Waypoint
                     </Button>
                 </CardContent>
@@ -212,8 +226,9 @@ export function FlightPlannerForm({ aircrafts, pilots, bookings }: FlightPlanner
               <CardHeader>
                 <CardTitle>Performance &amp; Fuel</CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField control={form.control} name="cruiseSpeed" render={({ field }) => (<FormItem><FormLabel>TAS (kts)</FormLabel><FormControl><Input type="number" placeholder="100" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="fuelBurnRate" render={({ field }) => (<FormItem><FormLabel>Fuel Burn (gal/hr)</FormLabel><FormControl><Input type="number" placeholder="8.0" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="windDirection" render={({ field }) => (<FormItem><FormLabel>Wind Dir (°)</FormLabel><FormControl><Input type="number" placeholder="270" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="windSpeed" render={({ field }) => (<FormItem><FormLabel>Wind Spd (kts)</FormLabel><FormControl><Input type="number" placeholder="15" {...field} /></FormControl><FormMessage /></FormItem>)} />
               </CardContent>
@@ -239,6 +254,7 @@ export function FlightPlannerForm({ aircrafts, pilots, bookings }: FlightPlanner
                         <TableRow>
                             <TableHead>From</TableHead>
                             <TableHead>To</TableHead>
+                            <TableHead>Altitude</TableHead>
                             <TableHead>Track</TableHead>
                             <TableHead>HDG</TableHead>
                             <TableHead>Dist</TableHead>
@@ -253,17 +269,18 @@ export function FlightPlannerForm({ aircrafts, pilots, bookings }: FlightPlanner
                                <TableRow key={index}>
                                    <TableCell>{leg.from}</TableCell>
                                    <TableCell>{leg.to}</TableCell>
+                                   <TableCell>{leg.altitude} ft</TableCell>
                                    <TableCell>{leg.track}°</TableCell>
                                    <TableCell>{leg.heading}°</TableCell>
                                    <TableCell>{leg.distance} NM</TableCell>
                                    <TableCell>{leg.groundSpeed} kts</TableCell>
-                                   <TableCell>TODO</TableCell>
-                                   <TableCell>TODO</TableCell>
+                                   <TableCell>{leg.ete} min</TableCell>
+                                   <TableCell>{leg.fuel} gal</TableCell>
                                </TableRow>
                            ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={8} className="h-96 text-center text-muted-foreground">
+                                <TableCell colSpan={9} className="h-96 text-center text-muted-foreground">
                                     Add at least two waypoints to generate the navigation log.
                                 </TableCell>
                             </TableRow>

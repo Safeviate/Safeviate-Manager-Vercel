@@ -117,3 +117,16 @@ export const calculateWindTriangle = (input: WindTriangleInput): WindTriangleOut
         groundSpeed: groundSpeed,
     };
 };
+
+/**
+ * Calculates the Estimated Time En-route (ETE) for a given distance and speed.
+ * @param distance - The distance to travel (in nautical miles).
+ * @param groundSpeed - The speed over ground (in knots).
+ * @returns The time required in minutes.
+ */
+export const calculateEte = (distance: number, groundSpeed: number): number => {
+    if (groundSpeed <= 0) {
+        return Infinity; // Or handle as an error, but Infinity is mathematically correct
+    }
+    return (distance / groundSpeed) * 60; // Time in minutes
+};
