@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -49,9 +48,10 @@ type RiskFormValues = z.infer<typeof riskSchema>;
 
 interface RiskFormProps {
     existingRisk?: Risk;
+    onFormSuccess?: () => void;
 }
 
-export function RiskForm({ existingRisk }: RiskFormProps) {
+export function RiskForm({ existingRisk, onFormSuccess }: RiskFormProps) {
   const firestore = useFirestore();
   const { user } = useUser();
   const router = useRouter();
@@ -62,7 +62,7 @@ export function RiskForm({ existingRisk }: RiskFormProps) {
 
   const form = useForm<RiskFormValues>({
     resolver: zodResolver(riskSchema),
-    defaultValues: {
+    defaultValues: isEditMode && existingRisk ? existingRisk : {
       hazard: '',
       risk: '',
       hazardArea: '',
@@ -126,6 +126,8 @@ export function RiskForm({ existingRisk }: RiskFormProps) {
           title: 'Risk Updated',
           description: 'The risk has been successfully updated.',
         });
+        if (onFormSuccess) onFormSuccess();
+        router.push('/safety/risk-register'); // Ensure user is on main page
       } else {
         const risksRef = collection(firestore, 'tenants', tenantId, 'risks');
         await addDocumentNonBlocking(risksRef, riskData);
@@ -133,9 +135,8 @@ export function RiskForm({ existingRisk }: RiskFormProps) {
             title: 'Risk Added',
             description: 'The new organizational risk has been added to the register.',
         });
+        if (onFormSuccess) onFormSuccess();
       }
-      
-      router.push('/safety/risk-register');
 
     } catch (error: any) {
       console.error(error);
@@ -149,18 +150,19 @@ export function RiskForm({ existingRisk }: RiskFormProps) {
     }
   };
 
+  const handleCancel = () => {
+    if (onFormSuccess) {
+      onFormSuccess();
+    } else {
+      router.push('/safety/risk-register');
+    }
+  };
+
   return (
     <div className='max-w-4xl mx-auto'>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>{isEditMode ? 'Edit Risk' : 'Add New Risk'}</CardTitle>
-              <CardDescription>
-                {isEditMode ? 'Update the details for this organizational risk.' : 'Add a new organizational risk to the Risk Register.'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+            <div className="space-y-6">
                 <FormField control={form.control} name="hazard" render={({ field }) => ( <FormItem> <FormLabel>Hazard</FormLabel> <FormControl> <Textarea placeholder="e.g., Frequent short-notice changes to the flight schedule" {...field} /> </FormControl> <FormDescription>A description of the condition or situation that has the potential to cause harm.</FormDescription> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="risk" render={({ field }) => ( <FormItem> <FormLabel>Risk</FormLabel> <FormControl> <Textarea placeholder="e.g., Increased likelihood of crew fatigue and planning errors" {...field} /> </FormControl> <FormDescription>The potential negative consequence if the hazard is not managed.</FormDescription> <FormMessage /> </FormItem> )} />
                 
@@ -188,32 +190,31 @@ export function RiskForm({ existingRisk }: RiskFormProps) {
                 <Separator />
                 
                 <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Status</FormLabel>
+                         <Select onValueChange={field.onChange} defaultValue={field.value}>
+                           <FormControl>
                             <SelectTrigger className='w-56'>
                                 <SelectValue placeholder="Set status" />
                             </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                              <SelectItem value="Open">Open</SelectItem>
-                              <SelectItem value="Mitigated">Mitigated</SelectItem>
-                              <SelectItem value="Closed">Closed</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                           </FormControl>
+                           <SelectContent>
+                               <SelectItem value="Open">Open</SelectItem>
+                               <SelectItem value="Mitigated">Mitigated</SelectItem>
+                               <SelectItem value="Closed">Closed</SelectItem>
+                           </SelectContent>
+                         </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
                 />
 
-            </CardContent>
-          </Card>
+            </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => router.push('/safety/risk-register')} disabled={isSubmitting}>
+            <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
