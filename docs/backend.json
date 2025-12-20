@@ -155,24 +155,6 @@
       },
       "required": ["userId", "userName", "role", "signatureUrl", "signedAt"]
     },
-    "Risk": {
-      "title": "Risk",
-      "type": "object",
-      "description": "Represents an organizational risk in the risk register.",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the risk." },
-        "hazard": { "type": "string", "description": "A description of the hazard." },
-        "risk": { "type": "string", "description": "The potential negative consequence of the hazard." },
-        "hazardArea": { "type": "string", "description": "The broad category where the risk originates (e.g., Flight Operations)." },
-        "process": { "type": "string", "description": "The specific process or activity involved (e.g., Flight Dispatch)." },
-        "initialRiskAssessment": { "$ref": "#/backend/entities/RiskAssessment" },
-        "mitigationControls": { "type": "string", "description": "Specific controls in place to mitigate the risk." },
-        "mitigatedRiskAssessment": { "$ref": "#/backend/entities/RiskAssessment" },
-        "riskOwnerId": { "type": "string", "description": "The user ID of the person responsible for managing the risk." },
-        "status": { "type": "string", "enum": ["Open", "Mitigated", "Closed"], "description": "The current status of the risk." }
-      },
-      "required": ["id", "hazard", "risk", "hazardArea", "status"]
-    },
     "ManagementOfChange": {
       "title": "Management of Change",
       "type": "object",
@@ -1021,20 +1003,6 @@
           "params": [
             { "name": "tenantId", "description": "Tenant ID." },
             { "name": "reportId", "description": "Safety Report ID." }
-          ]
-        }
-      },
-       {
-        "path": "tenants/{tenantId}/risks/{riskId}",
-        "definition": {
-          "entityName": "Risk",
-          "schema": {
-            "$ref": "#/backend/entities/Risk"
-          },
-          "description": "Stores organizational risks for the risk register.",
-          "params": [
-            { "name": "tenantId", "description": "Tenant ID." },
-            { "name": "riskId", "description": "Risk ID." }
           ]
         }
       },
