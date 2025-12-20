@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -715,60 +714,97 @@ export function ConfiguratorTab() {
           )}
 
            {canManageTemplates && (
-            <Dialog open={isClearAircraftDialogOpen} onOpenChange={handleClearDialogOpenChange}>
+            <Dialog>
                 <DialogTrigger asChild>
-                    <Button variant="destructive">
-                        <Wrench size={16} className="mr-2" /> Clear Aircraft M&amp;B
+                    <Button variant="outline">
+                        <Plane size={16} className="mr-2" /> Assign to Aircraft
                     </Button>
                 </DialogTrigger>
                 <DialogContent>
-                    {!showConfirmClear ? (
-                        <>
-                            <DialogHeader>
-                                <DialogTitle>Clear Aircraft Mass & Balance</DialogTitle>
-                                <DialogDescription>
-                                    Select an aircraft to clear its stored M&amp;B configuration. This action cannot be undone.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="py-4 space-y-2">
-                                <Label htmlFor="aircraft-clear-select">Aircraft Registration</Label>
-                                <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
-                                    <SelectTrigger id="aircraft-clear-select">
-                                        <SelectValue placeholder="Select an aircraft..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {(aircraftList || []).map(a => (
-                                            <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <DialogFooter>
-                                <Button variant="outline" onClick={() => handleClearDialogOpenChange(false)}>Cancel</Button>
-                                <Button variant='destructive' disabled={!selectedAircraftId} onClick={() => setShowConfirmClear(true)}>
-                                    Proceed to Clear
-                                </Button>
-                            </DialogFooter>
-                        </>
-                    ) : (
-                        <>
-                            <DialogHeader>
-                                <DialogTitle>Are you absolutely sure?</DialogTitle>
-                                <DialogDescription>
-                                    This will permanently delete the mass and balance data for aircraft <span className='font-bold'>{selectedAircraftName}</span>.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <DialogFooter>
-                                <Button variant="outline" onClick={() => setShowConfirmClear(false)}>Go Back</Button>
-                                <Button onClick={handleClearAircraftWandB} variant="destructive">
-                                    Yes, Clear Data
-                                </Button>
-                            </DialogFooter>
-                        </>
-                    )}
+                    <DialogHeader>
+                        <DialogTitle>Assign Configuration to Aircraft</DialogTitle>
+                        <DialogDescription>
+                            This will overwrite the selected aircraft&apos;s current M&amp;B data with the data from the configurator.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-2">
+                        <Label htmlFor="aircraft-select">Aircraft Registration</Label>
+                        <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
+                            <SelectTrigger id="aircraft-select">
+                                <SelectValue placeholder="Select an aircraft..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {(aircraftList || []).map(a => (
+                                    <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button onClick={handleAssignToAircraft} disabled={!selectedAircraftId}>Confirm Assignment</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
            )}
+
+            {canManageTemplates && (
+                 <Dialog open={isClearAircraftDialogOpen} onOpenChange={handleClearDialogOpenChange}>
+                    <DialogTrigger asChild>
+                        <Button variant="destructive">
+                            <Wrench size={16} className="mr-2" /> Clear Aircraft M&amp;B
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        {!showConfirmClear ? (
+                            <>
+                                <DialogHeader>
+                                    <DialogTitle>Clear Aircraft Mass & Balance</DialogTitle>
+                                    <DialogDescription>
+                                        Select an aircraft to clear its stored M&amp;B configuration. This action cannot be undone.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="py-4 space-y-2">
+                                    <Label htmlFor="aircraft-clear-select">Aircraft Registration</Label>
+                                    <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
+                                        <SelectTrigger id="aircraft-clear-select">
+                                            <SelectValue placeholder="Select an aircraft..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {(aircraftList || []).map(a => (
+                                                <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => handleClearDialogOpenChange(false)}>Cancel</Button>
+                                    <Button variant='destructive' disabled={!selectedAircraftId} onClick={() => setShowConfirmClear(true)}>
+                                        Proceed to Clear
+                                    </Button>
+                                </DialogFooter>
+                            </>
+                        ) : (
+                            <>
+                                <DialogHeader>
+                                    <DialogTitle>Are you absolutely sure?</DialogTitle>
+                                    <DialogDescription>
+                                        This will permanently delete the mass and balance data for aircraft <span className='font-bold'>{selectedAircraftName}</span>.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setShowConfirmClear(false)}>Go Back</Button>
+                                    <Button onClick={handleClearAircraftWandB} variant="destructive">
+                                        Yes, Clear Data
+                                    </Button>
+                                </DialogFooter>
+                            </>
+                        )}
+                    </DialogContent>
+                </Dialog>
+            )}
 
             {canManageTemplates && (
                 <>
@@ -799,7 +835,40 @@ export function ConfiguratorTab() {
                                 </AlertDialogContent>
                             </AlertDialog>
                         </div>
-                    ) : null }
+                    ) : (
+                    <Dialog open={isSaveProfileDialogOpen} onOpenChange={setIsSaveProfileDialogOpen}>
+                        <DialogTrigger asChild>
+                        <Button>
+                            <Save size={16} className="mr-2" /> Save as New Profile
+                        </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Save as New Profile</DialogTitle>
+                            <DialogDescription>
+                            Enter a name for this configuration to create a new reusable template.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4 grid grid-cols-1 gap-4">
+                            <div className="space-y-2">
+                            <Label htmlFor="profile-name">Profile Name</Label>
+                            <Input
+                                id="profile-name"
+                                value={profileNameForSave}
+                                onChange={(e) => setProfileNameForSave(e.target.value)}
+                                placeholder="e.g., Cessna 172S Standard"
+                            />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                            </DialogClose>
+                            <Button onClick={saveAsProfile} disabled={!profileNameForSave.trim()}>Save Profile</Button>
+                        </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                  )}
                 </>
             )}
         </div>
@@ -940,6 +1009,9 @@ export function ConfiguratorTab() {
             </ScatterChart>
           </ResponsiveContainer>
         </CardContent>
+        <CardFooter className="flex justify-end gap-2">
+            <Button>Save to Booking</Button>
+          </CardFooter>
       </Card>
       <Card>
         <CardContent className="p-6">
@@ -1400,77 +1472,8 @@ export function ConfiguratorTab() {
               </div>
             </div>
         </CardContent>
-        <CardFooter className="border-t pt-6 flex justify-end gap-2">
-            {canManageTemplates && (
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <Button variant="outline">
-                            <Plane size={16} className="mr-2" /> Assign to Aircraft
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Assign Configuration to Aircraft</DialogTitle>
-                            <DialogDescription>
-                                This will overwrite the selected aircraft&apos;s current M&amp;B data with the data from the configurator.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="py-4 space-y-2">
-                            <Label htmlFor="aircraft-select">Aircraft Registration</Label>
-                            <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
-                                <SelectTrigger id="aircraft-select">
-                                    <SelectValue placeholder="Select an aircraft..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {(aircraftList || []).map(a => (
-                                        <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <DialogFooter>
-                            <DialogClose asChild>
-                                <Button variant="outline">Cancel</Button>
-                            </DialogClose>
-                            <Button onClick={handleAssignToAircraft} disabled={!selectedAircraftId}>Confirm Assignment</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            )}
-            {canManageTemplates && !loadedProfileId && (
-                <Dialog open={isSaveProfileDialogOpen} onOpenChange={setIsSaveProfileDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button>
-                            <Save size={16} className="mr-2" /> Save as New Profile
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Save as New Profile</DialogTitle>
-                        <DialogDescription>
-                        Enter a name for this configuration to create a new reusable template.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4 grid grid-cols-1 gap-4">
-                        <div className="space-y-2">
-                        <Label htmlFor="profile-name">Profile Name</Label>
-                        <Input
-                            id="profile-name"
-                            value={profileNameForSave}
-                            onChange={(e) => setProfileNameForSave(e.target.value)}
-                            placeholder="e.g., Cessna 172S Standard"
-                        />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                        <Button variant="outline">Cancel</Button>
-                        </DialogClose>
-                        <Button onClick={saveAsProfile} disabled={!profileNameForSave.trim()}>Save Profile</Button>
-                    </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            )}
+        <CardFooter className="flex justify-end gap-2">
+          {/* Previous buttons were here */}
         </CardFooter>
       </Card>
     </div>
@@ -1478,5 +1481,3 @@ export function ConfiguratorTab() {
 }
 
 export default ConfiguratorTab;
-
-    
