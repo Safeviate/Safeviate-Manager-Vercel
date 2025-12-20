@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -71,7 +72,7 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
                 <TableHead>Pilot</TableHead>
                 <TableHead>Start Time</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>M&B</TableHead>
+                <TableHead>M&amp;B</TableHead>
                 <TableHead className='text-right'>Actions</TableHead>
             </TableRow>
             </TableHeader>
@@ -86,8 +87,10 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
                             <Badge variant={getStatusBadgeVariant(b.status)}>{b.status}</Badge>
                         </TableCell>
                         <TableCell>
-                            <Button variant="outline" size="sm">
-                                M&B
+                            <Button asChild variant="outline" size="sm">
+                                <Link href="/assets/mass-balance">
+                                    M&amp;B
+                                </Link>
                             </Button>
                         </TableCell>
                         <TableCell className='text-right'>
