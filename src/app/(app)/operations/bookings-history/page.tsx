@@ -72,7 +72,7 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
                 <TableHead>Pilot</TableHead>
                 <TableHead>Start Time</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>M&amp;B</TableHead>
+                <TableHead>M&B</TableHead>
                 <TableHead className='text-right'>Actions</TableHead>
             </TableRow>
             </TableHeader>
@@ -87,9 +87,9 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
                             <Badge variant={getStatusBadgeVariant(b.status)}>{b.status}</Badge>
                         </TableCell>
                         <TableCell>
-                            <Button asChild variant="outline" size="sm">
-                                <Link href="/assets/mass-balance">
-                                    M&amp;B
+                            <Button asChild variant={b.massAndBalance ? 'default' : 'outline'} size="sm">
+                                <Link href={`/assets/mass-balance?bookingId=${b.id}&aircraftId=${b.aircraftId}`}>
+                                    M&B
                                 </Link>
                             </Button>
                         </TableCell>
