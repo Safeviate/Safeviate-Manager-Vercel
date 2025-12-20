@@ -713,43 +713,6 @@ export function ConfiguratorTab() {
             </Button>
           )}
 
-           {canManageTemplates && (
-            <Dialog>
-                <DialogTrigger asChild>
-                    <Button variant="outline">
-                        <Plane size={16} className="mr-2" /> Assign to Aircraft
-                    </Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Assign Configuration to Aircraft</DialogTitle>
-                        <DialogDescription>
-                            This will overwrite the selected aircraft&apos;s current M&amp;B data with the data from the configurator.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4 space-y-2">
-                        <Label htmlFor="aircraft-select">Aircraft Registration</Label>
-                        <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
-                            <SelectTrigger id="aircraft-select">
-                                <SelectValue placeholder="Select an aircraft..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {(aircraftList || []).map(a => (
-                                    <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="outline">Cancel</Button>
-                        </DialogClose>
-                        <Button onClick={handleAssignToAircraft} disabled={!selectedAircraftId}>Confirm Assignment</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-           )}
-
             {canManageTemplates && (
                  <Dialog open={isClearAircraftDialogOpen} onOpenChange={handleClearDialogOpenChange}>
                     <DialogTrigger asChild>
@@ -805,72 +768,6 @@ export function ConfiguratorTab() {
                     </DialogContent>
                 </Dialog>
             )}
-
-            {canManageTemplates && (
-                <>
-                    {loadedProfileId ? (
-                        <div className='flex gap-2'>
-                            <Button onClick={handleUpdateProfile}>
-                                <Save size={16} className="mr-2" /> Update Profile
-                            </Button>
-                            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive">
-                                        <Trash2 size={16} className="mr-2" />
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This action cannot be undone. This will permanently delete the profile for &quot;{loadedProfileName}&quot;.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleDeleteProfile} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-                                            Delete
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-                    ) : (
-                    <Dialog open={isSaveProfileDialogOpen} onOpenChange={setIsSaveProfileDialogOpen}>
-                        <DialogTrigger asChild>
-                        <Button>
-                            <Save size={16} className="mr-2" /> Save as New Profile
-                        </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Save as New Profile</DialogTitle>
-                            <DialogDescription>
-                            Enter a name for this configuration to create a new reusable template.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="py-4 grid grid-cols-1 gap-4">
-                            <div className="space-y-2">
-                            <Label htmlFor="profile-name">Profile Name</Label>
-                            <Input
-                                id="profile-name"
-                                value={profileNameForSave}
-                                onChange={(e) => setProfileNameForSave(e.target.value)}
-                                placeholder="e.g., Cessna 172S Standard"
-                            />
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <DialogClose asChild>
-                            <Button variant="outline">Cancel</Button>
-                            </DialogClose>
-                            <Button onClick={saveAsProfile} disabled={!profileNameForSave.trim()}>Save Profile</Button>
-                        </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
-                  )}
-                </>
-            )}
         </div>
       </div>
       <Card className="relative">
@@ -894,21 +791,15 @@ export function ConfiguratorTab() {
             </span>
           </div>
         </div>
-        <CardHeader>
-          <div className="flex items-center gap-4">
-            <CardTitle>Interactive Graph</CardTitle>
-            {(loadedAircraftTailNumber || loadedProfileName) && (
-              <p className="text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">
-                  {loadedAircraftTailNumber ? `Aircraft: ${loadedAircraftTailNumber}` : `Profile: ${loadedProfileName}`}
-                </span>
-              </p>
-            )}
-          </div>
-          <CardDescription>
-            Visualize the aircraft&apos;s center of gravity based on the
-            configuration below.
-          </CardDescription>
+        <CardHeader className="flex flex-row justify-between items-start">
+            <div>
+                <CardTitle>Interactive Graph</CardTitle>
+                <CardDescription>
+                    Visualize the aircraft&apos;s center of gravity based on the
+                    configuration below.
+                </CardDescription>
+            </div>
+            <Button>Save to Booking</Button>
         </CardHeader>
         <CardContent className="min-h-[500px] flex flex-col justify-center items-center overflow-hidden pt-6">
             {isReadOnly && (
@@ -1009,9 +900,6 @@ export function ConfiguratorTab() {
             </ScatterChart>
           </ResponsiveContainer>
         </CardContent>
-        <CardFooter className="flex justify-end gap-2">
-            <Button>Save to Booking</Button>
-          </CardFooter>
       </Card>
       <Card>
         <CardContent className="p-6">
@@ -1472,8 +1360,108 @@ export function ConfiguratorTab() {
               </div>
             </div>
         </CardContent>
-        <CardFooter className="flex justify-end gap-2">
-          {/* Previous buttons were here */}
+        <CardFooter className="flex justify-end gap-2 border-t pt-6">
+            {canManageTemplates && (
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button variant="outline">
+                            <Plane size={16} className="mr-2" /> Assign to Aircraft
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Assign Configuration to Aircraft</DialogTitle>
+                            <DialogDescription>
+                                This will overwrite the selected aircraft&apos;s current M&amp;B data with the data from the configurator.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4 space-y-2">
+                            <Label htmlFor="aircraft-select">Aircraft Registration</Label>
+                            <Select onValueChange={setSelectedAircraftId} value={selectedAircraftId}>
+                                <SelectTrigger id="aircraft-select">
+                                    <SelectValue placeholder="Select an aircraft..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {(aircraftList || []).map(a => (
+                                        <SelectItem key={a.id} value={a.id}>{a.tailNumber}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button variant="outline">Cancel</Button>
+                            </DialogClose>
+                            <Button onClick={handleAssignToAircraft} disabled={!selectedAircraftId}>Confirm Assignment</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            )}
+            {canManageTemplates && (
+                    <>
+                        {loadedProfileId ? (
+                            <div className='flex gap-2'>
+                                <Button onClick={handleUpdateProfile}>
+                                    <Save size={16} className="mr-2" /> Update Profile
+                                </Button>
+                                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive">
+                                            <Trash2 size={16} className="mr-2" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This action cannot be undone. This will permanently delete the profile for &quot;{loadedProfileName}&quot;.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleDeleteProfile} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                                                Delete
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                        ) : (
+                        <Dialog open={isSaveProfileDialogOpen} onOpenChange={setIsSaveProfileDialogOpen}>
+                            <DialogTrigger asChild>
+                            <Button>
+                                <Save size={16} className="mr-2" /> Save as New Profile
+                            </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Save as New Profile</DialogTitle>
+                                <DialogDescription>
+                                Enter a name for this configuration to create a new reusable template.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="py-4 grid grid-cols-1 gap-4">
+                                <div className="space-y-2">
+                                <Label htmlFor="profile-name">Profile Name</Label>
+                                <Input
+                                    id="profile-name"
+                                    value={profileNameForSave}
+                                    onChange={(e) => setProfileNameForSave(e.target.value)}
+                                    placeholder="e.g., Cessna 172S Standard"
+                                />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <DialogClose asChild>
+                                <Button variant="outline">Cancel</Button>
+                                </DialogClose>
+                                <Button onClick={saveAsProfile} disabled={!profileNameForSave.trim()}>Save Profile</Button>
+                            </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    )}
+                    </>
+                )}
         </CardFooter>
       </Card>
     </div>
