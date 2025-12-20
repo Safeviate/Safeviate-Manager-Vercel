@@ -82,12 +82,12 @@ export const menuConfig: MenuItem[] = [
         label: 'Safety Performance Indicators',
         description: 'Track and analyze key safety metrics.',
       },
+      {
+        href: '/safety/management-of-change',
+        label: 'Management of Change',
+        description: 'Manage changes to procedures and policies.',
+      },
     ],
-  },
-  {
-    href: '/management-of-change',
-    label: 'Management of Change',
-    icon: GitBranch,
   },
   {
     href: '/quality',
