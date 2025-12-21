@@ -25,6 +25,7 @@ import {
   Target,
   ListChecks,
   Network,
+  CalendarDays,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -105,31 +106,36 @@ export const menuConfig: MenuItem[] = [
     label: 'Quality',
     icon: CheckSquare,
     subItems: [
-        {
-          href: '/quality/audits',
-          label: 'Audits',
-          description: 'View the quality assurance dashboard.',
-        },
-        {
-            href: '/quality/audit-checklists',
-            label: 'Audit Checklists',
-            description: 'Manage audit templates.',
-        },
-        {
-            href: '/quality/cap-tracker',
-            label: 'CAP Tracker',
-            description: 'Track corrective action plans.',
-        },
-        {
-            href: '/quality/task-tracker',
-            label: 'Task Tracker',
-            description: 'Track all quality-related tasks.',
-        },
-        {
-            href: '/quality/coherence-matrix',
-            label: 'Coherence Matrix',
-            description: 'Ensure regulatory coherence.',
-        },
+      {
+        href: '/quality/audit-schedule',
+        label: 'Audit Schedule',
+        description: 'Plan and view the annual audit schedule.',
+      },
+      {
+        href: '/quality/audits',
+        label: 'Audits',
+        description: 'View the quality assurance dashboard.',
+      },
+      {
+        href: '/quality/audit-checklists',
+        label: 'Audit Checklists',
+        description: 'Manage audit templates.',
+      },
+      {
+        href: '/quality/cap-tracker',
+        label: 'CAP Tracker',
+        description: 'Track corrective action plans.',
+      },
+      {
+        href: '/quality/task-tracker',
+        label: 'Task Tracker',
+        description: 'Track all quality-related tasks.',
+      },
+      {
+        href: '/quality/coherence-matrix',
+        label: 'Coherence Matrix',
+        description: 'Ensure regulatory coherence.',
+      },
     ],
   },
   {
