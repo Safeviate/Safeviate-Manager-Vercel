@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import type { QualityAudit, QualityAuditChecklistTemplate, QualityFinding, AuditFinding, ChecklistSection, AuditChecklistItem } from '@/types/quality';
+import type { QualityAudit, QualityAuditChecklistTemplate, QualityFinding, ChecklistSection, AuditChecklistItem } from '@/types/quality';
 import { DocumentUploader } from '../../../users/personnel/[id]/document-uploader';
 import { FileUp, Camera, Trash2, ZoomIn } from 'lucide-react';
 import Image from 'next/image';
@@ -89,9 +89,6 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
         const auditRef = doc(firestore, `tenants/${tenantId}/quality-audits`, audit.id);
         
         const filledFindings = values.findings.map(f => {
-            if (f.finding === 'Compliant' && f.level !== 'Observation') {
-                return { ...f, level: undefined };
-            }
             if (f.finding === 'Not Applicable') {
                  return { ...f, level: undefined };
             }
@@ -142,7 +139,14 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                         render={({ field }) => (
                             <FormItem className="space-y-3">
                                 <FormControl>
-                                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-wrap gap-4">
+                                    <RadioGroup
+                                      onValueChange={(value) => {
+                                        field.onChange(value);
+                                        form.setValue(`findings.${itemIndex}.level`, '');
+                                      }}
+                                      defaultValue={field.value}
+                                      className="flex flex-wrap gap-4"
+                                    >
                                         {(['Compliant', 'Non Compliant', 'Not Applicable'] as const).map(value => (
                                             <FormItem key={value} className="flex items-center space-x-2 space-y-0">
                                                 <FormControl><RadioGroupItem value={value} /></FormControl>
@@ -170,14 +174,14 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Finding Level</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                                            <Select onValueChange={field.onChange} value={field.value || ''}>
                                                 <FormControl>
                                                     <SelectTrigger
                                                         style={{
-                                                            backgroundColor: selectedLevel?.color,
-                                                            color: selectedLevel?.foregroundColor,
+                                                            backgroundColor: field.value ? selectedLevel?.color : undefined,
+                                                            color: field.value ? selectedLevel?.foregroundColor : undefined,
                                                         }}
-                                                        className={cn(!selectedLevel && 'text-muted-foreground')}
+                                                        className={cn(!field.value && 'text-muted-foreground')}
                                                     >
                                                         <SelectValue placeholder="Select a level" />
                                                     </SelectTrigger>
