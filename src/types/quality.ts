@@ -2,7 +2,7 @@
 
 export type AuditChecklistItemType = 'Header' | 'Checkbox' | 'Textbox' | 'Number' | 'Date';
 export type AuditFinding = 'Compliant' | 'Non Compliant' | 'Observation' | 'Not Applicable';
-export type AuditStatus = 'Scheduled' | 'In Progress' | 'Finalized' | 'Closed';
+export type AuditStatus = 'Scheduled' | 'In Progress' | 'Finalized' | 'Closed' | 'Archived';
 export type CorrectiveActionStatus = 'Open' | 'In Progress' | 'Completed' | 'Cancelled';
 export type AuditScheduleStatus = 'Scheduled' | 'Completed' | 'Pending' | 'Not Scheduled';
 
@@ -14,6 +14,17 @@ export interface AuditScheduleItem {
     year: number;
     status: AuditScheduleStatus;
 }
+
+export interface ComplianceRequirement {
+    id: string;
+    regulationCode: string;
+    regulationStatement: string;
+    companyReference: string;
+    responsibleManagerId: string;
+    lastAuditDate?: string; // ISO String
+    nextAuditDate?: string; // ISO String
+}
+
 
 export interface AuditChecklistItem {
     id: string;
