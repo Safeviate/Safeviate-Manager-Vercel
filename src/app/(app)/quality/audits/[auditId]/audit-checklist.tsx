@@ -22,12 +22,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import type { FindingLevel } from '@/app/(app)/admin/features/page';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type EnrichedAudit = QualityAudit & { template: QualityAuditChecklistTemplate };
 
 interface AuditChecklistProps {
   audit: EnrichedAudit;
   tenantId: string;
+  findingLevels: FindingLevel[];
 }
 
 const evidenceSchema = z.object({
@@ -50,7 +53,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function AuditChecklist({ audit, tenantId }: AuditChecklistProps) {
+export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklistProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
@@ -104,7 +107,9 @@ export function AuditChecklist({ audit, tenantId }: AuditChecklistProps) {
         form.setValue(`findings.${activeItemIndex}.evidence`, [...currentEvidence, { url: docDetails.url, description: docDetails.name }]);
     };
     
-    const activeItemFinding = form.watch(`findings.${form.getValues('findings').findIndex(f => f.checklistItemId === activeItemId)}.finding`);
+    const activeItemIndex = form.getValues('findings').findIndex(f => f.checklistItemId === activeItemId);
+    const activeItemFinding = form.watch(`findings.${activeItemIndex}.finding`);
+
     const isEvidenceDisabled = !activeItemId || activeItemFinding === 'Compliant' || activeItemFinding === 'Not Applicable';
 
 
@@ -157,7 +162,30 @@ export function AuditChecklist({ audit, tenantId }: AuditChecklistProps) {
                         {(findingType === 'Non Compliant' || findingType === 'Observation') && (
                             <div className="mt-4 space-y-4">
                                 {findingType === 'Non Compliant' && (
-                                    <FormField control={form.control} name={`findings.${itemIndex}.level`} render={({ field }) => ( <FormItem><FormLabel>Finding Level</FormLabel><FormControl><Input placeholder="e.g., Level 1, Level 2" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    <FormField
+                                        control={form.control}
+                                        name={`findings.${itemIndex}.level`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Finding Level</FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select a level" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {findingLevels.map(level => (
+                                                            <SelectItem key={level.id} value={level.name}>
+                                                                {level.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
                                 )}
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center">
@@ -229,4 +257,3 @@ export function AuditChecklist({ audit, tenantId }: AuditChecklistProps) {
         </>
     );
 }
-

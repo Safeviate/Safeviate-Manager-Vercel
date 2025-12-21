@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import type { QualityAudit, QualityAuditChecklistTemplate } from '@/types/quality';
 import { AuditChecklist } from './audit-checklist';
+import type { FindingLevelsSettings } from '@/app/(app)/admin/features/page';
 
 interface AuditDetailPageProps {
   params: { auditId: string };
@@ -26,17 +27,21 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
     () => (firestore ? doc(firestore, 'tenants', tenantId, 'quality-audits', auditId) : null),
     [firestore, tenantId, auditId]
   );
-
   const { data: audit, isLoading: isLoadingAudit, error: auditError } = useDoc<QualityAudit>(auditRef);
 
   const templateRef = useMemoFirebase(
       () => (firestore && audit?.templateId ? doc(firestore, 'tenants', tenantId, 'quality-audit-templates', audit.templateId) : null),
       [firestore, tenantId, audit?.templateId]
   );
-  
   const { data: template, isLoading: isLoadingTemplate } = useDoc<QualityAuditChecklistTemplate>(templateRef);
+  
+  const findingLevelsRef = useMemoFirebase(
+    () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'finding-levels') : null),
+    [firestore, tenantId]
+  );
+  const { data: findingLevelsSettings, isLoading: isLoadingFindingLevels } = useDoc<FindingLevelsSettings>(findingLevelsRef);
 
-  const isLoading = isLoadingAudit || isLoadingTemplate;
+  const isLoading = isLoadingAudit || isLoadingTemplate || isLoadingFindingLevels;
 
   const enrichedAudit = useMemo(() => {
     if (!audit || !template) return null;
@@ -99,7 +104,11 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-            <AuditChecklist audit={enrichedAudit} tenantId={tenantId} />
+            <AuditChecklist 
+                audit={enrichedAudit} 
+                tenantId={tenantId}
+                findingLevels={findingLevelsSettings?.levels || []}
+            />
         </CardContent>
       </Card>
     </div>
