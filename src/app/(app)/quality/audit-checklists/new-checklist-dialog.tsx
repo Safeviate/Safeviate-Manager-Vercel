@@ -168,7 +168,7 @@ export function NewChecklistDialog({
                 </div>
                 
                 <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="outline" size="sm" onClick={() => addItem('Header')}><PlusCircle className="mr-2" />Header</Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => addItem('Header')}><PlusCircle className="mr-2" />Item</Button>
                     <Button type="button" variant="outline" size="sm" onClick={() => addItem('Checkbox')}><PlusCircle className="mr-2" />Checkbox</Button>
                     <Button type="button" variant="outline" size="sm" onClick={() => addItem('Textbox')}><PlusCircle className="mr-2" />Textbox</Button>
                     <Button type="button" variant="outline" size="sm" onClick={() => addItem('Number')}><PlusCircle className="mr-2" />Number</Button>
