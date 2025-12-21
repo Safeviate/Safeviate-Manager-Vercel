@@ -1,4 +1,3 @@
-
 'use client';
 
 import AuditChecklistsManager from './audit-checklists-manager';

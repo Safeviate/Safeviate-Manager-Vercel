@@ -54,6 +54,8 @@ interface NewChecklistDialogProps {
   tenantId: string;
   departments: Department[];
   existingTemplate?: QualityAuditChecklistTemplate;
+  isOpen?: boolean;
+  setIsOpen?: (open: boolean) => void;
   trigger?: React.ReactNode;
 }
 
@@ -61,11 +63,16 @@ export function NewChecklistDialog({
   tenantId,
   departments,
   existingTemplate,
+  isOpen: controlledIsOpen,
+  setIsOpen: setControlledIsOpen,
   trigger,
 }: NewChecklistDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+
+  const isOpen = controlledIsOpen ?? internalIsOpen;
+  const setIsOpen = setControlledIsOpen ?? setInternalIsOpen;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -116,14 +123,16 @@ export function NewChecklistDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : (
+        <DialogTrigger asChild>
           <Button>
             <PlusCircle className="mr-2 h-4 w-4" />
             New Checklist Template
           </Button>
-        )}
-      </DialogTrigger>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>{existingTemplate ? 'Edit' : 'New'} Checklist Template</DialogTitle>
@@ -181,4 +190,3 @@ export function NewChecklistDialog({
     </Dialog>
   );
 }
-
