@@ -140,7 +140,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                             <FormItem className="space-y-3">
                                 <FormControl>
                                     <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-wrap gap-4">
-                                        {(['Compliant', 'Non Compliant', 'Not Applicable'] as AuditFinding[]).map(value => (
+                                        {(['Compliant', 'Non Compliant', 'Not Applicable'] as const).map(value => (
                                             <FormItem key={value} className="flex items-center space-x-2 space-y-0">
                                                 <FormControl><RadioGroupItem value={value} /></FormControl>
                                                 <FormLabel className="font-normal">{value}</FormLabel>
@@ -159,32 +159,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                          <FormField control={form.control} name={`findings.${itemIndex}.comment`} render={({ field }) => (<FormItem><FormLabel>Comment / Details</FormLabel><FormControl><Textarea placeholder="Provide details about the finding..." {...field} /></FormControl><FormMessage /></FormItem>)} />
                          <FormField control={form.control} name={`findings.${itemIndex}.suggestedImprovements`} render={({ field }) => (<FormItem><FormLabel>Suggested Improvements</FormLabel><FormControl><Textarea placeholder="Suggest any improvements..." {...field} /></FormControl><FormMessage /></FormItem>)} />
 
-                        {findingType === 'Compliant' && observationLevel && (
-                             <div className="mt-4 space-y-4">
-                                <FormField
-                                    control={form.control}
-                                    name={`findings.${itemIndex}.level`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Finding Level</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select a level (optional)" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="Observation">Observation</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                             </div>
-                        )}
-
-                        {findingType === 'Non Compliant' && (
+                        {(findingType === 'Compliant' || findingType === 'Non Compliant') && (
                             <div className="mt-4 space-y-4">
                                 <FormField
                                     control={form.control}
@@ -199,7 +174,10 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    {otherLevels.map(level => (
+                                                    {findingType === 'Compliant' && observationLevel && (
+                                                        <SelectItem value={observationLevel.name}>{observationLevel.name}</SelectItem>
+                                                    )}
+                                                    {findingType === 'Non Compliant' && otherLevels.map(level => (
                                                         <SelectItem key={level.id} value={level.name}>
                                                             {level.name}
                                                         </SelectItem>
@@ -210,6 +188,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                                         </FormItem>
                                     )}
                                 />
+                                
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center">
                                         <FormLabel>Evidence</FormLabel>
