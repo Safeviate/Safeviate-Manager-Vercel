@@ -23,6 +23,7 @@ import { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import type { FindingLevel } from '@/app/(app)/admin/features/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
 type EnrichedAudit = QualityAudit & { template: QualityAuditChecklistTemplate };
 
@@ -124,6 +125,8 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
             name: `findings.${itemIndex}.evidence`
         });
         
+        const selectedLevelName = form.watch(`findings.${itemIndex}.level`);
+        const selectedLevel = findingLevels.find(l => l.name === selectedLevelName);
         const observationLevel = findingLevels.find(l => l.name === 'Observation');
         const otherLevels = findingLevels.filter(l => l.name !== 'Observation');
 
@@ -167,9 +170,15 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Finding Level</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                                                 <FormControl>
-                                                    <SelectTrigger>
+                                                    <SelectTrigger
+                                                        style={{
+                                                            backgroundColor: selectedLevel?.color,
+                                                            color: selectedLevel?.foregroundColor,
+                                                        }}
+                                                        className={cn(!selectedLevel && 'text-muted-foreground')}
+                                                    >
                                                         <SelectValue placeholder="Select a level" />
                                                     </SelectTrigger>
                                                 </FormControl>
