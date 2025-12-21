@@ -37,9 +37,20 @@ export function ChecklistTemplateCard({ departmentName, templates, tenantId, dep
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    // State to control which dialogs are open
-    const [editTemplate, setEditTemplate] = useState<QualityAuditChecklistTemplate | null>(null);
-    const [startAuditTemplate, setStartAuditTemplate] = useState<QualityAuditChecklistTemplate | null>(null);
+    // State for controlling dialogs
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [isStartAuditOpen, setIsStartAuditOpen] = useState(false);
+    const [selectedTemplate, setSelectedTemplate] = useState<QualityAuditChecklistTemplate | null>(null);
+
+    const handleEditClick = (template: QualityAuditChecklistTemplate) => {
+        setSelectedTemplate(template);
+        setIsEditOpen(true);
+    };
+
+    const handleStartAuditClick = (template: QualityAuditChecklistTemplate) => {
+        setSelectedTemplate(template);
+        setIsStartAuditOpen(true);
+    };
 
     const handleDelete = (templateId: string, templateTitle: string) => {
         if (!firestore) return;
@@ -71,10 +82,10 @@ export function ChecklistTemplateCard({ departmentName, templates, tenantId, dep
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => setStartAuditTemplate(template)}>
+                        <DropdownMenuItem onSelect={() => handleStartAuditClick(template)}>
                             <PlayCircle className="mr-2 h-4 w-4" /> Start Audit
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => setEditTemplate(template)}>
+                        <DropdownMenuItem onSelect={() => handleEditClick(template)}>
                             <Pencil className="mr-2 h-4 w-4" /> Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => handleDelete(template.id, template.title)} className="text-destructive focus:text-destructive">
@@ -89,22 +100,19 @@ export function ChecklistTemplateCard({ departmentName, templates, tenantId, dep
         </AccordionContent>
       </AccordionItem>
 
-      {/* Edit Dialog - reuses NewChecklistDialog */}
-      {editTemplate && (
-         <NewChecklistDialog 
-            isOpen={!!editTemplate}
-            setIsOpen={(open) => !open && setEditTemplate(null)}
-            existingTemplate={editTemplate}
-            tenantId={tenantId}
-            departments={departments}
-         />
-      )}
-      {/* Start Audit Dialog */}
-      {startAuditTemplate && (
+      <NewChecklistDialog 
+        isOpen={isEditOpen}
+        setIsOpen={setIsEditOpen}
+        existingTemplate={selectedTemplate}
+        tenantId={tenantId}
+        departments={departments}
+      />
+      
+      {selectedTemplate && (
         <StartAuditDialog
-            isOpen={!!startAuditTemplate}
-            setIsOpen={(open) => !open && setStartAuditTemplate(null)}
-            template={startAuditTemplate}
+            isOpen={isStartAuditOpen}
+            setIsOpen={setIsStartAuditOpen}
+            template={selectedTemplate}
             tenantId={tenantId}
             personnel={personnel}
             departments={departments}
