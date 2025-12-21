@@ -100,15 +100,17 @@ export function ChecklistTemplateCard({ departmentName, templates, tenantId, dep
         </AccordionContent>
       </AccordionItem>
 
-      <NewChecklistDialog 
-        isOpen={isEditOpen}
-        setIsOpen={setIsEditOpen}
-        existingTemplate={selectedTemplate}
-        tenantId={tenantId}
-        departments={departments}
-      />
+      {isEditOpen && selectedTemplate && (
+          <NewChecklistDialog 
+            isOpen={isEditOpen}
+            setIsOpen={setIsEditOpen}
+            existingTemplate={selectedTemplate}
+            tenantId={tenantId}
+            departments={departments}
+          />
+      )}
       
-      {selectedTemplate && (
+      {isStartAuditOpen && selectedTemplate && (
         <StartAuditDialog
             isOpen={isStartAuditOpen}
             setIsOpen={setIsStartAuditOpen}
