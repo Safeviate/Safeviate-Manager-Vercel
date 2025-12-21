@@ -105,13 +105,13 @@ export function NewChecklistDialog({
   const onSubmit = async (values: FormValues) => {
     if (!firestore) return;
     
-    // Create a deep copy and remove the `id` from items if they have one from `useFieldArray`
+    // Create a deep copy and ensure IDs are present
     const dataToSave = {
         ...values,
         sections: values.sections.map(section => ({
             ...section,
             items: section.items.map(item => ({
-                id: item.id, // Keep the UUID for stability if needed, or remove
+                id: item.id || uuidv4(), 
                 text: item.text,
                 type: item.type,
                 regulationReference: item.regulationReference,
@@ -162,10 +162,10 @@ export function NewChecklistDialog({
                  </div>
              ))}
               <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="outline" size="sm" onClick={() => addItem('Checkbox')}><PlusCircle className="mr-2" />Checkbox</Button>
-                    <Button type="button" variant="outline" size="sm" onClick={() => addItem('Textbox')}><PlusCircle className="mr-2" />Textbox</Button>
-                    <Button type="button" variant="outline" size="sm" onClick={() => addItem('Number')}><PlusCircle className="mr-2" />Number</Button>
-                    <Button type="button" variant="outline" size="sm" onClick={() => addItem('Date')}><PlusCircle className="mr-2" />Date</Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => addItem('Checkbox')}><PlusCircle className="mr-2 h-4 w-4" />Checkbox</Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => addItem('Textbox')}><PlusCircle className="mr-2 h-4 w-4" />Textbox</Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => addItem('Number')}><PlusCircle className="mr-2 h-4 w-4" />Number</Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => addItem('Date')}><PlusCircle className="mr-2 h-4 w-4" />Date</Button>
                 </div>
           </div>
       )
