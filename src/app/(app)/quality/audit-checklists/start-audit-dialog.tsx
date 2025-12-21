@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -68,6 +68,7 @@ export function StartAuditDialog({
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newAuditId, setNewAuditId] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -77,6 +78,15 @@ export function StartAuditDialog({
       auditDate: new Date(),
     },
   });
+  
+  useEffect(() => {
+    // When the dialog closes, if we have a new audit ID, navigate.
+    if (!isOpen && newAuditId) {
+      router.push(`/quality/audits/${newAuditId}`);
+      setNewAuditId(null); // Reset for next time
+    }
+  }, [isOpen, newAuditId, router]);
+
 
   const onSubmit = async (values: FormValues) => {
     if (!firestore || !user) {
@@ -89,7 +99,7 @@ export function StartAuditDialog({
         const auditsRef = collection(firestore, `tenants/${tenantId}/quality-audits`);
         const counterRef = doc(firestore, `tenants/${tenantId}/counters`, 'audits');
 
-        const newAuditId = await runTransaction(firestore, async (transaction) => {
+        const createdAuditId = await runTransaction(firestore, async (transaction) => {
             const counterDoc = await transaction.get(counterRef);
             const newCount = (counterDoc.data()?.currentNumber || 0) + 1;
             const newAuditNumber = `AUD-${String(newCount).padStart(4, '0')}`;
@@ -111,9 +121,12 @@ export function StartAuditDialog({
             transaction.set(newAuditRef, newAuditData);
             return newAuditRef.id;
         });
+        
+        setNewAuditId(createdAuditId);
 
         toast({ title: 'Audit Started', description: `A new audit based on "${template.title}" has been created.` });
-        router.push(`/quality/audits/${newAuditId}`);
+        
+        // Close the dialog, the useEffect will handle navigation.
         setIsOpen(false);
 
     } catch (error: any) {
