@@ -25,6 +25,7 @@ export type FindingLevel = {
   id: string;
   name: string;
   color: string;
+  foregroundColor: string;
 };
 
 export type FindingLevelsSettings = {
@@ -33,10 +34,10 @@ export type FindingLevelsSettings = {
 };
 
 const defaultFindingLevels: FindingLevel[] = [
-    { id: 'obs', name: 'Observation', color: '#3b82f6' },
-    { id: 'lvl1', name: 'Level 1', color: '#facc15' },
-    { id: 'lvl2', name: 'Level 2', color: '#f97316' },
-    { id: 'lvl3', name: 'Level 3', color: '#ef4444' },
+    { id: 'obs', name: 'Observation', color: '#3b82f6', foregroundColor: '#ffffff' },
+    { id: 'lvl1', name: 'Level 1', color: '#facc15', foregroundColor: '#000000' },
+    { id: 'lvl2', name: 'Level 2', color: '#f97316', foregroundColor: '#ffffff' },
+    { id: 'lvl3', name: 'Level 3', color: '#ef4444', foregroundColor: '#ffffff' },
 ];
 
 export default function FeaturesPage() {
@@ -64,16 +65,17 @@ export default function FeaturesPage() {
   
   const [newLevelName, setNewLevelName] = useState('');
   const [newLevelColor, setNewLevelColor] = useState('#808080');
-  const [levelColors, setLevelColors] = useState<Record<string, string>>({});
+  const [newLevelForegroundColor, setNewLevelForegroundColor] = useState('#ffffff');
+  const [levelColors, setLevelColors] = useState<Record<string, { bg: string, fg: string }>>({});
   
   const debouncedLevelColors = useDebounce(levelColors, 500);
 
   useEffect(() => {
     if (findingLevelsSettings?.levels) {
         const initialColors = (findingLevelsSettings.levels).reduce((acc, l) => {
-            acc[l.id] = l.color;
+            acc[l.id] = { bg: l.color, fg: l.foregroundColor || '#ffffff' };
             return acc;
-        }, {} as Record<string, string>);
+        }, {} as Record<string, { bg: string, fg: string }>);
         setLevelColors(initialColors);
     }
   }, [findingLevelsSettings]);
@@ -81,12 +83,16 @@ export default function FeaturesPage() {
   useEffect(() => {
       if (!findingLevelsRef || !findingLevelsSettings?.levels || Object.keys(debouncedLevelColors).length === 0 || isLoadingFindingLevels) return;
 
-      const hasChanged = findingLevelsSettings.levels.some(l => l.color !== debouncedLevelColors[l.id] && debouncedLevelColors[l.id]);
+      const hasChanged = findingLevelsSettings.levels.some(l => 
+        (l.color !== debouncedLevelColors[l.id]?.bg && debouncedLevelColors[l.id]?.bg) ||
+        (l.foregroundColor !== debouncedLevelColors[l.id]?.fg && debouncedLevelColors[l.id]?.fg)
+      );
 
       if (hasChanged) {
         const newLevels = findingLevelsSettings.levels.map(l => ({
             ...l,
-            color: debouncedLevelColors[l.id] || l.color
+            color: debouncedLevelColors[l.id]?.bg || l.color,
+            foregroundColor: debouncedLevelColors[l.id]?.fg || l.foregroundColor
         }));
         setDocumentNonBlocking(findingLevelsRef, { levels: newLevels }, { merge: true });
       }
@@ -114,6 +120,7 @@ export default function FeaturesPage() {
         id: newLevelName.trim().toLowerCase().replace(/\s+/g, '-'),
         name: newLevelName.trim(),
         color: newLevelColor,
+        foregroundColor: newLevelForegroundColor,
     };
 
     const updatedLevels = [...currentLevels, newLevel];
@@ -121,6 +128,7 @@ export default function FeaturesPage() {
     toast({ title: 'Finding Level Added', description: `Level "${newLevel.name}" has been added.` });
     setNewLevelName('');
     setNewLevelColor('#808080');
+    setNewLevelForegroundColor('#ffffff');
   }
 
   const handleRemoveLevel = (levelIdToRemove: string) => {
@@ -131,8 +139,8 @@ export default function FeaturesPage() {
     toast({ title: 'Finding Level Removed' });
   };
 
-  const handleLevelColorChange = (levelId: string, color: string) => {
-    setLevelColors(prev => ({...prev, [levelId]: color}));
+  const handleLevelColorChange = (levelId: string, type: 'bg' | 'fg', color: string) => {
+    setLevelColors(prev => ({...prev, [levelId]: { ...prev[levelId], [type]: color }}));
   }
   
   const isLoading = isLoadingFeatures || isLoadingFindingLevels;
@@ -191,13 +199,14 @@ export default function FeaturesPage() {
                         placeholder="e.g., Observation, Level 1"
                         onKeyDown={(e) => e.key === 'Enter' && handleAddLevel()}
                     />
-                    <Input
-                        id="new-level-color"
-                        type="color"
-                        value={newLevelColor}
-                        onChange={(e) => setNewLevelColor(e.target.value)}
-                        className="p-1 h-10 w-12"
-                    />
+                    <div className="flex items-center gap-1 border rounded-md px-2">
+                      <Label htmlFor="new-level-color" className="text-xs">BG</Label>
+                      <Input id="new-level-color" type="color" value={newLevelColor} onChange={(e) => setNewLevelColor(e.target.value)} className="p-0 h-8 w-8 border-none"/>
+                    </div>
+                     <div className="flex items-center gap-1 border rounded-md px-2">
+                      <Label htmlFor="new-level-fg-color" className="text-xs">FG</Label>
+                      <Input id="new-level-fg-color" type="color" value={newLevelForegroundColor} onChange={(e) => setNewLevelForegroundColor(e.target.value)} className="p-0 h-8 w-8 border-none"/>
+                    </div>
                     <Button onClick={handleAddLevel}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Add
                     </Button>
@@ -212,15 +221,26 @@ export default function FeaturesPage() {
                     {(findingLevelsSettings?.levels || defaultFindingLevels).length > 0 ? (
                         (findingLevelsSettings?.levels || defaultFindingLevels).map((level) => (
                             <div key={level.id} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
-                                <Badge style={{ backgroundColor: levelColors[level.id] || level.color }} className={cn("text-base py-1", (levelColors[level.id] || level.color) === '#facc15' ? 'text-black' : 'text-white')}>
+                                <Badge style={{ 
+                                    backgroundColor: levelColors[level.id]?.bg || level.color, 
+                                    color: levelColors[level.id]?.fg || level.foregroundColor 
+                                  }} className="text-base py-1">
                                     {level.name}
                                 </Badge>
                                 <div className="flex items-center gap-2">
-                                     <div className="relative h-8 w-8 rounded-full border cursor-pointer" style={{ backgroundColor: levelColors[level.id] || level.color }}>
+                                     <div className="relative h-8 w-8 rounded-full border cursor-pointer" style={{ backgroundColor: levelColors[level.id]?.bg || level.color }}>
                                         <Input
                                             type="color"
-                                            value={levelColors[level.id] || level.color}
-                                            onChange={(e) => handleLevelColorChange(level.id, e.target.value)}
+                                            value={levelColors[level.id]?.bg || level.color}
+                                            onChange={(e) => handleLevelColorChange(level.id, 'bg', e.target.value)}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0"
+                                        />
+                                    </div>
+                                    <div className="relative h-8 w-8 rounded-full border cursor-pointer" style={{ backgroundColor: levelColors[level.id]?.fg || level.foregroundColor }}>
+                                        <Input
+                                            type="color"
+                                            value={levelColors[level.id]?.fg || level.foregroundColor}
+                                            onChange={(e) => handleLevelColorChange(level.id, 'fg', e.target.value)}
                                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0"
                                         />
                                     </div>

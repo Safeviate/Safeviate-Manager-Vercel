@@ -8,9 +8,10 @@
         "properties": {
             "id": { "type": "string" },
             "name": { "type": "string" },
-            "color": { "type": "string", "description": "The hex color code for this level." }
+            "color": { "type": "string", "description": "The hex color code for the background of this level." },
+            "foregroundColor": { "type": "string", "description": "The hex color code for the text of this level." }
         },
-        "required": ["id", "name", "color"]
+        "required": ["id", "name", "color", "foregroundColor"]
     },
     "FindingLevelsSettings": {
         "title": "Finding Levels Settings",
@@ -1513,7 +1514,7 @@
           "schema": {
             "$ref": "#/backend/entities/Settings"
           },
-          "description": "Stores application settings for a tenant. A single document can hold multiple settings, e.g., 'document-expiry' or 'features' or 'finding-levels'.",
+          "description": "Stores application settings for a tenant. A single document can hold multiple settings, e.g., 'document-expiry', 'features', or 'finding-levels'.",
           "params": [
             {
               "name": "tenantId",
