@@ -195,6 +195,8 @@ export default function AuditSchedulePage() {
   const [auditAreas, setAuditAreas] = useState<string[]>(INITIAL_AUDIT_AREAS);
   const [isAddAreaOpen, setIsAddAreaOpen] = useState(false);
   const [newAreaName, setNewAreaName] = useState('');
+  const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
+
 
   const scheduleQuery = useMemoFirebase(
     () =>
@@ -208,6 +210,7 @@ export default function AuditSchedulePage() {
 
   const handleStatusChange = (area: string, quarter: Quarter, status: AuditScheduleStatus) => {
     if (!firestore) return;
+    setOpenPopoverId(null);
     const itemsCollection = collection(firestore, `tenants/${tenantId}/audit-schedule-items`);
     const existingItem = schedule?.find(item => item.area === area && item.quarter === quarter);
 
@@ -322,9 +325,10 @@ export default function AuditSchedulePage() {
                 <TableCell className="font-medium">{area}</TableCell>
                 {QUARTERS.map((quarter) => {
                   const item = getScheduleItem(area, quarter);
+                  const popoverId = `${area}-${quarter}`;
                   return (
                     <TableCell key={quarter} className="text-center">
-                      <Popover>
+                      <Popover open={openPopoverId === popoverId} onOpenChange={(isOpen) => setOpenPopoverId(isOpen ? popoverId : null)}>
                         <PopoverTrigger asChild>
                           <Badge
                             variant={getStatusBadgeVariant(item.status)}
