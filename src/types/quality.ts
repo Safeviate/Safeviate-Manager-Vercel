@@ -49,6 +49,7 @@ export interface QualityFinding {
     finding: AuditFinding;
     level?: string; // e.g., 'Level 1', 'Level 2'
     comment?: string;
+    suggestedImprovements?: string;
     evidence?: {
         url: string;
         description: string;

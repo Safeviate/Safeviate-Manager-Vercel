@@ -1112,21 +1112,38 @@
             "id": { "type": "string" },
             "title": { "type": "string" },
             "departmentId": { "type": "string" },
-            "items": {
+            "sections": {
                 "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "id": { "type": "string" },
-                        "text": { "type": "string" },
-                        "type": { "type": "string", "enum": ["Header", "Checkbox", "Textbox", "Number", "Date"] },
-                        "regulationReference": { "type": "string" }
-                    },
-                    "required": ["id", "text", "type"]
-                }
+                "items": { "$ref": "#/backend/entities/ChecklistSection" }
             }
         },
         "required": ["id", "title", "departmentId"]
+    },
+    "ChecklistSection": {
+        "title": "Checklist Section",
+        "type": "object",
+        "description": "A section within a quality audit checklist template.",
+        "properties": {
+            "id": { "type": "string" },
+            "title": { "type": "string" },
+            "items": {
+                "type": "array",
+                "items": { "$ref": "#/backend/entities/AuditChecklistItem" }
+            }
+        },
+        "required": ["id", "title"]
+    },
+    "AuditChecklistItem": {
+        "title": "Audit Checklist Item",
+        "type": "object",
+        "description": "A single item within a quality audit checklist section.",
+        "properties": {
+            "id": { "type": "string" },
+            "text": { "type": "string" },
+            "type": { "type": "string", "enum": ["Checkbox", "Textbox", "Number", "Date"] },
+            "regulationReference": { "type": "string" }
+        },
+        "required": ["id", "text", "type"]
     },
     "QualityAudit": {
         "title": "Quality Audit",
@@ -1159,6 +1176,7 @@
             "finding": { "type": "string", "enum": ["Compliant", "Non Compliant", "Observation", "Not Applicable"] },
             "level": { "type": "string" },
             "comment": { "type": "string" },
+            "suggestedImprovements": { "type": "string", "description": "Suggested improvements related to the finding." },
             "evidence": {
                 "type": "array",
                 "items": {

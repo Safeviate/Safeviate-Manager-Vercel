@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
@@ -37,6 +38,7 @@ const findingSchema = z.object({
   checklistItemId: z.string(),
   finding: z.enum(['Compliant', 'Non Compliant', 'Observation', 'Not Applicable']),
   comment: z.string().optional(),
+  suggestedImprovements: z.string().optional(),
   level: z.string().optional(),
   evidence: z.array(evidenceSchema).optional(),
 });
@@ -60,7 +62,13 @@ export function AuditChecklist({ audit, tenantId }: AuditChecklistProps) {
         defaultValues: {
             findings: allChecklistItems.map(item => {
                 const existingFinding = audit.findings.find(f => f.checklistItemId === item.id);
-                return existingFinding || { checklistItemId: item.id, finding: 'Compliant', evidence: [] };
+                return existingFinding || { 
+                    checklistItemId: item.id, 
+                    finding: 'Compliant', 
+                    comment: '',
+                    suggestedImprovements: '',
+                    evidence: [] 
+                };
             })
         },
     });
@@ -128,6 +136,7 @@ export function AuditChecklist({ audit, tenantId }: AuditChecklistProps) {
 
                     <div className="space-y-4">
                          <FormField control={form.control} name={`findings.${itemIndex}.comment`} render={({ field }) => (<FormItem><FormLabel>Comment / Details</FormLabel><FormControl><Textarea placeholder="Provide details about the finding..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+                         <FormField control={form.control} name={`findings.${itemIndex}.suggestedImprovements`} render={({ field }) => (<FormItem><FormLabel>Suggested Improvements</FormLabel><FormControl><Textarea placeholder="Suggest any improvements..." {...field} /></FormControl><FormMessage /></FormItem>)} />
 
                         {(findingType === 'Non Compliant' || findingType === 'Observation') && (
                             <div className="mt-4 space-y-4">
