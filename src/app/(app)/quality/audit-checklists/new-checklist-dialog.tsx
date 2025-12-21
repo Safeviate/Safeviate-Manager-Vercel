@@ -151,24 +151,28 @@ export function NewChecklistDialog({
                 
                 <div>
                     <h3 className="text-lg font-medium mb-2">Checklist Items</h3>
-                     {fields.map((field, index) => (
-                        <div key={field.id} className="flex items-start gap-2 p-3 border rounded-lg mb-2 bg-muted/20">
-                            <GripVertical className="h-5 w-5 mt-9 text-muted-foreground" />
-                            <div className="grid grid-cols-3 gap-4 flex-1">
-                                <FormField control={form.control} name={`items.${index}.text`} render={({ field }) => ( <FormItem className="col-span-3"><FormLabel>Item Text ({`Type: ${form.getValues(`items.${index}.type`)}`})</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                                <FormField control={form.control} name={`items.${index}.regulationReference`} render={({ field }) => ( <FormItem className="col-span-2"><FormLabel>Regulation Ref.</FormLabel><FormControl><Input placeholder="e.g., EASA.ORO.FC.115" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                     {fields.map((field, index) => {
+                        const itemType = form.getValues(`items.${index}.type`);
+                        const isHeader = itemType === 'Header';
+                        return (
+                            <div key={field.id} className="flex items-start gap-2 p-3 border rounded-lg mb-2 bg-muted/20">
+                                <GripVertical className="h-5 w-5 mt-9 text-muted-foreground" />
+                                <div className="grid grid-cols-3 gap-4 flex-1">
+                                    <FormField control={form.control} name={`items.${index}.text`} render={({ field }) => ( <FormItem className="col-span-3"><FormLabel>{isHeader ? 'Section Header Text' : `Item Text (Type: ${itemType})`}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                                    <FormField control={form.control} name={`items.${index}.regulationReference`} render={({ field }) => ( <FormItem className="col-span-2"><FormLabel>Regulation Ref.</FormLabel><FormControl><Input placeholder="e.g., EASA.ORO.FC.115" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                                </div>
+                                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="mt-7 text-destructive hover:text-destructive">
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
                             </div>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="mt-7 text-destructive hover:text-destructive">
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        </div>
-                     ))}
+                        )
+                     })}
                      {fields.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No items yet. Add one below.</p>}
                      <FormField control={form.control} name="items" render={() => <FormMessage />} />
                 </div>
                 
                 <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="outline" size="sm" onClick={() => addItem('Header')}><PlusCircle className="mr-2" />Item</Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => addItem('Header')}><PlusCircle className="mr-2" />Section</Button>
                     <Button type="button" variant="outline" size="sm" onClick={() => addItem('Checkbox')}><PlusCircle className="mr-2" />Checkbox</Button>
                     <Button type="button" variant="outline" size="sm" onClick={() => addItem('Textbox')}><PlusCircle className="mr-2" />Textbox</Button>
                     <Button type="button" variant="outline" size="sm" onClick={() => addItem('Number')}><PlusCircle className="mr-2" />Number</Button>
