@@ -1,7 +1,7 @@
 
 'use client';
 
-import AuditChecklistsManager from '../audit-checklists-manager';
+import AuditChecklistsManager from './audit-checklists-manager';
 
 export default function AuditChecklistsPage() {
     return <AuditChecklistsManager />;
