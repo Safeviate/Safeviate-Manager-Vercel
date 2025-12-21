@@ -1,6 +1,30 @@
 
 {
   "entities": {
+    "FindingLevel": {
+        "title": "Finding Level",
+        "type": "object",
+        "description": "Represents a single audit finding level with its associated color.",
+        "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "color": { "type": "string", "description": "The hex color code for this level." }
+        },
+        "required": ["id", "name", "color"]
+    },
+    "FindingLevelsSettings": {
+        "title": "Finding Levels Settings",
+        "type": "object",
+        "description": "Represents the audit finding levels settings for a tenant.",
+        "properties": {
+            "id": { "type": "string" },
+            "levels": {
+                "type": "array",
+                "items": { "$ref": "#/backend/entities/FindingLevel" }
+            }
+        },
+        "required": ["id", "levels"]
+    },
     "ComplianceRequirement": {
         "title": "Compliance Requirement",
         "type": "object",
@@ -997,6 +1021,9 @@
         },
         "documentExpiry": {
             "$ref": "#/backend/entities/DocumentExpiry"
+        },
+        "findingLevels": {
+            "$ref": "#/backend/entities/FindingLevelsSettings"
         }
       },
       "required": [
@@ -1176,6 +1203,7 @@
             "finding": { "type": "string", "enum": ["Compliant", "Non Compliant", "Observation", "Not Applicable"] },
             "level": { "type": "string" },
             "comment": { "type": "string" },
+            "suggestedImprovements": { "type": "string", "description": "Suggested improvements related to the finding." },
             "evidence": {
                 "type": "array",
                 "items": {
@@ -1485,7 +1513,7 @@
           "schema": {
             "$ref": "#/backend/entities/Settings"
           },
-          "description": "Stores application settings for a tenant. A single document can hold multiple settings, e.g., 'document-expiry' or 'features'.",
+          "description": "Stores application settings for a tenant. A single document can hold multiple settings, e.g., 'document-expiry' or 'features' or 'finding-levels'.",
           "params": [
             {
               "name": "tenantId",
@@ -1493,7 +1521,7 @@
             },
             {
               "name": "settingsId",
-              "description": "Unique identifier for the settings document (e.g., 'theme', 'document-expiry', 'features')."
+              "description": "Unique identifier for the settings document (e.g., 'theme', 'document-expiry', 'features', 'finding-levels')."
             }
           ]
         }
