@@ -1,6 +1,95 @@
 
 {
   "entities": {
+    "FlightPlan": {
+      "title": "Flight Plan",
+      "type": "object",
+      "description": "Represents a comprehensive flight plan including route, W&B, and performance calculations.",
+      "properties": {
+        "id": { "type": "string" },
+        "bookingId": { "type": "string", "description": "The booking this flight plan is associated with." },
+        "pilotId": { "type": "string" },
+        "aircraftId": { "type": "string" },
+        "departure": { "type": "string" },
+        "destination": { "type": "string" },
+        "alternate": { "type": "string" },
+        "flightRules": { "type": "string", "enum": ["VFR", "IFR"] },
+        "cruisingAltitude": { "type": "number" },
+        "waypoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "type": { "type": "string", "enum": ["Airport", "VOR", "NDB", "GPS"] },
+              "lat": { "type": "number" },
+              "lon": { "type": "number" }
+            }
+          }
+        },
+        "massAndBalance": { "$ref": "#/backend/entities/MassAndBalance" },
+        "performance": {
+          "type": "object",
+          "properties": {
+            "cruiseSpeed": { "type": "number" },
+            "fuelBurnRate": { "type": "number" },
+            "windDirection": { "type": "number" },
+            "windSpeed": { "type": "number" }
+          }
+        },
+        "navLog": {
+          "type": "array",
+          "description": "Calculated navigation log for each leg of the journey.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": { "type": "string" },
+              "to": { "type": "string" },
+              "track": { "type": "number" },
+              "windCorrectionAngle": { "type": "number" },
+              "heading": { "type": "number" },
+              "distance": { "type": "number" },
+              "groundSpeed": { "type": "number" },
+              "ete": { "type": "number" },
+              "fuel": { "type": "number" }
+            }
+          }
+        },
+        "fuelPlan": {
+            "type": "object",
+            "properties": {
+                "tripFuel": { "type": "number" },
+                "contingencyFuel": { "type": "number" },
+                "alternateFuel": { "type": "number" },
+                "finalReserveFuel": { "type": "number" },
+                "extraFuel": { "type": "number" },
+                "totalFuelRequired": { "type": "number" }
+            }
+        }
+      },
+       "required": ["id", "pilotId", "aircraftId", "departure", "destination"]
+    },
+    "Risk": {
+      "title": "Risk",
+      "type": "object",
+      "description": "Represents an identified organizational risk.",
+      "properties": {
+        "id": { "type": "string" },
+        "hazard": { "type": "string" },
+        "risk": { "type": "string" },
+        "hazardArea": { "type": "string" },
+        "likelihood": { "type": "number" },
+        "severity": { "type": "number" },
+        "riskScore": { "type": "number" },
+        "residualLikelihood": { "type": "number" },
+        "residualSeverity": { "type": "number" },
+        "residualRiskScore": { "type": "number" },
+        "status": { "type": "string", "enum": ["Open", "Closed", "Archived"] },
+        "mitigation": { "type": "string" }
+      },
+      "required": ["id", "hazard", "risk", "hazardArea", "likelihood", "severity", "riskScore", "status"]
+    },
     "SafetyReport": {
       "title": "Safety Report",
       "type": "object",
@@ -261,6 +350,10 @@
         "id": {
           "type": "string",
           "description": "Unique identifier for the booking."
+        },
+        "flightPlanId": {
+          "type": "string",
+          "description": "The ID of the flight plan associated with this booking."
         },
         "bookingNumber": {
             "type": "number",
@@ -982,6 +1075,90 @@
         }
       },
       "required": ["id", "currentNumber"]
+    },
+    "QualityAuditChecklistTemplate": {
+        "title": "Quality Audit Checklist Template",
+        "type": "object",
+        "description": "A reusable template for conducting quality audits.",
+        "properties": {
+            "id": { "type": "string" },
+            "title": { "type": "string" },
+            "departmentId": { "type": "string" },
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string" },
+                        "text": { "type": "string" },
+                        "type": { "type": "string", "enum": ["Header", "Checkbox", "Textbox", "Number", "Date"] },
+                        "regulationReference": { "type": "string" }
+                    },
+                    "required": ["id", "text", "type"]
+                }
+            }
+        },
+        "required": ["id", "title", "departmentId"]
+    },
+    "QualityAudit": {
+        "title": "Quality Audit",
+        "type": "object",
+        "description": "An instance of a quality audit performed using a template.",
+        "properties": {
+            "id": { "type": "string" },
+            "templateId": { "type": "string" },
+            "title": { "type": "string" },
+            "auditNumber": { "type": "string" },
+            "auditorId": { "type": "string" },
+            "auditeeId": { "type": "string" },
+            "scope": { "type": "string" },
+            "auditDate": { "type": "string", "format": "date-time" },
+            "status": { "type": "string", "enum": ["Scheduled", "In Progress", "Finalized", "Closed"] },
+            "findings": {
+                "type": "array",
+                "items": { "$ref": "#/backend/entities/QualityFinding" }
+            },
+            "complianceScore": { "type": "number" }
+        },
+        "required": ["id", "templateId", "title", "auditNumber", "auditorId", "status", "auditDate"]
+    },
+    "QualityFinding": {
+        "title": "Quality Finding",
+        "type": "object",
+        "description": "A specific finding recorded during a quality audit.",
+        "properties": {
+            "checklistItemId": { "type": "string" },
+            "finding": { "type": "string", "enum": ["Compliant", "Non Compliant", "Observation", "Not Applicable"] },
+            "level": { "type": "string" },
+            "comment": { "type": "string" },
+            "evidence": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "url": { "type": "string" },
+                        "description": { "type": "string" }
+                    }
+                }
+            }
+        },
+        "required": ["checklistItemId", "finding"]
+    },
+    "CorrectiveActionPlan": {
+        "title": "Corrective Action Plan",
+        "type": "object",
+        "description": "A plan to address a non-conformance identified in an audit.",
+        "properties": {
+            "id": { "type": "string" },
+            "auditId": { "type": "string" },
+            "findingId": { "type": "string" },
+            "rootCauseAnalysis": { "type": "string" },
+            "actions": {
+                "type": "array",
+                "items": { "$ref": "#/backend/entities/CorrectiveAction" }
+            }
+        },
+        "required": ["id", "auditId", "findingId", "rootCauseAnalysis"]
     }
   },
   "auth": {
@@ -992,6 +1169,58 @@
   },
   "firestore": {
     "structure": [
+      {
+        "path": "tenants/{tenantId}/quality-audit-templates/{templateId}",
+        "definition": {
+          "entityName": "QualityAuditChecklistTemplate",
+          "schema": { "$ref": "#/backend/entities/QualityAuditChecklistTemplate" },
+          "description": "Stores templates for quality audits."
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/quality-audits/{auditId}",
+        "definition": {
+          "entityName": "QualityAudit",
+          "schema": { "$ref": "#/backend/entities/QualityAudit" },
+          "description": "Stores instances of quality audits."
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/corrective-action-plans/{capId}",
+        "definition": {
+          "entityName": "CorrectiveActionPlan",
+          "schema": { "$ref": "#/backend/entities/CorrectiveActionPlan" },
+          "description": "Stores corrective action plans for audit findings."
+        }
+      },
+       {
+        "path": "tenants/{tenantId}/flight-plans/{flightPlanId}",
+        "definition": {
+          "entityName": "FlightPlan",
+          "schema": {
+            "$ref": "#/backend/entities/FlightPlan"
+          },
+          "description": "Stores flight plans for each tenant.",
+          "params": [
+            { "name": "tenantId", "description": "Tenant ID." },
+            { "name": "flightPlanId", "description": "Flight Plan ID." }
+          ]
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/risks/{riskId}",
+        "definition": {
+          "entityName": "Risk",
+          "schema": {
+            "$ref": "#/backend/entities/Risk"
+          },
+          "description": "Stores organizational risks for each tenant.",
+          "params": [
+            { "name": "tenantId", "description": "Tenant ID." },
+            { "name": "riskId", "description": "Risk ID." }
+          ]
+        }
+      },
       {
         "path": "tenants/{tenantId}/safety-reports/{reportId}",
         "definition": {

@@ -100,6 +100,13 @@ export const menuConfig: MenuItem[] = [
     href: '/quality',
     label: 'Quality',
     icon: CheckSquare,
+    subItems: [
+        {
+          href: '/quality',
+          label: 'Dashboard',
+          description: 'View the quality assurance dashboard.',
+        },
+    ],
   },
   {
     href: '/training',
