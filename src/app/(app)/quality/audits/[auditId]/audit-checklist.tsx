@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -15,12 +15,13 @@ import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { QualityAudit, QualityAuditChecklistTemplate, QualityFinding, AuditFinding, ChecklistSection, AuditChecklistItem } from '@/types/quality';
 import { DocumentUploader } from '../../../users/personnel/[id]/document-uploader';
-import { FileUp, Camera, Trash2, ZoomIn } from 'lucide-react';
+import { FileUp, Camera, Trash2, ZoomIn, PlusCircle } from 'lucide-react';
 import Image from 'next/image';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 type EnrichedAudit = QualityAudit & { template: QualityAuditChecklistTemplate };
 
@@ -54,6 +55,7 @@ export function AuditChecklist({ audit, tenantId }: AuditChecklistProps) {
     const { toast } = useToast();
     const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
     const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+    const [activeItemId, setActiveItemId] = useState<string | null>(null);
 
     const allChecklistItems = audit.template.sections.flatMap(section => section.items);
 
@@ -92,22 +94,36 @@ export function AuditChecklist({ audit, tenantId }: AuditChecklistProps) {
         setIsImageViewerOpen(true);
     };
 
+    const handleEvidenceUploaded = (docDetails: { name: string; url: string; }) => {
+        if (!activeItemId) return;
+        
+        const activeItemIndex = form.getValues('findings').findIndex(f => f.checklistItemId === activeItemId);
+        if (activeItemIndex === -1) return;
+
+        const currentEvidence = form.getValues(`findings.${activeItemIndex}.evidence`) || [];
+        form.setValue(`findings.${activeItemIndex}.evidence`, [...currentEvidence, { url: docDetails.url, description: docDetails.name }]);
+    };
+    
+    const activeItemFinding = form.watch(`findings.${form.getValues('findings').findIndex(f => f.checklistItemId === activeItemId)}.finding`);
+    const isEvidenceDisabled = !activeItemId || activeItemFinding === 'Compliant' || activeItemFinding === 'Not Applicable';
+
+
     const renderChecklistItem = (item: AuditChecklistItem) => {
         const itemIndex = form.getValues('findings').findIndex(f => f.checklistItemId === item.id);
         if (itemIndex === -1) return null;
 
         const findingType = form.watch(`findings.${itemIndex}.finding`);
-        const { fields: evidenceFields, append: appendEvidence, remove: removeEvidence } = useFieldArray({
+        const { fields: evidenceFields, remove: removeEvidence } = useFieldArray({
             control: form.control,
             name: `findings.${itemIndex}.evidence`
         });
         
-        const handleEvidenceUploaded = (docDetails: { name: string; url: string; }) => {
-            appendEvidence({ url: docDetails.url, description: docDetails.name });
-        };
-
         return (
-            <Card key={item.id} className="mb-4">
+            <Card 
+                key={item.id} 
+                className={cn("mb-4 cursor-pointer transition-shadow", activeItemId === item.id && "shadow-lg ring-2 ring-primary")}
+                onClick={() => setActiveItemId(item.id)}
+            >
                 <CardHeader>
                     <CardTitle className="text-base">{item.text}</CardTitle>
                 </CardHeader>
@@ -146,18 +162,6 @@ export function AuditChecklist({ audit, tenantId }: AuditChecklistProps) {
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center">
                                         <FormLabel>Evidence</FormLabel>
-                                        <DocumentUploader
-                                            onDocumentUploaded={handleEvidenceUploaded}
-                                            trigger={(openDialog) => (
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild><Button type="button" variant="outline" size="sm">Add Evidence</Button></DropdownMenuTrigger>
-                                                    <DropdownMenuContent>
-                                                        <DropdownMenuItem onSelect={() => openDialog('file')}><FileUp className="mr-2 h-4 w-4" />Upload File</DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => openDialog('camera')}><Camera className="mr-2 h-4 w-4" />Take Photo</DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            )}
-                                        />
                                     </div>
                                     <div className="space-y-4 pt-2">
                                         {evidenceFields.map((evidence, evidenceIndex) => (
@@ -195,7 +199,23 @@ export function AuditChecklist({ audit, tenantId }: AuditChecklistProps) {
                             {section.items.map(item => renderChecklistItem(item))}
                         </div>
                     ))}
-                    <div className="flex justify-end sticky bottom-0 py-4 bg-background z-10">
+                    <div className="flex justify-end sticky bottom-0 py-4 bg-background z-10 gap-2">
+                        <DocumentUploader
+                          onDocumentUploaded={handleEvidenceUploaded}
+                          trigger={(openDialog) => (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button type="button" variant="outline" disabled={isEvidenceDisabled}>
+                                  <PlusCircle className="mr-2 h-4 w-4" /> Add Evidence
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                <DropdownMenuItem onSelect={() => openDialog('file')}><FileUp className="mr-2 h-4 w-4" />Upload File</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => openDialog('camera')}><Camera className="mr-2 h-4 w-4" />Take Photo</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        />
                         <Button type="submit">Save Findings</Button>
                     </div>
                 </form>
@@ -209,3 +229,4 @@ export function AuditChecklist({ audit, tenantId }: AuditChecklistProps) {
         </>
     );
 }
+
