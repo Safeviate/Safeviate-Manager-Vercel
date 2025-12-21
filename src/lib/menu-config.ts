@@ -21,6 +21,10 @@ import {
   LineChart,
   ShieldAlert,
   Map,
+  ClipboardList,
+  Target,
+  ListChecks,
+  Network,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -102,9 +106,29 @@ export const menuConfig: MenuItem[] = [
     icon: CheckSquare,
     subItems: [
         {
-          href: '/quality',
-          label: 'Dashboard',
+          href: '/quality/audits',
+          label: 'Audits',
           description: 'View the quality assurance dashboard.',
+        },
+        {
+            href: '/quality/audit-checklists',
+            label: 'Audit Checklists',
+            description: 'Manage audit templates.',
+        },
+        {
+            href: '/quality/cap-tracker',
+            label: 'CAP Tracker',
+            description: 'Track corrective action plans.',
+        },
+        {
+            href: '/quality/task-tracker',
+            label: 'Task Tracker',
+            description: 'Track all quality-related tasks.',
+        },
+        {
+            href: '/quality/coherence-matrix',
+            label: 'Coherence Matrix',
+            description: 'Ensure regulatory coherence.',
         },
     ],
   },
