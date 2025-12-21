@@ -15,13 +15,12 @@ import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { QualityAudit, QualityAuditChecklistTemplate, QualityFinding, AuditFinding, ChecklistSection, AuditChecklistItem } from '@/types/quality';
 import { DocumentUploader } from '../../../users/personnel/[id]/document-uploader';
-import { FileUp, Camera, Trash2, ZoomIn, PlusCircle } from 'lucide-react';
+import { FileUp, Camera, Trash2, ZoomIn } from 'lucide-react';
 import Image from 'next/image';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
 import type { FindingLevel } from '@/app/(app)/admin/features/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -58,7 +57,6 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
     const { toast } = useToast();
     const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
     const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
-    const [activeItemId, setActiveItemId] = useState<string | null>(null);
 
     const allChecklistItems = audit.template.sections.flatMap(section => section.items);
 
@@ -88,16 +86,17 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
     const onSubmit = (values: FormValues) => {
         if (!firestore) return;
         const auditRef = doc(firestore, `tenants/${tenantId}/quality-audits`, audit.id);
+        
         const filledFindings = values.findings.map(f => {
-            // Clear level if finding is not Compliant or Non Compliant
-            if (f.finding === 'Not Applicable') {
-                return { ...f, level: undefined };
-            }
             if (f.finding === 'Compliant' && f.level !== 'Observation') {
                 return { ...f, level: undefined };
             }
+            if (f.finding === 'Not Applicable') {
+                 return { ...f, level: undefined };
+            }
             return f;
         });
+
         updateDocumentNonBlocking(auditRef, { findings: filledFindings });
         toast({ title: "Findings Saved", description: "Your audit findings have been saved." });
     };
@@ -107,21 +106,13 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
         setIsImageViewerOpen(true);
     };
 
-    const handleEvidenceUploaded = (docDetails: { name: string; url: string; }) => {
-        if (!activeItemId) return;
-        
-        const activeItemIndex = form.getValues('findings').findIndex(f => f.checklistItemId === activeItemId);
-        if (activeItemIndex === -1) return;
+    const handleEvidenceUploaded = (checklistItemId: string, docDetails: { name: string; url: string; }) => {
+        const itemIndex = form.getValues('findings').findIndex(f => f.checklistItemId === checklistItemId);
+        if (itemIndex === -1) return;
 
-        const currentEvidence = form.getValues(`findings.${activeItemIndex}.evidence`) || [];
-        form.setValue(`findings.${activeItemIndex}.evidence`, [...currentEvidence, { url: docDetails.url, description: docDetails.name }]);
+        const currentEvidence = form.getValues(`findings.${itemIndex}.evidence`) || [];
+        form.setValue(`findings.${itemIndex}.evidence`, [...currentEvidence, { url: docDetails.url, description: docDetails.name }]);
     };
-    
-    const activeItemIndex = form.getValues('findings').findIndex(f => f.checklistItemId === activeItemId);
-    const activeItemFinding = form.watch(`findings.${activeItemIndex}.finding`);
-
-    const isEvidenceDisabled = !activeItemId || activeItemFinding === 'Compliant' || activeItemFinding === 'Not Applicable';
-
 
     const renderChecklistItem = (item: AuditChecklistItem) => {
         const itemIndex = form.getValues('findings').findIndex(f => f.checklistItemId === item.id);
@@ -137,11 +128,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
         const otherLevels = findingLevels.filter(l => l.name !== 'Observation');
 
         return (
-            <Card 
-                key={item.id} 
-                className={cn("mb-4 cursor-pointer transition-shadow", activeItemId === item.id && "shadow-lg ring-2 ring-primary")}
-                onClick={() => setActiveItemId(item.id)}
-            >
+            <Card key={item.id} className="mb-4">
                 <CardHeader>
                     <CardTitle className="text-base">{item.text}</CardTitle>
                 </CardHeader>
@@ -183,7 +170,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger>
-                                                        <SelectValue placeholder="Select a level" />
+                                                        <SelectValue placeholder="Select a level (optional)" />
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
@@ -226,6 +213,22 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center">
                                         <FormLabel>Evidence</FormLabel>
+                                        <DocumentUploader
+                                          onDocumentUploaded={(docDetails) => handleEvidenceUploaded(item.id, docDetails)}
+                                          trigger={(openDialog) => (
+                                            <DropdownMenu>
+                                              <DropdownMenuTrigger asChild>
+                                                <Button type="button" variant="outline" size="sm">
+                                                  Add Evidence
+                                                </Button>
+                                              </DropdownMenuTrigger>
+                                              <DropdownMenuContent>
+                                                <DropdownMenuItem onSelect={() => openDialog('file')}><FileUp className="mr-2 h-4 w-4" />Upload File</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => openDialog('camera')}><Camera className="mr-2 h-4 w-4" />Take Photo</DropdownMenuItem>
+                                              </DropdownMenuContent>
+                                            </DropdownMenu>
+                                          )}
+                                        />
                                     </div>
                                     <div className="space-y-4 pt-2">
                                         {evidenceFields.map((evidence, evidenceIndex) => (
@@ -263,23 +266,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                             {section.items.map(item => renderChecklistItem(item))}
                         </div>
                     ))}
-                    <div className="flex justify-end sticky bottom-0 py-4 bg-background z-10 gap-2">
-                        <DocumentUploader
-                          onDocumentUploaded={handleEvidenceUploaded}
-                          trigger={(openDialog) => (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button type="button" variant="outline" disabled={isEvidenceDisabled}>
-                                  <PlusCircle className="mr-2 h-4 w-4" /> Add Evidence
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent>
-                                <DropdownMenuItem onSelect={() => openDialog('file')}><FileUp className="mr-2 h-4 w-4" />Upload File</DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => openDialog('camera')}><Camera className="mr-2 h-4 w-4" />Take Photo</DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                        />
+                    <div className="flex justify-end sticky bottom-0 py-4 bg-background z-10">
                         <Button type="submit">Save Findings</Button>
                     </div>
                 </form>
@@ -293,5 +280,3 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
         </>
     );
 }
-
-    
