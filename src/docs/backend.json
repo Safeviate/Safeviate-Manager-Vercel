@@ -1,6 +1,21 @@
 
 {
   "entities": {
+    "ComplianceRequirement": {
+        "title": "Compliance Requirement",
+        "type": "object",
+        "description": "A single regulatory or internal compliance requirement.",
+        "properties": {
+            "id": { "type": "string" },
+            "regulationCode": { "type": "string", "description": "The official code for the regulation (e.g., '141.02.2')." },
+            "regulationStatement": { "type": "string", "description": "The full text of the regulation." },
+            "companyReference": { "type": "string", "description": "A reference to the internal manual or procedure (e.g., 'Ops Manual, Sec 4.2.1')." },
+            "responsibleManagerId": { "type": "string", "description": "The ID of the manager responsible for this requirement." },
+            "lastAuditDate": { "type": "string", "format": "date-time" },
+            "nextAuditDate": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "regulationCode", "regulationStatement", "companyReference", "responsibleManagerId"]
+    },
     "FlightPlan": {
       "title": "Flight Plan",
       "type": "object",
@@ -1097,21 +1112,38 @@
             "id": { "type": "string" },
             "title": { "type": "string" },
             "departmentId": { "type": "string" },
-            "items": {
+            "sections": {
                 "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "id": { "type": "string" },
-                        "text": { "type": "string" },
-                        "type": { "type": "string", "enum": ["Header", "Checkbox", "Textbox", "Number", "Date"] },
-                        "regulationReference": { "type": "string" }
-                    },
-                    "required": ["id", "text", "type"]
-                }
+                "items": { "$ref": "#/backend/entities/ChecklistSection" }
             }
         },
         "required": ["id", "title", "departmentId"]
+    },
+    "ChecklistSection": {
+        "title": "Checklist Section",
+        "type": "object",
+        "description": "A section within a quality audit checklist template.",
+        "properties": {
+            "id": { "type": "string" },
+            "title": { "type": "string" },
+            "items": {
+                "type": "array",
+                "items": { "$ref": "#/backend/entities/AuditChecklistItem" }
+            }
+        },
+        "required": ["id", "title"]
+    },
+    "AuditChecklistItem": {
+        "title": "Audit Checklist Item",
+        "type": "object",
+        "description": "A single item within a quality audit checklist section.",
+        "properties": {
+            "id": { "type": "string" },
+            "text": { "type": "string" },
+            "type": { "type": "string", "enum": ["Checkbox", "Textbox", "Number", "Date"] },
+            "regulationReference": { "type": "string" }
+        },
+        "required": ["id", "text", "type"]
     },
     "QualityAudit": {
         "title": "Quality Audit",
@@ -1126,7 +1158,7 @@
             "auditeeId": { "type": "string" },
             "scope": { "type": "string" },
             "auditDate": { "type": "string", "format": "date-time" },
-            "status": { "type": "string", "enum": ["Scheduled", "In Progress", "Finalized", "Closed"] },
+            "status": { "type": "string", "enum": ["Scheduled", "In Progress", "Finalized", "Closed", "Archived"] },
             "findings": {
                 "type": "array",
                 "items": { "$ref": "#/backend/entities/QualityFinding" }
@@ -1182,6 +1214,14 @@
   },
   "firestore": {
     "structure": [
+       {
+        "path": "tenants/{tenantId}/compliance-matrix/{itemId}",
+        "definition": {
+          "entityName": "ComplianceRequirement",
+          "schema": { "$ref": "#/backend/entities/ComplianceRequirement" },
+          "description": "Stores individual regulatory compliance items."
+        }
+      },
       {
         "path": "tenants/{tenantId}/audit-schedule-items/{itemId}",
         "definition": {

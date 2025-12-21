@@ -62,7 +62,7 @@ export function ChecklistTemplateCard({ departmentName, templates, tenantId, dep
                         <FileText className="h-5 w-5 text-muted-foreground" />
                         {template.title}
                     </CardTitle>
-                    <CardDescription>{template.items.length} items</CardDescription>
+                    <CardDescription>{template.sections.reduce((acc, section) => acc + section.items.length, 0)} items in {template.sections.length} sections</CardDescription>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
