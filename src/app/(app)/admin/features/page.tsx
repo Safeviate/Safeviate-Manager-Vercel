@@ -13,7 +13,8 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Trash2 } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+import { useDebounce } from '@/hooks/use-debounce';
+import { cn } from '@/lib/utils';
 
 export type FeatureSettings = {
   id: string;
@@ -63,6 +64,33 @@ export default function FeaturesPage() {
   
   const [newLevelName, setNewLevelName] = useState('');
   const [newLevelColor, setNewLevelColor] = useState('#808080');
+  const [levelColors, setLevelColors] = useState<Record<string, string>>({});
+  
+  const debouncedLevelColors = useDebounce(levelColors, 500);
+
+  useEffect(() => {
+    if (findingLevelsSettings?.levels) {
+        const initialColors = (findingLevelsSettings.levels).reduce((acc, l) => {
+            acc[l.id] = l.color;
+            return acc;
+        }, {} as Record<string, string>);
+        setLevelColors(initialColors);
+    }
+  }, [findingLevelsSettings]);
+
+  useEffect(() => {
+      if (!findingLevelsRef || !findingLevelsSettings?.levels || Object.keys(debouncedLevelColors).length === 0 || isLoadingFindingLevels) return;
+
+      const hasChanged = findingLevelsSettings.levels.some(l => l.color !== debouncedLevelColors[l.id] && debouncedLevelColors[l.id]);
+
+      if (hasChanged) {
+        const newLevels = findingLevelsSettings.levels.map(l => ({
+            ...l,
+            color: debouncedLevelColors[l.id] || l.color
+        }));
+        setDocumentNonBlocking(findingLevelsRef, { levels: newLevels }, { merge: true });
+      }
+  }, [debouncedLevelColors, findingLevelsSettings, findingLevelsRef, isLoadingFindingLevels]);
 
   const handleToggleChange = (feature: keyof Omit<FeatureSettings, 'id'>, value: boolean) => {
     if (!featureSettingsRef) return;
@@ -76,7 +104,7 @@ export default function FeaturesPage() {
     }
     if (!findingLevelsRef) return;
 
-    const currentLevels = findingLevelsSettings?.levels || [];
+    const currentLevels = findingLevelsSettings?.levels || defaultFindingLevels;
     if (currentLevels.some(l => l.name.toLowerCase() === newLevelName.trim().toLowerCase())) {
        toast({ variant: 'destructive', title: 'Duplicate Level', description: `A finding level named "${newLevelName}" already exists.` });
        return;
@@ -97,11 +125,15 @@ export default function FeaturesPage() {
 
   const handleRemoveLevel = (levelIdToRemove: string) => {
     if (!findingLevelsRef) return;
-    const currentLevels = findingLevelsSettings?.levels || [];
+    const currentLevels = findingLevelsSettings?.levels || defaultFindingLevels;
     const updatedLevels = currentLevels.filter(l => l.id !== levelIdToRemove);
     setDocumentNonBlocking(findingLevelsRef, { levels: updatedLevels }, { merge: true });
     toast({ title: 'Finding Level Removed' });
   };
+
+  const handleLevelColorChange = (levelId: string, color: string) => {
+    setLevelColors(prev => ({...prev, [levelId]: color}));
+  }
   
   const isLoading = isLoadingFeatures || isLoadingFindingLevels;
 
@@ -180,18 +212,28 @@ export default function FeaturesPage() {
                     {(findingLevelsSettings?.levels || defaultFindingLevels).length > 0 ? (
                         (findingLevelsSettings?.levels || defaultFindingLevels).map((level) => (
                             <div key={level.id} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
-                                <Badge style={{ backgroundColor: level.color }} className="text-white text-base py-1">
+                                <Badge style={{ backgroundColor: levelColors[level.id] || level.color }} className={cn("text-base py-1", (levelColors[level.id] || level.color) === '#facc15' ? 'text-black' : 'text-white')}>
                                     {level.name}
                                 </Badge>
-                                <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8 rounded-full hover:bg-destructive/20"
-                                    onClick={() => handleRemoveLevel(level.id)}
-                                >
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                    <span className="sr-only">Remove {level.name}</span>
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                     <div className="relative h-8 w-8 rounded-full border cursor-pointer" style={{ backgroundColor: levelColors[level.id] || level.color }}>
+                                        <Input
+                                            type="color"
+                                            value={levelColors[level.id] || level.color}
+                                            onChange={(e) => handleLevelColorChange(level.id, e.target.value)}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0"
+                                        />
+                                    </div>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-8 w-8 rounded-full hover:bg-destructive/20"
+                                        onClick={() => handleRemoveLevel(level.id)}
+                                    >
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                        <span className="sr-only">Remove {level.name}</span>
+                                    </Button>
+                                </div>
                             </div>
                         ))
                     ) : (
