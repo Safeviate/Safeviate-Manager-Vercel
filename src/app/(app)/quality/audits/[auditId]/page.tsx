@@ -1,7 +1,6 @@
-
 'use client';
 
-import { use } from 'react';
+import { use, useMemo } from 'react';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import type { QualityAudit } from '@/types/quality';
+import type { QualityAudit, QualityAuditChecklistTemplate } from '@/types/quality';
+import { AuditChecklist } from './audit-checklist';
 
 interface AuditDetailPageProps {
   params: { auditId: string };
@@ -27,7 +27,22 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
     [firestore, tenantId, auditId]
   );
 
-  const { data: audit, isLoading, error } = useDoc<QualityAudit>(auditRef);
+  const { data: audit, isLoading: isLoadingAudit, error: auditError } = useDoc<QualityAudit>(auditRef);
+
+  const templateRef = useMemoFirebase(
+      () => (firestore && audit?.templateId ? doc(firestore, 'tenants', tenantId, 'quality-audit-templates', audit.templateId) : null),
+      [firestore, tenantId, audit?.templateId]
+  );
+  
+  const { data: template, isLoading: isLoadingTemplate } = useDoc<QualityAuditChecklistTemplate>(templateRef);
+
+  const isLoading = isLoadingAudit || isLoadingTemplate;
+
+  const enrichedAudit = useMemo(() => {
+    if (!audit || !template) return null;
+    return { ...audit, template };
+  }, [audit, template]);
+
 
   if (isLoading) {
     return (
@@ -46,10 +61,10 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
     );
   }
 
-  if (error) {
+  if (auditError) {
     return (
       <div className="text-center py-10">
-        <p className="text-destructive">Error loading audit: {error.message}</p>
+        <p className="text-destructive">Error loading audit: {auditError.message}</p>
         <Button asChild variant="link">
           <Link href="/quality/audits">Return to list</Link>
         </Button>
@@ -57,10 +72,10 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
     );
   }
 
-  if (!audit) {
+  if (!audit || !enrichedAudit) {
     return (
       <div className="text-center py-10">
-        <p className="text-muted-foreground">Audit not found.</p>
+        <p className="text-muted-foreground">Audit not found or template is missing.</p>
         <Button asChild variant="link">
           <Link href="/quality/audits">Return to list</Link>
         </Button>
@@ -84,7 +99,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-            <p>Audit detail page content will go here. Status is currently: {audit.status}</p>
+            <AuditChecklist audit={enrichedAudit} tenantId={tenantId} />
         </CardContent>
       </Card>
     </div>
