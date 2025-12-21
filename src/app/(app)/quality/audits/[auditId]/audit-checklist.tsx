@@ -72,6 +72,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                     finding: 'Compliant', 
                     comment: '',
                     suggestedImprovements: '',
+                    level: '',
                     evidence: [] 
                 };
             })
@@ -87,7 +88,16 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
     const onSubmit = (values: FormValues) => {
         if (!firestore) return;
         const auditRef = doc(firestore, `tenants/${tenantId}/quality-audits`, audit.id);
-        const filledFindings = values.findings.filter(f => f.finding);
+        const filledFindings = values.findings.map(f => {
+            // Clear level if finding is not Compliant or Non Compliant
+            if (f.finding === 'Not Applicable') {
+                return { ...f, level: undefined };
+            }
+            if (f.finding === 'Compliant' && f.level !== 'Observation') {
+                return { ...f, level: undefined };
+            }
+            return f;
+        });
         updateDocumentNonBlocking(auditRef, { findings: filledFindings });
         toast({ title: "Findings Saved", description: "Your audit findings have been saved." });
     };
@@ -123,6 +133,9 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
             name: `findings.${itemIndex}.evidence`
         });
         
+        const observationLevel = findingLevels.find(l => l.name === 'Observation');
+        const otherLevels = findingLevels.filter(l => l.name !== 'Observation');
+
         return (
             <Card 
                 key={item.id} 
@@ -159,6 +172,31 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                          <FormField control={form.control} name={`findings.${itemIndex}.comment`} render={({ field }) => (<FormItem><FormLabel>Comment / Details</FormLabel><FormControl><Textarea placeholder="Provide details about the finding..." {...field} /></FormControl><FormMessage /></FormItem>)} />
                          <FormField control={form.control} name={`findings.${itemIndex}.suggestedImprovements`} render={({ field }) => (<FormItem><FormLabel>Suggested Improvements</FormLabel><FormControl><Textarea placeholder="Suggest any improvements..." {...field} /></FormControl><FormMessage /></FormItem>)} />
 
+                        {findingType === 'Compliant' && observationLevel && (
+                             <div className="mt-4 space-y-4">
+                                <FormField
+                                    control={form.control}
+                                    name={`findings.${itemIndex}.level`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Finding Level</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select a level" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="Observation">Observation</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                             </div>
+                        )}
+
                         {findingType === 'Non Compliant' && (
                             <div className="mt-4 space-y-4">
                                 <FormField
@@ -174,7 +212,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    {findingLevels.map(level => (
+                                                    {otherLevels.map(level => (
                                                         <SelectItem key={level.id} value={level.name}>
                                                             {level.name}
                                                         </SelectItem>
@@ -255,3 +293,5 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
         </>
     );
 }
+
+    
