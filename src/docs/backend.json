@@ -1201,7 +1201,7 @@
         "description": "A specific finding recorded during a quality audit.",
         "properties": {
             "checklistItemId": { "type": "string" },
-            "finding": { "type": "string", "enum": ["Compliant", "Non Compliant", "Observation", "Not Applicable"] },
+            "finding": { "type": "string", "enum": ["Compliant", "Non Compliant", "Not Applicable"] },
             "level": { "type": "string" },
             "comment": { "type": "string" },
             "suggestedImprovements": { "type": "string", "description": "Suggested improvements related to the finding." },

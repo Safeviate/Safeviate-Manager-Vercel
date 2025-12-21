@@ -40,7 +40,7 @@ const evidenceSchema = z.object({
 
 const findingSchema = z.object({
   checklistItemId: z.string(),
-  finding: z.enum(['Compliant', 'Non Compliant', 'Observation', 'Not Applicable']),
+  finding: z.enum(['Compliant', 'Non Compliant', 'Not Applicable']),
   comment: z.string().optional(),
   suggestedImprovements: z.string().optional(),
   level: z.string().optional(),
@@ -140,7 +140,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                             <FormItem className="space-y-3">
                                 <FormControl>
                                     <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-wrap gap-4">
-                                        {(['Compliant', 'Non Compliant', 'Observation', 'Not Applicable'] as AuditFinding[]).map(value => (
+                                        {(['Compliant', 'Non Compliant', 'Not Applicable'] as AuditFinding[]).map(value => (
                                             <FormItem key={value} className="flex items-center space-x-2 space-y-0">
                                                 <FormControl><RadioGroupItem value={value} /></FormControl>
                                                 <FormLabel className="font-normal">{value}</FormLabel>
@@ -159,34 +159,32 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                          <FormField control={form.control} name={`findings.${itemIndex}.comment`} render={({ field }) => (<FormItem><FormLabel>Comment / Details</FormLabel><FormControl><Textarea placeholder="Provide details about the finding..." {...field} /></FormControl><FormMessage /></FormItem>)} />
                          <FormField control={form.control} name={`findings.${itemIndex}.suggestedImprovements`} render={({ field }) => (<FormItem><FormLabel>Suggested Improvements</FormLabel><FormControl><Textarea placeholder="Suggest any improvements..." {...field} /></FormControl><FormMessage /></FormItem>)} />
 
-                        {(findingType === 'Non Compliant' || findingType === 'Observation') && (
+                        {findingType === 'Non Compliant' && (
                             <div className="mt-4 space-y-4">
-                                {findingType === 'Non Compliant' && (
-                                    <FormField
-                                        control={form.control}
-                                        name={`findings.${itemIndex}.level`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Finding Level</FormLabel>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                    <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select a level" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {findingLevels.map(level => (
-                                                            <SelectItem key={level.id} value={level.name}>
-                                                                {level.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                )}
+                                <FormField
+                                    control={form.control}
+                                    name={`findings.${itemIndex}.level`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Finding Level</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select a level" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {findingLevels.map(level => (
+                                                        <SelectItem key={level.id} value={level.name}>
+                                                            {level.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center">
                                         <FormLabel>Evidence</FormLabel>
