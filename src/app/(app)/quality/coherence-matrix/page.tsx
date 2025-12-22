@@ -208,23 +208,53 @@ export default function CoherenceMatrixPage() {
 
   const isLoading = isLoadingItems || isLoadingAudits || isLoadingPersonnel;
 
+  const naturalSort = (a: string, b: string) => {
+    const re = /(\d+)/g;
+    const aParts = a.split(re);
+    const bParts = b.split(re);
+    const len = Math.min(aParts.length, bParts.length);
+
+    for (let i = 0; i < len; i++) {
+        const aPart = aParts[i];
+        const bPart = bParts[i];
+
+        if (i % 2 === 1) { // It's a number
+            const aNum = parseInt(aPart, 10);
+            const bNum = parseInt(bPart, 10);
+            if (aNum !== bNum) {
+                return aNum - bNum;
+            }
+        } else { // It's a string
+            if (aPart !== bPart) {
+                return aPart.localeCompare(bPart);
+            }
+        }
+    }
+    return a.length - b.length;
+  };
+  
+  const sortedComplianceItems = useMemo(() => {
+    if (!complianceItems) return [];
+    return [...complianceItems].sort((a, b) => naturalSort(a.regulationCode, b.regulationCode));
+  }, [complianceItems]);
+
   const groupedComplianceItems = useMemo(() => {
-    if (!complianceItems) return {};
-    return complianceItems.reduce((acc, item) => {
+    if (!sortedComplianceItems) return {};
+    return sortedComplianceItems.reduce((acc, item) => {
       const parentCode = item.parentRegulationCode || 'Uncategorized';
       if (!acc[parentCode]) {
-        acc[parentCode] = { parent: complianceItems.find(p => p.regulationCode === parentCode), children: [] };
+        acc[parentCode] = { parent: sortedComplianceItems.find(p => p.regulationCode === parentCode), children: [] };
       }
       if (item.parentRegulationCode) {
         acc[parentCode].children.push(item);
       }
       return acc;
     }, {} as Record<string, { parent: ComplianceRequirement | undefined, children: ComplianceRequirement[] }>);
-  }, [complianceItems]);
+  }, [sortedComplianceItems]);
 
   const topLevelItems = useMemo(() => {
-    return (complianceItems || []).filter(item => !item.parentRegulationCode);
-  }, [complianceItems]);
+    return (sortedComplianceItems || []).filter(item => !item.parentRegulationCode);
+  }, [sortedComplianceItems]);
 
 
   const getAuditDataForRegulation = (regulationCode: string) => {
@@ -375,4 +405,3 @@ export default function CoherenceMatrixPage() {
     </>
   );
 }
-
