@@ -88,7 +88,7 @@ export function NewChecklistDialog({
   const setIsOpen = setControlledIsOpen ?? setInternalIsOpen;
 
   // Drag-and-drop state for sections
-  const [draggedSectionIndex, setDraggedSectionIndex] = useState<number | null>(null);
+  const dragSectionNode = useRef<HTMLDivElement | null>(null);
   const [dropSectionIndex, setDropSectionIndex] = useState<number | null>(null);
   
   const complianceQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/compliance-matrix`)) : null), [firestore, tenantId]);
@@ -161,27 +161,28 @@ export function NewChecklistDialog({
   }
 
   // Section Drag Handlers
-  const handleSectionDragStart = (e: React.DragEvent, index: number) => {
-    setDraggedSectionIndex(index);
+  const handleSectionDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    dragSectionNode.current = e.currentTarget;
     e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
   };
 
-  const handleSectionDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (draggedSectionIndex !== null && draggedSectionIndex !== index) {
-        setDropSectionIndex(index);
+  const handleSectionDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault(); // Necessary to allow drop
+    const target = e.currentTarget as HTMLDivElement;
+    if (dragSectionNode.current && dragSectionNode.current !== target) {
+        const targetIndex = Number(target.dataset.index);
+        setDropSectionIndex(targetIndex);
     }
-  };
-
-  const handleSectionDragLeave = () => {
-    setDropSectionIndex(null);
   };
   
-  const handleSectionDrop = () => {
-    if (draggedSectionIndex !== null && dropSectionIndex !== null) {
-      moveSection(draggedSectionIndex, dropSectionIndex);
+  const handleSectionDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    const draggedIndex = Number(e.dataTransfer.getData('text/plain'));
+    const targetIndex = Number(e.currentTarget.dataset.index);
+    if (!isNaN(draggedIndex) && !isNaN(targetIndex)) {
+        moveSection(draggedIndex, targetIndex);
     }
-    setDraggedSectionIndex(null);
+    dragSectionNode.current = null;
     setDropSectionIndex(null);
   };
   
@@ -301,16 +302,19 @@ export function NewChecklistDialog({
                         </div>
                     </div>
                      {sectionFields.map((section, index) => (
-                        <div key={section.id}>
+                        <div
+                            key={section.id}
+                            data-index={index}
+                            draggable
+                            onDragStart={(e) => handleSectionDragStart(e, index)}
+                            onDragOver={handleSectionDragOver}
+                            onDragLeave={() => setDropSectionIndex(null)}
+                            onDrop={handleSectionDrop}
+                        >
                             <Card 
-                                draggable
-                                onDragStart={(e) => handleSectionDragStart(e, index)}
-                                onDragOver={(e) => handleSectionDragOver(e, index)}
-                                onDragLeave={handleSectionDragLeave}
-                                onDrop={handleSectionDrop}
                                 className={cn(
                                     "mb-4 bg-muted/30 transition-shadow",
-                                    draggedSectionIndex === index && "opacity-50 shadow-lg",
+                                    dragSectionNode.current?.dataset.index === String(index) && "opacity-50 shadow-lg",
                                     dropSectionIndex === index && "border-primary border-dashed border-2"
                                 )}
                             >
