@@ -1,6 +1,27 @@
 
 {
   "entities": {
+    "SummarizeDocumentOutput": {
+        "title": "Summarize Document Output",
+        "type": "object",
+        "properties": {
+            "requirements": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/backend/entities/Regulation"
+                }
+            }
+        }
+    },
+    "Regulation": {
+        "title": "Regulation",
+        "type": "object",
+        "properties": {
+            "regulationCode": { "type": "string" },
+            "regulationStatement": { "type": "string" },
+            "companyReference": { "type": "string" }
+        }
+    },
     "FindingLevel": {
         "title": "Finding Level",
         "type": "object",

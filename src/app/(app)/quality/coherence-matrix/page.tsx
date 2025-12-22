@@ -1,12 +1,12 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { collection, query, writeBatch, doc, deleteDoc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, ChevronDown, Upload, Loader2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ChevronDown, Upload, Loader2, ClipboardPaste } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -17,16 +17,23 @@ import { seedComplianceData } from '@/lib/seed-data/part-141';
 import type { ComplianceRequirement, QualityAudit } from '@/types/quality';
 import type { Personnel } from '../../users/personnel/page';
 import { ComplianceItemForm } from './item-form';
-import { summarizeRegulations } from '@/ai/flows/summarize-regulations-flow';
+import { summarizeDocument } from '@/ai/flows/summarize-document-flow';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 
 
 function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
     const { toast } = useToast();
     const [isOpen, setIsOpen] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    
+    // State for different input types
     const [file, setFile] = useState<File | null>(null);
+    const [pastedText, setPastedText] = useState('');
+    const [pastedImage, setPastedImage] = useState<string | null>(null);
+    
     const firestore = useFirestore();
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,12 +41,26 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
             setFile(event.target.files[0]);
         }
     };
-
-    const handleUpload = async () => {
-        if (!file) {
-            toast({ variant: 'destructive', title: 'No File Selected' });
-            return;
+    
+    const handlePaste = useCallback(async (event: React.ClipboardEvent) => {
+        const items = event.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                const blob = items[i].getAsFile();
+                if (blob) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        setPastedImage(e.target?.result as string);
+                        toast({ title: 'Image Pasted', description: 'The image has been loaded and is ready to be processed.' });
+                    };
+                    reader.readAsDataURL(blob);
+                }
+                return; // Stop after handling the first image
+            }
         }
+    }, [toast]);
+
+    const processAndSave = async (input: { text?: string; image?: string }) => {
         if (!firestore) {
             toast({ variant: 'destructive', title: 'Database not available' });
             return;
@@ -47,11 +68,10 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
 
         setIsProcessing(true);
         try {
-            const documentContent = await file.text();
-            const { requirements } = await summarizeRegulations({ documentContent });
+            const { requirements } = await summarizeDocument({ document: input });
 
             if (!requirements || requirements.length === 0) {
-                toast({ variant: 'destructive', title: 'No Regulations Found', description: 'The AI could not identify any regulations in the document.' });
+                toast({ variant: 'destructive', title: 'No Regulations Found', description: 'The AI could not identify any regulations in the provided content.' });
                 return;
             }
 
@@ -71,34 +91,82 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
             });
 
         } catch (error: any) {
-            console.error('Error processing regulations:', error);
+            console.error('Error processing document:', error);
             toast({ variant: 'destructive', title: 'Processing Failed', description: error.message || 'An unknown error occurred.' });
         } finally {
             setIsProcessing(false);
             setFile(null);
+            setPastedText('');
+            setPastedImage(null);
             setIsOpen(false);
         }
     };
+
+    const handleProcess = async () => {
+        if (file) {
+            const documentContent = await file.text();
+            await processAndSave({ text: documentContent });
+        } else if (pastedText) {
+            await processAndSave({ text: pastedText });
+        } else if (pastedImage) {
+            await processAndSave({ image: pastedImage });
+        }
+    };
+
+    const canProcess = file || pastedText.trim() || pastedImage;
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
                 <Button variant="outline"><Upload className="mr-2 h-4 w-4" /> Upload Regulations</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
-                    <DialogTitle>Upload Regulations Document</DialogTitle>
+                    <DialogTitle>Populate Matrix from Document</DialogTitle>
                     <DialogDescription>
-                        Upload a .txt file containing aviation regulations. The AI will parse it and add the requirements to the matrix.
+                        Upload a file, paste text, or paste an image of regulations. The AI will parse it and add the requirements to the matrix.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="py-4 space-y-2">
-                    <Label htmlFor="reg-file">Regulation File (.txt)</Label>
-                    <Input id="reg-file" type="file" accept=".txt" onChange={handleFileChange} />
-                </div>
+                <Tabs defaultValue="text">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="text">Paste Text</TabsTrigger>
+                        <TabsTrigger value="file">Upload File</TabsTrigger>
+                        <TabsTrigger value="image">Paste Image</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="text" className="pt-4">
+                        <Textarea
+                            placeholder="Paste the raw text of the regulations here..."
+                            className="h-48"
+                            value={pastedText}
+                            onChange={(e) => setPastedText(e.target.value)}
+                        />
+                    </TabsContent>
+                    <TabsContent value="file" className="pt-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="reg-file">Regulation File (.txt, .pdf, etc.)</Label>
+                            <Input id="reg-file" type="file" onChange={handleFileChange} />
+                             {file && <p className="text-sm text-muted-foreground">Selected: {file.name}</p>}
+                        </div>
+                    </TabsContent>
+                     <TabsContent value="image" className="pt-4">
+                        <div 
+                            onPaste={handlePaste} 
+                            className="h-48 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground"
+                        >
+                            {pastedImage ? (
+                                <img src={pastedImage} alt="Pasted regulations" className="max-h-full max-w-full" />
+                            ) : (
+                                <div className="text-center">
+                                    <ClipboardPaste className="mx-auto h-8 w-8" />
+                                    <p>Click here and paste an image (Ctrl+V)</p>
+                                </div>
+                            )}
+                        </div>
+                    </TabsContent>
+                </Tabs>
                 <DialogFooter>
                     <DialogClose asChild><Button variant="outline" disabled={isProcessing}>Cancel</Button></DialogClose>
-                    <Button onClick={handleUpload} disabled={isProcessing || !file}>
+                    <Button onClick={handleProcess} disabled={isProcessing || !canProcess}>
                         {isProcessing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : 'Upload and Process'}
                     </Button>
                 </DialogFooter>
