@@ -149,7 +149,7 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
                     <TabsContent value="text" className="pt-4">
                         <Textarea
                             placeholder="Paste the raw text of the regulations here..."
-                            className="h-48"
+                            className="h-96"
                             value={pastedText}
                             onChange={(e) => setPastedText(e.target.value)}
                             onPaste={handlePaste}
