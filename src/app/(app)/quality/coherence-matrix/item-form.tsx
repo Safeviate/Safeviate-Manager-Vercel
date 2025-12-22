@@ -22,6 +22,7 @@ import type { ComplianceRequirement } from '@/types/quality';
 const formSchema = z.object({
     regulationCode: z.string().min(1, 'Code is required.'),
     regulationStatement: z.string().min(1, 'Statement is required.'),
+    technicalStandard: z.string().optional(),
     companyReference: z.string().min(1, 'Reference is required.'),
     responsibleManagerId: z.string().min(1, 'Manager is required.'),
     nextAuditDate: z.date().optional(),
@@ -45,6 +46,7 @@ export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tena
         defaultValues: {
             regulationCode: existingItem?.regulationCode || '',
             regulationStatement: existingItem?.regulationStatement || '',
+            technicalStandard: existingItem?.technicalStandard || '',
             companyReference: existingItem?.companyReference || '',
             responsibleManagerId: existingItem?.responsibleManagerId || '',
             nextAuditDate: existingItem?.nextAuditDate ? new Date(existingItem.nextAuditDate) : undefined,
@@ -75,7 +77,8 @@ export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tena
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField control={form.control} name="regulationCode" render={({ field }) => ( <FormItem><FormLabel>Regulation Code</FormLabel><FormControl><Input placeholder="e.g., 141.02.2" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                <FormField control={form.control} name="regulationStatement" render={({ field }) => ( <FormItem><FormLabel>Regulation Statement</FormLabel><FormControl><Textarea placeholder="The full text of the regulation..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="regulationStatement" render={({ field }) => ( <FormItem><FormLabel>Regulation Statement</FormLabel><FormControl><Input placeholder="The short title of the regulation..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="technicalStandard" render={({ field }) => ( <FormItem><FormLabel>Full Regulation Text</FormLabel><FormControl><Textarea placeholder="The full, detailed text of the regulation..." {...field} className="min-h-32" /></FormControl><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="companyReference" render={({ field }) => ( <FormItem><FormLabel>Company Reference</FormLabel><FormControl><Input placeholder="e.g., Ops Manual, Sec 4.2.1" {...field} /></FormControl><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="responsibleManagerId" render={({ field }) => ( <FormItem><FormLabel>Responsible Manager</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a manager" /></SelectTrigger></FormControl><SelectContent>{personnel.map(p => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="nextAuditDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Next Audit Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}>{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>)} />
