@@ -88,12 +88,18 @@ export function ImportFromMatrixDialog({ complianceItems, onImport }: ImportFrom
                 importedSections.push({
                     id: uuidv4(),
                     title: `${parent.regulationCode} - ${parent.regulationStatement}`,
-                    items: selectedChildren.map(child => ({
-                        id: uuidv4(),
-                        text: child.regulationStatement,
-                        regulationReference: child.regulationCode,
-                        type: 'Checkbox'
-                    }))
+                    items: selectedChildren.map(child => {
+                        const fullText = child.technicalStandard 
+                            ? `${child.regulationStatement}\n${child.technicalStandard}`
+                            : child.regulationStatement;
+                        
+                        return {
+                            id: uuidv4(),
+                            text: fullText,
+                            regulationReference: child.regulationCode,
+                            type: 'Checkbox'
+                        }
+                    })
                 });
             }
         });
