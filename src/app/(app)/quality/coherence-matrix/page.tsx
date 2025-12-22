@@ -334,7 +334,7 @@ export default function CoherenceMatrixPage() {
             ) : (
                 <div className="space-y-4">
                     {topLevelItems.map(parentItem => (
-                      <Collapsible key={parentItem.id} className="border rounded-lg" defaultOpen>
+                      <Collapsible key={parentItem.id} className="border rounded-lg">
                         <CollapsibleTrigger className="flex w-full items-center text-left p-4 hover:bg-muted/50 rounded-t-lg">
                            <span className="font-mono text-sm font-semibold w-28 flex-shrink-0">{parentItem.regulationCode}</span>
                            <p className="font-medium flex-1 mx-4">{parentItem.regulationStatement}</p>
@@ -345,8 +345,8 @@ export default function CoherenceMatrixPage() {
                               const { lastAudit, findings } = getAuditDataForRegulation(item.regulationCode);
                               const responsibleManager = personnel?.find(p => p.id === item.responsibleManagerId);
                               return (
-                                  <Collapsible key={item.id} className="border rounded-lg p-4 mb-2">
-                                      <div className="flex justify-between items-center">
+                                  <Collapsible key={item.id} className="border rounded-lg mb-2">
+                                    <div className="flex justify-between items-center p-4">
                                           <div className="flex-1">
                                               <CollapsibleTrigger className="flex w-full items-center text-left">
                                                   <span className="font-mono text-sm font-semibold w-24 flex-shrink-0">{item.regulationCode}</span>
@@ -359,8 +359,8 @@ export default function CoherenceMatrixPage() {
                                               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDeleteItem(item.id)}><Trash2 className="h-4 w-4" /></Button>
                                           </div>
                                       </div>
-                                      <CollapsibleContent className="space-y-4 pt-4 mt-4 border-t">
-                                          <div><p className="font-semibold text-sm">Regulation Statement</p><p className="text-muted-foreground">{item.regulationStatement}</p></div>
+                                      <CollapsibleContent className="space-y-4 px-4 pb-4 border-t">
+                                          <div className='pt-4'><p className="font-semibold text-sm">Regulation Statement</p><p className="text-muted-foreground">{item.regulationStatement}</p></div>
                                           <div><p className="font-semibold text-sm">Company Reference</p><p className="text-muted-foreground">{item.companyReference}</p></div>
                                           <div className="grid grid-cols-3 gap-4">
                                               <div><p className="font-semibold text-sm">Responsible Manager</p><p className="text-muted-foreground">{responsibleManager ? `${responsibleManager.firstName} ${responsibleManager.lastName}` : 'N/A'}</p></div>
