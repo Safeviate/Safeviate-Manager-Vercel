@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -34,8 +34,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { PlusCircle, GripVertical, Trash2 } from 'lucide-react';
 import type { QualityAuditChecklistTemplate, AuditChecklistItem, ChecklistSection } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 const checklistItemSchema = z.object({
   id: z.string(),
@@ -82,6 +83,10 @@ export function NewChecklistDialog({
   const isOpen = controlledIsOpen ?? internalIsOpen;
   const setIsOpen = setControlledIsOpen ?? setInternalIsOpen;
 
+  // Drag-and-drop state for sections
+  const [draggedSectionIndex, setDraggedSectionIndex] = useState<number | null>(null);
+  const [dropSectionIndex, setDropSectionIndex] = useState<number | null>(null);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: existingTemplate || {
@@ -91,7 +96,7 @@ export function NewChecklistDialog({
     },
   });
 
-  const { fields: sectionFields, append: appendSection, remove: removeSection } = useFieldArray({
+  const { fields: sectionFields, append: appendSection, remove: removeSection, move: moveSection } = useFieldArray({
     control: form.control,
     name: 'sections',
   });
@@ -105,7 +110,6 @@ export function NewChecklistDialog({
   const onSubmit = async (values: FormValues) => {
     if (!firestore) return;
     
-    // Create a deep copy and ensure IDs are present
     const dataToSave = {
         ...values,
         sections: values.sections.map(section => ({
@@ -120,12 +124,10 @@ export function NewChecklistDialog({
     }
 
     if (existingTemplate) {
-        // Update existing
         const templateRef = doc(firestore, `tenants/${tenantId}/quality-audit-templates`, existingTemplate.id);
         updateDocumentNonBlocking(templateRef, dataToSave);
         toast({ title: 'Template Updated', description: 'The checklist template has been saved.' });
     } else {
-        // Create new
         const templatesCollection = collection(firestore, `tenants/${tenantId}/quality-audit-templates`);
         addDocumentNonBlocking(templatesCollection, dataToSave);
         toast({ title: 'Template Created', description: 'The new checklist template has been saved.' });
@@ -133,27 +135,82 @@ export function NewChecklistDialog({
     
     setIsOpen(false);
   };
+
+  // Section Drag Handlers
+  const handleSectionDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedSectionIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleSectionDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedSectionIndex !== null && draggedSectionIndex !== index) {
+        setDropSectionIndex(index);
+    }
+  };
+
+  const handleSectionDragLeave = () => {
+    setDropSectionIndex(null);
+  };
+  
+  const handleSectionDrop = () => {
+    if (draggedSectionIndex !== null && dropSectionIndex !== null) {
+      moveSection(draggedSectionIndex, dropSectionIndex);
+    }
+    setDraggedSectionIndex(null);
+    setDropSectionIndex(null);
+  };
   
   const SectionItems = ({ sectionIndex }: { sectionIndex: number }) => {
-      const { fields, append, remove } = useFieldArray({
+      const { fields, append, remove, move } = useFieldArray({
           control: form.control,
           name: `sections.${sectionIndex}.items`
       });
 
+      const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
+      const [dropItemIndex, setDropItemIndex] = useState<number | null>(null);
+
       const addItem = (type: AuditChecklistItem['type']) => {
-        append({
-            id: uuidv4(),
-            text: '',
-            type,
-            regulationReference: '',
-        });
+        append({ id: uuidv4(), text: '', type, regulationReference: '' });
+      };
+
+      const handleItemDragStart = (e: React.DragEvent, index: number) => {
+          setDraggedItemIndex(index);
+          e.dataTransfer.effectAllowed = 'move';
+      };
+
+      const handleItemDragOver = (e: React.DragEvent, index: number) => {
+          e.preventDefault();
+          if (draggedItemIndex !== null && draggedItemIndex !== index) {
+            setDropItemIndex(index);
+          }
+      };
+
+      const handleItemDrop = () => {
+        if (draggedItemIndex !== null && dropItemIndex !== null) {
+            move(draggedItemIndex, dropItemIndex);
+        }
+        setDraggedItemIndex(null);
+        setDropItemIndex(null);
       };
 
       return (
           <div className="pl-4 border-l-2 ml-2 space-y-3">
              {fields.map((item, itemIndex) => (
-                 <div key={item.id} className="flex items-start gap-2 p-3 border rounded-lg bg-background">
-                     <GripVertical className="h-5 w-5 mt-8 text-muted-foreground" />
+                 <div 
+                    key={item.id}
+                    draggable
+                    onDragStart={(e) => handleItemDragStart(e, itemIndex)}
+                    onDragOver={(e) => handleItemDragOver(e, itemIndex)}
+                    onDragLeave={() => setDropItemIndex(null)}
+                    onDrop={handleItemDrop}
+                    className={cn(
+                        "flex items-start gap-2 p-3 border rounded-lg bg-background transition-shadow",
+                        draggedItemIndex === itemIndex && 'opacity-50 shadow-lg',
+                        dropItemIndex === itemIndex && 'border-primary border-dashed border-2'
+                    )}
+                >
+                     <GripVertical className="h-5 w-5 mt-8 text-muted-foreground cursor-grab" />
                      <div className="grid grid-cols-1 gap-4 flex-1">
                         <FormField control={form.control} name={`sections.${sectionIndex}.items.${itemIndex}.text`} render={({ field }) => ( <FormItem><FormLabel>Item Text (Type: {item.type})</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
                         <FormField control={form.control} name={`sections.${sectionIndex}.items.${itemIndex}.regulationReference`} render={({ field }) => ( <FormItem><FormLabel>Regulation Ref.</FormLabel><FormControl><Input placeholder="e.g., EASA.ORO.FC.115" {...field} /></FormControl><FormMessage /></FormItem> )}/>
@@ -204,32 +261,45 @@ export function NewChecklistDialog({
                 <div>
                     <h3 className="text-lg font-medium mb-4">Sections</h3>
                      {sectionFields.map((section, index) => (
-                        <Card key={section.id} className="mb-4 bg-muted/30">
-                            <CardHeader>
-                                <div className="flex items-start gap-2">
-                                     <GripVertical className="h-5 w-5 mt-2 text-muted-foreground" />
-                                     <div className="flex-1">
-                                        <FormField
-                                            control={form.control}
-                                            name={`sections.${index}.title`}
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Section Title</FormLabel>
-                                                    <FormControl><Input {...field} /></FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                     </div>
-                                      <Button type="button" variant="ghost" size="icon" onClick={() => removeSection(index)} className="mt-6 text-destructive hover:text-destructive">
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <SectionItems sectionIndex={index} />
-                            </CardContent>
-                        </Card>
+                        <div key={section.id}>
+                            <Card 
+                                draggable
+                                onDragStart={(e) => handleSectionDragStart(e, index)}
+                                onDragOver={(e) => handleSectionDragOver(e, index)}
+                                onDragLeave={handleSectionDragLeave}
+                                onDrop={handleSectionDrop}
+                                className={cn(
+                                    "mb-4 bg-muted/30 transition-shadow",
+                                    draggedSectionIndex === index && "opacity-50 shadow-lg",
+                                    dropSectionIndex === index && "border-primary border-dashed border-2"
+                                )}
+                            >
+                                <CardHeader>
+                                    <div className="flex items-start gap-2">
+                                        <GripVertical className="h-5 w-5 mt-2 text-muted-foreground cursor-grab" />
+                                        <div className="flex-1">
+                                            <FormField
+                                                control={form.control}
+                                                name={`sections.${index}.title`}
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Section Title</FormLabel>
+                                                        <FormControl><Input {...field} /></FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+                                        <Button type="button" variant="ghost" size="icon" onClick={() => removeSection(index)} className="mt-6 text-destructive hover:text-destructive">
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <SectionItems sectionIndex={index} />
+                                </CardContent>
+                            </Card>
+                         </div>
                      ))}
                      {sectionFields.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No sections yet. Add one to get started.</p>}
                      <FormField control={form.control} name="sections" render={() => <FormMessage />} />
