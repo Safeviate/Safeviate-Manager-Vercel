@@ -44,6 +44,7 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
     
     const handlePaste = useCallback(async (event: React.ClipboardEvent) => {
         const items = event.clipboardData.items;
+        let textFound = false;
         for (let i = 0; i < items.length; i++) {
             if (items[i].type.indexOf('image') !== -1) {
                 const blob = items[i].getAsFile();
@@ -57,6 +58,15 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
                 }
                 return; // Stop after handling the first image
             }
+            if (items[i].type === 'text/plain') {
+                items[i].getAsString((text) => {
+                    setPastedText(text);
+                });
+                textFound = true;
+            }
+        }
+         if (textFound) {
+            event.preventDefault();
         }
     }, [toast]);
 
@@ -104,8 +114,12 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
 
     const handleProcess = async () => {
         if (file) {
-            const documentContent = await file.text();
-            await processAndSave({ text: documentContent });
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const text = e.target?.result as string;
+                await processAndSave({ text });
+            };
+            reader.readAsText(file);
         } else if (pastedText) {
             await processAndSave({ text: pastedText });
         } else if (pastedImage) {
@@ -139,6 +153,7 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
                             className="h-48"
                             value={pastedText}
                             onChange={(e) => setPastedText(e.target.value)}
+                            onPaste={handlePaste}
                         />
                     </TabsContent>
                     <TabsContent value="file" className="pt-4">
