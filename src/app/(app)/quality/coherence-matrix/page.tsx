@@ -391,15 +391,18 @@ export default function CoherenceMatrixPage() {
             ) : (
                 <div className="space-y-4">
                     {topLevelItems.map(parentItem => (
-                        <div key={parentItem.id} className="border rounded-lg">
+                       <Collapsible key={parentItem.id} className="border rounded-lg" defaultOpen>
                             <div className="flex items-center p-4 bg-muted/30 rounded-t-lg">
-                               <span className="font-mono text-sm font-semibold w-28 flex-shrink-0">{parentItem.regulationCode}</span>
-                               <p className="font-medium flex-1 mx-4">{parentItem.regulationStatement}</p>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDeleteSection(parentItem)}>
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
+                               <CollapsibleTrigger className="flex flex-1 items-center text-left">
+                                  <span className="font-mono text-sm font-semibold w-28 flex-shrink-0">{parentItem.regulationCode}</span>
+                                  <p className="font-medium flex-1 mx-4">{parentItem.regulationStatement}</p>
+                                  <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 ease-in-out group-data-[state=open]:-rotate-180" />
+                               </CollapsibleTrigger>
+                               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDeleteSection(parentItem)}>
+                                   <Trash2 className="h-4 w-4" />
+                               </Button>
                             </div>
-                            <div className="p-4">
+                            <CollapsibleContent className="p-4">
                                 {(groupedComplianceItems[parentItem.regulationCode] || []).map(item => {
                                   const { lastAudit, findings } = getAuditDataForRegulation(item.regulationCode);
                                   const responsibleManager = personnel?.find(p => p.id === item.responsibleManagerId);
@@ -440,8 +443,8 @@ export default function CoherenceMatrixPage() {
                                 {(!groupedComplianceItems[parentItem.regulationCode] || groupedComplianceItems[parentItem.regulationCode]?.length === 0) && (
                                     <p className="text-sm text-muted-foreground text-center py-4">No sub-regulations found for this section.</p>
                                 )}
-                            </div>
-                        </div>
+                            </CollapsibleContent>
+                        </Collapsible>
                     ))}
                 </div>
             )}
