@@ -45,7 +45,7 @@ You must differentiate between the regulation's title (the 'regulationStatement'
 For each item you identify, structure it into the following fields:
 - regulationCode: The specific number or code (e.g., '141.01.18' for a main section, or a sub-number like '1.' which you should combine with its parent to form '141.01.18.1').
 - regulationStatement: The short, official title of the regulation ONLY. Do not include the detailed text that follows. For example, for "1. Quality policy and strategy", this field should be "Quality policy and strategy".
-- technicalStandard: The full, detailed text body of the regulation. This includes all sub-points like (1), (a), (b), (i), etc., combined into a single string. For a main heading with no body text, this field can be an empty string.
+- technicalStandard: The full, detailed text body of the regulation. This includes all sub-points like (1), (a), (b), (i), etc., combined into a single string. IMPORTANT: Preserve all original formatting, including line breaks and indentation for lists. For a main heading with no body text, this field can be an empty string.
 - companyReference: A sensible placeholder for where this might be found in a typical airline's Operations Manual (e.g., "Ops Manual, Sec 4.2.1").
 - parentRegulationCode: If it's a sub-regulation (like '1. Quality policy...'), its 'parentRegulationCode' should be the code of the main heading it falls under (e.g., '141.01.18'). For top-level headings, this field should be omitted.
 
@@ -65,7 +65,7 @@ Expected Output Objects:
 1. {
      regulationCode: '141.01.18',
      regulationStatement: 'QUALITY ASSURANCE AND QUALITY SYSTEM',
-     technicalStandard: 'An approved training organisation must establish a quality assurance programme and a quality system that includes:\n(1) a quality policy and strategy; and\n(2) quality procedures; and\n(3) a quality manager.',
+     technicalStandard: 'An approved training organisation must establish a quality assurance programme and a quality system that includes:\\n(1) a quality policy and strategy; and\\n(2) quality procedures; and\\n(3) a quality manager.',
      companyReference: '...'
    }
 2. {
