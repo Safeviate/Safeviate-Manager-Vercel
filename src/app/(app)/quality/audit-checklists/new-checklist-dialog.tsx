@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -6,8 +5,8 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, doc, query } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,13 +30,15 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PlusCircle, GripVertical, Trash2, Wand2 } from 'lucide-react';
-import type { QualityAuditChecklistTemplate, AuditChecklistItem, ChecklistSection } from '@/types/quality';
+import { PlusCircle, GripVertical, Trash2, Wand2, Library } from 'lucide-react';
+import type { QualityAuditChecklistTemplate, AuditChecklistItem, ChecklistSection, ComplianceRequirement } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { AiChecklistGenerator } from './ai-checklist-generator';
+import { ImportFromMatrixDialog } from './import-from-matrix-dialog';
+
 
 const checklistItemSchema = z.object({
   id: z.string(),
@@ -87,6 +88,10 @@ export function NewChecklistDialog({
   // Drag-and-drop state for sections
   const [draggedSectionIndex, setDraggedSectionIndex] = useState<number | null>(null);
   const [dropSectionIndex, setDropSectionIndex] = useState<number | null>(null);
+  
+  const complianceQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/compliance-matrix`)) : null), [firestore, tenantId]);
+  const { data: complianceItems } = useCollection<ComplianceRequirement>(complianceQuery);
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -143,6 +148,14 @@ export function NewChecklistDialog({
         title: 'Checklist Generated',
         description: `${sections.length} sections have been added to the form.`
     })
+  }
+
+  const handleImportFromMatrix = (importedSections: ChecklistSection[]) => {
+      form.setValue('sections', [...form.getValues('sections'), ...importedSections]);
+      toast({
+          title: 'Imported from Matrix',
+          description: `${importedSections.length} sections have been added to your checklist.`
+      })
   }
 
   // Section Drag Handlers
@@ -271,6 +284,10 @@ export function NewChecklistDialog({
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-medium">Sections</h3>
                         <div className="flex items-center gap-2">
+                            <ImportFromMatrixDialog 
+                                complianceItems={complianceItems || []}
+                                onImport={handleImportFromMatrix}
+                            />
                             <AiChecklistGenerator onGenerated={handleAiGeneratedSections} />
                             <Button 
                                 type="button" 
