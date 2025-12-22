@@ -24,7 +24,7 @@ const formSchema = z.object({
     regulationStatement: z.string().min(1, 'Statement is required.'),
     technicalStandard: z.string().optional(),
     companyReference: z.string().min(1, 'Reference is required.'),
-    responsibleManagerId: z.string().min(1, 'Manager is required.'),
+    responsibleManagerId: z.string().optional(),
     nextAuditDate: z.date().optional(),
 });
 

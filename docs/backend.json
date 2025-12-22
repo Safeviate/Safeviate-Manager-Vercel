@@ -1,4 +1,5 @@
 
+
 {
   "entities": {
     "SummarizeDocumentOutput": {
@@ -19,7 +20,9 @@
         "properties": {
             "regulationCode": { "type": "string" },
             "regulationStatement": { "type": "string" },
-            "companyReference": { "type": "string" }
+            "technicalStandard": { "type": "string" },
+            "companyReference": { "type": "string" },
+            "parentRegulationCode": { "type": "string", "description": "The code of the parent regulation, if this is a sub-regulation." }
         }
     },
     "FindingLevel": {
@@ -54,14 +57,15 @@
         "properties": {
             "id": { "type": "string" },
             "regulationCode": { "type": "string", "description": "The official code for the regulation (e.g., '141.02.2')." },
-            "regulationStatement": { "type": "string", "description": "The full text of the regulation." },
-            "technicalStandard": { "type": "string", "description": "The detailed procedure on how to implement the regulation." },
+            "parentRegulationCode": { "type": "string", "description": "The code of the parent regulation, if this is a sub-regulation." },
+            "regulationStatement": { "type": "string", "description": "The short, official title or heading of the regulation." },
+            "technicalStandard": { "type": "string", "description": "The full, detailed text body of the regulation." },
             "companyReference": { "type": "string", "description": "A reference to the internal manual or procedure (e.g., 'Ops Manual, Sec 4.2.1')." },
             "responsibleManagerId": { "type": "string", "description": "The ID of the manager responsible for this requirement." },
             "lastAuditDate": { "type": "string", "format": "date-time" },
             "nextAuditDate": { "type": "string", "format": "date-time" }
         },
-        "required": ["id", "regulationCode", "regulationStatement", "companyReference", "responsibleManagerId"]
+        "required": ["id", "regulationCode", "regulationStatement", "companyReference"]
     },
     "FlightPlan": {
       "title": "Flight Plan",
