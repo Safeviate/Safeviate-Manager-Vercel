@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -38,6 +39,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { AiChecklistGenerator } from './ai-checklist-generator';
 import { ImportFromMatrixDialog } from './import-from-matrix-dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 
 const checklistItemSchema = z.object({
@@ -234,7 +236,7 @@ export function NewChecklistDialog({
                 >
                      <GripVertical className="h-5 w-5 mt-8 text-muted-foreground cursor-grab" />
                      <div className="grid grid-cols-1 gap-4 flex-1">
-                        <FormField control={form.control} name={`sections.${sectionIndex}.items.${itemIndex}.text`} render={({ field }) => ( <FormItem><FormLabel>Item Text (Type: {item.type})</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name={`sections.${sectionIndex}.items.${itemIndex}.text`} render={({ field }) => ( <FormItem><FormLabel>Item Text (Type: {item.type})</FormLabel><FormControl><Textarea className="min-h-24" {...field} /></FormControl><FormMessage /></FormItem> )} />
                         <FormField control={form.control} name={`sections.${sectionIndex}.items.${itemIndex}.regulationReference`} render={({ field }) => ( <FormItem><FormLabel>Regulation Ref.</FormLabel><FormControl><Input placeholder="e.g., EASA.ORO.FC.115" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                      </div>
                      <Button type="button" variant="ghost" size="icon" onClick={() => remove(itemIndex)} className="mt-6 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
