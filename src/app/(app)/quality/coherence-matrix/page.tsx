@@ -334,12 +334,17 @@ export default function CoherenceMatrixPage() {
             ) : (
                 <div className="space-y-4">
                     {topLevelItems.map(parentItem => (
-                      <Collapsible key={parentItem.id} className="border rounded-lg">
-                        <CollapsibleTrigger className="flex w-full items-center text-left p-4 hover:bg-muted/50 rounded-t-lg">
-                           <span className="font-mono text-sm font-semibold w-28 flex-shrink-0">{parentItem.regulationCode}</span>
-                           <p className="font-medium flex-1 mx-4">{parentItem.regulationStatement}</p>
-                           <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200 ease-in-out group-data-[state=open]:-rotate-180" />
-                        </CollapsibleTrigger>
+                      <Collapsible key={parentItem.id} className="border rounded-lg" defaultOpen={false}>
+                        <div className="flex items-center p-4 hover:bg-muted/50 rounded-t-lg">
+                            <CollapsibleTrigger className="flex w-full items-center text-left">
+                               <span className="font-mono text-sm font-semibold w-28 flex-shrink-0">{parentItem.regulationCode}</span>
+                               <p className="font-medium flex-1 mx-4">{parentItem.regulationStatement}</p>
+                               <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200 ease-in-out group-data-[state=open]:-rotate-180" />
+                            </CollapsibleTrigger>
+                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDeleteItem(parentItem.id)}>
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
                         <CollapsibleContent className="p-4 border-t">
                           {(groupedComplianceItems[parentItem.regulationCode]?.children || []).map(item => {
                               const { lastAudit, findings } = getAuditDataForRegulation(item.regulationCode);
