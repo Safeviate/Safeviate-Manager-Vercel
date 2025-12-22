@@ -18,8 +18,9 @@ const RegulationSchema = z.object({
 const SummarizeDocumentInputSchema = z.object({
   document: z.object({
     text: z.string().optional().describe('The full text content of the regulations document.'),
-    image: z.string().optional().describe("A photo of the regulations document, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
-  })
+    images: z.array(z.string()).optional().describe("A sequence of photos of the regulations document, as data URIs. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
+  }),
+  isMultiPage: z.boolean().optional().describe("If true, treat the sequence of images as a single, continuous document."),
 });
 export type SummarizeDocumentInput = z.infer<typeof SummarizeDocumentInputSchema>;
 
@@ -38,7 +39,7 @@ const prompt = ai.definePrompt({
     name: 'summarizeDocumentPrompt',
     input: { schema: SummarizeDocumentInputSchema },
     output: { schema: SummarizeDocumentOutputSchema },
-    prompt: `You are an expert in aviation regulatory compliance. Your task is to analyze the provided document content (which could be text or an image) and extract each individual compliance requirement.
+    prompt: `You are an expert in aviation regulatory compliance. Your task is to analyze the provided document content (which could be text or a sequence of images) and extract each individual compliance requirement.
 
 You must differentiate between the regulation's title (the 'regulationStatement') and its full descriptive text (the 'technicalStandard').
 
@@ -55,7 +56,7 @@ Document snippet:
 141.01.18 QUALITY ASSURANCE AND QUALITY SYSTEM
 An approved training organisation must establish a quality assurance programme and a quality system that includes:
 (1) a quality policy and strategy; and
-(2) quality procedures; and
+(2) a quality procedures; and
 (3) a quality manager.
 1. Quality policy and strategy
 The quality policy and strategy must be defined in writing...
@@ -75,6 +76,10 @@ Expected Output Objects:
      parentRegulationCode: '141.01.18',
      companyReference: '...'
    }
+   
+{{#if isMultiPage}}
+You will be given a sequence of images. Treat them as pages of a single document, in the order they are provided. Text may flow from one image to the next.
+{{/if}}
 
 Analyze the following document and extract all requirements:
 
@@ -83,9 +88,11 @@ Document Content:
 {{document.text}}
 {{/if}}
 
-{{#if document.image}}
-Document Image:
-{{media url=document.image}}
+{{#if document.images}}
+Document Images:
+{{#each document.images}}
+{{media url=this}}
+{{/each}}
 {{/if}}
 `,
 });

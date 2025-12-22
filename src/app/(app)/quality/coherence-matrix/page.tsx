@@ -2,12 +2,12 @@
 
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, ChangeEvent } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { collection, query, writeBatch, doc, deleteDoc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, ChevronDown, Upload, Loader2, ClipboardPaste } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ChevronDown, Upload, Loader2, ClipboardPaste, WandSparkles } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -18,12 +18,14 @@ import { seedComplianceData } from '@/lib/seed-data/part-141';
 import type { ComplianceRequirement, QualityAudit } from '@/types/quality';
 import type { Personnel } from '../../users/personnel/page';
 import { ComplianceItemForm } from './item-form';
-import { summarizeDocument } from '@/ai/flows/summarize-document-flow';
+import { summarizeDocument, SummarizeDocumentInput } from '@/ai/flows/summarize-document-flow';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import Image from 'next/image';
+import { Switch } from '@/components/ui/switch';
 
 
 function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
@@ -31,10 +33,10 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
     const [isOpen, setIsOpen] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     
-    // State for different input types
     const [file, setFile] = useState<File | null>(null);
     const [pastedText, setPastedText] = useState('');
-    const [pastedImage, setPastedImage] = useState<string | null>(null);
+    const [stagedImages, setStagedImages] = useState<string[]>([]);
+    const [isMultiImageMode, setIsMultiImageMode] = useState(false);
     
     const firestore = useFirestore();
 
@@ -52,12 +54,13 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
                 if (blob) {
                     const reader = new FileReader();
                     reader.onload = (e) => {
-                        setPastedImage(e.target?.result as string);
-                        toast({ title: 'Image Pasted', description: 'The image has been loaded and is ready to be processed.' });
+                        const newImage = e.target?.result as string;
+                        setStagedImages(prev => [...prev, newImage]);
+                        toast({ title: 'Image Added', description: 'The image has been staged for processing.' });
                     };
                     reader.readAsDataURL(blob);
                 }
-                return; // Stop after handling the first image
+                return;
             }
             if (items[i].type.startsWith('text/plain')) {
                 event.preventDefault();
@@ -70,7 +73,11 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
         }
     }, [toast]);
 
-    const processAndSave = async (input: { text?: string; image?: string }) => {
+    const removeStagedImage = (index: number) => {
+        setStagedImages(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const processAndSave = async (input: SummarizeDocumentInput) => {
         if (!firestore) {
             toast({ variant: 'destructive', title: 'Database not available' });
             return;
@@ -78,7 +85,7 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
 
         setIsProcessing(true);
         try {
-            const { requirements } = await summarizeDocument({ document: input });
+            const { requirements } = await summarizeDocument(input);
 
             if (!requirements || requirements.length === 0) {
                 toast({ variant: 'destructive', title: 'No Regulations Found', description: 'The AI could not identify any regulations in the provided content.' });
@@ -107,46 +114,89 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
             setIsProcessing(false);
             setFile(null);
             setPastedText('');
-            setPastedImage(null);
+            setStagedImages([]);
+            setIsMultiImageMode(false);
             setIsOpen(false);
         }
     };
 
     const handleProcess = async () => {
+        let input: SummarizeDocumentInput = { document: {} };
+        
         if (file) {
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const text = e.target?.result as string;
-                await processAndSave({ text });
+                input.document.text = e.target?.result as string;
+                await processAndSave(input);
             };
             reader.readAsText(file);
         } else if (pastedText) {
-            await processAndSave({ text: pastedText });
-        } else if (pastedImage) {
-            await processAndSave({ image: pastedImage });
+            input.document.text = pastedText;
+            await processAndSave(input);
+        } else if (stagedImages.length > 0) {
+            input.document.images = stagedImages;
+            input.isMultiPage = isMultiImageMode;
+            await processAndSave(input);
         }
     };
 
-    const canProcess = file || pastedText.trim() || pastedImage;
+    const canProcess = file || pastedText.trim() || stagedImages.length > 0;
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline"><Upload className="mr-2 h-4 w-4" /> Upload Regulations</Button>
+                <Button variant="outline"><WandSparkles className="mr-2 h-4 w-4" /> AI Populate</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-xl">
+            <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>Populate Matrix from Document</DialogTitle>
+                    <DialogTitle>Populate Matrix with AI</DialogTitle>
                     <DialogDescription>
-                        Upload a file, paste text, or paste an image of regulations. The AI will parse it and add the requirements to the matrix.
+                        Upload a file, paste text, or paste one or more images of regulations. The AI will parse them and add the requirements to the matrix.
                     </DialogDescription>
                 </DialogHeader>
-                <Tabs defaultValue="text">
+                <Tabs defaultValue="image">
                     <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="image">Paste Images</TabsTrigger>
                         <TabsTrigger value="text">Paste Text</TabsTrigger>
                         <TabsTrigger value="file">Upload File</TabsTrigger>
-                        <TabsTrigger value="image">Paste Image</TabsTrigger>
                     </TabsList>
+                    <TabsContent value="image" className="pt-4">
+                         <div
+                            onPaste={handlePaste}
+                            className="h-48 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground mb-4"
+                        >
+                            <div className="text-center">
+                                <ClipboardPaste className="mx-auto h-8 w-8" />
+                                <p>Click here and paste image(s) (Ctrl+V)</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center space-x-2 my-4">
+                            <Switch id="multi-image-mode" checked={isMultiImageMode} onCheckedChange={setIsMultiImageMode} />
+                            <Label htmlFor="multi-image-mode">Treat images as a single document</Label>
+                        </div>
+                        {isMultiImageMode && (
+                           <p className="text-xs text-muted-foreground p-2 bg-muted rounded-md">
+                               Instruction to AI: &quot;You will be given a sequence of images. Treat them as pages of a single document, in the order they are provided. Text may flow from one image to the next.&quot;
+                           </p>
+                        )}
+                        <ScrollArea className="h-48 mt-4">
+                           <div className="grid grid-cols-3 gap-4">
+                                {stagedImages.map((imageSrc, index) => (
+                                    <div key={index} className="relative group">
+                                        <Image src={imageSrc} alt={`Staged image ${index + 1}`} width={150} height={150} className="rounded-md object-cover aspect-square" />
+                                        <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100"
+                                            onClick={() => removeStagedImage(index)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </TabsContent>
                     <TabsContent value="text" className="pt-4">
                         <ScrollArea className="h-96 rounded-md border">
                             <Textarea
@@ -160,27 +210,10 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
                     </TabsContent>
                     <TabsContent value="file" className="pt-4">
                         <div className="space-y-2">
-                            <Label htmlFor="reg-file">Regulation File (.txt, .pdf, etc.)</Label>
-                            <Input id="reg-file" type="file" onChange={handleFileChange} />
+                            <Label htmlFor="reg-file">Regulation File (.txt)</Label>
+                            <Input id="reg-file" type="file" onChange={handleFileChange} accept=".txt" />
                              {file && <p className="text-sm text-muted-foreground">Selected: {file.name}</p>}
                         </div>
-                    </TabsContent>
-                     <TabsContent value="image" className="pt-4">
-                        <ScrollArea 
-                            onPaste={handlePaste} 
-                            className="h-96 rounded-md border"
-                        >
-                            <div className="flex h-full min-h-[24rem] items-center justify-center p-4">
-                                {pastedImage ? (
-                                    <img src={pastedImage} alt="Pasted regulations" className="max-h-full max-w-full object-contain" />
-                                ) : (
-                                    <div className="text-center text-muted-foreground">
-                                        <ClipboardPaste className="mx-auto h-8 w-8" />
-                                        <p>Click here and paste an image (Ctrl+V)</p>
-                                    </div>
-                                )}
-                            </div>
-                        </ScrollArea>
                     </TabsContent>
                 </Tabs>
                 <DialogFooter>
