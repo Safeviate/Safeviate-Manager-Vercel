@@ -1,4 +1,5 @@
 
+
 export type AuditChecklistItemType = 'Checkbox' | 'Textbox' | 'Number' | 'Date';
 export type AuditFinding = 'Compliant' | 'Non Compliant' | 'Not Applicable';
 export type AuditStatus = 'Scheduled' | 'In Progress' | 'Finalized' | 'Closed' | 'Archived';
@@ -17,7 +18,9 @@ export interface AuditScheduleItem {
 export interface ComplianceRequirement {
     id: string;
     regulationCode: string;
+    parentRegulationCode?: string;
     regulationStatement: string;
+    technicalStandard?: string;
     companyReference: string;
     responsibleManagerId: string;
     lastAuditDate?: string; // ISO String
@@ -85,3 +88,4 @@ export interface CorrectiveActionPlan {
     rootCauseAnalysis: string;
     actions: CorrectiveAction[];
 }
+

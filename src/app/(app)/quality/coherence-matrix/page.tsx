@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
@@ -44,7 +45,6 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
     
     const handlePaste = useCallback(async (event: React.ClipboardEvent) => {
         const items = event.clipboardData.items;
-        let textFound = false;
         for (let i = 0; i < items.length; i++) {
             if (items[i].type.indexOf('image') !== -1) {
                 const blob = items[i].getAsFile();
@@ -58,15 +58,14 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
                 }
                 return; // Stop after handling the first image
             }
-            if (items[i].type === 'text/plain') {
+            if (items[i].type.startsWith('text/plain')) {
+                event.preventDefault();
                 items[i].getAsString((text) => {
                     setPastedText(text);
+                     toast({ title: 'Text Pasted', description: 'The text has been loaded and is ready to be processed.' });
                 });
-                textFound = true;
+                return; 
             }
-        }
-         if (textFound) {
-            event.preventDefault();
         }
     }, [toast]);
 
@@ -209,6 +208,25 @@ export default function CoherenceMatrixPage() {
 
   const isLoading = isLoadingItems || isLoadingAudits || isLoadingPersonnel;
 
+  const groupedComplianceItems = useMemo(() => {
+    if (!complianceItems) return {};
+    return complianceItems.reduce((acc, item) => {
+      const parentCode = item.parentRegulationCode || 'Uncategorized';
+      if (!acc[parentCode]) {
+        acc[parentCode] = { parent: complianceItems.find(p => p.regulationCode === parentCode), children: [] };
+      }
+      if (item.parentRegulationCode) {
+        acc[parentCode].children.push(item);
+      }
+      return acc;
+    }, {} as Record<string, { parent: ComplianceRequirement | undefined, children: ComplianceRequirement[] }>);
+  }, [complianceItems]);
+
+  const topLevelItems = useMemo(() => {
+    return (complianceItems || []).filter(item => !item.parentRegulationCode);
+  }, [complianceItems]);
+
+
   const getAuditDataForRegulation = (regulationCode: string) => {
     if (!audits) return { lastAudit: null, findings: [] };
 
@@ -284,44 +302,58 @@ export default function CoherenceMatrixPage() {
                     <Skeleton className="h-12 w-full" />
                 </div>
             ) : (
-                <div className="space-y-2">
-                    {(complianceItems || []).map(item => {
-                        const { lastAudit, findings } = getAuditDataForRegulation(item.regulationCode);
-                        const responsibleManager = personnel?.find(p => p.id === item.responsibleManagerId);
-                        return (
-                            <Collapsible key={item.id} className="border rounded-lg p-4">
-                                <div className="flex justify-between items-center">
-                                    <div className="flex-1">
-                                        <CollapsibleTrigger className="flex w-full items-center text-left">
-                                            <span className="font-mono text-sm font-semibold w-24 flex-shrink-0">{item.regulationCode}</span>
-                                            <p className="font-medium truncate flex-1 mx-4">{item.regulationStatement}</p>
-                                            <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 ease-in-out group-data-[state=open]:-rotate-180" />
-                                        </CollapsibleTrigger>
-                                    </div>
-                                    <div className="flex items-center gap-2 pl-4">
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenForm(item)}><Edit className="h-4 w-4" /></Button>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDeleteItem(item.id)}><Trash2 className="h-4 w-4" /></Button>
-                                    </div>
-                                </div>
-                                <CollapsibleContent className="space-y-4 pt-4 mt-4 border-t">
-                                    <div><p className="font-semibold text-sm">Regulation Statement</p><p className="text-muted-foreground">{item.regulationStatement}</p></div>
-                                    <div><p className="font-semibold text-sm">Company Reference</p><p className="text-muted-foreground">{item.companyReference}</p></div>
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <div><p className="font-semibold text-sm">Responsible Manager</p><p className="text-muted-foreground">{responsibleManager ? `${responsibleManager.firstName} ${responsibleManager.lastName}` : 'N/A'}</p></div>
-                                        <div><p className="font-semibold text-sm">Last Audit</p><p className="text-muted-foreground">{lastAudit || 'N/A'}</p></div>
-                                        <div><p className="font-semibold text-sm">Next Audit</p><p className="text-muted-foreground">{item.nextAuditDate ? format(new Date(item.nextAuditDate), 'PPP') : 'N/A'}</p></div>
-                                    </div>
-                                    {findings.length > 0 && (
-                                        <div><p className="font-semibold text-sm">Last Audit Findings</p>
-                                            <ul className="list-disc list-inside text-destructive text-sm">
-                                                {findings.map((f, i) => <li key={i}>{f}</li>)}
-                                            </ul>
-                                        </div>
-                                    )}
-                                </CollapsibleContent>
-                            </Collapsible>
-                        )
-                    })}
+                <div className="space-y-4">
+                    {topLevelItems.map(parentItem => (
+                      <Collapsible key={parentItem.id} className="border rounded-lg" defaultOpen>
+                        <CollapsibleTrigger className="flex w-full items-center text-left p-4 hover:bg-muted/50 rounded-t-lg">
+                           <span className="font-mono text-sm font-semibold w-28 flex-shrink-0">{parentItem.regulationCode}</span>
+                           <p className="font-medium flex-1 mx-4">{parentItem.regulationStatement}</p>
+                           <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200 ease-in-out group-data-[state=open]:-rotate-180" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="p-4 border-t">
+                          {(groupedComplianceItems[parentItem.regulationCode]?.children || []).map(item => {
+                              const { lastAudit, findings } = getAuditDataForRegulation(item.regulationCode);
+                              const responsibleManager = personnel?.find(p => p.id === item.responsibleManagerId);
+                              return (
+                                  <Collapsible key={item.id} className="border rounded-lg p-4 mb-2">
+                                      <div className="flex justify-between items-center">
+                                          <div className="flex-1">
+                                              <CollapsibleTrigger className="flex w-full items-center text-left">
+                                                  <span className="font-mono text-sm font-semibold w-24 flex-shrink-0">{item.regulationCode}</span>
+                                                  <p className="font-medium truncate flex-1 mx-4">{item.regulationStatement}</p>
+                                                  <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 ease-in-out group-data-[state=open]:-rotate-180" />
+                                              </CollapsibleTrigger>
+                                          </div>
+                                          <div className="flex items-center gap-2 pl-4">
+                                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenForm(item)}><Edit className="h-4 w-4" /></Button>
+                                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDeleteItem(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                                          </div>
+                                      </div>
+                                      <CollapsibleContent className="space-y-4 pt-4 mt-4 border-t">
+                                          <div><p className="font-semibold text-sm">Regulation Statement</p><p className="text-muted-foreground">{item.regulationStatement}</p></div>
+                                          <div><p className="font-semibold text-sm">Company Reference</p><p className="text-muted-foreground">{item.companyReference}</p></div>
+                                          <div className="grid grid-cols-3 gap-4">
+                                              <div><p className="font-semibold text-sm">Responsible Manager</p><p className="text-muted-foreground">{responsibleManager ? `${responsibleManager.firstName} ${responsibleManager.lastName}` : 'N/A'}</p></div>
+                                              <div><p className="font-semibold text-sm">Last Audit</p><p className="text-muted-foreground">{lastAudit || 'N/A'}</p></div>
+                                              <div><p className="font-semibold text-sm">Next Audit</p><p className="text-muted-foreground">{item.nextAuditDate ? format(new Date(item.nextAuditDate), 'PPP') : 'N/A'}</p></div>
+                                          </div>
+                                          {findings.length > 0 && (
+                                              <div><p className="font-semibold text-sm">Last Audit Findings</p>
+                                                  <ul className="list-disc list-inside text-destructive text-sm">
+                                                      {findings.map((f, i) => <li key={i}>{f}</li>)}
+                                                  </ul>
+                                              </div>
+                                          )}
+                                      </CollapsibleContent>
+                                  </Collapsible>
+                              )
+                          })}
+                          {(!groupedComplianceItems[parentItem.regulationCode]?.children || groupedComplianceItems[parentItem.regulationCode]?.children.length === 0) && (
+                              <p className="text-sm text-muted-foreground text-center py-4">No sub-regulations found for this section.</p>
+                          )}
+                        </CollapsibleContent>
+                      </Collapsible>
+                    ))}
                 </div>
             )}
         </CardContent>
@@ -343,3 +375,4 @@ export default function CoherenceMatrixPage() {
     </>
   );
 }
+
