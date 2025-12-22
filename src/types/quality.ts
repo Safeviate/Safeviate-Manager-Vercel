@@ -19,8 +19,8 @@ export interface ComplianceRequirement {
     id: string;
     regulationCode: string;
     parentRegulationCode?: string;
-    regulationStatement: string;
-    technicalStandard?: string;
+    regulationStatement: string; // The short title/heading
+    technicalStandard?: string; // The full, detailed body text
     companyReference: string;
     responsibleManagerId: string;
     lastAuditDate?: string; // ISO String
@@ -88,4 +88,3 @@ export interface CorrectiveActionPlan {
     rootCauseAnalysis: string;
     actions: CorrectiveAction[];
 }
-

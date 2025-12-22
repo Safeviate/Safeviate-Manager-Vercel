@@ -20,6 +20,7 @@
         "properties": {
             "regulationCode": { "type": "string" },
             "regulationStatement": { "type": "string" },
+            "technicalStandard": { "type": "string" },
             "companyReference": { "type": "string" },
             "parentRegulationCode": { "type": "string", "description": "The code of the parent regulation, if this is a sub-regulation." }
         }
@@ -57,8 +58,8 @@
             "id": { "type": "string" },
             "regulationCode": { "type": "string", "description": "The official code for the regulation (e.g., '141.02.2')." },
             "parentRegulationCode": { "type": "string", "description": "The code of the parent regulation, if this is a sub-regulation." },
-            "regulationStatement": { "type": "string", "description": "The full text of the regulation." },
-            "technicalStandard": { "type": "string", "description": "The detailed procedure on how to implement the regulation." },
+            "regulationStatement": { "type": "string", "description": "The short, official title or heading of the regulation." },
+            "technicalStandard": { "type": "string", "description": "The full, detailed text body of the regulation." },
             "companyReference": { "type": "string", "description": "A reference to the internal manual or procedure (e.g., 'Ops Manual, Sec 4.2.1')." },
             "responsibleManagerId": { "type": "string", "description": "The ID of the manager responsible for this requirement." },
             "lastAuditDate": { "type": "string", "format": "date-time" },
@@ -1596,4 +1597,3 @@
     "reasoning": "The Firestore structure is designed to support a multi-tenant aviation academy management application, focusing on security, scalability, and ease of debugging. Authorization Independence is achieved through denormalization where needed, especially for collaborative data. Structural Segregation ensures that each collection has a homogeneous security posture. Access Modeling follows consistent patterns, utilizing path-based ownership for user-specific data and membership maps for collaborative entities. The structure is multi-tenant, where tenants are isolated from each other. The structure uses the tenants collection to keep a list of tenants and provides a tenant id for all other collections in the database. This strategy allows the application to manage multiple academies within the same system, each with its own set of data and settings.\\n\\n*   **Tenants:** The root level collection `tenants` stores individual tenant documents. Each tenant has its own unique ID and associated settings.\\n*   **Users:** User data is now split into `personnel` (non-flying staff) and `pilots` (students, instructors, private pilots) under each tenant to better segregate data models and security rules.\\n*   **Settings:** A generic `settings` collection is added under each tenant. This allows for storing various configuration documents, such as `document-expiry`, in a structured and scalable way without creating new top-level collections for each setting type.\\n*   **ChecklistResponses:** A new collection to store the completed checklists, linked to a tenant.\\n\\nQAPs (Rules are not Filters) is addressed by:\\n\\n*   Segregating data into collections with homogeneous security requirements.\\n*   Using path-based ownership for private data.\\n*   Employing membership maps for collaborative data, and storing these maps directly within the documents to avoid `get()` calls in security rules.\\n\\nSpecifically, the following denormalization strategies are used:\\n\\n*   Authorization context (e.g., members, ownerId) is copied into subcollection documents to avoid hierarchical dependencies.\\n*   Tenant ID is included in all documents to support multi-tenancy access control.\\n\\nThis design enables robust security rules that are simple to write, easy to understand, and highly performant."
   }
 }
-

@@ -360,7 +360,7 @@ export default function CoherenceMatrixPage() {
                                           </div>
                                       </div>
                                       <CollapsibleContent className="space-y-4 px-4 pb-4 border-t">
-                                          <div className='pt-4'><p className="font-semibold text-sm">Regulation Statement</p><p className="text-muted-foreground">{item.regulationStatement}</p></div>
+                                          <div><p className="font-semibold text-sm">Full Regulation Text</p><p className="text-muted-foreground whitespace-pre-wrap">{item.technicalStandard}</p></div>
                                           <div><p className="font-semibold text-sm">Company Reference</p><p className="text-muted-foreground">{item.companyReference}</p></div>
                                           <div className="grid grid-cols-3 gap-4">
                                               <div><p className="font-semibold text-sm">Responsible Manager</p><p className="text-muted-foreground">{responsibleManager ? `${responsibleManager.firstName} ${responsibleManager.lastName}` : 'N/A'}</p></div>
