@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { collection, query, writeBatch, doc, deleteDoc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, ChevronDown } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ChevronDown, Upload, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -16,6 +16,95 @@ import { seedComplianceData } from '@/lib/seed-data/part-141';
 import type { ComplianceRequirement, QualityAudit } from '@/types/quality';
 import type { Personnel } from '../../users/personnel/page';
 import { ComplianceItemForm } from './item-form';
+import { summarizeRegulations } from '@/ai/flows/summarize-regulations-flow';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+
+function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
+    const { toast } = useToast();
+    const [isOpen, setIsOpen] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [file, setFile] = useState<File | null>(null);
+    const firestore = useFirestore();
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files) {
+            setFile(event.target.files[0]);
+        }
+    };
+
+    const handleUpload = async () => {
+        if (!file) {
+            toast({ variant: 'destructive', title: 'No File Selected' });
+            return;
+        }
+        if (!firestore) {
+            toast({ variant: 'destructive', title: 'Database not available' });
+            return;
+        }
+
+        setIsProcessing(true);
+        try {
+            const documentContent = await file.text();
+            const { requirements } = await summarizeRegulations({ documentContent });
+
+            if (!requirements || requirements.length === 0) {
+                toast({ variant: 'destructive', title: 'No Regulations Found', description: 'The AI could not identify any regulations in the document.' });
+                return;
+            }
+
+            const batch = writeBatch(firestore);
+            const collectionRef = collection(firestore, `tenants/${tenantId}/compliance-matrix`);
+            
+            requirements.forEach(req => {
+                const docRef = doc(collectionRef);
+                batch.set(docRef, req);
+            });
+
+            await batch.commit();
+
+            toast({
+                title: 'Matrix Populated',
+                description: `${requirements.length} compliance requirements have been added to the matrix.`,
+            });
+
+        } catch (error: any) {
+            console.error('Error processing regulations:', error);
+            toast({ variant: 'destructive', title: 'Processing Failed', description: error.message || 'An unknown error occurred.' });
+        } finally {
+            setIsProcessing(false);
+            setFile(null);
+            setIsOpen(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline"><Upload className="mr-2 h-4 w-4" /> Upload Regulations</Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Upload Regulations Document</DialogTitle>
+                    <DialogDescription>
+                        Upload a .txt file containing aviation regulations. The AI will parse it and add the requirements to the matrix.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-2">
+                    <Label htmlFor="reg-file">Regulation File (.txt)</Label>
+                    <Input id="reg-file" type="file" accept=".txt" onChange={handleFileChange} />
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="outline" disabled={isProcessing}>Cancel</Button></DialogClose>
+                    <Button onClick={handleUpload} disabled={isProcessing || !file}>
+                        {isProcessing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : 'Upload and Process'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 
 export default function CoherenceMatrixPage() {
@@ -95,9 +184,10 @@ export default function CoherenceMatrixPage() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-                <Button variant="outline" onClick={handleSeedData}>Seed Part 141 Regulations</Button>
+                <UploadRegulationsDialog tenantId={tenantId} />
+                <Button variant="outline" onClick={handleSeedData}>Seed Part 141</Button>
                 <Button onClick={() => handleOpenForm()}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Requirement
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                 </Button>
             </div>
           </div>

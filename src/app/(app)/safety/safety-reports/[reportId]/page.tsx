@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useMemo, useState } from 'react';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -8,10 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { SafetyReport } from '@/types/safety-report';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, LoaderCircle, Volume2 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { TriageForm } from './triage-form';
+import { textToSpeech } from '@/ai/flows/text-to-speech-flow';
+import { useToast } from '@/hooks/use-toast';
 
 interface SafetyReportDetailPageProps {
   params: { reportId: string };
@@ -20,8 +22,11 @@ interface SafetyReportDetailPageProps {
 export default function SafetyReportDetailPage({ params }: SafetyReportDetailPageProps) {
   const resolvedParams = use(params);
   const firestore = useFirestore();
+  const { toast } = useToast();
   const tenantId = 'safeviate';
   const reportId = resolvedParams.reportId;
+  const [isReading, setIsReading] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
   const reportRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'tenants', tenantId, 'safety-reports', reportId) : null),
@@ -29,6 +34,25 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
   );
 
   const { data: report, isLoading, error } = useDoc<SafetyReport>(reportRef);
+
+  const handleReadDescription = async () => {
+    if (!report?.description) return;
+    setIsReading(true);
+    setAudioUrl(null);
+    try {
+      const { media } = await textToSpeech(report.description);
+      setAudioUrl(media);
+    } catch (e) {
+      console.error(e);
+      toast({
+        variant: 'destructive',
+        title: 'Text-to-Speech Failed',
+        description: 'Could not generate audio for the description.',
+      });
+    } finally {
+      setIsReading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -85,7 +109,30 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
           </CardDescription>
         </CardHeader>
         <CardContent>
-            <p className="whitespace-pre-wrap">{report.description}</p>
+          <div className="flex items-start gap-4">
+            <p className="whitespace-pre-wrap flex-1">{report.description}</p>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleReadDescription}
+              disabled={isReading}
+              className="flex-shrink-0"
+            >
+              {isReading ? (
+                <LoaderCircle className="h-5 w-5 animate-spin" />
+              ) : (
+                <Volume2 className="h-5 w-5" />
+              )}
+              <span className="sr-only">Read description</span>
+            </Button>
+          </div>
+          {audioUrl && (
+            <div className="mt-4">
+              <audio controls autoPlay src={audioUrl} className="w-full">
+                Your browser does not support the audio element.
+              </audio>
+            </div>
+          )}
         </CardContent>
       </Card>
       
