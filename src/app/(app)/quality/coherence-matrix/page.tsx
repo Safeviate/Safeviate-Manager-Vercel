@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
@@ -147,13 +148,15 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
                         <TabsTrigger value="image">Paste Image</TabsTrigger>
                     </TabsList>
                     <TabsContent value="text" className="pt-4">
-                        <Textarea
-                            placeholder="Paste the raw text of the regulations here..."
-                            className="h-96"
-                            value={pastedText}
-                            onChange={(e) => setPastedText(e.target.value)}
-                            onPaste={handlePaste}
-                        />
+                        <ScrollArea className="h-96 rounded-md border">
+                            <Textarea
+                                placeholder="Paste the raw text of the regulations here..."
+                                className="h-full min-h-[24rem] border-none focus-visible:ring-0"
+                                value={pastedText}
+                                onChange={(e) => setPastedText(e.target.value)}
+                                onPaste={handlePaste}
+                            />
+                        </ScrollArea>
                     </TabsContent>
                     <TabsContent value="file" className="pt-4">
                         <div className="space-y-2">
@@ -163,19 +166,21 @@ function UploadRegulationsDialog({ tenantId }: { tenantId: string }) {
                         </div>
                     </TabsContent>
                      <TabsContent value="image" className="pt-4">
-                        <div 
+                        <ScrollArea 
                             onPaste={handlePaste} 
-                            className="h-48 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground"
+                            className="h-96 rounded-md border"
                         >
-                            {pastedImage ? (
-                                <img src={pastedImage} alt="Pasted regulations" className="max-h-full max-w-full" />
-                            ) : (
-                                <div className="text-center">
-                                    <ClipboardPaste className="mx-auto h-8 w-8" />
-                                    <p>Click here and paste an image (Ctrl+V)</p>
-                                </div>
-                            )}
-                        </div>
+                            <div className="flex h-full min-h-[24rem] items-center justify-center p-4">
+                                {pastedImage ? (
+                                    <img src={pastedImage} alt="Pasted regulations" className="max-h-full max-w-full object-contain" />
+                                ) : (
+                                    <div className="text-center text-muted-foreground">
+                                        <ClipboardPaste className="mx-auto h-8 w-8" />
+                                        <p>Click here and paste an image (Ctrl+V)</p>
+                                    </div>
+                                )}
+                            </div>
+                        </ScrollArea>
                     </TabsContent>
                 </Tabs>
                 <DialogFooter>
