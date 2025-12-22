@@ -340,6 +340,25 @@ export default function CoherenceMatrixPage() {
     await deleteDoc(doc(firestore, `tenants/${tenantId}/compliance-matrix`, itemId));
     toast({ title: "Success", description: "Compliance item has been deleted." });
   };
+  
+  const handleDeleteSection = async (parentItem: ComplianceRequirement) => {
+      if (!firestore || !complianceItems) return;
+      const batch = writeBatch(firestore);
+      
+      // Delete the parent
+      const parentRef = doc(firestore, `tenants/${tenantId}/compliance-matrix`, parentItem.id);
+      batch.delete(parentRef);
+      
+      // Delete all children
+      const childrenToDelete = complianceItems.filter(item => item.parentRegulationCode === parentItem.regulationCode);
+      childrenToDelete.forEach(child => {
+          const childRef = doc(firestore, `tenants/${tenantId}/compliance-matrix`, child.id);
+          batch.delete(childRef);
+      });
+
+      await batch.commit();
+      toast({ title: "Section Deleted", description: `Regulation ${parentItem.regulationCode} and all its sub-items have been deleted.`});
+  }
 
 
   return (
@@ -376,6 +395,9 @@ export default function CoherenceMatrixPage() {
                             <div className="flex items-center p-4 bg-muted/30 rounded-t-lg">
                                <span className="font-mono text-sm font-semibold w-28 flex-shrink-0">{parentItem.regulationCode}</span>
                                <p className="font-medium flex-1 mx-4">{parentItem.regulationStatement}</p>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDeleteSection(parentItem)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
                             </div>
                             <div className="p-4">
                                 {(groupedComplianceItems[parentItem.regulationCode] || []).map(item => {
@@ -442,3 +464,4 @@ export default function CoherenceMatrixPage() {
     </>
   );
 }
+
