@@ -31,12 +31,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PlusCircle, GripVertical, Trash2 } from 'lucide-react';
+import { PlusCircle, GripVertical, Trash2, Wand2 } from 'lucide-react';
 import type { QualityAuditChecklistTemplate, AuditChecklistItem, ChecklistSection } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { AiChecklistGenerator } from './ai-checklist-generator';
 
 const checklistItemSchema = z.object({
   id: z.string(),
@@ -57,7 +58,7 @@ const formSchema = z.object({
   sections: z.array(sectionSchema).min(1, 'At least one section is required.'),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+export type FormValues = z.infer<typeof formSchema>;
 
 interface NewChecklistDialogProps {
   tenantId: string;
@@ -135,6 +136,14 @@ export function NewChecklistDialog({
     
     setIsOpen(false);
   };
+
+  const handleAiGeneratedSections = (sections: ChecklistSection[]) => {
+    form.setValue('sections', sections, { shouldValidate: true });
+    toast({
+        title: 'Checklist Generated',
+        description: `${sections.length} sections have been added to the form.`
+    })
+  }
 
   // Section Drag Handlers
   const handleSectionDragStart = (e: React.DragEvent, index: number) => {
@@ -259,7 +268,19 @@ export function NewChecklistDialog({
                 <Separator />
                 
                 <div>
-                    <h3 className="text-lg font-medium mb-4">Sections</h3>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-medium">Sections</h3>
+                        <div className="flex items-center gap-2">
+                            <AiChecklistGenerator onGenerated={handleAiGeneratedSections} />
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                onClick={() => appendSection({ id: uuidv4(), title: '', items: [] })}
+                            >
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Section
+                            </Button>
+                        </div>
+                    </div>
                      {sectionFields.map((section, index) => (
                         <div key={section.id}>
                             <Card 
@@ -304,14 +325,6 @@ export function NewChecklistDialog({
                      {sectionFields.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No sections yet. Add one to get started.</p>}
                      <FormField control={form.control} name="sections" render={() => <FormMessage />} />
                 </div>
-                
-                <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => appendSection({ id: uuidv4(), title: '', items: [] })}
-                >
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Section
-                </Button>
               </div>
             </ScrollArea>
             <DialogFooter>
