@@ -1,8 +1,8 @@
 'use client';
 
 import { use, useMemo, useState } from 'react';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { InvestigationForm } from './investigation-form';
 import { CorrectiveActionsForm } from './corrective-actions-form';
 import { FinalReview } from './final-review';
+import type { Personnel } from '@/app/(app)/users/personnel/page';
 
 interface SafetyReportDetailPageProps {
   params: { reportId: string };
@@ -32,8 +33,15 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
     () => (firestore ? doc(firestore, 'tenants', tenantId, 'safety-reports', reportId) : null),
     [firestore, tenantId, reportId]
   );
+  const personnelQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null),
+    [firestore, tenantId]
+  );
 
-  const { data: report, isLoading, error } = useDoc<SafetyReport>(reportRef);
+  const { data: report, isLoading: isLoadingReport, error } = useDoc<SafetyReport>(reportRef);
+  const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
+
+  const isLoading = isLoadingReport || isLoadingPersonnel;
 
   if (isLoading) {
     return (
@@ -105,13 +113,13 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
             <TriageForm report={report} tenantId={tenantId} />
         </TabsContent>
         <TabsContent value="investigation">
-          <InvestigationForm report={report} tenantId={tenantId} />
+          <InvestigationForm report={report} tenantId={tenantId} personnel={personnel || []} />
         </TabsContent>
         <TabsContent value="cap">
-          <CorrectiveActionsForm report={report} tenantId={tenantId} />
+          <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} />
         </TabsContent>
         <TabsContent value="review">
-          <FinalReview report={report} tenantId={tenantId} />
+          <FinalReview report={report} tenantId={tenantId} personnel={personnel || []} />
         </TabsContent>
       </Tabs>
     </div>
