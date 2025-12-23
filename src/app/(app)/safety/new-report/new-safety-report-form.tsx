@@ -22,10 +22,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '../../assets/page';
 import type { ReportType } from '@/types/safety-report';
 
-const reportTypes: ReportType[] = ["Flight Operations", "Aircraft Defect", "Ground Operations", "General Safety Concern"];
-
 const formSchema = z.object({
-  reportType: z.enum(reportTypes, { required_error: "Report type is required." }),
+  reportType: z.string().min(1, "Report type is required."),
   isAnonymous: z.boolean().default(false),
   eventDate: z.date({ required_error: "Event date is required." }),
   eventTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: "Invalid time format (HH:mm)." }),
@@ -52,7 +50,7 @@ export function NewSafetyReportForm({ aircrafts, onSubmit, isSubmitting }: NewSa
   const form = useForm<NewSafetyReportValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      reportType: undefined,
+      reportType: '',
       isAnonymous: false,
       eventTime: format(new Date(), 'HH:mm'),
       location: '',
@@ -83,18 +81,9 @@ export function NewSafetyReportForm({ aircrafts, onSubmit, isSubmitting }: NewSa
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Type of Report</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a report type" />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            {reportTypes.map(type => (
-                                <SelectItem key={type} value={type}>{type}</SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
+                        <FormControl>
+                            <Input placeholder="e.g., Flight Operations, Aircraft Defect" {...field} />
+                        </FormControl>
                         <FormMessage />
                         </FormItem>
                     )}

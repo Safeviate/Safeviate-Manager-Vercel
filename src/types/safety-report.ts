@@ -1,6 +1,6 @@
 
 export type ReportStatus = 'Open' | 'Under Review' | 'Awaiting Action' | 'Closed';
-export type ReportType = 'Flight Operations' | 'Aircraft Defect' | 'Ground Operations' | 'General Safety Concern';
+export type ReportType = string;
 export type EventClassification = 'Hazard' | 'Incident' | 'Accident';
 export type InvestigationMemberRole = 'Lead Investigator' | 'Team Member' | 'Technical Expert' | 'Observer';
 export type InvestigationTaskStatus = 'Open' | 'In Progress' | 'Completed';
