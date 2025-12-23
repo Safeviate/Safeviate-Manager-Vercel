@@ -38,14 +38,8 @@ export function ChecklistTemplateCard({ departmentName, templates, tenantId, dep
     const { toast } = useToast();
 
     // State for controlling dialogs
-    const [isEditOpen, setIsEditOpen] = useState(false);
     const [isStartAuditOpen, setIsStartAuditOpen] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState<QualityAuditChecklistTemplate | null>(null);
-
-    const handleEditClick = (template: QualityAuditChecklistTemplate) => {
-        setSelectedTemplate(template);
-        setIsEditOpen(true);
-    };
 
     const handleStartAuditClick = (template: QualityAuditChecklistTemplate) => {
         setSelectedTemplate(template);
@@ -85,9 +79,18 @@ export function ChecklistTemplateCard({ departmentName, templates, tenantId, dep
                         <DropdownMenuItem onSelect={() => handleStartAuditClick(template)}>
                             <PlayCircle className="mr-2 h-4 w-4" /> Start Audit
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleEditClick(template)}>
-                            <Pencil className="mr-2 h-4 w-4" /> Edit
-                        </DropdownMenuItem>
+                        
+                        <NewChecklistDialog
+                          existingTemplate={template}
+                          tenantId={tenantId}
+                          departments={departments}
+                          trigger={
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <Pencil className="mr-2 h-4 w-4" /> Edit
+                            </DropdownMenuItem>
+                          }
+                        />
+
                         <DropdownMenuItem onSelect={() => handleDelete(template.id, template.title)} className="text-destructive focus:text-destructive">
                             <Trash2 className="mr-2 h-4 w-4" /> Delete
                         </DropdownMenuItem>
@@ -99,16 +102,6 @@ export function ChecklistTemplateCard({ departmentName, templates, tenantId, dep
           ))}
         </AccordionContent>
       </AccordionItem>
-
-      {isEditOpen && selectedTemplate && (
-          <NewChecklistDialog 
-            isOpen={isEditOpen}
-            setIsOpen={setIsEditOpen}
-            existingTemplate={selectedTemplate}
-            tenantId={tenantId}
-            departments={departments}
-          />
-      )}
       
       {isStartAuditOpen && selectedTemplate && (
         <StartAuditDialog

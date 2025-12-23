@@ -67,8 +67,6 @@ interface NewChecklistDialogProps {
   tenantId: string;
   departments: Department[];
   existingTemplate?: QualityAuditChecklistTemplate;
-  isOpen?: boolean;
-  setIsOpen?: (open: boolean) => void;
   trigger?: React.ReactNode;
 }
 
@@ -76,20 +74,14 @@ export function NewChecklistDialog({
   tenantId,
   departments,
   existingTemplate,
-  isOpen: controlledIsOpen,
-  setIsOpen: setControlledIsOpen,
   trigger,
 }: NewChecklistDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [internalIsOpen, setInternalIsOpen] = useState(false);
-
-  const isOpen = controlledIsOpen ?? internalIsOpen;
-  const setIsOpen = setControlledIsOpen ?? setInternalIsOpen;
+  const [isOpen, setIsOpen] = useState(false);
 
   // Drag-and-drop state for sections
   const dragSectionNode = useRef<HTMLDivElement | null>(null);
-  const [dropSectionIndex, setDropSectionIndex] = useState<number | null>(null);
   
   const complianceQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/compliance-matrix`)) : null), [firestore, tenantId]);
   const { data: complianceItems } = useCollection<ComplianceRequirement>(complianceQuery);
@@ -166,24 +158,27 @@ export function NewChecklistDialog({
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', String(index));
   };
-
+  
   const handleSectionDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault(); // Necessary to allow drop
-    const target = e.currentTarget as HTMLDivElement;
-    if (dragSectionNode.current && dragSectionNode.current !== target) {
-        const targetIndex = Number(target.dataset.index);
-        setDropSectionIndex(targetIndex);
+    e.preventDefault(); 
+    if (dragSectionNode.current && e.currentTarget !== dragSectionNode.current) {
+        e.currentTarget.classList.add('border-primary', 'border-dashed', 'border-2');
     }
   };
-  
+
+  const handleSectionDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.currentTarget.classList.remove('border-primary', 'border-dashed', 'border-2');
+  };
+
   const handleSectionDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
     const draggedIndex = Number(e.dataTransfer.getData('text/plain'));
     const targetIndex = Number(e.currentTarget.dataset.index);
     if (!isNaN(draggedIndex) && !isNaN(targetIndex)) {
         moveSection(draggedIndex, targetIndex);
     }
+    e.currentTarget.classList.remove('border-primary', 'border-dashed', 'border-2');
     dragSectionNode.current = null;
-    setDropSectionIndex(null);
   };
   
   const SectionItems = ({ sectionIndex }: { sectionIndex: number }) => {
@@ -192,31 +187,37 @@ export function NewChecklistDialog({
           name: `sections.${sectionIndex}.items`
       });
 
-      const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
-      const [dropItemIndex, setDropItemIndex] = useState<number | null>(null);
+      const dragItemNode = useRef<HTMLDivElement | null>(null);
 
       const addItem = (type: AuditChecklistItem['type']) => {
         append({ id: uuidv4(), text: '', type, regulationReference: '' });
       };
 
       const handleItemDragStart = (e: React.DragEvent, index: number) => {
-          setDraggedItemIndex(index);
+          dragItemNode.current = e.currentTarget as HTMLDivElement;
           e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', String(index));
       };
 
       const handleItemDragOver = (e: React.DragEvent, index: number) => {
           e.preventDefault();
-          if (draggedItemIndex !== null && draggedItemIndex !== index) {
-            setDropItemIndex(index);
+          if (dragItemNode.current && e.currentTarget !== dragItemNode.current) {
+             (e.currentTarget as HTMLDivElement).classList.add('border-primary', 'border-dashed', 'border-2');
           }
       };
 
-      const handleItemDrop = () => {
-        if (draggedItemIndex !== null && dropItemIndex !== null) {
-            move(draggedItemIndex, dropItemIndex);
+      const handleItemDragLeave = (e: React.DragEvent) => {
+        (e.currentTarget as HTMLDivElement).classList.remove('border-primary', 'border-dashed', 'border-2');
+      };
+
+      const handleItemDrop = (e: React.DragEvent, targetIndex: number) => {
+        e.preventDefault();
+        const draggedIndex = Number(e.dataTransfer.getData('text/plain'));
+        if (!isNaN(draggedIndex) && !isNaN(targetIndex)) {
+            move(draggedIndex, targetIndex);
         }
-        setDraggedItemIndex(null);
-        setDropItemIndex(null);
+        (e.currentTarget as HTMLDivElement).classList.remove('border-primary', 'border-dashed', 'border-2');
+        dragItemNode.current = null;
       };
 
       return (
@@ -227,13 +228,9 @@ export function NewChecklistDialog({
                     draggable
                     onDragStart={(e) => handleItemDragStart(e, itemIndex)}
                     onDragOver={(e) => handleItemDragOver(e, itemIndex)}
-                    onDragLeave={() => setDropItemIndex(null)}
-                    onDrop={handleItemDrop}
-                    className={cn(
-                        "flex items-start gap-2 p-3 border rounded-lg bg-background transition-shadow",
-                        draggedItemIndex === itemIndex && 'opacity-50 shadow-lg',
-                        dropItemIndex === itemIndex && 'border-primary border-dashed border-2'
-                    )}
+                    onDragLeave={handleItemDragLeave}
+                    onDrop={(e) => handleItemDrop(e, itemIndex)}
+                    className="flex items-start gap-2 p-3 border rounded-lg bg-background transition-shadow"
                 >
                      <GripVertical className="h-5 w-5 mt-8 text-muted-foreground cursor-grab" />
                      <div className="grid grid-cols-1 gap-4 flex-1">
@@ -308,15 +305,11 @@ export function NewChecklistDialog({
                             draggable
                             onDragStart={(e) => handleSectionDragStart(e, index)}
                             onDragOver={handleSectionDragOver}
-                            onDragLeave={() => setDropSectionIndex(null)}
+                            onDragLeave={handleSectionDragLeave}
                             onDrop={handleSectionDrop}
                         >
                             <Card 
-                                className={cn(
-                                    "mb-4 bg-muted/30 transition-shadow",
-                                    dragSectionNode.current?.dataset.index === String(index) && "opacity-50 shadow-lg",
-                                    dropSectionIndex === index && "border-primary border-dashed border-2"
-                                )}
+                                className="mb-4 bg-muted/30 transition-shadow"
                             >
                                 <CardHeader>
                                     <div className="flex items-start gap-2">
