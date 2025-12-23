@@ -90,6 +90,11 @@ export const menuConfig: MenuItem[] = [
         description: 'View the organizational risk register.',
       },
       {
+        href: '/safety/risk-matrix',
+        label: 'Risk Matrix',
+        description: 'Visualize the organizational risk landscape.',
+      },
+      {
         href: '/safety/safety-indicators',
         label: 'Safety Indicators',
         description: 'Track and analyze key safety metrics.',
