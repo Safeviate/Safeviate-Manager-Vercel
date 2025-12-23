@@ -77,7 +77,7 @@ export interface SafetyReport {
     phaseOfFlight?: string;
     systemOrComponent?: string;
     // Triage Fields
-    departmentId: string;
+    departmentId?: string;
     occurrenceCategory?: string;
     eventClassification?: EventClassification;
     // Investigation Fields

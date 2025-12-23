@@ -36,13 +36,8 @@ export default function NewSafetyReportPage() {
     () => (firestore ? collection(firestore, 'tenants', tenantId, 'aircrafts') : null),
     [firestore]
   );
-  const departmentsQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'tenants', tenantId, 'departments') : null),
-    [firestore]
-  );
   
   const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
-  const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
 
 
   const handleNewReport = async (values: NewSafetyReportValues) => {
@@ -57,13 +52,6 @@ export default function NewSafetyReportPage() {
         const reportPrefix = getReportTypePrefix(values.reportType);
         const reportsRef = collection(firestore, `tenants/${tenantId}/safety-reports`);
         const counterRef = doc(firestore, `tenants/${tenantId}/counters`, `safety-reports-${reportPrefix}`);
-
-        // All new reports are assigned to the 'Safety' department for initial triage.
-        const triageDepartment = departments?.find(d => d.name === 'Safety');
-
-        if (!triageDepartment) {
-            throw new Error(`The default "Safety" department was not found. Please create it in Admin > Departments to enable report submissions.`);
-        }
 
         const newReportId = await runTransaction(firestore, async (transaction) => {
             const counterDoc = await transaction.get(counterRef);
@@ -92,7 +80,6 @@ export default function NewSafetyReportPage() {
                 description: values.description,
                 phaseOfFlight: values.phaseOfFlight,
                 systemOrComponent: values.systemOrComponent,
-                departmentId: triageDepartment.id
             };
 
             transaction.set(newReportRef, reportData);
@@ -117,7 +104,7 @@ export default function NewSafetyReportPage() {
     }
   };
   
-  if (isLoadingAircrafts || isLoadingDepts) {
+  if (isLoadingAircrafts) {
     return (
         <div className="space-y-6">
             <Skeleton className="h-48 w-full" />
