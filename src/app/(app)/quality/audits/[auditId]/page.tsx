@@ -1,3 +1,4 @@
+
 'use client';
 
 import { use, useMemo } from 'react';
@@ -12,10 +13,19 @@ import { format } from 'date-fns';
 import type { QualityAudit, QualityAuditChecklistTemplate } from '@/types/quality';
 import { AuditChecklist } from './audit-checklist';
 import type { FindingLevelsSettings } from '@/app/(app)/admin/features/page';
+import { Progress } from '@/components/ui/progress';
 
 interface AuditDetailPageProps {
   params: { auditId: string };
 }
+
+const DetailItem = ({ label, value, children }: { label: string; value?: string | null; children?: React.ReactNode }) => (
+    <div>
+        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        {children ? <div className="text-lg font-semibold">{children}</div> : <p className="text-lg font-semibold">{value || 'N/A'}</p>}
+    </div>
+);
+
 
 export default function AuditDetailPage({ params }: AuditDetailPageProps) {
   const resolvedParams = use(params);
@@ -87,6 +97,13 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
       </div>
     );
   }
+  
+  const scoreColor = audit.complianceScore && audit.complianceScore >= 80 
+    ? "bg-green-500" 
+    : audit.complianceScore && audit.complianceScore >= 60
+    ? "bg-yellow-500"
+    : "bg-red-500";
+
 
   return (
     <div className="space-y-6">
@@ -103,14 +120,22 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
             Performed on {format(new Date(audit.auditDate), 'PPP')}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-            <AuditChecklist 
-                audit={enrichedAudit} 
-                tenantId={tenantId}
-                findingLevels={findingLevelsSettings?.levels || []}
-            />
-        </CardContent>
+        {typeof audit.complianceScore === 'number' && (
+            <CardContent>
+                <DetailItem label="Compliance Score">
+                    <div className="flex items-center gap-4 mt-1">
+                        <Progress value={audit.complianceScore} className="w-1/3" indicatorClassName={scoreColor} />
+                        <span className="text-2xl font-bold">{audit.complianceScore}%</span>
+                    </div>
+                </DetailItem>
+            </CardContent>
+        )}
       </Card>
+      <AuditChecklist 
+          audit={enrichedAudit} 
+          tenantId={tenantId}
+          findingLevels={findingLevelsSettings?.levels || []}
+      />
     </div>
   );
 }

@@ -24,6 +24,17 @@ import { Separator } from '@/components/ui/separator';
 import type { FindingLevel } from '@/app/(app)/admin/features/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 type EnrichedAudit = QualityAudit & { template: QualityAuditChecklistTemplate };
 
@@ -58,6 +69,8 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
     const { toast } = useToast();
     const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
     const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+
+    const isReadOnly = audit.status === 'Finalized' || audit.status === 'Closed' || audit.status === 'Archived';
 
     const allChecklistItems = audit.template.sections.flatMap(section => section.items);
 
@@ -97,6 +110,31 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
 
         updateDocumentNonBlocking(auditRef, { findings: filledFindings });
         toast({ title: "Findings Saved", description: "Your audit findings have been saved." });
+    };
+
+    const handleFinalizeAudit = () => {
+        if (!firestore) return;
+        
+        const values = form.getValues();
+        const auditRef = doc(firestore, `tenants/${tenantId}/quality-audits`, audit.id);
+
+        const applicableItems = values.findings.filter(f => f.finding !== 'Not Applicable');
+        const compliantItems = applicableItems.filter(f => f.finding === 'Compliant');
+        const complianceScore = applicableItems.length > 0
+            ? Math.round((compliantItems.length / applicableItems.length) * 100)
+            : 100;
+
+        const dataToSave = {
+            findings: values.findings,
+            status: 'Finalized',
+            complianceScore: complianceScore,
+        };
+
+        updateDocumentNonBlocking(auditRef, dataToSave);
+        toast({
+            title: "Audit Finalized",
+            description: `Compliance score of ${complianceScore}% has been calculated and saved.`
+        });
     };
 
     const handleViewImage = (url: string) => {
@@ -146,6 +184,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                                       }}
                                       defaultValue={field.value}
                                       className="flex flex-wrap gap-4"
+                                      disabled={isReadOnly}
                                     >
                                         {(['Compliant', 'Non Compliant', 'Not Applicable'] as const).map(value => (
                                             <FormItem key={value} className="flex items-center space-x-2 space-y-0">
@@ -163,8 +202,8 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                     <Separator />
 
                     <div className="space-y-4">
-                         <FormField control={form.control} name={`findings.${itemIndex}.comment`} render={({ field }) => (<FormItem><FormLabel>Comment / Details</FormLabel><FormControl><Textarea placeholder="Provide details about the finding..." {...field} /></FormControl><FormMessage /></FormItem>)} />
-                         <FormField control={form.control} name={`findings.${itemIndex}.suggestedImprovements`} render={({ field }) => (<FormItem><FormLabel>Suggested Improvements</FormLabel><FormControl><Textarea placeholder="Suggest any improvements..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+                         <FormField control={form.control} name={`findings.${itemIndex}.comment`} render={({ field }) => (<FormItem><FormLabel>Comment / Details</FormLabel><FormControl><Textarea placeholder="Provide details about the finding..." {...field} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)} />
+                         <FormField control={form.control} name={`findings.${itemIndex}.suggestedImprovements`} render={({ field }) => (<FormItem><FormLabel>Suggested Improvements</FormLabel><FormControl><Textarea placeholder="Suggest any improvements..." {...field} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)} />
 
                         {(findingType === 'Compliant' || findingType === 'Non Compliant') && (
                             <div className="mt-4 space-y-4">
@@ -174,7 +213,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Finding Level</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                                            <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
                                                 <FormControl>
                                                     <SelectTrigger
                                                         style={{
@@ -205,22 +244,24 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center">
                                         <FormLabel>Evidence</FormLabel>
-                                        <DocumentUploader
-                                          onDocumentUploaded={(docDetails) => handleEvidenceUploaded(item.id, docDetails)}
-                                          trigger={(openDialog) => (
-                                            <DropdownMenu>
-                                              <DropdownMenuTrigger asChild>
-                                                <Button type="button" variant="outline" size="sm">
-                                                  Add Evidence
-                                                </Button>
-                                              </DropdownMenuTrigger>
-                                              <DropdownMenuContent>
-                                                <DropdownMenuItem onSelect={() => openDialog('file')}><FileUp className="mr-2 h-4 w-4" />Upload File</DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => openDialog('camera')}><Camera className="mr-2 h-4 w-4" />Take Photo</DropdownMenuItem>
-                                              </DropdownMenuContent>
-                                            </DropdownMenu>
-                                          )}
-                                        />
+                                        {!isReadOnly && (
+                                            <DocumentUploader
+                                            onDocumentUploaded={(docDetails) => handleEvidenceUploaded(item.id, docDetails)}
+                                            trigger={(openDialog) => (
+                                                <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button type="button" variant="outline" size="sm">
+                                                    Add Evidence
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent>
+                                                    <DropdownMenuItem onSelect={() => openDialog('file')}><FileUp className="mr-2 h-4 w-4" />Upload File</DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => openDialog('camera')}><Camera className="mr-2 h-4 w-4" />Take Photo</DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            )}
+                                            />
+                                        )}
                                     </div>
                                     <div className="space-y-4 pt-2">
                                         {evidenceFields.map((evidence, evidenceIndex) => (
@@ -232,9 +273,9 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                                                     </div>
                                                 </div>
                                                 <div className="flex-1 space-y-2">
-                                                    <FormField control={form.control} name={`findings.${itemIndex}.evidence.${evidenceIndex}.description`} render={({ field }) => ( <FormItem><FormLabel className="text-xs">Description</FormLabel><FormControl><Input placeholder="Briefly describe the evidence" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                                                    <FormField control={form.control} name={`findings.${itemIndex}.evidence.${evidenceIndex}.description`} render={({ field }) => ( <FormItem><FormLabel className="text-xs">Description</FormLabel><FormControl><Input placeholder="Briefly describe the evidence" {...field} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem> )}/>
                                                 </div>
-                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 mt-4 text-destructive hover:text-destructive" onClick={() => removeEvidence(evidenceIndex)}><Trash2 className="h-4 w-4" /></Button>
+                                                {!isReadOnly && <Button type="button" variant="ghost" size="icon" className="h-8 w-8 mt-4 text-destructive hover:text-destructive" onClick={() => removeEvidence(evidenceIndex)}><Trash2 className="h-4 w-4" /></Button>}
                                             </div>
                                         ))}
                                     </div>
@@ -258,9 +299,30 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                             {section.items.map(item => renderChecklistItem(item))}
                         </div>
                     ))}
-                    <div className="flex justify-end sticky bottom-0 py-4 bg-background z-10">
-                        <Button type="submit">Save Findings</Button>
-                    </div>
+                    {!isReadOnly && (
+                        <div className="flex justify-end sticky bottom-0 py-4 bg-background z-10 gap-2">
+                            <Button type="submit">Save Findings</Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="default">Finalize Audit</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure you want to finalize?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This will calculate the compliance score and lock the audit from further edits. This action cannot be undone.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleFinalizeAudit}>
+                                            Yes, Finalize Audit
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                    )}
                 </form>
             </Form>
             <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
