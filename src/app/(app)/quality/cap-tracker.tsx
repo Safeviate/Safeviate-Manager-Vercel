@@ -2,16 +2,15 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Edit } from 'lucide-react';
-import { format } from 'date-fns';
+import { Edit } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { QualityAudit, CorrectiveActionPlan, QualityFinding, CorrectiveAction } from '@/types/quality';
+import type { QualityAudit, CorrectiveActionPlan } from '@/types/quality';
 import type { Personnel } from '../../users/personnel/page';
 import { UpdateActionStatusDialog } from './cap-tracker/update-action-status-dialog';
 import type { Department } from '../../admin/department/page';
@@ -20,7 +19,6 @@ export type EnrichedCorrectiveActionPlan = CorrectiveActionPlan & {
   auditNumber: string;
   findingDescription: string;
   findingLevel?: string;
-  responsiblePersonName?: string;
 };
 
 
@@ -63,29 +61,23 @@ export default function CapTracker() {
   
     // Create maps for efficient lookups
     const auditsMap = new Map(audits.map(a => [a.id, a]));
-    const usersMap = new Map([...(personnel || []), ...(departments || [])].map(p => [p.id, 'firstName' in p ? `${p.firstName} ${p.lastName}` : p.name]));
   
     return openCapsList.map(cap => {
       const audit = auditsMap.get(cap.auditId);
+      if (!audit) return null; // If the audit isn't found, we can't enrich the CAP.
       
-      // Find the specific finding within the audit that this CAP relates to
-      const finding = audit?.findings.find(f => f.checklistItemId === cap.findingId);
-      
-      // Find the original checklist item text from the template stored inside the audit
-      const checklistItem = audit?.template?.sections.flatMap(s => s.items).find(i => i.id === cap.findingId);
-  
-      // For simplicity, let's assume one action per CAP for now or take the first one
-      const action = cap.actions?.[0];
+      const finding = audit.findings.find(f => f.checklistItemId === cap.findingId);
+      const checklistItem = audit.template?.sections.flatMap(s => s.items).find(i => i.id === cap.findingId);
   
       return {
         ...cap,
-        auditNumber: audit?.auditNumber || 'N/A',
+        auditNumber: audit.auditNumber,
         findingDescription: checklistItem?.text || 'Finding description not found.',
         findingLevel: finding?.level,
-        responsiblePersonName: action ? usersMap.get(action.responsiblePersonId) : 'N/A',
       };
-    }).filter(cap => cap.auditNumber !== 'N/A'); // Filter out caps where the audit might not have been found
-  }, [audits, caps, personnel, departments]);
+    }).filter((cap): cap is EnrichedCorrectiveActionPlan => cap !== null);
+  }, [audits, caps]);
+  
 
   const handleOpenUpdateDialog = (cap: EnrichedCorrectiveActionPlan) => {
     setSelectedCap(cap);
