@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -13,7 +14,7 @@ import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { QualityAudit, CorrectiveAction } from '@/types/quality';
 import type { Personnel } from '../../users/personnel/page';
-import { UpdateActionStatusDialog } from './update-action-status-dialog';
+import { UpdateActionStatusDialog } from './cap-tracker/update-action-status-dialog';
 import type { Department } from '../../admin/department/page';
 
 type EnrichedCorrectiveAction = CorrectiveAction & {
