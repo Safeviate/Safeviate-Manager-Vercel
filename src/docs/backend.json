@@ -1251,15 +1251,13 @@
         "properties": {
             "id": { "type": "string" },
             "auditId": { "type": "string" },
-            "findingId": { "type": "string" },
+            "findingId": { "type": "string", "description": "The ID of the checklist item this CAP is for." },
             "rootCauseAnalysis": { "type": "string" },
-            "actions": {
-                "type": "array",
-                "items": { "$ref": "#/backend/entities/CorrectiveAction" }
-            },
-            "status": { "type": "string", "enum": ["Open", "In Progress", "Closed"] }
+            "status": { "type": "string", "enum": ["Open", "In Progress", "Closed", "Cancelled"] },
+            "responsiblePersonId": { "type": "string", "description": "The ID of the person responsible for this CAP." },
+            "dueDate": { "type": "string", "format": "date" }
         },
-        "required": ["id", "auditId", "findingId", "rootCauseAnalysis", "status"]
+        "required": ["id", "auditId", "findingId", "status"]
     }
   },
   "auth": {

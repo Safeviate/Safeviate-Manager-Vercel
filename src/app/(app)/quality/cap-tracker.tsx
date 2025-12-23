@@ -1,8 +1,9 @@
 
+
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -11,9 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Edit } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { QualityAudit, CorrectiveActionPlan } from '@/types/quality';
-import type { Personnel } from '../../users/personnel/page';
 import { UpdateActionStatusDialog } from './cap-tracker/update-action-status-dialog';
-import type { Department } from '../../admin/department/page';
 
 export type EnrichedCorrectiveActionPlan = CorrectiveActionPlan & {
   auditNumber: string;
@@ -33,38 +32,27 @@ export default function CapTracker() {
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/quality-audits`)) : null),
     [firestore, tenantId]
   );
-  const personnelQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
-    [firestore, tenantId]
-  );
-  const departmentsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/departments`)) : null),
-    [firestore, tenantId]
-  );
+  
    const capsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`)) : null),
     [firestore, tenantId]
   );
 
   const { data: audits, isLoading: isLoadingAudits } = useCollection<QualityAudit>(auditsQuery);
-  const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
-  const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
   const { data: caps, isLoading: isLoadingCaps } = useCollection<CorrectiveActionPlan>(capsQuery);
 
-  const isLoading = isLoadingAudits || isLoadingPersonnel || isLoadingDepts || isLoadingCaps;
+  const isLoading = isLoadingAudits || isLoadingCaps;
 
   const openCaps = useMemo((): EnrichedCorrectiveActionPlan[] => {
     if (!audits || !caps) return [];
   
-    // Filter for caps that are still open
     const openCapsList = caps.filter(cap => cap.status === 'Open');
   
-    // Create maps for efficient lookups
     const auditsMap = new Map(audits.map(a => [a.id, a]));
   
     return openCapsList.map(cap => {
       const audit = auditsMap.get(cap.auditId);
-      if (!audit) return null; // If the audit isn't found, we can't enrich the CAP.
+      if (!audit) return null;
       
       const finding = audit.findings.find(f => f.checklistItemId === cap.findingId);
       const checklistItem = audit.template?.sections.flatMap(s => s.items).find(i => i.id === cap.findingId);

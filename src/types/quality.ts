@@ -1,5 +1,6 @@
 
 
+
 export type AuditChecklistItemType = 'Checkbox' | 'Textbox' | 'Number' | 'Date';
 export type AuditFinding = 'Compliant' | 'Non Compliant' | 'Not Applicable';
 export type AuditStatus = 'Scheduled' | 'In Progress' | 'Finalized' | 'Closed' | 'Archived';
@@ -74,19 +75,12 @@ export interface QualityAudit {
     template: QualityAuditChecklistTemplate;
 }
 
-export interface CorrectiveAction {
-    id: string;
-    description: string;
-    responsiblePersonId: string;
-    dueDate: string; // ISO String
-    status: CorrectiveActionStatus;
-}
-
 export interface CorrectiveActionPlan {
     id: string;
     auditId: string;
-    findingId: string; // The specific finding this CAP addresses
+    findingId: string;
     rootCauseAnalysis: string;
-    actions: CorrectiveAction[];
-    status: 'Open' | 'In Progress' | 'Closed';
+    status: 'Open' | 'In Progress' | 'Closed' | 'Cancelled';
+    responsiblePersonId?: string;
+    dueDate?: string;
 }

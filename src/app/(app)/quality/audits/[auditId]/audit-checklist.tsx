@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -10,10 +11,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc, writeBatch, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import type { QualityAudit, QualityAuditChecklistTemplate, QualityFinding, ChecklistSection, AuditChecklistItem, CorrectiveActionPlan } from '@/types/quality';
+import type { QualityAudit, QualityAuditChecklistTemplate, QualityFinding, AuditChecklistItem, CorrectiveActionPlan } from '@/types/quality';
 import { DocumentUploader } from '../../../users/personnel/[id]/document-uploader';
 import { FileUp, Camera, Trash2, ZoomIn } from 'lucide-react';
 import Image from 'next/image';
@@ -145,7 +146,6 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                     auditId: audit.id,
                     findingId: finding.checklistItemId,
                     rootCauseAnalysis: '',
-                    actions: [],
                     status: 'Open',
                 };
                 batch.set(newCapRef, capData);
