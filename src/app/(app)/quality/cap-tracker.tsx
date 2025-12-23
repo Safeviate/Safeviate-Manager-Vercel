@@ -1,36 +1,34 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { QualityAudit, CorrectiveAction, CorrectiveActionPlan } from '@/types/quality';
+import type { QualityAudit, CorrectiveActionPlan, QualityFinding, CorrectiveAction } from '@/types/quality';
 import type { Personnel } from '../../users/personnel/page';
 import { UpdateActionStatusDialog } from './cap-tracker/update-action-status-dialog';
 import type { Department } from '../../admin/department/page';
 
-type EnrichedCorrectiveAction = CorrectiveAction & {
-  auditId: string;
+export type EnrichedCorrectiveActionPlan = CorrectiveActionPlan & {
   auditNumber: string;
-  findingId: string;
+  findingDescription: string;
+  findingLevel?: string;
   responsiblePersonName?: string;
-  capId: string;
 };
+
 
 export default function CapTracker() {
   const firestore = useFirestore();
   const tenantId = 'safeviate';
 
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
-  const [selectedAction, setSelectedAction] = useState<EnrichedCorrectiveAction | null>(null);
+  const [selectedCap, setSelectedCap] = useState<EnrichedCorrectiveActionPlan | null>(null);
 
   const auditsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/quality-audits`)) : null),
@@ -45,7 +43,7 @@ export default function CapTracker() {
     [firestore, tenantId]
   );
    const capsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`)) : null),
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`), where('status', '==', 'Open')) : null),
     [firestore, tenantId]
   );
 
@@ -56,40 +54,37 @@ export default function CapTracker() {
 
   const isLoading = isLoadingAudits || isLoadingPersonnel || isLoadingDepts || isLoadingCaps;
 
-  const openCorrectiveActions = useMemo((): EnrichedCorrectiveAction[] => {
-    if (!audits || !personnel || !departments || !caps) return [];
+  const openCaps = useMemo((): EnrichedCorrectiveActionPlan[] => {
+    if (!audits || !caps) return [];
 
-    const usersMap = new Map([...personnel, ...departments].map(p => [p.id, 'firstName' in p ? `${p.firstName} ${p.lastName}`: p.name]));
     const auditsMap = new Map(audits.map(a => [a.id, a]));
+    const usersMap = new Map([...(personnel || []), ...(departments || [])].map(p => [p.id, 'firstName' in p ? `${p.firstName} ${p.lastName}` : p.name]));
 
-    const allActions: EnrichedCorrectiveAction[] = [];
-    
-    caps.forEach(cap => {
-        const audit = auditsMap.get(cap.auditId);
-        if (audit) {
-             cap.actions.filter(action => action.status === 'Open').forEach(action => {
-                allActions.push({
-                    ...action,
-                    auditId: audit.id,
-                    auditNumber: audit.auditNumber,
-                    findingId: cap.findingId,
-                    responsiblePersonName: usersMap.get(action.responsiblePersonId),
-                    capId: cap.id,
-                });
-            });
-        }
+    return caps.map(cap => {
+      const audit = auditsMap.get(cap.auditId);
+      const finding = audit?.findings.find(f => f.checklistItemId === cap.findingId);
+      const checklistItem = audit?.template.sections.flatMap(s => s.items).find(i => i.id === cap.findingId);
+
+      // Assuming a single action for now, this can be expanded.
+      const action = cap.actions?.[0];
+
+      return {
+        ...cap,
+        auditNumber: audit?.auditNumber || 'N/A',
+        findingDescription: checklistItem?.text || 'Finding description not found.',
+        findingLevel: finding?.level,
+        responsiblePersonName: action ? usersMap.get(action.responsiblePersonId) : 'N/A',
+      };
     });
+  }, [audits, caps, personnel, departments]);
 
-    return allActions;
-  }, [audits, personnel, departments, caps]);
-
-  const handleOpenUpdateDialog = (action: EnrichedCorrectiveAction) => {
-    setSelectedAction(action);
+  const handleOpenUpdateDialog = (cap: EnrichedCorrectiveActionPlan) => {
+    setSelectedCap(cap);
     setIsUpdateDialogOpen(true);
   };
 
   const handleCloseUpdateDialog = () => {
-    setSelectedAction(null);
+    setSelectedCap(null);
     setIsUpdateDialogOpen(false);
   };
 
@@ -113,22 +108,22 @@ export default function CapTracker() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Audit ID</TableHead>
-                  <TableHead className="w-[40%]">Action Required</TableHead>
-                  <TableHead>Responsible</TableHead>
-                  <TableHead>Due Date</TableHead>
+                  <TableHead className="w-[40%]">Finding</TableHead>
+                  <TableHead>Level</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {openCorrectiveActions.length > 0 ? (
-                  openCorrectiveActions.map(action => (
-                    <TableRow key={action.id}>
-                      <TableCell className="font-medium">{action.auditNumber}</TableCell>
-                      <TableCell>{action.description}</TableCell>
-                      <TableCell>{action.responsiblePersonName || 'N/A'}</TableCell>
-                      <TableCell>{format(new Date(action.deadline), 'PPP')}</TableCell>
+                {openCaps.length > 0 ? (
+                  openCaps.map(cap => (
+                    <TableRow key={cap.id}>
+                      <TableCell className="font-medium">{cap.auditNumber}</TableCell>
+                      <TableCell>{cap.findingDescription}</TableCell>
+                      <TableCell><Badge variant={cap.findingLevel ? 'destructive' : 'outline'}>{cap.findingLevel || 'N/A'}</Badge></TableCell>
+                      <TableCell><Badge variant="secondary">{cap.status}</Badge></TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => handleOpenUpdateDialog(action)}>
+                        <Button variant="outline" size="sm" onClick={() => handleOpenUpdateDialog(cap)}>
                           <Edit className="mr-2 h-4 w-4" />
                           Update
                         </Button>
@@ -147,11 +142,11 @@ export default function CapTracker() {
           )}
         </CardContent>
       </Card>
-      {selectedAction && (
+      {selectedCap && (
         <UpdateActionStatusDialog 
             isOpen={isUpdateDialogOpen}
             onClose={handleCloseUpdateDialog}
-            action={selectedAction}
+            cap={selectedCap}
             tenantId={tenantId}
         />
       )}

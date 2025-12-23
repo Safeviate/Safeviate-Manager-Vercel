@@ -146,6 +146,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                     findingId: finding.checklistItemId,
                     rootCauseAnalysis: '',
                     actions: [],
+                    status: 'Open',
                 };
                 batch.set(newCapRef, capData);
             });

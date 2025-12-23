@@ -3,7 +3,7 @@
 export type AuditChecklistItemType = 'Checkbox' | 'Textbox' | 'Number' | 'Date';
 export type AuditFinding = 'Compliant' | 'Non Compliant' | 'Not Applicable';
 export type AuditStatus = 'Scheduled' | 'In Progress' | 'Finalized' | 'Closed' | 'Archived';
-export type CorrectiveActionStatus = 'Open' | 'In Progress' | 'Completed' | 'Cancelled';
+export type CorrectiveActionStatus = 'Open' | 'In Progress' | 'Closed' | 'Cancelled';
 export type AuditScheduleStatus = 'Scheduled' | 'Completed' | 'Pending' | 'Not Scheduled';
 
 
@@ -71,6 +71,7 @@ export interface QualityAudit {
     status: AuditStatus;
     findings: QualityFinding[];
     complianceScore?: number;
+    template: QualityAuditChecklistTemplate;
 }
 
 export interface CorrectiveAction {
@@ -87,4 +88,5 @@ export interface CorrectiveActionPlan {
     findingId: string; // The specific finding this CAP addresses
     rootCauseAnalysis: string;
     actions: CorrectiveAction[];
+    status: CorrectiveActionStatus;
 }
