@@ -58,12 +58,12 @@ export default function CapTracker() {
   const openCaps = useMemo((): EnrichedCorrectiveActionPlan[] => {
     if (!audits || !caps) return [];
 
-    const openCaps = caps.filter(cap => cap.status === 'Open');
+    const openCapsList = caps.filter(cap => cap.status === 'Open');
 
     const auditsMap = new Map(audits.map(a => [a.id, a]));
     const usersMap = new Map([...(personnel || []), ...(departments || [])].map(p => [p.id, 'firstName' in p ? `${p.firstName} ${p.lastName}` : p.name]));
 
-    return openCaps.map(cap => {
+    return openCapsList.map(cap => {
       const audit = auditsMap.get(cap.auditId);
       const finding = audit?.findings.find(f => f.checklistItemId === cap.findingId);
       const checklistItem = audit?.template.sections.flatMap(s => s.items).find(i => i.id === cap.findingId);
