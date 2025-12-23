@@ -67,14 +67,17 @@ export function ChecklistTemplateCard({ departmentName, templates, tenantId, dep
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <StartAuditDialog
+                       <StartAuditDialog
                           template={template}
                           tenantId={tenantId}
                           personnel={personnel}
                           departments={departments}
+                          trigger={
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <PlayCircle className="mr-2 h-4 w-4" /> Start Audit
+                            </DropdownMenuItem>
+                          }
                         />
-                      </DropdownMenuItem>
                         
                         <NewChecklistDialog
                           existingTemplate={template}

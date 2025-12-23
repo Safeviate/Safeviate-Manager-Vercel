@@ -33,7 +33,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, PlayCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { QualityAudit, QualityAuditChecklistTemplate } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
@@ -52,6 +52,7 @@ interface StartAuditDialogProps {
   tenantId: string;
   personnel: Personnel[];
   departments: Department[];
+  trigger?: React.ReactNode;
 }
 
 export function StartAuditDialog({
@@ -59,6 +60,7 @@ export function StartAuditDialog({
   tenantId,
   personnel,
   departments,
+  trigger,
 }: StartAuditDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const firestore = useFirestore();
@@ -138,11 +140,13 @@ export function StartAuditDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <div onClick={(e) => { e.stopPropagation(); setIsOpen(true); }} className="relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
-          {template.id ? 'Start Audit' : 'Start Audit'}
-        </div>
-      </DialogTrigger>
+        {trigger ? (
+            <DialogTrigger asChild>{trigger}</DialogTrigger>
+        ) : (
+            <DialogTrigger asChild>
+                <Button><PlayCircle className='mr-2 h-4 w-4' /> Start Audit</Button>
+            </DialogTrigger>
+        )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Start New Audit</DialogTitle>
