@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { QualityAudit, CorrectiveAction } from '@/types/quality';
+import type { QualityAudit, CorrectiveAction, CorrectiveActionPlan } from '@/types/quality';
 import type { Personnel } from '../../users/personnel/page';
 import { UpdateActionStatusDialog } from './cap-tracker/update-action-status-dialog';
 import type { Department } from '../../admin/department/page';
@@ -22,6 +22,7 @@ type EnrichedCorrectiveAction = CorrectiveAction & {
   auditNumber: string;
   findingId: string;
   responsiblePersonName?: string;
+  capId: string;
 };
 
 export default function CapTracker() {
@@ -43,43 +44,44 @@ export default function CapTracker() {
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/departments`)) : null),
     [firestore, tenantId]
   );
+   const capsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`)) : null),
+    [firestore, tenantId]
+  );
 
   const { data: audits, isLoading: isLoadingAudits } = useCollection<QualityAudit>(auditsQuery);
   const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
   const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
+  const { data: caps, isLoading: isLoadingCaps } = useCollection<CorrectiveActionPlan>(capsQuery);
 
-  const isLoading = isLoadingAudits || isLoadingPersonnel || isLoadingDepts;
+  const isLoading = isLoadingAudits || isLoadingPersonnel || isLoadingDepts || isLoadingCaps;
 
   const openCorrectiveActions = useMemo((): EnrichedCorrectiveAction[] => {
-    if (!audits || !personnel || !departments) return [];
+    if (!audits || !personnel || !departments || !caps) return [];
 
     const usersMap = new Map([...personnel, ...departments].map(p => [p.id, 'firstName' in p ? `${p.firstName} ${p.lastName}`: p.name]));
+    const auditsMap = new Map(audits.map(a => [a.id, a]));
 
     const allActions: EnrichedCorrectiveAction[] = [];
-
-    audits.forEach(audit => {
-      audit.findings?.forEach(finding => {
-        // This assumes corrective actions are nested under a CAP linked to a finding.
-        // We will adapt this if the data model is different. For now, let's assume a hypothetical `correctiveActions` array on the finding.
-        // Based on the latest backend.json, `CorrectiveActionPlan` is a separate collection, so we'd fetch those and match them.
-        // But for a direct CAP tracker, let's assume actions can be found or derived.
-        // Let's create a placeholder logic.
-        const findingActions = (audit as any).correctiveActions as CorrectiveAction[] || [];
-        
-        findingActions.filter(action => action.status === 'Open').forEach(action => {
-            allActions.push({
-                ...action,
-                auditId: audit.id,
-                auditNumber: audit.auditNumber,
-                findingId: finding.checklistItemId,
-                responsiblePersonName: usersMap.get(action.responsiblePersonId),
+    
+    caps.forEach(cap => {
+        const audit = auditsMap.get(cap.auditId);
+        if (audit) {
+             cap.actions.filter(action => action.status === 'Open').forEach(action => {
+                allActions.push({
+                    ...action,
+                    auditId: audit.id,
+                    auditNumber: audit.auditNumber,
+                    findingId: cap.findingId,
+                    responsiblePersonName: usersMap.get(action.responsiblePersonId),
+                    capId: cap.id,
+                });
             });
-        });
-      });
+        }
     });
 
     return allActions;
-  }, [audits, personnel, departments]);
+  }, [audits, personnel, departments, caps]);
 
   const handleOpenUpdateDialog = (action: EnrichedCorrectiveAction) => {
     setSelectedAction(action);

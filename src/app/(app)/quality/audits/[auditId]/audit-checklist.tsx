@@ -10,10 +10,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { doc, writeBatch, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import type { QualityAudit, QualityAuditChecklistTemplate, QualityFinding, ChecklistSection, AuditChecklistItem } from '@/types/quality';
+import type { QualityAudit, QualityAuditChecklistTemplate, QualityFinding, ChecklistSection, AuditChecklistItem, CorrectiveActionPlan } from '@/types/quality';
 import { DocumentUploader } from '../../../users/personnel/[id]/document-uploader';
 import { FileUp, Camera, Trash2, ZoomIn } from 'lucide-react';
 import Image from 'next/image';
@@ -112,7 +112,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
         toast({ title: "Findings Saved", description: "Your audit findings have been saved." });
     };
 
-    const handleFinalizeAudit = () => {
+    const handleFinalizeAudit = async () => {
         if (!firestore) return;
         
         const values = form.getValues();
@@ -120,21 +120,50 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
 
         const applicableItems = values.findings.filter(f => f.finding !== 'Not Applicable');
         const compliantItems = applicableItems.filter(f => f.finding === 'Compliant');
+        const nonCompliantFindings = values.findings.filter(f => f.finding === 'Non Compliant');
+        
         const complianceScore = applicableItems.length > 0
             ? Math.round((compliantItems.length / applicableItems.length) * 100)
             : 100;
 
-        const dataToSave = {
-            findings: values.findings,
-            status: 'Finalized',
-            complianceScore: complianceScore,
-        };
+        try {
+            const batch = writeBatch(firestore);
 
-        updateDocumentNonBlocking(auditRef, dataToSave);
-        toast({
-            title: "Audit Finalized",
-            description: `Compliance score of ${complianceScore}% has been calculated and saved.`
-        });
+            // 1. Update the audit document
+            const auditUpdateData = {
+                findings: values.findings,
+                status: 'Finalized' as const,
+                complianceScore: complianceScore,
+            };
+            batch.update(auditRef, auditUpdateData);
+
+            // 2. Create CAPs for non-compliant findings
+            const capsCollectionRef = collection(firestore, `tenants/${tenantId}/corrective-action-plans`);
+            nonCompliantFindings.forEach(finding => {
+                const newCapRef = doc(capsCollectionRef);
+                const capData: Omit<CorrectiveActionPlan, 'id'> = {
+                    auditId: audit.id,
+                    findingId: finding.checklistItemId,
+                    rootCauseAnalysis: '',
+                    actions: [],
+                };
+                batch.set(newCapRef, capData);
+            });
+
+            await batch.commit();
+
+            toast({
+                title: "Audit Finalized",
+                description: `Score: ${complianceScore}%. ${nonCompliantFindings.length} corrective action plans created.`
+            });
+
+        } catch(error: any) {
+             toast({
+                variant: "destructive",
+                title: "Finalization Failed",
+                description: "An error occurred while finalizing the audit and creating CAPs."
+            });
+        }
     };
 
     const handleViewImage = (url: string) => {
@@ -310,7 +339,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Are you sure you want to finalize?</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            This will calculate the compliance score and lock the audit from further edits. This action cannot be undone.
+                                            This will calculate the compliance score, create Corrective Action Plans for any non-compliant findings, and lock the audit from further edits. This action cannot be undone.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
