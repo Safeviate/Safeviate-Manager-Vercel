@@ -2,10 +2,12 @@
 'use client';
 
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+
+const RISK_MATRIX_COLORS_KEY = 'safeviate-risk-matrix-colors';
 
 const likelihoods = [
     { name: 'Frequent', value: 5 },
@@ -23,10 +25,10 @@ const severities = [
     { name: 'Negligible', value: 'E' },
 ];
 
-const defaultColors = {
+const defaultColors: Record<string, string> = {
     '5A': '#d9534f', '5B': '#d9534f', '5C': '#f0ad4e', '5D': '#f0ad4e', '5E': '#f0ad4e',
     '4A': '#d9534f', '4B': '#d9534f', '4C': '#d9534f', '4D': '#5cb85c', '4E': '#5cb85c',
-    '3A': '#d9534f', '3B': '#d9534f', '3C': '#f0ad4e', '3D': '##5cb85c', '3E': '#5cb85c',
+    '3A': '#d9534f', '3B': '#d9534f', '3C': '#f0ad4e', '3D': '#5cb85c', '3E': '#5cb85c',
     '2A': '#f0ad4e', '2B': '#f0ad4e', '2C': '#5cb85c', '2D': '#5cb85c', '2E': '#5cb85c',
     '1A': '#f0ad4e', '1B': '#5cb85c', '1C': '#5cb85c', '1D': '#5cb85c', '1E': '#5cb85c',
 };
@@ -36,6 +38,29 @@ export default function RiskMatrixPage() {
   const [colors, setColors] = useState<Record<string, string>>(defaultColors);
   const colorInputRef = React.useRef<HTMLInputElement>(null);
   const [activeCell, setActiveCell] = useState<string | null>(null);
+
+  // Load colors from localStorage on initial render
+  useEffect(() => {
+    try {
+        const savedColors = localStorage.getItem(RISK_MATRIX_COLORS_KEY);
+        if (savedColors) {
+            setColors(JSON.parse(savedColors));
+        }
+    } catch (error) {
+        console.error("Failed to load colors from localStorage", error);
+        setColors(defaultColors);
+    }
+  }, []);
+
+  // Save colors to localStorage whenever they change
+  useEffect(() => {
+    try {
+        localStorage.setItem(RISK_MATRIX_COLORS_KEY, JSON.stringify(colors));
+    } catch (error) {
+        console.error("Failed to save colors to localStorage", error);
+    }
+  }, [colors]);
+
 
   const handleColorChange = (cellId: string, newColor: string) => {
     setColors(prev => ({ ...prev, [cellId]: newColor }));
