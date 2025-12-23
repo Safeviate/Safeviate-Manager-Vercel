@@ -13,6 +13,9 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { TriageForm } from './triage-form';
 import { useToast } from '@/hooks/use-toast';
+import { InvestigationForm } from './investigation-form';
+import { CorrectiveActionsForm } from './corrective-actions-form';
+import { FinalReview } from './final-review';
 
 interface SafetyReportDetailPageProps {
   params: { reportId: string };
@@ -102,28 +105,13 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
             <TriageForm report={report} tenantId={tenantId} />
         </TabsContent>
         <TabsContent value="investigation">
-          <Card>
-             <CardHeader><CardTitle>Investigation</CardTitle></CardHeader>
-            <CardContent>
-              <p>Investigation task management, discussion forum, and root cause analysis tools will be here.</p>
-            </CardContent>
-          </Card>
+          <InvestigationForm report={report} tenantId={tenantId} />
         </TabsContent>
         <TabsContent value="cap">
-          <Card>
-             <CardHeader><CardTitle>Corrective Action Plan</CardTitle></CardHeader>
-            <CardContent>
-                <p>Tools for creating and tracking corrective actions and performing mitigated risk assessment will be here.</p>
-            </CardContent>
-          </Card>
+          <CorrectiveActionsForm report={report} tenantId={tenantId} />
         </TabsContent>
         <TabsContent value="review">
-          <Card>
-             <CardHeader><CardTitle>Final Review</CardTitle></CardHeader>
-            <CardContent>
-                <p>A summary of the entire report and signature functionality will be here.</p>
-            </CardContent>
-          </Card>
+          <FinalReview report={report} tenantId={tenantId} />
         </TabsContent>
       </Tabs>
     </div>
