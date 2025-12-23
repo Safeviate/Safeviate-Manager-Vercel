@@ -37,15 +37,6 @@ export function ChecklistTemplateCard({ departmentName, templates, tenantId, dep
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    // State for controlling dialogs
-    const [isStartAuditOpen, setIsStartAuditOpen] = useState(false);
-    const [selectedTemplate, setSelectedTemplate] = useState<QualityAuditChecklistTemplate | null>(null);
-
-    const handleStartAuditClick = (template: QualityAuditChecklistTemplate) => {
-        setSelectedTemplate(template);
-        setIsStartAuditOpen(true);
-    };
-
     const handleDelete = (templateId: string, templateTitle: string) => {
         if (!firestore) return;
         const templateRef = doc(firestore, `tenants/${tenantId}/quality-audit-templates`, templateId);
@@ -76,9 +67,17 @@ export function ChecklistTemplateCard({ departmentName, templates, tenantId, dep
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => handleStartAuditClick(template)}>
-                            <PlayCircle className="mr-2 h-4 w-4" /> Start Audit
-                        </DropdownMenuItem>
+                        <StartAuditDialog
+                          template={template}
+                          tenantId={tenantId}
+                          personnel={personnel}
+                          departments={departments}
+                          trigger={
+                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <PlayCircle className="mr-2 h-4 w-4" /> Start Audit
+                            </DropdownMenuItem>
+                          }
+                        />
                         
                         <NewChecklistDialog
                           existingTemplate={template}
@@ -102,17 +101,6 @@ export function ChecklistTemplateCard({ departmentName, templates, tenantId, dep
           ))}
         </AccordionContent>
       </AccordionItem>
-      
-      {isStartAuditOpen && selectedTemplate && (
-        <StartAuditDialog
-            isOpen={isStartAuditOpen}
-            setIsOpen={setIsStartAuditOpen}
-            template={selectedTemplate}
-            tenantId={tenantId}
-            personnel={personnel}
-            departments={departments}
-        />
-      )}
     </>
   );
 }
