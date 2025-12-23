@@ -24,18 +24,6 @@ const getReportTypePrefix = (type: NewSafetyReportValues['reportType']): string 
     }
 }
 
-const getDepartmentNameForReportType = (type: NewSafetyReportValues['reportType']): string => {
-    switch (type) {
-        case 'Flight Operations':
-        case 'Aircraft Defect':
-            return 'Flight Operations';
-        case 'Ground Operations':
-            return 'Ground Operations';
-        default:
-            return 'Safety';
-    }
-};
-
 export default function NewSafetyReportPage() {
   const firestore = useFirestore();
   const { user } = useUser();
@@ -70,11 +58,11 @@ export default function NewSafetyReportPage() {
         const reportsRef = collection(firestore, `tenants/${tenantId}/safety-reports`);
         const counterRef = doc(firestore, `tenants/${tenantId}/counters`, `safety-reports-${reportPrefix}`);
 
-        const departmentName = getDepartmentNameForReportType(values.reportType);
-        const department = departments?.find(d => d.name === departmentName);
+        // All new reports are assigned to the 'Safety' department for initial triage.
+        const triageDepartment = departments?.find(d => d.name === 'Safety');
 
-        if (!department) {
-            throw new Error(`Could not find department: "${departmentName}". Please ensure it exists in Admin > Departments.`);
+        if (!triageDepartment) {
+            throw new Error(`The default "Safety" department was not found. Please create it in Admin > Departments to enable report submissions.`);
         }
 
         const newReportId = await runTransaction(firestore, async (transaction) => {
@@ -104,7 +92,7 @@ export default function NewSafetyReportPage() {
                 description: values.description,
                 phaseOfFlight: values.phaseOfFlight,
                 systemOrComponent: values.systemOrComponent,
-                departmentId: department.id
+                departmentId: triageDepartment.id
             };
 
             transaction.set(newReportRef, reportData);
