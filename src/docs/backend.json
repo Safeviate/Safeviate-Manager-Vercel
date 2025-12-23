@@ -65,7 +65,7 @@
             "lastAuditDate": { "type": "string", "format": "date-time" },
             "nextAuditDate": { "type": "string", "format": "date-time" }
         },
-        "required": ["id", "regulationCode", "regulationStatement", "companyReference", "responsibleManagerId"]
+        "required": ["id", "regulationCode", "regulationStatement", "companyReference"]
     },
     "FlightPlan": {
       "title": "Flight Plan",
@@ -1256,7 +1256,8 @@
             "actions": {
                 "type": "array",
                 "items": { "$ref": "#/backend/entities/CorrectiveAction" }
-            }
+            },
+            "status": { "type": "string", "enum": ["Open", "In Progress", "Closed"] }
         },
         "required": ["id", "auditId", "findingId", "rootCauseAnalysis"]
     }
@@ -1540,7 +1541,7 @@
           "schema": {
             "$ref": "#/backend/entities/Settings"
           },
-          "description": "Stores application settings for a tenant. A single document can hold multiple settings, e.g., 'document-expiry', 'features', or 'finding-levels'.",
+          "description": "Stores application settings for a tenant. A single document can hold multiple settings, e.g., 'document-expiry', 'features', 'finding-levels'.",
           "params": [
             {
               "name": "tenantId",

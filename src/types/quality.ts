@@ -88,5 +88,5 @@ export interface CorrectiveActionPlan {
     findingId: string; // The specific finding this CAP addresses
     rootCauseAnalysis: string;
     actions: CorrectiveAction[];
-    status: CorrectiveActionStatus;
+    status: 'Open' | 'In Progress' | 'Closed';
 }

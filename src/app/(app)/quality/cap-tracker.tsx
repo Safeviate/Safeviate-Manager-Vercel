@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -43,7 +44,7 @@ export default function CapTracker() {
     [firestore, tenantId]
   );
    const capsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`), where('status', '==', 'Open')) : null),
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`)) : null),
     [firestore, tenantId]
   );
 
@@ -57,10 +58,12 @@ export default function CapTracker() {
   const openCaps = useMemo((): EnrichedCorrectiveActionPlan[] => {
     if (!audits || !caps) return [];
 
+    const openCaps = caps.filter(cap => cap.status === 'Open');
+
     const auditsMap = new Map(audits.map(a => [a.id, a]));
     const usersMap = new Map([...(personnel || []), ...(departments || [])].map(p => [p.id, 'firstName' in p ? `${p.firstName} ${p.lastName}` : p.name]));
 
-    return caps.map(cap => {
+    return openCaps.map(cap => {
       const audit = auditsMap.get(cap.auditId);
       const finding = audit?.findings.find(f => f.checklistItemId === cap.findingId);
       const checklistItem = audit?.template.sections.flatMap(s => s.items).find(i => i.id === cap.findingId);
