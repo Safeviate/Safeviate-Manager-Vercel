@@ -57,20 +57,26 @@ export default function CapTracker() {
 
   const openCaps = useMemo((): EnrichedCorrectiveActionPlan[] => {
     if (!audits || !caps) return [];
-
+  
+    // Filter for caps that are still open
     const openCapsList = caps.filter(cap => cap.status === 'Open');
-
+  
+    // Create maps for efficient lookups
     const auditsMap = new Map(audits.map(a => [a.id, a]));
     const usersMap = new Map([...(personnel || []), ...(departments || [])].map(p => [p.id, 'firstName' in p ? `${p.firstName} ${p.lastName}` : p.name]));
-
+  
     return openCapsList.map(cap => {
       const audit = auditsMap.get(cap.auditId);
+      
+      // Find the specific finding within the audit that this CAP relates to
       const finding = audit?.findings.find(f => f.checklistItemId === cap.findingId);
-      const checklistItem = audit?.template.sections.flatMap(s => s.items).find(i => i.id === cap.findingId);
-
-      // Assuming a single action for now, this can be expanded.
+      
+      // Find the original checklist item text from the template stored inside the audit
+      const checklistItem = audit?.template?.sections.flatMap(s => s.items).find(i => i.id === cap.findingId);
+  
+      // For simplicity, let's assume one action per CAP for now or take the first one
       const action = cap.actions?.[0];
-
+  
       return {
         ...cap,
         auditNumber: audit?.auditNumber || 'N/A',
@@ -78,7 +84,7 @@ export default function CapTracker() {
         findingLevel: finding?.level,
         responsiblePersonName: action ? usersMap.get(action.responsiblePersonId) : 'N/A',
       };
-    });
+    }).filter(cap => cap.auditNumber !== 'N/A'); // Filter out caps where the audit might not have been found
   }, [audits, caps, personnel, departments]);
 
   const handleOpenUpdateDialog = (cap: EnrichedCorrectiveActionPlan) => {
