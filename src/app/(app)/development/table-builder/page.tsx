@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Merge, Split, Text, GripVertical, PlusSquare, Trash2, AlignLeft, AlignCenter, AlignRight, SplitSquareHorizontal, SplitSquareVertical, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Bold } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 // --- Types ---
 interface CellData {
@@ -699,8 +700,8 @@ export default function TableBuilderPage() {
         <TooltipProvider>
         <div className="space-y-6">
              <h1 className="text-3xl font-bold tracking-tight">Interactive Table Builder</h1>
-            <div className="space-y-6">
-                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+             <div className="space-y-6">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                     <TableSelector onSelect={({rows, cols}) => createGrid(rows, cols)} />
                     <Card>
                         <CardHeader className="pb-4">
@@ -813,31 +814,34 @@ export default function TableBuilderPage() {
                     <CardDescription>Click in cells to edit text. Click and drag to select multiple cells. Drag column borders to resize.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {grid.length > 0 ? (
-                        <div className="relative overflow-auto rounded-lg border">
-                            <div className="grid" style={{ gridTemplateColumns: 'auto 1fr', gridTemplateRows: 'auto 1fr'}}>
-                                <div className="sticky top-0 left-0 z-20 bg-muted/50 w-6 h-6"/>
-                                <HorizontalRuler colWidths={colWidths} />
-                                <VerticalRuler rowCount={grid.length} rowHeight={rowHeight} />
-                                <ResizableTable 
-                                    grid={grid} 
-                                    setGrid={setGrid}
-                                    selectedCells={selectedCells}
-                                    onCellMouseDown={handleSelectionStart}
-                                    onCellMouseEnter={handleSelectionEnter}
-                                    onCellMouseUp={handleSelectionEnd}
-                                    colWidths={colWidths}
-                                    setColWidths={setColWidths}
-                                    rowHeight={rowHeight}
-                                    handleContentChange={handleContentChange}
-                                />
+                    <ScrollArea className="w-full whitespace-nowrap rounded-md border">
+                        {grid.length > 0 ? (
+                            <div className="relative overflow-auto rounded-lg border">
+                                <div className="grid" style={{ gridTemplateColumns: 'auto 1fr', gridTemplateRows: 'auto 1fr'}}>
+                                    <div className="sticky top-0 left-0 z-20 bg-muted/50 w-6 h-6"/>
+                                    <HorizontalRuler colWidths={colWidths} />
+                                    <VerticalRuler rowCount={grid.length} rowHeight={rowHeight} />
+                                    <ResizableTable 
+                                        grid={grid} 
+                                        setGrid={setGrid}
+                                        selectedCells={selectedCells}
+                                        onCellMouseDown={handleSelectionStart}
+                                        onCellMouseEnter={handleSelectionEnter}
+                                        onCellMouseUp={handleSelectionEnd}
+                                        colWidths={colWidths}
+                                        setColWidths={setColWidths}
+                                        rowHeight={rowHeight}
+                                        handleContentChange={handleContentChange}
+                                    />
+                                </div>
                             </div>
-                        </div>
-                    ) : (
-                        <div className="h-48 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
-                            <p>Select table dimensions to see a preview.</p>
-                        </div>
-                    )}
+                        ) : (
+                            <div className="h-48 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
+                                <p>Select table dimensions to see a preview.</p>
+                            </div>
+                        )}
+                        <ScrollBar orientation="horizontal" />
+                    </ScrollArea>
                 </CardContent>
             </Card>
         </div>
