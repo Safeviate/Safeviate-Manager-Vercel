@@ -81,6 +81,7 @@ const ResizableTable = ({
   rowHeight,
   handleContentChange,
   handleColResize,
+  onMouseDownResizer,
   pathPrefix = []
 }: {
   grid: CellData[][];
@@ -93,6 +94,7 @@ const ResizableTable = ({
   rowHeight: number;
   handleContentChange: (path: CellPath, content: string) => void;
   handleColResize: (index: number, newWidth: number) => void;
+  onMouseDownResizer: (event: React.MouseEvent, index: number) => void;
   pathPrefix?: CellPath;
 }) => {
     const tableRef = useRef<HTMLTableElement>(null);
@@ -119,8 +121,7 @@ const ResizableTable = ({
   return (
       <table
         ref={tableRef}
-        className={cn("w-full h-full border-collapse table-fixed", isNested && "bg-background/50", isNested && "h-full")}
-        style={{ minWidth: `${colWidths.reduce((a, b) => a + b, 0)}px` }}
+        className={cn("w-full border-collapse table-fixed", isNested && "bg-background/50 h-full")}
         onMouseUp={onCellMouseUp}
         onMouseLeave={onCellMouseUp} // Stop selection if mouse leaves table
       >
@@ -129,6 +130,18 @@ const ResizableTable = ({
                 <col key={i} style={{ width: `${width}px` }} />
             ))}
         </colgroup>
+        <thead>
+            <tr className="sticky top-0 z-10 bg-muted">
+                {colWidths.map((_, index) => (
+                    <th key={index} className="p-0 border-r border-border relative h-4">
+                        <div 
+                          onMouseDown={(e) => onMouseDownResizer(e, index)}
+                          className="absolute top-0 -right-1 w-2 h-full cursor-col-resize z-20"
+                        />
+                    </th>
+                ))}
+            </tr>
+        </thead>
         <tbody>
           {Array.from({ length: rows }).map((_, rowIndex) => (
             <tr key={rowIndex}>
@@ -167,6 +180,7 @@ const ResizableTable = ({
                             rowHeight={rowHeight}
                             handleContentChange={handleContentChange}
                             handleColResize={handleColResize}
+                            onMouseDownResizer={onMouseDownResizer}
                             pathPrefix={[...currentPath, 'nestedGrid']}
                         />
                     ) : (
@@ -237,11 +251,11 @@ export default function TableBuilderPage() {
     const [selectedCells, setSelectedCells] = useState<CellPath[]>([]);
     const [isSelecting, setIsSelecting] = useState(false);
     const [fontSize, setFontSize] = useState(14);
-    const [uniformColWidth, setUniformColWidth] = useState(150);
     const rowHeight = 48; // px
 
     const resizingColIndex = useRef<number | null>(null);
     const startCursorX = useRef(0);
+    const startWidth = useRef(0);
 
     const handleColResize = (index: number, newWidth: number) => {
       setColWidths(prev => {
@@ -252,16 +266,16 @@ export default function TableBuilderPage() {
     };
 
     const onMouseDownResizer = (event: React.MouseEvent, index: number) => {
+      event.preventDefault();
       resizingColIndex.current = index;
       startCursorX.current = event.clientX;
+      startWidth.current = colWidths[index];
     };
 
     const onMouseMove = useCallback((event: MouseEvent) => {
       if (resizingColIndex.current === null) return;
       
-      const newWidth = colWidths[resizingColIndex.current] + event.clientX - startCursorX.current;
-      startCursorX.current = event.clientX;
-
+      const newWidth = startWidth.current + event.clientX - startCursorX.current;
       handleColResize(resizingColIndex.current, newWidth);
     }, [colWidths]);
 
@@ -294,7 +308,7 @@ export default function TableBuilderPage() {
             }))
         );
         setGrid(newGrid);
-        setColWidths(Array(cols).fill(uniformColWidth));
+        setColWidths(Array(cols).fill(150));
         setSelectedCells([]);
     };
 
@@ -602,6 +616,7 @@ export default function TableBuilderPage() {
 
     const handleAddColumn = () => {
         if (grid.length === 0) return;
+        const newColWidth = colWidths.length > 0 ? colWidths[0] : 150;
         const newGrid = grid.map((row, rowIndex) => [
             ...row,
             {
@@ -617,9 +632,7 @@ export default function TableBuilderPage() {
             }
         ]);
         setGrid(newGrid);
-
-        const newColCount = newGrid[0].length;
-        setColWidths(Array(newColCount).fill(uniformColWidth));
+        setColWidths(prev => [...prev, newColWidth]);
     };
 
     const handleDeleteRow = () => {
@@ -759,30 +772,19 @@ export default function TableBuilderPage() {
                     <ScrollArea className="w-full whitespace-nowrap rounded-md border">
                         <div className="relative pb-4">
                             {grid.length > 0 ? (
-                                <>
-                                    <div className="grid bg-muted sticky top-0 z-10" style={{ gridTemplateColumns: colWidths.map(w => `${w}px`).join(' ') }}>
-                                      {colWidths.map((_, index) => (
-                                          <div key={index} className="h-4 border-r border-border relative">
-                                            <div 
-                                              onMouseDown={(e) => onMouseDownResizer(e, index)}
-                                              className="absolute top-0 -right-1.5 w-3 h-full cursor-col-resize"
-                                            />
-                                          </div>
-                                      ))}
-                                    </div>
-                                    <ResizableTable 
-                                        grid={grid} 
-                                        setGrid={setGrid}
-                                        selectedCells={selectedCells}
-                                        onCellMouseDown={handleSelectionStart}
-                                        onCellMouseEnter={handleSelectionEnter}
-                                        onCellMouseUp={handleSelectionEnd}
-                                        colWidths={colWidths}
-                                        rowHeight={rowHeight}
-                                        handleContentChange={handleContentChange}
-                                        handleColResize={handleColResize}
-                                    />
-                                </>
+                                <ResizableTable 
+                                    grid={grid} 
+                                    setGrid={setGrid}
+                                    selectedCells={selectedCells}
+                                    onCellMouseDown={handleSelectionStart}
+                                    onCellMouseEnter={handleSelectionEnter}
+                                    onCellMouseUp={handleSelectionEnd}
+                                    colWidths={colWidths}
+                                    rowHeight={rowHeight}
+                                    handleContentChange={handleContentChange}
+                                    handleColResize={handleColResize}
+                                    onMouseDownResizer={onMouseDownResizer}
+                                />
                             ) : (
                                 <div className="h-48 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
                                     <p>Select table dimensions to see a preview.</p>
