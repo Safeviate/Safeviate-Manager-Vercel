@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Merge, Split, Text, GripVertical, PlusSquare, Trash2, AlignLeft, AlignCenter, AlignRight, SplitSquareHorizontal, SplitSquareVertical, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Bold } from 'lucide-react';
+import { Merge, Split, Text, PlusSquare, Trash2, AlignLeft, AlignCenter, AlignRight, SplitSquareHorizontal, SplitSquareVertical, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Bold } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
@@ -78,7 +78,6 @@ const ResizableTable = ({
   onCellMouseEnter,
   onCellMouseUp,
   colWidths,
-  setColWidths,
   rowHeight,
   handleContentChange,
   pathPrefix = []
@@ -90,7 +89,6 @@ const ResizableTable = ({
   onCellMouseEnter: (path: CellPath) => void;
   onCellMouseUp: () => void;
   colWidths: number[];
-  setColWidths: (widths: number[]) => void;
   rowHeight: number;
   handleContentChange: (path: CellPath, content: string) => void;
   pathPrefix?: CellPath;
@@ -163,7 +161,6 @@ const ResizableTable = ({
                             onCellMouseEnter={onCellMouseEnter}
                             onCellMouseUp={onCellMouseUp}
                             colWidths={[]} // Nested tables don't control main widths
-                            setColWidths={() => {}}
                             rowHeight={rowHeight}
                             handleContentChange={handleContentChange}
                             pathPrefix={[...currentPath, 'nestedGrid']}
@@ -236,43 +233,14 @@ export default function TableBuilderPage() {
     const [selectedCells, setSelectedCells] = useState<CellPath[]>([]);
     const [isSelecting, setIsSelecting] = useState(false);
     const [fontSize, setFontSize] = useState(14);
+    const [uniformColWidth, setUniformColWidth] = useState(150);
     const rowHeight = 48; // px
 
-    const [resizingIndex, setResizingIndex] = useState<number | null>(null);
-    const startX = useRef(0);
-    const startWidth = useRef(0);
-
-    const onResizeMouseDown = (index: number, event: React.MouseEvent) => {
-        event.preventDefault();
-        setResizingIndex(index);
-        startX.current = event.clientX;
-        startWidth.current = colWidths[index];
-    };
-
     useEffect(() => {
-        const handleMouseMove = (event: MouseEvent) => {
-            if (resizingIndex === null) return;
-            const deltaX = event.clientX - startX.current;
-            const newWidth = Math.max(startWidth.current + deltaX, 50); // Minimum width 50px
-            const newWidths = [...colWidths];
-            newWidths[resizingIndex] = newWidth;
-            setColWidths(newWidths);
-        };
-
-        const handleMouseUp = () => {
-            setResizingIndex(null);
-        };
-
-        if (resizingIndex !== null) {
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
+        if (grid.length > 0 && grid[0].length > 0) {
+            setColWidths(Array(grid[0].length).fill(uniformColWidth));
         }
-
-        return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [resizingIndex, colWidths, setColWidths]);
+    }, [uniformColWidth, grid]);
     
     const createGrid = (rows: number, cols: number) => {
         const newGrid: CellData[][] = Array.from({ length: rows }, (_, rowIndex) => 
@@ -289,7 +257,7 @@ export default function TableBuilderPage() {
             }))
         );
         setGrid(newGrid);
-        setColWidths(Array(cols).fill(150)); // Set a fixed initial width for each column
+        setColWidths(Array(cols).fill(uniformColWidth));
         setSelectedCells([]);
     };
 
@@ -297,7 +265,6 @@ export default function TableBuilderPage() {
         setGrid(currentGrid => {
             const newGrid = JSON.parse(JSON.stringify(currentGrid));
             
-            // Function to recursively find and update the cell
             const updateCell = (grid: CellData[][], currentPath: CellPath): CellData[][] => {
                 if (currentPath.length < 2) return grid;
     
@@ -326,7 +293,6 @@ export default function TableBuilderPage() {
 
     const handleSelectionEnter = (path: CellPath) => {
         if (!isSelecting) return;
-        // Simple selection for now, doesn't support multi-cell selection across nested levels easily
         setSelectedCells(prev => [...prev.filter(p => JSON.stringify(p) !== JSON.stringify(path)), path]);
     };
 
@@ -340,14 +306,13 @@ export default function TableBuilderPage() {
         
         const newGrid = [...grid];
         selectedCells.forEach((path) => {
-            // This needs to be recursive to handle nested cells
             let cell: any = newGrid;
              for (let i = 0; i < path.length; i += 2) {
-                if(cell[path[i]] && cell[path[i]][path[i+1]]) {
+                if(cell[path[i] as number] && cell[path[i as number] + 1]) {
                     if (i + 2 < path.length) {
-                        cell = cell[path[i]][path[i+1]].nestedGrid;
+                        cell = cell[path[i] as number][path[i+1] as number].nestedGrid;
                     } else {
-                        cell[path[i]][path[i+1]].fontSize = newSize;
+                        cell[path[i] as number][path[i+1] as number].fontSize = newSize;
                     }
                 }
              }
@@ -365,7 +330,7 @@ export default function TableBuilderPage() {
               if (target?.[path[i] as number]?.[path[i+1] as number]?.nestedGrid) {
                   target = target[path[i] as number][path[i+1] as number].nestedGrid!;
               } else {
-                  return; // Path is invalid
+                  return; 
               }
           }
           
@@ -391,7 +356,7 @@ export default function TableBuilderPage() {
                 if (target?.[path[i] as number]?.[path[i+1] as number]?.nestedGrid) {
                     target = target[path[i] as number][path[i+1] as number].nestedGrid!;
                 } else {
-                    return; // Path is invalid
+                    return; 
                 }
             }
             
@@ -420,7 +385,7 @@ export default function TableBuilderPage() {
                 if (target?.[path[i] as number]?.[path[i+1] as number]?.nestedGrid) {
                     target = target[path[i] as number][path[i+1] as number].nestedGrid!;
                 } else {
-                    return; // Path is invalid
+                    return; 
                 }
             }
             
@@ -442,7 +407,6 @@ export default function TableBuilderPage() {
     const handleMergeCells = () => {
         if (selectedCells.length <= 1) return;
 
-        // Basic merge, doesn't support merging across nested boundaries
         const topLevelCells = selectedCells.filter(p => p.length === 2);
         if(topLevelCells.length !== selectedCells.length) {
             alert("Cannot merge cells across different nesting levels.");
@@ -462,13 +426,11 @@ export default function TableBuilderPage() {
         const newRowSpan = maxRow - minRow + 1;
         const newColSpan = maxCol - minCol + 1;
 
-        // Apply span to the top-left cell
         newGrid[minRow][minCol].rowSpan = newRowSpan;
         newGrid[minRow][minCol].colSpan = newColSpan;
         newGrid[minRow][minCol].isMerged = false;
 
 
-        // Mark other cells as merged
         for (let i = minRow; i <= maxRow; i++) {
             for (let j = minCol; j <= maxCol; j++) {
                 if (i === minRow && j === minCol) continue;
@@ -609,7 +571,7 @@ export default function TableBuilderPage() {
         setGrid(newGrid);
 
         const newColCount = newGrid[0].length;
-        setColWidths(Array(newColCount).fill(150));
+        setColWidths(Array(newColCount).fill(uniformColWidth));
     };
 
     const handleDeleteRow = () => {
@@ -625,24 +587,23 @@ export default function TableBuilderPage() {
             setGrid(newGrid);
 
             const newColCount = newGrid[0].length;
-            setColWidths(Array(newColCount).fill(150));
+            setColWidths(Array(newColCount).fill(uniformColWidth));
             setSelectedCells([]);
         }
     };
-
-    const totalTableWidth = colWidths.reduce((a, b) => a + b, 0);
 
     return (
         <TooltipProvider>
         <div className="space-y-6">
              <h1 className="text-3xl font-bold tracking-tight">Interactive Table Builder</h1>
-             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+             
+             <div className="grid grid-cols-1 lg:grid-cols-[auto,1fr] gap-6">
                 <TableSelector onSelect={({rows, cols}) => createGrid(rows, cols)} />
                 <Card>
                     <CardHeader className="pb-4">
                         <CardTitle>Toolbar</CardTitle>
                     </CardHeader>
-                    <CardContent className='flex flex-wrap items-center gap-2'>
+                    <CardContent className='flex flex-wrap items-center gap-x-4 gap-y-2'>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button variant="outline" size="icon" onClick={handleMergeCells} disabled={selectedCells.length <= 1}>
@@ -689,6 +650,17 @@ export default function TableBuilderPage() {
                                 className="w-20"
                             />
                         </div>
+                        <div className="flex items-center gap-2">
+                            <Label htmlFor="col-width">Col Width</Label>
+                            <Input 
+                                id="col-width" 
+                                type="number"
+                                value={uniformColWidth}
+                                onChange={(e) => setUniformColWidth(parseInt(e.target.value, 10))}
+                                className="w-20"
+                            />
+                        </div>
+                        <Separator orientation='vertical' className='h-8' />
                         <div className="flex items-center gap-1">
                             <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleTextAlignChange('left')}><AlignLeft /></Button></TooltipTrigger><TooltipContent><p>Align Left</p></TooltipContent></Tooltip>
                             <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleTextAlignChange('center')}><AlignCenter /></Button></TooltipTrigger><TooltipContent><p>Align Center</p></TooltipContent></Tooltip>
@@ -745,39 +717,23 @@ export default function TableBuilderPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Table Preview</CardTitle>
-                    <CardDescription>Drag the handles in the header to resize columns. Click and drag on cells to select multiple.</CardDescription>
+                    <CardDescription>Click and drag on cells to select multiple.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ScrollArea className="w-full whitespace-nowrap rounded-md border">
-                        <div className="relative pb-4" style={{ minWidth: `${totalTableWidth}px` }}>
+                        <div className="pb-4">
                             {grid.length > 0 ? (
-                                <>
-                                    <div className="sticky top-0 z-10 h-4 bg-background border-b">
-                                        {colWidths.map((_, index) => {
-                                            const left = colWidths.slice(0, index + 1).reduce((a, b) => a + b, 0);
-                                            return (
-                                                <div 
-                                                    key={index}
-                                                    className="absolute top-0 h-full w-2 cursor-col-resize z-20"
-                                                    style={{ left: `${left - 4}px` }}
-                                                    onMouseDown={(e) => onResizeMouseDown(index, e)}
-                                                />
-                                            )
-                                        })}
-                                    </div>
-                                    <ResizableTable 
-                                        grid={grid} 
-                                        setGrid={setGrid}
-                                        selectedCells={selectedCells}
-                                        onCellMouseDown={handleSelectionStart}
-                                        onCellMouseEnter={handleSelectionEnter}
-                                        onCellMouseUp={handleSelectionEnd}
-                                        colWidths={colWidths}
-                                        setColWidths={setColWidths}
-                                        rowHeight={rowHeight}
-                                        handleContentChange={handleContentChange}
-                                    />
-                                </>
+                                <ResizableTable 
+                                    grid={grid} 
+                                    setGrid={setGrid}
+                                    selectedCells={selectedCells}
+                                    onCellMouseDown={handleSelectionStart}
+                                    onCellMouseEnter={handleSelectionEnter}
+                                    onCellMouseUp={handleSelectionEnd}
+                                    colWidths={colWidths}
+                                    rowHeight={rowHeight}
+                                    handleContentChange={handleContentChange}
+                                />
                             ) : (
                                 <div className="h-48 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
                                     <p>Select table dimensions to see a preview.</p>
