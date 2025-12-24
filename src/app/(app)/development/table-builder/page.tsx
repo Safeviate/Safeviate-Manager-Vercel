@@ -2,14 +2,14 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Merge, Unmerge, Text, GripVertical } from 'lucide-react';
+import { Merge, Split, Text, GripVertical } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // --- Types ---
@@ -302,7 +302,7 @@ export default function TableBuilderPage() {
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Button variant="outline" size="icon" onClick={handleUnmergeCells} disabled={selectedCells.length === 0}>
-                                        <Unmerge />
+                                        <Split />
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent><p>Unmerge Cells</p></TooltipContent>
