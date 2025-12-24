@@ -70,38 +70,6 @@ const EditableCell = ({
 };
 
 
-const HorizontalRuler = ({ colWidths }: { colWidths: number[] }) => {
-    return (
-        <div className="sticky top-0 z-10 flex h-6 bg-muted/50 border-b border-r">
-            {colWidths.map((width, index) => (
-                <div
-                    key={index}
-                    style={{ width: `${width}px` }}
-                    className="flex-shrink-0 border-l p-1 text-xs text-muted-foreground flex items-center justify-center"
-                >
-                    {width}px
-                </div>
-            ))}
-        </div>
-    );
-};
-
-const VerticalRuler = ({ rowCount, rowHeight }: { rowCount: number, rowHeight: number }) => {
-    return (
-        <div className="sticky left-0 z-10 w-10 bg-muted/50 border-r">
-            {Array.from({ length: rowCount }).map((_, index) => (
-                <div
-                    key={index}
-                    style={{ height: `${rowHeight}px` }}
-                    className="flex items-center justify-center border-t"
-                >
-                    <span className="text-xs text-muted-foreground">{rowHeight}px</span>
-                </div>
-            ))}
-        </div>
-    );
-};
-
 const ResizableTable = ({
   grid,
   setGrid,
@@ -129,6 +97,41 @@ const ResizableTable = ({
 }) => {
     const tableRef = useRef<HTMLTableElement>(null);
     const isNested = pathPrefix.length > 0;
+    const [resizingIndex, setResizingIndex] = useState<number | null>(null);
+    const startX = useRef(0);
+    const startWidth = useRef(0);
+
+    const onResizeMouseDown = (index: number, event: React.MouseEvent) => {
+        event.preventDefault();
+        setResizingIndex(index);
+        startX.current = event.clientX;
+        startWidth.current = colWidths[index];
+    };
+
+    useEffect(() => {
+        const handleMouseMove = (event: MouseEvent) => {
+            if (resizingIndex === null) return;
+            const deltaX = event.clientX - startX.current;
+            const newWidth = Math.max(startWidth.current + deltaX, 50); // Minimum width 50px
+            const newWidths = [...colWidths];
+            newWidths[resizingIndex] = newWidth;
+            setColWidths(newWidths);
+        };
+
+        const handleMouseUp = () => {
+            setResizingIndex(null);
+        };
+
+        if (resizingIndex !== null) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [resizingIndex, colWidths, setColWidths]);
 
   if (grid.length === 0) return null;
 
@@ -163,6 +166,20 @@ const ResizableTable = ({
                 ))}
             </colgroup>
         )}
+        <thead>
+            {!isNested && (
+                <tr>
+                    {colWidths.map((_, index) => (
+                        <th key={index} className="relative border-t border-b p-0 h-4">
+                            <div 
+                                className="absolute top-0 right-0 h-full w-2 cursor-col-resize z-10"
+                                onMouseDown={(e) => onResizeMouseDown(index, e)}
+                            />
+                        </th>
+                    ))}
+                </tr>
+            )}
+        </thead>
         <tbody>
           {Array.from({ length: rows }).map((_, rowIndex) => (
             <tr key={rowIndex}>
@@ -745,11 +762,11 @@ export default function TableBuilderPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Table Preview</CardTitle>
-                        <CardDescription>Click in cells to edit text. Click and drag to select multiple cells.</CardDescription>
+                        <CardDescription>Drag the handles in the header to resize columns. Click and drag on cells to select multiple.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <ScrollArea className="w-full whitespace-nowrap rounded-md border">
-                            <div className="relative p-4">
+                            <div className="relative p-4 pb-8" style={{ minWidth: `${totalTableWidth}px` }}>
                                 {grid.length > 0 ? (
                                     <ResizableTable 
                                         grid={grid} 
@@ -778,3 +795,4 @@ export default function TableBuilderPage() {
         </TooltipProvider>
     );
 }
+
