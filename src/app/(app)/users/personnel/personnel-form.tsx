@@ -98,12 +98,12 @@ export function PersonnelForm({ tenantId, roles, departments, logbookTemplates }
     } else {
         collectionName = 'personnel';
         newUser = { 
-            userType,
+            userType: 'Personnel',
             firstName, 
             lastName, 
             email,
             department: selectedDepartment?.id || undefined,
-            role: selectedRole!.id, 
+            role: selectedRole!.id,
         };
     }
 
@@ -254,3 +254,5 @@ export function PersonnelForm({ tenantId, roles, departments, logbookTemplates }
     </Dialog>
   );
 }
+
+    

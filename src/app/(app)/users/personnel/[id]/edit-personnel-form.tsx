@@ -85,14 +85,15 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
         return;
     }
 
-    if (!formData.role) {
-        toast({
-            variant: 'destructive',
-            title: 'Missing Fields',
-            description: 'Role is required for all users.',
-        });
-        return;
+    if (!isPilotProfile(formData) && !(formData as Personnel).role) {
+      toast({
+          variant: 'destructive',
+          title: 'Missing Fields',
+          description: 'Role is required for all users.',
+      });
+      return;
     }
+
 
     if (!firestore || !tenantId) {
         toast({
@@ -110,6 +111,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
     if (!isPilotProfile(formData)) {
         // Ensure pilot-specific fields are not on personnel
         delete (dataToUpdate as Partial<PilotProfile>).pilotLicense;
+        delete (dataToUpdate as Partial<PilotProfile>).logbookTemplateId;
     } else {
         // Ensure personnel-specific fields are not on pilots, except role
         delete (dataToUpdate as Partial<Personnel>).department;
@@ -163,6 +165,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
     const role = roles.find(r => r.id === roleId);
     if (role) {
       if (isPilotProfile(formData)) {
+        const pilotFormData = formData as PilotProfile;
         setFormData(prev => ({
           ...prev,
           role: role.id,
@@ -231,7 +234,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                   </div>
                   <div className="space-y-2">
                       <Label htmlFor="role">Role</Label>
-                      <Select onValueChange={handleRoleChange} value={formData.role}>
+                      <Select onValueChange={handleRoleChange} value={(formData as Personnel)?.role}>
                           <SelectTrigger id="role">
                               <SelectValue placeholder="Select a role" />
                           </SelectTrigger>
@@ -261,13 +264,13 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                     <>
                       <div className="space-y-2">
                         <Label htmlFor="licenseNumber">License Number</Label>
-                        <Input id="licenseNumber" value={formData.pilotLicense?.licenseNumber || ''} onChange={(e) => handleNestedInputChange('pilotLicense', 'licenseNumber', e.target.value)} />
+                        <Input id="licenseNumber" value={(formData as PilotProfile).pilotLicense?.licenseNumber || ''} onChange={(e) => handleNestedInputChange('pilotLicense', 'licenseNumber', e.target.value)} />
                       </div>
                       <div className="space-y-2 col-span-1 md:col-span-2 lg:col-span-3">
                           <Label htmlFor="ratings">Ratings</Label>
                           <TagInput
                             id="ratings"
-                            value={formData.pilotLicense?.ratings || []}
+                            value={(formData as PilotProfile).pilotLicense?.ratings || []}
                             onChange={(newTags) => handleNestedInputChange('pilotLicense', 'ratings', newTags)}
                             placeholder="Add a rating (e.g., IFR) and press Enter..."
                           />
@@ -276,14 +279,14 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                           <Label htmlFor="endorsements">Endorsements</Label>
                           <TagInput
                             id="endorsements"
-                            value={formData.pilotLicense?.endorsements || []}
+                            value={(formData as PilotProfile).pilotLicense?.endorsements || []}
                             onChange={(newTags) => handleNestedInputChange('pilotLicense', 'endorsements', newTags)}
                             placeholder="Add an endorsement (e.g., High Performance) and press Enter..."
                           />
                       </div>
                       <div className="space-y-2">
                           <Label htmlFor="logbookTemplate">Logbook Template</Label>
-                          <Select onValueChange={(value) => handleInputChange('logbookTemplateId', value)} value={formData.logbookTemplateId}>
+                          <Select onValueChange={(value) => handleInputChange('logbookTemplateId', value)} value={(formData as PilotProfile).logbookTemplateId}>
                               <SelectTrigger id="logbookTemplate">
                                   <SelectValue placeholder="Select a logbook template" />
                               </SelectTrigger>
@@ -432,3 +435,5 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
     </Card>
   );
 }
+
+    

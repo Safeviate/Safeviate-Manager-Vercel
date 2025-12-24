@@ -17,7 +17,7 @@ export type PilotProfile = {
   firstName: string;
   lastName: string;
   email: string;
-  role?: string; // role ID
+  role: string; // role ID
   contactNumber?: string;
   dateOfBirth?: string;
   logbookTemplateId?: string;
@@ -166,3 +166,5 @@ export default function PersonnelPage() {
     </div>
   );
 }
+
+    

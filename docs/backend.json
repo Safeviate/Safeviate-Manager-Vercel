@@ -652,6 +652,7 @@
           "description": "Pilot's email address.",
           "format": "email"
         },
+        "role": { "type": "string", "description": "The ID of the role assigned to the user." },
         "contactNumber": { "type": "string", "description": "The contact phone number of the pilot." },
         "dateOfBirth": { "type": "string", "description": "The pilot's date of birth.", "format": "date" },
         "logbookTemplateId": { "type": "string", "description": "The ID of the logbook template assigned to this pilot." },
@@ -668,7 +669,7 @@
       "type": "object",
       "description": "Represents a non-flying staff member at the aviation academy.",
       "properties": {
-        "id_": {
+        "id": {
           "type": "string",
           "description": "Unique identifier for the Personnel entity."
         },
@@ -1643,3 +1644,6 @@
 
 
 
+
+
+    
