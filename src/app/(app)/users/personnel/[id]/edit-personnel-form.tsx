@@ -2,12 +2,12 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { doc } from 'firebase/firestore';
+import { doc, collection, query } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ChevronsUpDown, PlusCircle, Trash2 } from 'lucide-react';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,6 +16,7 @@ import { permissionsConfig } from '@/lib/permissions-config';
 import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
+import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +33,7 @@ interface EditPersonnelFormProps {
   user: UserProfile;
   roles: Role[];
   departments: Department[];
+  logbookTemplates: LogbookTemplate[];
   onCancel: () => void;
 }
 
@@ -41,7 +43,7 @@ const isPilotProfile = (user: Partial<UserProfile>): user is PilotProfile => {
     return user.userType === 'Student' || user.userType === 'Private Pilot' || user.userType === 'Instructor';
 }
 
-export function EditPersonnelForm({ tenantId, user, roles, departments, onCancel }: EditPersonnelFormProps) {
+export function EditPersonnelForm({ tenantId, user, roles, departments, logbookTemplates, onCancel }: EditPersonnelFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   
@@ -278,6 +280,19 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, onCancel
                             onChange={(newTags) => handleNestedInputChange('pilotLicense', 'endorsements', newTags)}
                             placeholder="Add an endorsement (e.g., High Performance) and press Enter..."
                           />
+                      </div>
+                      <div className="space-y-2">
+                          <Label htmlFor="logbookTemplate">Logbook Template</Label>
+                          <Select onValueChange={(value) => handleInputChange('logbookTemplateId', value)} value={formData.logbookTemplateId}>
+                              <SelectTrigger id="logbookTemplate">
+                                  <SelectValue placeholder="Select a logbook template" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  {logbookTemplates.map(template => (
+                                      <SelectItem key={template.id} value={template.id}>{template.name}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
                       </div>
                     </>
                   )}

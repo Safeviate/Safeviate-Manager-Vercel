@@ -7,6 +7,7 @@ import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase
 import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
+import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
 import { EditPersonnelForm } from './edit-personnel-form';
 import { ViewPersonnelDetails } from './view-personnel-details';
 import { UserLogbook } from './user-logbook';
@@ -51,15 +52,21 @@ export default function UserProfilePage({ params }: UserProfilePageProps) {
         () => (firestore ? collection(firestore, 'tenants', tenantId, 'departments') : null),
         [firestore, tenantId]
     );
+    
+    const logbookTemplatesQuery = useMemoFirebase(
+        () => (firestore ? collection(firestore, 'tenants', tenantId, 'logbook-templates') : null),
+        [firestore, tenantId]
+    );
 
     const { data: personnel, isLoading: isLoadingPersonnel, error: personnelError } = useDoc<Personnel>(personnelDocRef);
     const { data: pilot, isLoading: isLoadingPilot, error: pilotError } = useDoc<PilotProfile>(pilotDocRef);
 
     const { data: roles, isLoading: isLoadingRoles, error: rolesError } = useCollection<Role>(rolesQuery);
     const { data: departments, isLoading: isLoadingDepts, error: deptsError } = useCollection<Department>(departmentsQuery);
+    const { data: logbookTemplates, isLoading: isLoadingTemplates } = useCollection<LogbookTemplate>(logbookTemplatesQuery);
 
     const user = personnel || pilot;
-    const isLoading = isLoadingPersonnel || isLoadingPilot || isLoadingRoles || isLoadingDepts;
+    const isLoading = isLoadingPersonnel || isLoadingPilot || isLoadingRoles || isLoadingDepts || isLoadingTemplates;
     const error = personnelError || pilotError || rolesError || deptsError;
 
     const currentRole = useMemo(() => {
@@ -105,6 +112,7 @@ export default function UserProfilePage({ params }: UserProfilePageProps) {
                     user={user}
                     roles={roles || []}
                     departments={departments || []}
+                    logbookTemplates={logbookTemplates || []}
                     onCancel={() => setIsEditing(false)}
                 />
             ) : (
@@ -139,4 +147,3 @@ export default function UserProfilePage({ params }: UserProfilePageProps) {
         </div>
     );
 }
-

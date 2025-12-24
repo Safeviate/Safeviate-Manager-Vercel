@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -17,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { DocumentExpirySettings } from '../admin/document-dates/page';
 import { AlertCircle, BookCheck, Plane } from 'lucide-react';
+import { MyLogbook } from './my-logbook';
 
 
 export default function MyDashboardPage() {
@@ -230,8 +232,9 @@ export default function MyDashboardPage() {
                         </Table>
                     </CardContent>
                 </Card>
-
              </div>
+             
+             {userProfile?.[0] && <MyLogbook userProfile={userProfile[0]} />}
         </div>
     );
 }

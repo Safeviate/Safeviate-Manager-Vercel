@@ -19,6 +19,7 @@ export type PilotProfile = {
   role?: string; // role ID
   contactNumber?: string;
   dateOfBirth?: string;
+  logbookTemplateId?: string;
   address?: {
     street?: string;
     city?: string;
