@@ -3,10 +3,10 @@
 
 import { useMemo } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import type { PilotProfile } from '../users/personnel/page';
+import { collection, query, limit } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MyLogbook } from './my-logbook';
+import { GeminiLogbook } from './gemini-logbook';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
 
@@ -14,28 +14,19 @@ export default function MyDashboardPage() {
     const firestore = useFirestore();
     const tenantId = 'safeviate';
 
-    // Fetch all available logbook templates
+    // Fetch the first available logbook template
     const logbookTemplatesQuery = useMemoFirebase(
-        () => (firestore ? collection(firestore, `tenants/${tenantId}/logbook-templates`) : null),
+        () => (firestore ? query(collection(firestore, `tenants/${tenantId}/logbook-templates`), limit(1)) : null),
         [firestore, tenantId]
     );
 
     const { data: templates, isLoading: isLoadingTemplates } = useCollection<LogbookTemplate>(logbookTemplatesQuery);
 
-    // Create a dummy user profile and assign the ID of the FIRST available template
-    const dummyUserProfile: PilotProfile | null = useMemo(() => {
+    const logbookTemplate = useMemo(() => {
         if (!templates || templates.length === 0) {
             return null;
         }
-        return {
-            id: 'dummy-user',
-            userType: 'Instructor',
-            firstName: 'Demo',
-            lastName: 'User',
-            email: 'demo@safeviate.com',
-            role: 'demo-role',
-            logbookTemplateId: templates[0].id, // Use the first template found
-        };
+        return templates[0];
     }, [templates]);
     
     const isLoading = isLoadingTemplates;
@@ -44,11 +35,12 @@ export default function MyDashboardPage() {
         return (
             <div className="space-y-6">
                 <Skeleton className="h-96 w-full" />
+                <Skeleton className="h-96 w-full" />
             </div>
         );
     }
     
-    if (!dummyUserProfile) {
+    if (!logbookTemplate) {
         return (
              <Card>
                 <CardHeader>
@@ -63,9 +55,21 @@ export default function MyDashboardPage() {
         )
     }
     
+    // Create a dummy user profile to pass to the original logbook component
+    const dummyUserProfile = {
+        id: 'dummy-user-for-live-data',
+        userType: 'Instructor' as const,
+        firstName: 'Live',
+        lastName: 'Data',
+        email: 'live@safeviate.com',
+        role: 'demo-role',
+        logbookTemplateId: logbookTemplate.id,
+    };
+    
     return (
-        <div className="w-full">
+        <div className="w-full space-y-8">
             <MyLogbook userProfile={dummyUserProfile} />
+            <GeminiLogbook template={logbookTemplate} />
         </div>
     );
 }
