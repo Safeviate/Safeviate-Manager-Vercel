@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -9,7 +10,7 @@ import type { Booking } from '@/types/booking';
 import type { SpiConfig } from '../safety/safety-indicators/edit-spi-form';
 import { SPICard } from '../safety/safety-indicators/spi-card';
 import { AlertTriangle, BookCheck, CalendarClock, Plane } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
