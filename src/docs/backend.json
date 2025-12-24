@@ -539,6 +539,34 @@
       },
       "required": ["id", "aircraftId", "pilotId", "type", "bookingDate", "startTime", "endTime"]
     },
+    "LogbookTemplate": {
+      "title": "Logbook Template",
+      "type": "object",
+      "description": "Represents a saved structure for a flight logbook.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "description": "The user-defined name for this template." },
+        "columns": {
+          "type": "array",
+          "description": "The structured columns of the logbook table, allowing for nesting.",
+          "items": { "$ref": "#/backend/entities/LogbookColumn" }
+        }
+      },
+      "required": ["id", "name", "columns"]
+    },
+    "LogbookColumn": {
+        "title": "Logbook Column",
+        "type": "object",
+        "properties": {
+            "id": { "type": "string" },
+            "label": { "type": "string" },
+            "subColumns": {
+                "type": "array",
+                "items": { "$ref": "#/backend/entities/LogbookColumn" }
+            }
+        },
+        "required": ["id", "label"]
+    },
     "AircraftModelProfile": {
       "title": "Aircraft Model Profile",
       "type": "object",
@@ -1251,13 +1279,14 @@
         "properties": {
             "id": { "type": "string" },
             "auditId": { "type": "string" },
-            "findingId": { "type": "string", "description": "The ID of the checklist item this CAP is for." },
+            "findingId": { "type": "string" },
             "rootCauseAnalysis": { "type": "string" },
-            "status": { "type": "string", "enum": ["Open", "In Progress", "Closed", "Cancelled"] },
-            "responsiblePersonId": { "type": "string", "description": "The ID of the person responsible for this CAP." },
-            "dueDate": { "type": "string", "format": "date" }
+            "actions": {
+                "type": "array",
+                "items": { "$ref": "#/backend/entities/CorrectiveAction" }
+            }
         },
-        "required": ["id", "auditId", "findingId", "status"]
+        "required": ["id", "auditId", "findingId", "rootCauseAnalysis"]
     }
   },
   "auth": {
@@ -1375,6 +1404,20 @@
           "params": [
             { "name": "tenantId", "description": "Tenant ID." },
             { "name": "bookingId", "description": "Booking ID." }
+          ]
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/logbook-templates/{templateId}",
+        "definition": {
+          "entityName": "LogbookTemplate",
+          "schema": {
+            "$ref": "#/backend/entities/LogbookTemplate"
+          },
+          "description": "Stores saved structures for flight logbooks.",
+          "params": [
+            { "name": "tenantId", "description": "Tenant ID." },
+            { "name": "templateId", "description": "Template ID." }
           ]
         }
       },
@@ -1596,4 +1639,5 @@
     "reasoning": "The Firestore structure is designed to support a multi-tenant aviation academy management application, focusing on security, scalability, and ease of debugging. Authorization Independence is achieved through denormalization where needed, especially for collaborative data. Structural Segregation ensures that each collection has a homogeneous security posture. Access Modeling follows consistent patterns, utilizing path-based ownership for user-specific data and membership maps for collaborative entities. The structure is multi-tenant, where tenants are isolated from each other. The structure uses the tenants collection to keep a list of tenants and provides a tenant id for all other collections in the database. This strategy allows the application to manage multiple academies within the same system, each with its own set of data and settings.\\n\\n*   **Tenants:** The root level collection `tenants` stores individual tenant documents. Each tenant has its own unique ID and associated settings.\\n*   **Users:** User data is now split into `personnel` (non-flying staff) and `pilots` (students, instructors, private pilots) under each tenant to better segregate data models and security rules.\\n*   **Settings:** A generic `settings` collection is added under each tenant. This allows for storing various configuration documents, such as `document-expiry`, in a structured and scalable way without creating new top-level collections for each setting type.\\n*   **ChecklistResponses:** A new collection to store the completed checklists, linked to a tenant.\\n\\nQAPs (Rules are not Filters) is addressed by:\\n\\n*   Segregating data into collections with homogeneous security requirements.\\n*   Using path-based ownership for private data.\\n*   Employing membership maps for collaborative data, and storing these maps directly within the documents to avoid `get()` calls in security rules.\\n\\nSpecifically, the following denormalization strategies are used:\\n\\n*   Authorization context (e.g., members, ownerId) is copied into subcollection documents to avoid hierarchical dependencies.\\n*   Tenant ID is included in all documents to support multi-tenancy access control.\\n\\nThis design enables robust security rules that are simple to write, easy to understand, and highly performant."
   }
 }
+
 
