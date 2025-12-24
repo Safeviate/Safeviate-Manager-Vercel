@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Merge, Split, Text, GripVertical, PlusSquare, Trash2, AlignLeft, AlignCenter, AlignRight, SplitSquareHorizontal, SplitSquareVertical } from 'lucide-react';
+import { Merge, Split, Text, GripVertical, PlusSquare, Trash2, AlignLeft, AlignCenter, AlignRight, SplitSquareHorizontal, SplitSquareVertical, AlignVerticalTop, AlignVerticalCenter, AlignVerticalBottom } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // --- Types ---
@@ -21,6 +21,7 @@ interface CellData {
     isMerged: boolean;
     content: string;
     textAlign: 'left' | 'center' | 'right';
+    verticalAlign: 'top' | 'middle' | 'bottom';
     nestedGrid?: CellData[][];
 }
 
@@ -159,6 +160,15 @@ const ResizableTable = ({
     return selectedCells.some(path => JSON.stringify(path) === JSON.stringify(currentPath));
   };
 
+  const getVerticalAlignClass = (alignment: 'top' | 'middle' | 'bottom') => {
+    switch (alignment) {
+        case 'top': return 'align-top';
+        case 'middle': return 'align-middle';
+        case 'bottom': return 'align-bottom';
+        default: return 'align-top';
+    }
+  };
+
   return (
       <table
         ref={tableRef}
@@ -192,6 +202,7 @@ const ResizableTable = ({
                     style={{ textAlign: cell.textAlign, height: isNested ? 'auto' : `${rowHeight * cell.rowSpan}px` }}
                     className={cn(
                         "border border-muted p-0 relative select-none",
+                        getVerticalAlignClass(cell.verticalAlign),
                         isCellSelected(currentPath) && 'bg-primary/20 outline-2 outline-primary outline'
                     )}
                   >
@@ -302,7 +313,8 @@ export default function TableBuilderPage() {
                 fontSize: 14,
                 isMerged: false,
                 content: '',
-                textAlign: 'left'
+                textAlign: 'left',
+                verticalAlign: 'top',
             }))
         );
         setGrid(newGrid);
@@ -350,32 +362,56 @@ export default function TableBuilderPage() {
         if (selectedCells.length === 0) return;
         const newGrid = JSON.parse(JSON.stringify(grid));
         
-        const applyAlignmentRecursively = (currentGrid: CellData[][]) => {
-            currentGrid.forEach(row => {
-                row.forEach(cell => {
-                    cell.textAlign = alignment;
-                    if (cell.nestedGrid) {
-                        applyAlignmentRecursively(cell.nestedGrid);
-                    }
-                })
-            })
+        const applyAlignmentRecursively = (currentGrid: CellData[][], path: CellPath) => {
+            let target = currentGrid;
+             for(let i=0; i<path.length - 2; i+=2) {
+                if (target?.[path[i]]?.[path[i+1]]?.nestedGrid) {
+                    target = target[path[i] as number][path[i+1] as number].nestedGrid!;
+                } else {
+                    return; // Path is invalid
+                }
+            }
+            
+            const cell = target[path[path.length - 2] as number]?.[path[path.length - 1] as number];
+            if (cell) {
+                cell.textAlign = alignment;
+                if (cell.nestedGrid) {
+                    cell.nestedGrid.forEach(row => row.forEach(nestedCell => nestedCell.textAlign = alignment));
+                }
+            }
         }
 
         selectedCells.forEach((path) => {
-            let cell: any = newGrid;
-            for (let i = 0; i < path.length; i += 2) {
-                if(cell?.[path[i]]?.[path[i+1]]) {
-                     if (i + 2 < path.length) {
-                        cell = cell[path[i]][path[i+1]].nestedGrid;
-                    } else {
-                        const targetCell = cell[path[i]][path[i+1]];
-                        targetCell.textAlign = alignment;
-                        if (targetCell.nestedGrid) {
-                            applyAlignmentRecursively(targetCell.nestedGrid);
-                        }
-                    }
+            applyAlignmentRecursively(newGrid, path);
+        });
+        setGrid(newGrid);
+    };
+
+    const handleVerticalAlignChange = (alignment: 'top' | 'middle' | 'bottom') => {
+        if (selectedCells.length === 0) return;
+        const newGrid = JSON.parse(JSON.stringify(grid));
+        
+        const applyAlignmentRecursively = (currentGrid: CellData[][], path: CellPath) => {
+             let target = currentGrid;
+             for(let i=0; i<path.length - 2; i+=2) {
+                if (target?.[path[i]]?.[path[i+1]]?.nestedGrid) {
+                    target = target[path[i] as number][path[i+1] as number].nestedGrid!;
+                } else {
+                    return; // Path is invalid
                 }
             }
+            
+            const cell = target[path[path.length - 2] as number]?.[path[path.length - 1] as number];
+            if (cell) {
+                cell.verticalAlign = alignment;
+                if (cell.nestedGrid) {
+                    cell.nestedGrid.forEach(row => row.forEach(nestedCell => nestedCell.verticalAlign = alignment));
+                }
+            }
+        }
+
+        selectedCells.forEach((path) => {
+            applyAlignmentRecursively(newGrid, path);
         });
         setGrid(newGrid);
     };
@@ -525,6 +561,7 @@ export default function TableBuilderPage() {
             isMerged: false,
             content: '',
             textAlign: 'left',
+            verticalAlign: 'top',
         }));
         setGrid([...grid, newRow]);
     };
@@ -541,6 +578,7 @@ export default function TableBuilderPage() {
                 isMerged: false,
                 content: '',
                 textAlign: 'left',
+                verticalAlign: 'top',
             }
         ]);
         setGrid(newGrid);
@@ -627,6 +665,11 @@ export default function TableBuilderPage() {
                                 <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleTextAlignChange('center')}><AlignCenter /></Button></TooltipTrigger><TooltipContent><p>Align Center</p></TooltipContent></Tooltip>
                                 <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleTextAlignChange('right')}><AlignRight /></Button></TooltipTrigger><TooltipContent><p>Align Right</p></TooltipContent></Tooltip>
                              </div>
+                             <div className="flex items-center gap-1">
+                                <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleVerticalAlignChange('top')}><AlignVerticalTop /></Button></TooltipTrigger><TooltipContent><p>Align Top</p></TooltipContent></Tooltip>
+                                <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleVerticalAlignChange('middle')}><AlignVerticalCenter /></Button></TooltipTrigger><TooltipContent><p>Align Middle</p></TooltipContent></Tooltip>
+                                <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleVerticalAlignChange('bottom')}><AlignVerticalBottom /></Button></TooltipTrigger><TooltipContent><p>Align Bottom</p></TooltipContent></Tooltip>
+                             </div>
                              <Separator orientation='vertical' className='h-8' />
                              <Tooltip>
                                 <TooltipTrigger asChild>
@@ -705,3 +748,4 @@ export default function TableBuilderPage() {
         </TooltipProvider>
     );
 }
+
