@@ -27,6 +27,7 @@ import {
   Network,
   CalendarDays,
   FileJson,
+  Table,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -239,6 +240,11 @@ export const menuConfig: MenuItem[] = [
         href: '/development/logbook-parser',
         label: 'Logbook Parser',
         description: 'Parse the structure of a logbook table.',
+      },
+      {
+        href: '/development/table-builder',
+        label: 'Table Builder',
+        description: 'Visually create and resize tables.',
       },
     ],
   },
