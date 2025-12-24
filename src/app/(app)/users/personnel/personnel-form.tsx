@@ -23,6 +23,7 @@ import type { Role } from '../../admin/roles/page';
 import type { Department } from '../../admin/department/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Personnel, PilotProfile } from './page';
+import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -30,6 +31,7 @@ interface PersonnelFormProps {
   tenantId: string;
   roles: Role[];
   departments: Department[];
+  logbookTemplates: LogbookTemplate[];
 }
 
 const userTypes: UserProfile['userType'][] = ["Personnel", "Instructor", "Private Pilot", "Student"];
@@ -38,7 +40,7 @@ const isPilotUserType = (userType: UserProfile['userType'] | ''): userType is Pi
     return userType === 'Student' || userType === 'Private Pilot' || userType === 'Instructor';
 }
 
-export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormProps) {
+export function PersonnelForm({ tenantId, roles, departments, logbookTemplates }: PersonnelFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -50,6 +52,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
   const [email, setEmail] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [selectedLogbookTemplate, setSelectedLogbookTemplate] = useState<LogbookTemplate | null>(null);
   
   const handleAddUser = () => {
     if (!userType || !firstName.trim() || !lastName.trim() || !email.trim()) {
@@ -90,6 +93,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
             lastName,
             email,
             role: selectedRole!.id,
+            logbookTemplateId: selectedLogbookTemplate?.id,
         };
     } else {
         collectionName = 'personnel';
@@ -126,6 +130,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
     setEmail('');
     setSelectedDepartment(null);
     setSelectedRole(null);
+    setSelectedLogbookTemplate(null);
     setIsOpen(false);
   }
 
@@ -137,6 +142,11 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
   const handleDepartmentChange = (deptId: string) => {
     const dept = departments.find(d => d.id === deptId);
     setSelectedDepartment(dept || null);
+  }
+  
+  const handleLogbookTemplateChange = (templateId: string) => {
+    const template = logbookTemplates.find(t => t.id === templateId);
+    setSelectedLogbookTemplate(template || null);
   }
 
   return (
@@ -211,6 +221,22 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
                             <SelectContent>
                                 {departments.map(dept => (
                                     <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
+
+                {isPilotUserType(userType) && (
+                    <div className="space-y-2">
+                        <Label htmlFor="logbookTemplate">Logbook Template</Label>
+                        <Select onValueChange={handleLogbookTemplateChange} value={selectedLogbookTemplate?.id}>
+                            <SelectTrigger id="logbookTemplate">
+                                <SelectValue placeholder="Select a logbook" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {logbookTemplates.map(template => (
+                                    <SelectItem key={template.id} value={template.id}>{template.name}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>

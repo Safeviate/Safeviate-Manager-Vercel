@@ -16,7 +16,6 @@ import { permissionsConfig } from '@/lib/permissions-config';
 import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
-import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +24,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { TagInput } from '@/components/ui/tag-input';
+import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
 
 type UserProfile = Personnel | PilotProfile;
 

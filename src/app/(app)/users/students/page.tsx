@@ -10,6 +10,7 @@ import { StudentsTable } from './students-table';
 import { PersonnelForm } from '../personnel/personnel-form';
 import type { Role } from '../../admin/roles/page';
 import type { Department } from '../../admin/department/page';
+import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
 
 export default function StudentsPage() {
   const firestore = useFirestore();
@@ -38,13 +39,19 @@ export default function StudentsPage() {
         : null,
     [firestore]
   );
+  
+  const logbookTemplatesQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, `tenants/${tenantId}/logbook-templates`) : null),
+    [firestore, tenantId]
+  );
 
   const { data: pilots, isLoading: isLoadingPilots, error: pilotsError } = useCollection<PilotProfile>(pilotsQuery);
   const { data: roles, isLoading: isLoadingRoles, error: rolesError } = useCollection<Role>(rolesQuery);
   const { data: departments, isLoading: isLoadingDepts, error: deptsError } = useCollection<Department>(departmentsQuery);
+  const { data: logbookTemplates, isLoading: isLoadingTemplates } = useCollection<LogbookTemplate>(logbookTemplatesQuery);
 
 
-  const isLoading = isLoadingPilots || isLoadingRoles || isLoadingDepts;
+  const isLoading = isLoadingPilots || isLoadingRoles || isLoadingDepts || isLoadingTemplates;
   const error = pilotsError || rolesError || deptsError;
 
   return (
@@ -54,7 +61,7 @@ export default function StudentsPage() {
                 <h1 className="text-3xl font-bold tracking-tight">Students</h1>
                 <p className="text-muted-foreground">Manage all students in your organization.</p>
             </div>
-            <PersonnelForm tenantId={tenantId} roles={roles || []} departments={departments || []} />
+            <PersonnelForm tenantId={tenantId} roles={roles || []} departments={departments || []} logbookTemplates={logbookTemplates || []} />
         </div>
       <Card>
         <CardContent className="p-0">

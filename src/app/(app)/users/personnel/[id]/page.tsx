@@ -7,7 +7,6 @@ import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase
 import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
-import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
 import { EditPersonnelForm } from './edit-personnel-form';
 import { ViewPersonnelDetails } from './view-personnel-details';
 import { UserLogbook } from './user-logbook';
@@ -15,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
 
 interface UserProfilePageProps {
     params: { id: string };

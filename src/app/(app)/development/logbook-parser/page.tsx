@@ -21,7 +21,7 @@ interface HeaderCell {
   rowSpan: number;
 }
 
-interface LogbookTemplate {
+export interface LogbookTemplate {
     id: string;
     name: string;
     columns: LogbookColumn[];
