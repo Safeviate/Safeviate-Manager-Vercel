@@ -1,17 +1,19 @@
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Loader2, ClipboardPaste, Wand2, Table, Trash2, PlusCircle, Save, X } from 'lucide-react';
+import { Loader2, ClipboardPaste, Wand2, Table, Trash2, PlusCircle, Save, X, GripVertical } from 'lucide-react';
 import { parseLogbook, type LogbookColumn } from '@/ai/flows/parse-logbook-flow';
 import Image from 'next/image';
 import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
+
 
 // --- Types ---
 interface HeaderCell {
@@ -86,7 +88,9 @@ const calculateSpans = (columns: LogbookColumn[]): { headerRows: HeaderCell[][],
 
 // --- Editable Table Preview Component ---
 const TablePreview = ({ columns, setColumns }: { columns: LogbookColumn[], setColumns: (cols: LogbookColumn[]) => void }) => {
-  
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+
   const handleLabelChange = (id: string, newLabel: string) => {
     const updateRecursively = (cols: LogbookColumn[]): LogbookColumn[] => {
       return cols.map(col => {
@@ -101,6 +105,36 @@ const TablePreview = ({ columns, setColumns }: { columns: LogbookColumn[], setCo
     };
     setColumns(updateRecursively(columns));
   };
+
+  const handleDragStart = (e: React.DragEvent<HTMLTableHeaderCellElement>, index: number) => {
+    dragItem.current = index;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+  
+  const handleDragOver = (e: React.DragEvent<HTMLTableHeaderCellElement>, index: number) => {
+    e.preventDefault(); // This is necessary to allow a drop
+    dragOverItem.current = index;
+    e.currentTarget.classList.add('bg-primary/20', 'border-primary');
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLTableHeaderCellElement>) => {
+    e.currentTarget.classList.remove('bg-primary/20', 'border-primary');
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLTableHeaderCellElement>) => {
+    e.currentTarget.classList.remove('bg-primary/20', 'border-primary');
+    if (dragItem.current === null || dragOverItem.current === null) return;
+    
+    const newColumns = [...columns];
+    const draggedItemContent = newColumns.splice(dragItem.current, 1)[0];
+    newColumns.splice(dragOverItem.current, 0, draggedItemContent);
+    
+    dragItem.current = null;
+    dragOverItem.current = null;
+
+    setColumns(newColumns);
+  };
   
   const { headerRows, totalCols } = calculateSpans(columns);
 
@@ -112,20 +146,31 @@ const TablePreview = ({ columns, setColumns }: { columns: LogbookColumn[], setCo
         <thead className="text-xs text-gray-700 uppercase bg-gray-50">
           {headerRows.map((row, rowIndex) => (
             <tr key={rowIndex}>
-              {row.map((cell) => (
-                <th
-                  key={cell.id}
-                  colSpan={cell.colSpan}
-                  rowSpan={cell.rowSpan}
-                  className="px-1 py-1 border relative group"
-                >
-                    <Input
-                        value={cell.label}
-                        onChange={(e) => handleLabelChange(cell.id, e.target.value)}
-                        className="bg-transparent border-none text-center font-semibold text-gray-700 focus-visible:ring-1 focus-visible:ring-primary focus-visible:bg-white"
-                    />
-                </th>
-              ))}
+              {row.map((cell, cellIndex) => {
+                const isTopLevelDraggable = rowIndex === 0;
+                return (
+                  <th
+                    key={cell.id}
+                    colSpan={cell.colSpan}
+                    rowSpan={cell.rowSpan}
+                    className={cn("px-1 py-1 border relative group transition-colors", isTopLevelDraggable && "cursor-move")}
+                    draggable={isTopLevelDraggable}
+                    onDragStart={(e) => isTopLevelDraggable && handleDragStart(e, cellIndex)}
+                    onDragOver={(e) => isTopLevelDraggable && handleDragOver(e, cellIndex)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => isTopLevelDraggable && handleDrop(e)}
+                  >
+                      <div className="flex items-center justify-center">
+                          {isTopLevelDraggable && <GripVertical className="h-4 w-4 text-muted-foreground absolute left-1 top-1/2 -translate-y-1/2" />}
+                          <Input
+                              value={cell.label}
+                              onChange={(e) => handleLabelChange(cell.id, e.target.value)}
+                              className="bg-transparent border-none text-center font-semibold text-gray-700 focus-visible:ring-1 focus-visible:ring-primary focus-visible:bg-white"
+                          />
+                      </div>
+                  </th>
+                )
+              })}
             </tr>
           ))}
         </thead>
