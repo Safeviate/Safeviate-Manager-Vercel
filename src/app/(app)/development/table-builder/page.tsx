@@ -140,20 +140,30 @@ const ResizableTable = ({
   const cols = grid[0].length;
 
   const handleContentChange = (e: React.FormEvent<HTMLDivElement>, currentPath: CellPath) => {
-    const newGrid = JSON.parse(JSON.stringify(grid));
-    let cell: any = newGrid;
-    
-    // Navigate to the correct cell in the potentially nested structure
-    for (let i = 0; i < currentPath.length; i += 2) {
-        if (cell[currentPath[i]] && cell[currentPath[i+1]]) {
-            if (i + 2 < currentPath.length) {
-                cell = cell[currentPath[i]][currentPath[i+1]].nestedGrid;
-            } else {
-                cell[currentPath[i]][currentPath[i+1]].content = e.currentTarget.textContent || '';
-            }
-        }
-    }
-    setGrid(newGrid);
+      const newGrid = JSON.parse(JSON.stringify(grid));
+      
+      let target: any = newGrid;
+      let parent: any = null;
+      let lastSegment: string | number = -1;
+
+      for (let i = 0; i < currentPath.length; i++) {
+          const segment = currentPath[i];
+          if (i === currentPath.length - 1) {
+              parent = target;
+              lastSegment = segment;
+          } else {
+              target = target[segment];
+          }
+      }
+
+      if (parent && lastSegment !== -1) {
+          const cellToUpdate = parent[lastSegment];
+          if (cellToUpdate) {
+            cellToUpdate.content = e.currentTarget.textContent || '';
+          }
+      }
+      
+      setGrid(newGrid);
   };
   
   const isCellSelected = (currentPath: CellPath) => {
@@ -365,7 +375,7 @@ export default function TableBuilderPage() {
         const applyAlignmentRecursively = (currentGrid: CellData[][], path: CellPath) => {
             let target = currentGrid;
              for(let i=0; i<path.length - 2; i+=2) {
-                if (target?.[path[i]]?.[path[i+1]]?.nestedGrid) {
+                if (target?.[path[i] as number]?.[path[i+1] as number]?.nestedGrid) {
                     target = target[path[i] as number][path[i+1] as number].nestedGrid!;
                 } else {
                     return; // Path is invalid
@@ -394,7 +404,7 @@ export default function TableBuilderPage() {
         const applyAlignmentRecursively = (currentGrid: CellData[][], path: CellPath) => {
              let target = currentGrid;
              for(let i=0; i<path.length - 2; i+=2) {
-                if (target?.[path[i]]?.[path[i+1]]?.nestedGrid) {
+                if (target?.[path[i] as number]?.[path[i+1] as number]?.nestedGrid) {
                     target = target[path[i] as number][path[i+1] as number].nestedGrid!;
                 } else {
                     return; // Path is invalid
@@ -609,7 +619,7 @@ export default function TableBuilderPage() {
         <TooltipProvider>
         <div className="space-y-6">
              <h1 className="text-3xl font-bold tracking-tight">Interactive Table Builder</h1>
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <div className="space-y-6">
                  <TableSelector onSelect={({rows, cols}) => createGrid(rows, cols)} />
                  <Card>
                     <CardHeader className="pb-4">
