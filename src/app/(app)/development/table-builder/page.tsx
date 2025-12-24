@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Merge, Split, Text, GripVertical, PlusSquare, Trash2, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { Merge, Split, Text, GripVertical, PlusSquare, Trash2, AlignLeft, AlignCenter, AlignRight, SplitSquareHorizontal, SplitSquareVertical } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // --- Types ---
@@ -132,9 +132,9 @@ const ResizableTable = ({
   const rows = grid.length;
   const cols = grid[0].length;
 
-  const handleContentChange = (row: number, col: number, content: string) => {
+  const handleContentChange = (e: React.FormEvent<HTMLDivElement>, row: number, col: number) => {
     const newGrid = grid.map(r => r.map(c => ({...c})));
-    newGrid[row][col].content = content;
+    newGrid[row][col].content = e.currentTarget.textContent || '';
     setGrid(newGrid);
   };
   
@@ -178,7 +178,7 @@ const ResizableTable = ({
                     <div
                       contentEditable
                       suppressContentEditableWarning
-                      onBlur={(e) => handleContentChange(rowIndex, colIndex, e.currentTarget.textContent || '')}
+                      onInput={(e) => handleContentChange(e, rowIndex, colIndex)}
                       style={{ fontSize: `${cell.fontSize}px` }}
                       className="w-full h-full p-2 focus:outline-none"
                     >
@@ -407,6 +407,54 @@ export default function TableBuilderPage() {
       setSelectedCells([]);
     };
 
+    const handleSplitCell = (direction: 'vertical' | 'horizontal') => {
+        if (selectedCells.length !== 1) return;
+        const { row: selRow, col: selCol } = selectedCells[0];
+        
+        const newGrid = grid.map(r => r.map(c => ({...c})));
+
+        if (direction === 'vertical') {
+            const newColIndex = selCol + 1;
+            // Insert new column data for each row
+            for(let i = 0; i < newGrid.length; i++) {
+                const newCell: CellData = { id: `${i}-${newColIndex}`, rowSpan: 1, colSpan: 1, fontSize: 14, isMerged: false, content: '', textAlign: 'left' };
+                newGrid[i].splice(newColIndex, 0, newCell);
+            }
+            // Update colSpan of the selected cell
+            newGrid[selRow][selCol].colSpan = 2;
+            
+            // Adjust column widths
+            const newWidths = [...colWidths];
+            const originalWidth = newWidths[selCol];
+            newWidths[selCol] = originalWidth / 2;
+            newWidths.splice(newColIndex, 0, originalWidth / 2);
+            setColWidths(newWidths);
+
+        } else { // horizontal
+            const newRowIndex = selRow + 1;
+            const newRow: CellData[] = Array.from({ length: newGrid[0].length }, (_, colIndex) => ({ id: `${newRowIndex}-${colIndex}`, rowSpan: 1, colSpan: 1, fontSize: 14, isMerged: false, content: '', textAlign: 'left' }));
+            newGrid.splice(newRowIndex, 0, newRow);
+            
+            // Update rowSpan of cells in the original row
+            for(let i=0; i < newGrid[selRow].length; i++) {
+                if(newGrid[selRow][i].isMerged) continue;
+                if(i === selCol) {
+                    newGrid[selRow][i].rowSpan += 1;
+                } else {
+                    // Check if the cell to the left needs its rowspan increased to cover the new row
+                    if (i > 0 && newGrid[selRow][i-1].isMerged) {
+                        // find parent and increase its rowspan
+                    } else {
+                       newGrid[selRow][i].rowSpan += 1;
+                    }
+                }
+            }
+        }
+
+        setGrid(newGrid);
+        setSelectedCells([]);
+    };
+
     const handleAddRow = () => {
         if (grid.length === 0) return;
         const cols = grid[0].length;
@@ -486,7 +534,23 @@ export default function TableBuilderPage() {
                                         <Split />
                                     </Button>
                                 </TooltipTrigger>
-                                <TooltipContent><p>Split Cells</p></TooltipContent>
+                                <TooltipContent><p>Unmerge Cells</p></TooltipContent>
+                            </Tooltip>
+                             <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="outline" size="icon" onClick={() => handleSplitCell('vertical')} disabled={selectedCells.length !== 1}>
+                                        <SplitSquareVertical />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Split Cell Vertically</p></TooltipContent>
+                            </Tooltip>
+                             <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="outline" size="icon" onClick={() => handleSplitCell('horizontal')} disabled={selectedCells.length !== 1}>
+                                        <SplitSquareHorizontal />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Split Cell Horizontally</p></TooltipContent>
                             </Tooltip>
                             <Separator orientation='vertical' className='h-8' />
                              <div className="flex items-center gap-2">
