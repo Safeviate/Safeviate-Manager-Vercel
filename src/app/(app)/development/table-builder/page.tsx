@@ -356,46 +356,55 @@ export default function TableBuilderPage() {
     };
     
     const handleUnmergeCells = () => {
-        if (selectedCells.length === 0) return;
-        const newGrid = grid.map(r => r.map(c => ({...c})));
-
-        selectedCells.forEach(({ row, col }) => {
-            const cell = newGrid[row][col];
-            // Find the top-left cell of a potential merged block
-            let parentRow = row;
-            let parentCol = col;
-            
-            // This loop correctly finds the origin cell of a merged block
-            if(cell.isMerged) {
-                let found = false;
-                for(let r=0; r <= row; r++) {
-                    for(let c=0; c <= col; c++) {
-                        if (r + newGrid[r][c].rowSpan > row && c + newGrid[r][c].colSpan > col) {
-                            parentRow = r;
-                            parentCol = c;
-                            found = true;
-                            break;
-                        }
-                    }
-                    if(found) break;
-                }
+      if (selectedCells.length === 0) return;
+      const newGrid = grid.map(r => r.map(c => ({...c})));
+    
+      const processedParents = new Set<string>();
+    
+      selectedCells.forEach(({ row, col }) => {
+        let parentRow = row;
+        let parentCol = col;
+        let parentKey = `${parentRow}-${parentCol}`;
+    
+        // If the current cell is part of a merged block, find its top-left parent
+        if (newGrid[row][col].isMerged) {
+          let found = false;
+          for (let r = 0; r <= row; r++) {
+            for (let c = 0; c <= col; c++) {
+              if (!newGrid[r][c].isMerged && r + newGrid[r][c].rowSpan > row && c + newGrid[r][c].colSpan > col) {
+                parentRow = r;
+                parentCol = c;
+                found = true;
+                break;
+              }
             }
-
-
-            const parentCell = newGrid[parentRow][parentCol];
-
-            // Unmerge all cells within that block
-            for (let i = parentRow; i < parentRow + parentCell.rowSpan; i++) {
-                for (let j = parentCol; j < parentCol + parentCell.colSpan; j++) {
-                    newGrid[i][j].isMerged = false;
-                    newGrid[i][j].rowSpan = 1;
-                    newGrid[i][j].colSpan = 1;
-                }
-            }
-        });
-
-        setGrid(newGrid);
-        setSelectedCells([]);
+            if (found) break;
+          }
+        }
+        
+        parentKey = `${parentRow}-${parentCol}`;
+    
+        // Only process this parent block once
+        if (processedParents.has(parentKey)) {
+          return;
+        }
+        processedParents.add(parentKey);
+    
+        const parentCell = newGrid[parentRow][parentCol];
+        const { rowSpan, colSpan } = parentCell;
+    
+        // Revert all cells within the merged block to their original state
+        for (let i = parentRow; i < parentRow + rowSpan; i++) {
+          for (let j = parentCol; j < parentCol + colSpan; j++) {
+            newGrid[i][j].isMerged = false;
+            newGrid[i][j].rowSpan = 1;
+            newGrid[i][j].colSpan = 1;
+          }
+        }
+      });
+    
+      setGrid(newGrid);
+      setSelectedCells([]);
     };
 
     const handleAddRow = () => {
@@ -477,7 +486,7 @@ export default function TableBuilderPage() {
                                         <Split />
                                     </Button>
                                 </TooltipTrigger>
-                                <TooltipContent><p>Unmerge Cells</p></TooltipContent>
+                                <TooltipContent><p>Split Cells</p></TooltipContent>
                             </Tooltip>
                             <Separator orientation='vertical' className='h-8' />
                              <div className="flex items-center gap-2">
@@ -573,4 +582,3 @@ export default function TableBuilderPage() {
         </TooltipProvider>
     );
 }
-
