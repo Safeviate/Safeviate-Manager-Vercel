@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Merge, Split, Text, GripVertical, PlusSquare, Trash2 } from 'lucide-react';
+import { Merge, Split, Text, GripVertical, PlusSquare, Trash2, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // --- Types ---
@@ -20,6 +20,7 @@ interface CellData {
     fontSize: number; // in pixels
     isMerged: boolean;
     content: string;
+    textAlign: 'left' | 'center' | 'right';
 }
 
 // --- Components ---
@@ -142,6 +143,7 @@ const ResizableTable = ({
                     colSpan={cell.colSpan}
                     onMouseDown={() => onCellMouseDown(rowIndex, colIndex)}
                     onMouseEnter={() => onCellMouseEnter(rowIndex, colIndex)}
+                    style={{ textAlign: cell.textAlign }}
                     className={cn(
                         "border border-muted p-0 h-12 relative select-none",
                         isCellSelected(rowIndex, colIndex) && 'bg-primary/20 outline-2 outline-primary outline'
@@ -233,7 +235,8 @@ export default function TableBuilderPage() {
                 colSpan: 1,
                 fontSize: 14,
                 isMerged: false,
-                content: ''
+                content: '',
+                textAlign: 'left'
             }))
         );
         setGrid(newGrid);
@@ -281,6 +284,15 @@ export default function TableBuilderPage() {
         setGrid(newGrid);
     };
     
+    const handleTextAlignChange = (alignment: 'left' | 'center' | 'right') => {
+        if (selectedCells.length === 0) return;
+        const newGrid = [...grid];
+        selectedCells.forEach(({ row, col }) => {
+            newGrid[row][col] = { ...newGrid[row][col], textAlign: alignment };
+        });
+        setGrid(newGrid);
+    };
+
     const handleMergeCells = () => {
         if (selectedCells.length <= 1) return;
 
@@ -369,7 +381,8 @@ export default function TableBuilderPage() {
             colSpan: 1,
             fontSize: 14,
             isMerged: false,
-            content: ''
+            content: '',
+            textAlign: 'left',
         }));
         setGrid([...grid, newRow]);
     };
@@ -384,7 +397,8 @@ export default function TableBuilderPage() {
                 colSpan: 1,
                 fontSize: 14,
                 isMerged: false,
-                content: ''
+                content: '',
+                textAlign: 'left',
             }
         ]);
         setGrid(newGrid);
@@ -449,6 +463,11 @@ export default function TableBuilderPage() {
                                     onChange={(e) => handleFontSizeChange(parseInt(e.target.value, 10))}
                                     className="w-20"
                                 />
+                             </div>
+                             <div className="flex items-center gap-1">
+                                <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleTextAlignChange('left')}><AlignLeft /></Button></TooltipTrigger><TooltipContent><p>Align Left</p></TooltipContent></Tooltip>
+                                <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleTextAlignChange('center')}><AlignCenter /></Button></TooltipTrigger><TooltipContent><p>Align Center</p></TooltipContent></Tooltip>
+                                <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleTextAlignChange('right')}><AlignRight /></Button></TooltipTrigger><TooltipContent><p>Align Right</p></TooltipContent></Tooltip>
                              </div>
                              <Separator orientation='vertical' className='h-8' />
                              <Tooltip>
