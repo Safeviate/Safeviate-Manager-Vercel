@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { DocumentExpirySettings } from '../admin/document-dates/page';
 import { MyLogbook } from './my-logbook';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 export default function MyDashboardPage() {
@@ -145,100 +146,112 @@ export default function MyDashboardPage() {
     }
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="lg:col-span-2">
-                <CardHeader>
-                    <CardTitle>My Tasks</CardTitle>
-                    <CardDescription>A list of investigation tasks and corrective actions assigned to you.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Task</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Due Date</TableHead>
-                                <TableHead className="text-right">Link</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {myTasks.length > 0 ? myTasks.map(task => (
-                                <TableRow key={task.id}>
-                                    <TableCell>{task.description}</TableCell>
-                                    <TableCell><Badge variant="outline">{task.type}</Badge></TableCell>
-                                    <TableCell>{task.dueDate ? format(new Date(task.dueDate), 'PPP') : 'N/A'}</TableCell>
-                                    <TableCell className="text-right"><Button asChild variant="outline" size="sm"><Link href={task.link}>View</Link></Button></TableCell>
-                                </TableRow>
-                            )) : (
-                                <TableRow><TableCell colSpan={4} className="h-24 text-center">No outstanding tasks assigned to you.</TableCell></TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+        <Tabs defaultValue="information" className="space-y-6">
+            <TabsList>
+                <TabsTrigger value="information">Information</TabsTrigger>
+                {isPilotProfile(userProfile) && <TabsTrigger value="logbook">Logbook</TabsTrigger>}
+            </TabsList>
+            <TabsContent value="information">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Card className="lg:col-span-2">
+                        <CardHeader>
+                            <CardTitle>My Tasks</CardTitle>
+                            <CardDescription>A list of investigation tasks and corrective actions assigned to you.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Task</TableHead>
+                                        <TableHead>Type</TableHead>
+                                        <TableHead>Due Date</TableHead>
+                                        <TableHead className="text-right">Link</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {myTasks.length > 0 ? myTasks.map(task => (
+                                        <TableRow key={task.id}>
+                                            <TableCell>{task.description}</TableCell>
+                                            <TableCell><Badge variant="outline">{task.type}</Badge></TableCell>
+                                            <TableCell>{task.dueDate ? format(new Date(task.dueDate), 'PPP') : 'N/A'}</TableCell>
+                                            <TableCell className="text-right"><Button asChild variant="outline" size="sm"><Link href={task.link}>View</Link></Button></TableCell>
+                                        </TableRow>
+                                    )) : (
+                                        <TableRow><TableCell colSpan={4} className="h-24 text-center">No outstanding tasks assigned to you.</TableCell></TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>My Upcoming Bookings</CardTitle>
-                </CardHeader>
-                <CardContent>
-                        <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Aircraft</TableHead>
-                                <TableHead>Type</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {upcomingBookings && upcomingBookings.length > 0 ? upcomingBookings.map(booking => (
-                                <TableRow key={booking.id}>
-                                    <TableCell>{format(new Date(booking.bookingDate), 'PPP')} {booking.startTime}</TableCell>
-                                    <TableCell>{booking.aircraftId}</TableCell>
-                                    <TableCell>{booking.type}</TableCell>
-                                </TableRow>
-                            )) : (
-                                <TableRow><TableCell colSpan={3} className="h-24 text-center">No upcoming bookings.</TableCell></TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-            
-            <Card>
-                <CardHeader>
-                    <CardTitle>My Document Status</CardTitle>
-                </CardHeader>
-                <CardContent>
-                        <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Document</TableHead>
-                                <TableHead>Expires</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {documentStatus.length > 0 ? documentStatus.map(doc => (
-                                <TableRow key={doc.name}>
-                                    <TableCell className="flex items-center gap-2">
-                                        <span className="h-2.5 w-2.5 rounded-full" style={{backgroundColor: doc.color}} />
-                                        {doc.name}
-                                    </TableCell>
-                                    <TableCell>{doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'N/A'}</TableCell>
-                                </TableRow>
-                            )) : (
-                                <TableRow><TableCell colSpan={2} className="h-24 text-center">No documents found or required.</TableCell></TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-            
-            {userProfile && (
-              <div className="lg:col-span-2">
-                <MyLogbook userProfile={userProfile} />
-              </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>My Upcoming Bookings</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                                <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Aircraft</TableHead>
+                                        <TableHead>Type</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {upcomingBookings && upcomingBookings.length > 0 ? upcomingBookings.map(booking => (
+                                        <TableRow key={booking.id}>
+                                            <TableCell>{format(new Date(booking.bookingDate), 'PPP')} {booking.startTime}</TableCell>
+                                            <TableCell>{booking.aircraftId}</TableCell>
+                                            <TableCell>{booking.type}</TableCell>
+                                        </TableRow>
+                                    )) : (
+                                        <TableRow><TableCell colSpan={3} className="h-24 text-center">No upcoming bookings.</TableCell></TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                    
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>My Document Status</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                                <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Document</TableHead>
+                                        <TableHead>Expires</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {documentStatus.length > 0 ? documentStatus.map(doc => (
+                                        <TableRow key={doc.name}>
+                                            <TableCell className="flex items-center gap-2">
+                                                <span className="h-2.5 w-2.5 rounded-full" style={{backgroundColor: doc.color}} />
+                                                {doc.name}
+                                            </TableCell>
+                                            <TableCell>{doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'N/A'}</TableCell>
+                                        </TableRow>
+                                    )) : (
+                                        <TableRow><TableCell colSpan={2} className="h-24 text-center">No documents found or required.</TableCell></TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+            </TabsContent>
+            {isPilotProfile(userProfile) && (
+                 <TabsContent value="logbook">
+                    <MyLogbook userProfile={userProfile} />
+                </TabsContent>
             )}
-        </div>
+        </Tabs>
     );
 }
+function isPilotProfile(userProfile: PilotProfile | undefined): userProfile is PilotProfile {
+    return userProfile?.userType === 'Student' || userProfile?.userType === 'Private Pilot' || userProfile?.userType === 'Instructor';
+}
+
+    
