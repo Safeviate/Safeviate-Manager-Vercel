@@ -69,6 +69,55 @@ const EditableCell = ({
   );
 };
 
+const ResizableHeader = ({ colWidths, setColWidths }: { colWidths: number[]; setColWidths: React.Dispatch<React.SetStateAction<number[]>> }) => {
+    const resizingColIndex = useRef<number | null>(null);
+    const startCursorX = useRef(0);
+    const startWidth = useRef(0);
+
+    const onMouseDown = (e: React.MouseEvent, index: number) => {
+        e.preventDefault();
+        resizingColIndex.current = index;
+        startCursorX.current = e.clientX;
+        startWidth.current = colWidths[index];
+    };
+    
+    const onMouseMove = useCallback((e: MouseEvent) => {
+        if (resizingColIndex.current === null) return;
+        const newWidth = startWidth.current + e.clientX - startCursorX.current;
+        setColWidths(prev => {
+            const newColWidths = [...prev];
+            newColWidths[resizingColIndex.current!] = Math.max(50, newWidth);
+            return newColWidths;
+        });
+    }, [setColWidths]);
+
+    const onMouseUp = useCallback(() => {
+        resizingColIndex.current = null;
+    }, []);
+
+    useEffect(() => {
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+        return () => {
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+        };
+    }, [onMouseMove, onMouseUp]);
+
+    return (
+        <div className="flex sticky top-0 z-10 bg-muted" style={{ minWidth: `${colWidths.reduce((a, b) => a + b, 0)}px`}}>
+            {colWidths.map((width, i) => (
+                <div key={i} className="relative h-8 border-b border-r border-border" style={{ width: `${width}px` }}>
+                    <div
+                        onMouseDown={(e) => onMouseDown(e, i)}
+                        className="absolute top-0 right-0 h-full w-2 cursor-col-resize z-20"
+                    />
+                </div>
+            ))}
+        </div>
+    );
+};
+
 
 const ResizableTable = ({
   grid,
@@ -80,7 +129,6 @@ const ResizableTable = ({
   colWidths,
   rowHeight,
   handleContentChange,
-  onMouseDownResizer,
   pathPrefix = []
 }: {
   grid: CellData[][];
@@ -92,7 +140,6 @@ const ResizableTable = ({
   colWidths: number[];
   rowHeight: number;
   handleContentChange: (path: CellPath, content: string) => void;
-  onMouseDownResizer: (event: React.MouseEvent, index: number) => void;
   pathPrefix?: CellPath;
 }) => {
     const tableRef = useRef<HTMLTableElement>(null);
@@ -129,18 +176,6 @@ const ResizableTable = ({
                 <col key={i} style={{ width: `${width}px` }} />
             ))}
         </colgroup>
-        <thead className='sticky top-0 z-10 bg-muted'>
-            <tr>
-              {colWidths.map((_, i) => (
-                <th key={`header-${i}`} className="relative h-8 border-b border-r border-border p-0">
-                  <div
-                    onMouseDown={(e) => onMouseDownResizer(e, i)}
-                    className="absolute top-0 right-0 h-full w-2 cursor-col-resize z-20"
-                  />
-                </th>
-              ))}
-            </tr>
-        </thead>
         <tbody>
           {Array.from({ length: rows }).map((_, rowIndex) => (
             <tr key={rowIndex}>
@@ -178,7 +213,6 @@ const ResizableTable = ({
                             colWidths={[]} // Nested tables don't control main widths
                             rowHeight={rowHeight}
                             handleContentChange={handleContentChange}
-                            onMouseDownResizer={onMouseDownResizer}
                             pathPrefix={[...currentPath, 'nestedGrid']}
                         />
                     ) : (
@@ -251,46 +285,6 @@ export default function TableBuilderPage() {
     const [fontSize, setFontSize] = useState(14);
     const rowHeight = 48; // px
 
-    const resizingColIndex = useRef<number | null>(null);
-    const startCursorX = useRef(0);
-    const startWidth = useRef(0);
-
-    const handleColResize = useCallback((index: number, newWidth: number) => {
-      setColWidths(prev => {
-        const newColWidths = [...prev];
-        newColWidths[index] = Math.max(50, newWidth); // min width 50px
-        return newColWidths;
-      });
-    }, []);
-
-    const onMouseDownResizer = useCallback((event: React.MouseEvent, index: number) => {
-      event.preventDefault();
-      resizingColIndex.current = index;
-      startCursorX.current = event.clientX;
-      startWidth.current = colWidths[index];
-    }, [colWidths]);
-
-    const onMouseMove = useCallback((event: MouseEvent) => {
-      if (resizingColIndex.current === null) return;
-      
-      const newWidth = startWidth.current + event.clientX - startCursorX.current;
-      handleColResize(resizingColIndex.current, newWidth);
-    }, [handleColResize]);
-
-    const onMouseUpResizer = useCallback(() => {
-        resizingColIndex.current = null;
-    }, []);
-
-    useEffect(() => {
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUpResizer);
-
-        return () => {
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUpResizer);
-        };
-    }, [onMouseMove, onMouseUpResizer]);
-    
     const createGrid = (rows: number, cols: number) => {
         const newGrid: CellData[][] = Array.from({ length: rows }, (_, rowIndex) => 
             Array.from({ length: cols }, (_, colIndex) => ({
@@ -769,7 +763,8 @@ export default function TableBuilderPage() {
                 <CardContent>
                     {grid.length > 0 ? (
                         <ScrollArea className="w-full whitespace-nowrap border rounded-lg" style={{ height: '600px' }}>
-                          <div className='p-1'>
+                          <div className='p-4'>
+                              <ResizableHeader colWidths={colWidths} setColWidths={setColWidths} />
                               <ResizableTable 
                                   grid={grid} 
                                   setGrid={setGrid}
@@ -780,7 +775,6 @@ export default function TableBuilderPage() {
                                   colWidths={colWidths}
                                   rowHeight={rowHeight}
                                   handleContentChange={handleContentChange}
-                                  onMouseDownResizer={onMouseDownResizer}
                               />
                            </div>
                            <ScrollBar orientation="horizontal" />
@@ -796,3 +790,4 @@ export default function TableBuilderPage() {
         </TooltipProvider>
     );
 }
+
