@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Merge, Split, Text, GripVertical, PlusSquare, Trash2, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // --- Types ---
 interface CellData {
@@ -25,6 +25,38 @@ interface CellData {
 
 // --- Components ---
 
+const HorizontalRuler = ({ colWidths }: { colWidths: number[] }) => {
+    return (
+        <div className="sticky top-0 z-10 flex h-6 bg-muted/50 border-b border-r">
+            {colWidths.map((width, index) => (
+                <div
+                    key={index}
+                    style={{ width: `${width}%` }}
+                    className="flex-shrink-0 border-l p-1 text-xs text-muted-foreground"
+                >
+                    {Math.round(width)}%
+                </div>
+            ))}
+        </div>
+    );
+};
+
+const VerticalRuler = ({ rowCount, rowHeight }: { rowCount: number, rowHeight: number }) => {
+    return (
+        <div className="sticky left-0 z-10 w-6 bg-muted/50 border-r">
+            {Array.from({ length: rowCount }).map((_, index) => (
+                <div
+                    key={index}
+                    style={{ height: `${rowHeight}px` }}
+                    className="flex items-center justify-center border-t"
+                >
+                    <span className="text-xs text-muted-foreground -rotate-90">{rowHeight}px</span>
+                </div>
+            ))}
+        </div>
+    );
+};
+
 const ResizableTable = ({
   grid,
   setGrid,
@@ -33,7 +65,8 @@ const ResizableTable = ({
   onCellMouseEnter,
   onCellMouseUp,
   colWidths,
-  setColWidths
+  setColWidths,
+  rowHeight,
 }: {
   grid: CellData[][];
   setGrid: (grid: CellData[][]) => void;
@@ -43,6 +76,7 @@ const ResizableTable = ({
   onCellMouseUp: () => void;
   colWidths: number[];
   setColWidths: (widths: number[]) => void;
+  rowHeight: number;
 }) => {
     const tableRef = useRef<HTMLTableElement>(null);
     const [resizingCol, setResizingCol] = useState<number | null>(null);
@@ -57,16 +91,9 @@ const ResizableTable = ({
         if (resizingCol === null || !tableRef.current) return;
         
         const tableWidth = tableRef.current.offsetWidth;
-        
         const newWidths = [...colWidths];
-        
-        // Calculate the change in mouse position
         const dx = e.movementX;
-        
-        // Calculate new widths in percentage
         const widthChangePercent = (dx / tableWidth) * 100;
-        
-        // Prevent making columns too small
         const minWidthPercent = 5;
         
         if (newWidths[resizingCol] + widthChangePercent < minWidthPercent || newWidths[resizingCol + 1] - widthChangePercent < minWidthPercent) {
@@ -116,7 +143,6 @@ const ResizableTable = ({
   };
 
   return (
-    <div className="overflow-x-auto rounded-lg border">
       <table
         ref={tableRef}
         className="w-full border-collapse"
@@ -143,9 +169,9 @@ const ResizableTable = ({
                     colSpan={cell.colSpan}
                     onMouseDown={() => onCellMouseDown(rowIndex, colIndex)}
                     onMouseEnter={() => onCellMouseEnter(rowIndex, colIndex)}
-                    style={{ textAlign: cell.textAlign }}
+                    style={{ textAlign: cell.textAlign, height: `${rowHeight * cell.rowSpan}px` }}
                     className={cn(
-                        "border border-muted p-0 h-12 relative select-none",
+                        "border border-muted p-0 relative select-none",
                         isCellSelected(rowIndex, colIndex) && 'bg-primary/20 outline-2 outline-primary outline'
                     )}
                   >
@@ -159,7 +185,7 @@ const ResizableTable = ({
                       {cell.content}
                     </div>
 
-                    {colIndex < cols - 1 && cell.rowSpan === 1 && (
+                    {colIndex < cols - 1 && (
                       <div
                         onMouseDown={(e) => handleResizeMouseDown(e, colIndex)}
                         className="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-primary/50"
@@ -172,7 +198,6 @@ const ResizableTable = ({
           ))}
         </tbody>
       </table>
-    </div>
   );
 };
 
@@ -226,6 +251,7 @@ export default function TableBuilderPage() {
     const [selectedCells, setSelectedCells] = useState<{ row: number, col: number }[]>([]);
     const [isSelecting, setIsSelecting] = useState(false);
     const [fontSize, setFontSize] = useState(14);
+    const rowHeight = 48; // px
     
     const createGrid = (rows: number, cols: number) => {
         const newGrid: CellData[][] = Array.from({ length: rows }, (_, rowIndex) => 
@@ -516,16 +542,24 @@ export default function TableBuilderPage() {
                         </CardHeader>
                         <CardContent>
                             {grid.length > 0 ? (
-                                <ResizableTable 
-                                    grid={grid} 
-                                    setGrid={setGrid}
-                                    selectedCells={selectedCells}
-                                    onCellMouseDown={handleSelectionStart}
-                                    onCellMouseEnter={handleSelectionEnter}
-                                    onCellMouseUp={handleSelectionEnd}
-                                    colWidths={colWidths}
-                                    setColWidths={setColWidths}
-                                />
+                                <div className="relative overflow-auto rounded-lg border">
+                                    <div className="grid" style={{ gridTemplateColumns: 'auto 1fr', gridTemplateRows: 'auto 1fr'}}>
+                                        <div className="sticky top-0 left-0 z-20 bg-muted/50 w-6 h-6"/>
+                                        <HorizontalRuler colWidths={colWidths} />
+                                        <VerticalRuler rowCount={grid.length} rowHeight={rowHeight} />
+                                        <ResizableTable 
+                                            grid={grid} 
+                                            setGrid={setGrid}
+                                            selectedCells={selectedCells}
+                                            onCellMouseDown={handleSelectionStart}
+                                            onCellMouseEnter={handleSelectionEnter}
+                                            onCellMouseUp={handleSelectionEnd}
+                                            colWidths={colWidths}
+                                            setColWidths={setColWidths}
+                                            rowHeight={rowHeight}
+                                        />
+                                    </div>
+                                </div>
                             ) : (
                                 <div className="h-48 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
                                     <p>Select table dimensions to see a preview.</p>
