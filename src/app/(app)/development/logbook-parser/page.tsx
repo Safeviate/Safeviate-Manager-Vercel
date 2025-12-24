@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Loader2, ClipboardPaste, Wand2, Table, Trash2, PlusCircle, Save, X } from 'lucide-react';
 import { parseLogbook, type LogbookColumn } from '@/ai/flows/parse-logbook-flow';
 import Image from 'next/image';
-import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 
 // --- Types ---
@@ -221,6 +221,13 @@ export default function LogbookParserPage() {
     setPastedImage(null);
     setParsedStructure(null);
   };
+  
+  const handleDeleteTemplate = (templateId: string) => {
+    if (!firestore) return;
+    const templateRef = doc(firestore, `tenants/${tenantId}/logbook-templates`, templateId);
+    deleteDocumentNonBlocking(templateRef);
+    toast({ title: 'Template Deleted', description: 'The logbook template is being deleted.' });
+  }
 
   return (
     <div className="space-y-6">
@@ -321,7 +328,7 @@ export default function LogbookParserPage() {
                     {(savedTemplates || []).map(template => (
                         <Card key={template.id} className="flex items-center justify-between p-4">
                            <p className="font-semibold">{template.name}</p>
-                           <Button variant="ghost" size="icon" className="text-destructive h-8 w-8">
+                           <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => handleDeleteTemplate(template.id)}>
                                <Trash2 className="h-4 w-4" />
                            </Button>
                         </Card>
