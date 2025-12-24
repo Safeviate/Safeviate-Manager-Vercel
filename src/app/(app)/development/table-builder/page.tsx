@@ -24,6 +24,8 @@ interface CellData {
     nestedGrid?: CellData[][];
 }
 
+type CellPath = (string | number)[]; // e.g., [0, 1, 'nestedGrid', 0, 0]
+
 // --- Components ---
 
 const HorizontalRuler = ({ colWidths }: { colWidths: number[] }) => {
@@ -68,21 +70,22 @@ const ResizableTable = ({
   colWidths,
   setColWidths,
   rowHeight,
-  isNested = false,
+  pathPrefix = []
 }: {
   grid: CellData[][];
   setGrid: (grid: CellData[][]) => void;
-  selectedCells: { row: number, col: number }[];
-  onCellMouseDown: (row: number, col: number, isNested?: boolean) => void;
-  onCellMouseEnter: (row: number, col: number, isNested?: boolean) => void;
+  selectedCells: CellPath[];
+  onCellMouseDown: (path: CellPath) => void;
+  onCellMouseEnter: (path: CellPath) => void;
   onCellMouseUp: () => void;
   colWidths: number[];
   setColWidths: (widths: number[]) => void;
   rowHeight: number;
-  isNested?: boolean;
+  pathPrefix?: CellPath;
 }) => {
     const tableRef = useRef<HTMLTableElement>(null);
     const [resizingCol, setResizingCol] = useState<number | null>(null);
+    const isNested = pathPrefix.length > 0;
 
     const handleResizeMouseDown = (e: React.MouseEvent, colIndex: number) => {
         e.preventDefault();
@@ -135,14 +138,25 @@ const ResizableTable = ({
   const rows = grid.length;
   const cols = grid[0].length;
 
-  const handleContentChange = (e: React.FormEvent<HTMLDivElement>, row: number, col: number) => {
-    const newGrid = grid.map(r => r.map(c => ({...c})));
-    newGrid[row][col].content = e.currentTarget.textContent || '';
+  const handleContentChange = (e: React.FormEvent<HTMLDivElement>, currentPath: CellPath) => {
+    const newGrid = JSON.parse(JSON.stringify(grid));
+    let cell: any = newGrid;
+    
+    // Navigate to the correct cell in the potentially nested structure
+    for (let i = 0; i < currentPath.length; i += 2) {
+        if (cell[currentPath[i]] && cell[currentPath[i]][currentPath[i+1]]) {
+            if (i + 2 < currentPath.length) {
+                cell = cell[currentPath[i]][currentPath[i+1]].nestedGrid;
+            } else {
+                cell[currentPath[i]][currentPath[i+1]].content = e.currentTarget.textContent || '';
+            }
+        }
+    }
     setGrid(newGrid);
   };
   
-  const isCellSelected = (row: number, col: number) => {
-    return selectedCells.some(cell => cell.row === row && cell.col === col);
+  const isCellSelected = (currentPath: CellPath) => {
+    return selectedCells.some(path => JSON.stringify(path) === JSON.stringify(currentPath));
   };
 
   return (
@@ -165,6 +179,7 @@ const ResizableTable = ({
             <tr key={rowIndex}>
               {Array.from({ length: cols }).map((_, colIndex) => {
                 const cell = grid[rowIndex][colIndex];
+                const currentPath = [...pathPrefix, rowIndex, colIndex];
                 if (cell.isMerged) return null; // Don't render merged cells
 
                 return (
@@ -172,12 +187,12 @@ const ResizableTable = ({
                     key={colIndex}
                     rowSpan={cell.rowSpan}
                     colSpan={cell.colSpan}
-                    onMouseDown={() => onCellMouseDown(rowIndex, colIndex, isNested)}
-                    onMouseEnter={() => onCellMouseEnter(rowIndex, colIndex, isNested)}
+                    onMouseDown={() => onCellMouseDown(currentPath)}
+                    onMouseEnter={() => onCellMouseEnter(currentPath)}
                     style={{ textAlign: cell.textAlign, height: isNested ? 'auto' : `${rowHeight * cell.rowSpan}px` }}
                     className={cn(
                         "border border-muted p-0 relative select-none",
-                        isCellSelected(rowIndex, colIndex) && 'bg-primary/20 outline-2 outline-primary outline'
+                        isCellSelected(currentPath) && 'bg-primary/20 outline-2 outline-primary outline'
                     )}
                   >
                     {cell.nestedGrid ? (
@@ -188,20 +203,20 @@ const ResizableTable = ({
                                 newGrid[rowIndex][colIndex].nestedGrid = newNestedGrid;
                                 setGrid(newGrid);
                             }}
-                            selectedCells={[]}
-                            onCellMouseDown={() => {}}
-                            onCellMouseEnter={() => {}}
-                            onCellMouseUp={() => {}}
+                            selectedCells={selectedCells}
+                            onCellMouseDown={onCellMouseDown}
+                            onCellMouseEnter={onCellMouseEnter}
+                            onCellMouseUp={onCellMouseUp}
                             colWidths={[]} // Not resizable for now
                             setColWidths={() => {}}
                             rowHeight={rowHeight}
-                            isNested={true}
+                            pathPrefix={[...currentPath, 'nestedGrid']}
                         />
                     ) : (
                         <div
                         contentEditable
                         suppressContentEditableWarning
-                        onInput={(e) => handleContentChange(e, rowIndex, colIndex)}
+                        onInput={(e) => handleContentChange(e, currentPath)}
                         style={{ fontSize: `${cell.fontSize}px` }}
                         className="w-full h-full p-2 focus:outline-none"
                         >
@@ -273,7 +288,7 @@ const TableSelector = ({ onSelect }: { onSelect: (dims: { rows: number; cols: nu
 export default function TableBuilderPage() {
     const [grid, setGrid] = useState<CellData[][]>([]);
     const [colWidths, setColWidths] = useState<number[]>([]);
-    const [selectedCells, setSelectedCells] = useState<{ row: number, col: number }[]>([]);
+    const [selectedCells, setSelectedCells] = useState<CellPath[]>([]);
     const [isSelecting, setIsSelecting] = useState(false);
     const [fontSize, setFontSize] = useState(14);
     const rowHeight = 48; // px
@@ -295,30 +310,15 @@ export default function TableBuilderPage() {
         setSelectedCells([]);
     };
 
-    const handleSelectionStart = (row: number, col: number, isNested = false) => {
-        if (isNested) return;
+    const handleSelectionStart = (path: CellPath) => {
         setIsSelecting(true);
-        setSelectedCells([{ row, col }]);
+        setSelectedCells([path]);
     };
 
-    const handleSelectionEnter = (row: number, col: number, isNested = false) => {
-        if (!isSelecting || isNested) return;
-        
-        const startCell = selectedCells[0];
-        if (!startCell) return;
-
-        const rowStart = Math.min(startCell.row, row);
-        const rowEnd = Math.max(startCell.row, row);
-        const colStart = Math.min(startCell.col, col);
-        const colEnd = Math.max(startCell.col, col);
-
-        const newSelectedCells: { row: number, col: number }[] = [];
-        for (let i = rowStart; i <= rowEnd; i++) {
-            for (let j = colStart; j <= colEnd; j++) {
-                newSelectedCells.push({ row: i, col: j });
-            }
-        }
-        setSelectedCells(newSelectedCells);
+    const handleSelectionEnter = (path: CellPath) => {
+        if (!isSelecting) return;
+        // Simple selection for now, doesn't support multi-cell selection across nested levels easily
+        setSelectedCells(prev => [...prev.filter(p => JSON.stringify(p) !== JSON.stringify(path)), path]);
     };
 
     const handleSelectionEnd = () => {
@@ -330,17 +330,52 @@ export default function TableBuilderPage() {
         if (selectedCells.length === 0) return;
         
         const newGrid = [...grid];
-        selectedCells.forEach(({ row, col }) => {
-            newGrid[row][col] = { ...newGrid[row][col], fontSize: newSize };
+        selectedCells.forEach((path) => {
+            // This needs to be recursive to handle nested cells
+            let cell: any = newGrid;
+             for (let i = 0; i < path.length; i += 2) {
+                if(cell[path[i]] && cell[path[i]][path[i+1]]) {
+                    if (i + 2 < path.length) {
+                        cell = cell[path[i]][path[i+1]].nestedGrid;
+                    } else {
+                        cell[path[i]][path[i+1]].fontSize = newSize;
+                    }
+                }
+             }
         });
         setGrid(newGrid);
     };
     
     const handleTextAlignChange = (alignment: 'left' | 'center' | 'right') => {
         if (selectedCells.length === 0) return;
-        const newGrid = [...grid];
-        selectedCells.forEach(({ row, col }) => {
-            newGrid[row][col] = { ...newGrid[row][col], textAlign: alignment };
+        const newGrid = JSON.parse(JSON.stringify(grid));
+        
+        const applyAlignmentRecursively = (currentGrid: CellData[][]) => {
+            currentGrid.forEach(row => {
+                row.forEach(cell => {
+                    cell.textAlign = alignment;
+                    if (cell.nestedGrid) {
+                        applyAlignmentRecursively(cell.nestedGrid);
+                    }
+                })
+            })
+        }
+
+        selectedCells.forEach((path) => {
+            let cell: any = newGrid;
+            for (let i = 0; i < path.length; i += 2) {
+                if(cell?.[path[i]]?.[path[i+1]]) {
+                     if (i + 2 < path.length) {
+                        cell = cell[path[i]][path[i+1]].nestedGrid;
+                    } else {
+                        const targetCell = cell[path[i]][path[i+1]];
+                        targetCell.textAlign = alignment;
+                        if (targetCell.nestedGrid) {
+                            applyAlignmentRecursively(targetCell.nestedGrid);
+                        }
+                    }
+                }
+            }
         });
         setGrid(newGrid);
     };
@@ -348,13 +383,20 @@ export default function TableBuilderPage() {
     const handleMergeCells = () => {
         if (selectedCells.length <= 1) return;
 
+        // Basic merge, doesn't support merging across nested boundaries
+        const topLevelCells = selectedCells.filter(p => p.length === 2);
+        if(topLevelCells.length !== selectedCells.length) {
+            alert("Cannot merge cells across different nesting levels.");
+            return;
+        }
+
         const newGrid = grid.map(r => r.map(c => ({...c})));
-        const { minRow, maxRow, minCol, maxCol } = selectedCells.reduce(
-            (acc, cell) => ({
-                minRow: Math.min(acc.minRow, cell.row),
-                maxRow: Math.max(acc.maxRow, cell.row),
-                minCol: Math.min(acc.minCol, cell.col),
-                maxCol: Math.max(acc.maxCol, cell.col)
+        const { minRow, maxRow, minCol, maxCol } = topLevelCells.reduce(
+            (acc, cellPath) => ({
+                minRow: Math.min(acc.minRow, cellPath[0] as number),
+                maxRow: Math.max(acc.maxRow, cellPath[0] as number),
+                minCol: Math.min(acc.minCol, cellPath[1] as number),
+                maxCol: Math.max(acc.maxCol, cellPath[1] as number)
             }), { minRow: Infinity, maxRow: -1, minCol: Infinity, maxCol: -1 }
         );
 
@@ -383,16 +425,18 @@ export default function TableBuilderPage() {
     
     const handleUnmergeCells = () => {
       if (selectedCells.length === 0) return;
+      const topLevelCells = selectedCells.filter(p => p.length === 2);
+
       const newGrid = grid.map(r => r.map(c => ({...c})));
     
       const processedParents = new Set<string>();
     
-      selectedCells.forEach(({ row, col }) => {
+      topLevelCells.forEach((path) => {
+        const [row, col] = path as [number, number];
         let parentRow = row;
         let parentCol = col;
         let parentKey = `${parentRow}-${parentCol}`;
     
-        // If the current cell is part of a merged block, find its top-left parent
         if (newGrid[row][col].isMerged) {
           let found = false;
           for (let r = 0; r <= row; r++) {
@@ -410,7 +454,6 @@ export default function TableBuilderPage() {
         
         parentKey = `${parentRow}-${parentCol}`;
     
-        // Only process this parent block once
         if (processedParents.has(parentKey)) {
           return;
         }
@@ -419,7 +462,6 @@ export default function TableBuilderPage() {
         const parentCell = newGrid[parentRow][parentCol];
         const { rowSpan, colSpan } = parentCell;
     
-        // Revert all cells within the merged block to their original state
         for (let i = parentRow; i < parentRow + rowSpan; i++) {
           for (let j = parentCol; j < parentCol + colSpan; j++) {
             newGrid[i][j].isMerged = false;
@@ -435,28 +477,39 @@ export default function TableBuilderPage() {
 
     const handleSplitCell = (direction: 'vertical' | 'horizontal') => {
         if (selectedCells.length !== 1) return;
-        const { row, col } = selectedCells[0];
-        const newGrid = grid.map(r => r.map(c => ({...c})));
-        const cellToSplit = newGrid[row][col];
+        const newGrid = JSON.parse(JSON.stringify(grid));
+        const path = selectedCells[0];
         
-        // Cannot split a merged cell or a cell that already contains a nested grid
-        if (cellToSplit.isMerged || cellToSplit.nestedGrid) return;
+        let parentGrid = newGrid;
+        let cellToUpdate: CellData | null = null;
+        
+        for (let i = 0; i < path.length; i += 2) {
+            if (i + 2 < path.length) {
+                parentGrid = parentGrid[path[i] as number][path[i+1] as number].nestedGrid!;
+            } else {
+                cellToUpdate = parentGrid[path[i] as number][path[i+1] as number];
+            }
+        }
+
+        if (!cellToUpdate || cellToUpdate.isMerged || cellToUpdate.nestedGrid) return;
         
         let newNestedGrid: CellData[][];
+        const baseCellProps = { ...cellToUpdate, colSpan: 1, rowSpan: 1 };
+        
         if (direction === 'vertical') {
             newNestedGrid = [[
-                {...cellToSplit, id: 'nested-0-0', colSpan: 1, rowSpan: 1, content: cellToSplit.content},
-                {...cellToSplit, id: 'nested-0-1', colSpan: 1, rowSpan: 1, content: ''}
+                {...baseCellProps, id: 'nested-0-0', content: cellToUpdate.content},
+                {...baseCellProps, id: 'nested-0-1', content: ''}
             ]];
         } else { // horizontal
             newNestedGrid = [
-                [{...cellToSplit, id: 'nested-0-0', colSpan: 1, rowSpan: 1, content: cellToSplit.content}],
-                [{...cellToSplit, id: 'nested-1-0', colSpan: 1, rowSpan: 1, content: ''}]
+                [{...baseCellProps, id: 'nested-0-0', content: cellToUpdate.content}],
+                [{...baseCellProps, id: 'nested-1-0', content: ''}]
             ];
         }
 
-        cellToSplit.nestedGrid = newNestedGrid;
-        cellToSplit.content = ''; // Content moves into the nested grid
+        cellToUpdate.nestedGrid = newNestedGrid;
+        cellToUpdate.content = ''; 
         setGrid(newGrid);
         setSelectedCells([]);
     };
