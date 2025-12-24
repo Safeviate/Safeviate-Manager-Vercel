@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Loader2, ClipboardPaste, Wand2, Table, Trash2, PlusCircle, Save } from 'lucide-react';
+import { Loader2, ClipboardPaste, Wand2, Table, Trash2, PlusCircle, Save, X } from 'lucide-react';
 import { parseLogbook, type LogbookColumn } from '@/ai/flows/parse-logbook-flow';
 import Image from 'next/image';
 import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
@@ -35,11 +35,12 @@ const calculateSpans = (columns: LogbookColumn[]): { headerRows: HeaderCell[][],
 
   const rows: HeaderCell[][] = [];
 
-  function processColumns(cols: LogbookColumn[], level: number): { maxSubLevel: number, totalSubCols: number } {
+  function processColumns(cols: LogbookColumn[], level: number): { maxLevel: number, totalSubCols: number } {
     if (!rows[level]) {
       rows[level] = [];
     }
-    let maxSubLevel = level;
+    let maxLevel = level;
+    let totalSubCols = 0;
 
     for (const col of cols) {
       const cell: HeaderCell = { id: col.id, label: col.label, colSpan: 1, rowSpan: 1 };
@@ -48,13 +49,11 @@ const calculateSpans = (columns: LogbookColumn[]): { headerRows: HeaderCell[][],
       if (col.subColumns && col.subColumns.length > 0) {
         const subResult = processColumns(col.subColumns, level + 1);
         cell.colSpan = subResult.totalSubCols;
-        maxSubLevel = Math.max(maxSubLevel, subResult.maxLevel);
+        maxLevel = Math.max(maxLevel, subResult.maxLevel);
+        totalSubCols += subResult.totalSubCols;
+      } else {
+        totalSubCols += 1;
       }
-    }
-
-    let totalSubCols = 0;
-    for (const col of cols) {
-      totalSubCols += (col.subColumns && col.subColumns.length > 0) ? col.subColumns.length : 1;
     }
     
     return { maxLevel, totalSubCols };
@@ -65,17 +64,17 @@ const calculateSpans = (columns: LogbookColumn[]): { headerRows: HeaderCell[][],
   // Adjust rowSpans for cells that don't have subColumns
   for (let i = 0; i < rows.length; i++) {
     for (const cell of rows[i]) {
-      const findCol = (cols: LogbookColumn[], label: string): LogbookColumn | undefined => {
+      const findCol = (cols: LogbookColumn[], id: string): LogbookColumn | undefined => {
         for (const c of cols) {
-          if (c.label === label) return c;
+          if (c.id === id) return c;
           if (c.subColumns) {
-            const found = findCol(c.subColumns, label);
+            const found = findCol(c.subColumns, id);
             if (found) return found;
           }
         }
         return undefined;
       };
-      const colData = findCol(columns, cell.label);
+      const colData = findCol(columns, cell.id);
       if (colData && (!colData.subColumns || colData.subColumns.length === 0)) {
         cell.rowSpan = maxLevel - i + 1;
       }
@@ -218,6 +217,11 @@ export default function LogbookParserPage() {
     setTemplateName('');
   };
 
+  const handleClearImage = () => {
+    setPastedImage(null);
+    setParsedStructure(null);
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full items-start">
@@ -242,9 +246,17 @@ export default function LogbookParserPage() {
                 </div>
               )}
             </div>
-            <Button onClick={handleProcess} disabled={isProcessing || !pastedImage} className="w-full">
-              {isProcessing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : <><Wand2 className="mr-2 h-4 w-4"/>Parse Structure</>}
-            </Button>
+            {pastedImage && (
+              <div className="flex gap-2">
+                <Button onClick={handleProcess} disabled={isProcessing} className="w-full">
+                  {isProcessing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : <><Wand2 className="mr-2 h-4 w-4"/>Parse Structure</>}
+                </Button>
+                <Button onClick={handleClearImage} variant="outline" size="icon">
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Clear image</span>
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
         
