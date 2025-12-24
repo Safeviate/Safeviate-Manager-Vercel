@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -251,7 +250,11 @@ export default function MyDashboardPage() {
     );
 }
 function isPilotProfile(userProfile: PilotProfile | undefined): userProfile is PilotProfile {
-    return userProfile?.userType === 'Student' || userProfile?.userType === 'Private Pilot' || userProfile?.userType === 'Instructor';
+    if (!userProfile) return false;
+    const pilotTypes: Array<PilotProfile['userType']> = ['Student', 'Private Pilot', 'Instructor'];
+    return pilotTypes.includes(userProfile.userType);
 }
+
+    
 
     
