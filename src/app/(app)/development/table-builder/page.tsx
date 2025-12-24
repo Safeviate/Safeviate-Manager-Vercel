@@ -63,7 +63,7 @@ const EditableCell = ({
       suppressContentEditableWarning
       onBlur={handleBlur}
       style={{ fontSize: `${fontSize}px`, fontWeight: fontWeight }}
-      className="w-full h-full p-2 focus:outline-none"
+      className="w-full h-full p-2 focus:outline-none break-words whitespace-normal"
       dangerouslySetInnerHTML={{ __html: initialContent }}
     />
   );
@@ -265,24 +265,35 @@ export default function TableBuilderPage() {
         setGrid(currentGrid => {
             const newGrid = JSON.parse(JSON.stringify(currentGrid));
             
-            const updateCell = (grid: CellData[][], currentPath: CellPath): CellData[][] => {
-                if (currentPath.length < 2) return grid;
-    
-                const [row, col] = currentPath as [number, number];
-                
-                if (!grid[row] || !grid[row][col]) return grid;
+            let targetGrid = newGrid;
+            let finalCell: CellData | undefined;
 
-                if (currentPath.length === 2) {
-                    if (grid[row][col].content !== newContent) {
-                        grid[row][col].content = newContent;
-                    }
-                } else if (currentPath[2] === 'nestedGrid' && grid[row][col].nestedGrid) {
-                    grid[row][col].nestedGrid = updateCell(grid[row][col].nestedGrid!, currentPath.slice(3));
+            for (let i = 0; i < path.length; i += 2) {
+                const row = path[i] as number;
+                const col = path[i + 1] as number;
+                
+                if (!targetGrid[row]?.[col]) {
+                    console.error("Invalid path in handleContentChange", path);
+                    return currentGrid; // Return original grid if path is invalid
                 }
-                return grid;
-            };
+
+                if (i + 2 < path.length) {
+                    if (path[i + 2] === 'nestedGrid') {
+                        targetGrid = targetGrid[row][col].nestedGrid!;
+                    } else {
+                        console.error("Invalid path segment in handleContentChange", path);
+                        return currentGrid;
+                    }
+                } else {
+                    finalCell = targetGrid[row][col];
+                }
+            }
+
+            if (finalCell && finalCell.content !== newContent) {
+                finalCell.content = newContent;
+            }
     
-            return updateCell(newGrid, path);
+            return newGrid;
         });
     }, []);
 
@@ -597,7 +608,7 @@ export default function TableBuilderPage() {
         <div className="space-y-6">
              <h1 className="text-3xl font-bold tracking-tight">Interactive Table Builder</h1>
              
-             <div className="grid grid-cols-1 lg:grid-cols-[auto,1fr] gap-6">
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <TableSelector onSelect={({rows, cols}) => createGrid(rows, cols)} />
                 <Card>
                     <CardHeader className="pb-4">
@@ -748,5 +759,3 @@ export default function TableBuilderPage() {
         </TooltipProvider>
     );
 }
-
-    
