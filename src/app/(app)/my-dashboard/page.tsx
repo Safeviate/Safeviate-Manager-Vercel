@@ -3,7 +3,7 @@
 
 import { useMemo } from 'react';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, Timestamp } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import type { SafetyReport } from '@/types/safety-report';
 import type { CorrectiveActionPlan } from '@/types/quality';
 import type { Booking } from '@/types/booking';
@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { DocumentExpirySettings } from '../admin/document-dates/page';
-import { AlertCircle, BookCheck, Plane } from 'lucide-react';
 import { MyLogbook } from './my-logbook';
 
 
@@ -143,98 +142,96 @@ export default function MyDashboardPage() {
     }
 
     return (
-        <div className="space-y-6">
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="lg:col-span-2">
-                    <CardHeader>
-                        <CardTitle>My Tasks</CardTitle>
-                        <CardDescription>A list of investigation tasks and corrective actions assigned to you.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Task</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>Due Date</TableHead>
-                                    <TableHead className="text-right">Link</TableHead>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="lg:col-span-2">
+                <CardHeader>
+                    <CardTitle>My Tasks</CardTitle>
+                    <CardDescription>A list of investigation tasks and corrective actions assigned to you.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Task</TableHead>
+                                <TableHead>Type</TableHead>
+                                <TableHead>Due Date</TableHead>
+                                <TableHead className="text-right">Link</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {myTasks.length > 0 ? myTasks.map(task => (
+                                <TableRow key={task.id}>
+                                    <TableCell>{task.description}</TableCell>
+                                    <TableCell><Badge variant="outline">{task.type}</Badge></TableCell>
+                                    <TableCell>{task.dueDate ? format(new Date(task.dueDate), 'PPP') : 'N/A'}</TableCell>
+                                    <TableCell className="text-right"><Button asChild variant="outline" size="sm"><Link href={task.link}>View</Link></Button></TableCell>
                                 </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                               {myTasks.length > 0 ? myTasks.map(task => (
-                                   <TableRow key={task.id}>
-                                       <TableCell>{task.description}</TableCell>
-                                       <TableCell><Badge variant="outline">{task.type}</Badge></TableCell>
-                                       <TableCell>{task.dueDate ? format(new Date(task.dueDate), 'PPP') : 'N/A'}</TableCell>
-                                       <TableCell className="text-right"><Button asChild variant="outline" size="sm"><Link href={task.link}>View</Link></Button></TableCell>
-                                   </TableRow>
-                               )) : (
-                                    <TableRow><TableCell colSpan={4} className="h-24 text-center">No outstanding tasks assigned to you.</TableCell></TableRow>
-                               )}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
+                            )) : (
+                                <TableRow><TableCell colSpan={4} className="h-24 text-center">No outstanding tasks assigned to you.</TableCell></TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>My Upcoming Bookings</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Aircraft</TableHead>
-                                    <TableHead>Type</TableHead>
+            <Card>
+                <CardHeader>
+                    <CardTitle>My Upcoming Bookings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                        <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Aircraft</TableHead>
+                                <TableHead>Type</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {upcomingBookings && upcomingBookings.length > 0 ? upcomingBookings.map(booking => (
+                                <TableRow key={booking.id}>
+                                    <TableCell>{format(new Date(booking.bookingDate), 'PPP')} {booking.startTime}</TableCell>
+                                    <TableCell>{booking.aircraftId}</TableCell>
+                                    <TableCell>{booking.type}</TableCell>
                                 </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {upcomingBookings && upcomingBookings.length > 0 ? upcomingBookings.map(booking => (
-                                   <TableRow key={booking.id}>
-                                       <TableCell>{format(new Date(booking.bookingDate), 'PPP')} {booking.startTime}</TableCell>
-                                       <TableCell>{booking.aircraftId}</TableCell>
-                                       <TableCell>{booking.type}</TableCell>
-                                   </TableRow>
-                                )) : (
-                                    <TableRow><TableCell colSpan={3} className="h-24 text-center">No upcoming bookings.</TableCell></TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-                
-                <Card>
-                    <CardHeader>
-                        <CardTitle>My Document Status</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Document</TableHead>
-                                    <TableHead>Expires</TableHead>
+                            )) : (
+                                <TableRow><TableCell colSpan={3} className="h-24 text-center">No upcoming bookings.</TableCell></TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>My Document Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                        <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Document</TableHead>
+                                <TableHead>Expires</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {documentStatus.length > 0 ? documentStatus.map(doc => (
+                                <TableRow key={doc.name}>
+                                    <TableCell className="flex items-center gap-2">
+                                        <span className="h-2.5 w-2.5 rounded-full" style={{backgroundColor: doc.color}} />
+                                        {doc.name}
+                                    </TableCell>
+                                    <TableCell>{doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'N/A'}</TableCell>
                                 </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                               {documentStatus.length > 0 ? documentStatus.map(doc => (
-                                   <TableRow key={doc.name}>
-                                       <TableCell className="flex items-center gap-2">
-                                            <span className="h-2.5 w-2.5 rounded-full" style={{backgroundColor: doc.color}} />
-                                            {doc.name}
-                                       </TableCell>
-                                       <TableCell>{doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'N/A'}</TableCell>
-                                   </TableRow>
-                               )) : (
-                                   <TableRow><TableCell colSpan={2} className="h-24 text-center">No documents found or required.</TableCell></TableRow>
-                               )}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-             </div>
-             
-             {userProfile?.[0] && <MyLogbook userProfile={userProfile[0]} />}
+                            )) : (
+                                <TableRow><TableCell colSpan={2} className="h-24 text-center">No documents found or required.</TableCell></TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+            
+            {userProfile?.[0] && <MyLogbook userProfile={userProfile[0]} />}
         </div>
     );
 }
