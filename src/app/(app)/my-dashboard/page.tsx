@@ -2,37 +2,43 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import type { PilotProfile } from '../users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MyLogbook } from './my-logbook';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-
-
-function isPilotProfile(userProfile: PilotProfile | undefined): userProfile is PilotProfile {
-    if (!userProfile) return false;
-    const pilotTypes: Array<PilotProfile['userType']> = ['Student', 'Private Pilot', 'Instructor'];
-    return pilotTypes.includes(userProfile.userType);
-}
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
 
 export default function MyDashboardPage() {
-    const { user, isUserLoading } = useUser();
     const firestore = useFirestore();
     const tenantId = 'safeviate';
 
-    const userProfileQuery = useMemoFirebase(
-        () => (user && firestore) ? query(
-            collection(firestore, `tenants/${tenantId}/pilots`),
-            where('email', '==', user.email)
-        ) : null,
-        [firestore, tenantId, user]
+    // Fetch all available logbook templates
+    const logbookTemplatesQuery = useMemoFirebase(
+        () => (firestore ? collection(firestore, `tenants/${tenantId}/logbook-templates`) : null),
+        [firestore, tenantId]
     );
 
-    const { data: userProfileData, isLoading: isLoadingProfile } = useCollection<PilotProfile>(userProfileQuery);
-    const userProfile = userProfileData?.[0];
+    const { data: templates, isLoading: isLoadingTemplates } = useCollection<LogbookTemplate>(logbookTemplatesQuery);
+
+    // Create a dummy user profile and assign the ID of the FIRST available template
+    const dummyUserProfile: PilotProfile | null = useMemo(() => {
+        if (!templates || templates.length === 0) {
+            return null;
+        }
+        return {
+            id: 'dummy-user',
+            userType: 'Instructor',
+            firstName: 'Demo',
+            lastName: 'User',
+            email: 'demo@safeviate.com',
+            role: 'demo-role',
+            logbookTemplateId: templates[0].id, // Use the first template found
+        };
+    }, [templates]);
     
-    const isLoading = isUserLoading || isLoadingProfile;
+    const isLoading = isLoadingTemplates;
     
     if (isLoading) {
         return (
@@ -42,15 +48,15 @@ export default function MyDashboardPage() {
         );
     }
     
-    if (!userProfile) {
+    if (!dummyUserProfile) {
         return (
              <Card>
                 <CardHeader>
-                    <CardTitle>My Dashboard</CardTitle>
+                    <CardTitle>My Logbook</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <p className="text-center text-muted-foreground py-8">
-                        No pilot profile found for the current user. Please contact an administrator.
+                        No logbook templates have been created yet. Please go to "Development" -&gt; "Logbook Parser" to create one.
                     </p>
                 </CardContent>
             </Card>
@@ -59,9 +65,7 @@ export default function MyDashboardPage() {
     
     return (
         <div className="w-full">
-            <MyLogbook userProfile={userProfile} />
+            <MyLogbook userProfile={dummyUserProfile} />
         </div>
     );
 }
-
-    
