@@ -97,42 +97,7 @@ const ResizableTable = ({
 }) => {
     const tableRef = useRef<HTMLTableElement>(null);
     const isNested = pathPrefix.length > 0;
-    const [resizingIndex, setResizingIndex] = useState<number | null>(null);
-    const startX = useRef(0);
-    const startWidth = useRef(0);
-
-    const onResizeMouseDown = (index: number, event: React.MouseEvent) => {
-        event.preventDefault();
-        setResizingIndex(index);
-        startX.current = event.clientX;
-        startWidth.current = colWidths[index];
-    };
-
-    useEffect(() => {
-        const handleMouseMove = (event: MouseEvent) => {
-            if (resizingIndex === null) return;
-            const deltaX = event.clientX - startX.current;
-            const newWidth = Math.max(startWidth.current + deltaX, 50); // Minimum width 50px
-            const newWidths = [...colWidths];
-            newWidths[resizingIndex] = newWidth;
-            setColWidths(newWidths);
-        };
-
-        const handleMouseUp = () => {
-            setResizingIndex(null);
-        };
-
-        if (resizingIndex !== null) {
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-        }
-
-        return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [resizingIndex, colWidths, setColWidths]);
-
+    
   if (grid.length === 0) return null;
 
   const rows = grid.length;
@@ -154,32 +119,15 @@ const ResizableTable = ({
   return (
       <table
         ref={tableRef}
-        className={cn("w-full h-full border-collapse", isNested && "bg-background/50")}
-        style={{ tableLayout: 'fixed' }}
+        className={cn("w-full border-collapse table-fixed", isNested && "bg-background/50")}
         onMouseUp={onCellMouseUp}
         onMouseLeave={onCellMouseUp} // Stop selection if mouse leaves table
       >
-        {!isNested && (
-            <colgroup>
-                {colWidths.map((width, i) => (
-                    <col key={i} style={{ width: `${width}px` }} />
-                ))}
-            </colgroup>
-        )}
-        <thead>
-            {!isNested && (
-                <tr>
-                    {colWidths.map((_, index) => (
-                        <th key={index} className="relative border-t border-b p-0 h-4">
-                            <div 
-                                className="absolute top-0 right-0 h-full w-2 cursor-col-resize z-10"
-                                onMouseDown={(e) => onResizeMouseDown(index, e)}
-                            />
-                        </th>
-                    ))}
-                </tr>
-            )}
-        </thead>
+        <colgroup>
+            {colWidths.map((width, i) => (
+                <col key={i} style={{ width: `${width}px` }} />
+            ))}
+        </colgroup>
         <tbody>
           {Array.from({ length: rows }).map((_, rowIndex) => (
             <tr key={rowIndex}>
@@ -289,6 +237,42 @@ export default function TableBuilderPage() {
     const [isSelecting, setIsSelecting] = useState(false);
     const [fontSize, setFontSize] = useState(14);
     const rowHeight = 48; // px
+
+    const [resizingIndex, setResizingIndex] = useState<number | null>(null);
+    const startX = useRef(0);
+    const startWidth = useRef(0);
+
+    const onResizeMouseDown = (index: number, event: React.MouseEvent) => {
+        event.preventDefault();
+        setResizingIndex(index);
+        startX.current = event.clientX;
+        startWidth.current = colWidths[index];
+    };
+
+    useEffect(() => {
+        const handleMouseMove = (event: MouseEvent) => {
+            if (resizingIndex === null) return;
+            const deltaX = event.clientX - startX.current;
+            const newWidth = Math.max(startWidth.current + deltaX, 50); // Minimum width 50px
+            const newWidths = [...colWidths];
+            newWidths[resizingIndex] = newWidth;
+            setColWidths(newWidths);
+        };
+
+        const handleMouseUp = () => {
+            setResizingIndex(null);
+        };
+
+        if (resizingIndex !== null) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [resizingIndex, colWidths, setColWidths]);
     
     const createGrid = (rows: number, cols: number) => {
         const newGrid: CellData[][] = Array.from({ length: rows }, (_, rowIndex) => 
@@ -652,122 +636,135 @@ export default function TableBuilderPage() {
         <TooltipProvider>
         <div className="space-y-6">
              <h1 className="text-3xl font-bold tracking-tight">Interactive Table Builder</h1>
-             <div className="grid grid-cols-1 gap-6">
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                    <TableSelector onSelect={({rows, cols}) => createGrid(rows, cols)} />
-                    <Card>
-                        <CardHeader className="pb-4">
-                            <CardTitle>Toolbar</CardTitle>
-                        </CardHeader>
-                        <CardContent className='flex flex-wrap items-center gap-2'>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="outline" size="icon" onClick={handleMergeCells} disabled={selectedCells.length <= 1}>
-                                        <Merge />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent><p>Merge Cells</p></TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="outline" size="icon" onClick={handleUnmergeCells} disabled={selectedCells.length === 0}>
-                                        <Split />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent><p>Unmerge Cells</p></TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="outline" size="icon" onClick={() => handleSplitCell('vertical')} disabled={selectedCells.length !== 1}>
-                                        <SplitSquareVertical />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent><p>Split Cell Vertically</p></TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="outline" size="icon" onClick={() => handleSplitCell('horizontal')} disabled={selectedCells.length !== 1}>
-                                        <SplitSquareHorizontal />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent><p>Split Cell Horizontally</p></TooltipContent>
-                            </Tooltip>
-                            <Separator orientation='vertical' className='h-8' />
-                            <div className="flex items-center gap-1">
-                                <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={handleToggleBold}><Bold /></Button></TooltipTrigger><TooltipContent><p>Bold</p></TooltipContent></Tooltip>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Label htmlFor="font-size"><Text className="h-5 w-5" /></Label>
-                                <Input 
-                                    id="font-size" 
-                                    type="number"
-                                    value={fontSize}
-                                    onChange={(e) => handleFontSizeChange(parseInt(e.target.value, 10))}
-                                    className="w-20"
-                                />
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleTextAlignChange('left')}><AlignLeft /></Button></TooltipTrigger><TooltipContent><p>Align Left</p></TooltipContent></Tooltip>
-                                <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleTextAlignChange('center')}><AlignCenter /></Button></TooltipTrigger><TooltipContent><p>Align Center</p></TooltipContent></Tooltip>
-                                <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleTextAlignChange('right')}><AlignRight /></Button></TooltipTrigger><TooltipContent><p>Align Right</p></TooltipContent></Tooltip>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleVerticalAlignChange('top')}><AlignStartVertical /></Button></TooltipTrigger><TooltipContent><p>Align Top</p></TooltipContent></Tooltip>
-                                <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleVerticalAlignChange('middle')}><AlignCenterVertical /></Button></TooltipTrigger><TooltipContent><p>Align Middle</p></TooltipContent></Tooltip>
-                                <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleVerticalAlignChange('bottom')}><AlignEndVertical /></Button></TooltipTrigger><TooltipContent><p>Align Bottom</p></TooltipContent></Tooltip>
-                            </div>
-                        </CardContent>
-                        <CardContent className='flex flex-wrap items-center gap-2'>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="outline" onClick={handleAddRow} disabled={grid.length === 0}>
-                                        <PlusSquare className="transform rotate-90 mr-2"/>
-                                        Add Row
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent><p>Add Row</p></TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="outline" onClick={handleAddColumn} disabled={grid.length === 0}>
-                                        <PlusSquare className='mr-2' />
-                                        Add Column
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent><p>Add Column</p></TooltipContent>
-                            </Tooltip>
-                            <Separator orientation='vertical' className='h-8' />
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="destructive" onClick={handleDeleteRow} disabled={grid.length <= 1}>
-                                        <Trash2 className="transform rotate-90 mr-2"/>
-                                        Delete Row
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent><p>Delete Last Row</p></TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="destructive" onClick={handleDeleteColumn} disabled={grid.length === 0 || grid[0].length <= 1}>
-                                        <Trash2 className='mr-2' />
-                                        Delete Column
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent><p>Delete Last Column</p></TooltipContent>
-                            </Tooltip>
-                        </CardContent>
-                    </Card>
-                </div>
-                
+             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <TableSelector onSelect={({rows, cols}) => createGrid(rows, cols)} />
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Table Preview</CardTitle>
-                        <CardDescription>Drag the handles in the header to resize columns. Click and drag on cells to select multiple.</CardDescription>
+                    <CardHeader className="pb-4">
+                        <CardTitle>Toolbar</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <ScrollArea className="w-full whitespace-nowrap rounded-md border">
-                            <div className="relative p-4 pb-8" style={{ minWidth: `${totalTableWidth}px` }}>
-                                {grid.length > 0 ? (
+                    <CardContent className='flex flex-wrap items-center gap-2'>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="outline" size="icon" onClick={handleMergeCells} disabled={selectedCells.length <= 1}>
+                                    <Merge />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Merge Cells</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="outline" size="icon" onClick={handleUnmergeCells} disabled={selectedCells.length === 0}>
+                                    <Split />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Unmerge Cells</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="outline" size="icon" onClick={() => handleSplitCell('vertical')} disabled={selectedCells.length !== 1}>
+                                    <SplitSquareVertical />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Split Cell Vertically</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="outline" size="icon" onClick={() => handleSplitCell('horizontal')} disabled={selectedCells.length !== 1}>
+                                    <SplitSquareHorizontal />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Split Cell Horizontally</p></TooltipContent>
+                        </Tooltip>
+                        <Separator orientation='vertical' className='h-8' />
+                        <div className="flex items-center gap-1">
+                            <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={handleToggleBold}><Bold /></Button></TooltipTrigger><TooltipContent><p>Bold</p></TooltipContent></Tooltip>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Label htmlFor="font-size"><Text className="h-5 w-5" /></Label>
+                            <Input 
+                                id="font-size" 
+                                type="number"
+                                value={fontSize}
+                                onChange={(e) => handleFontSizeChange(parseInt(e.target.value, 10))}
+                                className="w-20"
+                            />
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleTextAlignChange('left')}><AlignLeft /></Button></TooltipTrigger><TooltipContent><p>Align Left</p></TooltipContent></Tooltip>
+                            <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleTextAlignChange('center')}><AlignCenter /></Button></TooltipTrigger><TooltipContent><p>Align Center</p></TooltipContent></Tooltip>
+                            <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleTextAlignChange('right')}><AlignRight /></Button></TooltipTrigger><TooltipContent><p>Align Right</p></TooltipContent></Tooltip>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleVerticalAlignChange('top')}><AlignStartVertical /></Button></TooltipTrigger><TooltipContent><p>Align Top</p></TooltipContent></Tooltip>
+                            <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleVerticalAlignChange('middle')}><AlignCenterVertical /></Button></TooltipTrigger><TooltipContent><p>Align Middle</p></TooltipContent></Tooltip>
+                            <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleVerticalAlignChange('bottom')}><AlignEndVertical /></Button></TooltipTrigger><TooltipContent><p>Align Bottom</p></TooltipContent></Tooltip>
+                        </div>
+                    </CardContent>
+                    <CardContent className='flex flex-wrap items-center gap-2'>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="outline" onClick={handleAddRow} disabled={grid.length === 0}>
+                                    <PlusSquare className="transform rotate-90 mr-2"/>
+                                    Add Row
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Add Row</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="outline" onClick={handleAddColumn} disabled={grid.length === 0}>
+                                    <PlusSquare className='mr-2' />
+                                    Add Column
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Add Column</p></TooltipContent>
+                        </Tooltip>
+                        <Separator orientation='vertical' className='h-8' />
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="destructive" onClick={handleDeleteRow} disabled={grid.length <= 1}>
+                                    <Trash2 className="transform rotate-90 mr-2"/>
+                                    Delete Row
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Delete Last Row</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="destructive" onClick={handleDeleteColumn} disabled={grid.length === 0 || grid[0].length <= 1}>
+                                    <Trash2 className='mr-2' />
+                                    Delete Column
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Delete Last Column</p></TooltipContent>
+                        </Tooltip>
+                    </CardContent>
+                </Card>
+            </div>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>Table Preview</CardTitle>
+                    <CardDescription>Drag the handles in the header to resize columns. Click and drag on cells to select multiple.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ScrollArea className="w-full whitespace-nowrap rounded-md border">
+                        <div className="relative pb-4" style={{ minWidth: `${totalTableWidth}px` }}>
+                            {grid.length > 0 ? (
+                                <>
+                                    <div className="sticky top-0 z-10 h-4 bg-background border-b">
+                                        {colWidths.map((_, index) => {
+                                            const left = colWidths.slice(0, index + 1).reduce((a, b) => a + b, 0);
+                                            return (
+                                                <div 
+                                                    key={index}
+                                                    className="absolute top-0 h-full w-2 cursor-col-resize z-20"
+                                                    style={{ left: `${left - 4}px` }}
+                                                    onMouseDown={(e) => onResizeMouseDown(index, e)}
+                                                />
+                                            )
+                                        })}
+                                    </div>
                                     <ResizableTable 
                                         grid={grid} 
                                         setGrid={setGrid}
@@ -780,19 +777,20 @@ export default function TableBuilderPage() {
                                         rowHeight={rowHeight}
                                         handleContentChange={handleContentChange}
                                     />
-                                ) : (
-                                    <div className="h-48 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
-                                        <p>Select table dimensions to see a preview.</p>
-                                    </div>
-                                )}
-                            </div>
-                            <ScrollBar orientation="horizontal" />
-                        </ScrollArea>
-                    </CardContent>
-                </Card>
-             </div>
-        </div>
+                                </>
+                            ) : (
+                                <div className="h-48 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
+                                    <p>Select table dimensions to see a preview.</p>
+                                </div>
+                            )}
+                        </div>
+                        <ScrollBar orientation="horizontal" />
+                    </ScrollArea>
+                </CardContent>
+            </Card>
+         </div>
         </TooltipProvider>
     );
 }
 
+    
