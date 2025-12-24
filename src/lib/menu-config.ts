@@ -26,6 +26,7 @@ import {
   ListChecks,
   Network,
   CalendarDays,
+  FileJson,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -228,6 +229,16 @@ export const menuConfig: MenuItem[] = [
         href: '/development/database',
         label: 'Tenant Creator',
         description: 'Create new tenants with custom branding.',
+      },
+      {
+        href: '/development/ai-parser',
+        label: 'AI Document Parser',
+        description: 'A flexible tool to parse document structures into JSON.',
+      },
+      {
+        href: '/development/logbook-parser',
+        label: 'Logbook Parser',
+        description: 'Parse the structure of a logbook table.',
       },
     ],
   },
