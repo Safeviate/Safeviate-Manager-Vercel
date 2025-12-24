@@ -80,6 +80,7 @@ const ResizableTable = ({
   colWidths,
   rowHeight,
   handleContentChange,
+  onMouseDownResizer,
   pathPrefix = []
 }: {
   grid: CellData[][];
@@ -91,6 +92,7 @@ const ResizableTable = ({
   colWidths: number[];
   rowHeight: number;
   handleContentChange: (path: CellPath, content: string) => void;
+  onMouseDownResizer: (event: React.MouseEvent, index: number) => void;
   pathPrefix?: CellPath;
 }) => {
     const tableRef = useRef<HTMLTableElement>(null);
@@ -127,6 +129,18 @@ const ResizableTable = ({
                 <col key={i} style={{ width: `${width}px` }} />
             ))}
         </colgroup>
+        <thead className='sticky top-0 z-10 bg-muted'>
+            <tr>
+              {colWidths.map((_, i) => (
+                <th key={`header-${i}`} className="relative h-8 border-b border-r border-border p-0">
+                  <div
+                    onMouseDown={(e) => onMouseDownResizer(e, i)}
+                    className="absolute top-0 right-0 h-full w-2 cursor-col-resize z-20"
+                  />
+                </th>
+              ))}
+            </tr>
+        </thead>
         <tbody>
           {Array.from({ length: rows }).map((_, rowIndex) => (
             <tr key={rowIndex}>
@@ -164,6 +178,7 @@ const ResizableTable = ({
                             colWidths={[]} // Nested tables don't control main widths
                             rowHeight={rowHeight}
                             handleContentChange={handleContentChange}
+                            onMouseDownResizer={onMouseDownResizer}
                             pathPrefix={[...currentPath, 'nestedGrid']}
                         />
                     ) : (
@@ -239,8 +254,6 @@ export default function TableBuilderPage() {
     const resizingColIndex = useRef<number | null>(null);
     const startCursorX = useRef(0);
     const startWidth = useRef(0);
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const headerRef = useRef<HTMLDivElement>(null);
 
     const handleColResize = useCallback((index: number, newWidth: number) => {
       setColWidths(prev => {
@@ -278,20 +291,6 @@ export default function TableBuilderPage() {
         };
     }, [onMouseMove, onMouseUpResizer]);
     
-    // Sync header scroll with body scroll
-    useEffect(() => {
-      const scrollEl = scrollRef.current;
-      const headerEl = headerRef.current;
-      if (!scrollEl || !headerEl) return;
-
-      const handleScroll = () => {
-          headerEl.scrollLeft = scrollEl.scrollLeft;
-      };
-
-      scrollEl.addEventListener('scroll', handleScroll);
-      return () => scrollEl.removeEventListener('scroll', handleScroll);
-    }, [grid]); // Rerun when grid changes
-
     const createGrid = (rows: number, cols: number) => {
         const newGrid: CellData[][] = Array.from({ length: rows }, (_, rowIndex) => 
             Array.from({ length: cols }, (_, colIndex) => ({
@@ -769,41 +768,23 @@ export default function TableBuilderPage() {
                 </CardHeader>
                 <CardContent>
                     {grid.length > 0 ? (
-                      <div className="border rounded-lg">
-                        <div ref={headerRef} className="sticky top-0 z-10 bg-muted overflow-x-hidden">
-                           <div className="flex" style={{ width: `${colWidths.reduce((a,b) => a + b, 0)}px`}}>
-                            {colWidths.map((width, i) => (
-                              <div
-                                key={`header-${i}`}
-                                className="relative border-r border-border flex items-center justify-center"
-                                style={{ width: `${width}px` }}
-                              >
-                                <span className="text-xs text-muted-foreground">Col {i + 1}</span>
-                                <div
-                                  onMouseDown={(e) => onMouseDownResizer(e, i)}
-                                  className="absolute top-0 right-0 h-full w-2 cursor-col-resize z-20"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        <ScrollArea className="w-full whitespace-nowrap" style={{ height: '500px' }}>
-                           <div ref={scrollRef} className='overflow-auto'>
-                                <ResizableTable 
-                                    grid={grid} 
-                                    setGrid={setGrid}
-                                    selectedCells={selectedCells}
-                                    onCellMouseDown={handleSelectionStart}
-                                    onCellMouseEnter={handleSelectionEnter}
-                                    onCellMouseUp={handleSelectionEnd}
-                                    colWidths={colWidths}
-                                    rowHeight={rowHeight}
-                                    handleContentChange={handleContentChange}
-                                />
+                        <ScrollArea className="w-full whitespace-nowrap border rounded-lg" style={{ height: '600px' }}>
+                          <div className='p-1'>
+                              <ResizableTable 
+                                  grid={grid} 
+                                  setGrid={setGrid}
+                                  selectedCells={selectedCells}
+                                  onCellMouseDown={handleSelectionStart}
+                                  onCellMouseEnter={handleSelectionEnter}
+                                  onCellMouseUp={handleSelectionEnd}
+                                  colWidths={colWidths}
+                                  rowHeight={rowHeight}
+                                  handleContentChange={handleContentChange}
+                                  onMouseDownResizer={onMouseDownResizer}
+                              />
                            </div>
                            <ScrollBar orientation="horizontal" />
                         </ScrollArea>
-                      </div>
                     ) : (
                         <div className="h-48 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
                             <p>Select table dimensions to see a preview.</p>
