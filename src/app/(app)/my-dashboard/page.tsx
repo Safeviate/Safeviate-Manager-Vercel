@@ -6,6 +6,8 @@ import { collection, query, where } from 'firebase/firestore';
 import type { PilotProfile } from '../users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MyLogbook } from './my-logbook';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+
 
 function isPilotProfile(userProfile: PilotProfile | undefined): userProfile is PilotProfile {
     if (!userProfile) return false;
@@ -19,9 +21,9 @@ export default function MyDashboardPage() {
     const tenantId = 'safeviate';
 
     const userProfileQuery = useMemoFirebase(
-        () => user ? query(
+        () => (user && firestore) ? query(
             collection(firestore, `tenants/${tenantId}/pilots`),
-            where('id', '==', user.uid)
+            where('email', '==', user.email)
         ) : null,
         [firestore, tenantId, user]
     );
@@ -29,16 +31,6 @@ export default function MyDashboardPage() {
     const { data: userProfileData, isLoading: isLoadingProfile } = useCollection<PilotProfile>(userProfileQuery);
     const userProfile = userProfileData?.[0];
     
-    // For demonstration, we'll create a dummy profile if one doesn't exist
-    const displayProfile = userProfile || {
-        id: user?.uid || 'dummy-user',
-        userType: 'Student',
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'john.doe@example.com',
-        logbookTemplateId: 'default-template' // A placeholder ID
-    } as PilotProfile;
-
     const isLoading = isUserLoading || isLoadingProfile;
     
     if (isLoading) {
@@ -49,9 +41,24 @@ export default function MyDashboardPage() {
         );
     }
     
+    if (!userProfile) {
+        return (
+             <Card>
+                <CardHeader>
+                    <CardTitle>My Dashboard</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-center text-muted-foreground py-8">
+                        No pilot profile found for the current user. Please contact an administrator.
+                    </p>
+                </CardContent>
+            </Card>
+        )
+    }
+    
     return (
         <div className="w-full">
-            <MyLogbook userProfile={displayProfile} />
+            <MyLogbook userProfile={userProfile} />
         </div>
     );
 }
