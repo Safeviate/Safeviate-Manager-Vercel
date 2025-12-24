@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Merge, Split, Text, GripVertical } from 'lucide-react';
+import { Merge, Split, Text, GripVertical, PlusSquare } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // --- Types ---
@@ -358,7 +358,40 @@ export default function TableBuilderPage() {
 
         setGrid(newGrid);
         setSelectedCells([]);
-    }
+    };
+
+    const handleAddRow = () => {
+        if (grid.length === 0) return;
+        const cols = grid[0].length;
+        const newRow: CellData[] = Array.from({ length: cols }, (_, colIndex) => ({
+            id: `${grid.length}-${colIndex}`,
+            rowSpan: 1,
+            colSpan: 1,
+            fontSize: 14,
+            isMerged: false,
+            content: ''
+        }));
+        setGrid([...grid, newRow]);
+    };
+
+    const handleAddColumn = () => {
+        if (grid.length === 0) return;
+        const newGrid = grid.map((row, rowIndex) => [
+            ...row,
+            {
+                id: `${rowIndex}-${row.length}`,
+                rowSpan: 1,
+                colSpan: 1,
+                fontSize: 14,
+                isMerged: false,
+                content: ''
+            }
+        ]);
+        setGrid(newGrid);
+
+        const newColCount = newGrid[0].length;
+        setColWidths(Array(newColCount).fill(100 / newColCount));
+    };
 
     return (
         <TooltipProvider>
@@ -371,7 +404,7 @@ export default function TableBuilderPage() {
                         <CardHeader className="pb-4">
                             <CardTitle>Toolbar</CardTitle>
                         </CardHeader>
-                        <CardContent className='flex items-center gap-4'>
+                        <CardContent className='flex flex-wrap items-center gap-4'>
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Button variant="outline" size="icon" onClick={handleMergeCells} disabled={selectedCells.length <= 1}>
@@ -399,6 +432,23 @@ export default function TableBuilderPage() {
                                     className="w-20"
                                 />
                              </div>
+                             <Separator orientation='vertical' className='h-8' />
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="outline" size="icon" onClick={handleAddRow} disabled={grid.length === 0}>
+                                        <PlusSquare className="transform rotate-90" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Add Row</p></TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="outline" size="icon" onClick={handleAddColumn} disabled={grid.length === 0}>
+                                        <PlusSquare />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Add Column</p></TooltipContent>
+                            </Tooltip>
                         </CardContent>
                      </Card>
                      <Card>
@@ -431,3 +481,4 @@ export default function TableBuilderPage() {
         </TooltipProvider>
     );
 }
+
