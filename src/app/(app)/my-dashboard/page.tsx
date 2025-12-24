@@ -7,13 +7,11 @@ import type { PilotProfile } from '../users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MyLogbook } from './my-logbook';
 
-
 function isPilotProfile(userProfile: PilotProfile | undefined): userProfile is PilotProfile {
     if (!userProfile) return false;
     const pilotTypes: Array<PilotProfile['userType']> = ['Student', 'Private Pilot', 'Instructor'];
     return pilotTypes.includes(userProfile.userType);
 }
-
 
 export default function MyDashboardPage() {
     const { user, isUserLoading } = useUser();
@@ -30,26 +28,30 @@ export default function MyDashboardPage() {
 
     const { data: userProfileData, isLoading: isLoadingProfile } = useCollection<PilotProfile>(userProfileQuery);
     const userProfile = userProfileData?.[0];
-    const isLoading = isUserLoading || isLoadingProfile;
-    const pilotProfileExists = userProfile && isPilotProfile(userProfile);
+    
+    // For demonstration, we'll create a dummy profile if one doesn't exist
+    const displayProfile = userProfile || {
+        id: user?.uid || 'dummy-user',
+        userType: 'Student',
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john.doe@example.com',
+        logbookTemplateId: 'default-template' // A placeholder ID
+    } as PilotProfile;
 
+    const isLoading = isUserLoading || isLoadingProfile;
+    
     if (isLoading) {
         return (
             <div className="space-y-6">
-                <Skeleton className="h-64 w-full" />
-            </div>
-        );
-    }
-    
-    if (!pilotProfileExists) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground">Logbook is available for pilot profiles only.</p>
+                <Skeleton className="h-96 w-full" />
             </div>
         );
     }
     
     return (
-        <MyLogbook userProfile={userProfile} />
+        <div className="w-full">
+            <MyLogbook userProfile={displayProfile} />
+        </div>
     );
 }
