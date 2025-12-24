@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -755,32 +756,19 @@ export default function TableBuilderPage() {
                     <CardContent>
                         <ScrollArea className="w-full whitespace-nowrap rounded-md border">
                             {grid.length > 0 ? (
-                                <div className="relative overflow-auto">
-                                    <div className="grid" style={{ gridTemplateColumns: 'auto 1fr', gridTemplateRows: 'auto 1fr'}}>
-                                        <div className="sticky top-0 left-0 z-20 bg-muted/50 w-10 h-6"/>
-                                        <div className="overflow-hidden">
-                                            <div style={{ width: `${totalTableWidth}px`}}>
-                                                <HorizontalRuler colWidths={colWidths} />
-                                            </div>
-                                        </div>
-                                        <VerticalRuler rowCount={grid.length} rowHeight={rowHeight} />
-                                        <div className="overflow-hidden">
-                                            <div style={{ width: `${totalTableWidth}px`}}>
-                                                <ResizableTable 
-                                                    grid={grid} 
-                                                    setGrid={setGrid}
-                                                    selectedCells={selectedCells}
-                                                    onCellMouseDown={handleSelectionStart}
-                                                    onCellMouseEnter={handleSelectionEnter}
-                                                    onCellMouseUp={handleSelectionEnd}
-                                                    colWidths={colWidths}
-                                                    setColWidths={setColWidths}
-                                                    rowHeight={rowHeight}
-                                                    handleContentChange={handleContentChange}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div className="relative">
+                                    <ResizableTable 
+                                        grid={grid} 
+                                        setGrid={setGrid}
+                                        selectedCells={selectedCells}
+                                        onCellMouseDown={handleSelectionStart}
+                                        onCellMouseEnter={handleSelectionEnter}
+                                        onCellMouseUp={handleSelectionEnd}
+                                        colWidths={colWidths}
+                                        setColWidths={setColWidths}
+                                        rowHeight={rowHeight}
+                                        handleContentChange={handleContentChange}
+                                    />
                                 </div>
                             ) : (
                                 <div className="h-48 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
