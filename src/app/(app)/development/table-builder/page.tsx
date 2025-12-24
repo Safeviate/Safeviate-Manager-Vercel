@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Merge, Split, Text, GripVertical, PlusSquare } from 'lucide-react';
+import { Merge, Split, Text, GripVertical, PlusSquare, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // --- Types ---
@@ -393,6 +393,24 @@ export default function TableBuilderPage() {
         setColWidths(Array(newColCount).fill(100 / newColCount));
     };
 
+    const handleDeleteRow = () => {
+        if (grid.length > 1) {
+            setGrid(grid.slice(0, -1));
+            setSelectedCells([]);
+        }
+    };
+    
+    const handleDeleteColumn = () => {
+        if (grid.length > 0 && grid[0].length > 1) {
+            const newGrid = grid.map(row => row.slice(0, -1));
+            setGrid(newGrid);
+
+            const newColCount = newGrid[0].length;
+            setColWidths(Array(newColCount).fill(100 / newColCount));
+            setSelectedCells([]);
+        }
+    };
+
     return (
         <TooltipProvider>
         <div className="space-y-6">
@@ -433,21 +451,42 @@ export default function TableBuilderPage() {
                                 />
                              </div>
                              <Separator orientation='vertical' className='h-8' />
-                            <Tooltip>
+                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Button variant="outline" size="icon" onClick={handleAddRow} disabled={grid.length === 0}>
-                                        <PlusSquare className="transform rotate-90" />
+                                    <Button variant="outline" onClick={handleAddRow} disabled={grid.length === 0}>
+                                        <PlusSquare className="transform rotate-90 mr-2"/>
+                                        Add Row
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent><p>Add Row</p></TooltipContent>
                             </Tooltip>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Button variant="outline" size="icon" onClick={handleAddColumn} disabled={grid.length === 0}>
-                                        <PlusSquare />
+                                    <Button variant="outline" onClick={handleAddColumn} disabled={grid.length === 0}>
+                                        <PlusSquare className='mr-2' />
+                                        Add Column
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent><p>Add Column</p></TooltipContent>
+                            </Tooltip>
+                            <Separator orientation='vertical' className='h-8' />
+                             <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="destructive" onClick={handleDeleteRow} disabled={grid.length <= 1}>
+                                        <Trash2 className="transform rotate-90 mr-2"/>
+                                        Delete Row
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Delete Last Row</p></TooltipContent>
+                            </Tooltip>
+                             <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="destructive" onClick={handleDeleteColumn} disabled={grid.length === 0 || grid[0].length <= 1}>
+                                        <Trash2 className='mr-2' />
+                                        Delete Column
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Delete Last Column</p></TooltipContent>
                             </Tooltip>
                         </CardContent>
                      </Card>
