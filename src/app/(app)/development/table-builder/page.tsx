@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Merge, Split, Text, GripVertical, PlusSquare, Trash2, AlignLeft, AlignCenter, AlignRight, SplitSquareHorizontal, SplitSquareVertical, AlignStartVertical, AlignCenterVertical, AlignEndVertical } from 'lucide-react';
+import { Merge, Split, Text, GripVertical, PlusSquare, Trash2, AlignLeft, AlignCenter, AlignRight, SplitSquareHorizontal, SplitSquareVertical, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Bold } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // --- Types ---
@@ -18,6 +18,7 @@ interface CellData {
     rowSpan: number;
     colSpan: number;
     fontSize: number;
+    fontWeight: 'normal' | 'bold';
     isMerged: boolean;
     content: string;
     textAlign: 'left' | 'center' | 'right';
@@ -32,10 +33,12 @@ type CellPath = (string | number)[];
 const EditableCell = ({
   initialContent,
   fontSize,
+  fontWeight,
   onContentSave,
 }: {
   initialContent: string;
   fontSize: number;
+  fontWeight: 'normal' | 'bold';
   onContentSave: (newContent: string) => void;
 }) => {
   const cellRef = useRef<HTMLDivElement>(null);
@@ -59,7 +62,7 @@ const EditableCell = ({
       contentEditable
       suppressContentEditableWarning
       onBlur={handleBlur}
-      style={{ fontSize: `${fontSize}px` }}
+      style={{ fontSize: `${fontSize}px`, fontWeight: fontWeight }}
       className="w-full h-full p-2 focus:outline-none"
     />
   );
@@ -250,6 +253,7 @@ const ResizableTable = ({
                         <EditableCell
                             initialContent={cell.content}
                             fontSize={cell.fontSize}
+                            fontWeight={cell.fontWeight}
                             onContentSave={(newContent) => handleContentChange(currentPath, newContent)}
                         />
                     )}
@@ -330,6 +334,7 @@ export default function TableBuilderPage() {
                 rowSpan: 1,
                 colSpan: 1,
                 fontSize: 14,
+                fontWeight: 'normal',
                 isMerged: false,
                 content: '',
                 textAlign: 'left',
@@ -341,34 +346,42 @@ export default function TableBuilderPage() {
         setSelectedCells([]);
     };
 
-    const handleContentChange = (path: CellPath, newContent: string) => {
+    const handleContentChange = useCallback((path: CellPath, newContent: string) => {
       setGrid(currentGrid => {
         const newGrid = JSON.parse(JSON.stringify(currentGrid));
-        let targetCell: CellData | null = null;
+        
         let parent: any = newGrid;
+        let finalCell: CellData | null = null;
+        let finalIndex = -1;
 
         for (let i = 0; i < path.length; i++) {
             const segment = path[i];
-            if (i === path.length - 1) { // last segment is the cell index
-                targetCell = parent[segment as number];
-            } else if (typeof segment === 'number' && typeof path[i+1] === 'number') {
-                parent = parent[segment][path[i+1] as number];
-                i++; // consumed two segments
+            if (i === path.length - 1) { // It's a cell index in the current 'parent' grid
+                if (Array.isArray(parent)) {
+                    finalCell = parent[segment as number];
+                    finalIndex = segment as number;
+                }
+                break;
+            } else if (typeof segment === 'number' && typeof path[i+1] === 'number') { // Navigating rowIndex and colIndex
+                if (Array.isArray(parent)) {
+                    parent = parent[segment][path[i+1] as number];
+                }
+                i++;
             } else if (segment === 'nestedGrid') {
-                parent = parent.nestedGrid;
-            } else {
-                 break; // Should not happen with valid paths
+                if (parent) {
+                    parent = parent.nestedGrid;
+                }
             }
         }
-
-        if (targetCell && targetCell.content !== newContent) {
-            targetCell.content = newContent;
-            return newGrid;
+        
+        if (finalCell && finalCell.content !== newContent) {
+          finalCell.content = newContent;
+          return newGrid;
         }
 
-        return currentGrid; // No change, return original grid
+        return currentGrid;
       });
-    };
+    }, []);
 
     const handleSelectionStart = (path: CellPath) => {
         setIsSelecting(true);
@@ -406,6 +419,33 @@ export default function TableBuilderPage() {
         setGrid(newGrid);
     };
     
+    const handleToggleBold = () => {
+      if (selectedCells.length === 0) return;
+      const newGrid = JSON.parse(JSON.stringify(grid));
+
+      selectedCells.forEach((path) => {
+          let currentLevel = newGrid;
+          for (let i = 0; i < path.length; i++) {
+              if (i === path.length - 2 && Array.isArray(currentLevel)) { // Last pair, it's a cell
+                  const cell = currentLevel[path[i] as number][path[i+1] as number];
+                  if (cell) {
+                      cell.fontWeight = cell.fontWeight === 'bold' ? 'normal' : 'bold';
+                  }
+                  break;
+              }
+              if (Array.isArray(currentLevel)) {
+                  const nextCell = currentLevel[path[i] as number]?.[path[i+1] as number];
+                  currentLevel = nextCell?.nestedGrid;
+                  i++;
+              } else {
+                  break; // Invalid path
+              }
+          }
+      });
+
+      setGrid(newGrid);
+    };
+
     const handleTextAlignChange = (alignment: 'left' | 'center' | 'right') => {
         if (selectedCells.length === 0) return;
         const newGrid = JSON.parse(JSON.stringify(grid));
@@ -606,6 +646,7 @@ export default function TableBuilderPage() {
             rowSpan: 1,
             colSpan: 1,
             fontSize: 14,
+            fontWeight: 'normal',
             isMerged: false,
             content: '',
             textAlign: 'left',
@@ -623,6 +664,7 @@ export default function TableBuilderPage() {
                 rowSpan: 1,
                 colSpan: 1,
                 fontSize: 14,
+                fontWeight: 'normal',
                 isMerged: false,
                 content: '',
                 textAlign: 'left',
@@ -698,6 +740,9 @@ export default function TableBuilderPage() {
                                 <TooltipContent><p>Split Cell Horizontally</p></TooltipContent>
                             </Tooltip>
                             <Separator orientation='vertical' className='h-8' />
+                            <div className="flex items-center gap-1">
+                                <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={handleToggleBold}><Bold /></Button></TooltipTrigger><TooltipContent><p>Bold</p></TooltipContent></Tooltip>
+                            </div>
                             <div className="flex items-center gap-2">
                                 <Label htmlFor="font-size"><Text className="h-5 w-5" /></Label>
                                 <Input 
