@@ -17,10 +17,11 @@ interface CellData {
     id: string;
     rowSpan: number;
     colSpan: number;
-    fontSize: number; // in pixels
+    fontSize: number;
     isMerged: boolean;
     content: string;
     textAlign: 'left' | 'center' | 'right';
+    nestedGrid?: CellData[][];
 }
 
 // --- Components ---
@@ -67,16 +68,18 @@ const ResizableTable = ({
   colWidths,
   setColWidths,
   rowHeight,
+  isNested = false,
 }: {
   grid: CellData[][];
   setGrid: (grid: CellData[][]) => void;
   selectedCells: { row: number, col: number }[];
-  onCellMouseDown: (row: number, col: number) => void;
-  onCellMouseEnter: (row: number, col: number) => void;
+  onCellMouseDown: (row: number, col: number, isNested?: boolean) => void;
+  onCellMouseEnter: (row: number, col: number, isNested?: boolean) => void;
   onCellMouseUp: () => void;
   colWidths: number[];
   setColWidths: (widths: number[]) => void;
   rowHeight: number;
+  isNested?: boolean;
 }) => {
     const tableRef = useRef<HTMLTableElement>(null);
     const [resizingCol, setResizingCol] = useState<number | null>(null);
@@ -145,16 +148,18 @@ const ResizableTable = ({
   return (
       <table
         ref={tableRef}
-        className="w-full border-collapse"
+        className={cn("w-full h-full border-collapse", isNested && "bg-background/50")}
         style={{ tableLayout: 'fixed' }}
         onMouseUp={onCellMouseUp}
         onMouseLeave={onCellMouseUp} // Stop selection if mouse leaves table
       >
-        <colgroup>
-            {colWidths.map((width, i) => (
-                <col key={i} style={{ width: `${width}%` }} />
-            ))}
-        </colgroup>
+        {!isNested && (
+            <colgroup>
+                {colWidths.map((width, i) => (
+                    <col key={i} style={{ width: `${width}%` }} />
+                ))}
+            </colgroup>
+        )}
         <tbody>
           {Array.from({ length: rows }).map((_, rowIndex) => (
             <tr key={rowIndex}>
@@ -167,25 +172,45 @@ const ResizableTable = ({
                     key={colIndex}
                     rowSpan={cell.rowSpan}
                     colSpan={cell.colSpan}
-                    onMouseDown={() => onCellMouseDown(rowIndex, colIndex)}
-                    onMouseEnter={() => onCellMouseEnter(rowIndex, colIndex)}
-                    style={{ textAlign: cell.textAlign, height: `${rowHeight * cell.rowSpan}px` }}
+                    onMouseDown={() => onCellMouseDown(rowIndex, colIndex, isNested)}
+                    onMouseEnter={() => onCellMouseEnter(rowIndex, colIndex, isNested)}
+                    style={{ textAlign: cell.textAlign, height: isNested ? 'auto' : `${rowHeight * cell.rowSpan}px` }}
                     className={cn(
                         "border border-muted p-0 relative select-none",
                         isCellSelected(rowIndex, colIndex) && 'bg-primary/20 outline-2 outline-primary outline'
                     )}
                   >
-                    <div
-                      contentEditable
-                      suppressContentEditableWarning
-                      onInput={(e) => handleContentChange(e, rowIndex, colIndex)}
-                      style={{ fontSize: `${cell.fontSize}px` }}
-                      className="w-full h-full p-2 focus:outline-none"
-                    >
-                      {cell.content}
-                    </div>
+                    {cell.nestedGrid ? (
+                        <ResizableTable
+                            grid={cell.nestedGrid}
+                            setGrid={(newNestedGrid) => {
+                                const newGrid = [...grid];
+                                newGrid[rowIndex][colIndex].nestedGrid = newNestedGrid;
+                                setGrid(newGrid);
+                            }}
+                            selectedCells={[]}
+                            onCellMouseDown={() => {}}
+                            onCellMouseEnter={() => {}}
+                            onCellMouseUp={() => {}}
+                            colWidths={[]} // Not resizable for now
+                            setColWidths={() => {}}
+                            rowHeight={rowHeight}
+                            isNested={true}
+                        />
+                    ) : (
+                        <div
+                        contentEditable
+                        suppressContentEditableWarning
+                        onInput={(e) => handleContentChange(e, rowIndex, colIndex)}
+                        style={{ fontSize: `${cell.fontSize}px` }}
+                        className="w-full h-full p-2 focus:outline-none"
+                        >
+                        {cell.content}
+                        </div>
+                    )}
+                    
 
-                    {colIndex < cols - 1 && (
+                    {!isNested && colIndex < cols - 1 && (
                       <div
                         onMouseDown={(e) => handleResizeMouseDown(e, colIndex)}
                         className="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-primary/50"
@@ -270,13 +295,14 @@ export default function TableBuilderPage() {
         setSelectedCells([]);
     };
 
-    const handleSelectionStart = (row: number, col: number) => {
+    const handleSelectionStart = (row: number, col: number, isNested = false) => {
+        if (isNested) return;
         setIsSelecting(true);
         setSelectedCells([{ row, col }]);
     };
 
-    const handleSelectionEnter = (row: number, col: number) => {
-        if (!isSelecting) return;
+    const handleSelectionEnter = (row: number, col: number, isNested = false) => {
+        if (!isSelecting || isNested) return;
         
         const startCell = selectedCells[0];
         if (!startCell) return;
@@ -409,48 +435,28 @@ export default function TableBuilderPage() {
 
     const handleSplitCell = (direction: 'vertical' | 'horizontal') => {
         if (selectedCells.length !== 1) return;
-        const { row: selRow, col: selCol } = selectedCells[0];
-        
+        const { row, col } = selectedCells[0];
         const newGrid = grid.map(r => r.map(c => ({...c})));
-
+        const cellToSplit = newGrid[row][col];
+        
+        // Cannot split a merged cell or a cell that already contains a nested grid
+        if (cellToSplit.isMerged || cellToSplit.nestedGrid) return;
+        
+        let newNestedGrid: CellData[][];
         if (direction === 'vertical') {
-            const newColIndex = selCol + 1;
-            // Insert new column data for each row
-            for(let i = 0; i < newGrid.length; i++) {
-                const newCell: CellData = { id: `${i}-${newColIndex}`, rowSpan: 1, colSpan: 1, fontSize: 14, isMerged: false, content: '', textAlign: 'left' };
-                newGrid[i].splice(newColIndex, 0, newCell);
-            }
-            // Update colSpan of the selected cell
-            newGrid[selRow][selCol].colSpan = 2;
-            
-            // Adjust column widths
-            const newWidths = [...colWidths];
-            const originalWidth = newWidths[selCol];
-            newWidths[selCol] = originalWidth / 2;
-            newWidths.splice(newColIndex, 0, originalWidth / 2);
-            setColWidths(newWidths);
-
+            newNestedGrid = [[
+                {...cellToSplit, id: 'nested-0-0', colSpan: 1, rowSpan: 1, content: cellToSplit.content},
+                {...cellToSplit, id: 'nested-0-1', colSpan: 1, rowSpan: 1, content: ''}
+            ]];
         } else { // horizontal
-            const newRowIndex = selRow + 1;
-            const newRow: CellData[] = Array.from({ length: newGrid[0].length }, (_, colIndex) => ({ id: `${newRowIndex}-${colIndex}`, rowSpan: 1, colSpan: 1, fontSize: 14, isMerged: false, content: '', textAlign: 'left' }));
-            newGrid.splice(newRowIndex, 0, newRow);
-            
-            // Update rowSpan of cells in the original row
-            for(let i=0; i < newGrid[selRow].length; i++) {
-                if(newGrid[selRow][i].isMerged) continue;
-                if(i === selCol) {
-                    newGrid[selRow][i].rowSpan += 1;
-                } else {
-                    // Check if the cell to the left needs its rowspan increased to cover the new row
-                    if (i > 0 && newGrid[selRow][i-1].isMerged) {
-                        // find parent and increase its rowspan
-                    } else {
-                       newGrid[selRow][i].rowSpan += 1;
-                    }
-                }
-            }
+            newNestedGrid = [
+                [{...cellToSplit, id: 'nested-0-0', colSpan: 1, rowSpan: 1, content: cellToSplit.content}],
+                [{...cellToSplit, id: 'nested-1-0', colSpan: 1, rowSpan: 1, content: ''}]
+            ];
         }
 
+        cellToSplit.nestedGrid = newNestedGrid;
+        cellToSplit.content = ''; // Content moves into the nested grid
         setGrid(newGrid);
         setSelectedCells([]);
     };
