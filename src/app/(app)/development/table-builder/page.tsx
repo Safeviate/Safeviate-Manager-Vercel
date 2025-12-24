@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,8 @@ const ResizableTable = ({
   onCellMouseDown,
   onCellMouseEnter,
   onCellMouseUp,
+  colWidths,
+  setColWidths
 }: {
   grid: CellData[][];
   setGrid: (grid: CellData[][]) => void;
@@ -38,7 +40,65 @@ const ResizableTable = ({
   onCellMouseDown: (row: number, col: number) => void;
   onCellMouseEnter: (row: number, col: number) => void;
   onCellMouseUp: () => void;
+  colWidths: number[];
+  setColWidths: (widths: number[]) => void;
 }) => {
+    const tableRef = useRef<HTMLTableElement>(null);
+    const [resizingCol, setResizingCol] = useState<number | null>(null);
+
+    const handleResizeMouseDown = (e: React.MouseEvent, colIndex: number) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setResizingCol(colIndex);
+    };
+
+    const handleResizeMouseMove = useCallback((e: MouseEvent) => {
+        if (resizingCol === null || !tableRef.current) return;
+        
+        const tableWidth = tableRef.current.offsetWidth;
+        
+        const newWidths = [...colWidths];
+        
+        // Calculate the change in mouse position
+        const dx = e.movementX;
+        
+        // Calculate new widths in percentage
+        const widthChangePercent = (dx / tableWidth) * 100;
+        
+        // Prevent making columns too small
+        const minWidthPercent = 5;
+        
+        if (newWidths[resizingCol] + widthChangePercent < minWidthPercent || newWidths[resizingCol + 1] - widthChangePercent < minWidthPercent) {
+            return;
+        }
+
+        newWidths[resizingCol] += widthChangePercent;
+        newWidths[resizingCol + 1] -= widthChangePercent;
+        
+        setColWidths(newWidths);
+
+    }, [resizingCol, colWidths, setColWidths]);
+
+    const handleResizeMouseUp = useCallback(() => {
+        setResizingCol(null);
+    }, []);
+
+    useEffect(() => {
+        if (resizingCol !== null) {
+            document.addEventListener('mousemove', handleResizeMouseMove);
+            document.addEventListener('mouseup', handleResizeMouseUp);
+        } else {
+            document.removeEventListener('mousemove', handleResizeMouseMove);
+            document.removeEventListener('mouseup', handleResizeMouseUp);
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleResizeMouseMove);
+            document.removeEventListener('mouseup', handleResizeMouseUp);
+        };
+    }, [resizingCol, handleResizeMouseMove, handleResizeMouseUp]);
+
+
   if (grid.length === 0) return null;
 
   const rows = grid.length;
@@ -57,11 +117,17 @@ const ResizableTable = ({
   return (
     <div className="overflow-x-auto rounded-lg border">
       <table
+        ref={tableRef}
         className="w-full border-collapse"
         style={{ tableLayout: 'fixed' }}
         onMouseUp={onCellMouseUp}
         onMouseLeave={onCellMouseUp} // Stop selection if mouse leaves table
       >
+        <colgroup>
+            {colWidths.map((width, i) => (
+                <col key={i} style={{ width: `${width}%` }} />
+            ))}
+        </colgroup>
         <tbody>
           {Array.from({ length: rows }).map((_, rowIndex) => (
             <tr key={rowIndex}>
@@ -90,6 +156,13 @@ const ResizableTable = ({
                     >
                       {cell.content}
                     </div>
+
+                    {colIndex < cols - 1 && cell.rowSpan === 1 && (
+                      <div
+                        onMouseDown={(e) => handleResizeMouseDown(e, colIndex)}
+                        className="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-primary/50"
+                      />
+                    )}
                   </td>
                 );
               })}
@@ -117,6 +190,7 @@ const TableSelector = ({ onSelect }: { onSelect: (dims: { rows: number; cols: nu
                 <div 
                     className="grid gap-1 bg-muted/20 p-2" 
                     style={{ gridTemplateColumns: `repeat(${gridSize}, 1fr)` }}
+                    onMouseLeave={() => setHovered({ rows: 0, cols: 0 })}
                 >
                     {Array.from({ length: gridSize * gridSize }).map((_, index) => {
                         const row = Math.floor(index / gridSize) + 1;
@@ -146,6 +220,7 @@ const TableSelector = ({ onSelect }: { onSelect: (dims: { rows: number; cols: nu
 // --- Main Page Component ---
 export default function TableBuilderPage() {
     const [grid, setGrid] = useState<CellData[][]>([]);
+    const [colWidths, setColWidths] = useState<number[]>([]);
     const [selectedCells, setSelectedCells] = useState<{ row: number, col: number }[]>([]);
     const [isSelecting, setIsSelecting] = useState(false);
     const [fontSize, setFontSize] = useState(14);
@@ -162,6 +237,7 @@ export default function TableBuilderPage() {
             }))
         );
         setGrid(newGrid);
+        setColWidths(Array(cols).fill(100 / cols));
         setSelectedCells([]);
     };
 
@@ -224,6 +300,8 @@ export default function TableBuilderPage() {
         // Apply span to the top-left cell
         newGrid[minRow][minCol].rowSpan = newRowSpan;
         newGrid[minRow][minCol].colSpan = newColSpan;
+        newGrid[minRow][minCol].isMerged = false;
+
 
         // Mark other cells as merged
         for (let i = minRow; i <= maxRow; i++) {
@@ -248,20 +326,23 @@ export default function TableBuilderPage() {
             // Find the top-left cell of a potential merged block
             let parentRow = row;
             let parentCol = col;
-            while(parentRow >= 0 && parentCol >= 0 && newGrid[parentRow][parentCol].isMerged) {
-                let foundParent = false;
-                for(let r=0; r <= parentRow; r++) {
-                    for(let c=0; c <= parentCol; c++) {
-                        if (r + newGrid[r][c].rowSpan > parentRow && c + newGrid[r][c].colSpan > parentCol) {
+            
+            // This loop correctly finds the origin cell of a merged block
+            if(cell.isMerged) {
+                let found = false;
+                for(let r=0; r <= row; r++) {
+                    for(let c=0; c <= col; c++) {
+                        if (r + newGrid[r][c].rowSpan > row && c + newGrid[r][c].colSpan > col) {
                             parentRow = r;
                             parentCol = c;
-                            foundParent = true;
+                            found = true;
                             break;
                         }
                     }
-                    if (foundParent) break;
+                    if(found) break;
                 }
             }
+
 
             const parentCell = newGrid[parentRow][parentCol];
 
@@ -323,7 +404,7 @@ export default function TableBuilderPage() {
                      <Card>
                         <CardHeader>
                             <CardTitle>Table Preview</CardTitle>
-                            <CardDescription>Click in cells to edit text. Click and drag to select multiple cells.</CardDescription>
+                            <CardDescription>Click in cells to edit text. Click and drag to select multiple cells. Drag column borders to resize.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {grid.length > 0 ? (
@@ -334,6 +415,8 @@ export default function TableBuilderPage() {
                                     onCellMouseDown={handleSelectionStart}
                                     onCellMouseEnter={handleSelectionEnter}
                                     onCellMouseUp={handleSelectionEnd}
+                                    colWidths={colWidths}
+                                    setColWidths={setColWidths}
                                 />
                             ) : (
                                 <div className="h-48 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
