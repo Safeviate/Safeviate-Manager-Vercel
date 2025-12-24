@@ -43,19 +43,19 @@ const EditableCell = ({
   onContentSave: (newContent: string) => void;
 }) => {
   const cellRef = useRef<HTMLDivElement>(null);
-
+  
   useEffect(() => {
     if (cellRef.current && cellRef.current.textContent !== initialContent) {
-      cellRef.current.textContent = initialContent;
+        cellRef.current.textContent = initialContent;
     }
   }, [initialContent]);
 
   const handleBlur = () => {
     if (cellRef.current) {
-      onContentSave(cellRef.current.textContent || '');
+        onContentSave(cellRef.current.textContent || '');
     }
   };
-
+  
   return (
     <div
       ref={cellRef}
@@ -64,6 +64,7 @@ const EditableCell = ({
       onBlur={handleBlur}
       style={{ fontSize: `${fontSize}px`, fontWeight: fontWeight }}
       className="w-full h-full p-2 focus:outline-none"
+      dangerouslySetInnerHTML={{ __html: initialContent }}
     />
   );
 };
@@ -75,10 +76,10 @@ const HorizontalRuler = ({ colWidths }: { colWidths: number[] }) => {
             {colWidths.map((width, index) => (
                 <div
                     key={index}
-                    style={{ width: `${width}%` }}
-                    className="flex-shrink-0 border-l p-1 text-xs text-muted-foreground"
+                    style={{ width: `${width}px` }}
+                    className="flex-shrink-0 border-l p-1 text-xs text-muted-foreground flex items-center justify-center"
                 >
-                    {Math.round(width)}%
+                    {width}px
                 </div>
             ))}
         </div>
@@ -87,14 +88,14 @@ const HorizontalRuler = ({ colWidths }: { colWidths: number[] }) => {
 
 const VerticalRuler = ({ rowCount, rowHeight }: { rowCount: number, rowHeight: number }) => {
     return (
-        <div className="sticky left-0 z-10 w-6 bg-muted/50 border-r">
+        <div className="sticky left-0 z-10 w-10 bg-muted/50 border-r">
             {Array.from({ length: rowCount }).map((_, index) => (
                 <div
                     key={index}
                     style={{ height: `${rowHeight}px` }}
                     className="flex items-center justify-center border-t"
                 >
-                    <span className="text-xs text-muted-foreground -rotate-90">{rowHeight}px</span>
+                    <span className="text-xs text-muted-foreground">{rowHeight}px</span>
                 </div>
             ))}
         </div>
@@ -158,7 +159,7 @@ const ResizableTable = ({
         {!isNested && (
             <colgroup>
                 {colWidths.map((width, i) => (
-                    <col key={i} style={{ width: `${width}%` }} />
+                    <col key={i} style={{ width: `${width}px` }} />
                 ))}
             </colgroup>
         )}
@@ -196,7 +197,7 @@ const ResizableTable = ({
                             onCellMouseDown={onCellMouseDown}
                             onCellMouseEnter={onCellMouseEnter}
                             onCellMouseUp={onCellMouseUp}
-                            colWidths={[]} // Not resizable for now
+                            colWidths={[]} // Nested tables don't control main widths
                             setColWidths={() => {}}
                             rowHeight={rowHeight}
                             handleContentChange={handleContentChange}
@@ -287,43 +288,38 @@ export default function TableBuilderPage() {
             }))
         );
         setGrid(newGrid);
-        setColWidths(Array(cols).fill(100 / cols));
+        setColWidths(Array(cols).fill(150)); // Set a fixed initial width for each column
         setSelectedCells([]);
     };
 
     const handleContentChange = useCallback((path: CellPath, newContent: string) => {
-      setGrid(currentGrid => {
-          const newGrid = JSON.parse(JSON.stringify(currentGrid));
-          let currentLevel: any = newGrid;
-          let targetCell: CellData | null = null;
-  
-          for (let i = 0; i < path.length; i++) {
-              if (i === path.length - 2 && Array.isArray(currentLevel)) { // Last pair, it's a cell in a grid
-                  targetCell = currentLevel[path[i] as number][path[i+1] as number];
-                  break;
-              } else if (path[i+1] === 'nestedGrid' && currentLevel[path[i] as number]) { // Navigate into nested grid
-                  currentLevel = currentLevel[path[i] as number].nestedGrid;
-                  i++;
-              } else if (Array.isArray(currentLevel) && currentLevel[path[i] as number] && typeof path[i+1] === 'number') { // Traverse a grid
-                   currentLevel = currentLevel[path[i] as number][path[i+1] as number];
-                   if (i + 2 < path.length && currentLevel.nestedGrid) {
-                       currentLevel = currentLevel.nestedGrid;
-                       i++;
-                   }
-              } else {
-                  currentLevel = null; // Invalid path
-                  break;
-              }
-          }
-  
-          if (targetCell && targetCell.content !== newContent) {
-              targetCell.content = newContent;
-              return newGrid;
-          }
-  
-          return currentGrid;
-      });
-  }, []);
+        setGrid(currentGrid => {
+            const newGrid = JSON.parse(JSON.stringify(currentGrid));
+            
+            let currentLevel: any = newGrid;
+            
+            // Function to recursively find and update the cell
+            const updateCell = (grid: CellData[][], currentPath: CellPath): CellData[][] => {
+                if (currentPath.length === 2) {
+                    const [row, col] = currentPath as [number, number];
+                    if (grid[row] && grid[row][col] && grid[row][col].content !== newContent) {
+                        grid[row][col].content = newContent;
+                    }
+                    return grid;
+                }
+    
+                if (currentPath.length > 2) {
+                    const [row, col] = currentPath as [number, number];
+                    if (grid[row] && grid[row][col] && grid[row][col].nestedGrid) {
+                        grid[row][col].nestedGrid = updateCell(grid[row][col].nestedGrid!, currentPath.slice(2));
+                    }
+                }
+                return grid;
+            };
+    
+            return updateCell(newGrid, path);
+        });
+    }, []);
 
     const handleSelectionStart = (path: CellPath) => {
         setIsSelecting(true);
@@ -366,7 +362,7 @@ export default function TableBuilderPage() {
       const newGrid = JSON.parse(JSON.stringify(grid));
 
       selectedCells.forEach((path) => {
-          let currentLevel = newGrid;
+          let currentLevel: any = newGrid;
           for (let i = 0; i < path.length; i++) {
               if (i === path.length - 2 && Array.isArray(currentLevel)) { // Last pair, it's a cell
                   const cell = currentLevel[path[i] as number][path[i+1] as number];
@@ -375,10 +371,15 @@ export default function TableBuilderPage() {
                   }
                   break;
               }
-              if (Array.isArray(currentLevel)) {
+              if (Array.isArray(currentLevel) && currentLevel[path[i] as number] && typeof path[i+1] === 'number') {
                   const nextCell = currentLevel[path[i] as number]?.[path[i+1] as number];
-                  currentLevel = nextCell?.nestedGrid;
-                  i++;
+                  if (path[i+2] === 'nestedGrid') {
+                    currentLevel = nextCell?.nestedGrid;
+                    i += 2;
+                  } else {
+                    currentLevel = nextCell;
+                    i++;
+                  }
               } else {
                   break; // Invalid path
               }
@@ -616,7 +617,7 @@ export default function TableBuilderPage() {
         setGrid(newGrid);
 
         const newColCount = newGrid[0].length;
-        setColWidths(Array(newColCount).fill(100 / newColCount));
+        setColWidths(Array(newColCount).fill(150));
     };
 
     const handleDeleteRow = () => {
@@ -632,10 +633,12 @@ export default function TableBuilderPage() {
             setGrid(newGrid);
 
             const newColCount = newGrid[0].length;
-            setColWidths(Array(newColCount).fill(100 / newColCount));
+            setColWidths(Array(newColCount).fill(150));
             setSelectedCells([]);
         }
     };
+
+    const totalTableWidth = colWidths.reduce((a, b) => a + b, 0);
 
     return (
         <TooltipProvider>
@@ -757,21 +760,29 @@ export default function TableBuilderPage() {
                         {grid.length > 0 ? (
                             <div className="relative overflow-auto rounded-lg border">
                                 <div className="grid" style={{ gridTemplateColumns: 'auto 1fr', gridTemplateRows: 'auto 1fr'}}>
-                                    <div className="sticky top-0 left-0 z-20 bg-muted/50 w-6 h-6"/>
-                                    <HorizontalRuler colWidths={colWidths} />
+                                    <div className="sticky top-0 left-0 z-20 bg-muted/50 w-10 h-6"/>
+                                    <div className="overflow-hidden">
+                                        <div style={{ width: `${totalTableWidth}px`}}>
+                                            <HorizontalRuler colWidths={colWidths} />
+                                        </div>
+                                    </div>
                                     <VerticalRuler rowCount={grid.length} rowHeight={rowHeight} />
-                                    <ResizableTable 
-                                        grid={grid} 
-                                        setGrid={setGrid}
-                                        selectedCells={selectedCells}
-                                        onCellMouseDown={handleSelectionStart}
-                                        onCellMouseEnter={handleSelectionEnter}
-                                        onCellMouseUp={handleSelectionEnd}
-                                        colWidths={colWidths}
-                                        setColWidths={setColWidths}
-                                        rowHeight={rowHeight}
-                                        handleContentChange={handleContentChange}
-                                    />
+                                    <div className="overflow-hidden">
+                                        <div style={{ width: `${totalTableWidth}px`}}>
+                                            <ResizableTable 
+                                                grid={grid} 
+                                                setGrid={setGrid}
+                                                selectedCells={selectedCells}
+                                                onCellMouseDown={handleSelectionStart}
+                                                onCellMouseEnter={handleSelectionEnter}
+                                                onCellMouseUp={handleSelectionEnd}
+                                                colWidths={colWidths}
+                                                setColWidths={setColWidths}
+                                                rowHeight={rowHeight}
+                                                handleContentChange={handleContentChange}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         ) : (
