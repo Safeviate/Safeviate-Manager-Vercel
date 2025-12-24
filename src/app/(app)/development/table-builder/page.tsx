@@ -117,7 +117,7 @@ const ResizableTable = ({
   return (
       <table
         ref={tableRef}
-        className={cn("w-full border-collapse table-fixed", isNested && "bg-background/50")}
+        className={cn("w-full h-full border-collapse table-fixed", isNested && "bg-background/50")}
         onMouseUp={onCellMouseUp}
         onMouseLeave={onCellMouseUp} // Stop selection if mouse leaves table
       >
@@ -759,3 +759,4 @@ export default function TableBuilderPage() {
         </TooltipProvider>
     );
 }
+
