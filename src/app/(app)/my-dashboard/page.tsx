@@ -72,8 +72,10 @@ export default function MyDashboardPage() {
     const { data: reports, isLoading: isLoadingReports } = useCollection<SafetyReport>(safetyReportsQuery);
     const { data: caps, isLoading: isLoadingCaps } = useCollection<CorrectiveActionPlan>(capsQuery);
     const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
-    const { data: userProfile, isLoading: isLoadingProfile } = useCollection<PilotProfile>(userProfileQuery);
+    const { data: userProfileData, isLoading: isLoadingProfile } = useCollection<PilotProfile>(userProfileQuery);
     const { data: expirySettings, isLoading: isLoadingExpiry } = useCollection<DocumentExpirySettings>(expirySettingsQuery);
+
+    const userProfile = userProfileData?.[0];
 
     const isLoading = isUserLoading || isLoadingReports || isLoadingCaps || isLoadingBookings || isLoadingProfile || isLoadingExpiry;
 
@@ -105,10 +107,10 @@ export default function MyDashboardPage() {
     }, [bookings]);
     
     const documentStatus = useMemo(() => {
-        if (!userProfile?.[0]?.documents) return [];
+        if (!userProfile?.documents) return [];
         const settings = expirySettings?.[0];
         
-        return userProfile[0].documents.map(doc => {
+        return userProfile.documents.map(doc => {
             let status: 'Valid' | 'Warning' | 'Expired' = 'Valid';
             let color = settings?.defaultColor || '#22c55e';
 
@@ -138,6 +140,7 @@ export default function MyDashboardPage() {
             <Card className="lg:col-span-2"><CardHeader><Skeleton className="h-6 w-1/3" /></CardHeader><CardContent><Skeleton className="h-24 w-full" /></CardContent></Card>
             <Card><CardHeader><Skeleton className="h-6 w-1/3" /></CardHeader><CardContent><Skeleton className="h-32 w-full" /></CardContent></Card>
             <Card><CardHeader><Skeleton className="h-6 w-1/3" /></CardHeader><CardContent><Skeleton className="h-32 w-full" /></CardContent></Card>
+            <Card className="lg:col-span-2"><CardHeader><Skeleton className="h-6 w-1/3" /></CardHeader><CardContent><Skeleton className="h-48 w-full" /></CardContent></Card>
         </div>
     }
 
@@ -231,7 +234,7 @@ export default function MyDashboardPage() {
                 </CardContent>
             </Card>
             
-            {userProfile?.[0] && <MyLogbook userProfile={userProfile[0]} />}
+            {userProfile && <MyLogbook userProfile={userProfile} />}
         </div>
     );
 }

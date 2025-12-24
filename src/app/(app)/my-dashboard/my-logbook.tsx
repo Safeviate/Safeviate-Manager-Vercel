@@ -195,4 +195,3 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
     </Card>
   );
 }
-
