@@ -80,6 +80,7 @@ const ResizableTable = ({
   colWidths,
   rowHeight,
   handleContentChange,
+  handleColResize,
   pathPrefix = []
 }: {
   grid: CellData[][];
@@ -91,6 +92,7 @@ const ResizableTable = ({
   colWidths: number[];
   rowHeight: number;
   handleContentChange: (path: CellPath, content: string) => void;
+  handleColResize: (index: number, newWidth: number) => void;
   pathPrefix?: CellPath;
 }) => {
     const tableRef = useRef<HTMLTableElement>(null);
@@ -117,7 +119,8 @@ const ResizableTable = ({
   return (
       <table
         ref={tableRef}
-        className={cn("w-full h-full border-collapse table-fixed", isNested && "bg-background/50")}
+        className={cn("w-full h-full border-collapse table-fixed", isNested && "bg-background/50", isNested && "h-full")}
+        style={{ minWidth: `${colWidths.reduce((a, b) => a + b, 0)}px` }}
         onMouseUp={onCellMouseUp}
         onMouseLeave={onCellMouseUp} // Stop selection if mouse leaves table
       >
@@ -163,6 +166,7 @@ const ResizableTable = ({
                             colWidths={[]} // Nested tables don't control main widths
                             rowHeight={rowHeight}
                             handleContentChange={handleContentChange}
+                            handleColResize={handleColResize}
                             pathPrefix={[...currentPath, 'nestedGrid']}
                         />
                     ) : (
@@ -236,11 +240,44 @@ export default function TableBuilderPage() {
     const [uniformColWidth, setUniformColWidth] = useState(150);
     const rowHeight = 48; // px
 
+    const resizingColIndex = useRef<number | null>(null);
+    const startCursorX = useRef(0);
+
+    const handleColResize = (index: number, newWidth: number) => {
+      setColWidths(prev => {
+        const newColWidths = [...prev];
+        newColWidths[index] = Math.max(50, newWidth); // min width 50px
+        return newColWidths;
+      });
+    };
+
+    const onMouseDownResizer = (event: React.MouseEvent, index: number) => {
+      resizingColIndex.current = index;
+      startCursorX.current = event.clientX;
+    };
+
+    const onMouseMove = useCallback((event: MouseEvent) => {
+      if (resizingColIndex.current === null) return;
+      
+      const newWidth = colWidths[resizingColIndex.current] + event.clientX - startCursorX.current;
+      startCursorX.current = event.clientX;
+
+      handleColResize(resizingColIndex.current, newWidth);
+    }, [colWidths]);
+
+    const onMouseUpResizer = useCallback(() => {
+        resizingColIndex.current = null;
+    }, []);
+
     useEffect(() => {
-        if (grid.length > 0 && grid[0].length > 0) {
-            setColWidths(Array(grid[0].length).fill(uniformColWidth));
-        }
-    }, [uniformColWidth, grid]);
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUpResizer);
+
+        return () => {
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUpResizer);
+        };
+    }, [onMouseMove, onMouseUpResizer]);
     
     const createGrid = (rows: number, cols: number) => {
         const newGrid: CellData[][] = Array.from({ length: rows }, (_, rowIndex) => 
@@ -596,9 +633,7 @@ export default function TableBuilderPage() {
         if (grid.length > 0 && grid[0].length > 1) {
             const newGrid = grid.map(row => row.slice(0, -1));
             setGrid(newGrid);
-
-            const newColCount = newGrid[0].length;
-            setColWidths(Array(newColCount).fill(uniformColWidth));
+            setColWidths(prev => prev.slice(0,-1));
             setSelectedCells([]);
         }
     };
@@ -661,16 +696,6 @@ export default function TableBuilderPage() {
                                 className="w-20"
                             />
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Label htmlFor="col-width">Col Width</Label>
-                            <Input 
-                                id="col-width" 
-                                type="number"
-                                value={uniformColWidth}
-                                onChange={(e) => setUniformColWidth(parseInt(e.target.value, 10))}
-                                className="w-20"
-                            />
-                        </div>
                         <Separator orientation='vertical' className='h-8' />
                         <div className="flex items-center gap-1">
                             <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleTextAlignChange('left')}><AlignLeft /></Button></TooltipTrigger><TooltipContent><p>Align Left</p></TooltipContent></Tooltip>
@@ -728,23 +753,36 @@ export default function TableBuilderPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Table Preview</CardTitle>
-                    <CardDescription>Click and drag on cells to select multiple.</CardDescription>
+                    <CardDescription>Click and drag on cells to select multiple. Drag column borders to resize.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ScrollArea className="w-full whitespace-nowrap rounded-md border">
-                        <div className="pb-4">
+                        <div className="relative pb-4">
                             {grid.length > 0 ? (
-                                <ResizableTable 
-                                    grid={grid} 
-                                    setGrid={setGrid}
-                                    selectedCells={selectedCells}
-                                    onCellMouseDown={handleSelectionStart}
-                                    onCellMouseEnter={handleSelectionEnter}
-                                    onCellMouseUp={handleSelectionEnd}
-                                    colWidths={colWidths}
-                                    rowHeight={rowHeight}
-                                    handleContentChange={handleContentChange}
-                                />
+                                <>
+                                    <div className="grid bg-muted sticky top-0 z-10" style={{ gridTemplateColumns: colWidths.map(w => `${w}px`).join(' ') }}>
+                                      {colWidths.map((_, index) => (
+                                          <div key={index} className="h-4 border-r border-border relative">
+                                            <div 
+                                              onMouseDown={(e) => onMouseDownResizer(e, index)}
+                                              className="absolute top-0 -right-1.5 w-3 h-full cursor-col-resize"
+                                            />
+                                          </div>
+                                      ))}
+                                    </div>
+                                    <ResizableTable 
+                                        grid={grid} 
+                                        setGrid={setGrid}
+                                        selectedCells={selectedCells}
+                                        onCellMouseDown={handleSelectionStart}
+                                        onCellMouseEnter={handleSelectionEnter}
+                                        onCellMouseUp={handleSelectionEnd}
+                                        colWidths={colWidths}
+                                        rowHeight={rowHeight}
+                                        handleContentChange={handleContentChange}
+                                        handleColResize={handleColResize}
+                                    />
+                                </>
                             ) : (
                                 <div className="h-48 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
                                     <p>Select table dimensions to see a preview.</p>
@@ -759,4 +797,3 @@ export default function TableBuilderPage() {
         </TooltipProvider>
     );
 }
-
