@@ -148,7 +148,7 @@ export default function MyDashboardPage() {
         <Tabs defaultValue="information" className="space-y-6">
             <TabsList>
                 <TabsTrigger value="information">Information</TabsTrigger>
-                {isPilotProfile(userProfile) && <TabsTrigger value="logbook">Logbook</TabsTrigger>}
+                <TabsTrigger value="logbook">Logbook</TabsTrigger>
             </TabsList>
             <TabsContent value="information">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -241,11 +241,17 @@ export default function MyDashboardPage() {
                     </Card>
                 </div>
             </TabsContent>
-            {isPilotProfile(userProfile) && (
-                 <TabsContent value="logbook">
-                    <MyLogbook userProfile={userProfile} />
-                </TabsContent>
-            )}
+            <TabsContent value="logbook">
+              {userProfile && isPilotProfile(userProfile) ? (
+                <MyLogbook userProfile={userProfile} />
+              ) : (
+                <Card>
+                  <CardContent className="h-48 flex items-center justify-center">
+                    <p className="text-muted-foreground">Logbook is available for pilots, students, and instructors.</p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
         </Tabs>
     );
 }
@@ -254,6 +260,8 @@ function isPilotProfile(userProfile: PilotProfile | undefined): userProfile is P
     const pilotTypes: Array<PilotProfile['userType']> = ['Student', 'Private Pilot', 'Instructor'];
     return pilotTypes.includes(userProfile.userType);
 }
+
+    
 
     
 
