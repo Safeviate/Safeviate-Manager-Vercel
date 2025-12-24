@@ -225,8 +225,8 @@ export function FlightPlannerForm({ aircrafts, pilots, bookings }: FlightPlanner
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>From</TableHead>
-                            <TableHead>To</TableHead>
+                            <TableHead className="w-[15%]">From</TableHead>
+                            <TableHead className="w-[15%]">To</TableHead>
                             <TableHead>Altitude</TableHead>
                             <TableHead>Track</TableHead>
                             <TableHead>HDG</TableHead>
