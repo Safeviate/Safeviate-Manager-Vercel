@@ -153,7 +153,7 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
   const isLoading = isLoadingTemplate || isLoadingBookings || isLoadingAircrafts;
 
   return (
-    <Card className="lg:col-span-2">
+    <Card>
       <CardHeader>
         <CardTitle>My Logbook</CardTitle>
         <CardDescription>A summary of your completed flights.</CardDescription>

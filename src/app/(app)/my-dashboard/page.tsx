@@ -234,7 +234,11 @@ export default function MyDashboardPage() {
                 </CardContent>
             </Card>
             
-            {userProfile && <MyLogbook userProfile={userProfile} />}
+            {userProfile && (
+              <div className="lg:col-span-2">
+                <MyLogbook userProfile={userProfile} />
+              </div>
+            )}
         </div>
     );
 }
