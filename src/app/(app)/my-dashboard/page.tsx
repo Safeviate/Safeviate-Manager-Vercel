@@ -143,12 +143,14 @@ export default function MyDashboardPage() {
             <Card className="lg:col-span-2"><CardHeader><Skeleton className="h-6 w-1/3" /></CardHeader><CardContent><Skeleton className="h-48 w-full" /></CardContent></Card>
         </div>
     }
+    
+    const pilotProfileExists = userProfile && isPilotProfile(userProfile);
 
     return (
         <Tabs defaultValue="information" className="space-y-6">
             <TabsList>
                 <TabsTrigger value="information">Information</TabsTrigger>
-                {isPilotProfile(userProfile) && (
+                {pilotProfileExists && (
                     <TabsTrigger value="logbook">Logbook</TabsTrigger>
                 )}
             </TabsList>
@@ -243,20 +245,15 @@ export default function MyDashboardPage() {
                     </Card>
                 </div>
             </TabsContent>
-            <TabsContent value="logbook">
-              {userProfile && isPilotProfile(userProfile) ? (
-                <MyLogbook userProfile={userProfile} />
-              ) : (
-                <Card>
-                  <CardContent className="h-48 flex items-center justify-center">
-                    <p className="text-muted-foreground">Logbook is available for pilots, students, and instructors.</p>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
+            {pilotProfileExists && (
+                 <TabsContent value="logbook">
+                    <MyLogbook userProfile={userProfile} />
+                </TabsContent>
+            )}
         </Tabs>
     );
 }
+
 function isPilotProfile(userProfile: PilotProfile | undefined): userProfile is PilotProfile {
     if (!userProfile) return false;
     const pilotTypes: Array<PilotProfile['userType']> = ['Student', 'Private Pilot', 'Instructor'];
