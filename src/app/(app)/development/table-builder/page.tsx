@@ -358,31 +358,25 @@ export default function TableBuilderPage() {
       if (selectedCells.length === 0) return;
       const newGrid = JSON.parse(JSON.stringify(grid));
 
-      selectedCells.forEach((path) => {
-          let currentLevel: any = newGrid;
-          for (let i = 0; i < path.length; i++) {
-              if (i === path.length - 2 && Array.isArray(currentLevel)) { // Last pair, it's a cell
-                  const cell = currentLevel[path[i] as number][path[i+1] as number];
-                  if (cell) {
-                      cell.fontWeight = cell.fontWeight === 'bold' ? 'normal' : 'bold';
-                  }
-                  break;
-              }
-              if (Array.isArray(currentLevel) && currentLevel[path[i] as number] && typeof path[i+1] === 'number') {
-                  const nextCell = currentLevel[path[i] as number]?.[path[i+1] as number];
-                  if (path[i+2] === 'nestedGrid') {
-                    currentLevel = nextCell?.nestedGrid;
-                    i += 2;
-                  } else {
-                    currentLevel = nextCell;
-                    i++;
-                  }
+      const applyBoldRecursively = (currentGrid: CellData[][], path: CellPath) => {
+          let target = currentGrid;
+          for (let i = 0; i < path.length - 2; i += 2) {
+              if (target?.[path[i] as number]?.[path[i+1] as number]?.nestedGrid) {
+                  target = target[path[i] as number][path[i+1] as number].nestedGrid!;
               } else {
-                  break; // Invalid path
+                  return; // Path is invalid
               }
           }
-      });
+          
+          const cell = target[path[path.length - 2] as number]?.[path[path.length - 1] as number];
+          if (cell) {
+              cell.fontWeight = cell.fontWeight === 'bold' ? 'normal' : 'bold';
+          }
+      };
 
+      selectedCells.forEach((path) => {
+          applyBoldRecursively(newGrid, path);
+      });
       setGrid(newGrid);
     };
 
@@ -755,8 +749,8 @@ export default function TableBuilderPage() {
                     </CardHeader>
                     <CardContent>
                         <ScrollArea className="w-full whitespace-nowrap rounded-md border">
-                            {grid.length > 0 ? (
-                                <div className="relative">
+                            <div className="relative p-4">
+                                {grid.length > 0 ? (
                                     <ResizableTable 
                                         grid={grid} 
                                         setGrid={setGrid}
@@ -769,12 +763,12 @@ export default function TableBuilderPage() {
                                         rowHeight={rowHeight}
                                         handleContentChange={handleContentChange}
                                     />
-                                </div>
-                            ) : (
-                                <div className="h-48 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
-                                    <p>Select table dimensions to see a preview.</p>
-                                </div>
-                            )}
+                                ) : (
+                                    <div className="h-48 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
+                                        <p>Select table dimensions to see a preview.</p>
+                                    </div>
+                                )}
+                            </div>
                             <ScrollBar orientation="horizontal" />
                         </ScrollArea>
                     </CardContent>
