@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PlusCircle, Save, Trash2, AlignLeft, AlignCenter, AlignRight, ChevronsUpDown, Bold, Minus, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, updateDocumentNonBlocking, useDoc, deleteDocumentNonBlocking } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, updateDocumentNonBlocking, useDoc, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, query, doc, setDoc } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -609,7 +609,7 @@ const TableBuilderPage = () => {
                 <thead>
                     <tr>
                         <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10">
-                            <div className="w-32 h-10 flex flex-row items-center justify-center">
+                            <div className="w-32 h-7 flex flex-row items-center justify-center">
                                 <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addRow(0)}><PlusCircle className="h-4 w-4" /></Button>
                             </div>
                         </th>
@@ -619,7 +619,7 @@ const TableBuilderPage = () => {
                                 style={{ width: `${tableData.colWidths[colIndex]}px` }}
                                 className="p-0 border border-border bg-muted/50 relative"
                             >
-                                <div className="h-10 flex items-center justify-center px-0">
+                                <div className="h-7 flex items-center justify-center p-0">
                                     <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
                                     <SizeInput value={tableData.colWidths[colIndex]} onSave={(newWidth) => updateColWidth(colIndex, newWidth)} />
                                     <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addColumn(colIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
@@ -721,6 +721,7 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
+
 
 
 
