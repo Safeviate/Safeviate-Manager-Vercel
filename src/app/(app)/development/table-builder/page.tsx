@@ -281,48 +281,35 @@ const TableBuilderPage = () => {
     }
   };
   
- const addColumn = (index: number) => {
+  const addColumn = (index: number) => {
     if (!tableData) return;
     setTableData(prev => {
-        if (!prev) return null;
+      if (!prev) return null;
 
-        const newCols = prev.cols + 1;
-        const newCells = [...prev.cells];
-        const newColWidths = [...prev.colWidths];
-        
-        newColWidths.splice(index, 0, DEFAULT_COL_WIDTH);
+      const newCols = prev.cols + 1;
+      const newColWidths = [...prev.colWidths];
+      newColWidths.splice(index, 0, DEFAULT_COL_WIDTH);
 
-        for (let r = 0; r < prev.rows; r++) {
-            const insertionIndex = newCells.findIndex(cell => cell.r > r || (cell.r === r && cell.c >= index));
-            const newCell = { r, c: index, content: '', rowSpan: 1, colSpan: 1, align: 'left', fontWeight: 'normal', fontSize: DEFAULT_FONT_SIZE, hidden: false };
-            
-            if (insertionIndex === -1) {
-                newCells.push(newCell);
-            } else {
-                newCells.splice(insertionIndex, 0, newCell);
-            }
+      const newCells: Cell[] = [];
+      for (let r = 0; r < prev.rows; r++) {
+        for (let c = 0; c < newCols; c++) {
+          if (c < index) {
+            const oldCell = prev.cells.find(cell => cell.r === r && cell.c === c);
+            if(oldCell) newCells.push(oldCell);
+          } else if (c === index) {
+            newCells.push({ r, c, content: '', rowSpan: 1, colSpan: 1, align: 'left', fontWeight: 'normal', fontSize: DEFAULT_FONT_SIZE, hidden: false });
+          } else { // c > index
+            const oldCell = prev.cells.find(cell => cell.r === r && cell.c === c - 1);
+            if(oldCell) newCells.push({ ...oldCell, c });
+          }
         }
-        
-        for (const cell of newCells) {
-            if (cell.c >= index) {
-                // Find the original cell to avoid issues with already shifted cells
-                const originalCell = prev.cells.find(c => c.r === cell.r && c.c === cell.c - 1);
-                if (cell.r === originalCell?.r && cell.c === originalCell?.c + 1) {
-                  // already shifted
-                } else if(cell.r === newCells.find(c => c.c === index)?.r && cell.c === index){
-                  // this is a new cell, do nothing
-                }
-                else {
-                   cell.c += 1;
-                }
-            }
-        }
+      }
 
-        const newTableData = { ...prev, cols: newCols, cells: newCells, colWidths: newColWidths };
-        updateRemoteTable(newTableData);
-        return newTableData;
+      const newTableData = { ...prev, cols: newCols, cells: newCells, colWidths: newColWidths };
+      updateRemoteTable(newTableData);
+      return newTableData;
     });
-};
+  };
 
 
   const addRow = (index: number) => {
@@ -699,7 +686,7 @@ const TableBuilderPage = () => {
                 className="grid"
                 style={{
                     gridTemplateColumns: isEditMode ? `48px ${tableData.colWidths.map(w => `${w}px`).join(' ')}` : tableData.colWidths.map(w => `${w}px`).join(' '),
-                    gridTemplateRows: isEditMode ? `28px repeat(${tableData.rows}, auto)` : `repeat(${tableData.rows}, auto)`,
+                    gridTemplateRows: isEditMode ? `28px auto` : `auto`,
                 }}
             >
                 {isEditMode && (
@@ -725,60 +712,64 @@ const TableBuilderPage = () => {
                     </div>
                 </>
                 )}
+                
+                <div className='contents' style={{gridRow: isEditMode ? 2 : 1, gridColumn: '1 / -1'}}>
+                    <div className='contents' style={{gridTemplateColumns: isEditMode ? `48px ${tableData.colWidths.map(w => `${w}px`).join(' ')}` : tableData.colWidths.map(w => `${w}px`).join(' '), gridTemplateRows: `repeat(${tableData.rows}, auto)`}}>
+                        {isEditMode &&
+                        Array.from({ length: tableData.rows }).map((_, rowIndex) => (
+                            <div
+                                key={rowIndex}
+                                className="p-0 border-t border-border bg-muted/50 sticky left-0 z-10 flex flex-row items-center justify-center"
+                                style={{ gridRow: rowIndex + 1, gridColumn: 1 }}
+                            >
+                                <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
+                                <SizeInput value={tableData.rowHeights[rowIndex]} onSave={(newHeight) => updateRowHeight(rowIndex, newHeight)} minValue={MIN_ROW_HEIGHT} />
+                                <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addRow(rowIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
+                            </div>
+                        ))}
 
-                {isEditMode &&
-                Array.from({ length: tableData.rows }).map((_, rowIndex) => (
-                    <div
-                        key={rowIndex}
-                        className="p-0 border-t border-border bg-muted/50 sticky left-0 z-10 flex flex-row items-center justify-center"
-                        style={{ gridRow: rowIndex + 2 }}
-                    >
-                        <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
-                        <SizeInput value={tableData.rowHeights[rowIndex]} onSave={(newHeight) => updateRowHeight(rowIndex, newHeight)} minValue={MIN_ROW_HEIGHT} />
-                        <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addRow(rowIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
-                    </div>
-                ))}
-
-                {tableData.cells
-                    .filter(cell => !cell.hidden)
-                    .map(cell => {
-                        const isSelected = selectedCells.some(s => s.r === cell.r && s.c === cell.c);
-                        const justifyContent = cell.align === 'left' ? 'flex-start' : cell.align === 'right' ? 'flex-end' : 'center';
-                        return (
-                        <div
-                            key={`${cell.r}-${cell.c}`}
-                            onClick={() => toggleSelect(cell.r, cell.c)}
-                            className={cn(
-                                "p-0 relative flex",
-                                isEditMode && "cursor-pointer hover:bg-muted/50",
-                                "border border-border"
-                            )}
-                            style={{
-                                gridRow: `${cell.r + (isEditMode ? 2 : 1)} / span ${cell.rowSpan}`,
-                                gridColumn: `${cell.c + (isEditMode ? 2 : 1)} / span ${cell.colSpan}`,
-                                justifyContent,
-                                alignItems: 'center',
-                                minHeight: `${tableData.rowHeights[cell.r]}px`,
-                            }}
-                        >
-                            {isEditMode ? (
-                                <AutoResizingTextarea
-                                    value={cell.content}
-                                    onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
-                                    onBlur={onBlurContent}
-                                    className="w-full h-full p-1 bg-transparent border-none resize-none overflow-hidden focus:outline-none focus:ring-0"
+                        {tableData.cells
+                            .filter(cell => !cell.hidden)
+                            .map(cell => {
+                                const isSelected = selectedCells.some(s => s.r === cell.r && s.c === cell.c);
+                                const justifyContent = cell.align === 'left' ? 'flex-start' : cell.align === 'right' ? 'flex-end' : 'center';
+                                return (
+                                <div
+                                    key={`${cell.r}-${cell.c}`}
+                                    onClick={() => toggleSelect(cell.r, cell.c)}
+                                    className={cn(
+                                        "p-0 relative flex",
+                                        isEditMode && "cursor-pointer hover:bg-muted/50",
+                                        "border border-border"
+                                    )}
                                     style={{
-                                        fontWeight: cell.fontWeight,
-                                        fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`,
-                                        textAlign: cell.align,
+                                        gridRow: `${cell.r + 1} / span ${cell.rowSpan}`,
+                                        gridColumn: `${cell.c + (isEditMode ? 2 : 1)} / span ${cell.colSpan}`,
+                                        justifyContent,
+                                        alignItems: 'center',
+                                        minHeight: `${tableData.rowHeights[cell.r]}px`,
                                     }}
-                                />
-                            ) : (
-                                <div className='p-1 whitespace-pre-wrap' style={{wordBreak: 'break-word', fontWeight: cell.fontWeight, fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`, textAlign: cell.align}}>{cell.content}</div>
-                            )}
-                            {isSelected && <div className="absolute inset-0 bg-primary/20 pointer-events-none" />}
-                        </div>
-                    )})}
+                                >
+                                    {isEditMode ? (
+                                        <AutoResizingTextarea
+                                            value={cell.content}
+                                            onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
+                                            onBlur={onBlurContent}
+                                            className="w-full h-full p-1 bg-transparent border-none resize-none overflow-hidden focus:outline-none focus:ring-0"
+                                            style={{
+                                                fontWeight: cell.fontWeight,
+                                                fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`,
+                                                textAlign: cell.align,
+                                            }}
+                                        />
+                                    ) : (
+                                        <div className='p-1 whitespace-pre-wrap' style={{wordBreak: 'break-word', fontWeight: cell.fontWeight, fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`, textAlign: cell.align}}>{cell.content}</div>
+                                    )}
+                                    {isSelected && <div className="absolute inset-0 bg-primary/20 pointer-events-none" />}
+                                </div>
+                            )})}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
