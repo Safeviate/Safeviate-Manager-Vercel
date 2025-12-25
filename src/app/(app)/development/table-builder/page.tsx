@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Save, Trash2, GripHorizontal, GripVertical } from 'lucide-react';
+import { PlusCircle, Save, Trash2, AlignLeft, AlignCenter, AlignRight, ChevronsUpDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, updateDocumentNonBlocking, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, doc, setDoc } from 'firebase/firestore';
@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type Cell = {
   r: number;
@@ -171,7 +172,7 @@ const TableBuilderPage = () => {
   }, [firestore, tenantId, tableTemplateRef]);
 
   useEffect(() => {
-    if (!isLoading && remoteTableData) {
+    if (!isLoading && remoteTableData?.tableData) {
         setTableData(remoteTableData.tableData);
         if (!activeTemplate) {
             setActiveTemplate(remoteTableData);
@@ -322,12 +323,9 @@ const TableBuilderPage = () => {
     const minC = Math.min(...cols);
     const maxC = Math.max(...cols);
 
-    const rowSpan = maxR - minR + 1;
-    const colSpan = maxC - minC + 1;
-
     const newCells = tableData.cells.map(cell => {
       if (cell.r === minR && cell.c === minC) {
-        return { ...cell, rowSpan, colSpan, hidden: false };
+        return { ...cell, rowSpan: maxR - minR + 1, colSpan: maxC - minC + 1, hidden: false };
       }
       if (cell.r >= minR && cell.r <= maxR && cell.c >= minC && cell.c <= maxC) {
         return { ...cell, hidden: true };
@@ -348,7 +346,7 @@ const TableBuilderPage = () => {
         const masterCell = newCells.find(c => c.r === selCell.r && c.c === selCell.c);
         if (masterCell && (masterCell.rowSpan > 1 || masterCell.colSpan > 1)) {
             for (let r = masterCell.r; r < masterCell.r + masterCell.rowSpan; r++) {
-                for (let c = masterCell.c; c < masterCell.colSpan; c++) {
+                for (let c = masterCell.c; c < masterCell.c + masterCell.colSpan; c++) {
                     const cellToUnhide = newCells.find(cell => cell.r === r && cell.c === c);
                     if (cellToUnhide) {
                         cellToUnhide.hidden = false;
@@ -380,7 +378,7 @@ const TableBuilderPage = () => {
   const handleSaveTemplate = (name: string) => {
     if (!firestore || !name.trim() || !tableData) return;
     
-    if (activeTemplate) {
+    if (activeTemplate && activeTemplate.id !== 'main-table') {
         // Update existing
         updateDocumentNonBlocking(doc(firestore, `tenants/${tenantId}/table-templates`, activeTemplate.id), {
             name: name,
@@ -451,15 +449,40 @@ const TableBuilderPage = () => {
         </CardHeader>
         <CardContent className="space-y-4">
             <div className='flex justify-between items-center'>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                     {isEditMode && (
-                        <>
-                            <Button onClick={handleMerge} disabled={selectedCells.length < 2}>Merge</Button>
-                            <Button onClick={handleUnmerge} disabled={selectedCells.length === 0}>Unmerge</Button>
-                            <Button onClick={() => updateAlignment('left')} disabled={selectedCells.length === 0}>Left</Button>
-                            <Button onClick={() => updateAlignment('center')} disabled={selectedCells.length === 0}>Center</Button>
-                            <Button onClick={() => updateAlignment('right')} disabled={selectedCells.length === 0}>Right</Button>
-                        </>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button onClick={handleMerge} disabled={selectedCells.length < 2} size="sm">Merge</Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Merge selected cells</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                           <Button onClick={handleUnmerge} disabled={selectedCells.length === 0} size="sm">Unmerge</Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Unmerge cells</p></TooltipContent>
+                        </Tooltip>
+                         <Tooltip>
+                          <TooltipTrigger asChild>
+                           <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => updateAlignment('left')} disabled={selectedCells.length === 0}><AlignLeft /></Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Align Left</p></TooltipContent>
+                        </Tooltip>
+                         <Tooltip>
+                          <TooltipTrigger asChild>
+                           <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => updateAlignment('center')} disabled={selectedCells.length === 0}><AlignCenter /></Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Align Center</p></TooltipContent>
+                        </Tooltip>
+                         <Tooltip>
+                          <TooltipTrigger asChild>
+                           <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => updateAlignment('right')} disabled={selectedCells.length === 0}><AlignRight /></Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Align Right</p></TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     )}
                 </div>
                  <div className="flex items-center space-x-2">
@@ -468,7 +491,7 @@ const TableBuilderPage = () => {
                 </div>
             </div>
              <div className='flex gap-2'>
-               <SaveAsNewTemplateDialog onSave={handleSaveTemplate} isUpdate={!!activeTemplate} currentName={activeTemplate?.name}>
+               <SaveAsNewTemplateDialog onSave={handleSaveTemplate} isUpdate={!!activeTemplate && activeTemplate.id !== 'main-table'} currentName={activeTemplate?.name}>
                  <Button>
                    <Save className="mr-2 h-4 w-4" />
                    {activeTemplate && activeTemplate.id !== 'main-table' ? `Save "${activeTemplate.name}"` : 'Save as New Template'}
@@ -483,38 +506,42 @@ const TableBuilderPage = () => {
       
       <div className="w-full overflow-auto rounded-lg border shadow-sm bg-card p-4">
         <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-            <thead>
-                <tr>
-                    <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10">
-                        <div className="w-32 h-10 flex flex-row items-center justify-center gap-1">
-                            <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => addRow(0)}><PlusCircle className="h-4 w-4" /></Button>
-                        </div>
-                    </th>
-                    {Array.from({ length: tableData.cols }).map((_, colIndex) => (
-                        <th
-                            key={colIndex}
-                            style={{ width: `${tableData.colWidths[colIndex]}px` }}
-                            className="p-0 border border-border bg-muted/50 relative"
-                        >
-                            <div className="h-10 flex items-center justify-center">
-                                <Button variant="ghost" size="icon" className='h-8 w-8 px-0' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
-                                <SizeInput value={tableData.colWidths[colIndex]} onSave={(newWidth) => updateColWidth(colIndex, newWidth)} />
-                                <Button variant="ghost" size="icon" className='h-8 w-8 px-0' onClick={() => addColumn(colIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
+            {isEditMode && (
+                <thead>
+                    <tr>
+                        <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10">
+                            <div className="w-32 h-10 flex flex-row items-center justify-center">
+                                <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => addRow(0)}><PlusCircle className="h-4 w-4" /></Button>
                             </div>
                         </th>
-                    ))}
-                </tr>
-            </thead>
+                        {Array.from({ length: tableData.cols }).map((_, colIndex) => (
+                            <th
+                                key={colIndex}
+                                style={{ width: `${tableData.colWidths[colIndex]}px` }}
+                                className="p-0 border border-border bg-muted/50 relative"
+                            >
+                                <div className="h-10 flex items-center justify-center">
+                                    <Button variant="ghost" size="icon" className='h-8 w-8 px-0' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
+                                    <SizeInput value={tableData.colWidths[colIndex]} onSave={(newWidth) => updateColWidth(colIndex, newWidth)} />
+                                    <Button variant="ghost" size="icon" className='h-8 w-8 px-0' onClick={() => addColumn(colIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
+                                </div>
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+            )}
             <tbody>
                 {Array.from({ length: tableData.rows }).map((_, rowIndex) => (
                     <tr key={rowIndex} style={{ height: `${tableData.rowHeights[rowIndex]}px` }}>
-                        <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10">
-                           <div className="w-32 h-full flex flex-row items-center justify-center gap-1">
-                                <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
-                                <SizeInput value={tableData.rowHeights[rowIndex]} onSave={(newHeight) => updateRowHeight(rowIndex, newHeight)} />
-                                <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => addRow(rowIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
-                            </div>
-                        </th>
+                        {isEditMode && (
+                            <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10">
+                               <div className="w-32 h-full flex flex-row items-center justify-center">
+                                    <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
+                                    <SizeInput value={tableData.rowHeights[rowIndex]} onSave={(newHeight) => updateRowHeight(rowIndex, newHeight)} />
+                                    <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => addRow(rowIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
+                                </div>
+                            </th>
+                        )}
                         {tableData.cells
                             .filter(cell => cell.r === rowIndex)
                             .sort((a, b) => a.c - b.c)
@@ -528,18 +555,32 @@ const TableBuilderPage = () => {
                                     colSpan={cell.colSpan}
                                     onClick={() => toggleSelect(cell.r, cell.c)}
                                     className={cn(
-                                        "p-0 border border-border relative",
+                                        "p-1 border border-border relative align-top",
                                         isEditMode && "cursor-pointer"
                                     )}
+                                    style={{
+                                        width: `${tableData.colWidths[cell.c]}px`,
+                                        height: `${tableData.rowHeights[cell.r]}px`,
+                                        textAlign: cell.align,
+                                    }}
                                 >
                                     {isSelected && <div className="absolute inset-0 bg-primary/20 pointer-events-none" />}
-                                    <Input
-                                        value={cell.content}
-                                        onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
-                                        onBlur={() => updateRemoteTable(tableData)}
-                                        className="h-full w-full border-0 bg-transparent focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0"
-                                        style={{ textAlign: cell.align }}
-                                    />
+                                    {isEditMode ? (
+                                        <Input
+                                            value={cell.content}
+                                            onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
+                                            onBlur={() => updateRemoteTable(tableData)}
+                                            className="h-full w-full border-0 bg-transparent focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0"
+                                            style={{ textAlign: cell.align }}
+                                        />
+                                    ) : (
+                                        <div 
+                                          className="w-full h-full" 
+                                          style={{ textAlign: cell.align }}
+                                        >
+                                          {cell.content}
+                                        </div>
+                                    )}
                                 </td>
                             )})}
                     </tr>
@@ -577,7 +618,3 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
-
-
-
-    
