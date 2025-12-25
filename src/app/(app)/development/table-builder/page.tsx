@@ -46,7 +46,7 @@ const DEFAULT_COL_WIDTH = 120;
 const DEFAULT_ROW_HEIGHT = 40;
 const DEFAULT_FONT_SIZE = 14;
 const MIN_COL_WIDTH = 50;
-const MIN_ROW_HEIGHT = 20;
+const MIN_ROW_HEIGHT = 36;
 
 // A controlled, auto-resizing textarea component
 const AutoResizingTextarea = ({ value, onChange, onBlur, ...props }: { value: string, onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void, onBlur: () => void } & React.ComponentProps<'textarea'>) => {
@@ -54,7 +54,7 @@ const AutoResizingTextarea = ({ value, onChange, onBlur, ...props }: { value: st
 
     useEffect(() => {
         if (textareaRef.current) {
-            textareaRef.current.style.height = '0px';
+            textareaRef.current.style.height = '0px'; // Temporarily shrink to get the correct scrollHeight
             const scrollHeight = textareaRef.current.scrollHeight;
             textareaRef.current.style.height = scrollHeight + 'px';
         }
@@ -681,7 +681,7 @@ const TableBuilderPage = () => {
                                     colSpan={cell.colSpan}
                                     onClick={() => toggleSelect(cell.r, cell.c)}
                                     className={cn(
-                                        "p-0 border border-border relative align-top",
+                                        "p-0 border border-border relative align-middle",
                                         isEditMode && "cursor-pointer hover:bg-muted/50"
                                     )}
                                     style={{
@@ -745,5 +745,3 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
-
-    
