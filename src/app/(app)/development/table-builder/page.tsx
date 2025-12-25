@@ -276,11 +276,16 @@ const ColumnWidthInput = ({ index, width, onWidthChange }: { index: number, widt
 
     useEffect(() => {
         const numericValue = parseInt(debouncedValue, 10);
-        if (!isNaN(numericValue) && numericValue !== width) {
+        if (!isNaN(numericValue)) {
             onWidthChange(index, Math.max(50, numericValue));
         }
-    }, [debouncedValue, index, onWidthChange, width]);
+    }, [debouncedValue, index, onWidthChange]);
     
+    // Update local state if the parent's width changes (e.g., on template load)
+    useEffect(() => {
+        setInputValue(width.toString());
+    }, [width]);
+
     return (
          <Input
             type="number"
@@ -298,11 +303,11 @@ const RowHeightInput = ({ index, height, onHeightChange }: { index: number, heig
 
     useEffect(() => {
         const numericValue = parseInt(debouncedValue, 10);
-        if (!isNaN(numericValue) && numericValue !== height) {
+        if (!isNaN(numericValue)) {
             onHeightChange(index, Math.max(20, numericValue));
         }
-    }, [debouncedValue, index, onHeightChange, height]);
-    
+    }, [debouncedValue, index, onHeightChange]);
+
     useEffect(() => {
         setInputValue(height.toString());
     }, [height]);
@@ -318,8 +323,8 @@ const RowHeightInput = ({ index, height, onHeightChange }: { index: number, heig
     );
 }
 
-const convertGridToMap = (grid: CellData[][]): { [key: number]: CellData[] } => {
-    const gridMap: { [key: number]: CellData[] } = {};
+const convertGridToMap = (grid: CellData[][]): { [key: string]: CellData[] } => {
+    const gridMap: { [key: string]: CellData[] } = {};
     grid.forEach((row, rowIndex) => {
         gridMap[rowIndex] = row.map(cell => {
             if (cell.nestedGrid) {
@@ -334,7 +339,7 @@ const convertGridToMap = (grid: CellData[][]): { [key: number]: CellData[] } => 
     return gridMap;
 };
 
-const convertMapToGrid = (gridMap: { [key: number]: CellData[] }): CellData[][] => {
+const convertMapToGrid = (gridMap: { [key: string]: CellData[] }): CellData[][] => {
     if (!gridMap) return [];
     return Object.keys(gridMap)
         .sort((a, b) => parseInt(a) - parseInt(b))
