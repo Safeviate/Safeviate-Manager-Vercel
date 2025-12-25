@@ -143,11 +143,6 @@ const TableBuilderPage = () => {
     const [isSelecting, setIsSelecting] = useState(false);
     const [loadedTemplateId, setLoadedTemplateId] = useState<string | null>(null);
 
-    // Resizing state
-    const [resizingCol, setResizingCol] = useState<number | null>(null);
-    const [resizingRow, setResizingRow] = useState<number | null>(null);
-    const tableRef = useRef<HTMLTableElement>(null);
-
     const firestore = useFirestore();
     const { toast } = useToast();
     const tenantId = 'safeviate';
@@ -158,55 +153,6 @@ const TableBuilderPage = () => {
     );
     const { data: savedTemplates, isLoading: isLoadingTemplates } = useCollection<TableTemplate>(templatesQuery);
     
-    // --- Resizing Logic ---
-    const handleColResizeStart = (e: React.MouseEvent, colIndex: number) => {
-        e.preventDefault();
-        setResizingCol(colIndex);
-    };
-
-    const handleRowResizeStart = (e: React.MouseEvent, rowIndex: number) => {
-        e.preventDefault();
-        setResizingRow(rowIndex);
-    };
-    
-    useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            if (resizingCol !== null) {
-                const newWidths = [...tableData.colWidths];
-                const th = tableRef.current?.querySelector(`thead th:nth-child(${resizingCol + 2})`);
-                if (th) {
-                    const rect = th.getBoundingClientRect();
-                    const newWidth = e.clientX - rect.left;
-                    newWidths[resizingCol] = Math.max(40, newWidth);
-                    setTableData(prev => ({...prev, colWidths: newWidths}));
-                }
-            }
-             if (resizingRow !== null) {
-                const newHeights = [...tableData.rowHeights];
-                const tr = tableRef.current?.querySelector(`tbody tr:nth-child(${resizingRow + 1})`);
-                if (tr) {
-                    const rect = tr.getBoundingClientRect();
-                    const newHeight = e.clientY - rect.top;
-                    newHeights[resizingRow] = Math.max(20, newHeight);
-                    setTableData(prev => ({...prev, rowHeights: newHeights}));
-                }
-            }
-        };
-
-        const handleMouseUp = () => {
-            setResizingCol(null);
-            setResizingRow(null);
-        };
-
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
-
-        return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [resizingCol, resizingRow, tableData.colWidths, tableData.rowHeights]);
-
     // --- Cell & Selection Logic ---
     const getCell = useCallback((r: number, c: number) => {
         return tableData.cells.find(cell => cell.r === r && cell.c === c);
@@ -416,7 +362,7 @@ const TableBuilderPage = () => {
                 <CardHeader>
                     <CardTitle>Dynamic Table Builder</CardTitle>
                     <CardDescription>
-                        Click and drag to select cells. Use the controls to merge, align, and format your table. Drag the borders of the headers to resize.
+                        Click and drag to select cells. Use the controls to merge, align, and format your table.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="flex justify-between items-center flex-wrap gap-4">
@@ -440,7 +386,7 @@ const TableBuilderPage = () => {
             </Card>
 
             <div className="w-full overflow-auto rounded-lg border shadow-sm" onMouseUp={handleMouseUp} onMouseLeave={() => setIsSelecting(false)}>
-                <table ref={tableRef} className="border-collapse bg-white" style={{ tableLayout: 'fixed' }}>
+                <table className="border-collapse bg-white" style={{ tableLayout: 'fixed' }}>
                     <colgroup>
                         <col style={{ width: '50px' }} />
                         {tableData.colWidths.map((width, index) => (
@@ -453,13 +399,6 @@ const TableBuilderPage = () => {
                             {Array.from({ length: tableData.cols }).map((_, colIndex) => (
                                 <th key={colIndex} className="p-1 border border-gray-300 bg-gray-50 text-center text-xs relative group" style={{width: `${tableData.colWidths[colIndex]}px`}}>
                                     {String.fromCharCode(65 + colIndex)}
-                                    <div
-                                        onMouseDown={(e) => handleColResizeStart(e, colIndex)}
-                                        className="absolute top-0 right-0 h-full w-1 cursor-col-resize bg-blue-500/0 hover:bg-blue-500"
-                                    />
-                                    <Button variant="ghost" size="icon" className="absolute top-1/2 -translate-y-1/2 -right-3 h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => deleteColumn(colIndex)}>
-                                        <Trash2 className="h-3 w-3 text-destructive" />
-                                    </Button>
                                 </th>
                             ))}
                         </tr>
@@ -469,13 +408,6 @@ const TableBuilderPage = () => {
                             <tr key={r} style={{height: `${tableData.rowHeights[r]}px`}} className="group">
                                 <td className="sticky left-0 z-10 text-center text-xs text-gray-500 bg-gray-100 border border-gray-300 w-[50px] relative">
                                     {r + 1}
-                                     <div
-                                        onMouseDown={(e) => handleRowResizeStart(e, r)}
-                                        className="absolute bottom-0 left-0 w-full h-1 cursor-row-resize bg-blue-500/0 hover:bg-blue-500"
-                                    />
-                                     <Button variant="ghost" size="icon" className="absolute left-1/2 -translate-x-1/2 -bottom-3 h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => deleteRow(r)}>
-                                        <Trash2 className="h-3 w-3 text-destructive" />
-                                    </Button>
                                 </td>
                                 {Array.from({ length: tableData.cols }).map((_, c) => {
                                     const cell = getCell(r, c);
