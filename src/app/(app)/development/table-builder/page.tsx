@@ -39,6 +39,7 @@ interface TableTemplate {
     name: string;
     grid: CellData[][];
     colWidths: number[];
+    rowHeights: number[];
 }
 
 type CellPath = (string | number)[];
@@ -91,7 +92,7 @@ const ResizableTable = ({
   onCellMouseEnter,
   onCellMouseUp,
   colWidths,
-  rowHeight,
+  rowHeights,
   handleContentChange,
   pathPrefix = []
 }: {
@@ -102,7 +103,7 @@ const ResizableTable = ({
   onCellMouseEnter: (path: CellPath) => void;
   onCellMouseUp: () => void;
   colWidths: number[];
-  rowHeight: number;
+  rowHeights: number[];
   handleContentChange: (path: CellPath, content: string) => void;
   pathPrefix?: CellPath;
 }) => {
@@ -138,57 +139,79 @@ const ResizableTable = ({
             ))}
         </colgroup>
         <tbody>
-          {Array.from({ length: rows }).map((_, rowIndex) => (
-            <tr key={rowIndex}>
-              {Array.from({ length: cols }).map((_, colIndex) => {
-                const cell = grid[rowIndex][colIndex];
-                const currentPath = [...pathPrefix, rowIndex, colIndex];
-                if (cell.isMerged) return null; // Don't render merged cells
+          {Array.from({ length: rows }).map((_, rowIndex) => {
+                const cellHeight = rowHeights[rowIndex] || 48; // Default height if not specified
+                let totalSpanHeight = cellHeight;
+                const startingCell = grid[rowIndex].find(c => !c.isMerged);
+                if (startingCell && startingCell.rowSpan > 1) {
+                    totalSpanHeight = Array.from({ length: startingCell.rowSpan }).reduce((acc, _, i) => acc + (rowHeights[rowIndex + i] || 48), 0);
+                }
 
                 return (
-                  <td
-                    key={colIndex}
-                    rowSpan={cell.rowSpan}
-                    colSpan={cell.colSpan}
-                    onMouseDown={() => onCellMouseDown(currentPath)}
-                    onMouseEnter={() => onCellMouseEnter(currentPath)}
-                    style={{ textAlign: cell.textAlign, height: isNested ? 'auto' : `${rowHeight * cell.rowSpan}px` }}
-                    className={cn(
-                        "border border-muted p-0 relative select-none",
-                        getVerticalAlignClass(cell.verticalAlign),
-                        isCellSelected(currentPath) && 'bg-primary/20 outline-2 outline-primary outline'
-                    )}
-                  >
-                    {cell.nestedGrid ? (
-                        <ResizableTable
-                            grid={cell.nestedGrid}
-                            setGrid={(newNestedGrid) => {
-                                const newGrid = [...grid];
-                                newGrid[rowIndex][colIndex].nestedGrid = newNestedGrid;
-                                setGrid(newGrid);
-                            }}
-                            selectedCells={selectedCells}
-                            onCellMouseDown={onCellMouseDown}
-                            onCellMouseEnter={onCellMouseEnter}
-                            onCellMouseUp={onCellMouseUp}
-                            colWidths={[]} // Nested tables don't control main widths
-                            rowHeight={rowHeight}
-                            handleContentChange={handleContentChange}
-                            pathPrefix={[...currentPath, 'nestedGrid']}
-                        />
-                    ) : (
-                        <EditableCell
-                            initialContent={cell.content}
-                            fontSize={cell.fontSize}
-                            fontWeight={cell.fontWeight}
-                            onContentSave={(newContent) => handleContentChange(currentPath, newContent)}
-                        />
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
+                    <tr key={rowIndex} style={{ height: `${cellHeight}px` }}>
+                    {Array.from({ length: cols }).map((_, colIndex) => {
+                        const cell = grid[rowIndex][colIndex];
+                        const currentPath = [...pathPrefix, rowIndex, colIndex];
+                        if (cell.isMerged) return null; // Don't render merged cells
+
+                        let cellStyle: React.CSSProperties = {
+                            textAlign: cell.textAlign,
+                        };
+                        if (cell.rowSpan > 1) {
+                           let calculatedHeight = 0;
+                           for(let i=0; i<cell.rowSpan; i++) {
+                               calculatedHeight += rowHeights[rowIndex+i] || 48;
+                           }
+                           cellStyle.height = `${calculatedHeight}px`;
+                        } else {
+                           cellStyle.height = isNested ? 'auto' : `${cellHeight}px`;
+                        }
+
+                        return (
+                        <td
+                            key={colIndex}
+                            rowSpan={cell.rowSpan}
+                            colSpan={cell.colSpan}
+                            onMouseDown={() => onCellMouseDown(currentPath)}
+                            onMouseEnter={() => onCellMouseEnter(currentPath)}
+                            style={cellStyle}
+                            className={cn(
+                                "border border-muted p-0 relative select-none",
+                                getVerticalAlignClass(cell.verticalAlign),
+                                isCellSelected(currentPath) && 'bg-primary/20 outline-2 outline-primary outline'
+                            )}
+                        >
+                            {cell.nestedGrid ? (
+                                <ResizableTable
+                                    grid={cell.nestedGrid}
+                                    setGrid={(newNestedGrid) => {
+                                        const newGrid = [...grid];
+                                        newGrid[rowIndex][colIndex].nestedGrid = newNestedGrid;
+                                        setGrid(newGrid);
+                                    }}
+                                    selectedCells={selectedCells}
+                                    onCellMouseDown={onCellMouseDown}
+                                    onCellMouseEnter={onCellMouseEnter}
+                                    onCellMouseUp={onCellMouseUp}
+                                    colWidths={[]} // Nested tables don't control main widths
+                                    rowHeights={[]}
+                                    handleContentChange={handleContentChange}
+                                    pathPrefix={[...currentPath, 'nestedGrid']}
+                                />
+                            ) : (
+                                <EditableCell
+                                    initialContent={cell.content}
+                                    fontSize={cell.fontSize}
+                                    fontWeight={cell.fontWeight}
+                                    onContentSave={(newContent) => handleContentChange(currentPath, newContent)}
+                                />
+                            )}
+                        </td>
+                        );
+                    })}
+                    </tr>
+                )
+            })}
         </tbody>
       </table>
   );
@@ -197,8 +220,7 @@ const ResizableTable = ({
 
 const TableSelector = ({ onSelect }: { onSelect: (dims: { rows: number; cols: number }) => void }) => {
     const [hovered, setHovered] = useState({ rows: 0, cols: 0 });
-    const [selection, setSelection] = useState({ rows: 0, cols: 0 });
-
+    
     const gridSize = 10;
     
     const handleClick = (row: number, col: number) => {
@@ -248,16 +270,14 @@ const ColumnWidthInput = ({ index, width, onWidthChange }: { index: number, widt
 
     useEffect(() => {
         const numericValue = parseInt(debouncedValue, 10);
-        if (!isNaN(numericValue)) {
+        if (!isNaN(numericValue) && numericValue !== width) {
             const validatedWidth = Math.max(50, numericValue);
-            if (validatedWidth !== width) {
-                onWidthChange(index, validatedWidth);
-            }
+            onWidthChange(index, validatedWidth);
         }
     }, [debouncedValue, index, onWidthChange, width]);
-    
+
     useEffect(() => {
-        if(Number(debouncedValue) !== width) {
+        if(parseInt(inputValue, 10) !== width) {
             setInputValue(width.toString());
         }
     }, [width]);
@@ -273,14 +293,44 @@ const ColumnWidthInput = ({ index, width, onWidthChange }: { index: number, widt
     );
 }
 
+const RowHeightInput = ({ index, height, onHeightChange }: { index: number, height: number, onHeightChange: (index: number, newHeight: number) => void }) => {
+    const [inputValue, setInputValue] = useState(height.toString());
+    const debouncedValue = useDebounce(inputValue, 500);
+
+    useEffect(() => {
+        const numericValue = parseInt(debouncedValue, 10);
+        if (!isNaN(numericValue) && numericValue !== height) {
+            const validatedHeight = Math.max(20, numericValue);
+            onHeightChange(index, validatedHeight);
+        }
+    }, [debouncedValue, index, onHeightChange, height]);
+    
+    useEffect(() => {
+        if(parseInt(inputValue, 10) !== height) {
+            setInputValue(height.toString());
+        }
+    }, [height]);
+
+    return (
+        <Input
+            type="number"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            className="w-full h-full text-center p-0 border-none bg-transparent focus-visible:ring-0"
+            min={20}
+        />
+    );
+}
+
 // --- Main Page Component ---
 export default function TableBuilderPage() {
     const [grid, setGrid] = useState<CellData[][]>([]);
     const [colWidths, setColWidths] = useState<number[]>([]);
+    const [rowHeights, setRowHeights] = useState<number[]>([]);
     const [selectedCells, setSelectedCells] = useState<CellPath[]>([]);
     const [isSelecting, setIsSelecting] = useState(false);
     const [fontSize, setFontSize] = useState(14);
-    const rowHeight = 48; // px
+    const defaultRowHeight = 48; // px
     const { toast } = useToast();
     const firestore = useFirestore();
     const tenantId = 'safeviate'; // Hardcoded for now
@@ -309,6 +359,7 @@ export default function TableBuilderPage() {
         );
         setGrid(newGrid);
         setColWidths(Array(cols).fill(150));
+        setRowHeights(Array(rows).fill(defaultRowHeight));
         setSelectedCells([]);
     };
 
@@ -612,6 +663,7 @@ export default function TableBuilderPage() {
             verticalAlign: 'top',
         }));
         setGrid([...grid, newRow]);
+        setRowHeights(prev => [...prev, defaultRowHeight]);
     };
 
     const handleAddColumn = () => {
@@ -638,6 +690,7 @@ export default function TableBuilderPage() {
     const handleDeleteRow = () => {
         if (grid.length > 1) {
             setGrid(grid.slice(0, -1));
+            setRowHeights(prev => prev.slice(0, -1));
             setSelectedCells([]);
         }
     };
@@ -658,6 +711,14 @@ export default function TableBuilderPage() {
             return newColWidths;
         });
     };
+
+    const handleRowHeightChange = (index: number, newHeight: number) => {
+        setRowHeights(prev => {
+            const newRowHeights = [...prev];
+            newRowHeights[index] = newHeight;
+            return newRowHeights;
+        });
+    };
     
     const handleSaveTemplate = () => {
         if (!firestore) return;
@@ -671,7 +732,7 @@ export default function TableBuilderPage() {
         }
 
         const templatesCollection = collection(firestore, `tenants/${tenantId}/table-templates`);
-        const templateData = { name: templateName, grid, colWidths };
+        const templateData = { name: templateName, grid, colWidths, rowHeights };
         addDocumentNonBlocking(templatesCollection, templateData);
         
         toast({ title: 'Template Saved', description: `Template "${templateName}" has been saved.`});
@@ -681,6 +742,7 @@ export default function TableBuilderPage() {
     const handleLoadTemplate = (template: TableTemplate) => {
         setGrid(template.grid);
         setColWidths(template.colWidths);
+        setRowHeights(template.rowHeights || Array(template.grid.length).fill(defaultRowHeight));
         toast({ title: 'Template Loaded', description: `"${template.name}" has been loaded into the builder.` });
     };
 
@@ -838,24 +900,35 @@ export default function TableBuilderPage() {
                         <ScrollArea className="w-full whitespace-nowrap border rounded-lg" style={{ height: '600px' }}>
                           <div className='p-4'>
                             {/* Column Width Inputs */}
-                            <div className="flex" style={{ width: colWidths.reduce((a, b) => a + b, 0) }}>
+                            <div className="flex" style={{ width: colWidths.reduce((a, b) => a + b, 0), marginLeft: '4rem' }}>
                                 {colWidths.map((width, index) => (
                                     <div key={`width-input-${index}`} style={{ width: `${width}px` }} className="p-1">
                                         <ColumnWidthInput index={index} width={width} onWidthChange={handleColWidthChange} />
                                     </div>
                                 ))}
                             </div>
-                            <ResizableTable 
-                                grid={grid} 
-                                setGrid={setGrid}
-                                selectedCells={selectedCells}
-                                onCellMouseDown={handleSelectionStart}
-                                onCellMouseEnter={handleSelectionEnter}
-                                onCellMouseUp={handleSelectionEnd}
-                                colWidths={colWidths}
-                                rowHeight={rowHeight}
-                                handleContentChange={handleContentChange}
-                            />
+                            <div className="flex">
+                                {/* Row Height Inputs */}
+                                <div className="flex flex-col" style={{ width: '4rem' }}>
+                                    {rowHeights.map((height, index) => (
+                                        <div key={`height-input-${index}`} style={{ height: `${height}px` }} className="p-1 border-r border-b">
+                                            <RowHeightInput index={index} height={height} onHeightChange={handleRowHeightChange} />
+                                        </div>
+                                    ))}
+                                </div>
+                                {/* Table */}
+                                <ResizableTable 
+                                    grid={grid} 
+                                    setGrid={setGrid}
+                                    selectedCells={selectedCells}
+                                    onCellMouseDown={handleSelectionStart}
+                                    onCellMouseEnter={handleSelectionEnter}
+                                    onCellMouseUp={handleSelectionEnd}
+                                    colWidths={colWidths}
+                                    rowHeights={rowHeights}
+                                    handleContentChange={handleContentChange}
+                                />
+                            </div>
                            </div>
                            <ScrollBar orientation="horizontal" />
                         </ScrollArea>
