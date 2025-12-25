@@ -120,10 +120,10 @@ const ResizableTable = ({
 
   const getVerticalAlignClass = (alignment: 'top' | 'middle' | 'bottom') => {
     switch (alignment) {
-        case 'top': return 'align-top';
-        case 'middle': return 'align-middle';
-        case 'bottom': return 'align-bottom';
-        default: return 'align-top';
+        case 'top': return 'items-start';
+        case 'middle': return 'items-center';
+        case 'bottom': return 'items-end';
+        default: return 'items-start';
     }
   };
 
@@ -177,35 +177,36 @@ const ResizableTable = ({
                             style={cellStyle}
                             className={cn(
                                 "border border-muted p-0 relative select-none",
-                                getVerticalAlignClass(cell.verticalAlign),
                                 isCellSelected(currentPath) && 'bg-primary/20 outline-2 outline-primary outline'
                             )}
                         >
-                            {cell.nestedGrid ? (
-                                <ResizableTable
-                                    grid={cell.nestedGrid}
-                                    setGrid={(newNestedGrid) => {
-                                        const newGrid = [...grid];
-                                        newGrid[rowIndex][colIndex].nestedGrid = newNestedGrid;
-                                        setGrid(newGrid);
-                                    }}
-                                    selectedCells={selectedCells}
-                                    onCellMouseDown={onCellMouseDown}
-                                    onCellMouseEnter={onCellMouseEnter}
-                                    onCellMouseUp={onCellMouseUp}
-                                    colWidths={[]} // Nested tables don't control main widths
-                                    rowHeights={[]}
-                                    handleContentChange={handleContentChange}
-                                    pathPrefix={[...currentPath, 'nestedGrid']}
-                                />
-                            ) : (
-                                <EditableCell
-                                    initialContent={cell.content}
-                                    fontSize={cell.fontSize}
-                                    fontWeight={cell.fontWeight}
-                                    onContentSave={(newContent) => handleContentChange(currentPath, newContent)}
-                                />
-                            )}
+                            <div className={cn("flex w-full h-full", getVerticalAlignClass(cell.verticalAlign))}>
+                                {cell.nestedGrid ? (
+                                    <ResizableTable
+                                        grid={cell.nestedGrid}
+                                        setGrid={(newNestedGrid) => {
+                                            const newGrid = [...grid];
+                                            newGrid[rowIndex][colIndex].nestedGrid = newNestedGrid;
+                                            setGrid(newGrid);
+                                        }}
+                                        selectedCells={selectedCells}
+                                        onCellMouseDown={onCellMouseDown}
+                                        onCellMouseEnter={onCellMouseEnter}
+                                        onCellMouseUp={onCellMouseUp}
+                                        colWidths={[]} // Nested tables don't control main widths
+                                        rowHeights={[]}
+                                        handleContentChange={handleContentChange}
+                                        pathPrefix={[...currentPath, 'nestedGrid']}
+                                    />
+                                ) : (
+                                    <EditableCell
+                                        initialContent={cell.content}
+                                        fontSize={cell.fontSize}
+                                        fontWeight={cell.fontWeight}
+                                        onContentSave={(newContent) => handleContentChange(currentPath, newContent)}
+                                    />
+                                )}
+                            </div>
                         </td>
                         );
                     })}
