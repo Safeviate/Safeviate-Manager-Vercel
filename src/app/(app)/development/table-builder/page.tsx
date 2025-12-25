@@ -120,10 +120,10 @@ const ResizableTable = ({
 
   const getVerticalAlignClass = (alignment: 'top' | 'middle' | 'bottom') => {
     switch (alignment) {
-        case 'top': return 'items-start';
-        case 'middle': return 'items-center';
-        case 'bottom': return 'items-end';
-        default: return 'items-start';
+        case 'top': return 'justify-start';
+        case 'middle': return 'justify-center';
+        case 'bottom': return 'justify-end';
+        default: return 'justify-start';
     }
   };
 
@@ -180,7 +180,7 @@ const ResizableTable = ({
                                 isCellSelected(currentPath) && 'bg-primary/20 outline-2 outline-primary outline'
                             )}
                         >
-                            <div className={cn("flex w-full h-full", getVerticalAlignClass(cell.verticalAlign))}>
+                            <div className={cn("flex flex-col w-full h-full", getVerticalAlignClass(cell.verticalAlign))}>
                                 {cell.nestedGrid ? (
                                     <ResizableTable
                                         grid={cell.nestedGrid}
@@ -272,10 +272,9 @@ const ColumnWidthInput = ({ index, width, onWidthChange }: { index: number, widt
     useEffect(() => {
         const numericValue = parseInt(debouncedValue, 10);
         if (!isNaN(numericValue) && numericValue !== width) {
-            const validatedWidth = Math.max(50, numericValue);
-            onWidthChange(index, validatedWidth);
+            onWidthChange(index, Math.max(50, numericValue));
         }
-    }, [debouncedValue, index, onWidthChange, width]);
+    }, [debouncedValue]);
 
     useEffect(() => {
         if(parseInt(inputValue, 10) !== width) {
@@ -299,18 +298,15 @@ const RowHeightInput = ({ index, height, onHeightChange }: { index: number, heig
     const debouncedValue = useDebounce(inputValue, 500);
 
     useEffect(() => {
+      setInputValue(height.toString());
+    }, [height]);
+
+    useEffect(() => {
         const numericValue = parseInt(debouncedValue, 10);
         if (!isNaN(numericValue) && numericValue !== height) {
-            const validatedHeight = Math.max(20, numericValue);
-            onHeightChange(index, validatedHeight);
+            onHeightChange(index, Math.max(20, numericValue));
         }
-    }, [debouncedValue, index, onHeightChange, height]);
-    
-    useEffect(() => {
-        if(parseInt(inputValue, 10) !== height) {
-            setInputValue(height.toString());
-        }
-    }, [height]);
+    }, [debouncedValue]);
 
     return (
         <Input
@@ -972,3 +968,5 @@ export default function TableBuilderPage() {
         </TooltipProvider>
     );
 }
+
+    
