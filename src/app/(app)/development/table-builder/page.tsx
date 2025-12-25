@@ -789,4 +789,3 @@ export default function TableBuilderPage() {
         </TooltipProvider>
     );
 }
-
