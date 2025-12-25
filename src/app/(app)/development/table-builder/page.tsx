@@ -94,14 +94,14 @@ export default function TableBuilderPage() {
 
     let minR = Infinity, minC = Infinity, maxR = -1, maxC = -1;
     selectionKeys.forEach(key => {
-      const [r, c] = key.split('-').map(Number);
-      const cell = newCells.find(cell => cell.r === r && cell.c === c);
-      if (cell) {
-        minR = Math.min(minR, r);
-        minC = Math.min(minC, c);
-        maxR = Math.max(maxR, r + cell.rowSpan - 1);
-        maxC = Math.max(maxC, c + cell.colSpan - 1);
-      }
+        const [r, c] = key.split('-').map(Number);
+        const cell = newCells.find(cell => cell.r === r && cell.c === c);
+        if (cell) {
+            minR = Math.min(minR, r);
+            minC = Math.min(minC, c);
+            maxR = Math.max(maxR, r + cell.rowSpan - 1);
+            maxC = Math.max(maxC, c + cell.colSpan - 1);
+        }
     });
 
     const newRowSpan = maxR - minR + 1;
@@ -111,11 +111,11 @@ export default function TableBuilderPage() {
     selectionKeys.forEach(key => {
         const [r, c] = key.split('-').map(Number);
         const cell = newCells.find(cell => cell.r === r && cell.c === c);
-        if (cell) {
+        if (cell && !cell.hidden) {
             totalSelectedArea += cell.rowSpan * cell.colSpan;
         }
     });
-    
+
     if (totalSelectedArea !== newRowSpan * newColSpan) {
         toast({ variant: 'destructive', title: 'Invalid Merge', description: 'Selected cells do not form a solid rectangle.' });
         return;
@@ -314,8 +314,8 @@ export default function TableBuilderPage() {
               </div>
             );
           })}
-          {isEditing && Array.from({ length: cols - 1 }).map((_, index) => {
-            const isAligned = Math.abs(colWidths[index] - colWidths[index + 1]) < 1;
+          {isEditing && Array.from({ length: cols }).map((_, index) => {
+            const isAligned = Math.abs(colWidths[index] - colWidths[index - 1]) < 1;
             return (
                 <div 
                     key={`col-handle-${index}`}
@@ -328,8 +328,8 @@ export default function TableBuilderPage() {
                 />
             )
           })}
-          {isEditing && Array.from({ length: rows - 1 }).map((_, index) => {
-            const isAligned = Math.abs(rowHeights[index] - rowHeights[index + 1]) < 1;
+          {isEditing && Array.from({ length: rows }).map((_, index) => {
+            const isAligned = Math.abs(rowHeights[index] - rowHeights[index - 1]) < 1;
             return (
                 <div 
                     key={`row-handle-${index}`}
