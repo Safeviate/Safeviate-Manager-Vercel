@@ -107,13 +107,11 @@ export default function TableBuilderPage() {
       toast({ variant: 'destructive', title: 'Invalid Selection', description: 'Please select at least two cells to merge.' });
       return;
     }
-
-    const newCells = JSON.parse(JSON.stringify(cells)) as Cell[];
-
+    
     let minR = Infinity, minC = Infinity, maxR = -1, maxC = -1;
     selectionKeys.forEach(key => {
         const [r, c] = key.split('-').map(Number);
-        const cell = newCells.find(cell => cell.r === r && cell.c === c);
+        const cell = getCell(r, c);
         if (cell) {
             minR = Math.min(minR, r);
             minC = Math.min(minC, c);
@@ -122,29 +120,25 @@ export default function TableBuilderPage() {
         }
     });
 
-    const newRowSpan = maxR - minR + 1;
-    const newColSpan = maxC - minC + 1;
-    
-    // Verify that the selection forms a solid rectangle
     let totalSelectedArea = 0;
-    for (let r = minR; r <= maxR; r++) {
-        for (let c = minC; c <= maxC; c++) {
-            const cell = newCells.find(cell => cell.r === r && cell.c === c);
-            if (!cell || !selectedCells[`${r}-${c}`]) {
-                 const occupiedCell = newCells.find(cl => 
-                    !cl.hidden &&
-                    r >= cl.r && r < cl.r + cl.rowSpan &&
-                    c >= cl.c && c < cl.c + cl.colSpan &&
-                    !selectedCells[`${cl.r}-${cl.c}`]
-                );
-                if (occupiedCell) {
-                    toast({ variant: 'destructive', title: 'Invalid Merge', description: 'Selection contains unselected cells. Please select a solid rectangle.' });
-                    return;
-                }
-            }
+    selectionKeys.forEach(key => {
+        const [r, c] = key.split('-').map(Number);
+        const cell = getCell(r,c);
+        if(cell) {
+            totalSelectedArea += cell.rowSpan * cell.colSpan;
         }
+    });
+
+    const boundingBoxArea = (maxR - minR + 1) * (maxC - minC + 1);
+    if(totalSelectedArea !== boundingBoxArea) {
+      toast({ variant: 'destructive', title: 'Invalid Merge', description: 'Selection is not a solid rectangle. Please select a solid block of cells to merge.' });
+      return;
     }
 
+
+    const newCells = JSON.parse(JSON.stringify(cells)) as Cell[];
+    const newRowSpan = maxR - minR + 1;
+    const newColSpan = maxC - minC + 1;
 
     const topLeftCell = newCells.find(cell => cell.r === minR && cell.c === minC);
     if (!topLeftCell) {
@@ -372,7 +366,7 @@ export default function TableBuilderPage() {
                         "absolute top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/50",
                          isAligned && "bg-blue-500"
                     )}
-                    style={{ left: `${colWidths.slice(0, index + 1).reduce((a, b) => a + b, 0) - 3 + index}px`}}
+                    style={{ left: `${colWidths.slice(0, index + 1).reduce((a, b) => a + b, 0) + index * 1 - 2}px`}}
                     onMouseDown={(e) => handleMouseDown(e, 'col', index)}
                 />
             )
@@ -386,7 +380,7 @@ export default function TableBuilderPage() {
                         "absolute left-0 right-0 h-1.5 cursor-row-resize hover:bg-primary/50",
                          isAligned && "bg-blue-500"
                     )}
-                    style={{ top: `${rowHeights.slice(0, index + 1).reduce((a, b) => a + b, 0) - 3 + index}px`}}
+                    style={{ top: `${rowHeights.slice(0, index + 1).reduce((a, b) => a + b, 0) + index * 1 - 2}px`}}
                     onMouseDown={(e) => handleMouseDown(e, 'row', index)}
                 />
             )
