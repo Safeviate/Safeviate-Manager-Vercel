@@ -277,10 +277,15 @@ const ColumnWidthInput = ({ index, width, onWidthChange }: { index: number, widt
     const debouncedValue = useDebounce(inputValue, 500);
 
     useEffect(() => {
-        if (!isNaN(parseInt(debouncedValue, 10))) {
-            onWidthChange(index, Math.max(50, parseInt(debouncedValue, 10)));
+        setInputValue(width.toString())
+    }, [width]);
+    
+    useEffect(() => {
+        const numericValue = parseInt(debouncedValue, 10);
+        if (!isNaN(numericValue) && numericValue !== width) {
+            onWidthChange(index, Math.max(50, numericValue));
         }
-    }, [debouncedValue, index, onWidthChange]);
+    }, [debouncedValue, index, onWidthChange, width]);
 
     return (
          <Input
@@ -298,10 +303,15 @@ const RowHeightInput = ({ index, height, onHeightChange }: { index: number, heig
     const debouncedValue = useDebounce(inputValue, 500);
 
      useEffect(() => {
-        if (!isNaN(parseInt(debouncedValue, 10))) {
-            onHeightChange(index, Math.max(20, parseInt(debouncedValue, 10)));
+        setInputValue(height.toString());
+     }, [height]);
+
+     useEffect(() => {
+        const numericValue = parseInt(debouncedValue, 10);
+        if (!isNaN(numericValue) && numericValue !== height) {
+            onHeightChange(index, Math.max(20, numericValue));
         }
-    }, [debouncedValue, index, onHeightChange]);
+    }, [debouncedValue, index, onHeightChange, height]);
 
     return (
         <Input
@@ -1062,3 +1072,5 @@ export default function TableBuilderPage() {
         </TooltipProvider>
     );
 }
+
+    
