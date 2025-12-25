@@ -11,10 +11,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
 import { addDocumentNonBlocking, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import { useDebounce } from '@/hooks/use-debounce';
 
 type Cell = {
   r: number;
   c: number;
+  content: string;
   rowSpan: number;
   colSpan: number;
   hidden: boolean;
@@ -32,7 +34,7 @@ const createInitialTable = (rows: number, cols: number): TableData => {
   const cells: Cell[] = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      cells.push({ r, c, rowSpan: 1, colSpan: 1, hidden: false });
+      cells.push({ r, c, rowSpan: 1, colSpan: 1, hidden: false, content: '' });
     }
   }
   return { 
@@ -49,6 +51,8 @@ export default function TableBuilderPage() {
   const [tableData, setTableData] = useState<TableData>(() => createInitialTable(5, 5));
   const [selectedCells, setSelectedCells] = useState<Record<string, boolean>>({});
   const [isEditing, setIsEditing] = useState(true);
+
+  const debouncedTableData = useDebounce(tableData, 300);
 
   const resizeHandleRef = useRef<{ type: 'col' | 'row', index: number, initialPos: number, initialSize: number } | null>(null);
 
@@ -90,59 +94,47 @@ export default function TableBuilderPage() {
   
     let minR = Infinity, minC = Infinity, maxR = -1, maxC = -1;
     selectionKeys.forEach(key => {
-      const [r, c] = key.split('-').map(Number);
-      const cell = newCells.find(cell => cell.r === r && cell.c === c);
-      if (cell) {
-        minR = Math.min(minR, r);
-        minC = Math.min(minC, c);
-        maxR = Math.max(maxR, r + cell.rowSpan - 1);
-        maxC = Math.max(maxC, c + cell.colSpan - 1);
-      }
+        const [r, c] = key.split('-').map(Number);
+        const cell = newCells.find(cell => cell.r === r && cell.c === c);
+        if (cell) {
+            minR = Math.min(minR, r);
+            minC = Math.min(minC, c);
+            maxR = Math.max(maxR, r + cell.rowSpan - 1);
+            maxC = Math.max(maxC, c + cell.colSpan - 1);
+        }
     });
-  
+
     const newRowSpan = maxR - minR + 1;
     const newColSpan = maxC - minC + 1;
-  
-    let totalSelectedArea = 0;
-    selectionKeys.forEach(key => {
-      const [r, c] = key.split('-').map(Number);
-      const cell = newCells.find(cell => cell.r === r && cell.c === c);
-      if (cell) {
-        totalSelectedArea += cell.rowSpan * cell.colSpan;
-      }
-    });
-  
     const boundingBoxArea = newRowSpan * newColSpan;
-  
-    let selectionIsValid = totalSelectedArea === boundingBoxArea;
-    if (selectionIsValid) {
-        for (let r = minR; r <= maxR; r++) {
-            for (let c = minC; c <= maxC; c++) {
-                const cellInBox = newCells.find(cell => cell.r === r && cell.c === c);
-                if (!cellInBox || !selectedCells[`${r}-${c}`]) {
-                    const originalCell = cells.find(cell => r >= cell.r && r < cell.r + cell.rowSpan && c >= cell.c && c < cell.c + cell.colSpan && !cell.hidden);
-                     if (!originalCell || !selectedCells[`${originalCell.r}-${originalCell.c}`]) {
-                        selectionIsValid = false;
-                        break;
-                     }
-                }
+
+    let totalSelectedArea = 0;
+    let validSelection = true;
+
+    // Verify that the selection is a perfect rectangle
+    for (let r = minR; r <= maxR; r++) {
+        for (let c = minC; c <= maxC; c++) {
+            const originalCell = cells.find(cell => r >= cell.r && r < cell.r + cell.rowSpan && c >= cell.c && c < cell.c + cell.colSpan && !cell.hidden);
+            if (!originalCell || !selectedCells[`${originalCell.r}-${originalCell.c}`]) {
+                validSelection = false;
+                break;
             }
-            if (!selectionIsValid) break;
         }
+        if (!validSelection) break;
     }
-
-
-    if (!selectionIsValid) {
+    
+    if (!validSelection) {
       toast({ variant: 'destructive', title: 'Invalid Selection', description: 'Selected cells do not form a solid rectangle.' });
       return;
     }
-  
+
     const topLeftCell = newCells.find(cell => cell.r === minR && cell.c === minC);
     if (!topLeftCell) {
         toast({ variant: 'destructive', title: 'Merge Error', description: 'Could not find a top-left cell for the merge.' });
         return;
     }
     
+    // Perform the merge
     newCells.forEach(cell => {
       if (cell.r >= minR && cell.r <= maxR && cell.c >= minC && cell.c <= maxC) {
         if (cell.r === minR && cell.c === minC) {
@@ -236,6 +228,18 @@ export default function TableBuilderPage() {
     document.body.style.cursor = 'default';
   }, []);
 
+  const handleCellContentChange = (r: number, c: number, content: string) => {
+    setTableData(prev => {
+        const newCells = prev.cells.map(cell => {
+            if (cell.r === r && cell.c === c) {
+                return { ...cell, content };
+            }
+            return cell;
+        });
+        return { ...prev, cells: newCells };
+    });
+  };
+
   useEffect(() => {
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
@@ -252,7 +256,7 @@ export default function TableBuilderPage() {
         <CardHeader>
           <CardTitle>Table Builder</CardTitle>
           <CardDescription>
-            Create and manipulate table structures. Click to select, drag handles to resize.
+            Create and manipulate table structures. Click to select, drag handles to resize, and type to edit content.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -296,7 +300,7 @@ export default function TableBuilderPage() {
                 key={key}
                 onClick={isEditing ? () => handleCellClick(cell.r, cell.c) : undefined}
                 className={cn(
-                  'flex items-center justify-center border text-sm text-muted-foreground transition-colors',
+                  'flex items-center justify-center border text-sm text-muted-foreground transition-colors p-0.5',
                   isEditing && 'cursor-pointer hover:bg-accent/50',
                   isSelected && 'ring-2 ring-primary ring-inset bg-blue-100'
                 )}
@@ -307,7 +311,13 @@ export default function TableBuilderPage() {
                   gridColumnEnd: cell.c + 1 + cell.colSpan,
                 }}
               >
-                ({cell.r}, {cell.c})
+                <Input
+                    value={cell.content}
+                    onChange={(e) => handleCellContentChange(cell.r, cell.c, e.target.value)}
+                    disabled={!isEditing}
+                    className="w-full h-full bg-transparent border-none text-center focus-visible:ring-1 focus-visible:ring-ring"
+                    placeholder={isEditing ? '...' : ''}
+                />
               </div>
             );
           })}
@@ -332,3 +342,4 @@ export default function TableBuilderPage() {
     </div>
   );
 }
+
