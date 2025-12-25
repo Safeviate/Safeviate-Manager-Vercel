@@ -72,21 +72,32 @@ export default function TableBuilderPage() {
             toast({ title: "Select at least two cells to merge." });
             return;
         }
-
-        const selected = Array.from(selectedCells).map(key => {
+    
+        const newCells = [...tableData.cells];
+        const selectedCellObjects = Array.from(selectedCells).map(key => {
             const [r, c] = key.split('-').map(Number);
-            return { r, c };
+            return newCells.find(cell => cell.r === r && cell.c === c);
+        }).filter(Boolean) as Cell[];
+    
+        // 1. Determine the bounding box of the merge area, considering spans.
+        let minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
+        selectedCellObjects.forEach(cell => {
+            minR = Math.min(minR, cell.r);
+            maxR = Math.max(maxR, cell.r + cell.rowSpan - 1);
+            minC = Math.min(minC, cell.c);
+            maxC = Math.max(maxC, cell.c + cell.colSpan - 1);
         });
-
-        const minR = Math.min(...selected.map(cell => cell.r));
-        const maxR = Math.max(...selected.map(cell => cell.r));
-        const minC = Math.min(...selected.map(cell => cell.c));
-        const maxC = Math.max(...selected.map(cell => cell.c));
-
-        const spanR = maxR - minR + 1;
-        const spanC = maxC - minC + 1;
-
-        if (selected.length !== spanR * spanC) {
+    
+        const finalRowSpan = maxR - minR + 1;
+        const finalColSpan = maxC - minC + 1;
+    
+        // 2. Verify that the selection forms a solid rectangle.
+        let totalAreaInSelection = 0;
+        selectedCellObjects.forEach(cell => {
+            totalAreaInSelection += cell.rowSpan * cell.colSpan;
+        });
+    
+        if (totalAreaInSelection !== finalRowSpan * finalColSpan) {
             toast({
                 variant: "destructive",
                 title: "Invalid Selection",
@@ -95,31 +106,27 @@ export default function TableBuilderPage() {
             return;
         }
 
-        setTableData(prev => {
-            const newCells = prev.cells.map(cell => ({ ...cell }));
-            
-            // Find the top-left cell of the merge area and update its span
-            const masterCellIndex = newCells.findIndex(cell => cell.r === minR && cell.c === minC);
-            if (masterCellIndex !== -1) {
-                newCells[masterCellIndex].colSpan = spanC;
-                newCells[masterCellIndex].rowSpan = spanR;
-                newCells[masterCellIndex].hidden = false;
-            }
+        // 3. Find the master cell (top-left) and hide all others within the bounding box.
+        const masterCell = newCells.find(cell => cell.r === minR && cell.c === minC);
+        if (!masterCell) {
+            toast({ variant: "destructive", title: "Merge Error", description: "Could not find master cell." });
+            return;
+        }
 
-            // Hide all other cells in the merge area
-            for (let r = minR; r <= maxR; r++) {
-                for (let c = minC; c <= maxC; c++) {
-                    if (r === minR && c === minC) continue; // Skip the master cell
-                    const cellIndexToHide = newCells.findIndex(cell => cell.r === r && cell.c === c);
-                    if (cellIndexToHide !== -1) {
-                        newCells[cellIndexToHide].hidden = true;
-                    }
-                }
-            }
+        masterCell.rowSpan = finalRowSpan;
+        masterCell.colSpan = finalColSpan;
+        masterCell.hidden = false;
 
-            return { ...prev, cells: newCells };
+        newCells.forEach(cell => {
+            // Hide any cell that is not the master cell but falls within the new merged area.
+            if (!(cell.r === minR && cell.c === minC) &&
+                cell.r >= minR && cell.r <= maxR &&
+                cell.c >= minC && cell.c <= maxC) {
+                cell.hidden = true;
+            }
         });
-
+    
+        setTableData(prev => ({ ...prev, cells: newCells }));
         setSelectedCells(new Set());
         toast({ title: "Cells Merged", description: "The selected cells have been merged." });
     };
