@@ -182,7 +182,7 @@ const ResizableTable = ({
                             style={cellStyle}
                             className={cn(
                                 "border border-muted p-0 relative select-none",
-                                "flex", // Use flex for vertical alignment
+                                "flex flex-col", // Use flex for vertical alignment
                                 getVerticalAlignClass(cell.verticalAlign),
                                 isCellSelected(currentPath) && 'bg-primary/20 outline-2 outline-primary outline'
                             )}
@@ -353,15 +353,19 @@ const convertMapToGrid = (gridMap: { [key: string]: CellData[] }): CellData[][] 
         }));
 };
 
-const SaveAsNewTemplateDialog = ({ onSave }: { onSave: (name: string) => void; }) => {
+const SaveAsNewTemplateDialog = ({ onSave, children }: { onSave: (name: string) => void; children: React.ReactNode }) => {
+    const [isOpen, setIsOpen] = useState(false);
     const [name, setName] = useState('');
+
+    const handleSave = () => {
+        onSave(name);
+        setIsOpen(false);
+        setName('');
+    };
+
     return (
-        <Dialog>
-            <DialogTrigger asChild>
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    Save as New Template...
-                </DropdownMenuItem>
-            </DialogTrigger>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>{children}</DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Save as New Template</DialogTitle>
@@ -376,9 +380,7 @@ const SaveAsNewTemplateDialog = ({ onSave }: { onSave: (name: string) => void; }
                 </div>
                 <DialogFooter>
                     <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                    <DialogClose asChild>
-                        <Button onClick={() => onSave(name)} disabled={!name.trim()}>Save as New</Button>
-                    </DialogClose>
+                    <Button onClick={handleSave} disabled={!name.trim()}>Save as New</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -855,7 +857,11 @@ export default function TableBuilderPage() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                           <SaveAsNewTemplateDialog onSave={handleSaveAsNew} />
+                           <SaveAsNewTemplateDialog onSave={handleSaveAsNew}>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                    Save as New Template...
+                                </DropdownMenuItem>
+                           </SaveAsNewTemplateDialog>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -863,16 +869,9 @@ export default function TableBuilderPage() {
         }
 
         return (
-            <Dialog>
-                <DialogTrigger asChild>
-                    <Button disabled={grid.length === 0}><Save className="mr-2 h-4 w-4" /> Save as Template</Button>
-                </DialogTrigger>
-                <SaveAsNewTemplateDialog onSave={(name) => {
-                    handleSaveAsNew(name);
-                    // This is a bit of a hack to close the outer dialog, but it works with the current structure
-                    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-                }} />
-            </Dialog>
+            <SaveAsNewTemplateDialog onSave={handleSaveAsNew}>
+                 <Button disabled={grid.length === 0}><Save className="mr-2 h-4 w-4" /> Save as Template</Button>
+            </SaveAsNewTemplateDialog>
         );
     }
 
