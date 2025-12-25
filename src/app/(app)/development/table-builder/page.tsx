@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Trash2, Plus, Minus, Upload } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 
 
 type Cell = {
@@ -379,6 +380,22 @@ export default function TableBuilderPage() {
     });
   };
 
+  const handleDimensionChange = (type: 'col' | 'row', index: number, value: string) => {
+    const newSize = parseInt(value, 10);
+    if (isNaN(newSize) || newSize < 20) return;
+
+    if (type === 'col') {
+      const newColWidths = [...colWidths];
+      newColWidths[index] = newSize;
+      setTableData(prev => ({ ...prev, colWidths: newColWidths }));
+    } else {
+      const newRowHeights = [...rowHeights];
+      newRowHeights[index] = newSize;
+      setTableData(prev => ({ ...prev, rowHeights: newRowHeights }));
+    }
+  };
+
+
   useEffect(() => {
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
@@ -423,7 +440,7 @@ export default function TableBuilderPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
                  <div className="flex items-center gap-2">
                     <Label>Rows ({rows})</Label>
                     <Button size="icon" variant="outline" onClick={addRow}><Plus className="h-4 w-4" /></Button>
@@ -438,10 +455,45 @@ export default function TableBuilderPage() {
                     <Switch id="edit-mode" checked={isEditing} onCheckedChange={setIsEditing} />
                     <Label htmlFor="edit-mode">Edit Mode</Label>
                 </div>
+                <div className="flex items-center gap-2">
+                    <Button onClick={handleMerge} disabled={Object.keys(selectedCells).length < 2 || !isEditing}>Merge Selected</Button>
+                    <Button onClick={handleUnmerge} disabled={Object.keys(selectedCells).length === 0 || !isEditing} variant="outline">Unmerge</Button>
+                </div>
             </div>
-            <div className="flex gap-2">
-                <Button onClick={handleMerge} disabled={Object.keys(selectedCells).length < 2 || !isEditing}>Merge Selected</Button>
-                <Button onClick={handleUnmerge} disabled={Object.keys(selectedCells).length === 0 || !isEditing} variant="outline">Unmerge</Button>
+            
+            <Separator />
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Column Widths (px)</Label>
+                <div className="flex flex-wrap gap-2">
+                  {colWidths.map((width, index) => (
+                    <Input 
+                      key={`col-width-${index}`}
+                      type="number"
+                      value={Math.round(width)}
+                      onChange={(e) => handleDimensionChange('col', index, e.target.value)}
+                      className="w-20"
+                      disabled={!isEditing}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Row Heights (px)</Label>
+                <div className="flex flex-wrap gap-2">
+                  {rowHeights.map((height, index) => (
+                    <Input 
+                      key={`row-height-${index}`}
+                      type="number"
+                      value={Math.round(height)}
+                      onChange={(e) => handleDimensionChange('row', index, e.target.value)}
+                      className="w-20"
+                      disabled={!isEditing}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
         </CardContent>
       </Card>
@@ -486,34 +538,22 @@ export default function TableBuilderPage() {
               </div>
             );
           })}
-         {isEditing && Array.from({ length: cols }).map((_, index) => {
-            const isAligned = index > 0 && Math.abs(colWidths[index] - colWidths[index - 1]) < 1;
-            return (
-                <div 
-                    key={`col-handle-${index}`}
-                    className={cn(
-                        "absolute top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/50",
-                         isAligned && "bg-blue-500"
-                    )}
-                    style={{ left: `${colWidths.slice(0, index + 1).reduce((a, b) => a + b, 0) - 1.5}px`}}
-                    onMouseDown={(e) => handleMouseDown(e, 'col', index)}
-                />
-            )
-          })}
-          {isEditing && Array.from({ length: rows }).map((_, index) => {
-            const isAligned = index > 0 && Math.abs(rowHeights[index] - rowHeights[index - 1]) < 1;
-            return (
-                <div 
-                    key={`row-handle-${index}`}
-                    className={cn(
-                        "absolute left-0 right-0 h-1.5 cursor-row-resize hover:bg-primary/50",
-                         isAligned && "bg-blue-500"
-                    )}
-                    style={{ top: `${rowHeights.slice(0, index + 1).reduce((a, b) => a + b, 0) - 1.5}px`}}
-                    onMouseDown={(e) => handleMouseDown(e, 'row', index)}
-                />
-            )
-          })}
+         {isEditing && Array.from({ length: cols }).map((_, index) => (
+            <div 
+                key={`col-handle-${index}`}
+                className="absolute top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/50"
+                style={{ left: `${colWidths.slice(0, index + 1).reduce((a, b) => a + b, 0) - 1.5}px`}}
+                onMouseDown={(e) => handleMouseDown(e, 'col', index)}
+            />
+          ))}
+          {isEditing && Array.from({ length: rows }).map((_, index) => (
+            <div 
+                key={`row-handle-${index}`}
+                className="absolute left-0 right-0 h-1.5 cursor-row-resize hover:bg-primary/50"
+                style={{ top: `${rowHeights.slice(0, index + 1).reduce((a, b) => a + b, 0) - 1.5}px`}}
+                onMouseDown={(e) => handleMouseDown(e, 'row', index)}
+            />
+          ))}
         </div>
       </div>
       
