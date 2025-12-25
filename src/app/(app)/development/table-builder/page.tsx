@@ -39,7 +39,7 @@ type TableTemplate = {
 };
 
 const DEFAULT_COL_WIDTH = 120;
-const DEFAULT_ROW_HEIGHT = 40;
+const DEFAULT_ROW_HEIGHT = 30;
 
 
 const SizeInput = ({ value, onSave }: { value: number, onSave: (newSize: number) => void }) => {
@@ -72,7 +72,7 @@ const SizeInput = ({ value, onSave }: { value: number, onSave: (newSize: number)
             onChange={(e) => setLocalValue(e.target.value)}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            className="h-6 w-16 text-center text-xs bg-transparent border-0 focus-visible:ring-1 focus-visible:ring-primary"
+            className="h-6 w-16 text-center text-xs bg-transparent border-0 focus-visible:ring-1 focus-visible:ring-primary px-0"
         />
     );
 };
@@ -168,7 +168,7 @@ const TableBuilderPage = () => {
     
     setTableData(initialData);
 
-  }, [firestore, tenantId]);
+  }, [firestore, tenantId, tableTemplateRef]);
 
   useEffect(() => {
     if (!isLoading && remoteTableData) {
@@ -348,7 +348,7 @@ const TableBuilderPage = () => {
         const masterCell = newCells.find(c => c.r === selCell.r && c.c === selCell.c);
         if (masterCell && (masterCell.rowSpan > 1 || masterCell.colSpan > 1)) {
             for (let r = masterCell.r; r < masterCell.r + masterCell.rowSpan; r++) {
-                for (let c = masterCell.c; c < masterCell.c + masterCell.colSpan; c++) {
+                for (let c = masterCell.c; c < masterCell.colSpan; c++) {
                     const cellToUnhide = newCells.find(cell => cell.r === r && cell.c === c);
                     if (cellToUnhide) {
                         cellToUnhide.hidden = false;
@@ -486,7 +486,7 @@ const TableBuilderPage = () => {
             <thead>
                 <tr>
                     <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10">
-                        <div className="w-24 h-10 flex items-center justify-center">
+                        <div className="w-32 h-10 flex flex-row items-center justify-center gap-1">
                             <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => addRow(0)}><PlusCircle className="h-4 w-4" /></Button>
                         </div>
                     </th>
@@ -496,12 +496,10 @@ const TableBuilderPage = () => {
                             style={{ width: `${tableData.colWidths[colIndex]}px` }}
                             className="p-0 border border-border bg-muted/50 relative"
                         >
-                            <div className="h-10 flex items-center justify-center gap-1">
-                                <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
-                                <div className="flex items-center gap-1">
-                                    <SizeInput value={tableData.colWidths[colIndex]} onSave={(newWidth) => updateColWidth(colIndex, newWidth)} />
-                                </div>
-                                 <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => addColumn(colIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
+                            <div className="h-10 flex items-center justify-center">
+                                <Button variant="ghost" size="icon" className='h-8 w-8 px-0' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
+                                <SizeInput value={tableData.colWidths[colIndex]} onSave={(newWidth) => updateColWidth(colIndex, newWidth)} />
+                                <Button variant="ghost" size="icon" className='h-8 w-8 px-0' onClick={() => addColumn(colIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
                             </div>
                         </th>
                     ))}
@@ -511,7 +509,7 @@ const TableBuilderPage = () => {
                 {Array.from({ length: tableData.rows }).map((_, rowIndex) => (
                     <tr key={rowIndex} style={{ height: `${tableData.rowHeights[rowIndex]}px` }}>
                         <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10">
-                           <div className="w-24 h-full flex items-center justify-center gap-1">
+                           <div className="w-32 h-full flex flex-row items-center justify-center gap-1">
                                 <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
                                 <SizeInput value={tableData.rowHeights[rowIndex]} onSave={(newHeight) => updateRowHeight(rowIndex, newHeight)} />
                                 <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => addRow(rowIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
