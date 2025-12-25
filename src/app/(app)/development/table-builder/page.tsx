@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -6,12 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 // --- Types ---
 interface Cell {
   r: number;
   c: number;
   content?: string;
+  rowSpan: number;
+  colSpan: number;
+  hidden: boolean;
 }
 
 interface TableData {
@@ -24,7 +29,7 @@ const createTableData = (rows: number, cols: number): TableData => {
     const cells: Cell[] = [];
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-            cells.push({ r, c });
+            cells.push({ r, c, rowSpan: 1, colSpan: 1, hidden: false });
         }
     }
     return {
@@ -40,6 +45,7 @@ export default function TableBuilderPage() {
     const [numRows, setNumRows] = useState(5);
     const [numCols, setNumCols] = useState(5);
     const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
+    const { toast } = useToast();
 
     const handleUpdateGrid = () => {
         const rows = Math.max(1, numRows);
@@ -59,6 +65,63 @@ export default function TableBuilderPage() {
             }
             return newSelection;
         });
+    };
+
+    const handleMerge = () => {
+        if (selectedCells.size < 2) {
+            toast({ title: "Select at least two cells to merge." });
+            return;
+        }
+
+        const selected = Array.from(selectedCells).map(key => {
+            const [r, c] = key.split('-').map(Number);
+            return { r, c };
+        });
+
+        const minR = Math.min(...selected.map(cell => cell.r));
+        const maxR = Math.max(...selected.map(cell => cell.r));
+        const minC = Math.min(...selected.map(cell => cell.c));
+        const maxC = Math.max(...selected.map(cell => cell.c));
+
+        const spanR = maxR - minR + 1;
+        const spanC = maxC - minC + 1;
+
+        if (selected.length !== spanR * spanC) {
+            toast({
+                variant: "destructive",
+                title: "Invalid Selection",
+                description: "You can only merge a solid rectangular block of cells.",
+            });
+            return;
+        }
+
+        setTableData(prev => {
+            const newCells = prev.cells.map(cell => ({ ...cell }));
+            
+            // Find the top-left cell of the merge area and update its span
+            const masterCellIndex = newCells.findIndex(cell => cell.r === minR && cell.c === minC);
+            if (masterCellIndex !== -1) {
+                newCells[masterCellIndex].colSpan = spanC;
+                newCells[masterCellIndex].rowSpan = spanR;
+                newCells[masterCellIndex].hidden = false;
+            }
+
+            // Hide all other cells in the merge area
+            for (let r = minR; r <= maxR; r++) {
+                for (let c = minC; c <= maxC; c++) {
+                    if (r === minR && c === minC) continue; // Skip the master cell
+                    const cellIndexToHide = newCells.findIndex(cell => cell.r === r && cell.c === c);
+                    if (cellIndexToHide !== -1) {
+                        newCells[cellIndexToHide].hidden = true;
+                    }
+                }
+            }
+
+            return { ...prev, cells: newCells };
+        });
+
+        setSelectedCells(new Set());
+        toast({ title: "Cells Merged", description: "The selected cells have been merged." });
     };
 
     if (!tableData) {
@@ -94,6 +157,7 @@ export default function TableBuilderPage() {
                         />
                     </div>
                     <Button onClick={handleUpdateGrid}>Update Grid</Button>
+                    <Button onClick={handleMerge} disabled={selectedCells.size < 2}>Merge Selected</Button>
                 </div>
                  <div className="w-full overflow-auto border rounded-lg">
                     <div 
@@ -101,7 +165,10 @@ export default function TableBuilderPage() {
                         style={{ gridTemplateColumns: `repeat(${tableData.cols}, minmax(120px, 1fr))` }}
                     >
                         {tableData.cells.map(cell => {
+                            if (cell.hidden) return null;
+
                             const isSelected = selectedCells.has(`${cell.r}-${cell.c}`);
+                            
                             return (
                                 <div
                                     key={`${cell.r}-${cell.c}`}
@@ -111,6 +178,10 @@ export default function TableBuilderPage() {
                                         'transition-colors',
                                         isSelected ? 'ring-2 ring-blue-500 ring-inset' : 'hover:bg-muted/50'
                                     )}
+                                    style={{
+                                        gridRow: `span ${cell.rowSpan}`,
+                                        gridColumn: `span ${cell.colSpan}`
+                                    }}
                                 >
                                     <span className="text-xs text-muted-foreground">{cell.r},{cell.c}</span>
                                 </div>
