@@ -21,13 +21,13 @@ const TableBuilderPage = () => {
   };
 
   const deleteColumn = (colIndex: number) => {
-    if (headers.length <= 1) return; // Prevent deleting the last column
+    if (headers.length <= 1) return;
     setHeaders(headers.filter((_, i) => i !== colIndex));
     setRows(rows.map(row => row.filter((_, i) => i !== colIndex)));
   };
 
   const deleteRow = (rowIndex: number) => {
-    if (rows.length <= 1) return; // Prevent deleting the last row
+    if (rows.length <= 1) return;
     setRows(rows.filter((_, i) => i !== rowIndex));
   };
   
@@ -51,13 +51,13 @@ const TableBuilderPage = () => {
                 <CardDescription>A simple, stable table builder. Add or remove rows and columns, and edit content directly.</CardDescription>
             </CardHeader>
             <CardContent className="flex gap-2">
-                <Button onClick={addRow}><PlusCircle className="mr-2" /> Add Row</Button>
-                <Button onClick={addColumn}><PlusCircle className="mr-2" /> Add Column</Button>
+                <Button onClick={addRow}><PlusCircle className="mr-2 h-4 w-4" /> Add Row</Button>
+                <Button onClick={addColumn}><PlusCircle className="mr-2 h-4 w-4" /> Add Column</Button>
             </CardContent>
         </Card>
 
         <div className="w-full overflow-x-auto rounded-lg border shadow-sm">
-            <table className="w-full border-collapse bg-card table-fixed min-w-[800px]">
+            <table className="w-full border-collapse bg-card table-auto min-w-[800px]">
             <thead>
                 <tr className="border-b">
                 <th className="w-16 p-0 border-r bg-muted/50"></th>
@@ -67,7 +67,7 @@ const TableBuilderPage = () => {
                             <Input
                                 value={header}
                                 onChange={(e) => updateHeader(colIndex, e.target.value)}
-                                className="h-10 border-0 bg-transparent text-center font-semibold"
+                                className="h-10 border-0 bg-transparent text-center font-semibold text-card-foreground"
                             />
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/50 hover:text-destructive" onClick={() => deleteColumn(colIndex)}>
                                 <Trash2 className="h-4 w-4" />
