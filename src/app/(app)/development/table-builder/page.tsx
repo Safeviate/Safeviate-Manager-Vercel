@@ -1,90 +1,60 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { DragDropContext, Droppable, Draggable, OnDragEndResponder } from '@hello-pangea/dnd';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { PlusCircle, Trash2, GripVertical, Save } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { PlusCircle, Trash2, Save, AlignLeft, AlignCenter, AlignRight, Merge, Unplug } from 'lucide-react';
 
 // --- Types ---
-type CellData = string;
-type RowData = CellData[];
-type GridData = RowData[];
+type Cell = {
+    r: number;
+    c: number;
+    content: string;
+    rowSpan: number;
+    colSpan: number;
+    align: 'left' | 'center' | 'right';
+    hidden: boolean;
+};
+
+type TableData = {
+    rows: number;
+    cols: number;
+    cells: Cell[];
+};
+
 type TableTemplate = {
     id: string;
     name: string;
-    grid: Record<string, RowData>;
-    colWidths: number[];
-    rowHeights: number[];
+    tableData: TableData;
 };
 
-// --- Hook for debouncing state updates ---
-function useDebounce<T>(value: T, delay: number): T {
-    const [debouncedValue, setDebouncedValue] = useState<T>(value);
-    useEffect(() => {
-      const handler = setTimeout(() => {
-        setDebouncedValue(value);
-      }, delay);
-      return () => {
-        clearTimeout(handler);
-      };
-    }, [value, delay]);
-    return debouncedValue;
-}
-
-
-// --- Child Components for Inputs ---
-const ColumnWidthInput = ({ width, onChange }: { width: number; onChange: (newWidth: number) => void }) => {
-    const [value, setValue] = useState(width);
-    const debouncedValue = useDebounce(value, 500);
-
-    useEffect(() => {
-        onChange(debouncedValue);
-    }, [debouncedValue, onChange]);
-    
-    useEffect(() => {
-        setValue(width);
-    }, [width]);
-
-    return (
-        <Input 
-          type="number" 
-          value={value} 
-          onChange={(e) => setValue(Number(e.target.value))} 
-          className="w-20 h-8 text-xs p-1"
-        />
-    );
+// --- Initial Data Helper ---
+const createInitialTableData = (rows: number, cols: number): TableData => {
+    const cells: Cell[] = [];
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            cells.push({
+                r, c,
+                content: ``,
+                rowSpan: 1,
+                colSpan: 1,
+                align: 'left',
+                hidden: false,
+            });
+        }
+    }
+    return { rows, cols, cells };
 };
 
-const RowHeightInput = ({ height, onChange }: { height: number, onChange: (newHeight: number) => void }) => {
-    const [value, setValue] = useState(height);
-    const debouncedValue = useDebounce(value, 500);
-    
-    useEffect(() => {
-        onChange(debouncedValue);
-    }, [debouncedValue, onChange]);
-
-    useEffect(() => {
-        setValue(height);
-    }, [height]);
-
-    return (
-        <Input 
-          type="number" 
-          value={value} 
-          onChange={(e) => setValue(Number(e.target.value))} 
-          className="w-16 h-8 text-xs p-1"
-        />
-    );
-};
 
 // --- Save Button Components ---
 const SaveAsNewTemplateDialog = ({ onSave, children }: { onSave: (name: string) => void, children: React.ReactNode }) => {
@@ -124,7 +94,7 @@ const SaveAsNewTemplateDialog = ({ onSave, children }: { onSave: (name: string) 
 };
 
 
-const SaveButton = ({ isTemplateLoaded, onSave, onSaveAs, onUpdate }: { isTemplateLoaded: boolean, onSave: (name: string) => void, onSaveAs: (name: string) => void, onUpdate: () => void }) => {
+const SaveButton = ({ isTemplateLoaded, onSaveAs, onUpdate }: { isTemplateLoaded: boolean, onSaveAs: (name: string) => void, onUpdate: () => void }) => {
     if (isTemplateLoaded) {
         return (
             <DropdownMenu>
@@ -145,313 +115,247 @@ const SaveButton = ({ isTemplateLoaded, onSave, onSaveAs, onUpdate }: { isTempla
     }
 
     return (
-        <SaveAsNewTemplateDialog onSave={onSave}>
+        <SaveAsNewTemplateDialog onSave={onSaveAs}>
              <Button>
                 <Save className="mr-2" />
-                Save Template
+                Save as New Template
             </Button>
         </SaveAsNewTemplateDialog>
     );
 };
 
-
 // --- Main Page Component ---
 const TableBuilderPage = () => {
-  const [cols, setCols] = useState<string[]>(['Header 1', 'Header 2']);
-  const [rows, setRows] = useState<GridData>([['Cell 1', 'Cell 2']]);
-  const [colWidths, setColWidths] = useState<number[]>([150, 150]);
-  const [rowHeights, setRowHeights] = useState<number[]>([35]);
-  const [loadedTemplateId, setLoadedTemplateId] = useState<string | null>(null);
+    const [tableData, setTableData] = useState<TableData>(() => createInitialTableData(5, 5));
+    const [selection, setSelection] = useState<{ start: { r: number, c: number } | null, end: { r: number, c: number } | null }>({ start: null, end: null });
+    const [isSelecting, setIsSelecting] = useState(false);
+    const [loadedTemplateId, setLoadedTemplateId] = useState<string | null>(null);
 
-  const firestore = useFirestore();
-  const { toast } = useToast();
-  const tenantId = 'safeviate';
-  
-  const templatesQuery = useMemoFirebase(
-      () => (firestore ? collection(firestore, `tenants/${tenantId}/table-templates`) : null),
-      [firestore, tenantId]
-  );
-  const { data: savedTemplates, isLoading: isLoadingTemplates } = useCollection<TableTemplate>(templatesQuery);
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const tenantId = 'safeviate';
 
-  const addColumn = () => {
-    setCols([...cols, `Header ${cols.length + 1}`]);
-    setRows(rows.map(row => [...row, '']));
-    setColWidths([...colWidths, 150]);
-  };
-
-  const addRow = () => {
-    setRows([...rows, Array(cols.length).fill('')]);
-    setRowHeights([...rowHeights, 35]);
-  };
-
-  const deleteColumn = (colIndex: number) => {
-    if (cols.length <= 1) return;
-    setCols(cols.filter((_, i) => i !== colIndex));
-    setRows(rows.map(row => row.filter((_, i) => i !== colIndex)));
-    setColWidths(colWidths.filter((_, i) => i !== colIndex));
-  };
-
-  const deleteRow = (rowIndex: number) => {
-    if (rows.length <= 1) return;
-    setRows(rows.filter((_, i) => i !== rowIndex));
-    setRowHeights(rowHeights.filter((_, i) => i !== rowIndex));
-  };
-
-  const updateCell = (rowIndex: number, colIndex: number, value: string) => {
-    const updatedRows = [...rows];
-    updatedRows[rowIndex][colIndex] = value;
-    setRows(updatedRows);
-  };
-  
-  const updateHeader = (colIndex: number, value: string) => {
-    const newCols = [...cols];
-    newCols[colIndex] = value;
-    setCols(newCols);
-  };
-
-  const updateColWidth = useCallback((colIndex: number, width: number) => {
-    setColWidths(prev => {
-        const newWidths = [...prev];
-        newWidths[colIndex] = width;
-        return newWidths;
-    });
-  }, []);
-
-  const updateRowHeight = useCallback((rowIndex: number, height: number) => {
-    setRowHeights(prev => {
-        const newHeights = [...prev];
-        newHeights[rowIndex] = height;
-        return newHeights;
-    });
-  }, []);
-
-  const handleSaveTemplate = (name: string, idToUpdate?: string) => {
-    if (!firestore) return;
+    const templatesQuery = useMemoFirebase(
+        () => (firestore ? collection(firestore, `tenants/${tenantId}/table-templates`) : null),
+        [firestore, tenantId]
+    );
+    const { data: savedTemplates, isLoading: isLoadingTemplates } = useCollection<TableTemplate>(templatesQuery);
     
-    // Convert array to object for Firestore compatibility
-    const gridObject = rows.reduce((acc, row, index) => {
-      acc[index] = row;
-      return acc;
-    }, {} as Record<string, RowData>);
+    // --- Cell & Selection Logic ---
+    const getCell = (r: number, c: number) => {
+        return tableData.cells.find(cell => cell.r === r && cell.c === c);
+    };
 
-    const templateData = { name, grid: gridObject, colWidths, rowHeights };
+    const handleMouseDown = (r: number, c: number) => {
+        setIsSelecting(true);
+        setSelection({ start: { r, c }, end: { r, c } });
+    };
 
-    if (idToUpdate) {
-        // Update existing template
-        const templateRef = doc(firestore, `tenants/${tenantId}/table-templates`, idToUpdate);
-        updateDocumentNonBlocking(templateRef, templateData);
-        toast({ title: "Template Updated", description: `Template "${name}" has been updated.` });
-    } else {
-        // Add new template
-        const templatesCollection = collection(firestore, `tenants/${tenantId}/table-templates`);
-        addDocumentNonBlocking(templatesCollection, templateData);
-        toast({ title: "Template Saved", description: `Template "${name}" has been saved.` });
-    }
-  };
-  
-  const handleUpdateCurrentTemplate = () => {
-    if (loadedTemplateId && savedTemplates) {
-        const currentTemplate = savedTemplates.find(t => t.id === loadedTemplateId);
-        if (currentTemplate) {
-            handleSaveTemplate(currentTemplate.name, loadedTemplateId);
+    const handleMouseOver = (r: number, c: number) => {
+        if (isSelecting && selection.start) {
+            setSelection(prev => ({ ...prev, end: { r, c } }));
+        }
+    };
+
+    const handleMouseUp = () => {
+        setIsSelecting(false);
+    };
+
+    const isCellSelected = (r: number, c: number) => {
+        if (!selection.start || !selection.end) return false;
+        const { start, end } = selection;
+        const minR = Math.min(start.r, end.r);
+        const maxR = Math.max(start.r, end.r);
+        const minC = Math.min(start.c, end.c);
+        const maxC = Math.max(start.c, end.c);
+        return r >= minR && r <= maxR && c >= minC && c <= maxC;
+    };
+    
+    // --- Grid Modification Logic ---
+    const updateCellContent = (r: number, c: number, content: string) => {
+        const newCells = tableData.cells.map(cell => 
+            (cell.r === r && cell.c === c) ? { ...cell, content } : cell
+        );
+        setTableData({ ...tableData, cells: newCells });
+    };
+
+    const addRow = () => {
+        const newRowIndex = tableData.rows;
+        const newCells: Cell[] = [];
+        for (let c = 0; c < tableData.cols; c++) {
+            newCells.push({ r: newRowIndex, c, content: '', rowSpan: 1, colSpan: 1, align: 'left', hidden: false });
+        }
+        setTableData({
+            rows: newRowIndex + 1,
+            cols: tableData.cols,
+            cells: [...tableData.cells, ...newCells]
+        });
+    };
+
+    const addColumn = () => {
+        const newColIndex = tableData.cols;
+        const newCells: Cell[] = [];
+        for (let r = 0; r < tableData.rows; r++) {
+            newCells.push({ r, c: newColIndex, content: '', rowSpan: 1, colSpan: 1, align: 'left', hidden: false });
+        }
+        setTableData({
+            rows: tableData.rows,
+            cols: newColIndex + 1,
+            cells: [...tableData.cells, ...newCells]
+        });
+    };
+
+    // --- Template & Firestore Logic ---
+    const handleSaveTemplate = (name: string, idToUpdate?: string) => {
+        if (!firestore) return;
+
+        const templateData = { name, tableData };
+
+        if (idToUpdate) {
+            const templateRef = doc(firestore, `tenants/${tenantId}/table-templates`, idToUpdate);
+            updateDocumentNonBlocking(templateRef, templateData);
+            toast({ title: "Template Updated", description: `Template "${name}" has been updated.` });
+        } else {
+            const templatesCollection = collection(firestore, `tenants/${tenantId}/table-templates`);
+            addDocumentNonBlocking(templatesCollection, templateData).then((docRef) => {
+                if(docRef) setLoadedTemplateId(docRef.id);
+            });
+            toast({ title: "Template Saved", description: `Template "${name}" has been saved.` });
+        }
+    };
+    
+    const handleUpdateCurrentTemplate = () => {
+        if (loadedTemplateId && savedTemplates) {
+            const currentTemplate = savedTemplates.find(t => t.id === loadedTemplateId);
+            if (currentTemplate) {
+                handleSaveTemplate(currentTemplate.name, loadedTemplateId);
+            }
         }
     }
-  }
-
-  const handleDeleteTemplate = (templateId: string) => {
+    
+    const handleDeleteTemplate = (templateId: string) => {
       if (!firestore) return;
       const templateRef = doc(firestore, `tenants/${tenantId}/table-templates`, templateId);
       deleteDocumentNonBlocking(templateRef);
       toast({ title: "Template Deleted" });
-  };
-  
-  const handleLoadTemplate = (template: TableTemplate) => {
-    const gridArray = Object.keys(template.grid).sort((a,b) => Number(a) - Number(b)).map(key => template.grid[key]);
-    setCols(gridArray[0]?.map((_, i) => template.grid[0]?.[i] || `Header ${i+1}`));
-    setRows(gridArray);
-    setColWidths(template.colWidths);
-    setRowHeights(template.rowHeights || Array(gridArray.length).fill(35));
-    setLoadedTemplateId(template.id);
-    toast({ title: "Template Loaded", description: `Template "${template.name}" has been loaded.` });
-  };
+      if (loadedTemplateId === templateId) {
+          setLoadedTemplateId(null);
+          setTableData(createInitialTableData(5,5)); // Reset to blank slate
+      }
+    };
 
-  const onDragEnd: OnDragEndResponder = (result) => {
-    const { source, destination, type } = result;
-    if (!destination) return;
+    const handleLoadTemplate = (template: TableTemplate) => {
+        setTableData(template.tableData);
+        setLoadedTemplateId(template.id);
+        toast({ title: "Template Loaded", description: `Template "${template.name}" has been loaded.` });
+    };
 
-    if (type === 'COLUMN') {
-      const newHeaders = Array.from(cols);
-      const [removedHeader] = newHeaders.splice(source.index, 1);
-      newHeaders.splice(destination.index, 0, removedHeader);
-      
-      const newRows = rows.map(row => {
-        const newRow = Array.from(row);
-        const [removedCell] = newRow.splice(source.index, 1);
-        newRow.splice(destination.index, 0, removedCell);
-        return newRow;
-      });
+    return (
+        <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Dynamic Table Builder</CardTitle>
+                    <CardDescription>
+                        Click and drag to select cells. Use the controls to merge, align, and format your table.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="flex justify-between items-center flex-wrap gap-4">
+                    <div className="flex gap-2 flex-wrap">
+                        <Button onClick={addRow}><PlusCircle className="mr-2" /> Add Row</Button>
+                        <Button onClick={addColumn}><PlusCircle className="mr-2" /> Add Column</Button>
+                        <Button variant="outline"><Merge className="mr-2" /> Merge</Button>
+                        <Button variant="outline"><Unplug className="mr-2" /> Unmerge</Button>
+                        <Button variant="outline"><AlignLeft className="mr-2" /> Left</Button>
+                        <Button variant="outline"><AlignCenter className="mr-2" /> Center</Button>
+                        <Button variant="outline"><AlignRight className="mr-2" /> Right</Button>
+                    </div>
+                     <SaveButton
+                        isTemplateLoaded={!!loadedTemplateId}
+                        onSaveAs={(name) => handleSaveTemplate(name)}
+                        onUpdate={handleUpdateCurrentTemplate}
+                    />
+                </CardContent>
+            </Card>
 
-      const newColWidths = Array.from(colWidths);
-      const [removedWidth] = newColWidths.splice(source.index, 1);
-      newColWidths.splice(destination.index, 0, removedWidth);
-      
-      setCols(newHeaders);
-      setRows(newRows);
-      setColWidths(newColWidths);
-    } else { // ROW
-      const newRows = Array.from(rows);
-      const [removed] = newRows.splice(source.index, 1);
-      newRows.splice(destination.index, 0, removed);
-
-      const newRowHeights = Array.from(rowHeights);
-      const [removedHeight] = newRowHeights.splice(source.index, 1);
-      newRowHeights.splice(destination.index, 0, removedHeight);
-
-      setRows(newRows);
-      setRowHeights(newRowHeights);
-    }
-  };
-
-
-  return (
-    <div className="space-y-6">
-      <Card>
-          <CardHeader>
-              <CardTitle>Dynamic Table Builder</CardTitle>
-              <CardDescription>
-                  Add or remove rows and columns, resize them, and drag to reorder. Save your designs as templates.
-              </CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-between items-center">
-              <div className="flex gap-2">
-                  <Button onClick={addRow}><PlusCircle className="mr-2" /> Add Row</Button>
-                  <Button onClick={addColumn}><PlusCircle className="mr-2" /> Add Column</Button>
-              </div>
-              <SaveButton
-                isTemplateLoaded={!!loadedTemplateId}
-                onSave={(name) => handleSaveTemplate(name)}
-                onSaveAs={(name) => handleSaveTemplate(name)}
-                onUpdate={handleUpdateCurrentTemplate}
-              />
-          </CardContent>
-      </Card>
-      
-      <DragDropContext onDragEnd={onDragEnd}>
-        <div className="w-full overflow-x-auto rounded-lg border shadow-sm">
-          <table className="border-collapse bg-white" style={{ tableLayout: 'fixed' }}>
-            <thead>
-                <Droppable droppableId="headers" direction="horizontal" type="COLUMN">
-                    {(provided) => (
-                        <tr ref={provided.innerRef} {...provided.droppableProps}>
-                            <th className="sticky left-0 z-20 w-[40px] bg-gray-100 border border-gray-300">
-                                <div className="flex items-center justify-center">
-                                    <RowHeightInput height={35} onChange={() => {}} />
-                                </div>
-                            </th>
-                            {cols.map((_, colIndex) => (
-                                <Draggable key={`col-${colIndex}`} draggableId={`col-draggable-${colIndex}`} index={colIndex}>
-                                {(provided, snapshot) => (
-                                    <th 
-                                        ref={provided.innerRef}
-                                        {...provided.draggableProps}
-                                        style={{ ...provided.draggableProps.style, width: `${colWidths[colIndex]}px` }}
-                                        className="border border-gray-300 bg-gray-50 h-[35px] p-0 relative group"
-                                    >
-                                        <div className="flex items-center h-full">
-                                            <div {...provided.dragHandleProps} className="w-6 h-full flex items-center justify-center cursor-grab active:cursor-grabbing">
-                                                <GripVertical className='h-4 w-4 text-gray-400' />
-                                            </div>
-                                            <Input 
-                                                value={cols[colIndex]} 
-                                                onChange={(e) => updateHeader(colIndex, e.target.value)} 
-                                                className="w-full h-full border-none p-2 bg-transparent focus:bg-blue-100/50 focus:shadow-[inset_0_0_0_2px_#1a73e8]"
-                                            />
-                                            <button onClick={() => deleteColumn(colIndex)} className="px-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Trash2 className='h-4 w-4' />
-                                            </button>
-                                        </div>
-                                    </th>
-                                )}
-                                </Draggable>
+            <div className="w-full overflow-x-auto rounded-lg border shadow-sm" onMouseUp={handleMouseUp}>
+                <table className="border-collapse bg-white" style={{ tableLayout: 'fixed' }}>
+                    <thead>
+                        <tr>
+                            <th className="sticky left-0 z-20 w-[40px] bg-gray-100 border border-gray-300"></th>
+                            {Array.from({ length: tableData.cols }).map((_, colIndex) => (
+                                <th key={colIndex} className="p-1 border border-gray-300 bg-gray-50 text-center text-xs w-36">
+                                    {String.fromCharCode(65 + colIndex)}
+                                </th>
                             ))}
-                             {provided.placeholder}
                         </tr>
-                    )}
-                </Droppable>
-            </thead>
-            <Droppable droppableId="rows" type="ROW">
-                {(provided) => (
-                    <tbody ref={provided.innerRef} {...provided.droppableProps}>
-                        {rows.map((row, rowIndex) => (
-                             <Draggable key={`row-${rowIndex}`} draggableId={`row-draggable-${rowIndex}`} index={rowIndex}>
-                                {(provided, snapshot) => (
-                                     <tr 
-                                        ref={provided.innerRef}
-                                        {...provided.draggableProps}
-                                        style={{...provided.draggableProps.style, height: `${rowHeights[rowIndex]}px`}}
-                                        className="group"
-                                    >
-                                        <td className="sticky left-0 z-10 text-center text-xs text-gray-500 bg-gray-100 border border-gray-300 relative">
-                                          <div className="flex items-center h-full justify-center">
-                                              <div {...provided.dragHandleProps} className="absolute left-0 top-0 h-full w-4 flex items-center justify-center cursor-grab active:cursor-grabbing">
-                                                 <GripVertical className='h-4 w-4 text-gray-400 -rotate-90' />
-                                              </div>
-                                              <span>{rowIndex + 1}</span>
-                                              <button onClick={() => deleteRow(rowIndex)} className="absolute right-0 top-1/2 -translate-y-1/2 px-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                  <Trash2 className='h-4 w-4' />
-                                              </button>
-                                          </div>
-                                        </td>
-                                        {row.map((cell, colIndex) => (
-                                        <td key={colIndex} className="border border-gray-300 h-full p-0">
-                                            <Input 
-                                            value={cell} 
-                                            onChange={(e) => updateCell(rowIndex, colIndex, e.target.value)} 
-                                            className="w-full h-full border-none p-2 bg-transparent focus:bg-blue-100/50 focus:shadow-[inset_0_0_0_2px_#1a73e8]"
+                    </thead>
+                    <tbody>
+                        {Array.from({ length: tableData.rows }).map((_, r) => (
+                            <tr key={r}>
+                                <td className="sticky left-0 z-10 text-center text-xs text-gray-500 bg-gray-100 border border-gray-300 w-[40px]">{r + 1}</td>
+                                {Array.from({ length: tableData.cols }).map((_, c) => {
+                                    const cell = getCell(r, c);
+                                    if (!cell || cell.hidden) return null;
+                                    
+                                    return (
+                                        <td
+                                            key={`${r}-${c}`}
+                                            rowSpan={cell.rowSpan}
+                                            colSpan={cell.colSpan}
+                                            onMouseDown={() => handleMouseDown(r, c)}
+                                            onMouseOver={() => handleMouseOver(r, c)}
+                                            className={cn(
+                                                "border border-gray-300 p-0 relative",
+                                                isCellSelected(r,c) && "bg-blue-100/50"
+                                            )}
+                                        >
+                                            <Input
+                                                value={cell.content}
+                                                onChange={(e) => updateCellContent(r, c, e.target.value)}
+                                                className={cn(
+                                                  "w-full h-full border-none p-2 bg-transparent focus:shadow-[inset_0_0_0_2px_#1a73e8] focus:z-10",
+                                                  `text-${cell.align}`
+                                                )}
                                             />
                                         </td>
-                                        ))}
-                                    </tr>
-                                )}
-                             </Draggable>
+                                    );
+                                })}
+                            </tr>
                         ))}
-                        {provided.placeholder}
                     </tbody>
-                )}
-            </Droppable>
-          </table>
-        </div>
-      </DragDropContext>
-      <Card>
-        <CardHeader>
-            <CardTitle>Saved Templates</CardTitle>
-            <CardDescription>Load or delete previously saved table designs.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            {isLoadingTemplates ? <Skeleton className="h-20 w-full" /> : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {(savedTemplates || []).map(template => (
-                        <Card key={template.id}>
-                            <CardHeader className="p-4">
-                                <CardTitle className='text-base'>{template.name}</CardTitle>
-                            </CardHeader>
-                            <CardFooter className="flex justify-end gap-2 p-4 pt-0">
-                                <Button variant="outline" size="sm" onClick={() => handleLoadTemplate(template)}>Load</Button>
-                                <Button variant="destructive" size="sm" onClick={() => handleDeleteTemplate(template.id)}>Delete</Button>
-                            </CardFooter>
-                        </Card>
-                    ))}
-                    {(savedTemplates || []).length === 0 && (
-                        <p className="col-span-full text-center text-muted-foreground py-4">
-                            No templates saved yet.
-                        </p>
+                </table>
+            </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Saved Templates</CardTitle>
+                    <CardDescription>Load or delete previously saved table designs.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {isLoadingTemplates ? <Skeleton className="h-20 w-full" /> : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {(savedTemplates || []).map(template => (
+                                <Card key={template.id}>
+                                    <CardHeader className="p-4">
+                                        <CardTitle className='text-base'>{template.name}</CardTitle>
+                                    </CardHeader>
+                                    <CardFooter className="flex justify-end gap-2 p-4 pt-0">
+                                        <Button variant="outline" size="sm" onClick={() => handleLoadTemplate(template)}>Load</Button>
+                                        <Button variant="destructive" size="sm" onClick={() => handleDeleteTemplate(template.id)}>Delete</Button>
+                                    </CardFooter>
+                                </Card>
+                            ))}
+                            {(savedTemplates || []).length === 0 && (
+                                <p className="col-span-full text-center text-muted-foreground py-4">
+                                    No templates saved yet.
+                                </p>
+                            )}
+                        </div>
                     )}
-                </div>
-            )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+                </CardContent>
+            </Card>
+        </div>
+    );
 };
 
 export default TableBuilderPage;
