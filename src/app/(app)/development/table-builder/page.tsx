@@ -46,7 +46,7 @@ const DEFAULT_COL_WIDTH = 120;
 const DEFAULT_ROW_HEIGHT = 40;
 const DEFAULT_FONT_SIZE = 14;
 const MIN_COL_WIDTH = 50;
-const MIN_ROW_HEIGHT = 36;
+const MIN_ROW_HEIGHT = 20;
 
 // A controlled, auto-resizing textarea component
 const AutoResizingTextarea = ({ value, onChange, onBlur, ...props }: { value: string, onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void, onBlur: () => void } & React.ComponentProps<'textarea'>) => {
@@ -745,3 +745,5 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
+
+    
