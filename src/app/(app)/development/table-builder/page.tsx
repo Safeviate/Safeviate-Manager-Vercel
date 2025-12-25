@@ -283,7 +283,10 @@ const ColumnWidthInput = ({ index, width, onWidthChange }: { index: number, widt
     }, [debouncedValue, index, onWidthChange]);
     
     useEffect(() => {
-      setInputValue(width.toString());
+      if (width.toString() !== inputValue) {
+        setInputValue(width.toString());
+      }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [width]);
 
     return (
@@ -306,10 +309,6 @@ const RowHeightInput = ({ index, height, onHeightChange }: { index: number, heig
             onHeightChange(index, Math.max(20, parseInt(debouncedValue, 10)));
         }
     }, [debouncedValue, index, onHeightChange]);
-
-    useEffect(() => {
-        setInputValue(height.toString());
-    }, [height]);
 
     return (
         <Input
