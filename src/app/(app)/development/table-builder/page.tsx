@@ -34,12 +34,16 @@ interface CellData {
     nestedGrid?: CellData[][];
 }
 
-interface TableTemplate {
+interface FirestoreTableTemplate {
     id: string;
     name: string;
-    grid: CellData[][];
+    grid: { [key: number]: CellData[] }; // Changed to map for Firestore compatibility
     colWidths: number[];
     rowHeights: number[];
+}
+
+interface TableTemplate extends Omit<FirestoreTableTemplate, 'grid'> {
+    grid: CellData[][];
 }
 
 type CellPath = (string | number)[];
@@ -270,17 +274,15 @@ const ColumnWidthInput = ({ index, width, onWidthChange }: { index: number, widt
     const debouncedValue = useDebounce(inputValue, 500);
 
     useEffect(() => {
+        setInputValue(width.toString());
+    }, [width]);
+
+    useEffect(() => {
         const numericValue = parseInt(debouncedValue, 10);
         if (!isNaN(numericValue) && numericValue !== width) {
             onWidthChange(index, Math.max(50, numericValue));
         }
-    }, [debouncedValue]);
-
-    useEffect(() => {
-        if(parseInt(inputValue, 10) !== width) {
-            setInputValue(width.toString());
-        }
-    }, [width]);
+    }, [debouncedValue, index, onWidthChange, width]);
     
     return (
          <Input
@@ -306,7 +308,7 @@ const RowHeightInput = ({ index, height, onHeightChange }: { index: number, heig
         if (!isNaN(numericValue) && numericValue !== height) {
             onHeightChange(index, Math.max(20, numericValue));
         }
-    }, [debouncedValue]);
+    }, [debouncedValue, index, onHeightChange, height]);
 
     return (
         <Input
@@ -318,6 +320,37 @@ const RowHeightInput = ({ index, height, onHeightChange }: { index: number, heig
         />
     );
 }
+
+const convertGridToMap = (grid: CellData[][]): { [key: number]: CellData[] } => {
+    const gridMap: { [key: number]: CellData[] } = {};
+    grid.forEach((row, rowIndex) => {
+        gridMap[rowIndex] = row.map(cell => {
+            if (cell.nestedGrid) {
+                return {
+                    ...cell,
+                    nestedGrid: convertGridToMap(cell.nestedGrid) as any
+                };
+            }
+            return cell;
+        });
+    });
+    return gridMap;
+};
+
+const convertMapToGrid = (gridMap: { [key: number]: CellData[] }): CellData[][] => {
+    if (!gridMap) return [];
+    return Object.keys(gridMap)
+        .sort((a, b) => parseInt(a) - parseInt(b))
+        .map(key => gridMap[parseInt(key)].map(cell => {
+            if (cell.nestedGrid) {
+                return {
+                    ...cell,
+                    nestedGrid: convertMapToGrid(cell.nestedGrid as any)
+                };
+            }
+            return cell;
+        }));
+};
 
 // --- Main Page Component ---
 export default function TableBuilderPage() {
@@ -337,7 +370,7 @@ export default function TableBuilderPage() {
         () => (firestore ? collection(firestore, `tenants/${tenantId}/table-templates`) : null),
         [firestore, tenantId]
     );
-    const { data: savedTemplates, isLoading: isLoadingTemplates } = useCollection<TableTemplate>(templatesQuery);
+    const { data: savedTemplates, isLoading: isLoadingTemplates } = useCollection<FirestoreTableTemplate>(templatesQuery);
 
     const createGrid = (rows: number, cols: number) => {
         if (rows === 0 || cols === 0) return;
@@ -729,17 +762,20 @@ export default function TableBuilderPage() {
         }
 
         const templatesCollection = collection(firestore, `tenants/${tenantId}/table-templates`);
-        const templateData = { name: templateName, grid, colWidths, rowHeights };
+        
+        const gridAsMap = convertGridToMap(grid);
+
+        const templateData = { name: templateName, grid: gridAsMap, colWidths, rowHeights };
         addDocumentNonBlocking(templatesCollection, templateData);
         
         toast({ title: 'Template Saved', description: `Template "${templateName}" has been saved.`});
         setTemplateName('');
     };
 
-    const handleLoadTemplate = (template: TableTemplate) => {
-        setGrid(template.grid);
+    const handleLoadTemplate = (template: FirestoreTableTemplate) => {
+        setGrid(convertMapToGrid(template.grid));
         setColWidths(template.colWidths);
-        setRowHeights(template.rowHeights || Array(template.grid.length).fill(defaultRowHeight));
+        setRowHeights(template.rowHeights || Array(Object.keys(template.grid).length).fill(defaultRowHeight));
         toast({ title: 'Template Loaded', description: `"${template.name}" has been loaded into the builder.` });
     };
 
@@ -968,5 +1004,3 @@ export default function TableBuilderPage() {
         </TooltipProvider>
     );
 }
-
-    
