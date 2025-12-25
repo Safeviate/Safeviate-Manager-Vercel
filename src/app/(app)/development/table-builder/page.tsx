@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Save, Trash2, AlignLeft, AlignCenter, AlignRight, ChevronsUpDown, Bold } from 'lucide-react';
+import { PlusCircle, Save, Trash2, AlignLeft, AlignCenter, AlignRight, ChevronsUpDown, Bold, Minus, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, updateDocumentNonBlocking, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, doc, setDoc } from 'firebase/firestore';
@@ -23,6 +23,7 @@ type Cell = {
   colSpan: number;
   align: 'left' | 'center' | 'right';
   fontWeight: 'normal' | 'bold';
+  fontSize: number;
   hidden: boolean;
 };
 
@@ -42,6 +43,7 @@ type TableTemplate = {
 
 const DEFAULT_COL_WIDTH = 120;
 const DEFAULT_ROW_HEIGHT = 40;
+const DEFAULT_FONT_SIZE = 14;
 
 const TablePreview = ({ tableData }: { tableData: TableData }) => {
     if (!tableData) return null;
@@ -62,11 +64,12 @@ const TablePreview = ({ tableData }: { tableData: TableData }) => {
                         key={`${cell.r}-${cell.c}`}
                         rowSpan={cell.rowSpan}
                         colSpan={cell.colSpan}
-                        className="p-1 border border-border align-top text-xs"
+                        className="p-1 border border-border align-top"
                         style={{
                           textAlign: cell.align,
                           fontWeight: cell.fontWeight,
-                          width: `${100 / tableData.cols}%`, // Use percentages for preview
+                          fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`,
+                          width: `${100 / tableData.cols}%`,
                         }}
                       >
                         {cell.content}
@@ -191,7 +194,7 @@ const TableBuilderPage = () => {
     const newCells: Cell[] = [];
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        newCells.push({ r, c, content: '', rowSpan: 1, colSpan: 1, align: 'left', fontWeight: 'normal', hidden: false });
+        newCells.push({ r, c, content: '', rowSpan: 1, colSpan: 1, align: 'left', fontWeight: 'normal', fontSize: DEFAULT_FONT_SIZE, hidden: false });
       }
     }
     const initialData: TableData = {
@@ -258,7 +261,7 @@ const TableBuilderPage = () => {
         }
         // Add new cells for the new column
         for(let r = 0; r < prev.rows; r++) {
-            newCells.push({ r, c: index, content: '', rowSpan: 1, colSpan: 1, align: 'left', fontWeight: 'normal', hidden: false });
+            newCells.push({ r, c: index, content: '', rowSpan: 1, colSpan: 1, align: 'left', fontWeight: 'normal', fontSize: DEFAULT_FONT_SIZE, hidden: false });
         }
         const newColWidths = [...prev.colWidths];
         newColWidths.splice(index, 0, DEFAULT_COL_WIDTH);
@@ -282,7 +285,7 @@ const TableBuilderPage = () => {
           }
           // Add new cells for the new row
           for(let c = 0; c < prev.cols; c++) {
-              newCells.push({ r: index, c, content: '', rowSpan: 1, colSpan: 1, align: 'left', fontWeight: 'normal', hidden: false });
+              newCells.push({ r: index, c, content: '', rowSpan: 1, colSpan: 1, align: 'left', fontWeight: 'normal', fontSize: DEFAULT_FONT_SIZE, hidden: false });
           }
           const newRowHeights = [...prev.rowHeights];
           newRowHeights.splice(index, 0, DEFAULT_ROW_HEIGHT);
@@ -430,6 +433,17 @@ const TableBuilderPage = () => {
     setTableData(newTableData);
     updateRemoteTable(newTableData);
   };
+  
+  const updateFontSize = (newSize: number) => {
+    if (!tableData || newSize <= 0) return;
+    const newCells = tableData.cells.map(cell => {
+      const isSelected = selectedCells.some(s => s.r === cell.r && s.c === cell.c);
+      return isSelected ? { ...cell, fontSize: newSize } : cell;
+    });
+    const newTableData = { ...tableData, cells: newCells };
+    setTableData(newTableData);
+    updateRemoteTable(newTableData);
+  };
 
   const handleSaveTemplate = (name: string) => {
     if (!firestore || !name.trim() || !tableData) return;
@@ -489,6 +503,12 @@ const TableBuilderPage = () => {
       }
       toast({ title: "Template Deleted" });
   }
+  
+  const getSelectedCellFontSize = () => {
+    if (!tableData || selectedCells.length === 0) return DEFAULT_FONT_SIZE;
+    const firstSelectedCell = tableData.cells.find(c => c.r === selectedCells[0].r && c.c === selectedCells[0].c);
+    return firstSelectedCell?.fontSize || DEFAULT_FONT_SIZE;
+  }
 
   if (isLoading || !tableData) {
       return <div>Loading...</div>;
@@ -544,6 +564,19 @@ const TableBuilderPage = () => {
                           </TooltipTrigger>
                           <TooltipContent><p>Toggle Bold</p></TooltipContent>
                         </Tooltip>
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            value={getSelectedCellFontSize()}
+                            onChange={(e) => updateFontSize(Number(e.target.value))}
+                            className="h-9 w-16 text-center"
+                            disabled={selectedCells.length === 0}
+                          />
+                           <div className='flex flex-col'>
+                                <Button variant="outline" size="icon" className='h-4 w-5 rounded-b-none' onClick={() => updateFontSize(getSelectedCellFontSize() + 1)} disabled={selectedCells.length === 0}><Plus className="h-3 w-3"/></Button>
+                                <Button variant="outline" size="icon" className='h-4 w-5 rounded-t-none' onClick={() => updateFontSize(getSelectedCellFontSize() - 1)} disabled={selectedCells.length === 0}><Minus className="h-3 w-3"/></Button>
+                           </div>
+                        </div>
                       </TooltipProvider>
                     )}
                 </div>
@@ -624,7 +657,8 @@ const TableBuilderPage = () => {
                                         width: `${tableData.colWidths[cell.c]}px`,
                                         height: `${tableData.rowHeights[cell.r]}px`,
                                         textAlign: cell.align,
-                                        fontWeight: cell.fontWeight
+                                        fontWeight: cell.fontWeight,
+                                        fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`,
                                     }}
                                 >
                                     {isSelected && <div className="absolute inset-0 bg-primary/20 pointer-events-none" />}
@@ -634,12 +668,12 @@ const TableBuilderPage = () => {
                                             onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
                                             onBlur={onBlurContent}
                                             className={cn("h-full w-full border-0 bg-transparent focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0", cell.fontWeight === 'bold' && 'font-bold')}
-                                            style={{ textAlign: cell.align }}
+                                            style={{ textAlign: cell.align, fontSize: 'inherit' }}
                                         />
                                     ) : (
                                         <div 
                                           className="w-full h-full" 
-                                          style={{ textAlign: cell.align, fontWeight: cell.fontWeight }}
+                                          style={{ textAlign: cell.align, fontWeight: cell.fontWeight, fontSize: 'inherit' }}
                                         >
                                           {cell.content}
                                         </div>
