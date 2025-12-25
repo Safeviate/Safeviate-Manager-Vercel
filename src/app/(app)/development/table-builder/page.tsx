@@ -1,10 +1,11 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Save, Trash2, AlignLeft, AlignCenter, AlignRight, ChevronsUpDown, Bold, Minus, Plus } from 'lucide-react';
+import { PlusCircle, Save, Trash2, AlignLeft, AlignCenter, AlignRight, ChevronsUpDown, Bold, Minus, Plus, Unplug } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, updateDocumentNonBlocking, useDoc, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, query, doc } from 'firebase/firestore';
@@ -92,7 +93,7 @@ const TablePreview = ({ tableData }: { tableData: TableData }) => {
                         key={`${cell.r}-${cell.c}`}
                         rowSpan={cell.rowSpan}
                         colSpan={cell.colSpan}
-                        className="p-1 border border-border align-top"
+                        className="p-1 border border-border align-middle"
                         style={{
                           textAlign: cell.align,
                           fontWeight: cell.fontWeight,
@@ -443,6 +444,31 @@ const TableBuilderPage = () => {
     setSelectedCells([]);
   };
 
+  const handleSplit = () => {
+    if (!tableData || selectedCells.length !== 1) return;
+    
+    const { r: selectedR, c: selectedC } = selectedCells[0];
+    const cellToSplit = tableData.cells.find(cell => cell.r === selectedR && cell.c === selectedC);
+
+    if (!cellToSplit || (cellToSplit.rowSpan === 1 && cellToSplit.colSpan === 1)) return;
+
+    const newCells = tableData.cells.map(cell => {
+        // Un-hide all the cells within the bounds of the merged cell
+        if (
+            cell.r >= cellToSplit.r && cell.r < cellToSplit.r + cellToSplit.rowSpan &&
+            cell.c >= cellToSplit.c && cell.c < cellToSplit.c + cellToSplit.colSpan
+        ) {
+            return { ...cell, hidden: false, rowSpan: 1, colSpan: 1 };
+        }
+        return cell;
+    });
+
+    const newTableData = { ...tableData, cells: newCells };
+    setTableData(newTableData);
+    updateRemoteTable(newTableData);
+    setSelectedCells([]);
+  };
+
   const updateAlignment = (align: 'left' | 'center' | 'right') => {
     if (!tableData) return;
     const newCells = tableData.cells.map(cell => {
@@ -540,6 +566,12 @@ const TableBuilderPage = () => {
     const firstSelectedCell = tableData.cells.find(c => c.r === selectedCells[0].r && c.c === selectedCells[0].c);
     return firstSelectedCell?.fontSize || DEFAULT_FONT_SIZE;
   }
+  
+  const isSplitEnabled = useMemo(() => {
+    if (!tableData || selectedCells.length !== 1) return false;
+    const cell = tableData.cells.find(c => c.r === selectedCells[0].r && c.c === selectedCells[0].c);
+    return cell ? (cell.rowSpan > 1 || cell.colSpan > 1) : false;
+  }, [tableData, selectedCells]);
 
   if (isLoading || !tableData) {
       return <div>Loading...</div>;
@@ -570,6 +602,12 @@ const TableBuilderPage = () => {
                            <Button onClick={handleUnmerge} disabled={selectedCells.length === 0} size="sm">Unmerge</Button>
                           </TooltipTrigger>
                           <TooltipContent><p>Unmerge cells</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button onClick={handleSplit} disabled={!isSplitEnabled} size="sm">Split</Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Split selected cell</p></TooltipContent>
                         </Tooltip>
                          <Tooltip>
                           <TooltipTrigger asChild>
