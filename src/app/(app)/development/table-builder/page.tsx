@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -48,7 +47,7 @@ const TableBuilderPage = () => {
         <Card>
             <CardHeader>
                 <CardTitle>Dynamic Table Builder</CardTitle>
-                <CardDescription>A simple, stable table builder. Add or remove rows and columns, and edit content directly.</CardDescription>
+                <CardDescription>A simple table builder. Add or remove rows and columns, and edit content directly.</CardDescription>
             </CardHeader>
             <CardContent className="flex gap-2">
                 <Button onClick={addRow}><PlusCircle className="mr-2 h-4 w-4" /> Add Row</Button>
