@@ -655,8 +655,8 @@ const TableBuilderPage = () => {
                                     colSpan={cell.colSpan}
                                     onClick={() => toggleSelect(cell.r, cell.c)}
                                     className={cn(
-                                        "p-1 border border-border relative align-middle focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background",
-                                        isEditMode && "cursor-pointer"
+                                        "p-1 border border-border relative align-middle",
+                                        isEditMode && "cursor-pointer hover:bg-muted/50"
                                     )}
                                     style={{
                                         minWidth: `${MIN_COL_WIDTH}px`,
@@ -712,5 +712,3 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
-
-    
