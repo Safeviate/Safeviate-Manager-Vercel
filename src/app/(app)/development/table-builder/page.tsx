@@ -279,11 +279,10 @@ const ColumnWidthInput = ({ index, width, onWidthChange }: { index: number, widt
         if (!isNaN(numericValue)) {
             onWidthChange(index, Math.max(50, numericValue));
         }
-    }, [debouncedValue, index, onWidthChange]);
+    }, [debouncedValue]); // Removed index and onWidthChange to prevent re-triggering
     
-    // Update local state if the parent's width changes (e.g., on template load)
     useEffect(() => {
-        setInputValue(width.toString());
+      setInputValue(width.toString());
     }, [width]);
 
     return (
@@ -306,7 +305,7 @@ const RowHeightInput = ({ index, height, onHeightChange }: { index: number, heig
         if (!isNaN(numericValue)) {
             onHeightChange(index, Math.max(20, numericValue));
         }
-    }, [debouncedValue, index, onHeightChange]);
+    }, [debouncedValue]); // Removed index and onHeightChange to prevent re-triggering
 
     useEffect(() => {
         setInputValue(height.toString());
