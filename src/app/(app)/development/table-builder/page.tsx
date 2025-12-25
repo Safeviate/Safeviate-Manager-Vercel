@@ -1,11 +1,12 @@
+
 'use client';
 
-import { useState, useMemo } from 'react';
-import { produce } from 'immer';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 // --- Types ---
 interface Cell {
@@ -18,11 +19,9 @@ interface TableData {
   rows: number;
   cols: number;
   cells: Cell[];
-  rowHeights: number[];
-  colWidths: number[];
 }
 
-const createInitialTableData = (rows: number, cols: number): TableData => {
+const createTableData = (rows: number, cols: number): TableData => {
     const cells: Cell[] = [];
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
@@ -33,31 +32,20 @@ const createInitialTableData = (rows: number, cols: number): TableData => {
         rows,
         cols,
         cells,
-        rowHeights: Array(rows).fill(40),
-        colWidths: Array(cols).fill(120),
     };
 };
 
 
 export default function TableBuilderPage() {
-    const [tableData, setTableData] = useState<TableData>(() => createInitialTableData(5, 5));
+    const [tableData, setTableData] = useState<TableData>(() => createTableData(5, 5));
+    const [numRows, setNumRows] = useState(5);
+    const [numCols, setNumCols] = useState(5);
 
-    const totalWidth = useMemo(() => {
-        if (!tableData) return 0;
-        return tableData.colWidths.reduce((acc, width) => acc + width, 0);
-    }, [tableData]);
-
-    const gridTemplateColumns = useMemo(() => {
-        if (!tableData) return '';
-        return tableData.colWidths.map(w => `${w}px`).join(' ');
-    }, [tableData]);
-
-    const gridTemplateRows = useMemo(() => {
-        if (!tableData) return '';
-        const headerHeight = 40; // Height for the column controls
-        const rowHeights = tableData.rowHeights.map(h => `${h}px`).join(' ');
-        return `${headerHeight}px ${rowHeights}`;
-    }, [tableData]);
+    const handleUpdateGrid = () => {
+        const rows = Math.max(1, numRows);
+        const cols = Math.max(1, numCols);
+        setTableData(createTableData(rows, cols));
+    };
 
   if (!tableData) {
     return <div>Loading...</div>;
@@ -70,52 +58,45 @@ export default function TableBuilderPage() {
             <CardDescription>A visual tool for creating and configuring complex table layouts.</CardDescription>
         </CardHeader>
         <CardContent>
+            <div className="flex items-center gap-4 mb-6">
+                <div className="flex items-center gap-2">
+                    <Label htmlFor="rows">Rows</Label>
+                    <Input 
+                        id="rows"
+                        type="number" 
+                        value={numRows} 
+                        onChange={(e) => setNumRows(parseInt(e.target.value, 10))}
+                        className="w-20"
+                    />
+                </div>
+                 <div className="flex items-center gap-2">
+                    <Label htmlFor="cols">Columns</Label>
+                    <Input 
+                        id="cols"
+                        type="number" 
+                        value={numCols} 
+                        onChange={(e) => setNumCols(parseInt(e.target.value, 10))}
+                        className="w-20"
+                    />
+                </div>
+                <Button onClick={handleUpdateGrid}>Update Grid</Button>
+            </div>
              <div className="w-full overflow-auto border rounded-lg">
                 <div 
                     className="grid"
-                    style={{ 
-                        width: `${totalWidth}px`,
-                        gridTemplateColumns,
-                        gridTemplateRows,
-                     }}
+                    style={{ gridTemplateColumns: `repeat(${tableData.cols}, minmax(120px, 1fr))` }}
                 >
-                    {/* Column Headers */}
-                    <div 
-                        className="col-span-full grid sticky top-0 z-10 bg-muted/50" 
-                        style={{ gridTemplateColumns: 'subgrid', gridColumn: `1 / span ${tableData.cols}` }}
-                    >
-                         {Array.from({ length: tableData.cols }).map((_, c) => (
-                            <div key={`header-${c}`} className="border-b border-r p-1">
-                                <Input
-                                    type="number"
-                                    value={tableData.colWidths[c]}
-                                    onChange={() => {}}
-                                    className="h-8 w-full text-center"
-                                />
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Table Body Cells */}
-                    {tableData.cells.map(cell => {
-                        const style = {
-                            gridRow: `${cell.r + 2}`,
-                            gridColumn: `${cell.c + 1}`,
-                            height: `${tableData.rowHeights[cell.r]}px`,
-                        };
-                        return (
+                    {tableData.cells.map(cell => (
                         <div
                             key={`${cell.r}-${cell.c}`}
-                            style={style}
                             className={cn(
-                                'border-b border-r flex items-center justify-center p-1',
+                                'border p-1 h-14 flex items-center justify-center',
                                 'transition-colors'
                             )}
                         >
                             <span className="text-xs text-muted-foreground">{cell.r},{cell.c}</span>
                         </div>
-                        );
-                    })}
+                    ))}
                 </div>
             </div>
         </CardContent>
