@@ -9,15 +9,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Merge, Split, Text, PlusSquare, Trash2, AlignLeft, AlignCenter, AlignRight, SplitSquareHorizontal, SplitSquareVertical, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Bold, Save } from 'lucide-react';
+import { Merge, Split, Text, PlusSquare, Trash2, AlignLeft, AlignCenter, AlignRight, SplitSquareHorizontal, SplitSquareVertical, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Bold, Save, ChevronDown } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useDebounce } from '@/hooks/use-debounce';
-import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 
 // --- Types ---
@@ -37,7 +38,7 @@ interface CellData {
 interface FirestoreTableTemplate {
     id: string;
     name: string;
-    grid: { [key: number]: CellData[] }; // Changed to map for Firestore compatibility
+    grid: { [key: string]: CellData[] }; // Changed to map for Firestore compatibility
     colWidths: number[];
     rowHeights: number[];
 }
@@ -300,15 +301,15 @@ const RowHeightInput = ({ index, height, onHeightChange }: { index: number, heig
     const debouncedValue = useDebounce(inputValue, 500);
 
     useEffect(() => {
-      setInputValue(height.toString());
-    }, [height]);
-
-    useEffect(() => {
         const numericValue = parseInt(debouncedValue, 10);
         if (!isNaN(numericValue) && numericValue !== height) {
             onHeightChange(index, Math.max(20, numericValue));
         }
     }, [debouncedValue, index, onHeightChange, height]);
+    
+    useEffect(() => {
+        setInputValue(height.toString());
+    }, [height]);
 
     return (
         <Input
@@ -364,7 +365,9 @@ export default function TableBuilderPage() {
     const { toast } = useToast();
     const firestore = useFirestore();
     const tenantId = 'safeviate'; // Hardcoded for now
-    const [templateName, setTemplateName] = useState('');
+    const [newTemplateName, setNewTemplateName] = useState('');
+    const [activeTemplate, setActiveTemplate] = useState<FirestoreTableTemplate | null>(null);
+
 
     const templatesQuery = useMemoFirebase(
         () => (firestore ? collection(firestore, `tenants/${tenantId}/table-templates`) : null),
@@ -391,6 +394,7 @@ export default function TableBuilderPage() {
         setColWidths(Array(cols).fill(150));
         setRowHeights(Array(rows).fill(defaultRowHeight));
         setSelectedCells([]);
+        setActiveTemplate(null);
     };
 
     const handleContentChange = useCallback((path: CellPath, newContent: string) => {
@@ -750,10 +754,10 @@ export default function TableBuilderPage() {
         });
     };
     
-    const handleSaveTemplate = () => {
+    const handleSaveAsNew = () => {
         if (!firestore) return;
-        if (!templateName.trim()) {
-            toast({ variant: 'destructive', title: 'Name required', description: 'Please enter a name for the template.' });
+        if (!newTemplateName.trim()) {
+            toast({ variant: 'destructive', title: 'Name required', description: 'Please enter a name for the new template.' });
             return;
         }
         if (grid.length === 0) {
@@ -765,14 +769,30 @@ export default function TableBuilderPage() {
         
         const gridAsMap = convertGridToMap(grid);
 
-        const templateData = { name: templateName, grid: gridAsMap, colWidths, rowHeights };
+        const templateData = { name: newTemplateName, grid: gridAsMap, colWidths, rowHeights };
         addDocumentNonBlocking(templatesCollection, templateData);
         
-        toast({ title: 'Template Saved', description: `Template "${templateName}" has been saved.`});
-        setTemplateName('');
+        toast({ title: 'Template Saved', description: `Template "${newTemplateName}" has been saved.`});
+        setNewTemplateName('');
     };
 
+    const handleUpdateTemplate = () => {
+        if (!firestore || !activeTemplate) return;
+        if (grid.length === 0) {
+            toast({ variant: 'destructive', title: 'Empty Table', description: 'Cannot save an empty table.' });
+            return;
+        }
+
+        const templateRef = doc(firestore, `tenants/${tenantId}/table-templates`, activeTemplate.id);
+        const gridAsMap = convertGridToMap(grid);
+        const templateData = { name: activeTemplate.name, grid: gridAsMap, colWidths, rowHeights };
+
+        updateDocumentNonBlocking(templateRef, templateData);
+        toast({ title: 'Template Updated', description: `Template "${activeTemplate.name}" has been updated.`});
+    }
+
     const handleLoadTemplate = (template: FirestoreTableTemplate) => {
+        setActiveTemplate(template);
         setGrid(convertMapToGrid(template.grid));
         setColWidths(template.colWidths);
         setRowHeights(template.rowHeights || Array(Object.keys(template.grid).length).fill(defaultRowHeight));
@@ -784,7 +804,86 @@ export default function TableBuilderPage() {
         const templateRef = doc(firestore, `tenants/${tenantId}/table-templates`, templateId);
         deleteDocumentNonBlocking(templateRef);
         toast({ title: 'Template Deleted', description: 'The table template is being deleted.' });
+        if (activeTemplate?.id === templateId) {
+            setActiveTemplate(null);
+        }
     };
+    
+    const SaveButton = () => {
+        if (grid.length === 0) return null;
+
+        if (activeTemplate) {
+            return (
+                <div className="flex rounded-md">
+                    <Button onClick={handleUpdateTemplate} className="rounded-r-none">
+                        <Save className="mr-2 h-4 w-4" /> Update &quot;{activeTemplate.name}&quot;
+                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button size="icon" className="w-8 rounded-l-none border-l">
+                                <ChevronDown className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                           <Dialog>
+                                <DialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        Save as New Template...
+                                    </DropdownMenuItem>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Save as New Template</DialogTitle>
+                                        <DialogDescription>Give this new table design a name to save it.</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="py-4">
+                                        <Input 
+                                            placeholder="e.g., Daily Inspection Report"
+                                            value={newTemplateName}
+                                            onChange={(e) => setNewTemplateName(e.target.value)}
+                                        />
+                                    </div>
+                                    <DialogFooter>
+                                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                                        <DialogClose asChild>
+                                            <Button onClick={handleSaveAsNew} disabled={!newTemplateName.trim()}>Save as New</Button>
+                                        </DialogClose>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            );
+        }
+
+        return (
+            <Dialog>
+                <DialogTrigger asChild>
+                    <Button disabled={grid.length === 0}><Save className="mr-2 h-4 w-4" /> Save as Template</Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Save Table Template</DialogTitle>
+                        <DialogDescription>Give this table design a name to save it for later use.</DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Input 
+                            placeholder="e.g., Daily Inspection Report"
+                            value={newTemplateName}
+                            onChange={(e) => setNewTemplateName(e.target.value)}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                        <DialogClose asChild>
+                            <Button onClick={handleSaveAsNew} disabled={!newTemplateName.trim()}>Save Template</Button>
+                        </DialogClose>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        );
+    }
 
     return (
         <TooltipProvider>
@@ -895,37 +994,14 @@ export default function TableBuilderPage() {
                             <TooltipContent><p>Delete Last Column</p></TooltipContent>
                         </Tooltip>
                          <Separator orientation='vertical' className='h-8' />
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button disabled={grid.length === 0}><Save className="mr-2 h-4 w-4" /> Save as Template</Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Save Table Template</DialogTitle>
-                                    <DialogDescription>Give this table design a name to save it for later use.</DialogDescription>
-                                </DialogHeader>
-                                <div className="py-4">
-                                    <Input 
-                                        placeholder="e.g., Daily Inspection Report"
-                                        value={templateName}
-                                        onChange={(e) => setTemplateName(e.target.value)}
-                                    />
-                                </div>
-                                <DialogFooter>
-                                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                                    <DialogClose asChild>
-                                        <Button onClick={handleSaveTemplate} disabled={!templateName.trim()}>Save Template</Button>
-                                    </DialogClose>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
+                        <SaveButton />
                     </CardContent>
                 </Card>
             </div>
             
             <Card>
                 <CardHeader>
-                    <CardTitle>Table Preview</CardTitle>
+                    <CardTitle>Table Preview {activeTemplate && `- Editing "${activeTemplate.name}"`}</CardTitle>
                     <CardDescription>Click and drag to select cells. Adjust column widths below.</CardDescription>
                 </CardHeader>
                 <CardContent>
