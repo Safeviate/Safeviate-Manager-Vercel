@@ -89,33 +89,36 @@ export default function TableBuilderPage() {
       toast({ variant: 'destructive', title: 'Invalid Selection', description: 'Please select at least two cells to merge.' });
       return;
     }
-  
+
     const newCells = JSON.parse(JSON.stringify(cells)) as Cell[];
-  
+
     let minR = Infinity, minC = Infinity, maxR = -1, maxC = -1;
     selectionKeys.forEach(key => {
-        const [r, c] = key.split('-').map(Number);
-        const cell = newCells.find(cell => cell.r === r && cell.c === c);
-        if (cell) {
-            minR = Math.min(minR, r);
-            minC = Math.min(minC, c);
-            maxR = Math.max(maxR, r + cell.rowSpan - 1);
-            maxC = Math.max(maxC, c + cell.colSpan - 1);
-        }
+      const [r, c] = key.split('-').map(Number);
+      const cell = newCells.find(cell => cell.r === r && cell.c === c);
+      if (cell) {
+        minR = Math.min(minR, r);
+        minC = Math.min(minC, c);
+        maxR = Math.max(maxR, r + cell.rowSpan - 1);
+        maxC = Math.max(maxC, c + cell.colSpan - 1);
+      }
     });
 
     const newRowSpan = maxR - minR + 1;
     const newColSpan = maxC - minC + 1;
-    
-    // Verify that the selection is a perfect rectangle
-    for (let r = minR; r <= maxR; r++) {
-        for (let c = minC; c <= maxC; c++) {
-            const cellInBox = newCells.find(cell => r >= cell.r && r < cell.r + cell.rowSpan && c >= cell.c && c < cell.c + cell.colSpan && !cell.hidden);
-            if (!cellInBox || !selectedCells[`${cellInBox.r}-${cellInBox.c}`]) {
-                toast({ variant: 'destructive', title: 'Invalid Selection', description: 'Selected cells do not form a solid rectangle.' });
-                return;
-            }
+
+    let totalSelectedArea = 0;
+    selectionKeys.forEach(key => {
+        const [r, c] = key.split('-').map(Number);
+        const cell = newCells.find(cell => cell.r === r && cell.c === c);
+        if (cell) {
+            totalSelectedArea += cell.rowSpan * cell.colSpan;
         }
+    });
+    
+    if (totalSelectedArea !== newRowSpan * newColSpan) {
+        toast({ variant: 'destructive', title: 'Invalid Merge', description: 'Selected cells do not form a solid rectangle.' });
+        return;
     }
 
     const topLeftCell = newCells.find(cell => cell.r === minR && cell.c === minC);
@@ -311,26 +314,36 @@ export default function TableBuilderPage() {
               </div>
             );
           })}
-          {isEditing && Array.from({ length: cols }).map((_, index) => (
-             <div 
-                key={`col-handle-${index}`}
-                className="absolute top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/50"
-                style={{ left: `${colWidths.slice(0, index + 1).reduce((a, b) => a + b, 0) - 3}px`}}
-                onMouseDown={(e) => handleMouseDown(e, 'col', index)}
-            />
-          ))}
-          {isEditing && Array.from({ length: rows }).map((_, index) => (
-             <div 
-                key={`row-handle-${index}`}
-                className="absolute left-0 right-0 h-1.5 cursor-row-resize hover:bg-primary/50"
-                style={{ top: `${rowHeights.slice(0, index + 1).reduce((a, b) => a + b, 0) - 3}px`}}
-                onMouseDown={(e) => handleMouseDown(e, 'row', index)}
-            />
-          ))}
+          {isEditing && Array.from({ length: cols - 1 }).map((_, index) => {
+            const isAligned = Math.abs(colWidths[index] - colWidths[index + 1]) < 1;
+            return (
+                <div 
+                    key={`col-handle-${index}`}
+                    className={cn(
+                        "absolute top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/50",
+                        isAligned && "bg-blue-500"
+                    )}
+                    style={{ left: `${colWidths.slice(0, index + 1).reduce((a, b) => a + b, 0) - 3}px`}}
+                    onMouseDown={(e) => handleMouseDown(e, 'col', index)}
+                />
+            )
+          })}
+          {isEditing && Array.from({ length: rows - 1 }).map((_, index) => {
+            const isAligned = Math.abs(rowHeights[index] - rowHeights[index + 1]) < 1;
+            return (
+                <div 
+                    key={`row-handle-${index}`}
+                    className={cn(
+                        "absolute left-0 right-0 h-1.5 cursor-row-resize hover:bg-primary/50",
+                        isAligned && "bg-blue-500"
+                    )}
+                    style={{ top: `${rowHeights.slice(0, index + 1).reduce((a, b) => a + b, 0) - 3}px`}}
+                    onMouseDown={(e) => handleMouseDown(e, 'row', index)}
+                />
+            )
+          })}
         </div>
       </div>
     </div>
   );
 }
-
-    
