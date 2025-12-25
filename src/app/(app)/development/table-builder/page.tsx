@@ -9,12 +9,14 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
-import { addDocumentNonBlocking, deleteDocumentNonBlocking, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Trash2, Plus, Minus } from 'lucide-react';
+import { Trash2, Plus, Minus, Upload } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 
 type Cell = {
   r: number;
@@ -54,6 +56,76 @@ const createInitialTable = (rows: number, cols: number): TableData => {
     rowHeights: Array(rows).fill(48), // Default height
   };
 };
+
+const PublishDialog = ({ template }: { template: TableTemplate }) => {
+    const { toast } = useToast();
+    const firestore = useFirestore();
+    const tenantId = 'safeviate';
+    const [selectedPage, setSelectedPage] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+
+    // In a real app, this would come from a config or another Firestore collection.
+    const availablePages = [{ id: 'my-dashboard', name: 'My Dashboard' }];
+
+    const handlePublish = () => {
+        if (!firestore || !selectedPage) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please select a page to publish to.' });
+            return;
+        }
+
+        const publishedTableRef = doc(firestore, `tenants/${tenantId}/published-tables`, selectedPage);
+        const dataToPublish = {
+            pageId: selectedPage,
+            tableData: template.tableData,
+        };
+
+        setDocumentNonBlocking(publishedTableRef, dataToPublish, { merge: true });
+
+        toast({
+            title: 'Table Published',
+            description: `Template "${template.name}" has been published to "${selectedPage}".`,
+        });
+        setIsOpen(false);
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button size="sm" variant="secondary"><Upload className="mr-2 h-4 w-4" /> Publish</Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Publish &quot;{template.name}&quot;</DialogTitle>
+                    <DialogDescription>
+                        Publishing this table will make it live on the selected page, replacing any existing table.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-2">
+                    <Label htmlFor="destination-page">Destination Page</Label>
+                    <Select onValueChange={setSelectedPage} value={selectedPage}>
+                        <SelectTrigger id="destination-page">
+                            <SelectValue placeholder="Select a page..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {availablePages.map(page => (
+                                <SelectItem key={page.id} value={page.id}>{page.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button onClick={handlePublish} disabled={!selectedPage}>
+                        Confirm & Publish
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
 
 export default function TableBuilderPage() {
   const { toast } = useToast();
@@ -112,18 +184,13 @@ export default function TableBuilderPage() {
           const newCols = prev.cols + 1;
           const newCells = [...prev.cells];
           for (let r = 0; r < prev.rows; r++) {
-              // Insert new cells at the end of each row conceptually
-              newCells.splice((r + 1) * newCols - 1, 0, { r, c: newCols - 1, rowSpan: 1, colSpan: 1, hidden: false, content: '' });
+              newCells.push({ r, c: newCols - 1, rowSpan: 1, colSpan: 1, hidden: false, content: '' });
           }
-           // Re-index columns 'c' after insertion
-          const reindexedCells = Array.from({ length: prev.rows }, (_, r) => 
-            newCells.filter(cell => cell.r === r).sort((a,b) => a.c - b.c).map((cell, c_idx) => ({...cell, c: c_idx}))
-          ).flat();
 
           return {
               ...prev,
               cols: newCols,
-              cells: reindexedCells,
+              cells: newCells,
               colWidths: [...prev.colWidths, 120],
           };
       });
@@ -179,18 +246,17 @@ export default function TableBuilderPage() {
 
     for (let r = minR; r <= maxR; r++) {
         for (let c = minC; c <= maxC; c++) {
-            const cellInBox = getCell(r,c);
-            let isCellSelected = false;
+            let isCellInSelection = false;
             for (const key of selectionKeys) {
                 const [selR, selC] = key.split('-').map(Number);
                  const selectedCell = getCell(selR, selC);
                  if (selectedCell && r >= selR && r < selR + selectedCell.rowSpan && c >= selC && c < selC + selectedCell.colSpan) {
-                     isCellSelected = true;
+                    isCellInSelection = true;
                      break;
                  }
             }
-            if(!isCellSelected){
-                 toast({ variant: "destructive", title: "Invalid Merge", description: "Selection must be a solid rectangle." });
+            if(!isCellInSelection){
+                 toast({ variant: "destructive", title: "Invalid Merge", description: "Selection must form a solid rectangle." });
                  return;
             }
         }
@@ -429,7 +495,7 @@ export default function TableBuilderPage() {
                         "absolute top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/50",
                          isAligned && "bg-blue-500"
                     )}
-                    style={{ left: `${colWidths.slice(0, index + 1).reduce((a, b) => a + b, 0) - 3}px`}}
+                    style={{ left: `${colWidths.slice(0, index + 1).reduce((a, b) => a + b, 0) - 1.5}px`}}
                     onMouseDown={(e) => handleMouseDown(e, 'col', index)}
                 />
             )
@@ -443,7 +509,7 @@ export default function TableBuilderPage() {
                         "absolute left-0 right-0 h-1.5 cursor-row-resize hover:bg-primary/50",
                          isAligned && "bg-blue-500"
                     )}
-                    style={{ top: `${rowHeights.slice(0, index + 1).reduce((a, b) => a + b, 0) - 3}px`}}
+                    style={{ top: `${rowHeights.slice(0, index + 1).reduce((a, b) => a + b, 0) - 1.5}px`}}
                     onMouseDown={(e) => handleMouseDown(e, 'row', index)}
                 />
             )
@@ -472,6 +538,7 @@ export default function TableBuilderPage() {
                                     <span className="font-medium">{template.name}</span>
                                     <div className="flex gap-2">
                                         <Button size="sm" variant="outline" onClick={() => handleLoadTemplate(template)}>Load</Button>
+                                        <PublishDialog template={template} />
                                         <Button size="icon" variant="destructive" className="h-9 w-9" onClick={() => handleDeleteTemplate(template.id)}>
                                             <Trash2 className='h-4 w-4' />
                                         </Button>
@@ -489,4 +556,3 @@ export default function TableBuilderPage() {
     </div>
   );
 }
-

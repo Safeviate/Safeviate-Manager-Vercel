@@ -1,6 +1,15 @@
 
 {
   "entities": {
+    "PublishedTable": {
+      "title": "Published Table",
+      "type": "object",
+      "properties": {
+        "pageId": { "type": "string" },
+        "tableData": { "$ref": "#/backend/entities/TableTemplate/properties/tableData" }
+      },
+      "required": ["pageId", "tableData"]
+    },
     "TableTemplate": {
         "title": "Table Template",
         "type": "object",
@@ -1331,6 +1340,14 @@
   },
   "firestore": {
     "structure": [
+       {
+        "path": "tenants/{tenantId}/published-tables/{pageId}",
+        "definition": {
+          "entityName": "PublishedTable",
+          "schema": { "$ref": "#/backend/entities/PublishedTable" },
+          "description": "Stores table structures published to specific pages."
+        }
+      },
       {
         "path": "tenants/{tenantId}/table-templates/{templateId}",
         "definition": {
