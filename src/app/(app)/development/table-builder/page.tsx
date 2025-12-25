@@ -13,7 +13,7 @@ import { addDocumentNonBlocking, deleteDocumentNonBlocking, useCollection, useFi
 import { collection, doc } from 'firebase/firestore';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Plus, Minus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 type Cell = {
@@ -78,11 +78,68 @@ export default function TableBuilderPage() {
 
   const getCell = (r: number, c: number) => cells.find(cell => cell.r === r && cell.c === c);
 
-  const updateGridSize = (newRows: number, newCols: number) => {
-    if (newRows > 0 && newRows <= 50 && newCols > 0 && newCols <= 50) {
-      setTableData(createInitialTable(newRows, newCols));
-      setSelectedCells({});
-    }
+  const addRow = () => {
+    setTableData(prev => {
+        const newRows = prev.rows + 1;
+        const newCells = [...prev.cells];
+        for (let c = 0; c < prev.cols; c++) {
+            newCells.push({ r: newRows - 1, c, rowSpan: 1, colSpan: 1, hidden: false, content: '' });
+        }
+        return {
+            ...prev,
+            rows: newRows,
+            cells: newCells,
+            rowHeights: [...prev.rowHeights, 48],
+        };
+    });
+  };
+
+  const removeRow = () => {
+      if (rows <= 1) return;
+      setTableData(prev => {
+          const newRows = prev.rows - 1;
+          return {
+              ...prev,
+              rows: newRows,
+              cells: prev.cells.filter(cell => cell.r < newRows),
+              rowHeights: prev.rowHeights.slice(0, -1),
+          };
+      });
+  };
+
+  const addColumn = () => {
+      setTableData(prev => {
+          const newCols = prev.cols + 1;
+          const newCells = [...prev.cells];
+          for (let r = 0; r < prev.rows; r++) {
+              // Insert new cells at the end of each row conceptually
+              newCells.splice((r + 1) * newCols - 1, 0, { r, c: newCols - 1, rowSpan: 1, colSpan: 1, hidden: false, content: '' });
+          }
+           // Re-index columns 'c' after insertion
+          const reindexedCells = Array.from({ length: prev.rows }, (_, r) => 
+            newCells.filter(cell => cell.r === r).sort((a,b) => a.c - b.c).map((cell, c_idx) => ({...cell, c: c_idx}))
+          ).flat();
+
+          return {
+              ...prev,
+              cols: newCols,
+              cells: reindexedCells,
+              colWidths: [...prev.colWidths, 120],
+          };
+      });
+  };
+
+  const removeColumn = () => {
+      if (cols <= 1) return;
+      setTableData(prev => {
+          const newCols = prev.cols - 1;
+          return {
+              ...prev,
+              cols: newCols,
+              cells: prev.cells.filter(cell => cell.c < newCols),
+              colWidths: prev.colWidths.slice(0, -1),
+          };
+      });
   };
   
   const handleCellClick = (r: number, c: number) => {
@@ -101,7 +158,7 @@ export default function TableBuilderPage() {
     });
   };
 
-  const handleMerge = () => {
+ const handleMerge = () => {
     const selectionKeys = Object.keys(selectedCells).filter(key => selectedCells[key]);
     if (selectionKeys.length < 2) {
         toast({ variant: "destructive", title: "Invalid Selection", description: "Select at least two cells to merge." });
@@ -109,8 +166,6 @@ export default function TableBuilderPage() {
     }
 
     let minR = Infinity, maxR = -1, minC = Infinity, maxC = -1;
-
-    // 1. Find the bounding box of the selection considering spans
     selectionKeys.forEach(key => {
         const [r, c] = key.split('-').map(Number);
         const cell = getCell(r, c);
@@ -122,47 +177,30 @@ export default function TableBuilderPage() {
         }
     });
 
-    // 2. Verify if the selection forms a perfect rectangle
-    let totalCoveredCells = 0;
     for (let r = minR; r <= maxR; r++) {
         for (let c = minC; c <= maxC; c++) {
-            const cell = getCell(r, c);
-            if (!cell || cell.hidden) {
-                // This case should ideally not happen if logic is sound, but it's a safeguard
-                continue;
+            const cellInBox = getCell(r,c);
+            let isCellSelected = false;
+            for (const key of selectionKeys) {
+                const [selR, selC] = key.split('-').map(Number);
+                 const selectedCell = getCell(selR, selC);
+                 if (selectedCell && r >= selR && r < selR + selectedCell.rowSpan && c >= selC && c < selC + selectedCell.colSpan) {
+                     isCellSelected = true;
+                     break;
+                 }
             }
-            // Check if the cell at (r, c) is part of the original selection
-            let isCellInSelection = false;
-            for(const key of selectionKeys) {
-                const [sr, sc] = key.split('-').map(Number);
-                const selectedCell = getCell(sr, sc);
-                if(selectedCell && r >= sr && r < sr + selectedCell.rowSpan && c >= sc && c < sc + selectedCell.colSpan) {
-                    isCellInSelection = true;
-                    break;
-                }
+            if(!isCellSelected){
+                 toast({ variant: "destructive", title: "Invalid Merge", description: "Selection must be a solid rectangle." });
+                 return;
             }
-            
-            if(!isCellInSelection) {
-                 toast({ variant: "destructive", title: "Invalid Merge", description: "Selection must be a solid rectangle. Please ensure there are no unselected cells within your selection area." });
-                return;
-            }
-            totalCoveredCells++;
         }
     }
 
-    const boundingBoxArea = (maxR - minR + 1) * (maxC - minC + 1);
-    if(totalCoveredCells !== boundingBoxArea) {
-      toast({ variant: "destructive", title: "Invalid Merge", description: "The selected cells do not form a solid rectangle." });
-      return;
-    }
 
-
-    // 3. Perform the merge
     const newCells = cells.map(cell => ({ ...cell }));
     const newRowSpan = maxR - minR + 1;
     const newColSpan = maxC - minC + 1;
     
-    // Find the real top-left cell to merge into
     const topLeftCell = newCells.find(c => c.r === minR && c.c === minC);
     if (!topLeftCell) return;
 
@@ -170,14 +208,13 @@ export default function TableBuilderPage() {
     topLeftCell.colSpan = newColSpan;
     topLeftCell.hidden = false;
 
-    // Hide all other cells within the bounding box
     for (let r = minR; r <= maxR; r++) {
         for (let c = minC; c <= maxC; c++) {
             if (r === minR && c === minC) continue;
             const cellToHide = newCells.find(cell => cell.r === r && cell.c === c);
             if (cellToHide) {
                 cellToHide.hidden = true;
-                cellToHide.rowSpan = 1; // Reset spans
+                cellToHide.rowSpan = 1; 
                 cellToHide.colSpan = 1;
             }
         }
@@ -321,13 +358,15 @@ export default function TableBuilderPage() {
         </CardHeader>
         <CardContent className="space-y-4">
             <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                    <Label htmlFor="rows">Rows</Label>
-                    <Input id="rows" type="number" value={rows} onChange={(e) => updateGridSize(Number(e.target.value), cols)} className="w-20" />
+                 <div className="flex items-center gap-2">
+                    <Label>Rows ({rows})</Label>
+                    <Button size="icon" variant="outline" onClick={addRow}><Plus className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="outline" onClick={removeRow} disabled={rows <= 1}><Minus className="h-4 w-4" /></Button>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Label htmlFor="cols">Columns</Label>
-                    <Input id="cols" type="number" value={cols} onChange={(e) => updateGridSize(rows, Number(e.target.value))} className="w-20" />
+                    <Label>Columns ({cols})</Label>
+                    <Button size="icon" variant="outline" onClick={addColumn}><Plus className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="outline" onClick={removeColumn} disabled={cols <= 1}><Minus className="h-4 w-4" /></Button>
                 </div>
                  <div className="flex items-center space-x-2">
                     <Switch id="edit-mode" checked={isEditing} onCheckedChange={setIsEditing} />
@@ -381,8 +420,8 @@ export default function TableBuilderPage() {
               </div>
             );
           })}
-          {isEditing && Array.from({ length: cols }).map((_, index) => {
-            const isAligned = Math.abs(colWidths[index] - (colWidths[index - 1] || 0)) < 1;
+         {isEditing && Array.from({ length: cols }).map((_, index) => {
+            const isAligned = index > 0 && Math.abs(colWidths[index] - colWidths[index - 1]) < 1;
             return (
                 <div 
                     key={`col-handle-${index}`}
@@ -396,7 +435,7 @@ export default function TableBuilderPage() {
             )
           })}
           {isEditing && Array.from({ length: rows }).map((_, index) => {
-            const isAligned = Math.abs(rowHeights[index] - (rowHeights[index - 1] || 0)) < 1;
+            const isAligned = index > 0 && Math.abs(rowHeights[index] - rowHeights[index - 1]) < 1;
             return (
                 <div 
                     key={`row-handle-${index}`}
@@ -450,3 +489,4 @@ export default function TableBuilderPage() {
     </div>
   );
 }
+
