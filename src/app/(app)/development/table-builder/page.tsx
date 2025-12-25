@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Save, Trash2, AlignLeft, AlignCenter, AlignRight, ChevronsUpDown, Bold, Minus, Plus, Unplug } from 'lucide-react';
+import { PlusCircle, Save, Trash2, AlignLeft, AlignCenter, AlignRight, ChevronsUpDown, Bold, Minus, Plus, Unplug, Split } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, updateDocumentNonBlocking, useDoc, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, query, doc } from 'firebase/firestore';
@@ -78,38 +78,34 @@ const TablePreview = ({ tableData }: { tableData: TableData }) => {
   
     return (
       <div className="w-full overflow-auto rounded-lg border my-2">
-        <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%' }}>
-          <tbody>
-            {Array.from({ length: tableData.rows }).map((_, rowIndex) => (
-              <tr key={rowIndex}>
-                {tableData.cells
-                  .filter(cell => cell.r === rowIndex)
-                  .sort((a, b) => a.c - b.c)
-                  .map(cell => {
-                    if (cell.hidden) return null;
-                    return (
-                      <td
-                        key={`${cell.r}-${cell.c}`}
-                        rowSpan={cell.rowSpan}
-                        colSpan={cell.colSpan}
-                        className="p-1 border border-border align-middle"
-                        style={{
-                          textAlign: cell.align,
-                          fontWeight: cell.fontWeight,
-                          fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`,
-                          width: `${100 / tableData.cols}%`,
-                          wordBreak: 'break-word',
-                          whiteSpace: 'pre-wrap',
-                        }}
-                      >
-                        {cell.content}
-                      </td>
-                    );
-                  })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: tableData.colWidths.map(w => `${w}px`).join(' '),
+            gridTemplateRows: `repeat(${tableData.rows}, auto)`,
+          }}
+        >
+          {tableData.cells.map(cell => {
+            if (cell.hidden) return null;
+            return (
+              <div
+                key={`${cell.r}-${cell.c}`}
+                className="p-1 border border-border flex items-center"
+                style={{
+                  gridRow: `${cell.r + 1} / span ${cell.rowSpan}`,
+                  gridColumn: `${cell.c + 1} / span ${cell.colSpan}`,
+                  justifyContent: cell.align,
+                  fontWeight: cell.fontWeight,
+                  fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`,
+                  wordBreak: 'break-word',
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {cell.content}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
 };
@@ -604,7 +600,10 @@ const TableBuilderPage = () => {
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button onClick={handleSplit} disabled={!isSplitEnabled} size="sm">Split</Button>
+                           <Button onClick={handleSplit} disabled={!isSplitEnabled} size="sm">
+                              <Split className="mr-2 h-4 w-4" />
+                              Split
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent><p>Split selected cell</p></TooltipContent>
                         </Tooltip>
@@ -668,88 +667,87 @@ const TableBuilderPage = () => {
       </Card>
       
       <div className="w-full overflow-auto rounded-lg border shadow-sm bg-card p-4">
-        <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: `auto ${tableData.colWidths.map(w => `${w}px`).join(' ')}`,
+            gridTemplateRows: `auto repeat(${tableData.rows}, auto)`,
+          }}
+        >
             {isEditMode && (
-                <thead>
-                    <tr>
-                        <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10">
-                            <div className="w-32 h-7 flex flex-row items-center justify-center">
-                                <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addRow(0)}><PlusCircle className="h-4 w-4" /></Button>
-                            </div>
-                        </th>
-                        {Array.from({ length: tableData.cols }).map((_, colIndex) => (
-                            <th
-                                key={colIndex}
-                                style={{ width: `${tableData.colWidths[colIndex]}px` }}
-                                className="p-0 border border-border bg-muted/50 relative"
-                            >
-                                <div className="h-7 flex items-center justify-center p-0">
-                                    <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
-                                    <SizeInput value={tableData.colWidths[colIndex]} onSave={(newWidth) => updateColWidth(colIndex, newWidth)} minValue={MIN_COL_WIDTH} />
-                                    <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addColumn(colIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
-                                </div>
-                            </th>
-                        ))}
-                    </tr>
-                </thead>
+              <>
+                <div className="row-start-1 col-start-1 sticky top-0 left-0 z-20 bg-muted/50 border border-border"></div>
+                <div
+                  className="row-start-1 col-start-2 col-span-full grid sticky top-0 z-10"
+                  style={{ gridTemplateColumns: 'subgrid' }}
+                >
+                  {Array.from({ length: tableData.cols }).map((_, colIndex) => (
+                    <div
+                      key={colIndex}
+                      className="p-0 border-x border-border bg-muted/50 relative h-7 flex items-center justify-center"
+                    >
+                      <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
+                      <SizeInput value={tableData.colWidths[colIndex]} onSave={(newWidth) => updateColWidth(colIndex, newWidth)} minValue={MIN_COL_WIDTH} />
+                      <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addColumn(colIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
-            <tbody>
-                {Array.from({ length: tableData.rows }).map((_, rowIndex) => (
-                    <tr key={rowIndex} style={{ minHeight: `${tableData.rowHeights[rowIndex]}px` }}>
-                        {isEditMode && (
-                            <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10 align-middle">
-                               <div className="w-32 h-10 flex flex-row items-center justify-center">
-                                    <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
-                                    <SizeInput value={tableData.rowHeights[rowIndex]} onSave={(newHeight) => updateRowHeight(rowIndex, newHeight)} minValue={MIN_ROW_HEIGHT} />
-                                    <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addRow(rowIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
-                                </div>
-                            </th>
+
+            {isEditMode &&
+              Array.from({ length: tableData.rows }).map((_, rowIndex) => (
+                 <div
+                    key={rowIndex}
+                    className="p-0 border-t border-border bg-muted/50 sticky left-0 z-10 flex flex-row items-center justify-center"
+                    style={{ gridRow: rowIndex + 2 }}
+                >
+                    <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
+                    <SizeInput value={tableData.rowHeights[rowIndex]} onSave={(newHeight) => updateRowHeight(rowIndex, newHeight)} minValue={MIN_ROW_HEIGHT} />
+                    <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addRow(rowIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
+                </div>
+              ))}
+
+            {tableData.cells
+                .filter(cell => !cell.hidden)
+                .map(cell => {
+                    const isSelected = selectedCells.some(s => s.r === cell.r && s.c === cell.c);
+                    const justifyContent = cell.align === 'left' ? 'flex-start' : cell.align === 'right' ? 'flex-end' : 'center';
+                    return (
+                    <div
+                        key={`${cell.r}-${cell.c}`}
+                        onClick={() => toggleSelect(cell.r, cell.c)}
+                        className={cn(
+                            "p-0 relative flex items-center",
+                            isEditMode && "cursor-pointer hover:bg-muted/50",
+                            "border border-border",
                         )}
-                        {tableData.cells
-                            .filter(cell => cell.r === rowIndex)
-                            .sort((a, b) => a.c - b.c)
-                            .map(cell => {
-                                if (cell.hidden) return null;
-                                const isSelected = selectedCells.some(s => s.r === cell.r && s.c === cell.c);
-                                return (
-                                <td
-                                    key={`${cell.r}-${cell.c}`}
-                                    rowSpan={cell.rowSpan}
-                                    colSpan={cell.colSpan}
-                                    onClick={() => toggleSelect(cell.r, cell.c)}
-                                    className={cn(
-                                        "p-0 border border-border relative align-middle",
-                                        isEditMode && "cursor-pointer hover:bg-muted/50"
-                                    )}
-                                    style={{
-                                        minWidth: `${MIN_COL_WIDTH}px`,
-                                        textAlign: cell.align,
-                                        fontWeight: cell.fontWeight,
-                                        fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`,
-                                    }}
-                                >
-                                    {isEditMode ? (
-                                        <AutoResizingTextarea
-                                            value={cell.content}
-                                            onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
-                                            onBlur={onBlurContent}
-                                            className="w-full h-full p-1 bg-transparent border-none resize-none overflow-hidden focus:outline-none focus:ring-0"
-                                            style={{
-                                                textAlign: cell.align,
-                                                fontWeight: cell.fontWeight,
-                                                fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`,
-                                            }}
-                                        />
-                                    ) : (
-                                        <div className='p-1 whitespace-pre-wrap' style={{wordBreak: 'break-word'}}>{cell.content}</div>
-                                    )}
-                                    {isSelected && <div className="absolute inset-0 bg-primary/20 pointer-events-none" />}
-                                </td>
-                            )})}
-                    </tr>
-                ))}
-            </tbody>
-        </table>
+                        style={{
+                            gridRow: `${cell.r + 2} / span ${cell.rowSpan}`,
+                            gridColumn: `${cell.c + 2} / span ${cell.colSpan}`,
+                            justifyContent,
+                            minHeight: `${MIN_ROW_HEIGHT}px`,
+                        }}
+                    >
+                        {isEditMode ? (
+                            <AutoResizingTextarea
+                                value={cell.content}
+                                onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
+                                onBlur={onBlurContent}
+                                className="w-full h-full p-1 bg-transparent border-none resize-none overflow-hidden focus:outline-none focus:ring-0"
+                                style={{
+                                    fontWeight: cell.fontWeight,
+                                    fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`,
+                                    textAlign: cell.align,
+                                }}
+                            />
+                        ) : (
+                            <div className='p-1 whitespace-pre-wrap' style={{wordBreak: 'break-word', fontWeight: cell.fontWeight, fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`, textAlign: cell.align}}>{cell.content}</div>
+                        )}
+                        {isSelected && <div className="absolute inset-0 bg-primary/20 pointer-events-none" />}
+                    </div>
+                )})}
+        </div>
     </div>
 
       <Card>
@@ -782,4 +780,3 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
-
