@@ -1,8 +1,7 @@
 
-
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PlusCircle, Save, Trash2, AlignLeft, AlignCenter, AlignRight, ChevronsUpDown, Bold, Minus, Plus, Unplug } from 'lucide-react';
