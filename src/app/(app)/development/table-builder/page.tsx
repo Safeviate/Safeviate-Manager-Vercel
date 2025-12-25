@@ -68,67 +68,81 @@ export default function TableBuilderPage() {
     };
 
     const handleMerge = () => {
-        if (selectedCells.size < 2) {
-            toast({ title: "Select at least two cells to merge." });
-            return;
-        }
-    
-        const newCells = [...tableData.cells];
-        const selectedCellObjects = Array.from(selectedCells).map(key => {
-            const [r, c] = key.split('-').map(Number);
-            return newCells.find(cell => cell.r === r && cell.c === c);
-        }).filter(Boolean) as Cell[];
-    
-        // 1. Determine the bounding box of the merge area, considering spans.
-        let minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
-        selectedCellObjects.forEach(cell => {
-            minR = Math.min(minR, cell.r);
-            maxR = Math.max(maxR, cell.r + cell.rowSpan - 1);
-            minC = Math.min(minC, cell.c);
-            maxC = Math.max(maxC, cell.c + cell.colSpan - 1);
-        });
-    
-        const finalRowSpan = maxR - minR + 1;
-        const finalColSpan = maxC - minC + 1;
-    
-        // 2. Verify that the selection forms a solid rectangle.
-        let totalAreaInSelection = 0;
-        selectedCellObjects.forEach(cell => {
-            totalAreaInSelection += cell.rowSpan * cell.colSpan;
-        });
-    
-        if (totalAreaInSelection !== finalRowSpan * finalColSpan) {
-            toast({
-                variant: "destructive",
-                title: "Invalid Selection",
-                description: "You can only merge a solid rectangular block of cells.",
-            });
-            return;
-        }
+      if (selectedCells.size < 2) {
+        toast({ title: "Select at least two cells to merge." });
+        return;
+      }
 
-        // 3. Find the master cell (top-left) and hide all others within the bounding box.
-        const masterCell = newCells.find(cell => cell.r === minR && cell.c === minC);
-        if (!masterCell) {
-            toast({ variant: "destructive", title: "Merge Error", description: "Could not find master cell." });
-            return;
-        }
+      const newCells = [...tableData.cells];
 
-        masterCell.rowSpan = finalRowSpan;
-        masterCell.colSpan = finalColSpan;
-        masterCell.hidden = false;
+      // Get the actual cell objects for the selection
+      const selectedCellObjects = Array.from(selectedCells)
+        .map(key => {
+          const [r, c] = key.split('-').map(Number);
+          return newCells.find(cell => cell.r === r && cell.c === c);
+        })
+        .filter((c): c is Cell => !!c);
+        
+      if (selectedCellObjects.length !== selectedCells.size) {
+        toast({ variant: 'destructive', title: 'Merge Error', description: 'Selection contains invalid cells.' });
+        return;
+      }
 
-        newCells.forEach(cell => {
-            // Hide any cell that is not the master cell but falls within the new merged area.
-            if (!(cell.r === minR && cell.c === minC) &&
-                cell.r >= minR && cell.r <= maxR &&
-                cell.c >= minC && cell.c <= maxC) {
-                cell.hidden = true;
-            }
+      // 1. Find the true bounding box of the selection
+      let minR = Infinity, maxR = -1, minC = Infinity, maxC = -1;
+      selectedCellObjects.forEach(cell => {
+        minR = Math.min(minR, cell.r);
+        minC = Math.min(minC, cell.c);
+        maxR = Math.max(maxR, cell.r + cell.rowSpan - 1);
+        maxC = Math.max(maxC, cell.c + cell.colSpan - 1);
+      });
+
+      const finalRowSpan = maxR - minR + 1;
+      const finalColSpan = maxC - minC + 1;
+      const totalGridSlotsInBox = finalRowSpan * finalColSpan;
+
+      // 2. Verify that the selection forms a solid rectangle
+      let totalSlotsInSelection = 0;
+      selectedCellObjects.forEach(cell => {
+        totalSlotsInSelection += cell.rowSpan * cell.colSpan;
+      });
+
+      if (totalSlotsInSelection !== totalGridSlotsInBox) {
+        toast({
+          variant: "destructive",
+          title: "Invalid Merge Selection",
+          description: "The selected cells must form a solid rectangle without gaps.",
         });
-    
-        setTableData(prev => ({ ...prev, cells: newCells }));
-        setSelectedCells(new Set());
-        toast({ title: "Cells Merged", description: "The selected cells have been merged." });
+        return;
+      }
+      
+      // 3. Perform the merge
+      const masterCellIndex = newCells.findIndex(c => c.r === minR && c.c === minC);
+      if (masterCellIndex === -1) {
+          toast({ variant: "destructive", title: "Merge Error", description: "Could not find the master cell for merging." });
+          return;
+      }
+
+      // Hide all cells within the bounding box
+      newCells.forEach((cell, index) => {
+        if (cell.r >= minR && cell.r <= maxR && cell.c >= minC && cell.c <= maxC) {
+          if (index !== masterCellIndex) {
+            cell.hidden = true;
+            // Also reset spans to avoid confusion, though they are hidden
+            cell.rowSpan = 1;
+            cell.colSpan = 1;
+          }
+        }
+      });
+      
+      // Update the master cell
+      newCells[masterCellIndex].rowSpan = finalRowSpan;
+      newCells[masterCellIndex].colSpan = finalColSpan;
+      newCells[masterCellIndex].hidden = false;
+
+      setTableData(prev => ({ ...prev, cells: newCells }));
+      setSelectedCells(new Set());
+      toast({ title: "Cells Merged" });
     };
 
     if (!tableData) {
