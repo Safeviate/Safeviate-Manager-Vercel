@@ -9,10 +9,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Merge, Split, Text, PlusSquare, Trash2, AlignLeft, AlignCenter, AlignRight, SplitSquareHorizontal, SplitSquareVertical, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Bold } from 'lucide-react';
+import { Merge, Split, Text, PlusSquare, Trash2, AlignLeft, AlignCenter, AlignRight, SplitSquareHorizontal, SplitSquareVertical, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Bold, Save } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useDebounce } from '@/hooks/use-debounce';
+import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 // --- Types ---
 interface CellData {
@@ -26,6 +32,13 @@ interface CellData {
     textAlign: 'left' | 'center' | 'right';
     verticalAlign: 'top' | 'middle' | 'bottom';
     nestedGrid?: CellData[][];
+}
+
+interface TableTemplate {
+    id: string;
+    name: string;
+    grid: CellData[][];
+    colWidths: number[];
 }
 
 type CellPath = (string | number)[];
@@ -184,8 +197,13 @@ const ResizableTable = ({
 
 const TableSelector = ({ onSelect }: { onSelect: (dims: { rows: number; cols: number }) => void }) => {
     const [hovered, setHovered] = useState({ rows: 0, cols: 0 });
+    const [selection, setSelection] = useState({ rows: 0, cols: 0 });
 
     const gridSize = 10;
+    
+    const handleClick = (row: number, col: number) => {
+        onSelect({ rows: row, cols: col });
+    }
 
     return (
         <Card className="w-fit">
@@ -211,7 +229,7 @@ const TableSelector = ({ onSelect }: { onSelect: (dims: { rows: number; cols: nu
                                     isHighlighted ? 'bg-primary' : 'bg-background hover:bg-accent'
                                 )}
                                 onMouseEnter={() => setHovered({ rows: row, cols: col })}
-                                onClick={() => onSelect({ rows: row, cols: col })}
+                                onClick={() => handleClick(row, col)}
                             />
                         );
                     })}
@@ -229,10 +247,6 @@ const ColumnWidthInput = ({ index, width, onWidthChange }: { index: number, widt
     const debouncedValue = useDebounce(inputValue, 500);
 
     useEffect(() => {
-        setInputValue(width.toString());
-    }, [width]);
-
-    useEffect(() => {
         const numericValue = parseInt(debouncedValue, 10);
         if (!isNaN(numericValue)) {
             const validatedWidth = Math.max(50, numericValue);
@@ -241,6 +255,12 @@ const ColumnWidthInput = ({ index, width, onWidthChange }: { index: number, widt
             }
         }
     }, [debouncedValue, index, onWidthChange, width]);
+    
+    useEffect(() => {
+        if(Number(debouncedValue) !== width) {
+            setInputValue(width.toString());
+        }
+    }, [width]);
     
     return (
          <Input
@@ -261,6 +281,16 @@ export default function TableBuilderPage() {
     const [isSelecting, setIsSelecting] = useState(false);
     const [fontSize, setFontSize] = useState(14);
     const rowHeight = 48; // px
+    const { toast } = useToast();
+    const firestore = useFirestore();
+    const tenantId = 'safeviate'; // Hardcoded for now
+    const [templateName, setTemplateName] = useState('');
+
+    const templatesQuery = useMemoFirebase(
+        () => (firestore ? collection(firestore, `tenants/${tenantId}/table-templates`) : null),
+        [firestore, tenantId]
+    );
+    const { data: savedTemplates, isLoading: isLoadingTemplates } = useCollection<TableTemplate>(templatesQuery);
 
     const createGrid = (rows: number, cols: number) => {
         if (rows === 0 || cols === 0) return;
@@ -628,6 +658,38 @@ export default function TableBuilderPage() {
             return newColWidths;
         });
     };
+    
+    const handleSaveTemplate = () => {
+        if (!firestore) return;
+        if (!templateName.trim()) {
+            toast({ variant: 'destructive', title: 'Name required', description: 'Please enter a name for the template.' });
+            return;
+        }
+        if (grid.length === 0) {
+            toast({ variant: 'destructive', title: 'Empty Table', description: 'Cannot save an empty table.' });
+            return;
+        }
+
+        const templatesCollection = collection(firestore, `tenants/${tenantId}/table-templates`);
+        const templateData = { name: templateName, grid, colWidths };
+        addDocumentNonBlocking(templatesCollection, templateData);
+        
+        toast({ title: 'Template Saved', description: `Template "${templateName}" has been saved.`});
+        setTemplateName('');
+    };
+
+    const handleLoadTemplate = (template: TableTemplate) => {
+        setGrid(template.grid);
+        setColWidths(template.colWidths);
+        toast({ title: 'Template Loaded', description: `"${template.name}" has been loaded into the builder.` });
+    };
+
+    const handleDeleteTemplate = (templateId: string) => {
+        if (!firestore) return;
+        const templateRef = doc(firestore, `tenants/${tenantId}/table-templates`, templateId);
+        deleteDocumentNonBlocking(templateRef);
+        toast({ title: 'Template Deleted', description: 'The table template is being deleted.' });
+    };
 
     return (
         <TooltipProvider>
@@ -737,6 +799,31 @@ export default function TableBuilderPage() {
                             </TooltipTrigger>
                             <TooltipContent><p>Delete Last Column</p></TooltipContent>
                         </Tooltip>
+                         <Separator orientation='vertical' className='h-8' />
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button disabled={grid.length === 0}><Save className="mr-2 h-4 w-4" /> Save as Template</Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Save Table Template</DialogTitle>
+                                    <DialogDescription>Give this table design a name to save it for later use.</DialogDescription>
+                                </DialogHeader>
+                                <div className="py-4">
+                                    <Input 
+                                        placeholder="e.g., Daily Inspection Report"
+                                        value={templateName}
+                                        onChange={(e) => setTemplateName(e.target.value)}
+                                    />
+                                </div>
+                                <DialogFooter>
+                                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                                    <DialogClose asChild>
+                                        <Button onClick={handleSaveTemplate} disabled={!templateName.trim()}>Save Template</Button>
+                                    </DialogClose>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
                     </CardContent>
                 </Card>
             </div>
@@ -776,6 +863,34 @@ export default function TableBuilderPage() {
                         <div className="h-48 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
                             <p>Select table dimensions to see a preview.</p>
                         </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Saved Templates</CardTitle>
+                    <CardDescription>Load a previously saved table design.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {isLoadingTemplates ? <Skeleton className="h-24 w-full" /> : (
+                        (savedTemplates || []).length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {(savedTemplates || []).map(template => (
+                                    <Card key={template.id} className="flex flex-col">
+                                        <CardHeader className="flex-1">
+                                            <CardTitle className='text-base'>{template.name}</CardTitle>
+                                        </CardHeader>
+                                        <CardFooter className="flex justify-end gap-2">
+                                            <Button variant="outline" size="sm" onClick={() => handleLoadTemplate(template)}>Load</Button>
+                                            <Button variant="destructive" size="sm" onClick={() => handleDeleteTemplate(template.id)}>Delete</Button>
+                                        </CardFooter>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-center text-muted-foreground py-8">No saved templates yet.</p>
+                        )
                     )}
                 </CardContent>
             </Card>
