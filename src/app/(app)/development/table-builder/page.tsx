@@ -237,19 +237,15 @@ const TableBuilderPage = () => {
     }
   }, [tableTemplateRef]);
 
-  const updateCellContent = (r: number, c: number, content: string, textarea: HTMLTextAreaElement) => {
+  const updateCellContent = (r: number, c: number, content: string) => {
     if (!tableData) return;
     const newCells = tableData.cells.map(cell =>
         cell.r === r && cell.c === c ? { ...cell, content } : cell
       );
     const newTableData = { ...tableData, cells: newCells };
     setTableData(newTableData);
-    
-    // Auto-resize textarea
-    textarea.style.height = 'auto';
-    textarea.style.height = `${textarea.scrollHeight}px`;
   };
-
+  
   const onBlurContent = () => {
     if (tableData) {
       updateRemoteTable(tableData);
@@ -659,7 +655,7 @@ const TableBuilderPage = () => {
                                     colSpan={cell.colSpan}
                                     onClick={() => toggleSelect(cell.r, cell.c)}
                                     className={cn(
-                                        "p-0 border border-border relative align-middle",
+                                        "p-1 border border-border relative align-middle focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background",
                                         isEditMode && "cursor-pointer"
                                     )}
                                     style={{
@@ -669,21 +665,15 @@ const TableBuilderPage = () => {
                                         fontWeight: cell.fontWeight,
                                         fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`,
                                         wordBreak: 'break-word',
+                                        whiteSpace: 'pre-wrap',
                                     }}
+                                    contentEditable={isEditMode}
+                                    suppressContentEditableWarning={true}
+                                    onInput={(e) => updateCellContent(cell.r, cell.c, e.currentTarget.textContent || '')}
+                                    onBlur={onBlurContent}
                                 >
+                                    {cell.content}
                                     {isSelected && <div className="absolute inset-0 bg-primary/20 pointer-events-none" />}
-                                    <Textarea
-                                        value={cell.content}
-                                        onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value, e.target)}
-                                        onBlur={onBlurContent}
-                                        className={cn(
-                                            'w-full h-full border-0 bg-transparent p-1 focus-visible:bg-blue-100/20 focus-visible:ring-0 resize-none overflow-hidden',
-                                            cell.fontWeight === 'bold' && 'font-bold'
-                                        )}
-                                        style={{ textAlign: cell.align, fontSize: 'inherit', lineHeight: '1.2' }}
-                                        disabled={!isEditMode}
-                                        rows={1}
-                                    />
                                 </td>
                             )})}
                     </tr>
