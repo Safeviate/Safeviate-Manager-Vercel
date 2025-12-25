@@ -233,7 +233,9 @@ const TableBuilderPage = () => {
     return doc(firestore, 'tenants', tenantId, 'table-templates', templateId);
   }, [firestore, tenantId, activeTemplate]);
 
-  const { data: remoteTableData, isLoading } = useDoc<TableTemplate>(tableTemplateRef);
+  const { data: remoteTableData, isLoading } = useDoc<TableTemplate>(tableTemplateRef, {
+      initialData: defaultTableData
+  });
 
   const templatesQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/table-templates`)) : null),
@@ -244,14 +246,17 @@ const TableBuilderPage = () => {
   useEffect(() => {
     if (!isLoading && remoteTableData?.tableData) {
         setTableData(remoteTableData.tableData);
-        if (!activeTemplate) {
+        if (!activeTemplate && remoteTableData.id !== 'main-table') {
             setActiveTemplate(remoteTableData);
+        } else if (!activeTemplate && remoteTableData.id === 'main-table' ) {
+            setActiveTemplate(null);
         }
     } else if (!isLoading && !remoteTableData) {
         if (tableTemplateRef && tableTemplateRef.id === 'main-table') {
             setDocumentNonBlocking(tableTemplateRef, defaultTableData, { merge: true });
+            setTableData(defaultTableData.tableData);
+            setActiveTemplate(null);
         }
-        setTableData(defaultTableData.tableData);
     }
   }, [remoteTableData, isLoading, activeTemplate, tableTemplateRef, defaultTableData]);
   
@@ -276,29 +281,49 @@ const TableBuilderPage = () => {
     }
   };
   
-  const addColumn = (index: number) => {
+ const addColumn = (index: number) => {
     if (!tableData) return;
     setTableData(prev => {
         if (!prev) return null;
+
         const newCols = prev.cols + 1;
         const newCells = [...prev.cells];
-        // Shift existing cells
-        for (const cell of newCells) {
-            if (cell.c >= index) {
-                cell.c += 1;
+        const newColWidths = [...prev.colWidths];
+        
+        newColWidths.splice(index, 0, DEFAULT_COL_WIDTH);
+
+        for (let r = 0; r < prev.rows; r++) {
+            const insertionIndex = newCells.findIndex(cell => cell.r > r || (cell.r === r && cell.c >= index));
+            const newCell = { r, c: index, content: '', rowSpan: 1, colSpan: 1, align: 'left', fontWeight: 'normal', fontSize: DEFAULT_FONT_SIZE, hidden: false };
+            
+            if (insertionIndex === -1) {
+                newCells.push(newCell);
+            } else {
+                newCells.splice(insertionIndex, 0, newCell);
             }
         }
-        // Add new cells for the new column
-        for(let r = 0; r < prev.rows; r++) {
-            newCells.push({ r, c: index, content: '', rowSpan: 1, colSpan: 1, align: 'left', fontWeight: 'normal', fontSize: DEFAULT_FONT_SIZE, hidden: false });
+        
+        for (const cell of newCells) {
+            if (cell.c >= index) {
+                // Find the original cell to avoid issues with already shifted cells
+                const originalCell = prev.cells.find(c => c.r === cell.r && c.c === cell.c - 1);
+                if (cell.r === originalCell?.r && cell.c === originalCell?.c + 1) {
+                  // already shifted
+                } else if(cell.r === newCells.find(c => c.c === index)?.r && cell.c === index){
+                  // this is a new cell, do nothing
+                }
+                else {
+                   cell.c += 1;
+                }
+            }
         }
-        const newColWidths = [...prev.colWidths];
-        newColWidths.splice(index, 0, DEFAULT_COL_WIDTH);
-        const newTableData = { ...prev, cols: newCols, cells: newCells.sort((a,b) => a.r - b.r || a.c - b.c), colWidths: newColWidths };
+
+        const newTableData = { ...prev, cols: newCols, cells: newCells, colWidths: newColWidths };
         updateRemoteTable(newTableData);
         return newTableData;
     });
-  };
+};
+
 
   const addRow = (index: number) => {
     if (!tableData) return;
@@ -573,8 +598,8 @@ const TableBuilderPage = () => {
   const totalTableWidth = useMemo(() => {
     if (!tableData) return 0;
     // 48px is the width of the row header column
-    return 48 + tableData.colWidths.reduce((acc, width) => acc + width, 0);
-  }, [tableData]);
+    return (isEditMode ? 48 : 0) + tableData.colWidths.reduce((acc, width) => acc + width, 0);
+  }, [tableData, isEditMode]);
 
   if (isLoading || !tableData) {
       return <div>Loading...</div>;
@@ -673,8 +698,8 @@ const TableBuilderPage = () => {
             <div
                 className="grid"
                 style={{
-                    gridTemplateColumns: `auto ${tableData.colWidths.map(w => `${w}px`).join(' ')}`,
-                    gridTemplateRows: `${isEditMode ? 'auto' : ''} repeat(${tableData.rows}, auto)`,
+                    gridTemplateColumns: isEditMode ? `48px ${tableData.colWidths.map(w => `${w}px`).join(' ')}` : tableData.colWidths.map(w => `${w}px`).join(' '),
+                    gridTemplateRows: isEditMode ? `28px repeat(${tableData.rows}, auto)` : `repeat(${tableData.rows}, auto)`,
                 }}
             >
                 {isEditMode && (
@@ -773,7 +798,7 @@ const TableBuilderPage = () => {
                            <Button className="flex-1" variant="outline" size="sm" onClick={() => handleLoadTemplate(template)}>
                                Load
                            </Button>
-                           <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => handleDeleteTemplate(template.id)}>
+                           <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDeleteTemplate(template.id)}>
                                <Trash2 className="h-4 w-4" />
                            </Button>
                        </div>
