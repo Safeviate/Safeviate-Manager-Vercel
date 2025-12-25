@@ -85,6 +85,7 @@ const SaveAsNewTemplateDialog = ({ onSave, children }: { onSave: (name: string) 
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Save as New Template</DialogTitle>
+
                     <DialogDescription>
                         Give your new table template a name.
                     </DialogDescription>
@@ -542,5 +543,3 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
-
-    
