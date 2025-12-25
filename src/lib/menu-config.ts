@@ -232,9 +232,9 @@ export const menuConfig: MenuItem[] = [
         description: 'Create new tenants with custom branding.',
       },
       {
-        href: '/development/ai-parser',
-        label: 'AI Document Parser',
-        description: 'A flexible tool to parse document structures into JSON.',
+        href: '/development/table-builder',
+        label: 'Table Builder',
+        description: 'Visually create and configure complex tables.',
       },
       {
         href: '/development/logbook-parser',
