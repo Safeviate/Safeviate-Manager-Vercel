@@ -232,11 +232,6 @@ export const menuConfig: MenuItem[] = [
         description: 'Create new tenants with custom branding.',
       },
       {
-        href: '/development/table-builder',
-        label: 'Table Builder',
-        description: 'Visually create and configure complex tables.',
-      },
-      {
         href: '/development/logbook-parser',
         label: 'Logbook Parser',
         description: 'Parse the structure of a logbook table.',
