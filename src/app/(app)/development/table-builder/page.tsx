@@ -218,7 +218,7 @@ const TableBuilderPage = () => {
     
     setTableData(initialData);
 
-  }, [firestore, tenantId, tableTemplateRef]);
+  }, [tableTemplateRef]);
 
   useEffect(() => {
     if (!isLoading && remoteTableData?.tableData) {
@@ -670,22 +670,14 @@ const TableBuilderPage = () => {
                                     }}
                                 >
                                     {isSelected && <div className="absolute inset-0 bg-primary/20 pointer-events-none" />}
-                                    {isEditMode ? (
-                                        <Input
-                                            value={cell.content}
-                                            onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
-                                            onBlur={onBlurContent}
-                                            className={cn("h-full w-full border-0 bg-transparent p-1 focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0", cell.fontWeight === 'bold' && 'font-bold')}
-                                            style={{ textAlign: cell.align, fontSize: 'inherit' }}
-                                        />
-                                    ) : (
-                                        <div 
-                                          className="w-full h-full p-1" 
-                                          style={{ textAlign: cell.align, fontWeight: cell.fontWeight, fontSize: 'inherit', whiteSpace: 'pre-wrap' }}
-                                        >
-                                          {cell.content}
-                                        </div>
-                                    )}
+                                    <Input
+                                        value={cell.content}
+                                        onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
+                                        onBlur={onBlurContent}
+                                        className={cn("h-full w-full border-0 bg-transparent p-1 focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0", cell.fontWeight === 'bold' && 'font-bold')}
+                                        style={{ textAlign: cell.align, fontSize: 'inherit' }}
+                                        disabled={!isEditMode}
+                                    />
                                 </td>
                             )})}
                     </tr>
@@ -724,6 +716,7 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
+
 
 
 
