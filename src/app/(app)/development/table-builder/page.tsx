@@ -39,7 +39,7 @@ type TableTemplate = {
 };
 
 const DEFAULT_COL_WIDTH = 120;
-const DEFAULT_ROW_HEIGHT = 40;
+const DEFAULT_ROW_HEIGHT = 32;
 
 
 const SizeInput = ({ value, onSave }: { value: number, onSave: (newSize: number) => void }) => {
@@ -390,7 +390,7 @@ const TableBuilderPage = () => {
             <thead>
                 <tr>
                     <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10">
-                        <div className="w-16 h-12 flex items-center justify-center">
+                        <div className="w-16 h-10 flex items-center justify-center">
                             <Button variant="ghost" size="icon" onClick={() => addRow(0)}><PlusCircle className="h-4 w-4" /></Button>
                         </div>
                     </th>
@@ -400,7 +400,7 @@ const TableBuilderPage = () => {
                             style={{ width: `${tableData.colWidths[colIndex]}px` }}
                             className="p-0 border border-border bg-muted/50 relative"
                         >
-                            <div className="h-12 flex items-center justify-center p-1 gap-1">
+                            <div className="h-10 flex items-center justify-center gap-1">
                                 <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
                                 <div className="flex items-center gap-1">
                                     <SizeInput value={tableData.colWidths[colIndex]} onSave={(newWidth) => updateColWidth(colIndex, newWidth)} />
@@ -415,12 +415,12 @@ const TableBuilderPage = () => {
                 {Array.from({ length: tableData.rows }).map((_, rowIndex) => (
                     <tr key={rowIndex} style={{ height: `${tableData.rowHeights[rowIndex]}px` }}>
                         <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10">
-                           <div className="w-16 h-full flex flex-col items-center justify-center p-1 gap-1">
-                                <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
+                           <div className="w-16 h-full flex flex-col items-center justify-center">
+                                <Button variant="ghost" size="icon" className='h-6 w-6' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
                                  <div className="flex items-center gap-1 -rotate-90">
                                     <SizeInput value={tableData.rowHeights[rowIndex]} onSave={(newHeight) => updateRowHeight(rowIndex, newHeight)} />
                                 </div>
-                                <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => addRow(rowIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" className='h-6 w-6' onClick={() => addRow(rowIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
                             </div>
                         </th>
                         {tableData.cells
@@ -480,4 +480,3 @@ const TableBuilderPage = () => {
 
 export default TableBuilderPage;
 
-    
