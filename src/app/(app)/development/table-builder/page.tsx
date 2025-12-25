@@ -43,7 +43,7 @@ type TableTemplate = {
 };
 
 const DEFAULT_COL_WIDTH = 120;
-const DEFAULT_ROW_HEIGHT = 40;
+const DEFAULT_ROW_HEIGHT = 30;
 const DEFAULT_FONT_SIZE = 14;
 
 const TablePreview = ({ tableData }: { tableData: TableData }) => {
@@ -208,7 +208,7 @@ const TableBuilderPage = () => {
     };
 
     if (tableTemplateRef) {
-        await setDoc(tableTemplateRef, { name: 'Main Table', tableData: initialData }, { merge: true });
+        setDocumentNonBlocking(tableTemplateRef, { name: 'Main Table', tableData: initialData }, { merge: true });
     }
     
     setTableData(initialData);
@@ -632,7 +632,7 @@ const TableBuilderPage = () => {
                     <tr key={rowIndex} style={{ height: `${tableData.rowHeights[rowIndex]}px` }}>
                         {isEditMode && (
                             <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10">
-                               <div className="w-32 h-full flex flex-row items-center justify-center">
+                               <div className="w-32 h-8 flex flex-row items-center justify-center">
                                     <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
                                     <SizeInput value={tableData.rowHeights[rowIndex]} onSave={(newHeight) => updateRowHeight(rowIndex, newHeight)} />
                                     <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => addRow(rowIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
@@ -676,7 +676,7 @@ const TableBuilderPage = () => {
                                     ) : (
                                         <div 
                                           className="w-full h-full" 
-                                          style={{ textAlign: cell.align, fontWeight: cell.fontWeight, fontSize: 'inherit' }}
+                                          style={{ textAlign: cell.align, fontWeight: cell.fontWeight, fontSize: 'inherit', whiteSpace: 'pre-wrap' }}
                                         >
                                           {cell.content}
                                         </div>
@@ -719,4 +719,5 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
+
 
