@@ -10,7 +10,7 @@ import { PlusCircle, Trash2, GripVertical, Save } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -23,7 +23,23 @@ type TableTemplate = {
     name: string;
     grid: Record<string, RowData>;
     colWidths: number[];
+    rowHeights: number[];
 };
+
+// --- Hook for debouncing state updates ---
+function useDebounce<T>(value: T, delay: number): T {
+    const [debouncedValue, setDebouncedValue] = useState<T>(value);
+    useEffect(() => {
+      const handler = setTimeout(() => {
+        setDebouncedValue(value);
+      }, delay);
+      return () => {
+        clearTimeout(handler);
+      };
+    }, [value, delay]);
+    return debouncedValue;
+}
+
 
 // --- Child Components for Inputs ---
 const ColumnWidthInput = ({ width, onChange }: { width: number; onChange: (newWidth: number) => void }) => {
@@ -138,19 +154,6 @@ const SaveButton = ({ isTemplateLoaded, onSave, onSaveAs, onUpdate }: { isTempla
     );
 };
 
-// --- Hook for debouncing state updates ---
-function useDebounce<T>(value: T, delay: number): T {
-    const [debouncedValue, setDebouncedValue] = useState<T>(value);
-    useEffect(() => {
-      const handler = setTimeout(() => {
-        setDebouncedValue(value);
-      }, delay);
-      return () => {
-        clearTimeout(handler);
-      };
-    }, [value, delay]);
-    return debouncedValue;
-}
 
 // --- Main Page Component ---
 const TableBuilderPage = () => {
