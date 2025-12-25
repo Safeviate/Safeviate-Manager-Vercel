@@ -677,7 +677,7 @@ const TableBuilderPage = () => {
                                         onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value, e.target)}
                                         onBlur={onBlurContent}
                                         className={cn(
-                                            'w-full h-full border-0 bg-transparent p-1 focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0 resize-none overflow-hidden',
+                                            'w-full h-full border-0 bg-transparent p-1 focus-visible:bg-blue-100/20 focus-visible:ring-0 resize-none overflow-hidden',
                                             cell.fontWeight === 'bold' && 'font-bold'
                                         )}
                                         style={{ textAlign: cell.align, fontSize: 'inherit', lineHeight: '1.2' }}
