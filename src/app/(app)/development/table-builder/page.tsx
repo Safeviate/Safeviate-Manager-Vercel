@@ -281,13 +281,6 @@ const ColumnWidthInput = ({ index, width, onWidthChange }: { index: number, widt
             onWidthChange(index, Math.max(50, parseInt(debouncedValue, 10)));
         }
     }, [debouncedValue, index, onWidthChange]);
-    
-    useEffect(() => {
-      if (width.toString() !== inputValue) {
-        setInputValue(width.toString());
-      }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [width]);
 
     return (
          <Input
