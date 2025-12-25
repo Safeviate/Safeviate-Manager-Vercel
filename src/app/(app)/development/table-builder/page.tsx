@@ -106,26 +106,16 @@ export default function TableBuilderPage() {
 
     const newRowSpan = maxR - minR + 1;
     const newColSpan = maxC - minC + 1;
-    const boundingBoxArea = newRowSpan * newColSpan;
-
-    let totalSelectedArea = 0;
-    let validSelection = true;
-
+    
     // Verify that the selection is a perfect rectangle
     for (let r = minR; r <= maxR; r++) {
         for (let c = minC; c <= maxC; c++) {
-            const originalCell = cells.find(cell => r >= cell.r && r < cell.r + cell.rowSpan && c >= cell.c && c < cell.c + cell.colSpan && !cell.hidden);
-            if (!originalCell || !selectedCells[`${originalCell.r}-${originalCell.c}`]) {
-                validSelection = false;
-                break;
+            const cellInBox = newCells.find(cell => r >= cell.r && r < cell.r + cell.rowSpan && c >= cell.c && c < cell.c + cell.colSpan && !cell.hidden);
+            if (!cellInBox || !selectedCells[`${cellInBox.r}-${cellInBox.c}`]) {
+                toast({ variant: 'destructive', title: 'Invalid Selection', description: 'Selected cells do not form a solid rectangle.' });
+                return;
             }
         }
-        if (!validSelection) break;
-    }
-    
-    if (!validSelection) {
-      toast({ variant: 'destructive', title: 'Invalid Selection', description: 'Selected cells do not form a solid rectangle.' });
-      return;
     }
 
     const topLeftCell = newCells.find(cell => cell.r === minR && cell.c === minC);
@@ -321,7 +311,7 @@ export default function TableBuilderPage() {
               </div>
             );
           })}
-          {isEditing && Array.from({ length: cols - 1 }).map((_, index) => (
+          {isEditing && Array.from({ length: cols }).map((_, index) => (
              <div 
                 key={`col-handle-${index}`}
                 className="absolute top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/50"
@@ -329,7 +319,7 @@ export default function TableBuilderPage() {
                 onMouseDown={(e) => handleMouseDown(e, 'col', index)}
             />
           ))}
-          {isEditing && Array.from({ length: rows - 1 }).map((_, index) => (
+          {isEditing && Array.from({ length: rows }).map((_, index) => (
              <div 
                 key={`row-handle-${index}`}
                 className="absolute left-0 right-0 h-1.5 cursor-row-resize hover:bg-primary/50"
@@ -343,3 +333,4 @@ export default function TableBuilderPage() {
   );
 }
 
+    
