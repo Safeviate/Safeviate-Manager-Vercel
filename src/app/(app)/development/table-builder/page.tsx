@@ -46,6 +46,7 @@ type TableTemplate = {
 const DEFAULT_COL_WIDTH = 120;
 const DEFAULT_ROW_HEIGHT = 10;
 const DEFAULT_FONT_SIZE = 14;
+const MIN_COL_WIDTH = 50;
 
 const TablePreview = ({ tableData }: { tableData: TableData }) => {
     if (!tableData) return null;
@@ -97,11 +98,12 @@ const SizeInput = ({ value, onSave }: { value: number, onSave: (newSize: number)
     }, [value]);
 
     const handleBlur = () => {
-        const newSize = parseInt(localValue, 10);
-        if (!isNaN(newSize) && newSize > 0) {
+        let newSize = parseInt(localValue, 10);
+        if (!isNaN(newSize) && newSize >= MIN_COL_WIDTH) {
             onSave(newSize);
         } else {
-            setLocalValue(value.toString());
+            onSave(Math.max(MIN_COL_WIDTH, value));
+            setLocalValue(String(Math.max(MIN_COL_WIDTH, value)));
         }
     };
 
@@ -115,6 +117,7 @@ const SizeInput = ({ value, onSave }: { value: number, onSave: (newSize: number)
     return (
         <Input
             type="number"
+            min={MIN_COL_WIDTH}
             value={localValue}
             onChange={(e) => setLocalValue(e.target.value)}
             onBlur={handleBlur}
@@ -658,7 +661,7 @@ const TableBuilderPage = () => {
                                         isEditMode && "cursor-pointer"
                                     )}
                                     style={{
-                                        width: `${tableData.colWidths[cell.c]}px`,
+                                        minWidth: `${MIN_COL_WIDTH}px`,
                                         height: `${tableData.rowHeights[cell.r]}px`,
                                         textAlign: cell.align,
                                         fontWeight: cell.fontWeight,
@@ -672,7 +675,7 @@ const TableBuilderPage = () => {
                                             value={cell.content}
                                             onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
                                             onBlur={onBlurContent}
-                                            className={cn("h-full w-full border-0 bg-transparent py-0 px-1 focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0", cell.fontWeight === 'bold' && 'font-bold')}
+                                            className={cn("h-full w-full border-0 bg-transparent p-1 focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0", cell.fontWeight === 'bold' && 'font-bold')}
                                             style={{ textAlign: cell.align, fontSize: 'inherit' }}
                                         />
                                     ) : (
@@ -721,6 +724,7 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
+
 
 
 
