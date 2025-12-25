@@ -620,9 +620,9 @@ const TableBuilderPage = () => {
                                 className="p-0 border border-border bg-muted/50 relative"
                             >
                                 <div className="h-7 flex items-center justify-center p-0">
-                                    <Button variant="ghost" size="icon" className='h-7 w-7 p-0' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
                                     <SizeInput value={tableData.colWidths[colIndex]} onSave={(newWidth) => updateColWidth(colIndex, newWidth)} />
-                                    <Button variant="ghost" size="icon" className='h-7 w-7 p-0' onClick={() => addColumn(colIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addColumn(colIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
                                 </div>
                             </th>
                         ))}
@@ -635,9 +635,9 @@ const TableBuilderPage = () => {
                         {isEditMode && (
                             <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10">
                                <div className="w-32 h-7 flex flex-row items-center justify-center">
-                                    <Button variant="ghost" size="icon" className='h-7 w-7 p-0' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
                                     <SizeInput value={tableData.rowHeights[rowIndex]} onSave={(newHeight) => updateRowHeight(rowIndex, newHeight)} />
-                                    <Button variant="ghost" size="icon" className='h-7 w-7 p-0' onClick={() => addRow(rowIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addRow(rowIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
                                 </div>
                             </th>
                         )}
@@ -672,7 +672,7 @@ const TableBuilderPage = () => {
                                             value={cell.content}
                                             onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
                                             onBlur={onBlurContent}
-                                            className={cn("h-full w-full border-0 bg-transparent focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0 resize-none overflow-hidden", cell.fontWeight === 'bold' && 'font-bold')}
+                                            className={cn("h-full w-full border-0 bg-transparent py-0 focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0 resize-none overflow-hidden", cell.fontWeight === 'bold' && 'font-bold')}
                                             style={{ textAlign: cell.align, fontSize: 'inherit' }}
                                         />
                                     ) : (
@@ -721,5 +721,6 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
+
 
 
