@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -277,6 +278,42 @@ const TableBuilderPage = () => {
         }));
     };
 
+    const deleteRow = (rowIndex: number) => {
+        setTableData(prev => {
+            const newCells = prev.cells
+                .filter(cell => cell.r !== rowIndex) // Remove cells in the deleted row
+                .map(cell => cell.r > rowIndex ? { ...cell, r: cell.r - 1 } : cell); // Shift subsequent rows up
+            
+            const newRowHeights = [...prev.rowHeights];
+            newRowHeights.splice(rowIndex, 1);
+
+            return {
+                ...prev,
+                rows: prev.rows - 1,
+                cells: newCells,
+                rowHeights: newRowHeights,
+            };
+        });
+    };
+
+    const deleteColumn = (colIndex: number) => {
+        setTableData(prev => {
+            const newCells = prev.cells
+                .filter(cell => cell.c !== colIndex) // Remove cells in the deleted column
+                .map(cell => cell.c > colIndex ? { ...cell, c: cell.c - 1 } : cell); // Shift subsequent columns left
+
+            const newColWidths = [...prev.colWidths];
+            newColWidths.splice(colIndex, 1);
+
+            return {
+                ...prev,
+                cols: prev.cols - 1,
+                cells: newCells,
+                colWidths: newColWidths,
+            };
+        });
+    };
+
     // --- Merge & Align Logic ---
     const handleMerge = () => {
         if (!selectionBounds) return;
@@ -385,6 +422,8 @@ const TableBuilderPage = () => {
                     <div className="flex gap-2 flex-wrap">
                         <Button onClick={addRow}><PlusCircle className="mr-2" /> Add Row</Button>
                         <Button onClick={addColumn}><PlusCircle className="mr-2" /> Add Column</Button>
+                        <Button variant="outline" onClick={() => selectionBounds && deleteRow(selectionBounds.minR)}>Delete Row</Button>
+                        <Button variant="outline" onClick={() => selectionBounds && deleteColumn(selectionBounds.minC)}>Delete Column</Button>
                         <Button variant="outline" onClick={handleMerge}><Merge className="mr-2" /> Merge</Button>
                         <Button variant="outline" onClick={handleUnmerge}><Unplug className="mr-2" /> Unmerge</Button>
                         <Button variant="outline" onClick={() => handleAlignment('left')}><AlignLeft className="mr-2" /> Left</Button>
@@ -402,34 +441,40 @@ const TableBuilderPage = () => {
             <div className="w-full overflow-auto rounded-lg border shadow-sm" onMouseUp={handleMouseUp} onMouseLeave={() => setIsSelecting(false)}>
                 <table ref={tableRef} className="border-collapse bg-white" style={{ tableLayout: 'fixed' }}>
                     <colgroup>
-                        <col style={{ width: '40px' }} />
+                        <col style={{ width: '50px' }} />
                         {tableData.colWidths.map((width, index) => (
                             <col key={index} style={{ width: `${width}px` }} />
                         ))}
                     </colgroup>
                     <thead>
                         <tr>
-                            <th className="sticky left-0 z-20 w-[40px] bg-gray-100 border border-gray-300"></th>
+                            <th className="sticky left-0 z-20 w-[50px] bg-gray-100 border border-gray-300"></th>
                             {Array.from({ length: tableData.cols }).map((_, colIndex) => (
-                                <th key={colIndex} className="p-1 border border-gray-300 bg-gray-50 text-center text-xs relative" style={{width: `${tableData.colWidths[colIndex]}px`}}>
+                                <th key={colIndex} className="p-1 border border-gray-300 bg-gray-50 text-center text-xs relative group" style={{width: `${tableData.colWidths[colIndex]}px`}}>
                                     {String.fromCharCode(65 + colIndex)}
                                     <div
                                         onMouseDown={(e) => handleColResizeStart(e, colIndex)}
-                                        className="absolute top-0 right-0 h-full w-1 cursor-col-resize bg-blue-500/20 hover:bg-blue-500"
+                                        className="absolute top-0 right-0 h-full w-1 cursor-col-resize bg-blue-500/0 hover:bg-blue-500"
                                     />
+                                    <Button variant="ghost" size="icon" className="absolute top-1/2 -translate-y-1/2 -right-3 h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => deleteColumn(colIndex)}>
+                                        <Trash2 className="h-3 w-3 text-destructive" />
+                                    </Button>
                                 </th>
                             ))}
                         </tr>
                     </thead>
                     <tbody>
                         {Array.from({ length: tableData.rows }).map((_, r) => (
-                            <tr key={r} style={{height: `${tableData.rowHeights[r]}px`}}>
-                                <td className="sticky left-0 z-10 text-center text-xs text-gray-500 bg-gray-100 border border-gray-300 w-[40px] relative">
+                            <tr key={r} style={{height: `${tableData.rowHeights[r]}px`}} className="group">
+                                <td className="sticky left-0 z-10 text-center text-xs text-gray-500 bg-gray-100 border border-gray-300 w-[50px] relative">
                                     {r + 1}
                                      <div
                                         onMouseDown={(e) => handleRowResizeStart(e, r)}
-                                        className="absolute bottom-0 left-0 w-full h-1 cursor-row-resize bg-blue-500/20 hover:bg-blue-500"
+                                        className="absolute bottom-0 left-0 w-full h-1 cursor-row-resize bg-blue-500/0 hover:bg-blue-500"
                                     />
+                                     <Button variant="ghost" size="icon" className="absolute left-1/2 -translate-x-1/2 -bottom-3 h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => deleteRow(r)}>
+                                        <Trash2 className="h-3 w-3 text-destructive" />
+                                    </Button>
                                 </td>
                                 {Array.from({ length: tableData.cols }).map((_, c) => {
                                     const cell = getCell(r, c);
@@ -497,3 +542,5 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
+
+    
