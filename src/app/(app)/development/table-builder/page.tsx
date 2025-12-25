@@ -43,9 +43,34 @@ type TableTemplate = {
 };
 
 const DEFAULT_COL_WIDTH = 120;
-const DEFAULT_ROW_HEIGHT = 10;
+const DEFAULT_ROW_HEIGHT = 40; // Increased default for better initial spacing
 const DEFAULT_FONT_SIZE = 14;
 const MIN_COL_WIDTH = 50;
+
+// A controlled, auto-resizing textarea component
+const AutoResizingTextarea = ({ value, onChange, onBlur, ...props }: { value: string, onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void, onBlur: () => void } & React.ComponentProps<'textarea'>) => {
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = '0px';
+            const scrollHeight = textareaRef.current.scrollHeight;
+            textareaRef.current.style.height = scrollHeight + 'px';
+        }
+    }, [value]);
+
+    return (
+        <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={onChange}
+            onBlur={onBlur}
+            rows={1}
+            {...props}
+        />
+    );
+};
+
 
 const TablePreview = ({ tableData }: { tableData: TableData }) => {
     if (!tableData) return null;
@@ -632,9 +657,9 @@ const TableBuilderPage = () => {
             )}
             <tbody>
                 {Array.from({ length: tableData.rows }).map((_, rowIndex) => (
-                    <tr key={rowIndex} style={{ height: `${tableData.rowHeights[rowIndex]}px` }}>
+                    <tr key={rowIndex} style={{ minHeight: `${tableData.rowHeights[rowIndex]}px` }}>
                         {isEditMode && (
-                            <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10">
+                            <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10 align-middle">
                                <div className="w-32 h-7 flex flex-row items-center justify-center">
                                     <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
                                     <SizeInput value={tableData.rowHeights[rowIndex]} onSave={(newHeight) => updateRowHeight(rowIndex, newHeight)} />
@@ -655,24 +680,31 @@ const TableBuilderPage = () => {
                                     colSpan={cell.colSpan}
                                     onClick={() => toggleSelect(cell.r, cell.c)}
                                     className={cn(
-                                        "p-1 border border-border relative align-middle",
+                                        "p-0 border border-border relative align-middle",
                                         isEditMode && "cursor-pointer hover:bg-muted/50"
                                     )}
                                     style={{
                                         minWidth: `${MIN_COL_WIDTH}px`,
-                                        height: `${tableData.rowHeights[cell.r]}px`,
                                         textAlign: cell.align,
                                         fontWeight: cell.fontWeight,
                                         fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`,
-                                        wordBreak: 'break-word',
-                                        whiteSpace: 'pre-wrap',
                                     }}
-                                    contentEditable={isEditMode}
-                                    suppressContentEditableWarning={true}
-                                    onInput={(e) => updateCellContent(cell.r, cell.c, e.currentTarget.textContent || '')}
-                                    onBlur={onBlurContent}
                                 >
-                                    {cell.content}
+                                    {isEditMode ? (
+                                        <AutoResizingTextarea
+                                            value={cell.content}
+                                            onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
+                                            onBlur={onBlurContent}
+                                            className="w-full h-full p-1 bg-transparent border-none resize-none overflow-hidden focus:outline-none focus:ring-0"
+                                            style={{
+                                                textAlign: cell.align,
+                                                fontWeight: cell.fontWeight,
+                                                fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`,
+                                            }}
+                                        />
+                                    ) : (
+                                        <div className='p-1 whitespace-pre-wrap'>{cell.content}</div>
+                                    )}
                                     {isSelected && <div className="absolute inset-0 bg-primary/20 pointer-events-none" />}
                                 </td>
                             )})}
@@ -712,3 +744,5 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
+
+    
