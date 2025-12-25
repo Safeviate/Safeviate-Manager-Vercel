@@ -210,7 +210,7 @@ const TableSelector = ({ onSelect }: { onSelect: (dims: { rows: number; cols: nu
                                     isHighlighted ? 'bg-primary' : 'bg-background hover:bg-accent'
                                 )}
                                 onMouseEnter={() => setHovered({ rows: row, cols: col })}
-                                onClick={() => onSelect(hovered)}
+                                onClick={() => onSelect({ rows: row, cols: col })}
                             />
                         );
                     })}
@@ -233,6 +233,7 @@ export default function TableBuilderPage() {
     const rowHeight = 48; // px
 
     const createGrid = (rows: number, cols: number) => {
+        if (rows === 0 || cols === 0) return;
         const newGrid: CellData[][] = Array.from({ length: rows }, (_, rowIndex) => 
             Array.from({ length: cols }, (_, colIndex) => ({
                 id: `${rowIndex}-${colIndex}`,
@@ -590,10 +591,13 @@ export default function TableBuilderPage() {
         }
     };
     
-    const handleColWidthChange = (index: number, newWidth: number) => {
+    const handleColWidthChange = (index: number, newWidth: string) => {
+        const parsedWidth = parseInt(newWidth, 10);
+        if (isNaN(parsedWidth)) return;
+
         setColWidths(prev => {
             const newColWidths = [...prev];
-            newColWidths[index] = Math.max(50, newWidth); // min width 50px
+            newColWidths[index] = Math.max(50, parsedWidth); // min width 50px
             return newColWidths;
         });
     };
@@ -726,7 +730,7 @@ export default function TableBuilderPage() {
                                         <Input
                                             type="number"
                                             value={width}
-                                            onChange={(e) => handleColWidthChange(index, parseInt(e.target.value, 10) || 0)}
+                                            onChange={(e) => handleColWidthChange(index, e.target.value)}
                                             className="w-full h-8 text-center"
                                             min={50}
                                         />
