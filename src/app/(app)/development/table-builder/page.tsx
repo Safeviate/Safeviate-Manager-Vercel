@@ -681,8 +681,11 @@ const TableBuilderPage = () => {
                 <>
                     <div className="row-start-1 col-start-1 sticky top-0 left-0 z-20 bg-muted/50 border border-border"></div>
                     <div
-                    className="row-start-1 col-start-2 col-span-full grid sticky top-0 z-10"
-                    style={{ gridTemplateColumns: 'subgrid' }}
+                        className="row-start-1 col-start-2 grid sticky top-0 z-10"
+                        style={{ 
+                            gridTemplateColumns: 'subgrid',
+                            gridColumn: `span ${tableData.cols}`,
+                        }}
                     >
                     {Array.from({ length: tableData.cols }).map((_, colIndex) => (
                         <div
@@ -785,3 +788,4 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
+
