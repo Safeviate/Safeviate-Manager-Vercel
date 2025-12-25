@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -674,7 +673,10 @@ const TableBuilderPage = () => {
                                         value={cell.content}
                                         onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
                                         onBlur={onBlurContent}
-                                        className={cn("h-full w-full border-0 bg-transparent p-1 focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0", cell.fontWeight === 'bold' && 'font-bold')}
+                                        className={cn(
+                                            'h-full w-full border-0 bg-transparent p-1 focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0',
+                                            cell.fontWeight === 'bold' && 'font-bold'
+                                        )}
                                         style={{ textAlign: cell.align, fontSize: 'inherit' }}
                                         disabled={!isEditMode}
                                     />
@@ -717,9 +719,4 @@ const TableBuilderPage = () => {
 
 export default TableBuilderPage;
 
-
-
-
-
-
-
+    
