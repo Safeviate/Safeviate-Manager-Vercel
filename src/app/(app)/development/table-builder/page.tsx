@@ -317,20 +317,25 @@ const TableBuilderPage = () => {
       setTableData(prev => {
           if (!prev) return null;
           const newRows = prev.rows + 1;
-          const newCells = [...prev.cells];
-           // Shift existing cells
-          for (const cell of newCells) {
-            if (cell.r >= index) {
-                cell.r += 1;
-            }
+          const newCells: Cell[] = [];
+          
+          for (let r = 0; r < newRows; r++) {
+              for (let c = 0; c < prev.cols; c++) {
+                  if (r < index) {
+                      const oldCell = prev.cells.find(cell => cell.r === r && cell.c === c);
+                      if (oldCell) newCells.push(oldCell);
+                  } else if (r === index) {
+                      newCells.push({ r, c, content: '', rowSpan: 1, colSpan: 1, align: 'left', fontWeight: 'normal', fontSize: DEFAULT_FONT_SIZE, hidden: false });
+                  } else { // r > index
+                      const oldCell = prev.cells.find(cell => cell.r === r - 1 && cell.c === c);
+                      if (oldCell) newCells.push({ ...oldCell, r });
+                  }
+              }
           }
-          // Add new cells for the new row
-          for(let c = 0; c < prev.cols; c++) {
-              newCells.push({ r: index, c, content: '', rowSpan: 1, colSpan: 1, align: 'left', fontWeight: 'normal', fontSize: DEFAULT_FONT_SIZE, hidden: false });
-          }
+
           const newRowHeights = [...prev.rowHeights];
           newRowHeights.splice(index, 0, DEFAULT_ROW_HEIGHT);
-          const newTableData = { ...prev, rows: newRows, cells: newCells.sort((a,b) => a.r - b.r || a.c - b.c), rowHeights: newRowHeights };
+          const newTableData = { ...prev, rows: newRows, cells: newCells, rowHeights: newRowHeights };
           updateRemoteTable(newTableData);
           return newTableData;
       });
@@ -501,7 +506,7 @@ const TableBuilderPage = () => {
   };
   
   const updateFontSize = (newSize: number) => {
-    if (!tableData || newSize <= 0) return;
+    if (!tableData) return;
     const newCells = tableData.cells.map(cell => {
       const isSelected = selectedCells.some(s => s.r === cell.r && s.c === cell.c);
       return isSelected ? { ...cell, fontSize: newSize } : cell;
@@ -686,7 +691,7 @@ const TableBuilderPage = () => {
                 className="grid"
                 style={{
                     gridTemplateColumns: isEditMode ? `48px ${tableData.colWidths.map(w => `${w}px`).join(' ')}` : tableData.colWidths.map(w => `${w}px`).join(' '),
-                    gridTemplateRows: isEditMode ? `28px auto` : `auto`,
+                    gridTemplateRows: isEditMode ? `28px repeat(${tableData.rows}, auto)` : `repeat(${tableData.rows}, auto)`,
                 }}
             >
                 {isEditMode && (
@@ -713,14 +718,14 @@ const TableBuilderPage = () => {
                 </>
                 )}
                 
-                <div className='contents' style={{gridRow: isEditMode ? 2 : 1, gridColumn: '1 / -1'}}>
+                <div className='contents' style={{gridRow: isEditMode ? '2 / -1' : '1 / -1', gridColumn: '1 / -1'}}>
                     <div className='contents' style={{gridTemplateColumns: isEditMode ? `48px ${tableData.colWidths.map(w => `${w}px`).join(' ')}` : tableData.colWidths.map(w => `${w}px`).join(' '), gridTemplateRows: `repeat(${tableData.rows}, auto)`}}>
                         {isEditMode &&
                         Array.from({ length: tableData.rows }).map((_, rowIndex) => (
                             <div
                                 key={rowIndex}
                                 className="p-0 border-t border-border bg-muted/50 sticky left-0 z-10 flex flex-row items-center justify-center"
-                                style={{ gridRow: rowIndex + 1, gridColumn: 1 }}
+                                style={{ gridRow: rowIndex + 1, gridColumn: 1, height: `${tableData.rowHeights[rowIndex]}px` }}
                             >
                                 <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
                                 <SizeInput value={tableData.rowHeights[rowIndex]} onSave={(newHeight) => updateRowHeight(rowIndex, newHeight)} minValue={MIN_ROW_HEIGHT} />
@@ -804,3 +809,5 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
+
+    
