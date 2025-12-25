@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Save, Trash2, AlignLeft, AlignCenter, AlignRight, ChevronsUpDown } from 'lucide-react';
+import { PlusCircle, Save, Trash2, AlignLeft, AlignCenter, AlignRight, ChevronsUpDown, Bold } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, updateDocumentNonBlocking, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, doc, setDoc } from 'firebase/firestore';
@@ -22,6 +22,7 @@ type Cell = {
   rowSpan: number;
   colSpan: number;
   align: 'left' | 'center' | 'right';
+  fontWeight: 'normal' | 'bold';
   hidden: boolean;
 };
 
@@ -40,7 +41,7 @@ type TableTemplate = {
 };
 
 const DEFAULT_COL_WIDTH = 120;
-const DEFAULT_ROW_HEIGHT = 30;
+const DEFAULT_ROW_HEIGHT = 40;
 
 const TablePreview = ({ tableData }: { tableData: TableData }) => {
     if (!tableData) return null;
@@ -64,6 +65,7 @@ const TablePreview = ({ tableData }: { tableData: TableData }) => {
                         className="p-1 border border-border align-top text-xs"
                         style={{
                           textAlign: cell.align,
+                          fontWeight: cell.fontWeight,
                           width: `${100 / tableData.cols}%`, // Use percentages for preview
                         }}
                       >
@@ -189,7 +191,7 @@ const TableBuilderPage = () => {
     const newCells: Cell[] = [];
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        newCells.push({ r, c, content: '', rowSpan: 1, colSpan: 1, align: 'left', hidden: false });
+        newCells.push({ r, c, content: '', rowSpan: 1, colSpan: 1, align: 'left', fontWeight: 'normal', hidden: false });
       }
     }
     const initialData: TableData = {
@@ -233,7 +235,13 @@ const TableBuilderPage = () => {
       );
     const newTableData = { ...tableData, cells: newCells };
     setTableData(newTableData);
-    updateRemoteTable(newTableData);
+    // Debounced update in parent component or a save button would be better here for performance
+  };
+
+  const onBlurContent = () => {
+    if (tableData) {
+      updateRemoteTable(tableData);
+    }
   };
   
   const addColumn = (index: number) => {
@@ -250,7 +258,7 @@ const TableBuilderPage = () => {
         }
         // Add new cells for the new column
         for(let r = 0; r < prev.rows; r++) {
-            newCells.push({ r, c: index, content: '', rowSpan: 1, colSpan: 1, align: 'left', hidden: false });
+            newCells.push({ r, c: index, content: '', rowSpan: 1, colSpan: 1, align: 'left', fontWeight: 'normal', hidden: false });
         }
         const newColWidths = [...prev.colWidths];
         newColWidths.splice(index, 0, DEFAULT_COL_WIDTH);
@@ -274,7 +282,7 @@ const TableBuilderPage = () => {
           }
           // Add new cells for the new row
           for(let c = 0; c < prev.cols; c++) {
-              newCells.push({ r: index, c, content: '', rowSpan: 1, colSpan: 1, align: 'left', hidden: false });
+              newCells.push({ r: index, c, content: '', rowSpan: 1, colSpan: 1, align: 'left', fontWeight: 'normal', hidden: false });
           }
           const newRowHeights = [...prev.rowHeights];
           newRowHeights.splice(index, 0, DEFAULT_ROW_HEIGHT);
@@ -411,6 +419,17 @@ const TableBuilderPage = () => {
     setTableData(newTableData);
     updateRemoteTable(newTableData);
   };
+  
+  const toggleBold = () => {
+    if (!tableData) return;
+    const newCells = tableData.cells.map(cell => {
+      const isSelected = selectedCells.some(s => s.r === cell.r && s.c === cell.c);
+      return isSelected ? { ...cell, fontWeight: cell.fontWeight === 'bold' ? 'normal' : 'bold' } : cell;
+    });
+    const newTableData = { ...tableData, cells: newCells };
+    setTableData(newTableData);
+    updateRemoteTable(newTableData);
+  };
 
   const handleSaveTemplate = (name: string) => {
     if (!firestore || !name.trim() || !tableData) return;
@@ -519,6 +538,12 @@ const TableBuilderPage = () => {
                           </TooltipTrigger>
                           <TooltipContent><p>Align Right</p></TooltipContent>
                         </Tooltip>
+                         <Tooltip>
+                          <TooltipTrigger asChild>
+                           <Button variant="outline" size="icon" className="h-9 w-9" onClick={toggleBold} disabled={selectedCells.length === 0}><Bold /></Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Toggle Bold</p></TooltipContent>
+                        </Tooltip>
                       </TooltipProvider>
                     )}
                 </div>
@@ -557,10 +582,10 @@ const TableBuilderPage = () => {
                                 style={{ width: `${tableData.colWidths[colIndex]}px` }}
                                 className="p-0 border border-border bg-muted/50 relative"
                             >
-                                <div className="h-10 flex items-center justify-center">
-                                    <Button variant="ghost" size="icon" className='h-8 w-8 px-0' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
+                                <div className="h-10 flex items-center justify-center px-1">
+                                    <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
                                     <SizeInput value={tableData.colWidths[colIndex]} onSave={(newWidth) => updateColWidth(colIndex, newWidth)} />
-                                    <Button variant="ghost" size="icon" className='h-8 w-8 px-0' onClick={() => addColumn(colIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => addColumn(colIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
                                 </div>
                             </th>
                         ))}
@@ -599,6 +624,7 @@ const TableBuilderPage = () => {
                                         width: `${tableData.colWidths[cell.c]}px`,
                                         height: `${tableData.rowHeights[cell.r]}px`,
                                         textAlign: cell.align,
+                                        fontWeight: cell.fontWeight
                                     }}
                                 >
                                     {isSelected && <div className="absolute inset-0 bg-primary/20 pointer-events-none" />}
@@ -606,14 +632,14 @@ const TableBuilderPage = () => {
                                         <Input
                                             value={cell.content}
                                             onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
-                                            onBlur={() => updateRemoteTable(tableData)}
-                                            className="h-full w-full border-0 bg-transparent focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0"
+                                            onBlur={onBlurContent}
+                                            className={cn("h-full w-full border-0 bg-transparent focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0", cell.fontWeight === 'bold' && 'font-bold')}
                                             style={{ textAlign: cell.align }}
                                         />
                                     ) : (
                                         <div 
                                           className="w-full h-full" 
-                                          style={{ textAlign: cell.align }}
+                                          style={{ textAlign: cell.align, fontWeight: cell.fontWeight }}
                                         >
                                           {cell.content}
                                         </div>
@@ -656,3 +682,5 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
+
+    
