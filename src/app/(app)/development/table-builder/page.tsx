@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Textarea } from '@/components/ui/textarea';
 
 type Cell = {
   r: number;
@@ -70,6 +71,7 @@ const TablePreview = ({ tableData }: { tableData: TableData }) => {
                           fontWeight: cell.fontWeight,
                           fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`,
                           width: `${100 / tableData.cols}%`,
+                          wordBreak: 'break-word',
                         }}
                       >
                         {cell.content}
@@ -659,15 +661,16 @@ const TableBuilderPage = () => {
                                         textAlign: cell.align,
                                         fontWeight: cell.fontWeight,
                                         fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`,
+                                        wordBreak: 'break-word',
                                     }}
                                 >
                                     {isSelected && <div className="absolute inset-0 bg-primary/20 pointer-events-none" />}
                                     {isEditMode ? (
-                                        <Input
+                                        <Textarea
                                             value={cell.content}
                                             onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
                                             onBlur={onBlurContent}
-                                            className={cn("h-full w-full border-0 bg-transparent focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0", cell.fontWeight === 'bold' && 'font-bold')}
+                                            className={cn("h-full w-full border-0 bg-transparent focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0 resize-none", cell.fontWeight === 'bold' && 'font-bold')}
                                             style={{ textAlign: cell.align, fontSize: 'inherit' }}
                                         />
                                     ) : (
@@ -717,4 +720,3 @@ const TableBuilderPage = () => {
 
 export default TableBuilderPage;
 
-    
