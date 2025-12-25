@@ -654,7 +654,7 @@ const TableBuilderPage = () => {
                                     colSpan={cell.colSpan}
                                     onClick={() => toggleSelect(cell.r, cell.c)}
                                     className={cn(
-                                        "p-1 border border-border relative align-middle",
+                                        "p-0 border border-border relative align-middle",
                                         isEditMode && "cursor-pointer"
                                     )}
                                     style={{
@@ -668,16 +668,16 @@ const TableBuilderPage = () => {
                                 >
                                     {isSelected && <div className="absolute inset-0 bg-primary/20 pointer-events-none" />}
                                     {isEditMode ? (
-                                        <Textarea
+                                        <Input
                                             value={cell.content}
                                             onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
                                             onBlur={onBlurContent}
-                                            className={cn("h-full w-full border-0 bg-transparent py-0 focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0 resize-none overflow-hidden", cell.fontWeight === 'bold' && 'font-bold')}
+                                            className={cn("h-full w-full border-0 bg-transparent py-0 px-1 focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0", cell.fontWeight === 'bold' && 'font-bold')}
                                             style={{ textAlign: cell.align, fontSize: 'inherit' }}
                                         />
                                     ) : (
                                         <div 
-                                          className="w-full h-full" 
+                                          className="w-full h-full p-1" 
                                           style={{ textAlign: cell.align, fontWeight: cell.fontWeight, fontSize: 'inherit', whiteSpace: 'pre-wrap' }}
                                         >
                                           {cell.content}
@@ -721,6 +721,7 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
+
 
 
 
