@@ -654,7 +654,7 @@ const TableBuilderPage = () => {
                                     colSpan={cell.colSpan}
                                     onClick={() => toggleSelect(cell.r, cell.c)}
                                     className={cn(
-                                        "p-1 border border-border relative align-top",
+                                        "p-1 border border-border relative align-middle",
                                         isEditMode && "cursor-pointer"
                                     )}
                                     style={{
@@ -721,6 +721,7 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
+
 
 
 
