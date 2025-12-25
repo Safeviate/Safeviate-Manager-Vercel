@@ -72,6 +72,7 @@ const TablePreview = ({ tableData }: { tableData: TableData }) => {
                           fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`,
                           width: `${100 / tableData.cols}%`,
                           wordBreak: 'break-word',
+                          whiteSpace: 'pre-wrap',
                         }}
                       >
                         {cell.content}
@@ -617,7 +618,7 @@ const TableBuilderPage = () => {
                                 style={{ width: `${tableData.colWidths[colIndex]}px` }}
                                 className="p-0 border border-border bg-muted/50 relative"
                             >
-                                <div className="h-10 flex items-center justify-center px-1">
+                                <div className="h-10 flex items-center justify-center px-0">
                                     <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
                                     <SizeInput value={tableData.colWidths[colIndex]} onSave={(newWidth) => updateColWidth(colIndex, newWidth)} />
                                     <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => addColumn(colIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
@@ -670,7 +671,7 @@ const TableBuilderPage = () => {
                                             value={cell.content}
                                             onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
                                             onBlur={onBlurContent}
-                                            className={cn("h-full w-full border-0 bg-transparent focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0 resize-none", cell.fontWeight === 'bold' && 'font-bold')}
+                                            className={cn("h-full w-full border-0 bg-transparent focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0 resize-none overflow-hidden", cell.fontWeight === 'bold' && 'font-bold')}
                                             style={{ textAlign: cell.align, fontSize: 'inherit' }}
                                         />
                                     ) : (
@@ -719,5 +720,6 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
+
 
 
