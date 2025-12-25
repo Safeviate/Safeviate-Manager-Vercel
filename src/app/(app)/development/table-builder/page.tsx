@@ -102,17 +102,19 @@ export default function TableBuilderPage() {
   };
 
   const handleMerge = () => {
-    const selectionKeys = Object.keys(selectedCells);
+    const selectionKeys = Object.keys(selectedCells).filter(key => selectedCells[key]);
     if (selectionKeys.length < 2) {
-      toast({ variant: 'destructive', title: 'Invalid Selection', description: 'Please select at least two cells to merge.' });
-      return;
+        toast({ variant: "destructive", title: "Invalid Selection", description: "Select at least two cells to merge." });
+        return;
     }
-    
-    let minR = Infinity, minC = Infinity, maxR = -1, maxC = -1;
+
+    let minR = Infinity, maxR = -1, minC = Infinity, maxC = -1;
+
+    // 1. Find the bounding box of the selection considering spans
     selectionKeys.forEach(key => {
         const [r, c] = key.split('-').map(Number);
         const cell = getCell(r, c);
-        if (cell) {
+        if (cell && !cell.hidden) {
             minR = Math.min(minR, r);
             minC = Math.min(minC, c);
             maxR = Math.max(maxR, r + cell.rowSpan - 1);
@@ -120,48 +122,70 @@ export default function TableBuilderPage() {
         }
     });
 
-    let totalSelectedArea = 0;
-    selectionKeys.forEach(key => {
-        const [r, c] = key.split('-').map(Number);
-        const cell = getCell(r,c);
-        if(cell) {
-            totalSelectedArea += cell.rowSpan * cell.colSpan;
+    // 2. Verify if the selection forms a perfect rectangle
+    let totalCoveredCells = 0;
+    for (let r = minR; r <= maxR; r++) {
+        for (let c = minC; c <= maxC; c++) {
+            const cell = getCell(r, c);
+            if (!cell || cell.hidden) {
+                // This case should ideally not happen if logic is sound, but it's a safeguard
+                continue;
+            }
+            // Check if the cell at (r, c) is part of the original selection
+            let isCellInSelection = false;
+            for(const key of selectionKeys) {
+                const [sr, sc] = key.split('-').map(Number);
+                const selectedCell = getCell(sr, sc);
+                if(selectedCell && r >= sr && r < sr + selectedCell.rowSpan && c >= sc && c < sc + selectedCell.colSpan) {
+                    isCellInSelection = true;
+                    break;
+                }
+            }
+            
+            if(!isCellInSelection) {
+                 toast({ variant: "destructive", title: "Invalid Merge", description: "Selection must be a solid rectangle. Please ensure there are no unselected cells within your selection area." });
+                return;
+            }
+            totalCoveredCells++;
         }
-    });
+    }
 
     const boundingBoxArea = (maxR - minR + 1) * (maxC - minC + 1);
-    if(totalSelectedArea !== boundingBoxArea) {
-      toast({ variant: 'destructive', title: 'Invalid Merge', description: 'Selection is not a solid rectangle. Please select a solid block of cells to merge.' });
+    if(totalCoveredCells !== boundingBoxArea) {
+      toast({ variant: "destructive", title: "Invalid Merge", description: "The selected cells do not form a solid rectangle." });
       return;
     }
 
 
-    const newCells = JSON.parse(JSON.stringify(cells)) as Cell[];
+    // 3. Perform the merge
+    const newCells = cells.map(cell => ({ ...cell }));
     const newRowSpan = maxR - minR + 1;
     const newColSpan = maxC - minC + 1;
-
-    const topLeftCell = newCells.find(cell => cell.r === minR && cell.c === minC);
-    if (!topLeftCell) {
-        toast({ variant: 'destructive', title: 'Merge Error', description: 'Could not find a top-left cell for the merge.' });
-        return;
-    }
     
-    // Perform the merge
-    newCells.forEach(cell => {
-      if (cell.r >= minR && cell.r <= maxR && cell.c >= minC && cell.c <= maxC) {
-        if (cell.r === minR && cell.c === minC) {
-          cell.rowSpan = newRowSpan;
-          cell.colSpan = newColSpan;
-          cell.hidden = false;
-        } else {
-          cell.hidden = true;
+    // Find the real top-left cell to merge into
+    const topLeftCell = newCells.find(c => c.r === minR && c.c === minC);
+    if (!topLeftCell) return;
+
+    topLeftCell.rowSpan = newRowSpan;
+    topLeftCell.colSpan = newColSpan;
+    topLeftCell.hidden = false;
+
+    // Hide all other cells within the bounding box
+    for (let r = minR; r <= maxR; r++) {
+        for (let c = minC; c <= maxC; c++) {
+            if (r === minR && c === minC) continue;
+            const cellToHide = newCells.find(cell => cell.r === r && cell.c === c);
+            if (cellToHide) {
+                cellToHide.hidden = true;
+                cellToHide.rowSpan = 1; // Reset spans
+                cellToHide.colSpan = 1;
+            }
         }
-      }
-    });
-  
-    setTableData({ ...tableData, cells: newCells });
+    }
+
+    setTableData(prev => ({ ...prev, cells: newCells }));
     setSelectedCells({});
-    toast({ title: 'Cells Merged', description: 'The selected cells have been merged successfully.' });
+    toast({ title: 'Cells Merged' });
   };
   
   const handleUnmerge = () => {
@@ -358,7 +382,7 @@ export default function TableBuilderPage() {
             );
           })}
           {isEditing && Array.from({ length: cols }).map((_, index) => {
-            const isAligned = Math.abs(colWidths[index] - colWidths[index - 1]) < 1;
+            const isAligned = Math.abs(colWidths[index] - (colWidths[index - 1] || 0)) < 1;
             return (
                 <div 
                     key={`col-handle-${index}`}
@@ -366,13 +390,13 @@ export default function TableBuilderPage() {
                         "absolute top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/50",
                          isAligned && "bg-blue-500"
                     )}
-                    style={{ left: `${colWidths.slice(0, index + 1).reduce((a, b) => a + b, 0) + index * 1 - 2}px`}}
+                    style={{ left: `${colWidths.slice(0, index + 1).reduce((a, b) => a + b, 0) - 3}px`}}
                     onMouseDown={(e) => handleMouseDown(e, 'col', index)}
                 />
             )
           })}
           {isEditing && Array.from({ length: rows }).map((_, index) => {
-            const isAligned = Math.abs(rowHeights[index] - rowHeights[index - 1]) < 1;
+            const isAligned = Math.abs(rowHeights[index] - (rowHeights[index - 1] || 0)) < 1;
             return (
                 <div 
                     key={`row-handle-${index}`}
@@ -380,7 +404,7 @@ export default function TableBuilderPage() {
                         "absolute left-0 right-0 h-1.5 cursor-row-resize hover:bg-primary/50",
                          isAligned && "bg-blue-500"
                     )}
-                    style={{ top: `${rowHeights.slice(0, index + 1).reduce((a, b) => a + b, 0) + index * 1 - 2}px`}}
+                    style={{ top: `${rowHeights.slice(0, index + 1).reduce((a, b) => a + b, 0) - 3}px`}}
                     onMouseDown={(e) => handleMouseDown(e, 'row', index)}
                 />
             )
