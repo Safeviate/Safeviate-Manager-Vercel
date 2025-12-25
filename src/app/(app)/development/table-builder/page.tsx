@@ -1,15 +1,15 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { PlusCircle, Trash2, Save, AlignLeft, AlignCenter, AlignRight, Merge, Unplug } from 'lucide-react';
@@ -29,6 +29,8 @@ type TableData = {
     rows: number;
     cols: number;
     cells: Cell[];
+    colWidths: number[];
+    rowHeights: number[];
 };
 
 type TableTemplate = {
@@ -36,6 +38,10 @@ type TableTemplate = {
     name: string;
     tableData: TableData;
 };
+
+const DEFAULT_COL_WIDTH = 144; // 9rem
+const DEFAULT_ROW_HEIGHT = 40; // 2.5rem
+
 
 // --- Initial Data Helper ---
 const createInitialTableData = (rows: number, cols: number): TableData => {
@@ -52,7 +58,13 @@ const createInitialTableData = (rows: number, cols: number): TableData => {
             });
         }
     }
-    return { rows, cols, cells };
+    return { 
+        rows, 
+        cols, 
+        cells,
+        colWidths: Array(cols).fill(DEFAULT_COL_WIDTH),
+        rowHeights: Array(rows).fill(DEFAULT_ROW_HEIGHT),
+    };
 };
 
 
@@ -69,7 +81,9 @@ const SaveAsNewTemplateDialog = ({ onSave, children }: { onSave: (name: string) 
     
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>{children}</DialogTrigger>
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsOpen(true); }}>
+                {children}
+            </DropdownMenuItem>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Save as New Template</DialogTitle>
@@ -107,7 +121,7 @@ const SaveButton = ({ isTemplateLoaded, onSaveAs, onUpdate }: { isTemplateLoaded
                 <DropdownMenuContent>
                     <DropdownMenuItem onSelect={onUpdate}>Update Current Template</DropdownMenuItem>
                     <SaveAsNewTemplateDialog onSave={onSaveAs}>
-                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Save as New Template...</DropdownMenuItem>
+                        Save as New Template...
                     </SaveAsNewTemplateDialog>
                 </DropdownMenuContent>
             </DropdownMenu>
@@ -115,12 +129,23 @@ const SaveButton = ({ isTemplateLoaded, onSaveAs, onUpdate }: { isTemplateLoaded
     }
 
     return (
-        <SaveAsNewTemplateDialog onSave={onSaveAs}>
-             <Button>
-                <Save className="mr-2" />
-                Save as New Template
+       <Dialog>
+         <DialogTrigger asChild>
+            <Button>
+              <Save className="mr-2" />
+              Save as New Template
             </Button>
-        </SaveAsNewTemplateDialog>
+         </DialogTrigger>
+         <DialogContent>
+           <DialogHeader>
+             <DialogTitle>Save as New Template</DialogTitle>
+             <DialogDescription>Give your new table template a name.</DialogDescription>
+           </DialogHeader>
+           <SaveAsNewTemplateDialog onSave={onSaveAs}>
+             <Input placeholder="e.g., Weekly Report" />
+           </SaveAsNewTemplateDialog>
+         </DialogContent>
+       </Dialog>
     );
 };
 
@@ -130,6 +155,12 @@ const TableBuilderPage = () => {
     const [selection, setSelection] = useState<{ start: { r: number, c: number } | null, end: { r: number, c: number } | null }>({ start: null, end: null });
     const [isSelecting, setIsSelecting] = useState(false);
     const [loadedTemplateId, setLoadedTemplateId] = useState<string | null>(null);
+
+    // Resizing state
+    const [resizingCol, setResizingCol] = useState<number | null>(null);
+    const [resizingRow, setResizingRow] = useState<number | null>(null);
+    const tableRef = useRef<HTMLTableElement>(null);
+
 
     const firestore = useFirestore();
     const { toast } = useToast();
@@ -141,6 +172,51 @@ const TableBuilderPage = () => {
     );
     const { data: savedTemplates, isLoading: isLoadingTemplates } = useCollection<TableTemplate>(templatesQuery);
     
+    // --- Resizing Logic ---
+    const handleColResizeStart = (e: React.MouseEvent, colIndex: number) => {
+        e.preventDefault();
+        setResizingCol(colIndex);
+    };
+
+    const handleRowResizeStart = (e: React.MouseEvent, rowIndex: number) => {
+        e.preventDefault();
+        setResizingRow(rowIndex);
+    };
+
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (resizingCol !== null) {
+                const newWidth = e.clientX - (tableRef.current?.rows[0]?.cells[resizingCol + 1]?.getBoundingClientRect().left || 0);
+                setTableData(prev => {
+                    const newColWidths = [...prev.colWidths];
+                    newColWidths[resizingCol] = Math.max(40, newWidth); // min width
+                    return { ...prev, colWidths: newColWidths };
+                });
+            }
+            if (resizingRow !== null && tableRef.current?.rows[resizingRow + 1]) {
+                const newHeight = e.clientY - (tableRef.current.rows[resizingRow + 1].getBoundingClientRect().top || 0);
+                 setTableData(prev => {
+                    const newRowHeights = [...prev.rowHeights];
+                    newRowHeights[resizingRow] = Math.max(20, newHeight); // min height
+                    return { ...prev, rowHeights: newRowHeights };
+                });
+            }
+        };
+
+        const handleMouseUp = () => {
+            setResizingCol(null);
+            setResizingRow(null);
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [resizingCol, resizingRow]);
+
     // --- Cell & Selection Logic ---
     const getCell = (r: number, c: number) => {
         return tableData.cells.find(cell => cell.r === r && cell.c === c);
@@ -185,11 +261,13 @@ const TableBuilderPage = () => {
         for (let c = 0; c < tableData.cols; c++) {
             newCells.push({ r: newRowIndex, c, content: '', rowSpan: 1, colSpan: 1, align: 'left', hidden: false });
         }
-        setTableData({
-            rows: newRowIndex + 1,
-            cols: tableData.cols,
-            cells: [...tableData.cells, ...newCells]
-        });
+        setTableData(prev => ({
+            rows: prev.rows + 1,
+            cols: prev.cols,
+            cells: [...prev.cells, ...newCells],
+            colWidths: prev.colWidths,
+            rowHeights: [...prev.rowHeights, DEFAULT_ROW_HEIGHT],
+        }));
     };
 
     const addColumn = () => {
@@ -198,11 +276,13 @@ const TableBuilderPage = () => {
         for (let r = 0; r < tableData.rows; r++) {
             newCells.push({ r, c: newColIndex, content: '', rowSpan: 1, colSpan: 1, align: 'left', hidden: false });
         }
-        setTableData({
-            rows: tableData.rows,
-            cols: newColIndex + 1,
-            cells: [...tableData.cells, ...newCells]
-        });
+        setTableData(prev => ({
+            rows: prev.rows,
+            cols: prev.cols + 1,
+            cells: [...prev.cells, ...newCells],
+            colWidths: [...prev.colWidths, DEFAULT_COL_WIDTH],
+            rowHeights: prev.rowHeights,
+        }));
     };
 
     // --- Template & Firestore Logic ---
@@ -256,7 +336,7 @@ const TableBuilderPage = () => {
                 <CardHeader>
                     <CardTitle>Dynamic Table Builder</CardTitle>
                     <CardDescription>
-                        Click and drag to select cells. Use the controls to merge, align, and format your table.
+                        Click and drag to select cells. Use the controls to merge, align, and format your table. Drag the borders of the headers to resize.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="flex justify-between items-center flex-wrap gap-4">
@@ -277,22 +357,38 @@ const TableBuilderPage = () => {
                 </CardContent>
             </Card>
 
-            <div className="w-full overflow-x-auto rounded-lg border shadow-sm" onMouseUp={handleMouseUp}>
-                <table className="border-collapse bg-white" style={{ tableLayout: 'fixed' }}>
+            <div className="w-full overflow-auto rounded-lg border shadow-sm" onMouseUp={handleMouseUp}>
+                <table ref={tableRef} className="border-collapse bg-white" style={{ tableLayout: 'fixed' }}>
+                    <colgroup>
+                        <col style={{ width: '40px' }} />
+                        {tableData.colWidths.map((width, index) => (
+                            <col key={index} style={{ width: `${width}px` }} />
+                        ))}
+                    </colgroup>
                     <thead>
                         <tr>
                             <th className="sticky left-0 z-20 w-[40px] bg-gray-100 border border-gray-300"></th>
                             {Array.from({ length: tableData.cols }).map((_, colIndex) => (
-                                <th key={colIndex} className="p-1 border border-gray-300 bg-gray-50 text-center text-xs w-36">
+                                <th key={colIndex} className="p-1 border border-gray-300 bg-gray-50 text-center text-xs relative" style={{width: `${tableData.colWidths[colIndex]}px`}}>
                                     {String.fromCharCode(65 + colIndex)}
+                                    <div
+                                        onMouseDown={(e) => handleColResizeStart(e, colIndex)}
+                                        className="absolute top-0 right-0 h-full w-1 cursor-col-resize bg-blue-500/20 hover:bg-blue-500"
+                                    />
                                 </th>
                             ))}
                         </tr>
                     </thead>
                     <tbody>
                         {Array.from({ length: tableData.rows }).map((_, r) => (
-                            <tr key={r}>
-                                <td className="sticky left-0 z-10 text-center text-xs text-gray-500 bg-gray-100 border border-gray-300 w-[40px]">{r + 1}</td>
+                            <tr key={r} style={{height: `${tableData.rowHeights[r]}px`}}>
+                                <td className="sticky left-0 z-10 text-center text-xs text-gray-500 bg-gray-100 border border-gray-300 w-[40px] relative">
+                                    {r + 1}
+                                     <div
+                                        onMouseDown={(e) => handleRowResizeStart(e, r)}
+                                        className="absolute bottom-0 left-0 w-full h-1 cursor-row-resize bg-blue-500/20 hover:bg-blue-500"
+                                    />
+                                </td>
                                 {Array.from({ length: tableData.cols }).map((_, c) => {
                                     const cell = getCell(r, c);
                                     if (!cell || cell.hidden) return null;
@@ -359,3 +455,5 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
+
+    
