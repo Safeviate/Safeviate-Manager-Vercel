@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -43,7 +44,7 @@ type TableTemplate = {
 };
 
 const DEFAULT_COL_WIDTH = 120;
-const DEFAULT_ROW_HEIGHT = 30;
+const DEFAULT_ROW_HEIGHT = 20;
 const DEFAULT_FONT_SIZE = 14;
 
 const TablePreview = ({ tableData }: { tableData: TableData }) => {
@@ -609,7 +610,7 @@ const TableBuilderPage = () => {
                     <tr>
                         <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10">
                             <div className="w-32 h-10 flex flex-row items-center justify-center">
-                                <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => addRow(0)}><PlusCircle className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addRow(0)}><PlusCircle className="h-4 w-4" /></Button>
                             </div>
                         </th>
                         {Array.from({ length: tableData.cols }).map((_, colIndex) => (
@@ -619,9 +620,9 @@ const TableBuilderPage = () => {
                                 className="p-0 border border-border bg-muted/50 relative"
                             >
                                 <div className="h-10 flex items-center justify-center px-0">
-                                    <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
                                     <SizeInput value={tableData.colWidths[colIndex]} onSave={(newWidth) => updateColWidth(colIndex, newWidth)} />
-                                    <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => addColumn(colIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addColumn(colIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
                                 </div>
                             </th>
                         ))}
@@ -633,10 +634,10 @@ const TableBuilderPage = () => {
                     <tr key={rowIndex} style={{ height: `${tableData.rowHeights[rowIndex]}px` }}>
                         {isEditMode && (
                             <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10">
-                               <div className="w-32 h-8 flex flex-row items-center justify-center">
-                                    <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
+                               <div className="w-32 h-7 flex flex-row items-center justify-center">
+                                    <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
                                     <SizeInput value={tableData.rowHeights[rowIndex]} onSave={(newHeight) => updateRowHeight(rowIndex, newHeight)} />
-                                    <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => addRow(rowIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addRow(rowIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
                                 </div>
                             </th>
                         )}
@@ -720,6 +721,7 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
+
 
 
 
