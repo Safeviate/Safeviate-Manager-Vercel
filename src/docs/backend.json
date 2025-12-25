@@ -21,9 +21,6 @@
                                 "content": { "type": "string" },
                                 "rowSpan": { "type": "number" },
                                 "colSpan": { "type": "number" },
-                                "align": { "type": "string", "enum": ["left", "center", "right"] },
-                                "fontWeight": { "type": "string", "enum": ["normal", "bold"] },
-                                "fontSize": { "type": "number" },
                                 "hidden": { "type": "boolean" }
                             },
                             "required": ["r", "c", "rowSpan", "colSpan", "hidden"]
@@ -1334,7 +1331,7 @@
   },
   "firestore": {
     "structure": [
-       {
+      {
         "path": "tenants/{tenantId}/table-templates/{templateId}",
         "definition": {
           "entityName": "TableTemplate",

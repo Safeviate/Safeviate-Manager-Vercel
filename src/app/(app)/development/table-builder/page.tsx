@@ -2,16 +2,19 @@
 'use client';
 
 import { useState, useMemo, MouseEvent, useRef, useEffect, useCallback } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
-import { addDocumentNonBlocking, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import { useDebounce } from '@/hooks/use-debounce';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Trash2 } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type Cell = {
   r: number;
@@ -29,6 +32,12 @@ type TableData = {
   colWidths: number[];
   rowHeights: number[];
 };
+
+type TableTemplate = {
+    id: string;
+    name: string;
+    tableData: TableData;
+}
 
 const createInitialTable = (rows: number, cols: number): TableData => {
   const cells: Cell[] = [];
@@ -48,11 +57,20 @@ const createInitialTable = (rows: number, cols: number): TableData => {
 
 export default function TableBuilderPage() {
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const tenantId = 'safeviate';
   const [tableData, setTableData] = useState<TableData>(() => createInitialTable(5, 5));
   const [selectedCells, setSelectedCells] = useState<Record<string, boolean>>({});
   const [isEditing, setIsEditing] = useState(true);
+  const [templateName, setTemplateName] = useState('');
 
-  const debouncedTableData = useDebounce(tableData, 300);
+  const debouncedTableData = useDebounce(tableData, 500);
+
+  const templatesQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, `tenants/${tenantId}/table-templates`) : null),
+    [firestore, tenantId]
+  );
+  const { data: savedTemplates, isLoading: isLoadingTemplates } = useCollection<TableTemplate>(templatesQuery);
 
   const resizeHandleRef = useRef<{ type: 'col' | 'row', index: number, initialPos: number, initialSize: number } | null>(null);
 
@@ -70,7 +88,7 @@ export default function TableBuilderPage() {
   const handleCellClick = (r: number, c: number) => {
     const key = `${r}-${c}`;
     const cell = getCell(r, c);
-    if (!cell || cell.hidden) return;
+    if (!cell || cell.hidden || !isEditing) return;
   
     setSelectedCells(prev => {
       const newSelected = { ...prev };
@@ -106,20 +124,27 @@ export default function TableBuilderPage() {
 
     const newRowSpan = maxR - minR + 1;
     const newColSpan = maxC - minC + 1;
-
+    
+    // Verify that the selection forms a solid rectangle
     let totalSelectedArea = 0;
-    selectionKeys.forEach(key => {
-        const [r, c] = key.split('-').map(Number);
-        const cell = newCells.find(cell => cell.r === r && cell.c === c);
-        if (cell && !cell.hidden) {
-            totalSelectedArea += cell.rowSpan * cell.colSpan;
+    for (let r = minR; r <= maxR; r++) {
+        for (let c = minC; c <= maxC; c++) {
+            const cell = newCells.find(cell => cell.r === r && cell.c === c);
+            if (!cell || !selectedCells[`${r}-${c}`]) {
+                 const occupiedCell = newCells.find(cl => 
+                    !cl.hidden &&
+                    r >= cl.r && r < cl.r + cl.rowSpan &&
+                    c >= cl.c && c < cl.c + cl.colSpan &&
+                    !selectedCells[`${cl.r}-${cl.c}`]
+                );
+                if (occupiedCell) {
+                    toast({ variant: 'destructive', title: 'Invalid Merge', description: 'Selection contains unselected cells. Please select a solid rectangle.' });
+                    return;
+                }
+            }
         }
-    });
-
-    if (totalSelectedArea !== newRowSpan * newColSpan) {
-        toast({ variant: 'destructive', title: 'Invalid Merge', description: 'Selected cells do not form a solid rectangle.' });
-        return;
     }
+
 
     const topLeftCell = newCells.find(cell => cell.r === minR && cell.c === minC);
     if (!topLeftCell) {
@@ -241,6 +266,30 @@ export default function TableBuilderPage() {
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [handleMouseMove, handleMouseUp]);
+  
+  const handleSaveTemplate = () => {
+    if (!firestore || !templateName.trim()) {
+        toast({ variant: 'destructive', title: 'Missing Name', description: 'Please provide a name for the template.' });
+        return;
+    }
+    const templatesCollection = collection(firestore, `tenants/${tenantId}/table-templates`);
+    addDocumentNonBlocking(templatesCollection, { name: templateName, tableData });
+    toast({ title: 'Template Saved', description: `Template "${templateName}" has been saved.` });
+    setTemplateName('');
+  };
+
+  const handleLoadTemplate = (template: TableTemplate) => {
+    setTableData(template.tableData);
+    setSelectedCells({});
+    toast({ title: 'Template Loaded', description: `Template "${template.name}" has been loaded.` });
+  }
+
+  const handleDeleteTemplate = (templateId: string) => {
+    if (!firestore) return;
+    const templateRef = doc(firestore, `tenants/${tenantId}/table-templates`, templateId);
+    deleteDocumentNonBlocking(templateRef);
+    toast({ title: 'Template Deleted' });
+  };
 
 
   return (
@@ -291,7 +340,7 @@ export default function TableBuilderPage() {
             return (
               <div
                 key={key}
-                onClick={isEditing ? () => handleCellClick(cell.r, cell.c) : undefined}
+                onClick={() => handleCellClick(cell.r, cell.c)}
                 className={cn(
                   'flex items-center justify-center border text-sm text-muted-foreground transition-colors p-0.5',
                   isEditing && 'cursor-pointer hover:bg-accent/50',
@@ -321,9 +370,9 @@ export default function TableBuilderPage() {
                     key={`col-handle-${index}`}
                     className={cn(
                         "absolute top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/50",
-                        isAligned && "bg-blue-500"
+                         isAligned && "bg-blue-500"
                     )}
-                    style={{ left: `${colWidths.slice(0, index + 1).reduce((a, b) => a + b, 0) - 3}px`}}
+                    style={{ left: `${colWidths.slice(0, index + 1).reduce((a, b) => a + b, 0) - 3 + index}px`}}
                     onMouseDown={(e) => handleMouseDown(e, 'col', index)}
                 />
             )
@@ -335,15 +384,51 @@ export default function TableBuilderPage() {
                     key={`row-handle-${index}`}
                     className={cn(
                         "absolute left-0 right-0 h-1.5 cursor-row-resize hover:bg-primary/50",
-                        isAligned && "bg-blue-500"
+                         isAligned && "bg-blue-500"
                     )}
-                    style={{ top: `${rowHeights.slice(0, index + 1).reduce((a, b) => a + b, 0) - 3}px`}}
+                    style={{ top: `${rowHeights.slice(0, index + 1).reduce((a, b) => a + b, 0) - 3 + index}px`}}
                     onMouseDown={(e) => handleMouseDown(e, 'row', index)}
                 />
             )
           })}
         </div>
       </div>
+      
+      <Card>
+        <CardHeader>
+            <CardTitle>Save & Load Templates</CardTitle>
+        </CardHeader>
+        <CardContent className='space-y-4'>
+            <div className="flex gap-2">
+                <Input placeholder="New template name..." value={templateName} onChange={(e) => setTemplateName(e.target.value)} />
+                <Button onClick={handleSaveTemplate} disabled={!templateName.trim()}>Save Current as Template</Button>
+            </div>
+             <div className="space-y-2">
+                <h4 className="text-sm font-medium text-muted-foreground">Saved Templates</h4>
+                {isLoadingTemplates ? (
+                    <p>Loading templates...</p>
+                ) : (savedTemplates?.length ?? 0) > 0 ? (
+                    <ScrollArea className='h-40 rounded-md border p-2'>
+                        <div className="space-y-2">
+                            {savedTemplates?.map(template => (
+                                <div key={template.id} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-md">
+                                    <span className="font-medium">{template.name}</span>
+                                    <div className="flex gap-2">
+                                        <Button size="sm" variant="outline" onClick={() => handleLoadTemplate(template)}>Load</Button>
+                                        <Button size="icon" variant="destructive" className="h-9 w-9" onClick={() => handleDeleteTemplate(template.id)}>
+                                            <Trash2 className='h-4 w-4' />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </ScrollArea>
+                ) : (
+                    <p className='text-sm text-muted-foreground text-center py-4'>No templates saved yet.</p>
+                )}
+            </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
