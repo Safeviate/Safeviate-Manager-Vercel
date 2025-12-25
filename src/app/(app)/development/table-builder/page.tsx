@@ -5,31 +5,39 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle } from 'lucide-react';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { PlusCircle, Trash2 } from 'lucide-react';
 
 const TableBuilderPage = () => {
   const [cols, setCols] = useState(['Header 1', 'Header 2']);
   const [rows, setRows] = useState([['Cell 1', 'Cell 2']]);
 
-  // Add a new column to every row
   const addColumn = () => {
     setCols([...cols, `Header ${cols.length + 1}`]);
     setRows(rows.map(row => [...row, '']));
   };
 
-  // Add a new row with empty strings for each column
   const addRow = () => {
     setRows([...rows, Array(cols.length).fill('')]);
   };
+  
+  const deleteColumn = (colIndex: number) => {
+    if (cols.length <= 1) return; // Prevent deleting the last column
+    setCols(cols.filter((_, i) => i !== colIndex));
+    setRows(rows.map(row => row.filter((_, i) => i !== colIndex)));
+  };
+
+  const deleteRow = (rowIndex: number) => {
+    if (rows.length <= 1) return; // Prevent deleting the last row
+    setRows(rows.filter((_, i) => i !== rowIndex));
+  };
+
 
   const updateCell = (rowIndex: number, colIndex: number, value: string) => {
     const updatedRows = [...rows];
     updatedRows[rowIndex][colIndex] = value;
     setRows(updatedRows);
   };
-
+  
   const updateHeader = (colIndex: number, value: string) => {
     const newCols = [...cols];
     newCols[colIndex] = value;
@@ -55,38 +63,50 @@ const TableBuilderPage = () => {
 
       <Card>
         <CardContent className="p-0">
-          <ScrollArea>
-            <Table className="min-w-max">
-              <TableHeader>
-                <TableRow>
-                  {cols.map((col, i) => (
-                    <TableHead key={i}>
-                      <Input 
-                        value={col} 
-                        onChange={(e) => updateHeader(i, e.target.value)} 
-                        className="font-bold"
-                      />
-                    </TableHead>
+          <div className="w-full overflow-x-auto border shadow-sm">
+            <table className="w-full border-collapse table-fixed min-w-[800px]">
+              <thead>
+                <tr>
+                  <th className="w-[40px] bg-gray-100 border border-gray-300"></th>
+                  {cols.map((_, colIndex) => (
+                    <th key={colIndex} className="border border-gray-300 bg-gray-50 h-[35px] p-0">
+                      <div className="flex items-center h-full">
+                        <Input 
+                          value={cols[colIndex]} 
+                          onChange={(e) => updateHeader(colIndex, e.target.value)} 
+                          className="w-full h-full border-none p-2 bg-transparent focus:bg-blue-100/50 focus:shadow-[inset_0_0_0_2px_#1a73e8]"
+                        />
+                         <button onClick={() => deleteColumn(colIndex)} className="px-2 text-gray-400 hover:text-red-500">
+                            <Trash2 className='h-4 w-4' />
+                         </button>
+                      </div>
+                    </th>
                   ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+                </tr>
+              </thead>
+              <tbody>
                 {rows.map((row, rowIndex) => (
-                  <TableRow key={rowIndex}>
+                  <tr key={rowIndex}>
+                    <td className="w-[40px] text-center text-xs text-gray-500 bg-gray-100 border border-gray-300 relative">
+                      {rowIndex + 1}
+                       <button onClick={() => deleteRow(rowIndex)} className="absolute right-0 top-1/2 -translate-y-1/2 px-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Trash2 className='h-4 w-4' />
+                        </button>
+                    </td>
                     {row.map((cell, colIndex) => (
-                      <TableCell key={colIndex}>
+                      <td key={colIndex} className="border border-gray-300 h-[35px] p-0">
                         <Input 
                           value={cell} 
                           onChange={(e) => updateCell(rowIndex, colIndex, e.target.value)} 
+                          className="w-full h-full border-none p-2 bg-transparent focus:bg-blue-100/50 focus:shadow-[inset_0_0_0_2px_#1a73e8]"
                         />
-                      </TableCell>
+                      </td>
                     ))}
-                  </TableRow>
+                  </tr>
                 ))}
-              </TableBody>
-            </Table>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
     </div>
