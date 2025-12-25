@@ -275,10 +275,6 @@ const ColumnWidthInput = ({ index, width, onWidthChange }: { index: number, widt
     const debouncedValue = useDebounce(inputValue, 500);
 
     useEffect(() => {
-        setInputValue(width.toString());
-    }, [width]);
-
-    useEffect(() => {
         const numericValue = parseInt(debouncedValue, 10);
         if (!isNaN(numericValue) && numericValue !== width) {
             onWidthChange(index, Math.max(50, numericValue));
