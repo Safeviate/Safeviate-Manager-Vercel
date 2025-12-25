@@ -236,6 +236,11 @@ export const menuConfig: MenuItem[] = [
         label: 'Logbook Parser',
         description: 'Parse the structure of a logbook table.',
       },
+      {
+        href: '/development/table-builder',
+        label: 'Table Builder',
+        description: 'Create and manipulate table structures.',
+      },
     ],
   },
 ];
