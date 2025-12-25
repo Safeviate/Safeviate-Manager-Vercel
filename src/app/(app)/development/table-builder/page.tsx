@@ -137,7 +137,32 @@ export default function TableBuilderPage() {
   const [isEditing, setIsEditing] = useState(true);
   const [templateName, setTemplateName] = useState('');
 
-  const debouncedTableData = useDebounce(tableData, 500);
+  const { rows, cols, cells, colWidths, rowHeights } = tableData;
+
+  const [inputColWidths, setInputColWidths] = useState(colWidths.map(w => Math.round(w).toString()));
+  const [inputRowHeights, setInputRowHeights] = useState(rowHeights.map(h => Math.round(h).toString()));
+  
+  const debouncedColWidths = useDebounce(inputColWidths, 500);
+  const debouncedRowHeights = useDebounce(inputRowHeights, 500);
+
+  useEffect(() => {
+    setInputColWidths(tableData.colWidths.map(w => Math.round(w).toString()));
+  }, [tableData.colWidths]);
+  
+  useEffect(() => {
+    setInputRowHeights(tableData.rowHeights.map(h => Math.round(h).toString()));
+  }, [tableData.rowHeights]);
+
+  useEffect(() => {
+      const newWidths = debouncedColWidths.map(w => parseInt(w, 10) || 20);
+      setTableData(prev => ({...prev, colWidths: newWidths}));
+  }, [debouncedColWidths]);
+
+  useEffect(() => {
+      const newHeights = debouncedRowHeights.map(h => parseInt(h, 10) || 20);
+      setTableData(prev => ({...prev, rowHeights: newHeights}));
+  }, [debouncedRowHeights]);
+
 
   const templatesQuery = useMemoFirebase(
     () => (firestore ? collection(firestore, `tenants/${tenantId}/table-templates`) : null),
@@ -146,8 +171,6 @@ export default function TableBuilderPage() {
   const { data: savedTemplates, isLoading: isLoadingTemplates } = useCollection<TableTemplate>(templatesQuery);
 
   const resizeHandleRef = useRef<{ type: 'col' | 'row', index: number, initialPos: number, initialSize: number } | null>(null);
-
-  const { rows, cols, cells, colWidths, rowHeights } = tableData;
 
   const getCell = (r: number, c: number) => cells.find(cell => cell.r === r && cell.c === c);
 
@@ -353,15 +376,19 @@ export default function TableBuilderPage() {
     const newSize = Math.max(initialSize + delta, 20); // Minimum size
 
     if (type === 'col') {
-      const newColWidths = [...colWidths];
-      newColWidths[index] = newSize;
-      setTableData(prev => ({ ...prev, colWidths: newColWidths }));
+      setTableData(prev => {
+        const newColWidths = [...prev.colWidths];
+        newColWidths[index] = newSize;
+        return { ...prev, colWidths: newColWidths }
+      });
     } else {
-      const newRowHeights = [...rowHeights];
-      newRowHeights[index] = newSize;
-      setTableData(prev => ({ ...prev, rowHeights: newRowHeights }));
+       setTableData(prev => {
+        const newRowHeights = [...prev.rowHeights];
+        newRowHeights[index] = newSize;
+        return { ...prev, rowHeights: newRowHeights }
+      });
     }
-  }, [colWidths, rowHeights]);
+  }, []);
 
   const handleMouseUp = useCallback(() => {
     resizeHandleRef.current = null;
@@ -381,17 +408,14 @@ export default function TableBuilderPage() {
   };
 
   const handleDimensionChange = (type: 'col' | 'row', index: number, value: string) => {
-    const newSize = parseInt(value, 10);
-    if (isNaN(newSize) || newSize < 20) return;
-
     if (type === 'col') {
-      const newColWidths = [...colWidths];
-      newColWidths[index] = newSize;
-      setTableData(prev => ({ ...prev, colWidths: newColWidths }));
+      const newColWidths = [...inputColWidths];
+      newColWidths[index] = value;
+      setInputColWidths(newColWidths);
     } else {
-      const newRowHeights = [...rowHeights];
-      newRowHeights[index] = newSize;
-      setTableData(prev => ({ ...prev, rowHeights: newRowHeights }));
+      const newRowHeights = [...inputRowHeights];
+      newRowHeights[index] = value;
+      setInputRowHeights(newRowHeights);
     }
   };
 
@@ -467,11 +491,11 @@ export default function TableBuilderPage() {
               <div className="space-y-2">
                 <Label>Column Widths (px)</Label>
                 <div className="flex flex-wrap gap-2">
-                  {colWidths.map((width, index) => (
+                  {inputColWidths.map((width, index) => (
                     <Input 
                       key={`col-width-${index}`}
                       type="number"
-                      value={Math.round(width)}
+                      value={width}
                       onChange={(e) => handleDimensionChange('col', index, e.target.value)}
                       className="w-20"
                       disabled={!isEditing}
@@ -482,11 +506,11 @@ export default function TableBuilderPage() {
               <div className="space-y-2">
                 <Label>Row Heights (px)</Label>
                 <div className="flex flex-wrap gap-2">
-                  {rowHeights.map((height, index) => (
+                  {inputRowHeights.map((height, index) => (
                     <Input 
                       key={`row-height-${index}`}
                       type="number"
-                      value={Math.round(height)}
+                      value={height}
                       onChange={(e) => handleDimensionChange('row', index, e.target.value)}
                       className="w-20"
                       disabled={!isEditing}
