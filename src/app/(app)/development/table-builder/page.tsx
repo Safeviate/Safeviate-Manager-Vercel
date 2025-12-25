@@ -42,6 +42,43 @@ type TableTemplate = {
 const DEFAULT_COL_WIDTH = 120;
 const DEFAULT_ROW_HEIGHT = 30;
 
+const TablePreview = ({ tableData }: { tableData: TableData }) => {
+    if (!tableData) return null;
+  
+    return (
+      <div className="w-full overflow-auto rounded-lg border my-2">
+        <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%' }}>
+          <tbody>
+            {Array.from({ length: tableData.rows }).map((_, rowIndex) => (
+              <tr key={rowIndex}>
+                {tableData.cells
+                  .filter(cell => cell.r === rowIndex)
+                  .sort((a, b) => a.c - b.c)
+                  .map(cell => {
+                    if (cell.hidden) return null;
+                    return (
+                      <td
+                        key={`${cell.r}-${cell.c}`}
+                        rowSpan={cell.rowSpan}
+                        colSpan={cell.colSpan}
+                        className="p-1 border border-border align-top text-xs"
+                        style={{
+                          textAlign: cell.align,
+                          width: `${100 / tableData.cols}%`, // Use percentages for preview
+                        }}
+                      >
+                        {cell.content}
+                      </td>
+                    );
+                  })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+};
+
 
 const SizeInput = ({ value, onSave }: { value: number, onSave: (newSize: number) => void }) => {
     const [localValue, setLocalValue] = useState(value.toString());
@@ -597,10 +634,11 @@ const TableBuilderPage = () => {
         <CardContent>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {(savedTemplates || []).filter(t => t.id !== 'main-table').map(template => (
-                    <Card key={template.id} className="flex items-center justify-between p-4">
-                       <p className="font-semibold">{template.name}</p>
-                       <div className="flex gap-2">
-                           <Button variant="outline" size="sm" onClick={() => handleLoadTemplate(template)}>
+                    <Card key={template.id} className="flex flex-col p-4">
+                       <p className="font-semibold mb-2">{template.name}</p>
+                       <TablePreview tableData={template.tableData} />
+                       <div className="flex gap-2 mt-auto pt-4">
+                           <Button className="flex-1" variant="outline" size="sm" onClick={() => handleLoadTemplate(template)}>
                                Load
                            </Button>
                            <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => handleDeleteTemplate(template.id)}>
