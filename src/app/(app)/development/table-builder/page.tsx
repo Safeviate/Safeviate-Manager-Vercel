@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -39,8 +38,8 @@ type TableTemplate = {
     tableData: TableData;
 };
 
-const DEFAULT_COL_WIDTH = 144; // 9rem
-const DEFAULT_ROW_HEIGHT = 40; // 2.5rem
+const DEFAULT_COL_WIDTH = 120;
+const DEFAULT_ROW_HEIGHT = 40;
 
 
 // --- Initial Data Helper ---
@@ -68,7 +67,7 @@ const createInitialTableData = (rows: number, cols: number): TableData => {
 };
 
 
-// --- Save Button Components ---
+// --- Dialog Components ---
 const SaveAsNewTemplateDialog = ({ onSave, children }: { onSave: (name: string) => void, children: React.ReactNode }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [name, setName] = useState('');
@@ -105,7 +104,6 @@ const SaveAsNewTemplateDialog = ({ onSave, children }: { onSave: (name: string) 
     );
 };
 
-
 const SaveButton = ({ isTemplateLoaded, onSaveAs, onUpdate }: { isTemplateLoaded: boolean, onSaveAs: (name: string) => void, onUpdate: () => void }) => {
     if (isTemplateLoaded) {
         return (
@@ -127,23 +125,12 @@ const SaveButton = ({ isTemplateLoaded, onSaveAs, onUpdate }: { isTemplateLoaded
     }
 
     return (
-       <Dialog>
-         <DialogTrigger asChild>
+       <SaveAsNewTemplateDialog onSave={onSaveAs}>
             <Button>
-              <Save className="mr-2" />
-              Save as New Template
+                <Save className="mr-2" />
+                Save as New Template
             </Button>
-         </DialogTrigger>
-         <DialogContent>
-           <DialogHeader>
-             <DialogTitle>Save as New Template</DialogTitle>
-             <DialogDescription>Give your new table template a name.</DialogDescription>
-           </DialogHeader>
-           <SaveAsNewTemplateDialog onSave={onSaveAs}>
-             <Input placeholder="e.g., Weekly Report" />
-           </SaveAsNewTemplateDialog>
-         </DialogContent>
-       </Dialog>
+        </SaveAsNewTemplateDialog>
     );
 };
 
@@ -158,7 +145,6 @@ const TableBuilderPage = () => {
     const [resizingCol, setResizingCol] = useState<number | null>(null);
     const [resizingRow, setResizingRow] = useState<number | null>(null);
     const tableRef = useRef<HTMLTableElement>(null);
-
 
     const firestore = useFirestore();
     const { toast } = useToast();
@@ -180,24 +166,28 @@ const TableBuilderPage = () => {
         e.preventDefault();
         setResizingRow(rowIndex);
     };
-
+    
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (resizingCol !== null) {
-                const newWidth = e.clientX - (tableRef.current?.rows[0]?.cells[resizingCol + 1]?.getBoundingClientRect().left || 0);
-                setTableData(prev => {
-                    const newColWidths = [...prev.colWidths];
-                    newColWidths[resizingCol] = Math.max(40, newWidth); // min width
-                    return { ...prev, colWidths: newColWidths };
-                });
+                const newWidths = [...tableData.colWidths];
+                const th = tableRef.current?.querySelector(`thead th:nth-child(${resizingCol + 2})`);
+                if (th) {
+                    const rect = th.getBoundingClientRect();
+                    const newWidth = e.clientX - rect.left;
+                    newWidths[resizingCol] = Math.max(40, newWidth);
+                    setTableData(prev => ({...prev, colWidths: newWidths}));
+                }
             }
-            if (resizingRow !== null && tableRef.current?.rows[resizingRow + 1]) {
-                const newHeight = e.clientY - (tableRef.current.rows[resizingRow + 1].getBoundingClientRect().top || 0);
-                 setTableData(prev => {
-                    const newRowHeights = [...prev.rowHeights];
-                    newRowHeights[resizingRow] = Math.max(20, newHeight); // min height
-                    return { ...prev, rowHeights: newRowHeights };
-                });
+             if (resizingRow !== null) {
+                const newHeights = [...tableData.rowHeights];
+                const tr = tableRef.current?.querySelector(`tbody tr:nth-child(${resizingRow + 1})`);
+                if (tr) {
+                    const rect = tr.getBoundingClientRect();
+                    const newHeight = e.clientY - rect.top;
+                    newHeights[resizingRow] = Math.max(20, newHeight);
+                    setTableData(prev => ({...prev, rowHeights: newHeights}));
+                }
             }
         };
 
@@ -213,12 +203,12 @@ const TableBuilderPage = () => {
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [resizingCol, resizingRow]);
+    }, [resizingCol, resizingRow, tableData.colWidths, tableData.rowHeights]);
 
     // --- Cell & Selection Logic ---
-    const getCell = (r: number, c: number) => {
+    const getCell = useCallback((r: number, c: number) => {
         return tableData.cells.find(cell => cell.r === r && cell.c === c);
-    };
+    }, [tableData.cells]);
 
     const handleMouseDown = (r: number, c: number) => {
         setIsSelecting(true);
@@ -235,13 +225,19 @@ const TableBuilderPage = () => {
         setIsSelecting(false);
     };
 
-    const isCellSelected = (r: number, c: number) => {
-        if (!selection.start || !selection.end) return false;
+    const selectionBounds = useMemo(() => {
+        if (!selection.start || !selection.end) return null;
         const { start, end } = selection;
         const minR = Math.min(start.r, end.r);
         const maxR = Math.max(start.r, end.r);
         const minC = Math.min(start.c, end.c);
         const maxC = Math.max(start.c, end.c);
+        return { minR, maxR, minC, maxC };
+    }, [selection]);
+
+    const isCellSelected = (r: number, c: number) => {
+        if (!selectionBounds) return false;
+        const { minR, maxR, minC, maxC } = selectionBounds;
         return r >= minR && r <= maxR && c >= minC && c <= maxC;
     };
     
@@ -260,10 +256,9 @@ const TableBuilderPage = () => {
             newCells.push({ r: newRowIndex, c, content: '', rowSpan: 1, colSpan: 1, align: 'left', hidden: false });
         }
         setTableData(prev => ({
+            ...prev,
             rows: prev.rows + 1,
-            cols: prev.cols,
             cells: [...prev.cells, ...newCells],
-            colWidths: prev.colWidths,
             rowHeights: [...prev.rowHeights, DEFAULT_ROW_HEIGHT],
         }));
     };
@@ -275,12 +270,61 @@ const TableBuilderPage = () => {
             newCells.push({ r, c: newColIndex, content: '', rowSpan: 1, colSpan: 1, align: 'left', hidden: false });
         }
         setTableData(prev => ({
-            rows: prev.rows,
+            ...prev,
             cols: prev.cols + 1,
             cells: [...prev.cells, ...newCells],
             colWidths: [...prev.colWidths, DEFAULT_COL_WIDTH],
-            rowHeights: prev.rowHeights,
         }));
+    };
+
+    // --- Merge & Align Logic ---
+    const handleMerge = () => {
+        if (!selectionBounds) return;
+        const { minR, maxR, minC, maxC } = selectionBounds;
+
+        const rowSpan = maxR - minR + 1;
+        const colSpan = maxC - minC + 1;
+
+        const newCells = tableData.cells.map(cell => {
+            if (cell.r === minR && cell.c === minC) {
+                return { ...cell, rowSpan, colSpan, hidden: false };
+            }
+            if (cell.r >= minR && cell.r <= maxR && cell.c >= minC && cell.c <= maxC) {
+                return { ...cell, hidden: true, rowSpan: 1, colSpan: 1 };
+            }
+            return cell;
+        });
+
+        setTableData(prev => ({...prev, cells: newCells}));
+        setSelection({start: null, end: null});
+    };
+
+    const handleUnmerge = () => {
+        if (!selectionBounds) return;
+        const { minR, maxR, minC, maxC } = selectionBounds;
+
+        const newCells = tableData.cells.map(cell => {
+            if (cell.r >= minR && cell.r <= maxR && cell.c >= minC && cell.c <= maxC) {
+                return { ...cell, rowSpan: 1, colSpan: 1, hidden: false };
+            }
+            return cell;
+        });
+
+        setTableData(prev => ({...prev, cells: newCells}));
+        setSelection({start: null, end: null});
+    };
+
+    const handleAlignment = (align: 'left' | 'center' | 'right') => {
+        if (!selectionBounds) return;
+        const { minR, maxR, minC, maxC } = selectionBounds;
+
+        const newCells = tableData.cells.map(cell => {
+            if(cell.r >= minR && cell.r <= maxR && cell.c >= minC && cell.c <= maxC) {
+                return { ...cell, align };
+            }
+            return cell;
+        });
+        setTableData(prev => ({...prev, cells: newCells}));
     };
 
     // --- Template & Firestore Logic ---
@@ -341,11 +385,11 @@ const TableBuilderPage = () => {
                     <div className="flex gap-2 flex-wrap">
                         <Button onClick={addRow}><PlusCircle className="mr-2" /> Add Row</Button>
                         <Button onClick={addColumn}><PlusCircle className="mr-2" /> Add Column</Button>
-                        <Button variant="outline"><Merge className="mr-2" /> Merge</Button>
-                        <Button variant="outline"><Unplug className="mr-2" /> Unmerge</Button>
-                        <Button variant="outline"><AlignLeft className="mr-2" /> Left</Button>
-                        <Button variant="outline"><AlignCenter className="mr-2" /> Center</Button>
-                        <Button variant="outline"><AlignRight className="mr-2" /> Right</Button>
+                        <Button variant="outline" onClick={handleMerge}><Merge className="mr-2" /> Merge</Button>
+                        <Button variant="outline" onClick={handleUnmerge}><Unplug className="mr-2" /> Unmerge</Button>
+                        <Button variant="outline" onClick={() => handleAlignment('left')}><AlignLeft className="mr-2" /> Left</Button>
+                        <Button variant="outline" onClick={() => handleAlignment('center')}><AlignCenter className="mr-2" /> Center</Button>
+                        <Button variant="outline" onClick={() => handleAlignment('right')}><AlignRight className="mr-2" /> Right</Button>
                     </div>
                      <SaveButton
                         isTemplateLoaded={!!loadedTemplateId}
@@ -355,7 +399,7 @@ const TableBuilderPage = () => {
                 </CardContent>
             </Card>
 
-            <div className="w-full overflow-auto rounded-lg border shadow-sm" onMouseUp={handleMouseUp}>
+            <div className="w-full overflow-auto rounded-lg border shadow-sm" onMouseUp={handleMouseUp} onMouseLeave={() => setIsSelecting(false)}>
                 <table ref={tableRef} className="border-collapse bg-white" style={{ tableLayout: 'fixed' }}>
                     <colgroup>
                         <col style={{ width: '40px' }} />
