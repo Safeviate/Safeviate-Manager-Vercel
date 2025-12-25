@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Merge, Split, Text, PlusSquare, Trash2, AlignLeft, AlignCenter, AlignRight, SplitSquareHorizontal, SplitSquareVertical, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Bold } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { useDebounce } from '@/hooks/use-debounce';
 
 // --- Types ---
 interface CellData {
@@ -220,6 +221,35 @@ const TableSelector = ({ onSelect }: { onSelect: (dims: { rows: number; cols: nu
                 </p>
             </CardContent>
         </Card>
+    );
+}
+
+const ColumnWidthInput = ({ index, width, onWidthChange }: { index: number, width: number, onWidthChange: (index: number, newWidth: number) => void }) => {
+    const [inputValue, setInputValue] = useState(width.toString());
+    const debouncedValue = useDebounce(inputValue, 500);
+
+    useEffect(() => {
+        setInputValue(width.toString());
+    }, [width]);
+
+    useEffect(() => {
+        const numericValue = parseInt(debouncedValue, 10);
+        if (!isNaN(numericValue)) {
+            const validatedWidth = Math.max(50, numericValue);
+            if (validatedWidth !== width) {
+                onWidthChange(index, validatedWidth);
+            }
+        }
+    }, [debouncedValue, index, onWidthChange, width]);
+    
+    return (
+         <Input
+            type="number"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            className="w-full h-8 text-center"
+            min={50}
+        />
     );
 }
 
@@ -591,13 +621,10 @@ export default function TableBuilderPage() {
         }
     };
     
-    const handleColWidthChange = (index: number, newWidth: string) => {
-        const parsedWidth = parseInt(newWidth, 10);
-        if (isNaN(parsedWidth)) return;
-
+    const handleColWidthChange = (index: number, newWidth: number) => {
         setColWidths(prev => {
             const newColWidths = [...prev];
-            newColWidths[index] = Math.max(50, parsedWidth); // min width 50px
+            newColWidths[index] = newWidth;
             return newColWidths;
         });
     };
@@ -727,13 +754,7 @@ export default function TableBuilderPage() {
                             <div className="flex" style={{ width: colWidths.reduce((a, b) => a + b, 0) }}>
                                 {colWidths.map((width, index) => (
                                     <div key={`width-input-${index}`} style={{ width: `${width}px` }} className="p-1">
-                                        <Input
-                                            type="number"
-                                            value={width}
-                                            onChange={(e) => handleColWidthChange(index, e.target.value)}
-                                            className="w-full h-8 text-center"
-                                            min={50}
-                                        />
+                                        <ColumnWidthInput index={index} width={width} onWidthChange={handleColWidthChange} />
                                     </div>
                                 ))}
                             </div>
