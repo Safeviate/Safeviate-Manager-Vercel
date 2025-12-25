@@ -204,6 +204,29 @@ const TableBuilderPage = () => {
   const [isEditMode, setIsEditMode] = useState(true);
   const [activeTemplate, setActiveTemplate] = useState<TableTemplate | null>(null);
 
+  const defaultTableData = useMemo<TableTemplate>(() => ({
+    id: 'main-table',
+    name: 'Main Table',
+    tableData: {
+      rows: 3,
+      cols: 4,
+      cells: Array.from({ length: 3 * 4 }, (_, i) => ({
+        r: Math.floor(i / 4),
+        c: i % 4,
+        content: '',
+        rowSpan: 1,
+        colSpan: 1,
+        align: 'left',
+        fontWeight: 'normal',
+        fontSize: DEFAULT_FONT_SIZE,
+        hidden: false,
+      })),
+      colWidths: Array(4).fill(DEFAULT_COL_WIDTH),
+      rowHeights: Array(3).fill(DEFAULT_ROW_HEIGHT),
+    },
+  }), []);
+
+
   const tableTemplateRef = useMemoFirebase(() => {
     if (!firestore) return null;
     const templateId = activeTemplate ? activeTemplate.id : 'main-table';
@@ -218,40 +241,19 @@ const TableBuilderPage = () => {
   );
   const { data: savedTemplates } = useCollection<TableTemplate>(templatesQuery);
 
-  const initializeTable = useCallback(async (rows: number, cols: number) => {
-    const newCells: Cell[] = [];
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        newCells.push({ r, c, content: '', rowSpan: 1, colSpan: 1, align: 'left', fontWeight: 'normal', fontSize: DEFAULT_FONT_SIZE, hidden: false });
-      }
-    }
-    const initialData: TableData = {
-      rows,
-      cols,
-      cells: newCells,
-      colWidths: Array(cols).fill(DEFAULT_COL_WIDTH),
-      rowHeights: Array(rows).fill(DEFAULT_ROW_HEIGHT),
-    };
-
-    if (tableTemplateRef) {
-        setDocumentNonBlocking(tableTemplateRef, { name: 'Main Table', tableData: initialData }, { merge: true });
-    }
-    
-    setTableData(initialData);
-
-  }, [tableTemplateRef]);
-
   useEffect(() => {
     if (!isLoading && remoteTableData?.tableData) {
         setTableData(remoteTableData.tableData);
         if (!activeTemplate) {
             setActiveTemplate(remoteTableData);
         }
-    } else if (!isLoading && !remoteTableData && !activeTemplate) {
-        // No data on remote, initialize a default one if we are not loading a specific template
-        initializeTable(3, 4);
+    } else if (!isLoading && !remoteTableData) {
+        if (tableTemplateRef && tableTemplateRef.id === 'main-table') {
+            setDocumentNonBlocking(tableTemplateRef, defaultTableData, { merge: true });
+        }
+        setTableData(defaultTableData.tableData);
     }
-  }, [remoteTableData, isLoading, activeTemplate, initializeTable]);
+  }, [remoteTableData, isLoading, activeTemplate, tableTemplateRef, defaultTableData]);
   
   const updateRemoteTable = useCallback((newTableData: Partial<TableData>) => {
     if (tableTemplateRef) {
@@ -567,6 +569,12 @@ const TableBuilderPage = () => {
     const cell = tableData.cells.find(c => c.r === selectedCells[0].r && c.c === selectedCells[0].c);
     return cell ? (cell.rowSpan > 1 || cell.colSpan > 1) : false;
   }, [tableData, selectedCells]);
+  
+  const totalTableWidth = useMemo(() => {
+    if (!tableData) return 0;
+    // 48px is the width of the row header column
+    return 48 + tableData.colWidths.reduce((acc, width) => acc + width, 0);
+  }, [tableData]);
 
   if (isLoading || !tableData) {
       return <div>Loading...</div>;
@@ -591,12 +599,6 @@ const TableBuilderPage = () => {
                             <Button onClick={handleMerge} disabled={selectedCells.length < 2} size="sm">Merge</Button>
                           </TooltipTrigger>
                           <TooltipContent><p>Merge selected cells</p></TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                           <Button onClick={handleUnmerge} disabled={selectedCells.length === 0} size="sm">Unmerge</Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Unmerge cells</p></TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -667,86 +669,89 @@ const TableBuilderPage = () => {
       </Card>
       
       <div className="w-full overflow-auto rounded-lg border shadow-sm bg-card p-4">
-        <div
-          className="grid"
-          style={{
-            gridTemplateColumns: `auto ${tableData.colWidths.map(w => `${w}px`).join(' ')}`,
-            gridTemplateRows: `auto repeat(${tableData.rows}, auto)`,
-          }}
-        >
-            {isEditMode && (
-              <>
-                <div className="row-start-1 col-start-1 sticky top-0 left-0 z-20 bg-muted/50 border border-border"></div>
-                <div
-                  className="row-start-1 col-start-2 col-span-full grid sticky top-0 z-10"
-                  style={{ gridTemplateColumns: 'subgrid' }}
-                >
-                  {Array.from({ length: tableData.cols }).map((_, colIndex) => (
+        <div style={{ width: `${totalTableWidth}px`}}>
+            <div
+                className="grid"
+                style={{
+                    gridTemplateColumns: `auto ${tableData.colWidths.map(w => `${w}px`).join(' ')}`,
+                    gridTemplateRows: `auto repeat(${tableData.rows}, auto)`,
+                }}
+            >
+                {isEditMode && (
+                <>
+                    <div className="row-start-1 col-start-1 sticky top-0 left-0 z-20 bg-muted/50 border border-border"></div>
                     <div
-                      key={colIndex}
-                      className="p-0 border-x border-border bg-muted/50 relative h-7 flex items-center justify-center"
+                    className="row-start-1 col-start-2 col-span-full grid sticky top-0 z-10"
+                    style={{ gridTemplateColumns: 'subgrid' }}
                     >
-                      <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
-                      <SizeInput value={tableData.colWidths[colIndex]} onSave={(newWidth) => updateColWidth(colIndex, newWidth)} minValue={MIN_COL_WIDTH} />
-                      <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addColumn(colIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
+                    {Array.from({ length: tableData.cols }).map((_, colIndex) => (
+                        <div
+                        key={colIndex}
+                        className="p-0 border-x border-border bg-muted/50 relative h-7 flex items-center justify-center"
+                        >
+                        <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
+                        <SizeInput value={tableData.colWidths[colIndex]} onSave={(newWidth) => updateColWidth(colIndex, newWidth)} minValue={MIN_COL_WIDTH} />
+                        <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addColumn(colIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
+                        </div>
+                    ))}
                     </div>
-                  ))}
-                </div>
-              </>
-            )}
+                </>
+                )}
 
-            {isEditMode &&
-              Array.from({ length: tableData.rows }).map((_, rowIndex) => (
-                 <div
-                    key={rowIndex}
-                    className="p-0 border-t border-border bg-muted/50 sticky left-0 z-10 flex flex-row items-center justify-center"
-                    style={{ gridRow: rowIndex + 2 }}
-                >
-                    <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
-                    <SizeInput value={tableData.rowHeights[rowIndex]} onSave={(newHeight) => updateRowHeight(rowIndex, newHeight)} minValue={MIN_ROW_HEIGHT} />
-                    <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addRow(rowIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
-                </div>
-              ))}
-
-            {tableData.cells
-                .filter(cell => !cell.hidden)
-                .map(cell => {
-                    const isSelected = selectedCells.some(s => s.r === cell.r && s.c === cell.c);
-                    const justifyContent = cell.align === 'left' ? 'flex-start' : cell.align === 'right' ? 'flex-end' : 'center';
-                    return (
+                {isEditMode &&
+                Array.from({ length: tableData.rows }).map((_, rowIndex) => (
                     <div
-                        key={`${cell.r}-${cell.c}`}
-                        onClick={() => toggleSelect(cell.r, cell.c)}
-                        className={cn(
-                            "p-0 relative flex items-center",
-                            isEditMode && "cursor-pointer hover:bg-muted/50",
-                            "border border-border",
-                        )}
-                        style={{
-                            gridRow: `${cell.r + 2} / span ${cell.rowSpan}`,
-                            gridColumn: `${cell.c + 2} / span ${cell.colSpan}`,
-                            justifyContent,
-                            minHeight: `${MIN_ROW_HEIGHT}px`,
-                        }}
+                        key={rowIndex}
+                        className="p-0 border-t border-border bg-muted/50 sticky left-0 z-10 flex flex-row items-center justify-center"
+                        style={{ gridRow: rowIndex + 2 }}
                     >
-                        {isEditMode ? (
-                            <AutoResizingTextarea
-                                value={cell.content}
-                                onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
-                                onBlur={onBlurContent}
-                                className="w-full h-full p-1 bg-transparent border-none resize-none overflow-hidden focus:outline-none focus:ring-0"
-                                style={{
-                                    fontWeight: cell.fontWeight,
-                                    fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`,
-                                    textAlign: cell.align,
-                                }}
-                            />
-                        ) : (
-                            <div className='p-1 whitespace-pre-wrap' style={{wordBreak: 'break-word', fontWeight: cell.fontWeight, fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`, textAlign: cell.align}}>{cell.content}</div>
-                        )}
-                        {isSelected && <div className="absolute inset-0 bg-primary/20 pointer-events-none" />}
+                        <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
+                        <SizeInput value={tableData.rowHeights[rowIndex]} onSave={(newHeight) => updateRowHeight(rowIndex, newHeight)} minValue={MIN_ROW_HEIGHT} />
+                        <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addRow(rowIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
                     </div>
-                )})}
+                ))}
+
+                {tableData.cells
+                    .filter(cell => !cell.hidden)
+                    .map(cell => {
+                        const isSelected = selectedCells.some(s => s.r === cell.r && s.c === cell.c);
+                        const justifyContent = cell.align === 'left' ? 'flex-start' : cell.align === 'right' ? 'flex-end' : 'center';
+                        return (
+                        <div
+                            key={`${cell.r}-${cell.c}`}
+                            onClick={() => toggleSelect(cell.r, cell.c)}
+                            className={cn(
+                                "p-0 relative flex",
+                                isEditMode && "cursor-pointer hover:bg-muted/50",
+                                "border border-border"
+                            )}
+                            style={{
+                                gridRow: `${cell.r + (isEditMode ? 2 : 1)} / span ${cell.rowSpan}`,
+                                gridColumn: `${cell.c + (isEditMode ? 2 : 1)} / span ${cell.colSpan}`,
+                                justifyContent,
+                                alignItems: 'center',
+                                minHeight: `${tableData.rowHeights[cell.r]}px`,
+                            }}
+                        >
+                            {isEditMode ? (
+                                <AutoResizingTextarea
+                                    value={cell.content}
+                                    onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
+                                    onBlur={onBlurContent}
+                                    className="w-full h-full p-1 bg-transparent border-none resize-none overflow-hidden focus:outline-none focus:ring-0"
+                                    style={{
+                                        fontWeight: cell.fontWeight,
+                                        fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`,
+                                        textAlign: cell.align,
+                                    }}
+                                />
+                            ) : (
+                                <div className='p-1 whitespace-pre-wrap' style={{wordBreak: 'break-word', fontWeight: cell.fontWeight, fontSize: `${cell.fontSize || DEFAULT_FONT_SIZE}px`, textAlign: cell.align}}>{cell.content}</div>
+                            )}
+                            {isSelected && <div className="absolute inset-0 bg-primary/20 pointer-events-none" />}
+                        </div>
+                    )})}
+            </div>
         </div>
     </div>
 
