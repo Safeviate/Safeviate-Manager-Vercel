@@ -43,9 +43,10 @@ type TableTemplate = {
 };
 
 const DEFAULT_COL_WIDTH = 120;
-const DEFAULT_ROW_HEIGHT = 40; // Increased default for better initial spacing
+const DEFAULT_ROW_HEIGHT = 40;
 const DEFAULT_FONT_SIZE = 14;
 const MIN_COL_WIDTH = 50;
+const MIN_ROW_HEIGHT = 20;
 
 // A controlled, auto-resizing textarea component
 const AutoResizingTextarea = ({ value, onChange, onBlur, ...props }: { value: string, onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void, onBlur: () => void } & React.ComponentProps<'textarea'>) => {
@@ -114,7 +115,7 @@ const TablePreview = ({ tableData }: { tableData: TableData }) => {
 };
 
 
-const SizeInput = ({ value, onSave }: { value: number, onSave: (newSize: number) => void }) => {
+const SizeInput = ({ value, onSave, minValue }: { value: number, onSave: (newSize: number) => void, minValue: number }) => {
     const [localValue, setLocalValue] = useState(value.toString());
 
     useEffect(() => {
@@ -123,11 +124,11 @@ const SizeInput = ({ value, onSave }: { value: number, onSave: (newSize: number)
 
     const handleBlur = () => {
         let newSize = parseInt(localValue, 10);
-        if (!isNaN(newSize) && newSize >= MIN_COL_WIDTH) {
+        if (!isNaN(newSize) && newSize >= minValue) {
             onSave(newSize);
         } else {
-            onSave(Math.max(MIN_COL_WIDTH, value));
-            setLocalValue(String(Math.max(MIN_COL_WIDTH, value)));
+            onSave(Math.max(minValue, value));
+            setLocalValue(String(Math.max(minValue, value)));
         }
     };
 
@@ -141,7 +142,7 @@ const SizeInput = ({ value, onSave }: { value: number, onSave: (newSize: number)
     return (
         <Input
             type="number"
-            min={MIN_COL_WIDTH}
+            min={minValue}
             value={localValue}
             onChange={(e) => setLocalValue(e.target.value)}
             onBlur={handleBlur}
@@ -647,7 +648,7 @@ const TableBuilderPage = () => {
                             >
                                 <div className="h-7 flex items-center justify-center p-0">
                                     <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteColumn(colIndex)}><Trash2 className="h-4 w-4" /></Button>
-                                    <SizeInput value={tableData.colWidths[colIndex]} onSave={(newWidth) => updateColWidth(colIndex, newWidth)} />
+                                    <SizeInput value={tableData.colWidths[colIndex]} onSave={(newWidth) => updateColWidth(colIndex, newWidth)} minValue={MIN_COL_WIDTH} />
                                     <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addColumn(colIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
                                 </div>
                             </th>
@@ -660,9 +661,9 @@ const TableBuilderPage = () => {
                     <tr key={rowIndex} style={{ minHeight: `${tableData.rowHeights[rowIndex]}px` }}>
                         {isEditMode && (
                             <th className="p-0 border border-border bg-muted/50 sticky left-0 z-10 align-middle">
-                               <div className="w-32 h-7 flex flex-row items-center justify-center">
+                               <div className="w-32 h-10 flex flex-row items-center justify-center">
                                     <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => deleteRow(rowIndex)}><Trash2 className="h-4 w-4" /></Button>
-                                    <SizeInput value={tableData.rowHeights[rowIndex]} onSave={(newHeight) => updateRowHeight(rowIndex, newHeight)} />
+                                    <SizeInput value={tableData.rowHeights[rowIndex]} onSave={(newHeight) => updateRowHeight(rowIndex, newHeight)} minValue={MIN_ROW_HEIGHT} />
                                     <Button variant="ghost" size="icon" className='h-7 w-7' onClick={() => addRow(rowIndex + 1)}><PlusCircle className="h-4 w-4" /></Button>
                                 </div>
                             </th>
@@ -680,7 +681,7 @@ const TableBuilderPage = () => {
                                     colSpan={cell.colSpan}
                                     onClick={() => toggleSelect(cell.r, cell.c)}
                                     className={cn(
-                                        "p-0 border border-border relative align-middle",
+                                        "p-0 border border-border relative align-top",
                                         isEditMode && "cursor-pointer hover:bg-muted/50"
                                     )}
                                     style={{
@@ -703,7 +704,7 @@ const TableBuilderPage = () => {
                                             }}
                                         />
                                     ) : (
-                                        <div className='p-1 whitespace-pre-wrap'>{cell.content}</div>
+                                        <div className='p-1 whitespace-pre-wrap' style={{wordBreak: 'break-word'}}>{cell.content}</div>
                                     )}
                                     {isSelected && <div className="absolute inset-0 bg-primary/20 pointer-events-none" />}
                                 </td>
