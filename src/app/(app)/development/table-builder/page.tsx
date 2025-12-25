@@ -674,17 +674,17 @@ const TableBuilderPage = () => {
                 className="grid"
                 style={{
                     gridTemplateColumns: `auto ${tableData.colWidths.map(w => `${w}px`).join(' ')}`,
-                    gridTemplateRows: `auto repeat(${tableData.rows}, auto)`,
+                    gridTemplateRows: `${isEditMode ? 'auto' : ''} repeat(${tableData.rows}, auto)`,
                 }}
             >
                 {isEditMode && (
                 <>
                     <div className="row-start-1 col-start-1 sticky top-0 left-0 z-20 bg-muted/50 border border-border"></div>
                     <div
-                        className="row-start-1 col-start-2 grid sticky top-0 z-10"
+                        className="row-start-1 grid sticky top-0 z-10"
                         style={{ 
                             gridTemplateColumns: 'subgrid',
-                            gridColumn: `span ${tableData.cols}`,
+                            gridColumn: `2 / span ${tableData.cols}`,
                         }}
                     >
                     {Array.from({ length: tableData.cols }).map((_, colIndex) => (
@@ -788,4 +788,3 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
-
