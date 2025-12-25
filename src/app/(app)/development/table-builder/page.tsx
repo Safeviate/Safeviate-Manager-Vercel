@@ -72,74 +72,63 @@ export default function TableBuilderPage() {
         toast({ title: "Select at least two cells to merge." });
         return;
       }
-
+    
       const newCells = [...tableData.cells];
-
-      // Get the actual cell objects for the selection
-      const selectedCellObjects = Array.from(selectedCells)
-        .map(key => {
-          const [r, c] = key.split('-').map(Number);
-          return newCells.find(cell => cell.r === r && cell.c === c);
-        })
-        .filter((c): c is Cell => !!c);
-        
-      if (selectedCellObjects.length !== selectedCells.size) {
-        toast({ variant: 'destructive', title: 'Merge Error', description: 'Selection contains invalid cells.' });
-        return;
-      }
-
-      // 1. Find the true bounding box of the selection
+    
+      // 1. Find the bounding box of the selection
       let minR = Infinity, maxR = -1, minC = Infinity, maxC = -1;
-      selectedCellObjects.forEach(cell => {
-        minR = Math.min(minR, cell.r);
-        minC = Math.min(minC, cell.c);
-        maxR = Math.max(maxR, cell.r + cell.rowSpan - 1);
-        maxC = Math.max(maxC, cell.c + cell.colSpan - 1);
+      selectedCells.forEach(key => {
+        const [r, c] = key.split('-').map(Number);
+        const cell = newCells.find(cell => cell.r === r && cell.c === c);
+        if (cell) {
+          minR = Math.min(minR, cell.r);
+          minC = Math.min(minC, cell.c);
+          maxR = Math.max(maxR, cell.r + cell.rowSpan - 1);
+          maxC = Math.max(maxC, cell.c + cell.colSpan - 1);
+        }
       });
-
-      const finalRowSpan = maxR - minR + 1;
-      const finalColSpan = maxC - minC + 1;
-      const totalGridSlotsInBox = finalRowSpan * finalColSpan;
-
+    
       // 2. Verify that the selection forms a solid rectangle
-      let totalSlotsInSelection = 0;
-      selectedCellObjects.forEach(cell => {
-        totalSlotsInSelection += cell.rowSpan * cell.colSpan;
-      });
-
-      if (totalSlotsInSelection !== totalGridSlotsInBox) {
-        toast({
-          variant: "destructive",
-          title: "Invalid Merge Selection",
-          description: "The selected cells must form a solid rectangle without gaps.",
-        });
+      for (let r = minR; r <= maxR; r++) {
+        for (let c = minC; c <= maxC; c++) {
+          const cellInBox = newCells.find(cell => 
+            !cell.hidden &&
+            r >= cell.r && r < cell.r + cell.rowSpan &&
+            c >= cell.c && c < cell.c + cell.colSpan
+          );
+    
+          if (!cellInBox || !selectedCells.has(`${cellInBox.r}-${cellInBox.c}`)) {
+            toast({
+              variant: "destructive",
+              title: "Invalid Merge Selection",
+              description: "The selected cells must form a solid rectangle without gaps or overlaps.",
+            });
+            return;
+          }
+        }
+      }
+    
+      // 3. Perform the merge
+      const masterCell = newCells.find(c => c.r === minR && c.c === minC);
+      if (!masterCell) {
+        toast({ variant: "destructive", title: "Merge Error", description: "Could not find the master cell for merging." });
         return;
       }
-      
-      // 3. Perform the merge
-      const masterCellIndex = newCells.findIndex(c => c.r === minR && c.c === minC);
-      if (masterCellIndex === -1) {
-          toast({ variant: "destructive", title: "Merge Error", description: "Could not find the master cell for merging." });
-          return;
-      }
-
-      // Hide all cells within the bounding box
-      newCells.forEach((cell, index) => {
+    
+      masterCell.rowSpan = maxR - minR + 1;
+      masterCell.colSpan = maxC - minC + 1;
+    
+      // Hide all other cells within the new bounding box
+      newCells.forEach(cell => {
         if (cell.r >= minR && cell.r <= maxR && cell.c >= minC && cell.c <= maxC) {
-          if (index !== masterCellIndex) {
+          if (cell !== masterCell) {
             cell.hidden = true;
-            // Also reset spans to avoid confusion, though they are hidden
             cell.rowSpan = 1;
             cell.colSpan = 1;
           }
         }
       });
-      
-      // Update the master cell
-      newCells[masterCellIndex].rowSpan = finalRowSpan;
-      newCells[masterCellIndex].colSpan = finalColSpan;
-      newCells[masterCellIndex].hidden = false;
-
+    
       setTableData(prev => ({ ...prev, cells: newCells }));
       setSelectedCells(new Set());
       toast({ title: "Cells Merged" });
@@ -197,7 +186,7 @@ export default function TableBuilderPage() {
                                     className={cn(
                                         'border p-1 h-14 flex items-center justify-center cursor-pointer',
                                         'transition-colors',
-                                        isSelected ? 'ring-2 ring-blue-500 ring-inset' : 'hover:bg-muted/50'
+                                        isSelected ? 'ring-2 ring-blue-500 ring-inset bg-blue-500/20' : 'hover:bg-muted/50'
                                     )}
                                     style={{
                                         gridRow: `span ${cell.rowSpan}`,
