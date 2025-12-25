@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { PlusCircle, Trash2, Save, AlignLeft, AlignCenter, AlignRight, Merge, Unplug } from 'lucide-react';
@@ -81,9 +81,7 @@ const SaveAsNewTemplateDialog = ({ onSave, children }: { onSave: (name: string) 
     
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsOpen(true); }}>
-                {children}
-            </DropdownMenuItem>
+            <DialogTrigger asChild>{children}</DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Save as New Template</DialogTitle>
@@ -121,7 +119,7 @@ const SaveButton = ({ isTemplateLoaded, onSaveAs, onUpdate }: { isTemplateLoaded
                 <DropdownMenuContent>
                     <DropdownMenuItem onSelect={onUpdate}>Update Current Template</DropdownMenuItem>
                     <SaveAsNewTemplateDialog onSave={onSaveAs}>
-                        Save as New Template...
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Save as New Template...</DropdownMenuItem>
                     </SaveAsNewTemplateDialog>
                 </DropdownMenuContent>
             </DropdownMenu>
@@ -455,5 +453,3 @@ const TableBuilderPage = () => {
 };
 
 export default TableBuilderPage;
-
-    
