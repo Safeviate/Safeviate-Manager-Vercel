@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Textarea } from '@/components/ui/textarea';
 
 type Cell = {
@@ -237,14 +237,17 @@ const TableBuilderPage = () => {
     }
   }, [tableTemplateRef]);
 
-  const updateCellContent = (r: number, c: number, content: string) => {
+  const updateCellContent = (r: number, c: number, content: string, textarea: HTMLTextAreaElement) => {
     if (!tableData) return;
     const newCells = tableData.cells.map(cell =>
         cell.r === r && cell.c === c ? { ...cell, content } : cell
       );
     const newTableData = { ...tableData, cells: newCells };
     setTableData(newTableData);
-    // Debounced update in parent component or a save button would be better here for performance
+    
+    // Auto-resize textarea
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
   };
 
   const onBlurContent = () => {
@@ -669,16 +672,17 @@ const TableBuilderPage = () => {
                                     }}
                                 >
                                     {isSelected && <div className="absolute inset-0 bg-primary/20 pointer-events-none" />}
-                                    <Input
+                                    <Textarea
                                         value={cell.content}
-                                        onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value)}
+                                        onChange={(e) => updateCellContent(cell.r, cell.c, e.target.value, e.target)}
                                         onBlur={onBlurContent}
                                         className={cn(
-                                            'h-full w-full border-0 bg-transparent p-1 focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0',
+                                            'w-full h-full border-0 bg-transparent p-1 focus-visible:bg-blue-100/20 focus-visible:shadow-[inset_0_0_0_2px_theme(colors.blue.500)] focus-visible:ring-0 resize-none overflow-hidden',
                                             cell.fontWeight === 'bold' && 'font-bold'
                                         )}
-                                        style={{ textAlign: cell.align, fontSize: 'inherit' }}
+                                        style={{ textAlign: cell.align, fontSize: 'inherit', lineHeight: '1.2' }}
                                         disabled={!isEditMode}
+                                        rows={1}
                                     />
                                 </td>
                             )})}
