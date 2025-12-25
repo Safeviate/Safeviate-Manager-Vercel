@@ -182,10 +182,12 @@ const ResizableTable = ({
                             style={cellStyle}
                             className={cn(
                                 "border border-muted p-0 relative select-none",
+                                "flex", // Use flex for vertical alignment
+                                getVerticalAlignClass(cell.verticalAlign),
                                 isCellSelected(currentPath) && 'bg-primary/20 outline-2 outline-primary outline'
                             )}
                         >
-                            <div className={cn("flex flex-col w-full h-full", getVerticalAlignClass(cell.verticalAlign))}>
+                            <div className="w-full">
                                 {cell.nestedGrid ? (
                                     <ResizableTable
                                         grid={cell.nestedGrid}
@@ -275,11 +277,10 @@ const ColumnWidthInput = ({ index, width, onWidthChange }: { index: number, widt
     const debouncedValue = useDebounce(inputValue, 500);
 
     useEffect(() => {
-        const numericValue = parseInt(debouncedValue, 10);
-        if (!isNaN(numericValue)) {
-            onWidthChange(index, Math.max(50, numericValue));
+        if (!isNaN(parseInt(debouncedValue, 10))) {
+            onWidthChange(index, Math.max(50, parseInt(debouncedValue, 10)));
         }
-    }, [debouncedValue]); // Removed index and onWidthChange to prevent re-triggering
+    }, [debouncedValue, index, onWidthChange]);
     
     useEffect(() => {
       setInputValue(width.toString());
@@ -300,12 +301,11 @@ const RowHeightInput = ({ index, height, onHeightChange }: { index: number, heig
     const [inputValue, setInputValue] = useState(height.toString());
     const debouncedValue = useDebounce(inputValue, 500);
 
-    useEffect(() => {
-        const numericValue = parseInt(debouncedValue, 10);
-        if (!isNaN(numericValue)) {
-            onHeightChange(index, Math.max(20, numericValue));
+     useEffect(() => {
+        if (!isNaN(parseInt(debouncedValue, 10))) {
+            onHeightChange(index, Math.max(20, parseInt(debouncedValue, 10)));
         }
-    }, [debouncedValue]); // Removed index and onHeightChange to prevent re-triggering
+    }, [debouncedValue, index, onHeightChange]);
 
     useEffect(() => {
         setInputValue(height.toString());
@@ -353,6 +353,38 @@ const convertMapToGrid = (gridMap: { [key: string]: CellData[] }): CellData[][] 
         }));
 };
 
+const SaveAsNewTemplateDialog = ({ onSave }: { onSave: (name: string) => void; }) => {
+    const [name, setName] = useState('');
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                    Save as New Template...
+                </DropdownMenuItem>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Save as New Template</DialogTitle>
+                    <DialogDescription>Give this new table design a name to save it.</DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Input
+                        placeholder="e.g., Daily Inspection Report"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                    />
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                    <DialogClose asChild>
+                        <Button onClick={() => onSave(name)} disabled={!name.trim()}>Save as New</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
 // --- Main Page Component ---
 export default function TableBuilderPage() {
     const [grid, setGrid] = useState<CellData[][]>([]);
@@ -365,7 +397,6 @@ export default function TableBuilderPage() {
     const { toast } = useToast();
     const firestore = useFirestore();
     const tenantId = 'safeviate'; // Hardcoded for now
-    const [newTemplateName, setNewTemplateName] = useState('');
     const [activeTemplate, setActiveTemplate] = useState<FirestoreTableTemplate | null>(null);
 
 
@@ -754,9 +785,9 @@ export default function TableBuilderPage() {
         });
     };
     
-    const handleSaveAsNew = () => {
+    const handleSaveAsNew = (name: string) => {
         if (!firestore) return;
-        if (!newTemplateName.trim()) {
+        if (!name.trim()) {
             toast({ variant: 'destructive', title: 'Name required', description: 'Please enter a name for the new template.' });
             return;
         }
@@ -769,11 +800,10 @@ export default function TableBuilderPage() {
         
         const gridAsMap = convertGridToMap(grid);
 
-        const templateData = { name: newTemplateName, grid: gridAsMap, colWidths, rowHeights };
+        const templateData = { name: name.trim(), grid: gridAsMap, colWidths, rowHeights };
         addDocumentNonBlocking(templatesCollection, templateData);
         
-        toast({ title: 'Template Saved', description: `Template "${newTemplateName}" has been saved.`});
-        setNewTemplateName('');
+        toast({ title: 'Template Saved', description: `Template "${name.trim()}" has been saved.`});
     };
 
     const handleUpdateTemplate = () => {
@@ -825,32 +855,7 @@ export default function TableBuilderPage() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                           <Dialog>
-                                <DialogTrigger asChild>
-                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                        Save as New Template...
-                                    </DropdownMenuItem>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Save as New Template</DialogTitle>
-                                        <DialogDescription>Give this new table design a name to save it.</DialogDescription>
-                                    </DialogHeader>
-                                    <div className="py-4">
-                                        <Input 
-                                            placeholder="e.g., Daily Inspection Report"
-                                            value={newTemplateName}
-                                            onChange={(e) => setNewTemplateName(e.target.value)}
-                                        />
-                                    </div>
-                                    <DialogFooter>
-                                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                                        <DialogClose asChild>
-                                            <Button onClick={handleSaveAsNew} disabled={!newTemplateName.trim()}>Save as New</Button>
-                                        </DialogClose>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                           <SaveAsNewTemplateDialog onSave={handleSaveAsNew} />
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -862,25 +867,11 @@ export default function TableBuilderPage() {
                 <DialogTrigger asChild>
                     <Button disabled={grid.length === 0}><Save className="mr-2 h-4 w-4" /> Save as Template</Button>
                 </DialogTrigger>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Save Table Template</DialogTitle>
-                        <DialogDescription>Give this table design a name to save it for later use.</DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
-                        <Input 
-                            placeholder="e.g., Daily Inspection Report"
-                            value={newTemplateName}
-                            onChange={(e) => setNewTemplateName(e.target.value)}
-                        />
-                    </div>
-                    <DialogFooter>
-                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                        <DialogClose asChild>
-                            <Button onClick={handleSaveAsNew} disabled={!newTemplateName.trim()}>Save Template</Button>
-                        </DialogClose>
-                    </DialogFooter>
-                </DialogContent>
+                <SaveAsNewTemplateDialog onSave={(name) => {
+                    handleSaveAsNew(name);
+                    // This is a bit of a hack to close the outer dialog, but it works with the current structure
+                    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                }} />
             </Dialog>
         );
     }
