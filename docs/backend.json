@@ -1,6 +1,48 @@
 
 {
   "entities": {
+    "PublishedTable": {
+      "title": "Published Table",
+      "type": "object",
+      "properties": {
+        "pageId": { "type": "string" },
+        "tableData": { "$ref": "#/backend/entities/TableTemplate/properties/tableData" }
+      },
+      "required": ["pageId", "tableData"]
+    },
+    "TableTemplate": {
+        "title": "Table Template",
+        "type": "object",
+        "properties": {
+            "name": { "type": "string" },
+            "tableData": {
+                "type": "object",
+                "properties": {
+                    "rows": { "type": "number" },
+                    "cols": { "type": "number" },
+                    "cells": { 
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "r": { "type": "number" },
+                                "c": { "type": "number" },
+                                "content": { "type": "string" },
+                                "rowSpan": { "type": "number" },
+                                "colSpan": { "type": "number" },
+                                "hidden": { "type": "boolean" }
+                            },
+                            "required": ["r", "c", "rowSpan", "colSpan", "hidden"]
+                        }
+                    },
+                    "colWidths": { "type": "array", "items": { "type": "number" } },
+                    "rowHeights": { "type": "array", "items": { "type": "number" } }
+                },
+                "required": ["rows", "cols", "cells", "colWidths", "rowHeights"]
+            }
+        },
+        "required": ["name", "tableData"]
+    },
     "SummarizeDocumentOutput": {
         "title": "Summarize Document Output",
         "type": "object",
@@ -1298,6 +1340,22 @@
   },
   "firestore": {
     "structure": [
+       {
+        "path": "tenants/{tenantId}/published-tables/{pageId}",
+        "definition": {
+          "entityName": "PublishedTable",
+          "schema": { "$ref": "#/backend/entities/PublishedTable" },
+          "description": "Stores table structures published to specific pages."
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/table-templates/{templateId}",
+        "definition": {
+          "entityName": "TableTemplate",
+          "schema": { "$ref": "#/backend/entities/TableTemplate" },
+          "description": "Stores saved table designs from the Table Builder."
+        }
+      },
        {
         "path": "tenants/{tenantId}/compliance-matrix/{itemId}",
         "definition": {
