@@ -277,7 +277,7 @@ const ColumnWidthInput = ({ index, width, onWidthChange }: { index: number, widt
     const debouncedValue = useDebounce(inputValue, 500);
 
     useEffect(() => {
-        setInputValue(width.toString())
+        setInputValue(width.toString());
     }, [width]);
     
     useEffect(() => {
@@ -285,7 +285,7 @@ const ColumnWidthInput = ({ index, width, onWidthChange }: { index: number, widt
         if (!isNaN(numericValue) && numericValue !== width) {
             onWidthChange(index, Math.max(50, numericValue));
         }
-    }, [debouncedValue, index, onWidthChange, width]);
+    }, [debouncedValue]);
 
     return (
          <Input
@@ -311,7 +311,7 @@ const RowHeightInput = ({ index, height, onHeightChange }: { index: number, heig
         if (!isNaN(numericValue) && numericValue !== height) {
             onHeightChange(index, Math.max(20, numericValue));
         }
-    }, [debouncedValue, index, onHeightChange, height]);
+    }, [debouncedValue]);
 
     return (
         <Input
@@ -999,7 +999,7 @@ export default function TableBuilderPage() {
                 <CardContent>
                     {grid.length > 0 ? (
                         <ScrollArea className="w-full whitespace-nowrap border rounded-lg" style={{ height: '600px' }}>
-                          <div className='p-4'>
+                          <div className='p-4' style={{ width: colWidths.reduce((a, b) => a + b, 0) + 64 }}>
                             {/* Column Width Inputs */}
                             <div className="flex" style={{ width: colWidths.reduce((a, b) => a + b, 0), marginLeft: '4rem' }}>
                                 {colWidths.map((width, index) => (
@@ -1073,4 +1073,3 @@ export default function TableBuilderPage() {
     );
 }
 
-    
