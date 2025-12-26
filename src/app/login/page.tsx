@@ -5,12 +5,14 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
+import { User, Code } from 'lucide-react';
 
 export default function LoginPage() {
   const bgImage = PlaceHolderImages.find((img) => img.id === 'login-background');
   const router = useRouter();
 
-  const handleContinue = () => {
+  const handleLogin = () => {
+    // Both logins go to the same place for now, without authentication.
     router.push('/dashboard');
   };
 
@@ -32,8 +34,13 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Button onClick={handleContinue} className="w-full">
-              Enter Dashboard
+            <Button onClick={handleLogin} className="w-full">
+              <User className="mr-2 h-4 w-4" />
+              Login as User
+            </Button>
+            <Button onClick={handleLogin} variant="secondary" className="w-full">
+              <Code className="mr-2 h-4 w-4" />
+              Login as Developer
             </Button>
           </div>
         </CardContent>
