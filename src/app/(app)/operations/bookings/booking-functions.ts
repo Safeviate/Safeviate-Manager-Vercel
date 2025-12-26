@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -112,11 +111,11 @@ export const updateBooking = async ({
     
     const updatePayload: Record<string, any> = { ...updateData };
 
-    if (updatePayload.type === 'Training Flight') {
-        updatePayload.pilotId = deleteField();
+     if (updatePayload.type === 'Training Flight') {
+        updatePayload.pilotId = null; // Use null instead of deleteField
     } else {
-        updatePayload.studentId = deleteField();
-        updatePayload.instructorId = deleteField();
+        updatePayload.studentId = null;
+        updatePayload.instructorId = null;
     }
 
     if (!updateData.isOvernight) {
@@ -212,5 +211,3 @@ export const cancelBooking = async (
         throw new Error("Failed to cancel booking.");
     }
 };
-
-    
