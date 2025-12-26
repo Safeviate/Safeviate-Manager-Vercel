@@ -101,8 +101,10 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
         
         const creator = booking.createdById ? allUsersMap.get(booking.createdById) : null;
         const creatorName = creator ? `${creator.firstName} ${creator.lastName}` : 'N/A';
+        
+        const lowerCaseColumnId = columnId.toLowerCase();
 
-        switch(columnId.toLowerCase()) {
+        switch(lowerCaseColumnId) {
             case 'date': return format(new Date(booking.date), 'yyyy-MM-dd');
             case 'booking no': return booking.bookingNumber.toString();
             case 'type': return aircraft?.model || 'N/A';

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -49,8 +50,8 @@ export const useSpiData = (spi: SpiConfig, reports: SafetyReport[] | null, booki
 
         // 2. Calculate flight hours per month from completed bookings
         bookings.filter(b => b.status === 'Completed' && b.postFlight).forEach(booking => {
-            const preFlightTime = parse(`${booking.bookingDate} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date());
-            const postFlightTime = parse(`${booking.bookingDate} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date());
+            const preFlightTime = parse(`${booking.date} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date());
+            const postFlightTime = parse(`${booking.date} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date());
             if (!isNaN(preFlightTime.getTime()) && !isNaN(postFlightTime.getTime())) {
                 const flightMinutes = differenceInMinutes(postFlightTime, preFlightTime);
                 const flightHours = flightMinutes / 60;
