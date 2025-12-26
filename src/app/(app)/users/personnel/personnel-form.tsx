@@ -79,12 +79,12 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
       return;
     }
 
-    let newUser: Omit<Personnel, 'id' | 'permissions'> | Omit<PilotProfile, 'id'>;
+    let newUser: Partial<UserProfile>;
     let collectionName: 'personnel' | 'pilots';
 
     if (isPilotUserType(userType)) {
         collectionName = 'pilots';
-        const newPilot: Omit<PilotProfile, 'id'> = {
+        const newPilot: Partial<PilotProfile> = {
             userType,
             firstName,
             lastName,
@@ -94,7 +94,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
         newUser = newPilot;
     } else {
         collectionName = 'personnel';
-        const newPersonnel: Omit<Personnel, 'id'> = { 
+        const newPersonnel: Partial<Personnel> = { 
             userType: 'Personnel',
             firstName, 
             lastName, 
