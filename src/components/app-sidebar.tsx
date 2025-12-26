@@ -24,7 +24,7 @@ import { Plane, LogOut, ChevronDown } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   menuConfig,
   settingsMenuItem,
@@ -40,10 +40,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SheetHeader, SheetTitle } from './ui/sheet';
-
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 const SidebarItems = () => {
     const pathname = usePathname();
@@ -120,14 +119,22 @@ const SidebarFooterContent = () => {
     const auth = useAuth();
     const router = useRouter();
     const { setOpenMobile } = useSidebar();
+    const { userProfile } = useUserProfile();
 
     const handleSignOut = () => {
       if (auth) {
         signOut(auth);
       }
+      localStorage.removeItem('impersonatedUser');
       setOpenMobile(false);
       router.push('/login');
     };
+    
+    const displayName = userProfile 
+      ? `${userProfile.firstName} ${userProfile.lastName}` 
+      : 'Developer';
+
+    const fallback = displayName.charAt(0).toUpperCase();
 
     return (
         <SidebarGroup>
@@ -147,15 +154,15 @@ const SidebarFooterContent = () => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton
-                    tooltip="Guest User"
+                    tooltip={displayName}
                     className="w-full justify-start"
                   >
                     <Avatar className="h-6 w-6">
-                      <AvatarImage src="https://picsum.photos/seed/guest-user/100/100" />
-                      <AvatarFallback>G</AvatarFallback>
+                      <AvatarImage src={`https://picsum.photos/seed/${displayName}/100/100`} />
+                      <AvatarFallback>{fallback}</AvatarFallback>
                     </Avatar>
-                    <span className="group-data-[collapsible=icon]:hidden">
-                      Guest User
+                    <span className="group-data-[collapsible=icon]:hidden truncate">
+                      {displayName}
                     </span>
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
