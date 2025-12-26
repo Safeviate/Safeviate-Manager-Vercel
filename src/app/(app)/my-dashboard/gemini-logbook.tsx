@@ -105,7 +105,7 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             <TableHead className="border" colSpan={3}>Multi Engine Day</TableHead>
                             <TableHead className="border" colSpan={3}>Multi Engine Night</TableHead>
                             <TableHead className="border" colSpan={3}>Instrument Flying</TableHead>
-                            <TableHead className="border" colSpan={1}>Flying As Instructor</TableHead>
+                            <TableHead className="border" colSpan={2}>Flying As Instructor</TableHead>
                         </TableRow>
                          <TableRow>
                             <TableHead className="border h-10">Type</TableHead>
@@ -124,6 +124,7 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             <TableHead className="border h-10">Place</TableHead>
                             <TableHead className="border h-10">Time</TableHead>
                             <TableHead className="border h-10">Day</TableHead>
+                            <TableHead className="border h-10">Night</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -160,12 +161,13 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                         <TableCell className="border"></TableCell>
                                         <TableCell className="border"></TableCell>
                                         <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
                                     </TableRow>
                                 );
                             })
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={19} className="h-24 text-center border">
+                                <TableCell colSpan={20} className="h-24 text-center border">
                                     No completed flights found.
                                 </TableCell>
                             </TableRow>
