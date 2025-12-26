@@ -32,6 +32,7 @@ export interface Booking {
     overnightBookingDate?: string | null; // YYYY-MM-DD
     overnightEndTime?: string | null; // HH:mm
     flightPlanId?: string; // Link to a flight plan document
+    flightDetails?: string; // New field for flight details
     // Pre-flight data
     preFlight?: {
         actualHobbs?: number;

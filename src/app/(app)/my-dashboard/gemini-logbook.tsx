@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useMemo } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { useMemo, useState } from 'react';
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
 import { format, differenceInMinutes, parse } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,6 +11,7 @@ import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import type { Aircraft } from '@/app/(app)/assets/page';
 import type { Booking } from '@/types/booking';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 interface GeminiLogbookProps {
   userProfile: PilotProfile | Personnel;
@@ -78,8 +79,47 @@ const useGeminiLogbookData = (userProfile: PilotProfile | Personnel) => {
     return { userBookings, aircraftMap, allUsersMap, isLoading };
 };
 
+const EditableCell = ({ booking, firestore }: { booking: Booking; firestore: any }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [text, setText] = useState(booking.flightDetails || '');
+    const tenantId = 'safeviate';
+  
+    const handleSave = () => {
+      if (firestore && booking.flightDetails !== text) {
+        const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', booking.id);
+        updateDocumentNonBlocking(bookingRef, { flightDetails: text });
+      }
+      setIsEditing(false);
+    };
+  
+    if (isEditing) {
+      return (
+        <Input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSave();
+            }
+          }}
+          autoFocus
+          className="bg-transparent border-primary"
+        />
+      );
+    }
+  
+    return (
+      <div onClick={() => setIsEditing(true)} className="min-h-[40px] w-full flex items-center justify-center cursor-pointer">
+        {text || <span className="text-muted-foreground">Click to edit</span>}
+      </div>
+    );
+};
+
 export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
     const { userBookings, aircraftMap, allUsersMap, isLoading } = useGeminiLogbookData(userProfile);
+    const firestore = useFirestore();
     
     if (isLoading) {
         return <Skeleton className="h-64 w-full" />;
@@ -99,10 +139,9 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             <col style={{ width: '100px' }} />
                             <col style={{ width: '100px' }} />
                             <col style={{ width: '100px' }} />
-                            <col style={{ width: '110px' }} />
+                            <col style={{ width: '150px' }} />
                             <col style={{ width: '120px' }} />
                             <col style={{ width: '60px' }} />
-                            {/* Dynamically generate remaining columns with equal width */}
                             {Array.from({ length: 16 }).map((_, i) => (
                                 <col key={i} style={{ width: '60px' }} />
                             ))}
@@ -173,9 +212,10 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                             <TableCell className="border text-center">{aircraft?.model || 'N/A'}</TableCell>
                                             <TableCell className="border text-center">{aircraft?.tailNumber || 'N/A'}</TableCell>
                                             <TableCell className="border text-center">{picName}</TableCell>
-                                            <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center p-0">
+                                                <EditableCell booking={booking} firestore={firestore} />
+                                            </TableCell>
                                             <TableCell className="border text-center">{`${flightHours}h`}</TableCell>
-                                            <TableCell className="border text-center"></TableCell>
                                             <TableCell className="border text-center"></TableCell>
                                             <TableCell className="border text-center"></TableCell>
                                             <TableCell className="border text-center"></TableCell>
@@ -197,7 +237,7 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                 })
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={23} className="h-24 text-center border">
+                                    <TableCell colSpan={24} className="h-24 text-center border">
                                         No completed flights found.
                                     </TableCell>
                                 </TableRow>
