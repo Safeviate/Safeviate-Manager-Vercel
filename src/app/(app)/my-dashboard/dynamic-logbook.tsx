@@ -77,7 +77,7 @@ const useLogbookData = (userProfile: PilotProfile | Personnel) => {
                 (booking.studentId && booking.studentId === userProfile.id) ||
                 booking.createdById === userProfile.id
             )
-            .sort((a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime());
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [allBookings, userProfile]);
 
     return { userBookings, aircraftMap, allUsersMap, isLoading };
@@ -91,8 +91,8 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
         const aircraft = aircraftMap.get(booking.aircraftId);
         
         const flightMinutes = (booking.status === 'Completed' && booking.startTime && booking.endTime) ? differenceInMinutes(
-            parse(`${booking.bookingDate} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date()),
-            parse(`${booking.bookingDate} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date())
+            parse(`${booking.date} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date()),
+            parse(`${booking.date} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date())
         ) : 0;
         const flightHours = (flightMinutes / 60).toFixed(1);
 
@@ -103,7 +103,7 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
         const creatorName = creator ? `${creator.firstName} ${creator.lastName}` : 'N/A';
 
         switch(columnId.toLowerCase()) {
-            case 'date': return format(new Date(booking.bookingDate), 'yyyy-MM-dd');
+            case 'date': return format(new Date(booking.date), 'yyyy-MM-dd');
             case 'booking no': return booking.bookingNumber.toString();
             case 'type': return aircraft?.model || 'N/A';
             case 'registration': return aircraft?.tailNumber || 'N/A';
@@ -197,4 +197,3 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
         </Card>
     );
 }
-

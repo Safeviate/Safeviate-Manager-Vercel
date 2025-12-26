@@ -107,16 +107,16 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
         if (!booking || !aircrafts || !pilots) return null;
         
         const aircraft = aircrafts.find(a => a.id === booking.aircraftId);
-        const pilot = pilots.find(p => p.id === booking.pilotId);
+        const creator = pilots.find(p => p.id === booking.createdById);
         const instructor = booking.instructorId ? pilots.find(p => p.id === booking.instructorId) : null;
 
         return {
             ...booking,
             aircraft,
-            pilotName: pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot',
+            creatorName: creator ? `${creator.firstName} ${creator.lastName}` : 'Unknown Creator',
             instructorName: instructor ? `${instructor.firstName} ${instructor.lastName}` : null,
-            fullStartTime: parse(`${booking.bookingDate} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date()),
-            fullEndTime: parse(`${booking.bookingDate} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date()),
+            fullStartTime: parse(`${booking.date} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date()),
+            fullEndTime: parse(`${booking.date} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date()),
         };
     }, [booking, aircrafts, pilots]);
 
@@ -167,10 +167,10 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                            <span>{enrichedBooking.aircraft?.tailNumber}</span>
                         </div>
                     </DetailItem>
-                    <DetailItem label="Pilot">
+                    <DetailItem label="Pilot in Command">
                         <div className="flex items-center gap-2">
                            <User className="h-4 w-4 text-muted-foreground" />
-                           <span>{enrichedBooking.pilotName}</span>
+                           <span>{enrichedBooking.creatorName}</span>
                         </div>
                     </DetailItem>
                     {enrichedBooking.instructorName && (

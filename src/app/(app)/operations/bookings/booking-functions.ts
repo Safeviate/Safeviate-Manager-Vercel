@@ -217,5 +217,3 @@ export const cancelBooking = async (
         throw new Error("Failed to cancel booking.");
     }
 };
-
-    

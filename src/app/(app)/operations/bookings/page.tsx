@@ -32,7 +32,7 @@ const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booki
 
     // First segment (always exists)
     segments.push({
-        date: booking.bookingDate,
+        date: booking.date,
         startTime: booking.startTime,
         endTime: booking.isOvernight ? '23:59' : booking.endTime
     });
@@ -115,9 +115,9 @@ const AircraftColumn = ({
         return bookings.filter(b => {
           if (b.isOvernight) {
             // Include if selectedDate is the start date or the overnight end date
-            return b.bookingDate === format(selectedDate, 'yyyy-MM-dd') || b.overnightBookingDate === format(selectedDate, 'yyyy-MM-dd');
+            return b.date === format(selectedDate, 'yyyy-MM-dd') || b.overnightBookingDate === format(selectedDate, 'yyyy-MM-dd');
           }
-          return b.bookingDate === format(selectedDate, 'yyyy-MM-dd');
+          return b.date === format(selectedDate, 'yyyy-MM-dd');
         });
       }, [bookings, selectedDate]);
 
@@ -206,7 +206,7 @@ export default function SchedulePage() {
     // We query for the selected day AND the previous day to catch overnight bookings that started the day before.
     return query(
         collection(firestore, 'tenants', tenantId, 'bookings'),
-        where('bookingDate', 'in', [today, yesterday]),
+        where('date', 'in', [today, yesterday]),
     );
   }, [firestore, tenantId, selectedDate, dataVersion]); 
 
@@ -274,7 +274,7 @@ export default function SchedulePage() {
     if (aircraftForBooking) {
       const allBookingsForAircraft = allBookings?.filter(b => b.aircraftId === aircraftForBooking.id) || [];
       const updatedBooking = allBookings?.find(b => b.id === booking.id) || booking;
-      setBookingFormData({ aircraft: aircraftForBooking, startTime: combineDateAndTime(updatedBooking.bookingDate, updatedBooking.startTime), allBookingsForAircraft, booking: updatedBooking });
+      setBookingFormData({ aircraft: aircraftForBooking, startTime: combineDateAndTime(updatedBooking.date, updatedBooking.startTime), allBookingsForAircraft, booking: updatedBooking });
       setIsBookingFormOpen(true);
     }
   };
@@ -387,5 +387,3 @@ export default function SchedulePage() {
     </>
   );
 }
-
-    

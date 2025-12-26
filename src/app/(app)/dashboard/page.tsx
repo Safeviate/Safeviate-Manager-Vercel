@@ -102,7 +102,7 @@ export default function DashboardPage() {
             openReports: reports?.filter(r => r.status === 'Open').length || 0,
             openCaps: caps?.filter(c => c.status === 'Open').length || 0,
             upcomingBookings: bookings?.filter(b => {
-                const bookingDate = new Date(b.bookingDate);
+                const bookingDate = new Date(b.date);
                 return bookingDate >= today && bookingDate <= nextWeek && b.status === 'Confirmed';
             }).length || 0
         };

@@ -143,7 +143,7 @@ export default function BookingsHistoryPage() {
 
     return bookings.map(b => {
       const bookingAircraft = aircraftMap.get(b.aircraftId);
-      const fullStartTime = b.bookingDate && b.startTime ? parse(`${b.bookingDate} ${b.startTime}`, 'yyyy-MM-dd HH:mm', new Date()) : undefined;
+      const fullStartTime = b.date && b.startTime ? parse(`${b.date} ${b.startTime}`, 'yyyy-MM-dd HH:mm', new Date()) : undefined;
       
       return {
         ...b,
@@ -213,5 +213,3 @@ export default function BookingsHistoryPage() {
     </div>
   );
 }
-
-    

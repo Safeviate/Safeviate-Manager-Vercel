@@ -23,7 +23,7 @@ export interface Booking {
     studentId?: string | null; // For training flights
     instructorId?: string | null; // For training flights
     type: 'Training Flight' | 'Private Flight' | 'Reposition Flight' | 'Maintenance Flight';
-    bookingDate: string; // YYYY-MM-DD
+    date: string; // YYYY-MM-DD
     startTime: string;   // HH:mm
     endTime: string;     // HH:mm
     status: 'Confirmed' | 'Completed' | 'Cancelled' | 'Cancelled with Reason';
@@ -52,5 +52,3 @@ export interface Booking {
     // Mass and Balance data
     massAndBalance?: MassAndBalance;
 }
-
-    

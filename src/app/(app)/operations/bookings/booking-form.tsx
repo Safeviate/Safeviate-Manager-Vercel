@@ -86,7 +86,7 @@ export function BookingForm({
   const [overnightEndTime, setOvernightEndTime] = useState('09:00');
   const [cancellationReason, setCancellationReason] = useState('');
   
-  const baseDate = existingBooking ? parse(existingBooking.bookingDate, 'yyyy-MM-dd', new Date()) : initialStartTime;
+  const baseDate = existingBooking ? parse(existingBooking.date, 'yyyy-MM-dd', new Date()) : initialStartTime;
   
   const [isPreFlightOpen, setIsPreFlightOpen] = useState(false);
   const [isPostFlightOpen, setIsPostFlightOpen] = useState(false);
@@ -166,7 +166,7 @@ export function BookingForm({
     const bookingDate = format(baseDate, 'yyyy-MM-dd');
 
     const commonData: Partial<Booking> = {
-        bookingDate,
+        date: bookingDate,
         startTime: startTimeValue,
         type: bookingType,
         isOvernight,
@@ -249,13 +249,13 @@ export function BookingForm({
     // Find the booking immediately preceding this one for the same aircraft
     const previousBooking = allBookingsForAircraft
         .filter(b => {
-            const bEnd = parse(`${b.bookingDate}T${b.endTime}`, "yyyy-MM-dd'T'HH:mm", new Date());
-            const thisStart = parse(`${existingBooking.bookingDate}T${existingBooking.startTime}`, "yyyy-MM-dd'T'HH:mm", new Date());
+            const bEnd = parse(`${b.date}T${b.endTime}`, "yyyy-MM-dd'T'HH:mm", new Date());
+            const thisStart = parse(`${existingBooking.date}T${existingBooking.startTime}`, "yyyy-MM-dd'T'HH:mm", new Date());
             return b.id !== existingBooking.id && bEnd <= thisStart;
         })
         .sort((a, b) => {
-            const aEnd = parse(`${a.bookingDate}T${a.endTime}`, "yyyy-MM-dd'T'HH:mm", new Date());
-            const bEnd = parse(`${b.bookingDate}T${b.endTime}`, "yyyy-MM-dd'T'HH:mm", new Date());
+            const aEnd = parse(`${a.date}T${a.endTime}`, "yyyy-MM-dd'T'HH:mm", new Date());
+            const bEnd = parse(`${b.date}T${b.endTime}`, "yyyy-MM-dd'T'HH:mm", new Date());
             return bEnd.getTime() - aEnd.getTime();
         })[0];
         
@@ -484,5 +484,3 @@ export function BookingForm({
     </>
   );
 }
-
-    
