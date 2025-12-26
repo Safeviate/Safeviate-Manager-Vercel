@@ -113,10 +113,17 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
             case 'type': return aircraft?.model || 'N/A';
             case 'registration': return aircraft?.tailNumber || 'N/A';
             case 'pilot in command':
+                 if (booking.type === 'Training Flight') {
+                    return instructor ? `${instructor.firstName} ${instructor.lastName}` : '';
+                }
                 return picName;
             case 'student': return student ? `${student.firstName} ${student.lastName}` : '---';
             case 'instructor': return instructor ? `${instructor.firstName} ${instructor.lastName}` : '---';
-            case 'pic': return picName;
+            case 'pic': 
+                if (booking.type === 'Training Flight') {
+                    return instructor ? `${instructor.firstName} ${instructor.lastName}` : '';
+                }
+                return picName;
             case 'flight time': return `${flightHours}h`;
             default: return '';
         }
