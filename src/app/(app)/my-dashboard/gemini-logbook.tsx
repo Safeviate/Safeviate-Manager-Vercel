@@ -117,7 +117,6 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                 <TableHead className="border" colSpan={3}>Multi Engine Night</TableHead>
                                 <TableHead className="border" colSpan={3}>Instrument Flying</TableHead>
                                 <TableHead className="border" colSpan={2}>Flying As Instructor</TableHead>
-                                <TableHead className="border" rowSpan={2}>New Column</TableHead>
                             </TableRow>
                              <TableRow>
                                 <TableHead className="border h-10">Type</TableHead>
@@ -132,8 +131,8 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                 <TableHead className="border h-10">Dual</TableHead>
                                 <TableHead className="border h-10">PIC</TableHead>
                                 <TableHead className="border h-10">Co Pilot</TableHead>
-                                <TableHead className="border h-10}>Nave Aids</TableHead>
-                                <TableHead className="border h-10">Place</TableHead>
+                                <TableHead className="border h-10">Nave Aids</TableHead>
+                                <TableHead className="border h-10" style={{ width: '60px' }}>Place</TableHead>
                                 <TableHead className="border h-10">Time</TableHead>
                                 <TableHead className="border h-10">Day</TableHead>
                                 <TableHead className="border h-10">Night</TableHead>
