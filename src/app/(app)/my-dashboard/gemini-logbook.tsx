@@ -105,7 +105,7 @@ const EditableCell = ({ booking, firestore }: { booking: Booking; firestore: any
             }
           }}
           autoFocus
-          className="bg-transparent border-primary"
+          className="bg-transparent border-primary text-center"
         />
       );
     }
@@ -139,8 +139,8 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             <col style={{ width: '100px' }} />
                             <col style={{ width: '100px' }} />
                             <col style={{ width: '100px' }} />
-                            <col style={{ width: '150px' }} />
-                            <col style={{ width: '120px' }} />
+                            <col style={{ width: '90px' }} />
+                            <col style={{ width: '140px' }} />
                             <col style={{ width: '60px' }} />
                             {Array.from({ length: 16 }).map((_, i) => (
                                 <col key={i} style={{ width: '60px' }} />
@@ -212,7 +212,7 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                             <TableCell className="border text-center">{aircraft?.model || 'N/A'}</TableCell>
                                             <TableCell className="border text-center">{aircraft?.tailNumber || 'N/A'}</TableCell>
                                             <TableCell className="border text-center">{picName}</TableCell>
-                                            <TableCell className="border text-center p-0">
+                                            <TableCell className="border p-0">
                                                 <EditableCell booking={booking} firestore={firestore} />
                                             </TableCell>
                                             <TableCell className="border text-center">{`${flightHours}h`}</TableCell>
