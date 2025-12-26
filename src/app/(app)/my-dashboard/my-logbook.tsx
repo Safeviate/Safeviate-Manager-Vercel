@@ -110,15 +110,13 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
       if (userProfile.userType === 'Instructor') {
           return query(
               bookingsCollection,
-              where('instructorId', '==', userProfile.id),
-              where('status', '==', 'Completed')
+              where('instructorId', '==', userProfile.id)
           );
       }
       
       return query(
         bookingsCollection,
-        where('studentId', '==', userProfile.id),
-        where('status', '==', 'Completed')
+        where('studentId', '==', userProfile.id)
       );
     },
     [firestore, tenantId, userProfile.id, userProfile.userType]
@@ -217,7 +215,7 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
     <Card>
       <CardHeader>
         <CardTitle>My Logbook</CardTitle>
-        <CardDescription>A summary of your completed flights, based on your assigned logbook template.</CardDescription>
+        <CardDescription>A summary of your flights, based on your assigned logbook template.</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? <Skeleton className="h-48 w-full" /> : (
@@ -243,7 +241,7 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={leafColumnIds.length || 1} className="h-24 text-center">
-                        No completed flights found.
+                        No flights found.
                       </TableCell>
                     </TableRow>
                   )}
