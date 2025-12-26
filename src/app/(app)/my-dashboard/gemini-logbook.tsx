@@ -76,7 +76,8 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                         <TableRow>
                             <TableHead className="border w-[120px]" rowSpan={2}>Booking #</TableHead>
                             <TableHead className="border w-[150px]" rowSpan={2}>Date</TableHead>
-                            <TableHead className="border w-[300px]" colSpan={2}>Aircraft</TableHead>
+                            <TableHead className="border w-[150px]">Aircraft</TableHead>
+                            <TableHead className="border w-[150px]">Column 4</TableHead>
                             <TableHead className="border w-[150px]">Column 5</TableHead>
                             <TableHead className="border w-[150px]">Column 6</TableHead>
                             <TableHead className="border w-[150px]">Column 7</TableHead>
@@ -95,7 +96,8 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             <TableHead className="border w-[150px]">Column 20</TableHead>
                         </TableRow>
                          <TableRow>
-                            <TableHead className="border h-10" colSpan={2}></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
                             <TableHead className="border h-10"></TableHead>
                             <TableHead className="border h-10"></TableHead>
                             <TableHead className="border h-10"></TableHead>
@@ -122,7 +124,8 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                     <TableRow key={booking.id}>
                                         <TableCell className="border">{booking.bookingNumber}</TableCell>
                                         <TableCell className="border">{format(new Date(booking.date), 'yyyy-MM-dd')}</TableCell>
-                                        <TableCell className="border" colSpan={2}>{aircraft?.tailNumber || 'N/A'}</TableCell>
+                                        <TableCell className="border">{aircraft?.tailNumber || 'N/A'}</TableCell>
+                                        <TableCell className="border"></TableCell>
                                         <TableCell className="border"></TableCell>
                                         <TableCell className="border"></TableCell>
                                         <TableCell className="border"></TableCell>
