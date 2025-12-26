@@ -4,7 +4,7 @@
 import { useMemo } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import { format } from 'date-fns';
+import { format, differenceInMinutes, parse } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
@@ -99,40 +99,32 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             <TableHead className="border w-[150px]" rowSpan={2}>Date</TableHead>
                             <TableHead className="border w-[300px]" colSpan={2}>Aircraft</TableHead>
                             <TableHead className="border w-[150px]" rowSpan={2}>Pilot In Command</TableHead>
-                            <TableHead className="border w-[150px]">Column 6</TableHead>
-                            <TableHead className="border w-[150px]">Column 7</TableHead>
-                            <TableHead className="border w-[150px]">Column 8</TableHead>
-                            <TableHead className="border w-[150px]">Column 9</TableHead>
-                            <TableHead className="border w-[150px]">Column 10</TableHead>
-                            <TableHead className="border w-[150px]">Column 11</TableHead>
-                            <TableHead className="border w-[150px]">Column 12</TableHead>
-                            <TableHead className="border w-[150px]">Column 13</TableHead>
-                            <TableHead className="border w-[150px]">Column 14</TableHead>
-                            <TableHead className="border w-[150px]">Column 15</TableHead>
-                            <TableHead className="border w-[150px]">Column 16</TableHead>
-                            <TableHead className="border w-[150px]">Column 17</TableHead>
-                            <TableHead className="border w-[150px]">Column 18</TableHead>
-                            <TableHead className="border w-[150px]">Column 19</TableHead>
-                            <TableHead className="border w-[150px]">Column 20</TableHead>
+                            <TableHead className="border" rowSpan={2}>Flight Details</TableHead>
+                            <TableHead className="border" colSpan={2}>Single Engine Day</TableHead>
+                            <TableHead className="border" colSpan={2}>Single Engine Night</TableHead>
+                            <TableHead className="border" colSpan={3}>Multi Engine Day</TableHead>
+                            <TableHead className="border" colSpan={3}>Multi Engine Night</TableHead>
+                            <TableHead className="border" colSpan={3}>Instrument Flying</TableHead>
+                            <TableHead className="border" colSpan={2}>Flying As Instructor</TableHead>
                         </TableRow>
                          <TableRow>
                             <TableHead className="border h-10">Type</TableHead>
                             <TableHead className="border h-10">Registration</TableHead>
-                            <TableHead className="border h-10"></TableHead>
-                            <TableHead className="border h-10"></TableHead>
-                            <TableHead className="border h-10"></TableHead>
-                            <TableHead className="border h-10"></TableHead>
-                            <TableHead className="border h-10"></TableHead>
-                            <TableHead className="border h-10"></TableHead>
-                            <TableHead className="border h-10"></TableHead>
-                            <TableHead className="border h-10"></TableHead>
-                            <TableHead className="border h-10"></TableHead>
-                            <TableHead className="border h-10"></TableHead>
-                            <TableHead className="border h-10"></TableHead>
-                            <TableHead className="border h-10"></TableHead>
-                            <TableHead className="border h-10"></TableHead>
-                            <TableHead className="border h-10"></TableHead>
-                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10">Dual</TableHead>
+                            <TableHead className="border h-10">PIC</TableHead>
+                            <TableHead className="border h-10">Dual</TableHead>
+                            <TableHead className="border h-10">PIC</TableHead>
+                            <TableHead className="border h-10">Dual</TableHead>
+                            <TableHead className="border h-10">PIC</TableHead>
+                            <TableHead className="border h-10">Co Pilot</TableHead>
+                            <TableHead className="border h-10">Dual</TableHead>
+                            <TableHead className="border h-10">PIC</TableHead>
+                            <TableHead className="border h-10">Co Pilot</TableHead>
+                            <TableHead className="border h-10">Nave Aids</TableHead>
+                            <TableHead className="border h-10">Place</TableHead>
+                            <TableHead className="border h-10">Time</TableHead>
+                            <TableHead className="border h-10">Day</TableHead>
+                            <TableHead className="border h-10">Night</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -140,13 +132,22 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             userBookings.map(booking => {
                                 const aircraft = aircraftMap.get(booking.aircraftId);
                                 const creator = booking.createdById ? allUsersMap.get(booking.createdById) : null;
+                                const creatorName = creator ? `${creator.firstName} ${creator.lastName}` : 'N/A';
+                                const flightMinutes = (booking.status === 'Completed' && booking.startTime && booking.endTime) ? differenceInMinutes(
+                                    parse(`${booking.date} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date()),
+                                    parse(`${booking.date} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date())
+                                ) : 0;
+                                const flightHours = (flightMinutes / 60).toFixed(1);
+                                
                                 return (
                                     <TableRow key={booking.id}>
                                         <TableCell className="border">{booking.bookingNumber}</TableCell>
                                         <TableCell className="border">{format(new Date(booking.date), 'yyyy-MM-dd')}</TableCell>
-                                        <TableCell className="border">{aircraft?.type || 'N/A'}</TableCell>
+                                        <TableCell className="border">{aircraft?.model || 'N/A'}</TableCell>
                                         <TableCell className="border">{aircraft?.tailNumber || 'N/A'}</TableCell>
-                                        <TableCell className="border">{creator ? `${creator.firstName} ${creator.lastName}` : 'N/A'}</TableCell>
+                                        <TableCell className="border">{creatorName}</TableCell>
+                                        <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
                                         <TableCell className="border"></TableCell>
                                         <TableCell className="border"></TableCell>
                                         <TableCell className="border"></TableCell>
