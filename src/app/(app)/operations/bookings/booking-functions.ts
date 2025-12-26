@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -63,9 +64,13 @@ export const createBooking = async (
                 status: 'Confirmed',
             };
 
+            // Correctly handle user IDs based on booking type
             if (payload.type === 'Training Flight') {
-                payload.pilotId = null; // Ensure pilotId is null for training flights
+                payload.studentId = bookingData.studentId || null;
+                payload.instructorId = bookingData.instructorId || null;
+                payload.pilotId = null; 
             } else {
+                payload.pilotId = bookingData.pilotId || null;
                 payload.studentId = null;
                 payload.instructorId = null;
             }
@@ -111,14 +116,19 @@ export const updateBooking = async ({
     
     const updatePayload: Record<string, any> = { ...updateData };
 
-     if (updatePayload.type === 'Training Flight') {
-        updatePayload.pilotId = null; // Use null instead of deleteField
-    } else {
+     // Correctly handle user IDs based on booking type
+    if (updatePayload.type === 'Training Flight') {
+        updatePayload.studentId = updateData.studentId || null;
+        updatePayload.instructorId = updateData.instructorId || null;
+        updatePayload.pilotId = null;
+    } else if (updatePayload.type) { // If type is being changed TO a non-training flight
+        updatePayload.pilotId = updateData.pilotId || null;
         updatePayload.studentId = null;
         updatePayload.instructorId = null;
     }
 
-    if (!updateData.isOvernight) {
+
+    if (updateData.isOvernight === false) {
         updatePayload.overnightBookingDate = deleteField();
         updatePayload.overnightEndTime = deleteField();
     }
