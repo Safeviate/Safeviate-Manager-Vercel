@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -63,10 +64,14 @@ export default function MyDashboardPage() {
         );
     }
     
+    const logbookTemplate: TableTemplate | null = publishedTable
+      ? { tableData: publishedTable.tableData, name: "Logbook", id: "logbook" }
+      : null;
+
     return (
         <div className="w-full space-y-6">
             {publishedTable?.tableData ? (
-                <DynamicLogbook template={{tableData: publishedTable.tableData, name: "Logbook", id: "logbook"}} userProfile={userProfile} />
+                <DynamicLogbook template={logbookTemplate!} userProfile={userProfile} />
             ) : (
                 <Card>
                     <CardHeader>
@@ -81,7 +86,7 @@ export default function MyDashboardPage() {
                 </Card>
             )}
 
-            <GeminiLogbook userProfile={userProfile} />
+            <GeminiLogbook template={logbookTemplate} userProfile={userProfile} />
         </div>
     );
 }
