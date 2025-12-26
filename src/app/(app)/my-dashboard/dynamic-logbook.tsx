@@ -103,6 +103,7 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
 
         switch(columnId.toLowerCase()) {
             case 'date': return format(new Date(booking.bookingDate), 'yyyy-MM-dd');
+            case 'booking no': return booking.bookingNumber.toString();
             case 'type': return aircraft?.model || 'N/A';
             case 'registration': return aircraft?.tailNumber || 'N/A';
             case 'pilot in command':
