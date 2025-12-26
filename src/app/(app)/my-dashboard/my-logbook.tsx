@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -32,25 +33,33 @@ const useLogbookData = (userProfile: PilotProfile | Personnel) => {
         [firestore, tenantId]
     );
     
-    // Correctly query the single 'pilots' collection for all pilot user types.
-    const pilotsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/pilots`) : null), [firestore, tenantId]);
+    // Correctly query ALL user collections
+    const studentsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
+    const instructorsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
+    const privatePilotsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/private-pilots`) : null), [firestore, tenantId]);
+    const personnelQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
 
 
     const { data: allBookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
     const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
+    const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsQuery);
+    const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
+    const { data: privatePilots, isLoading: isLoadingPrivatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
+    const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
+
     
-    // Fetch all pilots from the single collection
-    const { data: allPilots, isLoading: isLoadingPilots } = useCollection<PilotProfile>(pilotsQuery);
-    
-    const isLoading = isLoadingBookings || isLoadingAircrafts || isLoadingPilots;
+    const isLoading = isLoadingBookings || isLoadingAircrafts || isLoadingStudents || isLoadingInstructors || isLoadingPrivatePilots || isLoadingPersonnel;
     
     const allUsersMap = useMemo(() => {
         const userMap = new Map<string, PilotProfile | Personnel>();
-        if (allPilots) {
-            allPilots.forEach(p => userMap.set(p.id, p));
-        }
+        const allUserLists = [students, instructors, privatePilots, personnel];
+        allUserLists.forEach(list => {
+            if (list) {
+                list.forEach(p => userMap.set(p.id, p));
+            }
+        });
         return userMap;
-    }, [allPilots]);
+    }, [students, instructors, privatePilots, personnel]);
 
     const aircraftMap = useMemo(() => {
         if (!aircrafts) return new Map();
