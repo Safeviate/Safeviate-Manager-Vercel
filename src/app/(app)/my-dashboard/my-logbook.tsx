@@ -99,18 +99,32 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
       : null,
     [firestore, tenantId, userProfile.logbookTemplateId]
   );
-
-  const completedBookingsQuery = useMemoFirebase(
-    () => (firestore && userProfile.id)
-      ? query(
-          collection(firestore, `tenants/${tenantId}/bookings`),
-          where('pilotId', '==', userProfile.id),
-          where('status', '==', 'Completed')
-        )
-      : null,
-    [firestore, tenantId, userProfile.id]
+  
+  // Query for bookings where the user is either the pilot or the student
+  const bookingsQuery = useMemoFirebase(
+    () => {
+      if (!firestore || !userProfile.id) return null;
+      
+      const bookingsCollection = collection(firestore, `tenants/${tenantId}/bookings`);
+      
+      if (userProfile.userType === 'Instructor') {
+          return query(
+              bookingsCollection,
+              where('instructorId', '==', userProfile.id),
+              where('status', '==', 'Completed')
+          );
+      }
+      
+      return query(
+        bookingsCollection,
+        where('studentId', '==', userProfile.id),
+        where('status', '==', 'Completed')
+      );
+    },
+    [firestore, tenantId, userProfile.id, userProfile.userType]
   );
   
+
   const aircraftsQuery = useMemoFirebase(
     () => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null),
     [firestore, tenantId]
@@ -120,6 +134,12 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
       () => firestore ? query(collection(firestore, `tenants/${tenantId}/pilots`)) : null,
       [firestore, tenantId]
   );
+  
+  const allStudentsQuery = useMemoFirebase(
+      () => firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null,
+      [firestore, tenantId]
+  );
+  
   const allInstructorsQuery = useMemoFirebase(
       () => firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null,
       [firestore, tenantId]
@@ -127,9 +147,10 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
 
 
   const { data: template, isLoading: isLoadingTemplate } = useDoc<TableTemplate>(logbookTemplateRef);
-  const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(completedBookingsQuery);
+  const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
   const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
   const { data: pilots, isLoading: isLoadingPilots } = useCollection<PilotProfile>(allPilotsQuery);
+  const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(allStudentsQuery);
   const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(allInstructorsQuery);
 
   const aircraftMap = useMemo(() => {
@@ -140,9 +161,10 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
   const usersMap = useMemo(() => {
       const map = new Map<string, string>();
       (pilots || []).forEach(p => map.set(p.id, `${p.firstName} ${p.lastName}`));
+      (students || []).forEach(p => map.set(p.id, `${p.firstName} ${p.lastName}`));
       (instructors || []).forEach(p => map.set(p.id, `${p.firstName} ${p.lastName}`));
       return map;
-  }, [pilots, instructors]);
+  }, [pilots, students, instructors]);
 
   const { headerRows, leafColumnIds } = useMemo(() => {
     if (!template?.tableData) return { headerRows: [], leafColumnIds: [] };
@@ -159,8 +181,10 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
     );
     const flightHours = (flightMinutes / 60).toFixed(1);
     const aircraft = aircraftMap.get(booking.aircraftId);
-    const pilotName = usersMap.get(booking.pilotId) || booking.pilotId;
-    const instructorName = booking.instructorId ? (usersMap.get(booking.instructorId) || booking.instructorId) : '';
+    
+    const pilotName = booking.pilotId ? (usersMap.get(booking.pilotId) || 'Unknown') : '';
+    const studentName = booking.studentId ? (usersMap.get(booking.studentId) || 'Unknown') : '';
+    const instructorName = booking.instructorId ? (usersMap.get(booking.instructorId) || 'Unknown') : '';
 
     const normalizedColumnId = columnId.toUpperCase().replace(/\s+/g, '');
     
@@ -177,15 +201,17 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
         return flightHours;
       case 'PILOTINCOMMAND':
       case 'PIC':
-          return pilotName;
+          return pilotName || studentName;
       case 'INSTRUCTOR':
           return instructorName;
+      case 'STUDENT':
+          return studentName;
       default: return '';
     }
   };
 
 
-  const isLoading = isLoadingTemplate || isLoadingBookings || isLoadingAircrafts || isLoadingPilots || isLoadingInstructors;
+  const isLoading = isLoadingTemplate || isLoadingBookings || isLoadingAircrafts || isLoadingPilots || isLoadingStudents || isLoadingInstructors;
 
   return (
     <Card>
@@ -230,3 +256,5 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
     </Card>
   );
 }
+
+    

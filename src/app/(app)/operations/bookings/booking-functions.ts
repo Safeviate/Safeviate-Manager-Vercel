@@ -64,12 +64,16 @@ export const createBooking = async (
                 status: 'Confirmed',
             };
 
-            if (bookingData.instructorId === '' || bookingData.instructorId === null) {
-                delete payload.instructorId;
+            if (payload.type === 'Training Flight') {
+                payload.pilotId = null; // Ensure pilotId is null for training flights
+            } else {
+                payload.studentId = null;
+                payload.instructorId = null;
             }
+
             if (!bookingData.isOvernight) {
-                delete payload.overnightBookingDate;
-                delete payload.overnightEndTime;
+                payload.overnightBookingDate = null;
+                payload.overnightEndTime = null;
             }
 
             transaction.set(newBookingRef, payload);
@@ -108,7 +112,10 @@ export const updateBooking = async ({
     
     const updatePayload: Record<string, any> = { ...updateData };
 
-    if (updateData.instructorId === '' || updateData.instructorId === null) {
+    if (updatePayload.type === 'Training Flight') {
+        updatePayload.pilotId = deleteField();
+    } else {
+        updatePayload.studentId = deleteField();
         updatePayload.instructorId = deleteField();
     }
 
@@ -205,3 +212,5 @@ export const cancelBooking = async (
         throw new Error("Failed to cancel booking.");
     }
 };
+
+    

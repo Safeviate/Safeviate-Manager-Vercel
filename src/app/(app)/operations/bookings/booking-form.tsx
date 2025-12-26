@@ -76,8 +76,9 @@ export function BookingForm({
   const isEditMode = !!existingBooking;
 
   // Form state
-  const [bookingType, setBookingType] = useState('');
+  const [bookingType, setBookingType] = useState<Booking['type'] | ''>('');
   const [pilotId, setPilotId] = useState('');
+  const [studentId, setStudentId] = useState('');
   const [instructorId, setInstructorId] = useState('');
   const [startTimeValue, setStartTimeValue] = useState('');
   const [endTimeValue, setEndTimeValue] = useState('');
@@ -96,6 +97,7 @@ export function BookingForm({
         if (existingBooking) {
             setBookingType(existingBooking.type || '');
             setPilotId(existingBooking.pilotId || '');
+            setStudentId(existingBooking.studentId || '');
             setInstructorId(existingBooking.instructorId || '');
             setStartTimeValue(existingBooking.startTime);
             setEndTimeValue(existingBooking.endTime);
@@ -112,6 +114,7 @@ export function BookingForm({
             
             setBookingType('');
             setPilotId('');
+            setStudentId('');
             setInstructorId('');
             setStartTimeValue(formattedStartTime);
             setIsOvernight(false);
@@ -147,16 +150,21 @@ export function BookingForm({
   const handleSave = async () => {
     if (!firestore) return;
 
-    if (!bookingType || !pilotId) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Booking Type and Pilot are required.' });
-      return;
-    }
-
-    if (bookingType === 'Training Flight' && !instructorId) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Instructor is required for Training Flights.' });
+    if (!bookingType) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Booking Type is required.' });
         return;
     }
     
+    if (bookingType === 'Training Flight' && (!studentId || !instructorId)) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Student and Instructor are required for Training Flights.' });
+        return;
+    }
+
+    if (bookingType !== 'Training Flight' && !pilotId) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Pilot is required for this booking type.' });
+        return;
+    }
+
     if (isOvernight && !overnightEndTime) {
         toast({ variant: 'destructive', title: 'Error', description: 'Overnight end time is required.' });
         return;
@@ -167,12 +175,20 @@ export function BookingForm({
     const commonData: Partial<Booking> = {
         bookingDate,
         startTime: startTimeValue,
-        type: bookingType as Booking['type'],
-        pilotId,
-        instructorId: bookingType === 'Training Flight' ? instructorId : '',
+        type: bookingType,
         isOvernight,
     };
     
+    if (bookingType === 'Training Flight') {
+        commonData.studentId = studentId;
+        commonData.instructorId = instructorId;
+        commonData.pilotId = null; // Ensure pilotId is cleared for training flights
+    } else {
+        commonData.pilotId = pilotId;
+        commonData.studentId = null; // Ensure student/instructor IDs are cleared
+        commonData.instructorId = null;
+    }
+
     if (isOvernight) {
         const overnightBookingDate = addDays(baseDate, 1);
         commonData.endTime = '23:59';
@@ -202,7 +218,7 @@ export function BookingForm({
 
     } else {
         try {
-            await createBooking(firestore, tenantId, { aircraftId: aircraft.id, ...commonData } as Booking);
+            await createBooking(firestore, tenantId, { aircraftId: aircraft.id, ...commonData } as Omit<Booking, 'id'>);
             toast({ title: 'Booking Created', description: 'The new booking has been saved successfully.' });
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
@@ -325,7 +341,7 @@ export function BookingForm({
                         <>
                             <div className="col-span-1 space-y-2">
                                 <Label htmlFor="student">Student</Label>
-                                <Select onValueChange={setPilotId} value={pilotId}>
+                                <Select onValueChange={setStudentId} value={studentId}>
                                     <SelectTrigger id="student">
                                         <SelectValue placeholder="Select a student" />
                                     </SelectTrigger>
@@ -494,3 +510,5 @@ export function BookingForm({
     </>
   );
 }
+
+    

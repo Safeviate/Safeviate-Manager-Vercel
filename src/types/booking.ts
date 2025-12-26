@@ -19,8 +19,9 @@ export interface Booking {
     id: string;
     bookingNumber: number;
     aircraftId: string;
-    pilotId: string;
-    instructorId?: string | null;
+    pilotId?: string | null; // For private/reposition/maintenance flights
+    studentId?: string | null; // For training flights
+    instructorId?: string | null; // For training flights
     type: 'Training Flight' | 'Private Flight' | 'Reposition Flight' | 'Maintenance Flight';
     bookingDate: string; // YYYY-MM-DD
     startTime: string;   // HH:mm
@@ -51,3 +52,5 @@ export interface Booking {
     // Mass and Balance data
     massAndBalance?: MassAndBalance;
 }
+
+    
