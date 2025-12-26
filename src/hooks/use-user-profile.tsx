@@ -45,14 +45,24 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
             const impersonatedEmail = localStorage.getItem('impersonatedUser');
 
             if (!impersonatedEmail) {
+                // This handles the "Developer" login case
+                const devProfile: Personnel = {
+                    id: authUser.uid,
+                    userType: 'Personnel',
+                    firstName: 'Developer',
+                    lastName: 'Mode',
+                    email: authUser.email || 'dev@safeviate.com',
+                    role: 'dev',
+                    permissions: [],
+                }
+                setUserProfile(devProfile);
                 setIsLoading(false);
-                setUserProfile(null);
                 return;
             }
 
             try {
-                // Query all user type collections
-                const collectionsToQuery = ['personnel', 'instructors', 'students', 'private-pilots'];
+                // Define collections to check
+                const collectionsToQuery = ['personnel', 'pilots'];
                 
                 const queries = collectionsToQuery.map(col => 
                     query(collection(firestore, `tenants/safeviate/${col}`), where('email', '==', impersonatedEmail))
