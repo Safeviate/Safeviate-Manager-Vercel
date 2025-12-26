@@ -218,18 +218,25 @@ export default function SchedulePage() {
     [firestore, tenantId, dataVersion]
   );
 
-  const pilotsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'pilots')) : null),
-    [firestore, tenantId]
-  );
+  const studentsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
+  const privatePilotsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/private-pilots`) : null), [firestore, tenantId]);
+  
 
   const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
   const { data: bookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
   const { data: allBookings, isLoading: isLoadingAllBookings, error: allBookingsError } = useCollection<Booking>(allBookingsQuery);
-  const { data: pilots, isLoading: isLoadingPilots, error: pilotsError } = useCollection<PilotProfile>(pilotsQuery);
 
-  const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingPilots || isLoadingAllBookings;
-  const error = aircraftError || bookingsError || pilotsError || allBookingsError;
+  const { data: students } = useCollection<PilotProfile>(studentsQuery);
+  const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
+  const { data: privatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
+
+  const allPilots = useMemo(() => {
+      return [...(students || []), ...(instructors || []), ...(privatePilots || [])];
+  }, [students, instructors, privatePilots]);
+
+  const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingAllBookings;
+  const error = aircraftError || bookingsError || allBookingsError;
 
   const refreshBookings = useCallback(() => {
     setDataVersion(v => v + 1);
@@ -338,7 +345,7 @@ export default function SchedulePage() {
                         key={ac.id}
                         aircraft={ac}
                         bookings={(bookings || []).filter(b => b.aircraftId === ac.id)}
-                        pilots={pilots || []}
+                        pilots={allPilots}
                         showNowLine={showNowLine}
                         nowLinePosition={nowLinePosition}
                         selectedDate={selectedDate}
@@ -372,7 +379,7 @@ export default function SchedulePage() {
             aircraft={bookingFormData.aircraft}
             startTime={bookingFormData.startTime}
             tenantId={tenantId}
-            pilots={pilots || []}
+            pilots={allPilots}
             allBookingsForAircraft={bookingFormData.allBookingsForAircraft}
             existingBooking={bookingFormData.booking}
             refreshBookings={refreshBookings}
@@ -381,5 +388,3 @@ export default function SchedulePage() {
     </>
   );
 }
-
-    
