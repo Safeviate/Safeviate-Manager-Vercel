@@ -75,7 +75,7 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                     <TableHeader>
                         <TableRow>
                             <TableHead className="border w-[120px]" rowSpan={2}>Booking #</TableHead>
-                            <TableHead className="border w-[150px]">Date</TableHead>
+                            <TableHead className="border w-[150px]" rowSpan={2}>Date</TableHead>
                             <TableHead className="border w-[150px]">Aircraft</TableHead>
                             <TableHead className="border w-[150px]">Column 4</TableHead>
                             <TableHead className="border w-[150px]">Column 5</TableHead>
@@ -96,7 +96,6 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             <TableHead className="border w-[150px]">Column 20</TableHead>
                         </TableRow>
                          <TableRow>
-                            <TableHead className="border h-10"></TableHead>
                             <TableHead className="border h-10"></TableHead>
                             <TableHead className="border h-10"></TableHead>
                             <TableHead className="border h-10"></TableHead>
