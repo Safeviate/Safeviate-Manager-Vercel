@@ -96,26 +96,26 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             <TableHead className="border w-[150px]">Column 20</TableHead>
                         </TableRow>
                          <TableRow>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
-                            <TableHead className="border h-4"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
+                            <TableHead className="border h-10"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
