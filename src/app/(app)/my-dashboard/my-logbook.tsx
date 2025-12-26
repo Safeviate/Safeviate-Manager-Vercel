@@ -2,9 +2,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
-import type { PilotProfile } from '@/app/(app)/users/personnel/page';
+import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import type { Booking } from '@/types/booking';
 import type { TableTemplate } from '@/types/table-template';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import { format, differenceInMinutes, parse } from 'date-fns';
 import type { Aircraft } from '@/app/(app)/assets/page';
 
 interface MyLogbookProps {
-  userProfile: PilotProfile;
+  userProfile: PilotProfile | Personnel;
 }
 
 const renderHeaderRows = (tableData: TableTemplate['tableData']) => {
@@ -91,35 +91,29 @@ const getLeafColumnIds = (tableData: TableTemplate['tableData']): string[] => {
 
 export function MyLogbook({ userProfile }: MyLogbookProps) {
   const firestore = useFirestore();
+  const { user } = useUser();
   const tenantId = 'safeviate';
 
   const logbookTemplateRef = useMemoFirebase(
-    () => (firestore && userProfile.logbookTemplateId)
+    () => (firestore && 'logbookTemplateId' in userProfile && userProfile.logbookTemplateId)
       ? doc(firestore, `tenants/${tenantId}/table-templates`, userProfile.logbookTemplateId)
       : null,
-    [firestore, tenantId, userProfile.logbookTemplateId]
+    [firestore, tenantId, userProfile]
   );
   
-  // Query for bookings where the user is either the pilot or the student
   const bookingsQuery = useMemoFirebase(
     () => {
-      if (!firestore || !userProfile.id) return null;
+      if (!firestore || !user) return null;
       
       const bookingsCollection = collection(firestore, `tenants/${tenantId}/bookings`);
       
-      if (userProfile.userType === 'Instructor') {
-          return query(
-              bookingsCollection,
-              where('instructorId', '==', userProfile.id)
-          );
-      }
-      
       return query(
         bookingsCollection,
-        where('studentId', '==', userProfile.id)
+        where('status', '!=', 'Cancelled'), // Exclude cancelled bookings
+        where('status', '!=', 'Cancelled with Reason')
       );
     },
-    [firestore, tenantId, userProfile.id, userProfile.userType]
+    [firestore, tenantId, user]
   );
   
 
@@ -145,7 +139,7 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
 
 
   const { data: template, isLoading: isLoadingTemplate } = useDoc<TableTemplate>(logbookTemplateRef);
-  const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
+  const { data: allBookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
   const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
   const { data: pilots, isLoading: isLoadingPilots } = useCollection<PilotProfile>(allPilotsQuery);
   const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(allStudentsQuery);
@@ -164,6 +158,15 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
       return map;
   }, [pilots, students, instructors]);
 
+  const userBookings = useMemo(() => {
+    if (!allBookings || !user) return [];
+    return allBookings.filter(booking => 
+        booking.pilotId === user.uid || 
+        booking.studentId === user.uid || 
+        booking.instructorId === user.uid
+    );
+  }, [allBookings, user]);
+
   const { headerRows, leafColumnIds } = useMemo(() => {
     if (!template?.tableData) return { headerRows: [], leafColumnIds: [] };
     return { 
@@ -173,10 +176,10 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
   }, [template]);
   
   const getCellData = (booking: Booking, columnId: string): string => {
-    const flightMinutes = differenceInMinutes(
+    const flightMinutes = (booking.status === 'Completed' && booking.startTime && booking.endTime) ? differenceInMinutes(
       parse(`${booking.bookingDate} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date()),
       parse(`${booking.bookingDate} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date())
-    );
+    ) : 0;
     const flightHours = (flightMinutes / 60).toFixed(1);
     const aircraft = aircraftMap.get(booking.aircraftId);
     
@@ -219,7 +222,7 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
       </CardHeader>
       <CardContent>
         {isLoading ? <Skeleton className="h-48 w-full" /> : (
-          !userProfile.logbookTemplateId ? (
+          !('logbookTemplateId' in userProfile && userProfile.logbookTemplateId) ? (
             <p className="text-muted-foreground text-center">No logbook template assigned. Please contact an administrator.</p>
           ) : !template ? (
             <p className="text-muted-foreground text-center">Could not load logbook template. Check console for errors.</p>
@@ -230,8 +233,8 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
                   {headerRows}
                 </TableHeader>
                 <TableBody>
-                  {bookings && bookings.length > 0 ? (
-                    bookings.map(booking => (
+                  {userBookings && userBookings.length > 0 ? (
+                    userBookings.map(booking => (
                       <TableRow key={booking.id}>
                         {leafColumnIds.map((id, index) => (
                           <TableCell key={`${booking.id}-${index}`} className="text-center">{getCellData(booking, id)}</TableCell>
