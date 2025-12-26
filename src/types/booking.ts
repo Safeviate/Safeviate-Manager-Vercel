@@ -19,6 +19,7 @@ export interface Booking {
     id: string;
     bookingNumber: number;
     aircraftId: string;
+    createdById?: string; // The user ID of the person who created the booking.
     pilotId?: string | null; // For private/reposition/maintenance flights
     studentId?: string | null; // For training flights
     instructorId?: string | null; // For training flights

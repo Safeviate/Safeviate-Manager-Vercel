@@ -98,14 +98,9 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
 
         const student = booking.studentId ? allUsersMap.get(booking.studentId) : null;
         const instructor = booking.instructorId ? allUsersMap.get(booking.instructorId) : null;
-        const pilot = booking.pilotId ? allUsersMap.get(booking.pilotId) : null;
         
-        let picName = '';
-        if (booking.type === 'Training Flight') {
-            picName = instructor ? `${instructor.firstName} ${instructor.lastName}` : '';
-        } else {
-            picName = pilot ? `${pilot.firstName} ${pilot.lastName}` : '';
-        }
+        const creator = booking.createdById ? allUsersMap.get(booking.createdById) : null;
+        const picName = creator ? `${creator.firstName} ${creator.lastName}` : 'N/A';
 
         switch(columnId.toLowerCase()) {
             case 'date': return format(new Date(booking.bookingDate), 'yyyy-MM-dd');

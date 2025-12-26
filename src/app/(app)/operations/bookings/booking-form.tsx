@@ -39,7 +39,7 @@ import {
 import { format, addHours, parse, addDays } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { createBooking, updateBooking, deleteBooking, cancelBooking } from './booking-functions';
 import { PreFlightChecklistDialog } from './pre-flight-checklist-dialog';
@@ -72,6 +72,7 @@ export function BookingForm({
   refreshBookings,
 }: BookingFormProps) {
   const firestore = useFirestore();
+  const { user: authUser } = useUser();
   const { toast } = useToast();
   const isEditMode = !!existingBooking;
 
@@ -148,7 +149,7 @@ export function BookingForm({
   };
   
   const handleSave = async () => {
-    if (!firestore) return;
+    if (!firestore || !authUser) return;
 
     if (!bookingType) {
         toast({ variant: 'destructive', title: 'Error', description: 'Booking Type is required.' });
@@ -218,7 +219,7 @@ export function BookingForm({
 
     } else {
         try {
-            await createBooking(firestore, tenantId, { aircraftId: aircraft.id, ...commonData } as Omit<Booking, 'id'>);
+            await createBooking(firestore, tenantId, { aircraftId: aircraft.id, createdById: authUser.uid, ...commonData } as Omit<Booking, 'id'>);
             toast({ title: 'Booking Created', description: 'The new booking has been saved successfully.' });
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
