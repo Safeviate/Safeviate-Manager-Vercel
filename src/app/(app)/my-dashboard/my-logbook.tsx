@@ -32,29 +32,25 @@ const useLogbookData = (userProfile: PilotProfile | Personnel) => {
         [firestore, tenantId]
     );
     
-    // Correctly query all pilot-related collections
-    const studentsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
-    const instructorsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
-    const privatePilotsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/private-pilots`) : null), [firestore, tenantId]);
+    // Correctly query the single 'pilots' collection for all pilot user types.
+    const pilotsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/pilots`) : null), [firestore, tenantId]);
 
 
     const { data: allBookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
     const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
     
-    // Fetch all user types
-    const { data: students } = useCollection<PilotProfile>(studentsQuery);
-    const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
-    const { data: privatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
+    // Fetch all pilots from the single collection
+    const { data: allPilots, isLoading: isLoadingPilots } = useCollection<PilotProfile>(pilotsQuery);
     
-    const isLoading = isLoadingBookings || isLoadingAircrafts || !students || !instructors || !privatePilots;
+    const isLoading = isLoadingBookings || isLoadingAircrafts || isLoadingPilots;
     
     const allUsersMap = useMemo(() => {
         const userMap = new Map<string, PilotProfile | Personnel>();
-        [...(students || []), ...(instructors || []), ...(privatePilots || [])].forEach(p => {
-            if (p) userMap.set(p.id, p);
-        });
+        if (allPilots) {
+            allPilots.forEach(p => userMap.set(p.id, p));
+        }
         return userMap;
-    }, [students, instructors, privatePilots]);
+    }, [allPilots]);
 
     const aircraftMap = useMemo(() => {
         if (!aircrafts) return new Map();
@@ -67,7 +63,7 @@ const useLogbookData = (userProfile: PilotProfile | Personnel) => {
             .filter(booking => 
                 booking.pilotId === userProfile.id ||
                 booking.instructorId === userProfile.id ||
-                booking.studentId === userProfile.id
+                (booking.studentId === userProfile.id)
             )
             .sort((a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime());
     }, [allBookings, userProfile]);
@@ -111,7 +107,7 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
     const { userBookings, aircraftMap, allUsersMap, isLoading } = useLogbookData(userProfile);
 
     if (isLoading) {
-        return <Skeleton className="h-64 w-full" />
+        return <Skeleton className="h-64 w-full" />;
     }
 
     return (
