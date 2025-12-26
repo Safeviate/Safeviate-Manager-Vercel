@@ -102,7 +102,7 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             <col style={{ width: '110px' }} />
                             <col style={{ width: '120px' }} />
                             {/* Dynamically generate remaining columns with equal width */}
-                            {Array.from({ length: 15 }).map((_, i) => (
+                            {Array.from({ length: 16 }).map((_, i) => (
                                 <col key={i} style={{ width: '60px' }} />
                             ))}
                         </colgroup>
@@ -121,31 +121,43 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                 <TableHead className="border text-center" colSpan={2}>Flying As Instructor</TableHead>
                             </TableRow>
                              <TableRow>
-                                <TableHead className="border h-10 text-center">Type</TableHead>
-                                <TableHead className="border h-10 text-center">Registration</TableHead>
-                                <TableHead className="border h-10 text-center">Dual</TableHead>
-                                <TableHead className="border h-10 text-center">PIC</TableHead>
-                                <TableHead className="border h-10 text-center">Dual</TableHead>
-                                <TableHead className="border h-10 text-center">PIC</TableHead>
-                                <TableHead className="border h-10 text-center">Dual</TableHead>
-                                <TableHead className="border h-10 text-center">PIC</TableHead>
-                                <TableHead className="border h-10 text-center">Co Pilot</TableHead>
-                                <TableHead className="border h-10 text-center">Dual</TableHead>
-                                <TableHead className="border h-10 text-center">PIC</TableHead>
-                                <TableHead className="border h-10 text-center">Co Pilot</TableHead>
-                                <TableHead className="border h-10 text-center">Nave Aids</TableHead>
-                                <TableHead className="border h-10 text-center" style={{ width: '60px' }}>Place</TableHead>
-                                <TableHead className="border h-10 text-center">Time</TableHead>
-                                <TableHead className="border h-10 text-center">Day</TableHead>
-                                <TableHead className="border h-10 text-center">Night</TableHead>
+                                <TableHead className="border text-center h-10">Type</TableHead>
+                                <TableHead className="border text-center h-10">Registration</TableHead>
+                                <TableHead className="border text-center h-10">Dual</TableHead>
+                                <TableHead className="border text-center h-10">PIC</TableHead>
+                                <TableHead className="border text-center h-10">Dual</TableHead>
+                                <TableHead className="border text-center h-10">PIC</TableHead>
+                                <TableHead className="border text-center h-10">Dual</TableHead>
+                                <TableHead className="border text-center h-10">PIC</TableHead>
+                                <TableHead className="border text-center h-10">Co Pilot</TableHead>
+                                <TableHead className="border text-center h-10">Dual</TableHead>
+                                <TableHead className="border text-center h-10">PIC</TableHead>
+                                <TableHead className="border text-center h-10">Co Pilot</TableHead>
+                                <TableHead className="border text-center h-10">Nave Aids</TableHead>
+                                <TableHead className="border text-center h-10" style={{ width: '60px' }}>Place</TableHead>
+                                <TableHead className="border text-center h-10">Time</TableHead>
+                                <TableHead className="border text-center h-10">Day</TableHead>
+                                <TableHead className="border text-center h-10">Night</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {userBookings.length > 0 ? (
                                 userBookings.map(booking => {
                                     const aircraft = aircraftMap.get(booking.aircraftId);
-                                    const creator = booking.createdById ? allUsersMap.get(booking.createdById) : null;
-                                    const creatorName = creator ? `${creator.firstName} ${creator.lastName}` : 'N/A';
+                                    let picName = 'N/A';
+
+                                    if (booking.type === 'Training Flight' && booking.instructorId) {
+                                        const instructor = allUsersMap.get(booking.instructorId);
+                                        if (instructor) {
+                                            picName = `${instructor.firstName} ${instructor.lastName}`;
+                                        }
+                                    } else if (booking.createdById) {
+                                        const creator = allUsersMap.get(booking.createdById);
+                                        if (creator) {
+                                            picName = `${creator.firstName} ${creator.lastName}`;
+                                        }
+                                    }
+
                                     const flightMinutes = (booking.status === 'Completed' && booking.startTime && booking.endTime) ? differenceInMinutes(
                                         parse(`${booking.date} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date()),
                                         parse(`${booking.date} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date())
@@ -158,7 +170,7 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                             <TableCell className="border text-center">{format(new Date(booking.date), 'yyyy-MM-dd')}</TableCell>
                                             <TableCell className="border text-center">{aircraft?.model || 'N/A'}</TableCell>
                                             <TableCell className="border text-center">{aircraft?.tailNumber || 'N/A'}</TableCell>
-                                            <TableCell className="border text-center">{creatorName}</TableCell>
+                                            <TableCell className="border text-center">{picName}</TableCell>
                                             <TableCell className="border text-center"></TableCell>
                                             <TableCell className="border text-center"></TableCell>
                                             <TableCell className="border text-center"></TableCell>
