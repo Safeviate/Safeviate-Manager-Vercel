@@ -90,6 +90,10 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             <TableHead className="border w-[150px]">Column 14</TableHead>
                             <TableHead className="border w-[150px]">Column 15</TableHead>
                             <TableHead className="border w-[150px]">Column 16</TableHead>
+                            <TableHead className="border w-[150px]">Column 17</TableHead>
+                            <TableHead className="border w-[150px]">Column 18</TableHead>
+                            <TableHead className="border w-[150px]">Column 19</TableHead>
+                            <TableHead className="border w-[150px]">Column 20</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -114,12 +118,16 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                         <TableCell className="border"></TableCell>
                                         <TableCell className="border"></TableCell>
                                         <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
                                     </TableRow>
                                 );
                             })
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={16} className="h-24 text-center border">
+                                <TableCell colSpan={20} className="h-24 text-center border">
                                     No completed flights found.
                                 </TableCell>
                             </TableRow>
