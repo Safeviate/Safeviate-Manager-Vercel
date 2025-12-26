@@ -53,5 +53,3 @@ export interface Booking {
     // Mass and Balance data
     massAndBalance?: MassAndBalance;
 }
-
-    
