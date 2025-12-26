@@ -92,88 +92,101 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                 <CardDescription>A basic, working record of your completed flights.</CardDescription>
             </CardHeader>
             <CardContent>
-                <Table className="border">
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="border" rowSpan={2}>Booking #</TableHead>
-                            <TableHead className="border" rowSpan={2}>Date</TableHead>
-                            <TableHead className="border" colSpan={2}>Aircraft</TableHead>
-                            <TableHead className="border" rowSpan={2}>Pilot In Command</TableHead>
-                            <TableHead className="border" colSpan={2}>Single Engine Day</TableHead>
-                            <TableHead className="border" colSpan={2}>Single Engine Night</TableHead>
-                            <TableHead className="border" colSpan={3}>Multi Engine Day</TableHead>
-                            <TableHead className="border" colSpan={3}>Multi Engine Night</TableHead>
-                            <TableHead className="border" colSpan={3}>Instrument Flying</TableHead>
-                            <TableHead className="border" colSpan={2}>Flying As Instructor</TableHead>
-                            <TableHead className="border" rowSpan={2}>New Column</TableHead>
-                        </TableRow>
-                         <TableRow>
-                            <TableHead className="border h-10">Type</TableHead>
-                            <TableHead className="border h-10">Registration</TableHead>
-                            <TableHead className="border h-10">Dual</TableHead>
-                            <TableHead className="border h-10">PIC</TableHead>
-                            <TableHead className="border h-10">Dual</TableHead>
-                            <TableHead className="border h-10">PIC</TableHead>
-                            <TableHead className="border h-10">Dual</TableHead>
-                            <TableHead className="border h-10">PIC</TableHead>
-                            <TableHead className="border h-10">Co Pilot</TableHead>
-                            <TableHead className="border h-10">Dual</TableHead>
-                            <TableHead className="border h-10">PIC</TableHead>
-                            <TableHead className="border h-10">Co Pilot</TableHead>
-                            <TableHead className="border h-10">Nave Aids</TableHead>
-                            <TableHead className="border h-10">Place</TableHead>
-                            <TableHead className="border h-10">Time</TableHead>
-                            <TableHead className="border h-10">Day</TableHead>
-                            <TableHead className="border h-10">Night</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {userBookings.length > 0 ? (
-                            userBookings.map(booking => {
-                                const aircraft = aircraftMap.get(booking.aircraftId);
-                                const creator = booking.createdById ? allUsersMap.get(booking.createdById) : null;
-                                const creatorName = creator ? `${creator.firstName} ${creator.lastName}` : 'N/A';
-                                const flightMinutes = (booking.status === 'Completed' && booking.startTime && booking.endTime) ? differenceInMinutes(
-                                    parse(`${booking.date} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date()),
-                                    parse(`${booking.date} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date())
-                                ) : 0;
-                                const flightHours = (flightMinutes / 60).toFixed(1);
-                                
-                                return (
-                                    <TableRow key={booking.id}>
-                                        <TableCell className="border">{booking.bookingNumber}</TableCell>
-                                        <TableCell className="border">{format(new Date(booking.date), 'yyyy-MM-dd')}</TableCell>
-                                        <TableCell className="border">{aircraft?.model || 'N/A'}</TableCell>
-                                        <TableCell className="border">{aircraft?.tailNumber || 'N/A'}</TableCell>
-                                        <TableCell className="border">{creatorName}</TableCell>
-                                        <TableCell className="border"></TableCell>
-                                        <TableCell className="border"></TableCell>
-                                        <TableCell className="border"></TableCell>
-                                        <TableCell className="border"></TableCell>
-                                        <TableCell className="border"></TableCell>
-                                        <TableCell className="border"></TableCell>
-                                        <TableCell className="border"></TableCell>
-                                        <TableCell className="border"></TableCell>
-                                        <TableCell className="border"></TableCell>
-                                        <TableCell className="border"></TableCell>
-                                        <TableCell className="border"></TableCell>
-                                        <TableCell className="border"></TableCell>
-                                        <TableCell className="border"></TableCell>
-                                        <TableCell className="border"></TableCell>
-                                        <TableCell className="border"></TableCell>
-                                        <TableCell className="border"></TableCell>
-                                    </TableRow>
-                                );
-                            })
-                        ) : (
+                <div className="overflow-x-auto">
+                    <Table className="border table-fixed w-full">
+                        <colgroup>
+                            <col style={{ width: '100px' }} />
+                            <col style={{ width: '120px' }} />
+                            <col style={{ width: '120px' }} />
+                            <col style={{ width: '120px' }} />
+                            <col style={{ width: '150px' }} />
+                            {/* Dynamically generate remaining columns with equal width */}
+                            {Array.from({ length: 16 }).map((_, i) => (
+                                <col key={i} style={{ width: '80px' }} />
+                            ))}
+                        </colgroup>
+                        <TableHeader>
                             <TableRow>
-                                <TableCell colSpan={21} className="h-24 text-center border">
-                                    No completed flights found.
-                                </TableCell>
+                                <TableHead className="border" rowSpan={2}>Booking #</TableHead>
+                                <TableHead className="border" rowSpan={2}>Date</TableHead>
+                                <TableHead className="border" colSpan={2}>Aircraft</TableHead>
+                                <TableHead className="border" rowSpan={2}>Pilot In Command</TableHead>
+                                <TableHead className="border" colSpan={2}>Single Engine Day</TableHead>
+                                <TableHead className="border" colSpan={2}>Single Engine Night</TableHead>
+                                <TableHead className="border" colSpan={3}>Multi Engine Day</TableHead>
+                                <TableHead className="border" colSpan={3}>Multi Engine Night</TableHead>
+                                <TableHead className="border" colSpan={3}>Instrument Flying</TableHead>
+                                <TableHead className="border" colSpan={2}>Flying As Instructor</TableHead>
+                                <TableHead className="border" rowSpan={2}>New Column</TableHead>
                             </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
+                             <TableRow>
+                                <TableHead className="border h-10">Type</TableHead>
+                                <TableHead className="border h-10">Registration</TableHead>
+                                <TableHead className="border h-10">Dual</TableHead>
+                                <TableHead className="border h-10">PIC</TableHead>
+                                <TableHead className="border h-10">Dual</TableHead>
+                                <TableHead className="border h-10">PIC</TableHead>
+                                <TableHead className="border h-10">Dual</TableHead>
+                                <TableHead className="border h-10">PIC</TableHead>
+                                <TableHead className="border h-10">Co Pilot</TableHead>
+                                <TableHead className="border h-10">Dual</TableHead>
+                                <TableHead className="border h-10">PIC</TableHead>
+                                <TableHead className="border h-10">Co Pilot</TableHead>
+                                <TableHead className="border h-10">Nave Aids</TableHead>
+                                <TableHead className="border h-10">Place</TableHead>
+                                <TableHead className="border h-10">Time</TableHead>
+                                <TableHead className="border h-10">Day</TableHead>
+                                <TableHead className="border h-10">Night</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {userBookings.length > 0 ? (
+                                userBookings.map(booking => {
+                                    const aircraft = aircraftMap.get(booking.aircraftId);
+                                    const creator = booking.createdById ? allUsersMap.get(booking.createdById) : null;
+                                    const creatorName = creator ? `${creator.firstName} ${creator.lastName}` : 'N/A';
+                                    const flightMinutes = (booking.status === 'Completed' && booking.startTime && booking.endTime) ? differenceInMinutes(
+                                        parse(`${booking.date} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date()),
+                                        parse(`${booking.date} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date())
+                                    ) : 0;
+                                    const flightHours = (flightMinutes / 60).toFixed(1);
+                                    
+                                    return (
+                                        <TableRow key={booking.id}>
+                                            <TableCell className="border">{booking.bookingNumber}</TableCell>
+                                            <TableCell className="border">{format(new Date(booking.date), 'yyyy-MM-dd')}</TableCell>
+                                            <TableCell className="border">{aircraft?.model || 'N/A'}</TableCell>
+                                            <TableCell className="border">{aircraft?.tailNumber || 'N/A'}</TableCell>
+                                            <TableCell className="border">{creatorName}</TableCell>
+                                            <TableCell className="border"></TableCell>
+                                            <TableCell className="border"></TableCell>
+                                            <TableCell className="border"></TableCell>
+                                            <TableCell className="border"></TableCell>
+                                            <TableCell className="border"></TableCell>
+                                            <TableCell className="border"></TableCell>
+                                            <TableCell className="border"></TableCell>
+                                            <TableCell className="border"></TableCell>
+                                            <TableCell className="border"></TableCell>
+                                            <TableCell className="border"></TableCell>
+                                            <TableCell className="border"></TableCell>
+                                            <TableCell className="border"></TableCell>
+                                            <TableCell className="border"></TableCell>
+                                            <TableCell className="border"></TableCell>
+                                            <TableCell className="border"></TableCell>
+                                            <TableCell className="border"></TableCell>
+                                        </TableRow>
+                                    );
+                                })
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={21} className="h-24 text-center border">
+                                        No completed flights found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </CardContent>
         </Card>
     );
