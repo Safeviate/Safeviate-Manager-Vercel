@@ -93,14 +93,14 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">
-                    <Table className="border table-fixed w-full">
+                    <Table className="table-fixed w-full border">
                         <colgroup>
                             <col style={{ width: '80px' }} />
                             <col style={{ width: '100px' }} />
                             <col style={{ width: '100px' }} />
                             <col style={{ width: '100px' }} />
                             <col style={{ width: '110px' }} />
-                            <col style={{ width: '150px' }} />
+                            <col style={{ width: '120px' }} />
                             {/* Dynamically generate remaining columns with equal width */}
                             {Array.from({ length: 15 }).map((_, i) => (
                                 <col key={i} style={{ width: '60px' }} />
@@ -108,36 +108,36 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                         </colgroup>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="border" rowSpan={2}>Booking #</TableHead>
-                                <TableHead className="border" rowSpan={2}>Date</TableHead>
-                                <TableHead className="border" colSpan={2}>Aircraft</TableHead>
-                                <TableHead className="border" rowSpan={2}>Pilot In Command</TableHead>
-                                <TableHead className="border" rowSpan={2}>New Column</TableHead>
-                                <TableHead className="border" colSpan={2}>Single Engine Day</TableHead>
-                                <TableHead className="border" colSpan={2}>Single Engine Night</TableHead>
-                                <TableHead className="border" colSpan={3}>Multi Engine Day</TableHead>
-                                <TableHead className="border" colSpan={3}>Multi Engine Night</TableHead>
-                                <TableHead className="border" colSpan={3}>Instrument Flying</TableHead>
-                                <TableHead className="border" colSpan={2}>Flying As Instructor</TableHead>
+                                <TableHead className="border text-center" rowSpan={2}>Booking #</TableHead>
+                                <TableHead className="border text-center" rowSpan={2}>Date</TableHead>
+                                <TableHead className="border text-center" colSpan={2}>Aircraft</TableHead>
+                                <TableHead className="border text-center" rowSpan={2}>Pilot In Command</TableHead>
+                                <TableHead className="border text-center" rowSpan={2}>New Column</TableHead>
+                                <TableHead className="border text-center" colSpan={2}>Single Engine Day</TableHead>
+                                <TableHead className="border text-center" colSpan={2}>Single Engine Night</TableHead>
+                                <TableHead className="border text-center" colSpan={3}>Multi Engine Day</TableHead>
+                                <TableHead className="border text-center" colSpan={3}>Multi Engine Night</TableHead>
+                                <TableHead className="border text-center" colSpan={3}>Instrument Flying</TableHead>
+                                <TableHead className="border text-center" colSpan={2}>Flying As Instructor</TableHead>
                             </TableRow>
                              <TableRow>
-                                <TableHead className="border h-10">Type</TableHead>
-                                <TableHead className="border h-10">Registration</TableHead>
-                                <TableHead className="border h-10">Dual</TableHead>
-                                <TableHead className="border h-10">PIC</TableHead>
-                                <TableHead className="border h-10">Dual</TableHead>
-                                <TableHead className="border h-10">PIC</TableHead>
-                                <TableHead className="border h-10">Dual</TableHead>
-                                <TableHead className="border h-10">PIC</TableHead>
-                                <TableHead className="border h-10">Co Pilot</TableHead>
-                                <TableHead className="border h-10">Dual</TableHead>
-                                <TableHead className="border h-10">PIC</TableHead>
-                                <TableHead className="border h-10">Co Pilot</TableHead>
-                                <TableHead className="border h-10">Nave Aids</TableHead>
-                                <TableHead className="border h-10" style={{ width: '60px' }}>Place</TableHead>
-                                <TableHead className="border h-10">Time</TableHead>
-                                <TableHead className="border h-10">Day</TableHead>
-                                <TableHead className="border h-10">Night</TableHead>
+                                <TableHead className="border h-10 text-center">Type</TableHead>
+                                <TableHead className="border h-10 text-center">Registration</TableHead>
+                                <TableHead className="border h-10 text-center">Dual</TableHead>
+                                <TableHead className="border h-10 text-center">PIC</TableHead>
+                                <TableHead className="border h-10 text-center">Dual</TableHead>
+                                <TableHead className="border h-10 text-center">PIC</TableHead>
+                                <TableHead className="border h-10 text-center">Dual</TableHead>
+                                <TableHead className="border h-10 text-center">PIC</TableHead>
+                                <TableHead className="border h-10 text-center">Co Pilot</TableHead>
+                                <TableHead className="border h-10 text-center">Dual</TableHead>
+                                <TableHead className="border h-10 text-center">PIC</TableHead>
+                                <TableHead className="border h-10 text-center">Co Pilot</TableHead>
+                                <TableHead className="border h-10 text-center">Nave Aids</TableHead>
+                                <TableHead className="border h-10 text-center" style={{ width: '60px' }}>Place</TableHead>
+                                <TableHead className="border h-10 text-center">Time</TableHead>
+                                <TableHead className="border h-10 text-center">Day</TableHead>
+                                <TableHead className="border h-10 text-center">Night</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -154,28 +154,28 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                     
                                     return (
                                         <TableRow key={booking.id}>
-                                            <TableCell className="border">{booking.bookingNumber}</TableCell>
-                                            <TableCell className="border">{format(new Date(booking.date), 'yyyy-MM-dd')}</TableCell>
-                                            <TableCell className="border">{aircraft?.model || 'N/A'}</TableCell>
-                                            <TableCell className="border">{aircraft?.tailNumber || 'N/A'}</TableCell>
-                                            <TableCell className="border">{creatorName}</TableCell>
-                                            <TableCell className="border"></TableCell>
-                                            <TableCell className="border"></TableCell>
-                                            <TableCell className="border"></TableCell>
-                                            <TableCell className="border"></TableCell>
-                                            <TableCell className="border"></TableCell>
-                                            <TableCell className="border"></TableCell>
-                                            <TableCell className="border"></TableCell>
-                                            <TableCell className="border"></TableCell>
-                                            <TableCell className="border"></TableCell>
-                                            <TableCell className="border"></TableCell>
-                                            <TableCell className="border"></TableCell>
-                                            <TableCell className="border"></TableCell>
-                                            <TableCell className="border"></TableCell>
-                                            <TableCell className="border"></TableCell>
-                                            <TableCell className="border"></TableCell>
-                                            <TableCell className="border"></TableCell>
-                                            <TableCell className="border"></TableCell>
+                                            <TableCell className="border text-center">{booking.bookingNumber}</TableCell>
+                                            <TableCell className="border text-center">{format(new Date(booking.date), 'yyyy-MM-dd')}</TableCell>
+                                            <TableCell className="border text-center">{aircraft?.model || 'N/A'}</TableCell>
+                                            <TableCell className="border text-center">{aircraft?.tailNumber || 'N/A'}</TableCell>
+                                            <TableCell className="border text-center">{creatorName}</TableCell>
+                                            <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center"></TableCell>
                                         </TableRow>
                                     );
                                 })
