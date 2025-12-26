@@ -37,32 +37,33 @@ const useLogbookData = (userProfile: PilotProfile | Personnel) => {
         [firestore, tenantId]
     );
     
-    const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
+    const pilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/pilots`)) : null), [firestore, tenantId]);
     const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
-    const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
+    const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
     const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
 
 
     const { data: allBookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
     const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
-    const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsQuery);
+    const { data: pilots, isLoading: isLoadingPilots } = useCollection<PilotProfile>(pilotsQuery);
     const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
-    const { data: privatePilots, isLoading: isLoadingPrivatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
+    const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsQuery);
     const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
 
+
     
-    const isLoading = isLoadingBookings || isLoadingAircrafts || isLoadingStudents || isLoadingInstructors || isLoadingPrivatePilots || isLoadingPersonnel;
+    const isLoading = isLoadingBookings || isLoadingAircrafts || isLoadingPilots || isLoadingInstructors || isLoadingStudents || isLoadingPersonnel;
     
     const allUsersMap = useMemo(() => {
         const userMap = new Map<string, PilotProfile | Personnel>();
-        const allUserLists = [students, instructors, privatePilots, personnel];
+        const allUserLists = [pilots, instructors, students, personnel];
         allUserLists.forEach(list => {
             if (list) {
                 list.forEach(p => userMap.set(p.id, p));
             }
         });
         return userMap;
-    }, [students, instructors, privatePilots, personnel]);
+    }, [pilots, instructors, students, personnel]);
 
     const aircraftMap = useMemo(() => {
         if (!aircrafts) return new Map();
@@ -111,6 +112,11 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
             case 'date': return format(new Date(booking.bookingDate), 'yyyy-MM-dd');
             case 'type': return aircraft?.model || 'N/A';
             case 'registration': return aircraft?.tailNumber || 'N/A';
+            case 'pilot in command':
+                if (booking.type === 'Training Flight' && instructor) {
+                    return `${instructor.firstName} ${instructor.lastName}`;
+                }
+                return picName;
             case 'student': return student ? `${student.firstName} ${student.lastName}` : '---';
             case 'instructor': return instructor ? `${instructor.firstName} ${instructor.lastName}` : '---';
             case 'pic': return picName;
@@ -122,10 +128,8 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
 
     const headerRowsCount = tableData.cells.reduce((max, cell) => (cell.rowSpan > 1) ? Math.max(max, cell.r + cell.rowSpan) : max, 1);
     
-    // Get the header cells, assuming they are the first `headerRowsCount` rows
     const headerCells = tableData.cells.filter(cell => cell.r < headerRowsCount);
     
-    // Get the columns that have no children, these are the data columns
     const dataColumns = headerCells.filter(cell => {
         const hasChildren = headerCells.some(otherCell => 
             otherCell.r > cell.r && 
@@ -135,7 +139,7 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
         return !hasChildren;
     }).sort((a,b) => a.c - b.c);
     
-    const bodyRows = userBookings.length > 0 ? userBookings : [null]; // Add a null row for empty state
+    const bodyRows = userBookings.length > 0 ? userBookings : [null]; 
 
     if (isLoading) {
         return <Skeleton className="h-64 w-full" />;
@@ -203,4 +207,3 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
         </Card>
     );
 }
-
