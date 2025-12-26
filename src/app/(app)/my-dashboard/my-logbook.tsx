@@ -31,24 +31,30 @@ const useLogbookData = (userProfile: PilotProfile | Personnel) => {
         () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
         [firestore, tenantId]
     );
-    const pilotsQuery = useMemoFirebase(
-        () => (firestore ? query(collection(firestore, `tenants/${tenantId}/pilots`)) : null),
-        [firestore, tenantId]
-    );
+    
+    // Correctly query all pilot-related collections
+    const studentsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
+    const instructorsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
+    const privatePilotsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/private-pilots`) : null), [firestore, tenantId]);
+
 
     const { data: allBookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
     const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
-    const { data: pilots, isLoading: isLoadingPilots } = useCollection<PilotProfile>(pilotsQuery);
     
-    const isLoading = isLoadingBookings || isLoadingAircrafts || isLoadingPilots;
-
+    // Fetch all user types
+    const { data: students } = useCollection<PilotProfile>(studentsQuery);
+    const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
+    const { data: privatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
+    
+    const isLoading = isLoadingBookings || isLoadingAircrafts || !students || !instructors || !privatePilots;
+    
     const allUsersMap = useMemo(() => {
         const userMap = new Map<string, PilotProfile | Personnel>();
-        (pilots || []).forEach(p => {
+        [...(students || []), ...(instructors || []), ...(privatePilots || [])].forEach(p => {
             if (p) userMap.set(p.id, p);
         });
         return userMap;
-    }, [pilots]);
+    }, [students, instructors, privatePilots]);
 
     const aircraftMap = useMemo(() => {
         if (!aircrafts) return new Map();
