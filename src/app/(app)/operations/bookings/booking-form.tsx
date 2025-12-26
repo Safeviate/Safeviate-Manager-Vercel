@@ -250,6 +250,8 @@ export function BookingForm({
 
   const students = useMemo(() => pilots.filter(p => p.userType === 'Student'), [pilots]);
   const instructors = useMemo(() => pilots.filter(p => p.userType === 'Instructor'), [pilots]);
+  const privatePilots = useMemo(() => pilots.filter(p => p.userType === 'Private Pilot'), [pilots]);
+  const personnel = useMemo(() => pilots.filter(p => p.userType === 'Personnel'), [pilots]);
 
   const { isPreFlightDisabled, isPostFlightDisabled, warningMessage } = useMemo(() => {
     if (!isEditMode || !existingBooking) {
@@ -377,18 +379,21 @@ export function BookingForm({
                     )}
 
                     {bookingType === 'Private Flight' && (
-                        <div className="col-span-2 space-y-2">
-                            <Label htmlFor="private-pilot">Pilot</Label>
-                            <Select onValueChange={setPrivatePilotId} value={privatePilotId}>
-                                <SelectTrigger id="private-pilot">
-                                    <SelectValue placeholder="Select a pilot" />
+                        <div className="col-span-2 space-y-4">
+                            <Label>Pilot</Label>
+                             <Select onValueChange={setPrivatePilotId} value={privatePilotId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a pilot..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {pilots.map(pilot => (
-                                        <SelectItem key={pilot.id} value={pilot.id}>
-                                            {pilot.firstName} {pilot.lastName} ({pilot.userType})
-                                        </SelectItem>
-                                    ))}
+                                    {personnel.length > 0 && <Label className="px-2 text-xs text-muted-foreground">Personnel</Label>}
+                                    {personnel.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}
+                                    {instructors.length > 0 && <Label className="px-2 text-xs text-muted-foreground">Instructors</Label>}
+                                    {instructors.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}
+                                    {students.length > 0 && <Label className="px-2 text-xs text-muted-foreground">Students</Label>}
+                                    {students.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}
+                                    {privatePilots.length > 0 && <Label className="px-2 text-xs text-muted-foreground">Private Pilots</Label>}
+                                    {privatePilots.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
