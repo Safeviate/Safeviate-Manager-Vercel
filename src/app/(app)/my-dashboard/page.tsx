@@ -2,28 +2,13 @@
 
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import type { TableTemplate } from '@/app/(app)/development/table-builder/page';
-import { DynamicLogbook } from './dynamic-logbook';
+import { MyLogbook } from './my-logbook';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function MyDashboardPage() {
     const { userProfile, isLoading: isLoadingProfile } = useUserProfile();
-    const firestore = useFirestore();
-    const tenantId = 'safeviate';
-    const pageId = 'my-dashboard';
-
-    const publishedTableRef = useMemoFirebase(
-        () => (firestore ? doc(firestore, `tenants/${tenantId}/published-tables`, pageId) : null),
-        [firestore, tenantId, pageId]
-    );
-
-    const { data: publishedTable, isLoading: isLoadingTable } = useDoc<{tableData: TableTemplate['tableData']}>(publishedTableRef);
     
-    const isLoading = isLoadingProfile || isLoadingTable;
-
-    if (isLoading) {
+    if (isLoadingProfile) {
         return (
             <div className="w-full space-y-6">
                 <Skeleton className="h-10 w-48" />
@@ -55,30 +40,7 @@ export default function MyDashboardPage() {
 
     return (
         <div className="w-full space-y-6">
-            {publishedTable?.tableData ? (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>My Logbook</CardTitle>
-                        <CardDescription>
-                            A dynamic view of your flights based on the published template.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                       <DynamicLogbook tableData={publishedTable.tableData} userProfile={userProfile} />
-                    </CardContent>
-                </Card>
-            ) : (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Logbook Not Available</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground text-center py-10">
-                            No logbook template has been published to this page. Please publish a template from the Table Builder in the Development section.
-                        </p>
-                    </CardContent>
-                </Card>
-            )}
+            <MyLogbook userProfile={userProfile} />
         </div>
     );
 }
