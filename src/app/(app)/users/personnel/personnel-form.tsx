@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -83,31 +84,29 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
 
     if (isPilotUserType(userType)) {
         collectionName = 'pilots';
-        const newPilot: Partial<PilotProfile> = {
+        const newPilot: Omit<PilotProfile, 'id'> = {
             userType,
             firstName,
             lastName,
             email,
             role: selectedRole!.id,
         };
-        newUser = newPilot as Omit<PilotProfile, 'id'>;
+        newUser = newPilot;
     } else {
         collectionName = 'personnel';
-        newUser = { 
+        const newPersonnel: Omit<Personnel, 'id'> = { 
             userType: 'Personnel',
             firstName, 
             lastName, 
             email,
-            department: selectedDepartment?.id || undefined,
+            department: selectedDepartment?.id,
             role: selectedRole!.id,
+            permissions: selectedRole?.permissions || [],
         };
+        newUser = newPersonnel;
     }
 
     const collectionRef = collection(firestore, 'tenants', tenantId, collectionName);
-    
-    if (collectionName === 'personnel') {
-        (newUser as Omit<Personnel, 'id'>).permissions = selectedRole?.permissions || [];
-    }
     
     addDocumentNonBlocking(collectionRef, newUser);
 
