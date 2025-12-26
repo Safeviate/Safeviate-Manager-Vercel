@@ -27,12 +27,12 @@ export default function MyDashboardPage() {
         );
     }
     
-    // We can only show a logbook for a pilot type user
-    if (userProfile.userType === 'Personnel') {
+    // We can only show a logbook for a student or instructor.
+    if (userProfile.userType !== 'Student' && userProfile.userType !== 'Instructor') {
          return (
             <div className="w-full space-y-6">
                  <p className="text-muted-foreground text-center py-10">
-                    Logbook is only available for pilot profiles.
+                    Logbook is only available for Students and Instructors.
                 </p>
             </div>
         );
