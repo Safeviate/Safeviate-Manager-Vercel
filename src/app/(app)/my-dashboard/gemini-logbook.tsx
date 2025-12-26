@@ -102,7 +102,7 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             <col style={{ width: '150px' }} />
                             {/* Dynamically generate remaining columns with equal width */}
                             {Array.from({ length: 16 }).map((_, i) => (
-                                <col key={i} style={{ width: '70px' }} />
+                                <col key={i} style={{ width: '60px' }} />
                             ))}
                         </colgroup>
                         <TableHeader>
@@ -132,7 +132,7 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                 <TableHead className="border h-10">Dual</TableHead>
                                 <TableHead className="border h-10">PIC</TableHead>
                                 <TableHead className="border h-10">Co Pilot</TableHead>
-                                <TableHead className="border h-10">Nave Aids</TableHead>
+                                <TableHead className="border h-10}>Nave Aids</TableHead>
                                 <TableHead className="border h-10">Place</TableHead>
                                 <TableHead className="border h-10">Time</TableHead>
                                 <TableHead className="border h-10">Day</TableHead>
