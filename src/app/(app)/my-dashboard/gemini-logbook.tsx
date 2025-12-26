@@ -95,11 +95,11 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                 <div className="overflow-x-auto">
                     <Table className="border table-fixed w-full">
                         <colgroup>
+                            <col style={{ width: '80px' }} />
+                            <col style={{ width: '100px' }} />
+                            <col style={{ width: '100px' }} />
                             <col style={{ width: '100px' }} />
                             <col style={{ width: '120px' }} />
-                            <col style={{ width: '120px' }} />
-                            <col style={{ width: '120px' }} />
-                            <col style={{ width: '150px' }} />
                             {/* Dynamically generate remaining columns with equal width */}
                             {Array.from({ length: 16 }).map((_, i) => (
                                 <col key={i} style={{ width: '60px' }} />
