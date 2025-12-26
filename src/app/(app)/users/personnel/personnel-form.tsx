@@ -34,7 +34,7 @@ interface PersonnelFormProps {
   logbookTemplates: LogbookTemplate[];
 }
 
-const userTypes: UserProfile['userType'][] = ["Personnel", "Instructor", "Private Pilot", "Student"];
+const userTypes: UserProfile['userType'][] = ["Personnel", "Instructor", "Student", "Private Pilot"];
 
 const isPilotUserType = (userType: UserProfile['userType'] | ''): userType is PilotProfile['userType'] => {
     return userType === 'Student' || userType === 'Private Pilot' || userType === 'Instructor';
@@ -87,14 +87,17 @@ export function PersonnelForm({ tenantId, roles, departments, logbookTemplates }
 
     if (isPilotUserType(userType)) {
         collectionName = 'pilots';
-        newUser = {
+        const newPilot: Partial<PilotProfile> = {
             userType,
             firstName,
             lastName,
             email,
             role: selectedRole!.id,
-            logbookTemplateId: selectedLogbookTemplate?.id,
         };
+        if (selectedLogbookTemplate) {
+            newPilot.logbookTemplateId = selectedLogbookTemplate.id;
+        }
+        newUser = newPilot as Omit<PilotProfile, 'id'>;
     } else {
         collectionName = 'personnel';
         newUser = { 
@@ -254,5 +257,3 @@ export function PersonnelForm({ tenantId, roles, departments, logbookTemplates }
     </Dialog>
   );
 }
-
-    
