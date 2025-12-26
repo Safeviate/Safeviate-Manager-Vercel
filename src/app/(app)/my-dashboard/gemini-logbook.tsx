@@ -99,8 +99,8 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             <col style={{ width: '100px' }} />
                             <col style={{ width: '100px' }} />
                             <col style={{ width: '100px' }} />
+                            <col style={{ width: '110px' }} />
                             <col style={{ width: '150px' }} />
-                            <col style={{ width: '120px' }} />
                             {/* Dynamically generate remaining columns with equal width */}
                             {Array.from({ length: 15 }).map((_, i) => (
                                 <col key={i} style={{ width: '60px' }} />
