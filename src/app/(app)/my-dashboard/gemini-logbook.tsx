@@ -77,6 +77,19 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             <TableHead className="border w-[120px]">Booking #</TableHead>
                             <TableHead className="border w-[150px]">Date</TableHead>
                             <TableHead className="border w-[150px]">Aircraft</TableHead>
+                            <TableHead className="border w-[150px]">Column 4</TableHead>
+                            <TableHead className="border w-[150px]">Column 5</TableHead>
+                            <TableHead className="border w-[150px]">Column 6</TableHead>
+                            <TableHead className="border w-[150px]">Column 7</TableHead>
+                            <TableHead className="border w-[150px]">Column 8</TableHead>
+                            <TableHead className="border w-[150px]">Column 9</TableHead>
+                            <TableHead className="border w-[150px]">Column 10</TableHead>
+                            <TableHead className="border w-[150px]">Column 11</TableHead>
+                            <TableHead className="border w-[150px]">Column 12</TableHead>
+                            <TableHead className="border w-[150px]">Column 13</TableHead>
+                            <TableHead className="border w-[150px]">Column 14</TableHead>
+                            <TableHead className="border w-[150px]">Column 15</TableHead>
+                            <TableHead className="border w-[150px]">Column 16</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -88,12 +101,25 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                         <TableCell className="border">{booking.bookingNumber}</TableCell>
                                         <TableCell className="border">{format(new Date(booking.date), 'yyyy-MM-dd')}</TableCell>
                                         <TableCell className="border">{aircraft?.tailNumber || 'N/A'}</TableCell>
+                                        <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
+                                        <TableCell className="border"></TableCell>
                                     </TableRow>
                                 );
                             })
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={3} className="h-24 text-center border">
+                                <TableCell colSpan={16} className="h-24 text-center border">
                                     No completed flights found.
                                 </TableCell>
                             </TableRow>
