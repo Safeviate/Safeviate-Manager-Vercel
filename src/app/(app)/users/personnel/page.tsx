@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import type { Role } from '../../admin/roles/page';
 import type { Department } from '../../admin/department/page';
 import { PersonnelTable } from './personnel-table';
-import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
 
 export type PilotProfile = {
   id: string;
@@ -107,18 +106,10 @@ export default function PersonnelPage() {
     [firestore]
   );
   
-  const logbookTemplatesQuery = useMemoFirebase(
-    () =>
-      firestore
-        ? query(collection(firestore, 'tenants', tenantId, 'logbook-templates'))
-        : null,
-    [firestore]
-  );
 
   const { data: personnel, isLoading: isLoadingPersonnel, error: personnelError } = useCollection<Personnel>(personnelQuery);
   const { data: roles, isLoading: isLoadingRoles, error: rolesError } = useCollection<Role>(rolesQuery);
   const { data: departments, isLoading: isLoadingDepts, error: deptsError } = useCollection<Department>(departmentsQuery);
-  const { data: logbookTemplates, isLoading: isLoadingTemplates, error: templatesError } = useCollection<LogbookTemplate>(logbookTemplatesQuery);
 
   const rolesMap = useMemo(() => {
     if (!roles) return new Map<string, string>();
@@ -130,8 +121,8 @@ export default function PersonnelPage() {
     return new Map(departments.map(dept => [dept.id, dept.name]));
   }, [departments]);
 
-  const isLoading = isLoadingPersonnel || isLoadingRoles || isLoadingDepts || isLoadingTemplates;
-  const error = personnelError || rolesError || deptsError || templatesError;
+  const isLoading = isLoadingPersonnel || isLoadingRoles || isLoadingDepts;
+  const error = personnelError || rolesError || deptsError;
 
   return (
     <div className="flex flex-col gap-6 h-full">
@@ -140,7 +131,7 @@ export default function PersonnelPage() {
             <h1 className="text-3xl font-bold tracking-tight">Personnel</h1>
             <p className="text-muted-foreground">Manage all non-flying staff in your organization.</p>
         </div>
-        <PersonnelForm tenantId={tenantId} roles={roles || []} departments={departments || []} logbookTemplates={logbookTemplates || []} />
+        <PersonnelForm tenantId={tenantId} roles={roles || []} departments={departments || []} />
       </div>
 
       <Card>
