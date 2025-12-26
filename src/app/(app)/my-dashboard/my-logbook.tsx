@@ -94,6 +94,14 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                    <TableRow>
+                        <TableCell>&nbsp;</TableCell>
+                        <TableCell>&nbsp;</TableCell>
+                        <TableCell>&nbsp;</TableCell>
+                        <TableCell>&nbsp;</TableCell>
+                        <TableCell>&nbsp;</TableCell>
+                        <TableCell>&nbsp;</TableCell>
+                    </TableRow>
                   {userBookings && userBookings.length > 0 ? (
                     userBookings.map(booking => {
                         const flightMinutes = (booking.status === 'Completed' && booking.startTime && booking.endTime) ? differenceInMinutes(
