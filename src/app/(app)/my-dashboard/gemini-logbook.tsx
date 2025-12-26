@@ -101,6 +101,7 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             <col style={{ width: '100px' }} />
                             <col style={{ width: '110px' }} />
                             <col style={{ width: '120px' }} />
+                            <col style={{ width: '60px' }} />
                             {/* Dynamically generate remaining columns with equal width */}
                             {Array.from({ length: 16 }).map((_, i) => (
                                 <col key={i} style={{ width: '60px' }} />
@@ -113,6 +114,7 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                 <TableHead className="border text-center" colSpan={2}>Aircraft</TableHead>
                                 <TableHead className="border text-center" rowSpan={2}>Pilot In Command</TableHead>
                                 <TableHead className="border text-center" rowSpan={2}>Flight Details</TableHead>
+                                <TableHead className="border text-center" rowSpan={2}>Flight Time</TableHead>
                                 <TableHead className="border text-center" colSpan={2}>Single Engine Day</TableHead>
                                 <TableHead className="border text-center" colSpan={2}>Single Engine Night</TableHead>
                                 <TableHead className="border text-center" colSpan={3}>Multi Engine Day</TableHead>
@@ -172,6 +174,8 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                             <TableCell className="border text-center">{aircraft?.tailNumber || 'N/A'}</TableCell>
                                             <TableCell className="border text-center">{picName}</TableCell>
                                             <TableCell className="border text-center"></TableCell>
+                                            <TableCell className="border text-center">{`${flightHours}h`}</TableCell>
+                                            <TableCell className="border text-center"></TableCell>
                                             <TableCell className="border text-center"></TableCell>
                                             <TableCell className="border text-center"></TableCell>
                                             <TableCell className="border text-center"></TableCell>
@@ -193,7 +197,7 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                 })
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={22} className="h-24 text-center border">
+                                    <TableCell colSpan={23} className="h-24 text-center border">
                                         No completed flights found.
                                     </TableCell>
                                 </TableRow>
