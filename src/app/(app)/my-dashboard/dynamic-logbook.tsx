@@ -71,12 +71,13 @@ const useLogbookData = (userProfile: PilotProfile | Personnel) => {
     }, [aircrafts]);
 
     const userBookings = useMemo(() => {
-        if (!allBookings || !userProfile) return [];
+        if (!allBookings || !userProfile?.id) return [];
+        
         return allBookings
-            .filter(booking =>
+            .filter(booking => 
                 booking.pilotId === userProfile.id ||
-                booking.studentId === userProfile.id ||
-                booking.instructorId === userProfile.id
+                booking.instructorId === userProfile.id ||
+                booking.studentId === userProfile.id
             )
             .sort((a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime());
     }, [allBookings, userProfile]);
