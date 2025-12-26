@@ -13,11 +13,11 @@ import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocki
 import { collection, doc } from 'firebase/firestore';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { Trash2, Plus, Minus, Upload } from 'lucide-react';
+import { Trash2, Plus, Minus, Upload, Library } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-
+import type { LogbookTemplate } from '../../development/logbook-parser/page';
 
 type Cell = {
   r: number;
@@ -28,7 +28,7 @@ type Cell = {
   hidden: boolean;
 };
 
-type TableData = {
+export type TableData = {
   rows: number;
   cols: number;
   cells: Cell[];
@@ -36,7 +36,7 @@ type TableData = {
   rowHeights: number[];
 };
 
-type TableTemplate = {
+export type TableTemplate = {
     id: string;
     name: string;
     tableData: TableData;
@@ -169,6 +169,12 @@ export default function TableBuilderPage() {
     [firestore, tenantId]
   );
   const { data: savedTemplates, isLoading: isLoadingTemplates } = useCollection<TableTemplate>(templatesQuery);
+
+  const logbookTemplatesQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, `tenants/${tenantId}/logbook-templates`) : null),
+    [firestore, tenantId]
+  );
+  const { data: savedLogbookTemplates } = useCollection<LogbookTemplate>(logbookTemplatesQuery);
 
   const resizeHandleRef = useRef<{ type: 'col' | 'row', index: number, initialPos: number, initialSize: number } | null>(null);
 
@@ -452,6 +458,95 @@ export default function TableBuilderPage() {
     deleteDocumentNonBlocking(templateRef);
     toast({ title: 'Template Deleted' });
   };
+  
+  const handleImportFromLogbook = (logbookTemplate: LogbookTemplate) => {
+    const headerRows: { id: string; label: string; colSpan: number; rowSpan: number }[][] = [];
+    const maxDepth = getDepth(logbookTemplate.columns);
+    let totalCols = 0;
+
+    function getDepth(columns: LogbookTemplate['columns']): number {
+        if (!columns || columns.length === 0) return 0;
+        let max = 0;
+        for (const col of columns) {
+            max = Math.max(max, getDepth(col.subColumns || []));
+        }
+        return 1 + max;
+    }
+
+    function processColumns(columns: LogbookTemplate['columns'], level: number): number {
+        if (!headerRows[level]) headerRows[level] = [];
+        let numCols = 0;
+        for (const col of columns) {
+            const subCols = col.subColumns || [];
+            const colSpan = subCols.length > 0 ? processColumns(subCols, level + 1) : 1;
+            const rowSpan = subCols.length === 0 ? maxDepth - level : 1;
+            headerRows[level].push({ id: col.id, label: col.label, colSpan, rowSpan });
+            numCols += colSpan;
+        }
+        if(level === 0) totalCols = numCols;
+        return numCols;
+    }
+    
+    processColumns(logbookTemplate.columns, 0);
+
+    const newRows = headerRows.length + 5; // Headers + 5 data rows
+    const newCols = totalCols;
+    const newCells: Cell[] = [];
+
+    // Create header cells
+    headerRows.forEach((row, rIndex) => {
+        let cIndex = 0;
+        row.forEach(headerCell => {
+            newCells.push({
+                r: rIndex,
+                c: cIndex,
+                content: headerCell.label,
+                rowSpan: headerCell.rowSpan,
+                colSpan: headerCell.colSpan,
+                hidden: false,
+            });
+            // Mark covered cells as hidden
+            for (let rs = 0; rs < headerCell.rowSpan; rs++) {
+                for (let cs = 0; cs < headerCell.colSpan; cs++) {
+                    if (rs === 0 && cs === 0) continue;
+                    const r = rIndex + rs;
+                    const c = cIndex + cs;
+                    // Find if a cell needs to be added or marked
+                    newCells.push({ r, c, content: '', rowSpan: 1, colSpan: 1, hidden: true });
+                }
+            }
+            cIndex += headerCell.colSpan;
+        });
+    });
+
+    // Create empty data rows
+    for (let r = headerRows.length; r < newRows; r++) {
+        for (let c = 0; c < newCols; c++) {
+            if (!newCells.find(cell => cell.r === r && cell.c === c)) {
+               newCells.push({ r, c, content: '', rowSpan: 1, colSpan: 1, hidden: false });
+            }
+        }
+    }
+    
+    // Sort cells by row then column to ensure correct order
+    newCells.sort((a, b) => a.r - b.r || a.c - b.c);
+    
+    // Filter out duplicates that might have been created
+    const uniqueCells = newCells.filter((cell, index, self) => 
+        index === self.findIndex(c => c.r === cell.r && c.c === cell.c)
+    );
+
+    setTableData({
+        rows: newRows,
+        cols: newCols,
+        cells: uniqueCells,
+        colWidths: Array(newCols).fill(120),
+        rowHeights: Array(newRows).fill(48),
+    });
+
+    toast({ title: 'Logbook Imported', description: `Structure for "${logbookTemplate.name}" loaded into the builder.` });
+  };
+
 
 
   return (
@@ -586,9 +681,35 @@ export default function TableBuilderPage() {
             <CardTitle>Save & Load Templates</CardTitle>
         </CardHeader>
         <CardContent className='space-y-4'>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
                 <Input placeholder="New template name..." value={templateName} onChange={(e) => setTemplateName(e.target.value)} />
                 <Button onClick={handleSaveTemplate} disabled={!templateName.trim()}>Save Current as Template</Button>
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button variant="outline"><Library className='mr-2 h-4 w-4' /> Import from Logbook</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Import Logbook Structure</DialogTitle>
+                            <DialogDescription>Select a saved logbook template to import its structure into the builder.</DialogDescription>
+                        </DialogHeader>
+                        <ScrollArea className="h-60 mt-4">
+                            <div className="space-y-2">
+                                {(savedLogbookTemplates || []).map(template => (
+                                    <DialogClose key={template.id} asChild>
+                                        <Button
+                                            variant="ghost"
+                                            className="w-full justify-start"
+                                            onClick={() => handleImportFromLogbook(template)}
+                                        >
+                                            {template.name}
+                                        </Button>
+                                    </DialogClose>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </DialogContent>
+                </Dialog>
             </div>
              <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">Saved Templates</h4>
