@@ -74,9 +74,9 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                 <Table className="border">
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="border">Booking #</TableHead>
-                            <TableHead className="border">Date</TableHead>
-                            <TableHead className="border">Aircraft</TableHead>
+                            <TableHead className="border w-[120px]">Booking #</TableHead>
+                            <TableHead className="border w-[150px]">Date</TableHead>
+                            <TableHead className="border w-[150px]">Aircraft</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
