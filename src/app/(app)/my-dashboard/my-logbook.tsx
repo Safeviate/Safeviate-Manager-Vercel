@@ -6,7 +6,6 @@ import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@
 import { collection, doc, query, where } from 'firebase/firestore';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import type { Booking } from '@/types/booking';
-import type { TableTemplate } from '@/types/table-template';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,137 +16,37 @@ interface MyLogbookProps {
   userProfile: PilotProfile | Personnel;
 }
 
-const renderHeaderRows = (tableData: TableTemplate['tableData']) => {
-    if (!tableData) return [];
-    
-    const { rows, cols, cells } = tableData;
-    
-    const headerRowCount = cells.reduce((max, cell) => {
-        if (cell.content?.trim()) {
-            return Math.max(max, cell.r + cell.rowSpan);
-        }
-        return max;
-    }, 0);
-
-    if (headerRowCount === 0) return [];
-    
-    const headerRowsJsx: JSX.Element[] = [];
-    const processedCells = new Set<string>();
-
-    for(let r = 0; r < headerRowCount; r++) {
-        const rowCells: JSX.Element[] = [];
-        for (let c = 0; c < cols; c++) {
-            const key = `${r}-${c}`;
-            if(processedCells.has(key)) continue;
-
-            const cellData = cells.find(cell => cell.r === r && cell.c === c);
-            if (cellData && !cellData.hidden) {
-                rowCells.push(
-                    <TableHead
-                        key={key}
-                        colSpan={cellData.colSpan}
-                        rowSpan={cellData.rowSpan}
-                        className="text-center border"
-                    >
-                        {cellData.content}
-                    </TableHead>
-                );
-
-                for (let rs = 0; rs < cellData.rowSpan; rs++) {
-                    for (let cs = 0; cs < cellData.colSpan; cs++) {
-                        processedCells.add(`${r + rs}-${c + cs}`);
-                    }
-                }
-            }
-        }
-        if(rowCells.length > 0) {
-            headerRowsJsx.push(<TableRow key={`header-row-${r}`}>{rowCells}</TableRow>);
-        }
-    }
-
-    return headerRowsJsx;
-};
-
-
-const getLeafColumnIds = (tableData: TableTemplate['tableData']): string[] => {
-    if (!tableData || !tableData.cells) return [];
-    
-    const headerRowCount = tableData.cells.reduce((max, cell) => {
-        if (cell.content?.trim()) {
-            return Math.max(max, cell.r + cell.rowSpan);
-        }
-        return max;
-    }, 0);
-
-    const leafCells = tableData.cells.filter(cell => {
-        const isBottomHeader = (cell.r + cell.rowSpan) === headerRowCount;
-        return isBottomHeader && cell.content.trim() !== '';
-    });
-    
-    leafCells.sort((a,b) => a.c - b.c);
-
-    return leafCells.map(cell => cell.content);
-};
-
 export function MyLogbook({ userProfile }: MyLogbookProps) {
   const firestore = useFirestore();
   const { user } = useUser();
   const tenantId = 'safeviate';
 
-  const logbookTemplateRef = useMemoFirebase(
-    () => (firestore && 'logbookTemplateId' in userProfile && userProfile.logbookTemplateId)
-      ? doc(firestore, `tenants/${tenantId}/table-templates`, userProfile.logbookTemplateId)
-      : null,
-    [firestore, tenantId, userProfile]
+  const allBookingsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/bookings`)) : null),
+    [firestore, tenantId]
   );
   
-  const bookingsQuery = useMemoFirebase(
-    () => {
-      if (!firestore || !user) return null;
-      return query(collection(firestore, `tenants/${tenantId}/bookings`));
-    },
-    [firestore, tenantId, user]
+  const allUsersQuery = useMemoFirebase(
+      () => firestore ? [
+          query(collection(firestore, `tenants/${tenantId}/personnel`)),
+          query(collection(firestore, `tenants/${tenantId}/instructors`)),
+          query(collection(firestore, `tenants/${tenantId}/students`)),
+          query(collection(firestore, `tenants/${tenantId}/private-pilots`)),
+      ] : null,
+      [firestore, tenantId]
   );
-  
+
   const aircraftsQuery = useMemoFirebase(
     () => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null),
     [firestore, tenantId]
   );
 
-  const pilotsQuery = useMemoFirebase(
-      () => firestore ? query(collection(firestore, `tenants/${tenantId}/pilots`)) : null,
-      [firestore, tenantId]
-  );
-  
-  const studentsQuery = useMemoFirebase(
-      () => firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null,
-      [firestore, tenantId]
-  );
-  
-  const instructorsQuery = useMemoFirebase(
-      () => firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null,
-      [firestore, tenantId]
-  );
-
-  const { data: template, isLoading: isLoadingTemplate } = useDoc<TableTemplate>(logbookTemplateRef);
-  const { data: allBookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
+  const { data: allBookings, isLoading: isLoadingBookings } = useCollection<Booking>(allBookingsQuery);
+  const { data: personnel } = useCollection<Personnel>(allUsersQuery ? allUsersQuery[0] : null);
+  const { data: instructors } = useCollection<PilotProfile>(allUsersQuery ? allUsersQuery[1] : null);
+  const { data: students } = useCollection<PilotProfile>(allUsersQuery ? allUsersQuery[2] : null);
+  const { data: privatePilots } = useCollection<PilotProfile>(allUsersQuery ? allUsersQuery[3] : null);
   const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
-  const { data: pilots, isLoading: isLoadingPilots } = useCollection<PilotProfile>(pilotsQuery);
-  const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsQuery);
-  const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
-
-  const aircraftMap = useMemo(() => {
-    if (!aircrafts) return new Map();
-    return new Map(aircrafts.map(ac => [ac.id, ac]));
-  }, [aircrafts]);
-
-  const usersMap = useMemo(() => {
-      const map = new Map<string, string>();
-      (pilots || []).forEach(p => map.set(p.id, `${p.firstName} ${p.lastName}`));
-      (students || []).forEach(p => map.set(p.id, `${p.firstName} ${p.lastName}`));
-      (instructors || []).forEach(p => map.set(p.id, `${p.firstName} ${p.lastName}`));
-      return map;
-  }, [pilots, students, instructors]);
 
   const userBookings = useMemo(() => {
     if (!allBookings || !user) return [];
@@ -155,86 +54,73 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
         booking.pilotId === user.uid || 
         booking.studentId === user.uid || 
         booking.instructorId === user.uid
-    );
+    ).sort((a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime());
   }, [allBookings, user]);
 
-  const { headerRows, leafColumnIds } = useMemo(() => {
-    if (!template?.tableData) return { headerRows: [], leafColumnIds: [] };
-    return { 
-        headerRows: renderHeaderRows(template.tableData),
-        leafColumnIds: getLeafColumnIds(template.tableData)
-    };
-  }, [template]);
-  
-  const getCellData = (booking: Booking, columnId: string): string => {
-    const flightMinutes = (booking.status === 'Completed' && booking.startTime && booking.endTime) ? differenceInMinutes(
-      parse(`${booking.bookingDate} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date()),
-      parse(`${booking.bookingDate} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date())
-    ) : 0;
-    const flightHours = (flightMinutes / 60).toFixed(1);
-    const aircraft = aircraftMap.get(booking.aircraftId);
-    
-    const pilotName = booking.pilotId ? (usersMap.get(booking.pilotId) || 'Unknown') : '';
-    const studentName = booking.studentId ? (usersMap.get(booking.studentId) || 'Unknown') : '';
-    const instructorName = booking.instructorId ? (usersMap.get(booking.instructorId) || 'Unknown') : '';
+  const usersMap = useMemo(() => {
+      const map = new Map<string, string>();
+      (personnel || []).forEach(p => map.set(p.id, `${p.firstName} ${p.lastName}`));
+      (instructors || []).forEach(p => map.set(p.id, `${p.firstName} ${p.lastName}`));
+      (students || []).forEach(p => map.set(p.id, `${p.firstName} ${p.lastName}`));
+      (privatePilots || []).forEach(p => map.set(p.id, `${p.firstName} ${p.lastName}`));
+      return map;
+  }, [personnel, instructors, students, privatePilots]);
 
-    const normalizedColumnId = columnId.toUpperCase().replace(/\s+/g, '');
-    
-    switch (normalizedColumnId) {
-      case 'DATE': return format(new Date(booking.bookingDate), 'yyyy-MM-dd');
-      case 'AIRCRAFT':
-      case 'AIRCRAFTTYPE&REG':
-          return aircraft ? `${aircraft.model} (${aircraft.tailNumber})` : booking.aircraftId;
-      case 'SINGLEENGINE':
-      case 'SINGLE-ENGINE':
-        return booking.type === 'Training Flight' || booking.type === 'Private Flight' ? flightHours : '';
-      case 'TOTALTIME':
-      case 'TOTALFLIGHTTIME':
-        return flightHours;
-      case 'PILOTINCOMMAND':
-      case 'PIC':
-          return pilotName || studentName;
-      case 'INSTRUCTOR':
-          return instructorName;
-      case 'STUDENT':
-          return studentName;
-      default: return '';
-    }
-  };
+  const aircraftMap = useMemo(() => {
+    if (!aircrafts) return new Map();
+    return new Map(aircrafts.map(ac => [ac.id, ac]));
+  }, [aircrafts]);
 
-
-  const isLoading = isLoadingTemplate || isLoadingBookings || isLoadingAircrafts || isLoadingPilots || isLoadingStudents || isLoadingInstructors;
+  const isLoading = isLoadingBookings || isLoadingAircrafts || !usersMap.size;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>My Logbook</CardTitle>
-        <CardDescription>A summary of your flights, based on your assigned logbook template.</CardDescription>
+        <CardDescription>A summary of your flights.</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? <Skeleton className="h-48 w-full" /> : (
-          !('logbookTemplateId' in userProfile && userProfile.logbookTemplateId) ? (
-            <p className="text-muted-foreground text-center">No logbook template assigned. Please contact an administrator.</p>
-          ) : !template ? (
-            <p className="text-muted-foreground text-center">Could not load logbook template. Check console for errors.</p>
-          ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  {headerRows}
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Aircraft</TableHead>
+                    <TableHead>Student</TableHead>
+                    <TableHead>Instructor</TableHead>
+                    <TableHead>PIC</TableHead>
+                    <TableHead>Flight Time</TableHead>
+                  </TableRow>
                 </TableHeader>
                 <TableBody>
                   {userBookings && userBookings.length > 0 ? (
-                    userBookings.map(booking => (
-                      <TableRow key={booking.id}>
-                        {leafColumnIds.map((id, index) => (
-                          <TableCell key={`${booking.id}-${index}`} className="text-center">{getCellData(booking, id)}</TableCell>
-                        ))}
-                      </TableRow>
-                    ))
+                    userBookings.map(booking => {
+                        const flightMinutes = (booking.status === 'Completed' && booking.startTime && booking.endTime) ? differenceInMinutes(
+                            parse(`${booking.bookingDate} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date()),
+                            parse(`${booking.bookingDate} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date())
+                        ) : 0;
+                        const flightHours = (flightMinutes / 60).toFixed(1);
+
+                        const aircraft = aircraftMap.get(booking.aircraftId);
+                        const studentName = booking.studentId ? usersMap.get(booking.studentId) : '';
+                        const instructorName = booking.instructorId ? usersMap.get(booking.instructorId) : '';
+                        const picName = booking.pilotId ? usersMap.get(booking.pilotId) : (studentName || '');
+
+                        return (
+                            <TableRow key={booking.id}>
+                                <TableCell>{format(new Date(booking.bookingDate), 'yyyy-MM-dd')}</TableCell>
+                                <TableCell>{aircraft ? `${aircraft.model} (${aircraft.tailNumber})` : 'N/A'}</TableCell>
+                                <TableCell>{studentName || 'N/A'}</TableCell>
+                                <TableCell>{instructorName || 'N/A'}</TableCell>
+                                <TableCell>{picName || 'N/A'}</TableCell>
+                                <TableCell>{flightHours} hrs</TableCell>
+                            </TableRow>
+                        )
+                    })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={leafColumnIds.length || 1} className="h-24 text-center">
+                      <TableCell colSpan={6} className="h-24 text-center">
                         No flights found.
                       </TableCell>
                     </TableRow>
@@ -242,7 +128,6 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
                 </TableBody>
               </Table>
             </div>
-          )
         )}
       </CardContent>
     </Card>
