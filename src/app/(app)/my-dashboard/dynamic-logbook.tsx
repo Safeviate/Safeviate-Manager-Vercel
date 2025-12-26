@@ -76,7 +76,7 @@ const useLogbookData = (userProfile: PilotProfile | Personnel) => {
             .filter(booking => 
                 booking.pilotId === userProfile.id ||
                 booking.instructorId === userProfile.id ||
-                booking.studentId === userProfile.id
+                (booking.studentId === userProfile.id)
             )
             .sort((a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime());
     }, [allBookings, userProfile]);
@@ -113,9 +113,6 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
             case 'type': return aircraft?.model || 'N/A';
             case 'registration': return aircraft?.tailNumber || 'N/A';
             case 'pilot in command':
-                if (booking.type === 'Training Flight' && instructor) {
-                    return `${instructor.firstName} ${instructor.lastName}`;
-                }
                 return picName;
             case 'student': return student ? `${student.firstName} ${student.lastName}` : '---';
             case 'instructor': return instructor ? `${instructor.firstName} ${instructor.lastName}` : '---';
