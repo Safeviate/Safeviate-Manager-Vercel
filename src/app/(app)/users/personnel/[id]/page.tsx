@@ -1,7 +1,8 @@
 
 'use client';
 
-import { useState, useMemo, use } from 'react';
+import { useState, useMemo, use, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { collection, doc, query, where } from 'firebase/firestore';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Personnel, PilotProfile } from '../page';
@@ -26,21 +27,28 @@ const isPilotProfile = (user: UserProfile): user is PilotProfile => {
     return user.userType === 'Student' || user.userType === 'Private Pilot' || user.userType === 'Instructor';
 }
 
-export default function UserProfilePage({ params }: UserProfilePageProps) {
-    const resolvedParams = use(params);
+function UserProfileContent({ params }: UserProfilePageProps) {
     const firestore = useFirestore();
+    const searchParams = useSearchParams();
+    const userType = searchParams.get('type') || 'Personnel';
+
     const tenantId = 'safeviate'; // Hardcoded for now
-    const userId = resolvedParams.id;
+    const userId = params.id;
     const [isEditing, setIsEditing] = useState(false);
 
-    // We fetch from both collections. Only one will return data.
-    const personnelDocRef = useMemoFirebase(
-        () => (firestore ? doc(firestore, 'tenants', tenantId, 'personnel', userId) : null),
-        [firestore, tenantId, userId]
-    );
-     const pilotDocRef = useMemoFirebase(
-        () => (firestore ? doc(firestore, 'tenants', tenantId, 'pilots', userId) : null),
-        [firestore, tenantId, userId]
+    const collectionName = useMemo(() => {
+        switch(userType) {
+            case 'Personnel': return 'personnel';
+            case 'Instructor': return 'instructors';
+            case 'Student': return 'students';
+            case 'Private Pilot': return 'private-pilots';
+            default: return 'personnel';
+        }
+    }, [userType]);
+
+    const userDocRef = useMemoFirebase(
+        () => (firestore ? doc(firestore, 'tenants', tenantId, collectionName, userId) : null),
+        [firestore, tenantId, collectionName, userId]
     );
 
     const rolesQuery = useMemoFirebase(
@@ -58,16 +66,13 @@ export default function UserProfilePage({ params }: UserProfilePageProps) {
         [firestore, tenantId]
     );
 
-    const { data: personnel, isLoading: isLoadingPersonnel, error: personnelError } = useDoc<Personnel>(personnelDocRef);
-    const { data: pilot, isLoading: isLoadingPilot, error: pilotError } = useDoc<PilotProfile>(pilotDocRef);
-
+    const { data: user, isLoading: isLoadingUser, error: userError } = useDoc<UserProfile>(userDocRef);
     const { data: roles, isLoading: isLoadingRoles, error: rolesError } = useCollection<Role>(rolesQuery);
     const { data: departments, isLoading: isLoadingDepts, error: deptsError } = useCollection<Department>(departmentsQuery);
     const { data: logbookTemplates, isLoading: isLoadingTemplates } = useCollection<LogbookTemplate>(logbookTemplatesQuery);
 
-    const user = personnel || pilot;
-    const isLoading = isLoadingPersonnel || isLoadingPilot || isLoadingRoles || isLoadingDepts || isLoadingTemplates;
-    const error = personnelError || pilotError || rolesError || deptsError;
+    const isLoading = isLoadingUser || isLoadingRoles || isLoadingDepts || isLoadingTemplates;
+    const error = userError || rolesError || deptsError;
 
     const currentRole = useMemo(() => {
         if (user && 'role' in user) {
@@ -146,4 +151,13 @@ export default function UserProfilePage({ params }: UserProfilePageProps) {
            
         </div>
     );
+}
+
+
+export default function UserProfilePageWrapper(props: UserProfilePageProps) {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <UserProfileContent {...props} />
+    </Suspense>
+  )
 }

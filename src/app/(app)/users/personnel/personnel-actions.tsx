@@ -36,8 +36,14 @@ interface PersonnelActionsProps {
   user: UserProfile;
 }
 
-const isPilotProfile = (user: UserProfile): user is PilotProfile => {
-    return user.userType === 'Student' || user.userType === 'Private Pilot' || user.userType === 'Instructor';
+const determineCollection = (userType: UserProfile['userType']): string => {
+    switch(userType) {
+        case 'Personnel': return 'personnel';
+        case 'Instructor': return 'instructors';
+        case 'Student': return 'students';
+        case 'Private Pilot': return 'private-pilots';
+        default: return 'personnel'; // Fallback, should not happen
+    }
 }
 
 
@@ -58,7 +64,7 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
         return;
     }
     
-    const collectionName = isPilotProfile(user) ? 'pilots' : 'personnel';
+    const collectionName = determineCollection(user.userType);
     const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
     deleteDocumentNonBlocking(userRef);
 
@@ -95,7 +101,7 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                  <Link href={`/users/personnel/${user.id}`}>
+                  <Link href={`/users/personnel/${user.id}?type=${user.userType}`}>
                       <Eye className='mr-2' /> View Profile
                   </Link>
               </DropdownMenuItem>

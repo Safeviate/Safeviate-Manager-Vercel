@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent } from '@/components/ui/card';
 import type { PilotProfile } from '../personnel/page';
@@ -15,10 +15,10 @@ export default function StudentsPage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate'; // Hardcoded for now
 
-  const pilotsQuery = useMemoFirebase(
+  const studentsQuery = useMemoFirebase(
     () =>
       firestore
-        ? query(collection(firestore, 'tenants', tenantId, 'pilots'), where('userType', '==', 'Student'))
+        ? query(collection(firestore, 'tenants', tenantId, 'students'))
         : null,
     [firestore]
   );
@@ -40,13 +40,13 @@ export default function StudentsPage() {
   );
   
 
-  const { data: pilots, isLoading: isLoadingPilots, error: pilotsError } = useCollection<PilotProfile>(pilotsQuery);
+  const { data: students, isLoading: isLoadingStudents, error: studentsError } = useCollection<PilotProfile>(studentsQuery);
   const { data: roles, isLoading: isLoadingRoles, error: rolesError } = useCollection<Role>(rolesQuery);
   const { data: departments, isLoading: isLoadingDepts, error: deptsError } = useCollection<Department>(departmentsQuery);
 
 
-  const isLoading = isLoadingPilots || isLoadingRoles || isLoadingDepts;
-  const error = pilotsError || rolesError || deptsError;
+  const isLoading = isLoadingStudents || isLoadingRoles || isLoadingDepts;
+  const error = studentsError || rolesError || deptsError;
 
   return (
     <div className="flex flex-col gap-6 h-full">
@@ -65,8 +65,8 @@ export default function StudentsPage() {
             {!isLoading && error && (
                 <div className="text-center p-4 text-destructive">Error: {error.message}</div>
             )}
-            {!isLoading && !error && pilots && (
-                <StudentsTable data={pilots} tenantId={tenantId} />
+            {!isLoading && !error && students && (
+                <StudentsTable data={students} tenantId={tenantId} />
             )}
         </CardContent>
       </Card>

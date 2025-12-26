@@ -182,6 +182,10 @@ export const menuConfig: MenuItem[] = [
         href: '/users/students',
         label: 'Students',
       },
+      {
+        href: '/users/private-pilots',
+        label: 'Private Pilots',
+      },
     ],
   },
   {

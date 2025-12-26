@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent } from '@/components/ui/card';
 import type { PilotProfile } from '../personnel/page';
@@ -15,10 +15,10 @@ export default function PrivatePilotsPage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate'; // Hardcoded for now
 
-  const pilotsQuery = useMemoFirebase(
+  const privatePilotsQuery = useMemoFirebase(
     () =>
       firestore
-        ? query(collection(firestore, 'tenants', tenantId, 'pilots'), where('userType', '==', 'Private Pilot'))
+        ? query(collection(firestore, 'tenants', tenantId, 'private-pilots'))
         : null,
     [firestore]
   );
@@ -40,7 +40,7 @@ export default function PrivatePilotsPage() {
   );
   
 
-  const { data: pilots, isLoading: isLoadingPilots, error: pilotsError } = useCollection<PilotProfile>(pilotsQuery);
+  const { data: privatePilots, isLoading: isLoadingPilots, error: pilotsError } = useCollection<PilotProfile>(privatePilotsQuery);
   const { data: roles, isLoading: isLoadingRoles, error: rolesError } = useCollection<Role>(rolesQuery);
   const { data: departments, isLoading: isLoadingDepts, error: deptsError } = useCollection<Department>(departmentsQuery);
 
@@ -65,8 +65,8 @@ export default function PrivatePilotsPage() {
             {!isLoading && error && (
               <div className="text-center p-4 text-destructive">Error: {error.message}</div>
             )}
-            {!isLoading && !error && pilots && (
-              <PrivatePilotsTable data={pilots} tenantId={tenantId} />
+            {!isLoading && !error && privatePilots && (
+              <PrivatePilotsTable data={privatePilots} tenantId={tenantId} />
             )}
         </CardContent>
       </Card>

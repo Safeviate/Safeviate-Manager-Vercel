@@ -51,22 +51,23 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
             }
 
             try {
-                // Query both collections
-                const personnelQuery = query(collection(firestore, 'tenants/safeviate/personnel'), where('email', '==', impersonatedEmail));
-                const pilotsQuery = query(collection(firestore, 'tenants/safeviate/pilots'), where('email', '==', impersonatedEmail));
+                // Query all user type collections
+                const collectionsToQuery = ['personnel', 'instructors', 'students', 'private-pilots'];
+                
+                const queries = collectionsToQuery.map(col => 
+                    query(collection(firestore, `tenants/safeviate/${col}`), where('email', '==', impersonatedEmail))
+                );
 
-                const [personnelSnapshot, pilotsSnapshot] = await Promise.all([
-                    getDocs(personnelQuery),
-                    getDocs(pilotsQuery)
-                ]);
+                const querySnapshots = await Promise.all(queries.map(q => getDocs(q)));
 
                 let profile: UserProfile | null = null;
-                if (!personnelSnapshot.empty) {
-                    profile = { id: personnelSnapshot.docs[0].id, ...personnelSnapshot.docs[0].data() } as Personnel;
-                } else if (!pilotsSnapshot.empty) {
-                    profile = { id: pilotsSnapshot.docs[0].id, ...pilotsSnapshot.docs[0].data() } as PilotProfile;
+                for (const snapshot of querySnapshots) {
+                    if (!snapshot.empty) {
+                        profile = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as UserProfile;
+                        break; // Found the user, no need to check other collections
+                    }
                 }
-
+                
                 setUserProfile(profile);
 
             } catch (e: any) {

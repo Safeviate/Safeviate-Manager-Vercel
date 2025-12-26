@@ -43,6 +43,16 @@ const isPilotProfile = (user: Partial<UserProfile>): user is PilotProfile => {
     return user.userType === 'Student' || user.userType === 'Private Pilot' || user.userType === 'Instructor';
 }
 
+const determineCollection = (userType: UserProfile['userType']): string => {
+    switch(userType) {
+        case 'Personnel': return 'personnel';
+        case 'Instructor': return 'instructors';
+        case 'Student': return 'students';
+        case 'Private Pilot': return 'private-pilots';
+        default: return 'personnel'; // Fallback
+    }
+}
+
 export function EditPersonnelForm({ tenantId, user, roles, departments, logbookTemplates, onCancel }: EditPersonnelFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -104,7 +114,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
         return;
     }
     
-    const collectionName = isPilotProfile(formData) ? 'pilots' : 'personnel';
+    const collectionName = determineCollection(formData.userType);
     const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
     
     let dataToUpdate: Partial<UserProfile> = { ...formData };
@@ -435,5 +445,3 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
     </Card>
   );
 }
-
-    

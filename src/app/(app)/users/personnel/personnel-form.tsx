@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -34,8 +33,14 @@ interface PersonnelFormProps {
 
 const userTypes: UserProfile['userType'][] = ["Personnel", "Instructor", "Student", "Private Pilot"];
 
-const isPilotUserType = (userType: UserProfile['userType'] | ''): userType is PilotProfile['userType'] => {
-    return userType === 'Student' || userType === 'Private Pilot' || userType === 'Instructor';
+const determineCollection = (userType: UserProfile['userType'] | ''): string => {
+    switch(userType) {
+        case 'Personnel': return 'personnel';
+        case 'Instructor': return 'instructors';
+        case 'Student': return 'students';
+        case 'Private Pilot': return 'private-pilots';
+        default: return 'personnel'; // Fallback
+    }
 }
 
 export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormProps) {
@@ -79,31 +84,27 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
       return;
     }
 
-    let newUser: Partial<UserProfile>;
-    let collectionName: 'personnel' | 'pilots';
+    const collectionName = determineCollection(userType);
+    let newUser: Omit<UserProfile, 'id'>;
 
-    if (isPilotUserType(userType)) {
-        collectionName = 'pilots';
-        const newPilot: Partial<PilotProfile> = {
+    if (userType === 'Personnel') {
+        newUser = {
             userType,
             firstName,
             lastName,
             email,
-            role: selectedRole!.id,
-        };
-        newUser = newPilot;
-    } else {
-        collectionName = 'personnel';
-        const newPersonnel: Partial<Personnel> = { 
-            userType: 'Personnel',
-            firstName, 
-            lastName, 
-            email,
+            role: selectedRole.id,
             department: selectedDepartment?.id,
-            role: selectedRole!.id,
-            permissions: selectedRole?.permissions || [],
+            permissions: selectedRole.permissions || [],
         };
-        newUser = newPersonnel;
+    } else {
+        newUser = {
+            userType,
+            firstName,
+            lastName,
+            email,
+            role: selectedRole.id,
+        };
     }
 
     const collectionRef = collection(firestore, 'tenants', tenantId, collectionName);
@@ -200,7 +201,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
                     </Select>
                 </div>
 
-                {!isPilotUserType(userType) && userType && (
+                {userType === 'Personnel' && (
                     <div className="space-y-2">
                         <Label htmlFor="department">Department</Label>
                         <Select onValueChange={handleDepartmentChange} value={selectedDepartment?.id}>
