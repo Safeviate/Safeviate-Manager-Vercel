@@ -61,8 +61,8 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
             }
 
             try {
-                // Define collections to check
-                const collectionsToQuery = ['personnel', 'pilots'];
+                // Define all collections to check, as per the user structure.
+                const collectionsToQuery = ['personnel', 'instructors', 'students', 'private-pilots'];
                 
                 const queries = collectionsToQuery.map(col => 
                     query(collection(firestore, `tenants/safeviate/${col}`), where('email', '==', impersonatedEmail))
