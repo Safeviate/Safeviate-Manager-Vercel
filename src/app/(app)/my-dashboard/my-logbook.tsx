@@ -20,11 +20,11 @@ const useLogbookData = (userProfile: PilotProfile | Personnel) => {
     const tenantId = 'safeviate';
 
     const bookingsQuery = useMemoFirebase(
-      () => (firestore && userProfile?.id ? query(
+      () => (firestore ? query(
         collection(firestore, `tenants/${tenantId}/bookings`),
         where('status', '==', 'Completed')
       ) : null),
-      [firestore, tenantId, userProfile?.id]
+      [firestore, tenantId]
     );
 
     const aircraftsQuery = useMemoFirebase(
@@ -63,7 +63,7 @@ const useLogbookData = (userProfile: PilotProfile | Personnel) => {
             .filter(booking => 
                 booking.pilotId === userProfile.id ||
                 booking.instructorId === userProfile.id ||
-                (booking.studentId === userProfile.id)
+                booking.studentId === userProfile.id
             )
             .sort((a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime());
     }, [allBookings, userProfile]);
