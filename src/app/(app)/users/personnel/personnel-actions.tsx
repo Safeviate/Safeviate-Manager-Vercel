@@ -27,6 +27,7 @@ import {
   } from "@/components/ui/dropdown-menu"
 import type { Personnel, PilotProfile } from './page';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -43,6 +44,7 @@ const isPilotProfile = (user: UserProfile): user is PilotProfile => {
 export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const router = useRouter();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
 
@@ -59,6 +61,18 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
     const collectionName = isPilotProfile(user) ? 'pilots' : 'personnel';
     const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
     deleteDocumentNonBlocking(userRef);
+
+    // Check if the deleted user is the one being impersonated
+    const impersonatedEmail = localStorage.getItem('impersonatedUser');
+    if (impersonatedEmail === user.email) {
+      localStorage.removeItem('impersonatedUser');
+      toast({
+        title: 'Logged Out',
+        description: 'You have deleted the user you were impersonating and have been logged out.',
+      });
+      router.push('/login');
+      return;
+    }
 
     toast({
         title: 'User Deleted',
@@ -111,5 +125,3 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
   </>
   );
 }
-
-    
