@@ -2,11 +2,10 @@
 
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MyLogbook } from './my-logbook';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { TableTemplate } from '@/app/(app)/development/table-builder/page';
-import { TableViewer } from './table-viewer';
+import { DynamicLogbook } from './dynamic-logbook';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function MyDashboardPage() {
@@ -44,11 +43,11 @@ export default function MyDashboardPage() {
     }
     
     // We can only show dashboard content for a student or instructor.
-    if (userProfile.userType !== 'Student' && userProfile.userType !== 'Instructor') {
+    if (userProfile.userType !== 'Student' && userProfile.userType !== 'Instructor' && userProfile.userType !== 'Private Pilot') {
          return (
             <div className="w-full space-y-6">
                  <p className="text-muted-foreground text-center py-10">
-                    This dashboard is only available for Students and Instructors.
+                    This dashboard is only available for pilot user types.
                 </p>
             </div>
         );
@@ -57,19 +56,28 @@ export default function MyDashboardPage() {
     return (
         <div className="w-full space-y-6">
             {publishedTable?.tableData ? (
-                 <Card>
+                <Card>
                     <CardHeader>
-                        <CardTitle>Logbook</CardTitle>
+                        <CardTitle>My Logbook</CardTitle>
                         <CardDescription>
-                            A dynamic view of your logbook.
+                            A dynamic view of your flights based on the published template.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                       <TableViewer tableData={publishedTable.tableData} />
+                       <DynamicLogbook tableData={publishedTable.tableData} userProfile={userProfile} />
                     </CardContent>
                 </Card>
             ) : (
-                <MyLogbook userProfile={userProfile} />
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Logbook Not Available</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-muted-foreground text-center py-10">
+                            No logbook template has been published to this page. Please publish a template from the Table Builder in the Development section.
+                        </p>
+                    </CardContent>
+                </Card>
             )}
         </div>
     );
