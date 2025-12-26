@@ -95,17 +95,17 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                 <Table className="border">
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="border w-[120px]" rowSpan={2}>Booking #</TableHead>
-                            <TableHead className="border w-[150px]" rowSpan={2}>Date</TableHead>
-                            <TableHead className="border w-[300px]" colSpan={2}>Aircraft</TableHead>
-                            <TableHead className="border w-[150px]" rowSpan={2}>Pilot In Command</TableHead>
-                            <TableHead className="border" rowSpan={2}>Flight Details</TableHead>
+                            <TableHead className="border" rowSpan={2}>Booking #</TableHead>
+                            <TableHead className="border" rowSpan={2}>Date</TableHead>
+                            <TableHead className="border" colSpan={2}>Aircraft</TableHead>
+                            <TableHead className="border" rowSpan={2}>Pilot In Command</TableHead>
                             <TableHead className="border" colSpan={2}>Single Engine Day</TableHead>
                             <TableHead className="border" colSpan={2}>Single Engine Night</TableHead>
                             <TableHead className="border" colSpan={3}>Multi Engine Day</TableHead>
                             <TableHead className="border" colSpan={3}>Multi Engine Night</TableHead>
                             <TableHead className="border" colSpan={3}>Instrument Flying</TableHead>
                             <TableHead className="border" colSpan={2}>Flying As Instructor</TableHead>
+                            <TableHead className="border" rowSpan={2}>New Column</TableHead>
                         </TableRow>
                          <TableRow>
                             <TableHead className="border h-10">Type</TableHead>
@@ -167,7 +167,7 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             })
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={20} className="h-24 text-center border">
+                                <TableCell colSpan={21} className="h-24 text-center border">
                                     No completed flights found.
                                 </TableCell>
                             </TableRow>
