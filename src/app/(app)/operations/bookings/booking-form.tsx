@@ -78,7 +78,6 @@ export function BookingForm({
 
   // Form state
   const [bookingType, setBookingType] = useState<Booking['type'] | ''>('');
-  const [pilotId, setPilotId] = useState('');
   const [studentId, setStudentId] = useState('');
   const [instructorId, setInstructorId] = useState('');
   const [startTimeValue, setStartTimeValue] = useState('');
@@ -97,7 +96,6 @@ export function BookingForm({
     if (isOpen) {
         if (existingBooking) {
             setBookingType(existingBooking.type || '');
-            setPilotId(existingBooking.pilotId || '');
             setStudentId(existingBooking.studentId || '');
             setInstructorId(existingBooking.instructorId || '');
             setStartTimeValue(existingBooking.startTime);
@@ -114,7 +112,6 @@ export function BookingForm({
             const formattedStartTime = format(initialStartTime, 'HH:mm');
             
             setBookingType('');
-            setPilotId('');
             setStudentId('');
             setInstructorId('');
             setStartTimeValue(formattedStartTime);
@@ -161,11 +158,6 @@ export function BookingForm({
         return;
     }
 
-    if (bookingType !== 'Training Flight' && !pilotId) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Pilot is required for this booking type.' });
-        return;
-    }
-
     if (isOvernight && !overnightEndTime) {
         toast({ variant: 'destructive', title: 'Error', description: 'Overnight end time is required.' });
         return;
@@ -183,10 +175,8 @@ export function BookingForm({
     if (bookingType === 'Training Flight') {
         commonData.studentId = studentId;
         commonData.instructorId = instructorId;
-        commonData.pilotId = null; // Ensure pilotId is cleared for training flights
     } else {
-        commonData.pilotId = pilotId;
-        commonData.studentId = null; // Ensure student/instructor IDs are cleared
+        commonData.studentId = null;
         commonData.instructorId = null;
     }
 
@@ -372,23 +362,6 @@ export function BookingForm({
                             </div>
                         </>
                     )}
-                    {(bookingType === 'Private Flight' || bookingType === 'Maintenance Flight' || bookingType === 'Reposition Flight') && (
-                        <div className="col-span-2 space-y-2">
-                            <Label htmlFor="private-pilot">Pilot</Label>
-                              <Select onValueChange={setPilotId} value={pilotId}>
-                                <SelectTrigger id="private-pilot">
-                                    <SelectValue placeholder="Select a pilot" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {privatePilots.map(pilot => (
-                                        <SelectItem key={pilot.id} value={pilot.id}>
-                                            {pilot.firstName} {pilot.lastName}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    )}
 
                     <div className="space-y-2">
                         <Label htmlFor="start-time">Start Time</Label>
@@ -511,3 +484,5 @@ export function BookingForm({
     </>
   );
 }
+
+    

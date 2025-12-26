@@ -68,9 +68,7 @@ export const createBooking = async (
             if (payload.type === 'Training Flight') {
                 payload.studentId = bookingData.studentId || null;
                 payload.instructorId = bookingData.instructorId || null;
-                payload.pilotId = null; 
             } else {
-                payload.pilotId = bookingData.pilotId || null;
                 payload.studentId = null;
                 payload.instructorId = null;
             }
@@ -120,9 +118,7 @@ export const updateBooking = async ({
     if (updatePayload.type === 'Training Flight') {
         updatePayload.studentId = updateData.studentId || null;
         updatePayload.instructorId = updateData.instructorId || null;
-        updatePayload.pilotId = null;
     } else if (updatePayload.type) { // If type is being changed TO a non-training flight
-        updatePayload.pilotId = updateData.pilotId || null;
         updatePayload.studentId = null;
         updatePayload.instructorId = null;
     }
@@ -221,3 +217,5 @@ export const cancelBooking = async (
         throw new Error("Failed to cancel booking.");
     }
 };
+
+    

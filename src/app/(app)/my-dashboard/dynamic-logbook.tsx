@@ -73,7 +73,6 @@ const useLogbookData = (userProfile: PilotProfile | Personnel) => {
         if (!allBookings || !userProfile?.id) return [];
         return allBookings
             .filter(booking => 
-                booking.pilotId === userProfile.id ||
                 booking.instructorId === userProfile.id ||
                 (booking.studentId && booking.studentId === userProfile.id)
             )
@@ -197,3 +196,5 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
         </Card>
     );
 }
+
+    

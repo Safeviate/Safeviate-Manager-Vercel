@@ -20,7 +20,6 @@ export interface Booking {
     bookingNumber: number;
     aircraftId: string;
     createdById?: string; // The user ID of the person who created the booking.
-    pilotId?: string | null; // For private/reposition/maintenance flights
     studentId?: string | null; // For training flights
     instructorId?: string | null; // For training flights
     type: 'Training Flight' | 'Private Flight' | 'Reposition Flight' | 'Maintenance Flight';
@@ -53,3 +52,5 @@ export interface Booking {
     // Mass and Balance data
     massAndBalance?: MassAndBalance;
 }
+
+    

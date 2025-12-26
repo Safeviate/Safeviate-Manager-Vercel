@@ -12,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import type { Aircraft } from '../../assets/page';
-import type { PilotProfile } from '../../users/personnel/page';
+import type { PilotProfile, Personnel } from '../../users/personnel/page';
 import { useRouter } from 'next/navigation';
 import { Timestamp } from 'firebase/firestore';
 import type { Booking } from '@/types/booking';
@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
 // A consolidated type for display
 type EnrichedBooking = Booking & {
   aircraftTailNumber?: string;
-  pilotName?: string;
+  creatorName?: string;
   fullStartTime?: Date;
   aircraft?: Aircraft;
 };
@@ -69,7 +69,7 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
             <TableRow>
                 <TableHead>#</TableHead>
                 <TableHead>Aircraft</TableHead>
-                <TableHead>Pilot</TableHead>
+                <TableHead>Creator</TableHead>
                 <TableHead>Start Time</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>M&B</TableHead>
@@ -81,7 +81,7 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
                     <TableRow key={b.id} className={cn((b.status === 'Cancelled' || b.status === 'Cancelled with Reason') && 'text-muted-foreground')}>
                         <TableCell className="font-medium">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
                         <TableCell>{b.aircraftTailNumber}</TableCell>
-                        <TableCell>{b.pilotName}</TableCell>
+                        <TableCell>{b.creatorName}</TableCell>
                         <TableCell>{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
                         <TableCell>
                             <Badge variant={getStatusBadgeVariant(b.status)}>{b.status}</Badge>
@@ -118,21 +118,28 @@ export default function BookingsHistoryPage() {
     [firestore, tenantId]
   );
   const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'aircrafts') : null), [firestore, tenantId]);
-  const pilotsQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'pilots') : null), [firestore, tenantId]);
+  const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'personnel')) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'instructors')) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'students')) : null), [firestore, tenantId]);
+  const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'private-pilots')) : null), [firestore, tenantId]);
 
   const { data: bookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
   const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
-  const { data: pilots, isLoading: isLoadingPilots, error: pilotsError } = useCollection<PilotProfile>(pilotsQuery);
+  const { data: personnel, isLoading: isLoadingPersonnel, error: personnelError } = useCollection<Personnel>(personnelQuery);
+  const { data: instructors, isLoading: isLoadingInstructors, error: instructorsError } = useCollection<PilotProfile>(instructorsQuery);
+  const { data: students, isLoading: isLoadingStudents, error: studentsError } = useCollection<PilotProfile>(studentsQuery);
+  const { data: privatePilots, isLoading: isLoadingPrivatePilots, error: privatePilotsError } = useCollection<PilotProfile>(privatePilotsQuery);
 
-  const isLoading = isLoadingBookings || isLoadingAircraft || isLoadingPilots;
-  const error = bookingsError || aircraftError || pilotsError;
+  const isLoading = isLoadingBookings || isLoadingAircraft || isLoadingPersonnel || isLoadingInstructors || isLoadingStudents || isLoadingPrivatePilots;
+  const error = bookingsError || aircraftError || personnelError || instructorsError || studentsError || privatePilotsError;
 
   // --- Data Processing ---
   const enrichedBookings = useMemo((): EnrichedBooking[] => {
-    if (!bookings || !aircraft || !pilots) return [];
+    if (!bookings || !aircraft || !personnel || !instructors || !students || !privatePilots) return [];
 
     const aircraftMap = new Map(aircraft.map(a => [a.id, a]));
-    const pilotMap = new Map(pilots.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
+    const allUsers = [...personnel, ...instructors, ...students, ...privatePilots];
+    const userMap = new Map(allUsers.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
 
     return bookings.map(b => {
       const bookingAircraft = aircraftMap.get(b.aircraftId);
@@ -141,12 +148,12 @@ export default function BookingsHistoryPage() {
       return {
         ...b,
         aircraftTailNumber: bookingAircraft?.tailNumber || 'Unknown Aircraft',
-        pilotName: pilotMap.get(b.pilotId) || 'Unknown Pilot',
+        creatorName: userMap.get(b.createdById || '') || 'Unknown Creator',
         fullStartTime: fullStartTime,
         aircraft: bookingAircraft,
       };
     });
-  }, [bookings, aircraft, pilots]);
+  }, [bookings, aircraft, personnel, instructors, students, privatePilots]);
 
   const trainingBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Training Flight'), [enrichedBookings]);
   const privateBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Private Flight'), [enrichedBookings]);
@@ -206,3 +213,5 @@ export default function BookingsHistoryPage() {
     </div>
   );
 }
+
+    

@@ -6,7 +6,7 @@ import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Aircraft } from '../../assets/page';
-import type { PilotProfile } from '../../users/personnel/page';
+import type { PilotProfile, Personnel } from '../../users/personnel/page';
 import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, endOfHour, parse, isAfter } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -26,9 +26,7 @@ const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
     return parse(`${dateStr} ${timeStr}`, 'yyyy-MM-dd HH:mm', new Date());
 };
 
-const BookingItem = ({ booking, pilots, onBookingClick, selectedDate }: { booking: Booking, pilots: PilotProfile[], onBookingClick: (booking: Booking) => void, selectedDate: Date }) => {
-    
-    const pilot = pilots.find(p => p.id === booking.pilotId);
+const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booking, pilots: (PilotProfile | Personnel)[], onBookingClick: (booking: Booking) => void, selectedDate: Date }) => {
     
     const segments = [];
 
@@ -82,7 +80,6 @@ const BookingItem = ({ booking, pilots, onBookingClick, selectedDate }: { bookin
                     onClick={() => onBookingClick(booking)}
                 >
                     <p className="font-semibold truncate">#{booking.bookingNumber} - {booking.type}</p>
-                    <p className="truncate">{pilot ? `${pilot.firstName} ${pilot.lastName}` : 'Unknown Pilot'}</p>
                     {isCancelled && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
                     {booking.status === 'Completed' && <p className="font-bold uppercase text-[9px] mt-0.5">Completed</p>}
                 </div>
@@ -104,7 +101,7 @@ const AircraftColumn = ({
 }: { 
     aircraft?: Aircraft; 
     bookings: Booking[]; 
-    pilots: PilotProfile[]; 
+    pilots: (PilotProfile | Personnel)[]; 
     showNowLine: boolean; 
     nowLinePosition: number; 
     selectedDate: Date; 
@@ -218,22 +215,24 @@ export default function SchedulePage() {
     [firestore, tenantId, dataVersion]
   );
 
-  const studentsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
-  const privatePilotsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/private-pilots`) : null), [firestore, tenantId]);
+  const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
+  const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
   
 
   const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
   const { data: bookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
   const { data: allBookings, isLoading: isLoadingAllBookings, error: allBookingsError } = useCollection<Booking>(allBookingsQuery);
 
-  const { data: students } = useCollection<PilotProfile>(studentsQuery);
+  const { data: personnel } = useCollection<Personnel>(personnelQuery);
   const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
+  const { data: students } = useCollection<PilotProfile>(studentsQuery);
   const { data: privatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
 
   const allPilots = useMemo(() => {
-      return [...(students || []), ...(instructors || []), ...(privatePilots || [])];
-  }, [students, instructors, privatePilots]);
+      return [...(personnel || []), ...(students || []), ...(instructors || []), ...(privatePilots || [])];
+  }, [personnel, students, instructors, privatePilots]);
 
   const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingAllBookings;
   const error = aircraftError || bookingsError || allBookingsError;
@@ -388,3 +387,5 @@ export default function SchedulePage() {
     </>
   );
 }
+
+    
