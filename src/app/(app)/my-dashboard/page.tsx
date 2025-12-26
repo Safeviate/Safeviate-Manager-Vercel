@@ -6,6 +6,7 @@ import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { TableTemplate } from '@/types/table-template';
 import { DynamicLogbook } from './dynamic-logbook';
+import { GeminiLogbook } from './gemini-logbook';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function MyDashboardPage() {
@@ -27,6 +28,7 @@ export default function MyDashboardPage() {
             <div className="w-full space-y-6">
                 <Skeleton className="h-10 w-48" />
                 <Skeleton className="h-64 w-full" />
+                <Skeleton className="h-64 w-full mt-6" />
             </div>
         )
     }
@@ -61,25 +63,25 @@ export default function MyDashboardPage() {
         );
     }
     
-    if (!publishedTable?.tableData) {
-        return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>My Logbook</CardTitle>
-                    <CardDescription>A record of your completed flights.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="h-48 flex items-center justify-center text-center text-muted-foreground border-2 border-dashed rounded-lg">
-                        <p>No logbook template has been published for this page.<br />Please create and publish a template from the Table Builder in the Development section.</p>
-                    </div>
-                </CardContent>
-            </Card>
-        )
-    }
-
     return (
         <div className="w-full space-y-6">
-            <DynamicLogbook template={{tableData: publishedTable.tableData, name: "Logbook", id: "logbook"}} userProfile={userProfile} />
+            {publishedTable?.tableData ? (
+                <DynamicLogbook template={{tableData: publishedTable.tableData, name: "Logbook", id: "logbook"}} userProfile={userProfile} />
+            ) : (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>My Logbook</CardTitle>
+                        <CardDescription>A record of your completed flights.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="h-48 flex items-center justify-center text-center text-muted-foreground border-2 border-dashed rounded-lg">
+                            <p>No logbook template has been published for this page.<br />Please create and publish a template from the Table Builder in the Development section.</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            <GeminiLogbook userProfile={userProfile} />
         </div>
     );
 }
