@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -26,10 +25,6 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
     [firestore, tenantId]
   );
   
-  const personnelQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
-    [firestore, tenantId]
-  );
   const instructorsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null),
     [firestore, tenantId]
@@ -49,10 +44,9 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
   );
 
   const { data: allBookings, isLoading: isLoadingBookings } = useCollection<Booking>(allBookingsQuery);
-  const { data: personnel } = useCollection<Personnel>(personnelQuery);
-  const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
-  const { data: students } = useCollection<PilotProfile>(studentsQuery);
-  const { data: privatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
+  const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
+  const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsQuery);
+  const { data: privatePilots, isLoading: isLoadingPrivatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
   const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
 
   const userBookings = useMemo(() => {
@@ -66,19 +60,18 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
 
   const usersMap = useMemo(() => {
       const map = new Map<string, string>();
-      (personnel || []).forEach(p => map.set(p.id, `${p.firstName} ${p.lastName}`));
       (instructors || []).forEach(p => map.set(p.id, `${p.firstName} ${p.lastName}`));
       (students || []).forEach(p => map.set(p.id, `${p.firstName} ${p.lastName}`));
       (privatePilots || []).forEach(p => map.set(p.id, `${p.firstName} ${p.lastName}`));
       return map;
-  }, [personnel, instructors, students, privatePilots]);
+  }, [instructors, students, privatePilots]);
 
   const aircraftMap = useMemo(() => {
     if (!aircrafts) return new Map();
     return new Map(aircrafts.map(ac => [ac.id, ac]));
   }, [aircrafts]);
 
-  const isLoading = isLoadingBookings || isLoadingAircrafts || !usersMap.size;
+  const isLoading = isLoadingBookings || isLoadingAircrafts || isLoadingInstructors || isLoadingStudents || isLoadingPrivatePilots;
 
   return (
     <Card>
@@ -93,17 +86,17 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
                 <TableHeader>
                   <TableRow>
                     <TableHead rowSpan={2}>Date</TableHead>
-                    <TableHead colSpan={2} className="text-center">Aircraft</TableHead>
-                    <TableHead colSpan={3} className="text-center">Pilot In Command</TableHead>
-                    <TableHead colSpan={1} className="text-center">Flight Details</TableHead>
+                    <TableHead colSpan={2} className="text-center border-l">Aircraft</TableHead>
+                    <TableHead colSpan={3} className="text-center border-l">Pilot In Command</TableHead>
+                    <TableHead colSpan={1} className="text-center border-l">Flight Details</TableHead>
                   </TableRow>
                   <TableRow>
-                    <TableHead>Type</TableHead>
+                    <TableHead className="border-l">Type</TableHead>
                     <TableHead>Registration</TableHead>
-                    <TableHead>Student</TableHead>
+                    <TableHead className="border-l">Student</TableHead>
                     <TableHead>Instructor</TableHead>
                     <TableHead>PIC</TableHead>
-                    <TableHead>Flight Time</TableHead>
+                    <TableHead className="border-l">Flight Time</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -129,12 +122,12 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
                         return (
                             <TableRow key={booking.id}>
                                 <TableCell>{format(new Date(booking.bookingDate), 'yyyy-MM-dd')}</TableCell>
-                                <TableCell>{aircraft?.model || 'N/A'}</TableCell>
+                                <TableCell className="border-l">{aircraft?.model || 'N/A'}</TableCell>
                                 <TableCell>{aircraft?.tailNumber || 'N/A'}</TableCell>
-                                <TableCell>{studentName || 'N/A'}</TableCell>
+                                <TableCell className="border-l">{studentName || 'N/A'}</TableCell>
                                 <TableCell>{instructorName || 'N/A'}</TableCell>
                                 <TableCell>{picName || 'N/A'}</TableCell>
-                                <TableCell>{flightHours} hrs</TableCell>
+                                <TableCell className="border-l">{flightHours} hrs</TableCell>
                             </TableRow>
                         )
                     })
