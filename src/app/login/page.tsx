@@ -5,14 +5,53 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { User, Code } from 'lucide-react';
+import { User, Code, Mail } from 'lucide-react';
+import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useAuth, initiateAnonymousSignIn } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const bgImage = PlaceHolderImages.find((img) => img.id === 'login-background');
   const router = useRouter();
+  const auth = useAuth();
+  const { toast } = useToast();
+  const [email, setEmail] = useState('');
 
-  const handleLogin = () => {
-    // Both logins go to the same place for now, without authentication.
+  const handleUserLogin = () => {
+    if (!auth) {
+        toast({
+            variant: "destructive",
+            title: "Auth service not available",
+        });
+        return;
+    }
+    if (!email) {
+        toast({
+            variant: "destructive",
+            title: "Email required",
+            description: "Please enter an email to log in as a user.",
+        });
+        return;
+    }
+    // Store the impersonated email in localStorage
+    localStorage.setItem('impersonatedUser', email);
+    initiateAnonymousSignIn(auth);
+    router.push('/dashboard');
+  };
+  
+  const handleDeveloperLogin = () => {
+    if (!auth) {
+        toast({
+            variant: "destructive",
+            title: "Auth service not available",
+        });
+        return;
+    }
+     // Clear any impersonation
+    localStorage.removeItem('impersonatedUser');
+    initiateAnonymousSignIn(auth);
     router.push('/dashboard');
   };
 
@@ -32,17 +71,41 @@ export default function LoginPage() {
           <CardTitle className="text-2xl font-headline">Safeviate Manager</CardTitle>
           <CardDescription>Development Access</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <Button onClick={handleLogin} className="w-full">
-              <User className="mr-2 h-4 w-4" />
-              Login as User
-            </Button>
-            <Button onClick={handleLogin} variant="secondary" className="w-full">
+        <CardContent className="space-y-6">
+            <div className="space-y-4">
+                <div className='space-y-2'>
+                    <Label htmlFor="email">User Email</Label>
+                    <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                            id="email"
+                            type="email"
+                            placeholder="Enter user email to login"
+                            className="pl-9"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <Button onClick={handleUserLogin} className="w-full">
+                  <User className="mr-2 h-4 w-4" />
+                  Login as User
+                </Button>
+            </div>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or
+                </span>
+              </div>
+            </div>
+            <Button onClick={handleDeveloperLogin} variant="secondary" className="w-full">
               <Code className="mr-2 h-4 w-4" />
               Login as Developer
             </Button>
-          </div>
         </CardContent>
       </Card>
     </main>
