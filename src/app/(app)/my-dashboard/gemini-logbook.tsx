@@ -137,9 +137,9 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                         <colgroup>
                             <col style={{ width: '80px' }} />
                             <col style={{ width: '100px' }} />
+                            <col style={{ width: '80px' }} />
                             <col style={{ width: '100px' }} />
-                            <col style={{ width: '100px' }} />
-                            <col style={{ width: '90px' }} />
+                            <col style={{ width: '110px' }} />
                             <col style={{ width: '140px' }} />
                             <col style={{ width: '60px' }} />
                             {Array.from({ length: 16 }).map((_, i) => (

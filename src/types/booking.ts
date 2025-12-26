@@ -22,6 +22,7 @@ export interface Booking {
     createdById?: string; // The user ID of the person who created the booking.
     studentId?: string | null; // For training flights
     instructorId?: string | null; // For training flights
+    privatePilotId?: string | null; // For private flights
     type: 'Training Flight' | 'Private Flight' | 'Reposition Flight' | 'Maintenance Flight';
     date: string; // YYYY-MM-DD
     startTime: string;   // HH:mm

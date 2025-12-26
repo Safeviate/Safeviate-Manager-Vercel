@@ -80,6 +80,7 @@ export function BookingForm({
   const [bookingType, setBookingType] = useState<Booking['type'] | ''>('');
   const [studentId, setStudentId] = useState('');
   const [instructorId, setInstructorId] = useState('');
+  const [privatePilotId, setPrivatePilotId] = useState('');
   const [startTimeValue, setStartTimeValue] = useState('');
   const [endTimeValue, setEndTimeValue] = useState('');
   const [isOvernight, setIsOvernight] = useState(false);
@@ -98,6 +99,7 @@ export function BookingForm({
             setBookingType(existingBooking.type || '');
             setStudentId(existingBooking.studentId || '');
             setInstructorId(existingBooking.instructorId || '');
+            setPrivatePilotId(existingBooking.privatePilotId || '');
             setStartTimeValue(existingBooking.startTime);
             setEndTimeValue(existingBooking.endTime);
             setIsOvernight(existingBooking.isOvernight || false);
@@ -114,6 +116,7 @@ export function BookingForm({
             setBookingType('');
             setStudentId('');
             setInstructorId('');
+            setPrivatePilotId('');
             setStartTimeValue(formattedStartTime);
             setIsOvernight(false);
             setOvernightEndTime('09:00');
@@ -158,6 +161,11 @@ export function BookingForm({
         return;
     }
 
+    if (bookingType === 'Private Flight' && !privatePilotId) {
+        toast({ variant: 'destructive', title: 'Error', description: 'A pilot is required for Private Flights.'});
+        return;
+    }
+
     if (isOvernight && !overnightEndTime) {
         toast({ variant: 'destructive', title: 'Error', description: 'Overnight end time is required.' });
         return;
@@ -175,9 +183,15 @@ export function BookingForm({
     if (bookingType === 'Training Flight') {
         commonData.studentId = studentId;
         commonData.instructorId = instructorId;
+        commonData.privatePilotId = null;
+    } else if (bookingType === 'Private Flight') {
+        commonData.privatePilotId = privatePilotId;
+        commonData.studentId = null;
+        commonData.instructorId = null;
     } else {
         commonData.studentId = null;
         commonData.instructorId = null;
+        commonData.privatePilotId = null;
     }
 
     if (isOvernight) {
@@ -236,7 +250,6 @@ export function BookingForm({
 
   const students = useMemo(() => pilots.filter(p => p.userType === 'Student'), [pilots]);
   const instructors = useMemo(() => pilots.filter(p => p.userType === 'Instructor'), [pilots]);
-  const privatePilots = useMemo(() => pilots.filter(p => p.userType === 'Private Pilot'), [pilots]);
 
   const { isPreFlightDisabled, isPostFlightDisabled, warningMessage } = useMemo(() => {
     if (!isEditMode || !existingBooking) {
@@ -362,6 +375,25 @@ export function BookingForm({
                             </div>
                         </>
                     )}
+
+                    {bookingType === 'Private Flight' && (
+                        <div className="col-span-2 space-y-2">
+                            <Label htmlFor="private-pilot">Pilot</Label>
+                            <Select onValueChange={setPrivatePilotId} value={privatePilotId}>
+                                <SelectTrigger id="private-pilot">
+                                    <SelectValue placeholder="Select a pilot" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {pilots.map(pilot => (
+                                        <SelectItem key={pilot.id} value={pilot.id}>
+                                            {pilot.firstName} {pilot.lastName} ({pilot.userType})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
+
 
                     <div className="space-y-2">
                         <Label htmlFor="start-time">Start Time</Label>
