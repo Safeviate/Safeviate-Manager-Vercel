@@ -22,7 +22,6 @@ const renderHeaderRows = (tableData: TableTemplate['tableData']) => {
     
     const { rows, cols, cells } = tableData;
     
-    // Find the last row index that has content, assuming this is the end of the header.
     const headerRowCount = cells.reduce((max, cell) => {
         if (cell.content?.trim()) {
             return Math.max(max, cell.r + cell.rowSpan);
@@ -117,14 +116,33 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
     [firestore, tenantId]
   );
 
+  const allPilotsQuery = useMemoFirebase(
+      () => firestore ? query(collection(firestore, `tenants/${tenantId}/pilots`)) : null,
+      [firestore, tenantId]
+  );
+  const allInstructorsQuery = useMemoFirebase(
+      () => firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null,
+      [firestore, tenantId]
+  );
+
+
   const { data: template, isLoading: isLoadingTemplate } = useDoc<TableTemplate>(logbookTemplateRef);
   const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(completedBookingsQuery);
   const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
+  const { data: pilots, isLoading: isLoadingPilots } = useCollection<PilotProfile>(allPilotsQuery);
+  const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(allInstructorsQuery);
 
   const aircraftMap = useMemo(() => {
     if (!aircrafts) return new Map();
     return new Map(aircrafts.map(ac => [ac.id, ac]));
   }, [aircrafts]);
+
+  const usersMap = useMemo(() => {
+      const map = new Map<string, string>();
+      (pilots || []).forEach(p => map.set(p.id, `${p.firstName} ${p.lastName}`));
+      (instructors || []).forEach(p => map.set(p.id, `${p.firstName} ${p.lastName}`));
+      return map;
+  }, [pilots, instructors]);
 
   const { headerRows, leafColumnIds } = useMemo(() => {
     if (!template?.tableData) return { headerRows: [], leafColumnIds: [] };
@@ -141,23 +159,33 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
     );
     const flightHours = (flightMinutes / 60).toFixed(1);
     const aircraft = aircraftMap.get(booking.aircraftId);
+    const pilotName = usersMap.get(booking.pilotId) || booking.pilotId;
+    const instructorName = booking.instructorId ? (usersMap.get(booking.instructorId) || booking.instructorId) : '';
 
-    // Match based on column header text (the 'columnId' here)
-    const normalizedColumnId = columnId.toUpperCase();
+    const normalizedColumnId = columnId.toUpperCase().replace(/\s+/g, '');
     
     switch (normalizedColumnId) {
       case 'DATE': return format(new Date(booking.bookingDate), 'yyyy-MM-dd');
       case 'AIRCRAFT':
-      case 'AIRCRAFT TYPE & REG':
+      case 'AIRCRAFTTYPE&REG':
           return aircraft ? `${aircraft.model} (${aircraft.tailNumber})` : booking.aircraftId;
-      case 'SINGLE ENGINE': return booking.type === 'Training Flight' || booking.type === 'Private Flight' ? flightHours : '';
-      case 'TOTAL TIME': return flightHours;
+      case 'SINGLEENGINE':
+      case 'SINGLE-ENGINE':
+        return booking.type === 'Training Flight' || booking.type === 'Private Flight' ? flightHours : '';
+      case 'TOTALTIME':
+      case 'TOTALFLIGHTTIME':
+        return flightHours;
+      case 'PILOTINCOMMAND':
+      case 'PIC':
+          return pilotName;
+      case 'INSTRUCTOR':
+          return instructorName;
       default: return '';
     }
   };
 
 
-  const isLoading = isLoadingTemplate || isLoadingBookings || isLoadingAircrafts;
+  const isLoading = isLoadingTemplate || isLoadingBookings || isLoadingAircrafts || isLoadingPilots || isLoadingInstructors;
 
   return (
     <Card>
