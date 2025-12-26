@@ -71,12 +71,12 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                 <CardDescription>A basic, working record of your completed flights.</CardDescription>
             </CardHeader>
             <CardContent>
-                <Table>
+                <Table className="border">
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Booking #</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Aircraft</TableHead>
+                            <TableHead className="border">Booking #</TableHead>
+                            <TableHead className="border">Date</TableHead>
+                            <TableHead className="border">Aircraft</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -85,15 +85,15 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                 const aircraft = aircraftMap.get(booking.aircraftId);
                                 return (
                                     <TableRow key={booking.id}>
-                                        <TableCell>{booking.bookingNumber}</TableCell>
-                                        <TableCell>{format(new Date(booking.date), 'yyyy-MM-dd')}</TableCell>
-                                        <TableCell>{aircraft?.tailNumber || 'N/A'}</TableCell>
+                                        <TableCell className="border">{booking.bookingNumber}</TableCell>
+                                        <TableCell className="border">{format(new Date(booking.date), 'yyyy-MM-dd')}</TableCell>
+                                        <TableCell className="border">{aircraft?.tailNumber || 'N/A'}</TableCell>
                                     </TableRow>
                                 );
                             })
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={3} className="h-24 text-center">
+                                <TableCell colSpan={3} className="h-24 text-center border">
                                     No completed flights found.
                                 </TableCell>
                             </TableRow>
