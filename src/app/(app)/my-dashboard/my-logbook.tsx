@@ -11,17 +11,18 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, differenceInMinutes, parse } from 'date-fns';
+import type { Aircraft } from '@/app/(app)/assets/page';
 
 interface MyLogbookProps {
   userProfile: PilotProfile;
 }
 
 const renderHeaderRows = (tableData: TableTemplate['tableData']) => {
+    if (!tableData) return [];
+    
     const { rows, cols, cells } = tableData;
-    const headerCells: (JSX.Element | null)[] = [];
-  
-    // Assuming headers are the first few rows, let's find the max row index of non-empty cells
-    // This is a heuristic; a more robust solution might involve a "header row count" property
+    
+    // Find the last row index that has content, assuming this is the end of the header.
     const headerRowCount = cells.reduce((max, cell) => {
         if (cell.content?.trim()) {
             return Math.max(max, cell.r + cell.rowSpan);
@@ -29,30 +30,8 @@ const renderHeaderRows = (tableData: TableTemplate['tableData']) => {
         return max;
     }, 0);
 
-
-    for (let r = 0; r < headerRowCount; r++) {
-        for (let c = 0; c < cols; c++) {
-            const cell = cells.find(cell => cell.r === r && cell.c === c);
-            if (cell && !cell.hidden) {
-                 headerCells.push(
-                    <TableHead
-                        key={`${r}-${c}`}
-                        colSpan={cell.colSpan}
-                        rowSpan={cell.rowSpan}
-                        className="text-center border"
-                        style={{
-                            gridColumn: `${cell.c + 1} / span ${cell.colSpan}`,
-                            gridRow: `${cell.r + 1} / span ${cell.rowSpan}`,
-                        }}
-                    >
-                        {cell.content}
-                    </TableHead>
-                 );
-            }
-        }
-    }
+    if (headerRowCount === 0) return [];
     
-    // Group cells by row for rendering
     const headerRowsJsx: JSX.Element[] = [];
     const processedCells = new Set<string>();
 
@@ -75,7 +54,6 @@ const renderHeaderRows = (tableData: TableTemplate['tableData']) => {
                     </TableHead>
                 );
 
-                // Mark all cells covered by this rowspan/colspan as processed
                 for (let rs = 0; rs < cellData.rowSpan; rs++) {
                     for (let cs = 0; cs < cellData.colSpan; cs++) {
                         processedCells.add(`${r + rs}-${c + cs}`);
@@ -87,7 +65,6 @@ const renderHeaderRows = (tableData: TableTemplate['tableData']) => {
             headerRowsJsx.push(<TableRow key={`header-row-${r}`}>{rowCells}</TableRow>);
         }
     }
-
 
     return headerRowsJsx;
 };
@@ -108,10 +85,8 @@ const getLeafColumnIds = (tableData: TableTemplate['tableData']): string[] => {
         return isBottomHeader && cell.content.trim() !== '';
     });
     
-    // Sort them by their column index to ensure order
     leafCells.sort((a,b) => a.c - b.c);
 
-    // Return the content of the cell as its ID
     return leafCells.map(cell => cell.content);
 };
 
@@ -144,11 +119,11 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
 
   const { data: template, isLoading: isLoadingTemplate } = useDoc<TableTemplate>(logbookTemplateRef);
   const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(completedBookingsQuery);
-  const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection(aircraftsQuery);
+  const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
 
   const aircraftMap = useMemo(() => {
     if (!aircrafts) return new Map();
-    return new Map(aircrafts.map(ac => [ac.id, ac.tailNumber]));
+    return new Map(aircrafts.map(ac => [ac.id, ac]));
   }, [aircrafts]);
 
   const { headerRows, leafColumnIds } = useMemo(() => {
@@ -165,11 +140,16 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
       parse(`${booking.bookingDate} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date())
     );
     const flightHours = (flightMinutes / 60).toFixed(1);
+    const aircraft = aircraftMap.get(booking.aircraftId);
 
     // Match based on column header text (the 'columnId' here)
-    switch (columnId.toUpperCase()) {
+    const normalizedColumnId = columnId.toUpperCase();
+    
+    switch (normalizedColumnId) {
       case 'DATE': return format(new Date(booking.bookingDate), 'yyyy-MM-dd');
-      case 'AIRCRAFT': return aircraftMap.get(booking.aircraftId) || booking.aircraftId;
+      case 'AIRCRAFT':
+      case 'AIRCRAFT TYPE & REG':
+          return aircraft ? `${aircraft.model} (${aircraft.tailNumber})` : booking.aircraftId;
       case 'SINGLE ENGINE': return booking.type === 'Training Flight' || booking.type === 'Private Flight' ? flightHours : '';
       case 'TOTAL TIME': return flightHours;
       default: return '';
