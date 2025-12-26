@@ -104,46 +104,37 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
   const bookingsQuery = useMemoFirebase(
     () => {
       if (!firestore || !user) return null;
-      
-      const bookingsCollection = collection(firestore, `tenants/${tenantId}/bookings`);
-      
-      return query(
-        bookingsCollection,
-        where('status', '!=', 'Cancelled'), // Exclude cancelled bookings
-        where('status', '!=', 'Cancelled with Reason')
-      );
+      return query(collection(firestore, `tenants/${tenantId}/bookings`));
     },
     [firestore, tenantId, user]
   );
   
-
   const aircraftsQuery = useMemoFirebase(
     () => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null),
     [firestore, tenantId]
   );
 
-  const allPilotsQuery = useMemoFirebase(
+  const pilotsQuery = useMemoFirebase(
       () => firestore ? query(collection(firestore, `tenants/${tenantId}/pilots`)) : null,
       [firestore, tenantId]
   );
   
-  const allStudentsQuery = useMemoFirebase(
+  const studentsQuery = useMemoFirebase(
       () => firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null,
       [firestore, tenantId]
   );
   
-  const allInstructorsQuery = useMemoFirebase(
+  const instructorsQuery = useMemoFirebase(
       () => firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null,
       [firestore, tenantId]
   );
 
-
   const { data: template, isLoading: isLoadingTemplate } = useDoc<TableTemplate>(logbookTemplateRef);
   const { data: allBookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
   const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
-  const { data: pilots, isLoading: isLoadingPilots } = useCollection<PilotProfile>(allPilotsQuery);
-  const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(allStudentsQuery);
-  const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(allInstructorsQuery);
+  const { data: pilots, isLoading: isLoadingPilots } = useCollection<PilotProfile>(pilotsQuery);
+  const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsQuery);
+  const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
 
   const aircraftMap = useMemo(() => {
     if (!aircrafts) return new Map();
@@ -257,5 +248,3 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
     </Card>
   );
 }
-
-    
