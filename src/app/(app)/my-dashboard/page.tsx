@@ -1,54 +1,46 @@
 
 'use client';
 
-import { useMemo } from 'react';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import type { TableData } from '@/app/(app)/development/table-builder/page';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { TableViewer } from './table-viewer';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { Skeleton } from '@/components/ui/skeleton';
-
-// The entity type for a published table.
-type PublishedTable = {
-    pageId: string;
-    tableData: TableData;
-}
+import { MyLogbook } from './my-logbook';
 
 export default function MyDashboardPage() {
-    const firestore = useFirestore();
-    const tenantId = 'safeviate';
-    // This ID corresponds to the page we want to display the table on.
-    const pageId = 'my-dashboard';
+    const { userProfile, isLoading } = useUserProfile();
 
-    // A memoized reference to the specific published table document for this page.
-    const publishedTableRef = useMemoFirebase(
-        () => (firestore ? doc(firestore, `tenants/${tenantId}/published-tables`, pageId) : null),
-        [firestore, tenantId, pageId]
-    );
+    if (isLoading) {
+        return (
+            <div className="w-full space-y-6">
+                <Skeleton className="h-10 w-48" />
+                <Skeleton className="h-64 w-full" />
+            </div>
+        )
+    }
 
-    // useDoc hook to fetch the document in real-time.
-    const { data: publishedTable, isLoading } = useDoc<PublishedTable>(publishedTableRef);
+    if (!userProfile) {
+        return (
+            <div className="w-full space-y-6">
+                <p className="text-muted-foreground text-center py-10">
+                    User profile not found. Unable to display logbook.
+                </p>
+            </div>
+        );
+    }
+    
+    // We can only show a logbook for a pilot type user
+    if (userProfile.userType === 'Personnel') {
+         return (
+            <div className="w-full space-y-6">
+                 <p className="text-muted-foreground text-center py-10">
+                    Logbook is only available for pilot profiles.
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full space-y-6">
-           <Card>
-                <CardHeader>
-                    <CardTitle>Published Table Viewer</CardTitle>
-                    <CardDescription>
-                        This page displays the table that has been published to the &quot;{pageId}&quot; destination.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="mt-4 rounded-lg border p-4 min-h-[20rem] flex items-center justify-center">
-                    {isLoading ? (
-                        <Skeleton className="h-64 w-full" />
-                    ) : publishedTable ? (
-                        <TableViewer tableData={publishedTable.tableData} />
-                    ) : (
-                        <p className="text-muted-foreground">No table has been published to this page yet.</p>
-                    )}
-                </CardContent>
-           </Card>
+           <MyLogbook userProfile={userProfile} />
         </div>
     );
 }

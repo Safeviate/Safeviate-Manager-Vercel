@@ -4,9 +4,9 @@
 import { useMemo } from 'react';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
-import type { PilotProfile } from '../users/personnel/page';
+import type { PilotProfile } from '@/app/(app)/users/personnel/page';
 import type { Booking } from '@/types/booking';
-import type { LogbookTemplate, LogbookColumn } from '@/app/(app)/development/logbook-parser/page';
+import type { TableTemplate } from '@/types/table-template';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,37 +16,104 @@ interface MyLogbookProps {
   userProfile: PilotProfile;
 }
 
-// Recursive helper to render table headers
-const renderHeaderRows = (headerRows: any[][]) => {
-  return headerRows.map((row, rowIndex) => (
-    <TableRow key={`header-row-${rowIndex}`}>
-      {row.map((cell) => (
-        <TableHead
-          key={cell.id}
-          colSpan={cell.colSpan}
-          rowSpan={cell.rowSpan}
-          className="text-center border"
-        >
-          {cell.label}
-        </TableHead>
-      ))}
-    </TableRow>
-  ));
-};
+const renderHeaderRows = (tableData: TableTemplate['tableData']) => {
+    const { rows, cols, cells } = tableData;
+    const headerCells: (JSX.Element | null)[] = [];
+  
+    // Assuming headers are the first few rows, let's find the max row index of non-empty cells
+    // This is a heuristic; a more robust solution might involve a "header row count" property
+    const headerRowCount = cells.reduce((max, cell) => {
+        if (cell.content?.trim()) {
+            return Math.max(max, cell.r + cell.rowSpan);
+        }
+        return max;
+    }, 0);
 
-// Recursive helper to get all bottom-level column IDs
-const getLeafColumnIds = (columns: LogbookColumn[]): string[] => {
-  let ids: string[] = [];
-  for (const col of columns) {
-    if (col.subColumns && col.subColumns.length > 0) {
-      ids = [...ids, ...getLeafColumnIds(col.subColumns)];
-    } else {
-      ids.push(col.id);
+
+    for (let r = 0; r < headerRowCount; r++) {
+        for (let c = 0; c < cols; c++) {
+            const cell = cells.find(cell => cell.r === r && cell.c === c);
+            if (cell && !cell.hidden) {
+                 headerCells.push(
+                    <TableHead
+                        key={`${r}-${c}`}
+                        colSpan={cell.colSpan}
+                        rowSpan={cell.rowSpan}
+                        className="text-center border"
+                        style={{
+                            gridColumn: `${cell.c + 1} / span ${cell.colSpan}`,
+                            gridRow: `${cell.r + 1} / span ${cell.rowSpan}`,
+                        }}
+                    >
+                        {cell.content}
+                    </TableHead>
+                 );
+            }
+        }
     }
-  }
-  return ids;
+    
+    // Group cells by row for rendering
+    const headerRowsJsx: JSX.Element[] = [];
+    const processedCells = new Set<string>();
+
+    for(let r = 0; r < headerRowCount; r++) {
+        const rowCells: JSX.Element[] = [];
+        for (let c = 0; c < cols; c++) {
+            const key = `${r}-${c}`;
+            if(processedCells.has(key)) continue;
+
+            const cellData = cells.find(cell => cell.r === r && cell.c === c);
+            if (cellData && !cellData.hidden) {
+                rowCells.push(
+                    <TableHead
+                        key={key}
+                        colSpan={cellData.colSpan}
+                        rowSpan={cellData.rowSpan}
+                        className="text-center border"
+                    >
+                        {cellData.content}
+                    </TableHead>
+                );
+
+                // Mark all cells covered by this rowspan/colspan as processed
+                for (let rs = 0; rs < cellData.rowSpan; rs++) {
+                    for (let cs = 0; cs < cellData.colSpan; cs++) {
+                        processedCells.add(`${r + rs}-${c + cs}`);
+                    }
+                }
+            }
+        }
+        if(rowCells.length > 0) {
+            headerRowsJsx.push(<TableRow key={`header-row-${r}`}>{rowCells}</TableRow>);
+        }
+    }
+
+
+    return headerRowsJsx;
 };
 
+
+const getLeafColumnIds = (tableData: TableTemplate['tableData']): string[] => {
+    if (!tableData || !tableData.cells) return [];
+    
+    const headerRowCount = tableData.cells.reduce((max, cell) => {
+        if (cell.content?.trim()) {
+            return Math.max(max, cell.r + cell.rowSpan);
+        }
+        return max;
+    }, 0);
+
+    const leafCells = tableData.cells.filter(cell => {
+        const isBottomHeader = (cell.r + cell.rowSpan) === headerRowCount;
+        return isBottomHeader && cell.content.trim() !== '';
+    });
+    
+    // Sort them by their column index to ensure order
+    leafCells.sort((a,b) => a.c - b.c);
+
+    // Return the content of the cell as its ID
+    return leafCells.map(cell => cell.content);
+};
 
 export function MyLogbook({ userProfile }: MyLogbookProps) {
   const firestore = useFirestore();
@@ -54,7 +121,7 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
 
   const logbookTemplateRef = useMemoFirebase(
     () => (firestore && userProfile.logbookTemplateId)
-      ? doc(firestore, `tenants/${tenantId}/logbook-templates`, userProfile.logbookTemplateId)
+      ? doc(firestore, `tenants/${tenantId}/table-templates`, userProfile.logbookTemplateId)
       : null,
     [firestore, tenantId, userProfile.logbookTemplateId]
   );
@@ -75,7 +142,7 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
     [firestore, tenantId]
   );
 
-  const { data: template, isLoading: isLoadingTemplate } = useDoc<LogbookTemplate>(logbookTemplateRef);
+  const { data: template, isLoading: isLoadingTemplate } = useDoc<TableTemplate>(logbookTemplateRef);
   const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(completedBookingsQuery);
   const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection(aircraftsQuery);
 
@@ -85,52 +152,11 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
   }, [aircrafts]);
 
   const { headerRows, leafColumnIds } = useMemo(() => {
-    if (!template?.columns) return { headerRows: [], leafColumnIds: [] };
-
-    const rows: any[][] = [];
-    const process = (columns: LogbookColumn[], level: number) => {
-      if (!rows[level]) rows[level] = [];
-      let maxLevel = level;
-      let totalSubCols = 0;
-
-      for (const col of columns) {
-        const cell = { id: col.id, label: col.label, colSpan: 1, rowSpan: 1 };
-        rows[level].push(cell);
-
-        if (col.subColumns && col.subColumns.length > 0) {
-          const subResult = process(col.subColumns, level + 1);
-          cell.colSpan = subResult.totalSubCols;
-          maxLevel = Math.max(maxLevel, subResult.maxLevel);
-          totalSubCols += subResult.totalSubCols;
-        } else {
-          totalSubCols += 1;
-        }
-      }
-      return { maxLevel, totalSubCols };
+    if (!template?.tableData) return { headerRows: [], leafColumnIds: [] };
+    return { 
+        headerRows: renderHeaderRows(template.tableData),
+        leafColumnIds: getLeafColumnIds(template.tableData)
     };
-
-    const { maxLevel } = process(template.columns, 0);
-
-    for (let i = 0; i < rows.length; i++) {
-      for (const cell of rows[i]) {
-        const findCol = (cols: LogbookColumn[], id: string): LogbookColumn | undefined => {
-          for (const c of cols) {
-            if (c.id === id) return c;
-            if (c.subColumns) {
-              const found = findCol(c.subColumns, id);
-              if (found) return found;
-            }
-          }
-          return undefined;
-        };
-        const colData = findCol(template.columns, cell.id);
-        if (colData && (!colData.subColumns || colData.subColumns.length === 0)) {
-          cell.rowSpan = maxLevel - i + 1;
-        }
-      }
-    }
-
-    return { headerRows: rows, leafColumnIds: getLeafColumnIds(template.columns) };
   }, [template]);
   
   const getCellData = (booking: Booking, columnId: string): string => {
@@ -140,11 +166,12 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
     );
     const flightHours = (flightMinutes / 60).toFixed(1);
 
-    switch (columnId) {
-      case 'date': return format(new Date(booking.bookingDate), 'yyyy-MM-dd');
-      case 'aircraft': return aircraftMap.get(booking.aircraftId) || booking.aircraftId;
-      case 'singleEngineTime': return booking.type === 'Training Flight' || booking.type === 'Private Flight' ? flightHours : '';
-      case 'totalTime': return flightHours;
+    // Match based on column header text (the 'columnId' here)
+    switch (columnId.toUpperCase()) {
+      case 'DATE': return format(new Date(booking.bookingDate), 'yyyy-MM-dd');
+      case 'AIRCRAFT': return aircraftMap.get(booking.aircraftId) || booking.aircraftId;
+      case 'SINGLE ENGINE': return booking.type === 'Training Flight' || booking.type === 'Private Flight' ? flightHours : '';
+      case 'TOTAL TIME': return flightHours;
       default: return '';
     }
   };
@@ -156,26 +183,26 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
     <Card>
       <CardHeader>
         <CardTitle>My Logbook</CardTitle>
-        <CardDescription>A summary of your completed flights.</CardDescription>
+        <CardDescription>A summary of your completed flights, based on your assigned logbook template.</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? <Skeleton className="h-48 w-full" /> : (
           !userProfile.logbookTemplateId ? (
             <p className="text-muted-foreground text-center">No logbook template assigned. Please contact an administrator.</p>
           ) : !template ? (
-            <p className="text-muted-foreground text-center">Could not load logbook template.</p>
+            <p className="text-muted-foreground text-center">Could not load logbook template. Check console for errors.</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  {renderHeaderRows(headerRows)}
+                  {headerRows}
                 </TableHeader>
                 <TableBody>
                   {bookings && bookings.length > 0 ? (
                     bookings.map(booking => (
                       <TableRow key={booking.id}>
-                        {leafColumnIds.map(id => (
-                          <TableCell key={id} className="text-center">{getCellData(booking, id)}</TableCell>
+                        {leafColumnIds.map((id, index) => (
+                          <TableCell key={`${booking.id}-${index}`} className="text-center">{getCellData(booking, id)}</TableCell>
                         ))}
                       </TableRow>
                     ))
