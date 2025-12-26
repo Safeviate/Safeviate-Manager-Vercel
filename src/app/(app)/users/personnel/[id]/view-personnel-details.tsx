@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -400,5 +399,3 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     </div>
   );
 }
-
-    
