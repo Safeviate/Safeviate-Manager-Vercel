@@ -10,7 +10,6 @@ import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { EditPersonnelForm } from './edit-personnel-form';
 import { ViewPersonnelDetails } from './view-personnel-details';
-import { UserLogbook } from './user-logbook';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
@@ -128,24 +127,11 @@ function UserProfileContent({ params }: UserProfilePageProps) {
                             Edit Profile
                         </Button>
                     </div>
-                    <Tabs defaultValue="information">
-                        <TabsList className="grid w-full max-w-sm grid-cols-2">
-                            <TabsTrigger value="information">Information</TabsTrigger>
-                            {isPilotProfile(user) && <TabsTrigger value="logbook">Logbook</TabsTrigger>}
-                        </TabsList>
-                        <TabsContent value="information" className="mt-6">
-                            <ViewPersonnelDetails 
-                                user={user} 
-                                role={currentRole} 
-                                department={currentDepartment}
-                            />
-                        </TabsContent>
-                        {isPilotProfile(user) && (
-                            <TabsContent value="logbook" className="mt-6">
-                                <UserLogbook user={user} />
-                            </TabsContent>
-                        )}
-                    </Tabs>
+                    <ViewPersonnelDetails 
+                        user={user} 
+                        role={currentRole} 
+                        department={currentDepartment}
+                    />
                 </>
             )}
            
