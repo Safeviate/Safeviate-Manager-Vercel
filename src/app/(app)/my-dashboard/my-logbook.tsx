@@ -26,14 +26,21 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
     [firestore, tenantId]
   );
   
-  const allUsersQuery = useMemoFirebase(
-      () => firestore ? [
-          query(collection(firestore, `tenants/${tenantId}/personnel`)),
-          query(collection(firestore, `tenants/${tenantId}/instructors`)),
-          query(collection(firestore, `tenants/${tenantId}/students`)),
-          query(collection(firestore, `tenants/${tenantId}/private-pilots`)),
-      ] : null,
-      [firestore, tenantId]
+  const personnelQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
+    [firestore, tenantId]
+  );
+  const instructorsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null),
+    [firestore, tenantId]
+  );
+  const studentsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null),
+    [firestore, tenantId]
+  );
+  const privatePilotsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null),
+    [firestore, tenantId]
   );
 
   const aircraftsQuery = useMemoFirebase(
@@ -42,10 +49,10 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
   );
 
   const { data: allBookings, isLoading: isLoadingBookings } = useCollection<Booking>(allBookingsQuery);
-  const { data: personnel } = useCollection<Personnel>(allUsersQuery ? allUsersQuery[0] : null);
-  const { data: instructors } = useCollection<PilotProfile>(allUsersQuery ? allUsersQuery[1] : null);
-  const { data: students } = useCollection<PilotProfile>(allUsersQuery ? allUsersQuery[2] : null);
-  const { data: privatePilots } = useCollection<PilotProfile>(allUsersQuery ? allUsersQuery[3] : null);
+  const { data: personnel } = useCollection<Personnel>(personnelQuery);
+  const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
+  const { data: students } = useCollection<PilotProfile>(studentsQuery);
+  const { data: privatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
   const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
 
   const userBookings = useMemo(() => {
@@ -85,8 +92,14 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Aircraft</TableHead>
+                    <TableHead rowSpan={2}>Date</TableHead>
+                    <TableHead colSpan={2} className="text-center">Aircraft</TableHead>
+                    <TableHead colSpan={3} className="text-center">Pilot In Command</TableHead>
+                    <TableHead colSpan={1} className="text-center">Flight Details</TableHead>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Registration</TableHead>
                     <TableHead>Student</TableHead>
                     <TableHead>Instructor</TableHead>
                     <TableHead>PIC</TableHead>
@@ -94,14 +107,6 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                    <TableRow>
-                        <TableCell>&nbsp;</TableCell>
-                        <TableCell>&nbsp;</TableCell>
-                        <TableCell>&nbsp;</TableCell>
-                        <TableCell>&nbsp;</TableCell>
-                        <TableCell>&nbsp;</TableCell>
-                        <TableCell>&nbsp;</TableCell>
-                    </TableRow>
                   {userBookings && userBookings.length > 0 ? (
                     userBookings.map(booking => {
                         const flightMinutes = (booking.status === 'Completed' && booking.startTime && booking.endTime) ? differenceInMinutes(
@@ -111,14 +116,21 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
                         const flightHours = (flightMinutes / 60).toFixed(1);
 
                         const aircraft = aircraftMap.get(booking.aircraftId);
-                        const studentName = booking.studentId ? usersMap.get(booking.studentId) : '';
-                        const instructorName = booking.instructorId ? usersMap.get(booking.instructorId) : '';
-                        const picName = booking.pilotId ? usersMap.get(booking.pilotId) : (studentName || '');
+                        const studentName = booking.type === 'Training Flight' ? usersMap.get(booking.studentId || '') : '';
+                        const instructorName = booking.type === 'Training Flight' ? usersMap.get(booking.instructorId || '') : '';
+                        
+                        let picName = '';
+                        if (booking.type === 'Training Flight') {
+                            picName = instructorName || '';
+                        } else {
+                            picName = usersMap.get(booking.pilotId || '') || '';
+                        }
 
                         return (
                             <TableRow key={booking.id}>
                                 <TableCell>{format(new Date(booking.bookingDate), 'yyyy-MM-dd')}</TableCell>
-                                <TableCell>{aircraft ? `${aircraft.model} (${aircraft.tailNumber})` : 'N/A'}</TableCell>
+                                <TableCell>{aircraft?.model || 'N/A'}</TableCell>
+                                <TableCell>{aircraft?.tailNumber || 'N/A'}</TableCell>
                                 <TableCell>{studentName || 'N/A'}</TableCell>
                                 <TableCell>{instructorName || 'N/A'}</TableCell>
                                 <TableCell>{picName || 'N/A'}</TableCell>
@@ -128,7 +140,7 @@ export function MyLogbook({ userProfile }: MyLogbookProps) {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
+                      <TableCell colSpan={7} className="h-24 text-center">
                         No flights found.
                       </TableCell>
                     </TableRow>
