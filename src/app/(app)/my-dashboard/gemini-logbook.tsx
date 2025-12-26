@@ -32,11 +32,32 @@ const useGeminiLogbookData = (userProfile: PilotProfile | Personnel) => {
         () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
         [firestore, tenantId]
     );
-    
+
+    const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
+    const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
+    const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
+    const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
+
     const { data: allBookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
     const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
+    const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
+    const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
+    const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsQuery);
+    const { data: privatePilots, isLoading: isLoadingPrivatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
 
-    const isLoading = isLoadingBookings || isLoadingAircrafts;
+
+    const isLoading = isLoadingBookings || isLoadingAircrafts || isLoadingPersonnel || isLoadingInstructors || isLoadingStudents || isLoadingPrivatePilots;
+    
+    const allUsersMap = useMemo(() => {
+        const userMap = new Map<string, PilotProfile | Personnel>();
+        const allUserLists = [personnel, instructors, students, privatePilots];
+        allUserLists.forEach(list => {
+            if (list) {
+                list.forEach(p => userMap.set(p.id, p));
+            }
+        });
+        return userMap;
+    }, [personnel, instructors, students, privatePilots]);
     
     const aircraftMap = useMemo(() => {
         if (!aircrafts) return new Map();
@@ -54,11 +75,11 @@ const useGeminiLogbookData = (userProfile: PilotProfile | Personnel) => {
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [allBookings, userProfile]);
 
-    return { userBookings, aircraftMap, isLoading };
+    return { userBookings, aircraftMap, allUsersMap, isLoading };
 };
 
 export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
-    const { userBookings, aircraftMap, isLoading } = useGeminiLogbookData(userProfile);
+    const { userBookings, aircraftMap, allUsersMap, isLoading } = useGeminiLogbookData(userProfile);
     
     if (isLoading) {
         return <Skeleton className="h-64 w-full" />;
@@ -77,7 +98,7 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             <TableHead className="border w-[120px]" rowSpan={2}>Booking #</TableHead>
                             <TableHead className="border w-[150px]" rowSpan={2}>Date</TableHead>
                             <TableHead className="border w-[300px]" colSpan={2}>Aircraft</TableHead>
-                            <TableHead className="border w-[150px]" rowSpan={2}>Column 5</TableHead>
+                            <TableHead className="border w-[150px]" rowSpan={2}>Pilot In Command</TableHead>
                             <TableHead className="border w-[150px]">Column 6</TableHead>
                             <TableHead className="border w-[150px]">Column 7</TableHead>
                             <TableHead className="border w-[150px]">Column 8</TableHead>
@@ -118,13 +139,14 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                         {userBookings.length > 0 ? (
                             userBookings.map(booking => {
                                 const aircraft = aircraftMap.get(booking.aircraftId);
+                                const creator = booking.createdById ? allUsersMap.get(booking.createdById) : null;
                                 return (
                                     <TableRow key={booking.id}>
                                         <TableCell className="border">{booking.bookingNumber}</TableCell>
                                         <TableCell className="border">{format(new Date(booking.date), 'yyyy-MM-dd')}</TableCell>
                                         <TableCell className="border">{aircraft?.type || 'N/A'}</TableCell>
                                         <TableCell className="border">{aircraft?.tailNumber || 'N/A'}</TableCell>
-                                        <TableCell className="border"></TableCell>
+                                        <TableCell className="border">{creator ? `${creator.firstName} ${creator.lastName}` : 'N/A'}</TableCell>
                                         <TableCell className="border"></TableCell>
                                         <TableCell className="border"></TableCell>
                                         <TableCell className="border"></TableCell>
