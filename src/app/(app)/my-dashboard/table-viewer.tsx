@@ -15,7 +15,7 @@ export function TableViewer({ tableData }: TableViewerProps) {
     const { cells, colWidths, rowHeights } = tableData;
 
     return (
-        <div className="overflow-auto">
+        <div className="overflow-auto rounded-lg border">
             <div
                 className="grid gap-0 relative"
                 style={{

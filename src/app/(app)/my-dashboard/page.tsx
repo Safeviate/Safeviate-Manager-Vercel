@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -21,7 +20,7 @@ export default function MyDashboardPage() {
         [firestore, tenantId, pageId]
     );
 
-    const { data: publishedTable, isLoading: isLoadingTable } = useDoc<TableTemplate>(publishedTableRef);
+    const { data: publishedTable, isLoading: isLoadingTable } = useDoc<{tableData: TableTemplate['tableData']}>(publishedTableRef);
     
     const isLoading = isLoadingProfile || isLoadingTable;
 
