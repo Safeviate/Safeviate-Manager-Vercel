@@ -102,7 +102,7 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                             <col style={{ width: '150px' }} />
                             {/* Dynamically generate remaining columns with equal width */}
                             {Array.from({ length: 16 }).map((_, i) => (
-                                <col key={i} style={{ width: '80px' }} />
+                                <col key={i} style={{ width: '70px' }} />
                             ))}
                         </colgroup>
                         <TableHeader>
