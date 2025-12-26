@@ -112,7 +112,7 @@ export function GeminiLogbook({ userProfile }: GeminiLogbookProps) {
                                 <TableHead className="border text-center" rowSpan={2}>Date</TableHead>
                                 <TableHead className="border text-center" colSpan={2}>Aircraft</TableHead>
                                 <TableHead className="border text-center" rowSpan={2}>Pilot In Command</TableHead>
-                                <TableHead className="border text-center" rowSpan={2}>New Column</TableHead>
+                                <TableHead className="border text-center" rowSpan={2}>Flight Details</TableHead>
                                 <TableHead className="border text-center" colSpan={2}>Single Engine Day</TableHead>
                                 <TableHead className="border text-center" colSpan={2}>Single Engine Night</TableHead>
                                 <TableHead className="border text-center" colSpan={3}>Multi Engine Day</TableHead>
