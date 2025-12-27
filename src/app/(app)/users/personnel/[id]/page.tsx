@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
+import { TrainingRecords } from './training-records';
 
 interface UserProfilePageProps {
     params: { id: string };
@@ -127,11 +128,26 @@ function UserProfileContent({ params }: UserProfilePageProps) {
                             Edit Profile
                         </Button>
                     </div>
-                    <ViewPersonnelDetails 
-                        user={user} 
-                        role={currentRole} 
-                        department={currentDepartment}
-                    />
+                    <Tabs defaultValue="details">
+                        <TabsList className="grid w-full grid-cols-2">
+                           <TabsTrigger value="details">Details & Documents</TabsTrigger>
+                           <TabsTrigger value="training" disabled={user.userType !== 'Student'}>Training Records</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="details" className="mt-6">
+                             <ViewPersonnelDetails 
+                                user={user} 
+                                role={currentRole} 
+                                department={currentDepartment}
+                            />
+                        </TabsContent>
+                        <TabsContent value="training" className="mt-6">
+                            {user.userType === 'Student' ? (
+                                <TrainingRecords studentId={user.id} tenantId={tenantId} />
+                            ) : (
+                                <p className="text-muted-foreground text-center p-8">Training records are only applicable to students.</p>
+                            )}
+                        </TabsContent>
+                    </Tabs>
                 </>
             )}
            

@@ -45,3 +45,8 @@ export type {
   RiskLevel,
 } from './safety-report';
 export type { TableTemplate } from './table-template';
+export type {
+    StudentProgressReport,
+    StudentProgressEntry,
+    PerformanceRating
+} from './training';

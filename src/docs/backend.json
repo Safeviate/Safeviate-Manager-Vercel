@@ -1338,6 +1338,36 @@
             }
         },
         "required": ["id", "auditId", "findingId", "rootCauseAnalysis"]
+    },
+    "StudentProgressEntry": {
+        "title": "Student Progress Entry",
+        "type": "object",
+        "description": "A single entry in a student's progress report for a specific exercise.",
+        "properties": {
+            "id": { "type": "string" },
+            "exercise": { "type": "string" },
+            "rating": { "type": "number", "description": "Performance rating from 1 to 4." },
+            "comment": { "type": "string" }
+        },
+        "required": ["id", "exercise", "rating"]
+    },
+    "StudentProgressReport": {
+        "title": "Student Progress Report",
+        "type": "object",
+        "description": "An instructor's debrief of a student's performance for a single booking.",
+        "properties": {
+            "id": { "type": "string" },
+            "bookingId": { "type": "string" },
+            "studentId": { "type": "string" },
+            "instructorId": { "type": "string" },
+            "date": { "type": "string", "format": "date-time" },
+            "overallComment": { "type": "string", "description": "A summary comment for the entire debrief session." },
+            "entries": {
+                "type": "array",
+                "items": { "$ref": "#/backend/entities/StudentProgressEntry" }
+            }
+        },
+        "required": ["id", "bookingId", "studentId", "instructorId", "date"]
     }
   },
   "auth": {
@@ -1500,6 +1530,14 @@
             { "name": "tenantId", "description": "Tenant ID." },
             { "name": "profileId", "description": "Profile ID." }
           ]
+        }
+      },
+       {
+        "path": "tenants/{tenantId}/student-progress-reports/{reportId}",
+        "definition": {
+          "entityName": "StudentProgressReport",
+          "schema": { "$ref": "#/backend/entities/StudentProgressReport" },
+          "description": "Stores student debriefs from instructors."
         }
       },
       {
