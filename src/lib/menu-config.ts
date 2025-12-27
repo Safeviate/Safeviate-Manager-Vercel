@@ -149,6 +149,13 @@ export const menuConfig: MenuItem[] = [
     href: '/training',
     label: 'Training',
     icon: GraduationCap,
+    subItems: [
+      {
+        href: '/training/student-debriefs',
+        label: 'Student Debriefs',
+        description: 'View and manage student progress reports.',
+      },
+    ],
   },
   {
     href: '/assets',
