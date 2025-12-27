@@ -150,4 +150,3 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
         </div>
     );
 }
-
