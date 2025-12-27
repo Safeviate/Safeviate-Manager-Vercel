@@ -87,7 +87,7 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
                             <Badge variant={getStatusBadgeVariant(b.status)}>{b.status}</Badge>
                         </TableCell>
                         <TableCell>
-                            <Button asChild variant={b.massAndBalance ? 'default' : 'outline'} size="sm">
+                            <Button asChild variant={b.massAndBalance ? 'default' : 'outline'} size="sm" disabled={b.status === 'Cancelled' || b.status === 'Cancelled with Reason'}>
                                 <Link href={`/assets/mass-balance?bookingId=${b.id}&aircraftId=${b.aircraftId}`}>
                                     M&B
                                 </Link>
