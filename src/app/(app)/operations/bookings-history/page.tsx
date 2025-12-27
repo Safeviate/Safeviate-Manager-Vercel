@@ -4,7 +4,7 @@
 import { useMemo } from 'react';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, parse } from 'date-fns';
@@ -65,12 +65,7 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
     
     return (
          <Table>
-            <TableHeader className="sticky top-0 bg-background z-10">
-              <TableRow>
-                  <TableHead colSpan={5}></TableHead>
-                  <TableHead colSpan={2} className="text-center font-semibold">Pre-Flight</TableHead>
-                  <TableHead colSpan={1} className="text-center font-semibold">Post-Flight</TableHead>
-              </TableRow>
+            <TableHeader>
               <TableRow>
                   <TableHead>#</TableHead>
                   <TableHead>Aircraft</TableHead>
@@ -198,7 +193,7 @@ export default function BookingsHistoryPage() {
             </TabsList>
         </div>
         <CardContent className='p-0'>
-            <ScrollArea className="h-[calc(100vh-17rem)]">
+            <ScrollArea className="h-[calc(100vh-21rem)]">
                 <TabsContent value="all" className='m-0'>
                     <BookingsTable bookings={enrichedBookings} tenantId={tenantId} />
                 </TabsContent>
@@ -226,6 +221,17 @@ export default function BookingsHistoryPage() {
             </div>
         </div>
       <Card className="flex-grow flex flex-col">
+        <CardHeader className="bg-muted/30">
+          <div className="grid grid-cols-8 gap-4">
+            <div className="col-span-5"></div>
+            <div className="col-span-2 text-center text-sm font-semibold text-muted-foreground">
+              Pre-Flight
+            </div>
+            <div className="col-span-1 text-center text-sm font-semibold text-muted-foreground">
+              Post-Flight
+            </div>
+          </div>
+        </CardHeader>
         {renderContent()}
       </Card>
     </div>
