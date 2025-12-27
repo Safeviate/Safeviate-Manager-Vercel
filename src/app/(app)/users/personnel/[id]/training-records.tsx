@@ -44,7 +44,8 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
         () => (firestore ? query(
             collection(firestore, `tenants/${tenantId}/bookings`),
             where('studentId', '==', studentId),
-            where('type', '==', 'Training Flight')
+            where('type', '==', 'Training Flight'),
+            where('status', '==', 'Completed') // Correctly filter for completed bookings
         ) : null),
         [firestore, tenantId, studentId]
     );
@@ -68,7 +69,7 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
     const bookingsWithoutReports = useMemo(() => {
         if (!bookings || !reports) return [];
         const reportBookingIds = new Set(reports.map(r => r.bookingId));
-        return bookings.filter(b => b.status === 'Completed' && !reportBookingIds.has(b.id));
+        return bookings.filter(b => !reportBookingIds.has(b.id));
     }, [bookings, reports]);
 
     if (isLoading) {
