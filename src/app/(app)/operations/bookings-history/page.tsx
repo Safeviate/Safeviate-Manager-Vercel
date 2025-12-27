@@ -67,7 +67,7 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
          <Table>
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
-                  <TableHead colSpan={5} className="text-center font-semibold">Aircraft Booking Details</TableHead>
+                  <TableHead colSpan={5}></TableHead>
                   <TableHead colSpan={2} className="text-center font-semibold">Pre-Flight</TableHead>
                   <TableHead colSpan={1} className="text-center font-semibold">Post-Flight</TableHead>
               </TableRow>
