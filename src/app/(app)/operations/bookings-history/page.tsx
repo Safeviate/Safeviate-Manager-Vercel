@@ -66,15 +66,21 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
     return (
          <Table>
             <TableHeader className="sticky top-0 bg-background z-10">
-            <TableRow>
-                <TableHead>#</TableHead>
-                <TableHead>Aircraft</TableHead>
-                <TableHead>Creator</TableHead>
-                <TableHead>Start Time</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>M&B</TableHead>
-                <TableHead className='text-right'>Actions</TableHead>
-            </TableRow>
+              <TableRow>
+                  <TableHead colSpan={5} className="text-center font-semibold">Aircraft Booking Details</TableHead>
+                  <TableHead colSpan={2} className="text-center font-semibold">Pre-Flight</TableHead>
+                  <TableHead colSpan={1} className="text-center font-semibold">Post-Flight</TableHead>
+              </TableRow>
+              <TableRow>
+                  <TableHead>#</TableHead>
+                  <TableHead>Aircraft</TableHead>
+                  <TableHead>Creator</TableHead>
+                  <TableHead>Start Time</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className='text-center'>View</TableHead>
+                  <TableHead className='text-center'>M&B</TableHead>
+                  <TableHead className='text-center'>Debrief</TableHead>
+              </TableRow>
             </TableHeader>
             <TableBody>
                 {bookings.map(b => (
@@ -86,26 +92,29 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
                         <TableCell>
                             <Badge variant={getStatusBadgeVariant(b.status)}>{b.status}</Badge>
                         </TableCell>
-                        <TableCell>
-                            <Button asChild variant={b.massAndBalance ? 'default' : 'outline'} size="sm" disabled={b.status === 'Cancelled' || b.status === 'Cancelled with Reason'}>
-                                <Link href={`/assets/mass-balance?bookingId=${b.id}&aircraftId=${b.aircraftId}`}>
-                                    M&B
+                        <TableCell className='text-center'>
+                            <Button asChild variant="outline" size="icon" className="h-8 w-8">
+                                <Link href={`/operations/bookings-history/${b.id}`}>
+                                    <Eye className="h-4 w-4" />
+                                    <span className="sr-only">View Details</span>
                                 </Link>
                             </Button>
                         </TableCell>
-                        <TableCell className='text-right flex items-center justify-end gap-2'>
-                            <Button asChild variant="outline" size="sm">
-                                <Link href={`/operations/bookings-history/${b.id}`}>
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    View
+                        <TableCell className='text-center'>
+                            <Button asChild variant={b.massAndBalance ? 'default' : 'outline'} size="icon" className="h-8 w-8" disabled={b.status === 'Cancelled' || b.status === 'Cancelled with Reason'}>
+                                <Link href={`/assets/mass-balance?bookingId=${b.id}&aircraftId=${b.aircraftId}`}>
+                                    <Scale className="h-4 w-4" />
+                                     <span className="sr-only">Mass & Balance</span>
                                 </Link>
                             </Button>
+                        </TableCell>
+                        <TableCell className='text-center'>
                             {b.type === 'Training Flight' && b.status === 'Completed' && (
-                                <Button asChild variant="secondary" size="sm">
+                                <Button asChild variant="secondary" size="icon" className="h-8 w-8">
                                     {/* This will link to the new debrief page we will create */}
                                     <Link href={`/training/student-debriefs/new?bookingId=${b.id}`}>
-                                        <FilePlus className="mr-2 h-4 w-4" />
-                                        Debrief
+                                        <FilePlus className="h-4 w-4" />
+                                        <span className="sr-only">Create Debrief</span>
                                     </Link>
                                 </Button>
                             )}
