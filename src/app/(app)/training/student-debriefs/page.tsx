@@ -24,6 +24,40 @@ type EnrichedReport = StudentProgressReport & {
   bookingNumber?: number;
 };
 
+// Mock data for demonstration when no real data exists
+const mockDebriefs: EnrichedReport[] = [
+  {
+    id: 'mock-1',
+    bookingId: 'booking-mock-1',
+    studentId: 'student-mock-1',
+    instructorId: 'instructor-mock-1',
+    date: new Date().toISOString(),
+    overallComment: 'Good progress on landings.',
+    entries: [
+      { id: 'ex-1', exercise: 'Circuit and Landing', rating: 3, comment: 'Slightly high on final approach but corrected well.' },
+      { id: 'ex-2', exercise: 'Stall Recovery', rating: 4, comment: 'Excellent recognition and recovery.' }
+    ],
+    studentName: 'John Doe',
+    instructorName: 'Jane Smith',
+    bookingNumber: 101,
+  },
+  {
+    id: 'mock-2',
+    bookingId: 'booking-mock-2',
+    studentId: 'student-mock-2',
+    instructorId: 'instructor-mock-1',
+    date: new Date(new Date().setDate(new Date().getDate() - 2)).toISOString(),
+    overallComment: 'Needs to work on radio calls.',
+    entries: [
+      { id: 'ex-3', exercise: 'Cross-Country Navigation', rating: 2, comment: 'Struggled with identifying first checkpoint.' },
+      { id: 'ex-4', exercise: 'Radio Communications', rating: 2, comment: 'Hesitant on initial calls, improved during flight.' }
+    ],
+    studentName: 'Peter Jones',
+    instructorName: 'Jane Smith',
+    bookingNumber: 98,
+  }
+];
+
 export default function StudentDebriefsPage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate';
@@ -64,6 +98,11 @@ export default function StudentDebriefsPage() {
 
     if (selectedStudentId) {
         filteredReports = reports.filter(report => report.studentId === selectedStudentId);
+    }
+    
+    // If there's no real data, use the mock data
+    if (filteredReports.length === 0 && !selectedStudentId) {
+        return mockDebriefs;
     }
 
     return filteredReports.map(report => ({
