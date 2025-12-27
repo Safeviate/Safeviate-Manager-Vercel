@@ -29,6 +29,11 @@ export const permissionsConfig: PermissionResource[] = [
   
   // --- Core Features ---
   {
+    id: 'bookings',
+    name: 'Bookings',
+    actions: ['view', 'create', 'edit', 'delete'],
+  },
+  {
     id: 'assets',
     name: 'Assets',
     actions: ['view', 'create', 'edit', 'delete'],
