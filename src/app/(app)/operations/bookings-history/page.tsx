@@ -17,7 +17,7 @@ import { useRouter } from 'next/navigation';
 import { Timestamp } from 'firebase/firestore';
 import type { Booking } from '@/types/booking';
 import { Button } from '@/components/ui/button';
-import { Eye, CheckCircle, XCircle, Scale } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Scale, FilePlus } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -93,13 +93,22 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
                                 </Link>
                             </Button>
                         </TableCell>
-                        <TableCell className='text-right'>
+                        <TableCell className='text-right flex items-center justify-end gap-2'>
                             <Button asChild variant="outline" size="sm">
                                 <Link href={`/operations/bookings-history/${b.id}`}>
                                     <Eye className="mr-2 h-4 w-4" />
                                     View
                                 </Link>
                             </Button>
+                            {b.type === 'Training Flight' && b.status === 'Completed' && (
+                                <Button asChild variant="secondary" size="sm">
+                                    {/* This will link to the new debrief page we will create */}
+                                    <Link href={`/training/student-debriefs/new?bookingId=${b.id}`}>
+                                        <FilePlus className="mr-2 h-4 w-4" />
+                                        Debrief
+                                    </Link>
+                                </Button>
+                            )}
                         </TableCell>
                     </TableRow>
                 ))}
