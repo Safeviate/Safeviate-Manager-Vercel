@@ -221,10 +221,10 @@ export default function BookingsHistoryPage() {
             </div>
         </div>
       <Card className="flex-grow flex flex-col">
-        <CardHeader className="bg-muted/30">
+        <CardHeader className="bg-muted/30 p-0">
             <div className="grid grid-cols-2">
-                <div className="text-sm font-semibold text-muted-foreground text-center">Pre-Flight</div>
-                <div className="text-sm font-semibold text-muted-foreground text-center">Post-Flight</div>
+                <div className="text-sm font-semibold text-muted-foreground text-center p-2 border-r">Pre-Flight</div>
+                <div className="text-sm font-semibold text-muted-foreground text-center p-2">Post-Flight</div>
             </div>
         </CardHeader>
         {renderContent()}
