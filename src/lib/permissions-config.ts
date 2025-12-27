@@ -48,6 +48,11 @@ export const permissionsConfig: PermissionResource[] = [
     name: 'Users',
     actions: ['view', 'create', 'edit', 'delete'],
   },
+  {
+    id: 'training-debriefs',
+    name: 'Training: Student Debriefs',
+    actions: ['view'],
+  },
 
   // --- Admin Section ---
   {
