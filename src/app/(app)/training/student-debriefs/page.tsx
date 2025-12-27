@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,10 +10,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Eye } from 'lucide-react';
+import { Eye, User } from 'lucide-react';
 import type { StudentProgressReport } from '@/types/training';
 import type { Booking } from '@/types/booking';
 import type { PilotProfile } from '../../users/personnel/page';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 
 type EnrichedReport = StudentProgressReport & {
   studentName?: string;
@@ -24,6 +27,7 @@ type EnrichedReport = StudentProgressReport & {
 export default function StudentDebriefsPage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate';
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
   const reportsQuery = useMemoFirebase(
     () => firestore ? query(collection(firestore, `tenants/${tenantId}/student-progress-reports`), orderBy('date', 'desc')) : null,
@@ -56,19 +60,51 @@ export default function StudentDebriefsPage() {
     const studentsMap = new Map(students.map(s => [s.id, `${s.firstName} ${s.lastName}`]));
     const instructorsMap = new Map(instructors.map(i => [i.id, `${i.firstName} ${i.lastName}`]));
 
-    return reports.map(report => ({
+    let filteredReports = reports;
+
+    if (selectedStudentId) {
+        filteredReports = reports.filter(report => report.studentId === selectedStudentId);
+    }
+
+    return filteredReports.map(report => ({
       ...report,
       bookingNumber: bookingsMap.get(report.bookingId)?.bookingNumber,
       studentName: studentsMap.get(report.studentId),
       instructorName: instructorsMap.get(report.instructorId),
     }));
-  }, [reports, bookings, students, instructors]);
+  }, [reports, bookings, students, instructors, selectedStudentId]);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>All Student Debriefs</CardTitle>
-        <CardDescription>A complete history of all training debriefs filed by instructors.</CardDescription>
+        <div className="flex justify-between items-center">
+            <div>
+                <CardTitle>All Student Debriefs</CardTitle>
+                <CardDescription>A complete history of all training debriefs filed by instructors.</CardDescription>
+            </div>
+            <div className="w-64">
+                <Select onValueChange={(value) => setSelectedStudentId(value === 'all' ? null : value)}>
+                    <SelectTrigger>
+                        <User className="mr-2 h-4 w-4" />
+                        <SelectValue placeholder="Filter by student..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Students</SelectItem>
+                        {students?.map(student => (
+                             <SelectItem key={student.id} value={student.id}>
+                                <div className="flex items-center gap-2">
+                                     <Avatar className="h-6 w-6">
+                                        <AvatarImage src={`https://picsum.photos/seed/${student.firstName}/100/100`} />
+                                        <AvatarFallback>{student.firstName?.[0]}</AvatarFallback>
+                                    </Avatar>
+                                    <span>{student.firstName} {student.lastName}</span>
+                                </div>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
