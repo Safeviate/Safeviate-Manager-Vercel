@@ -1127,10 +1127,7 @@
             "$ref": "#/backend/entities/FindingLevelsSettings"
         }
       },
-      "required": [
-        "id",
-        "tenantId"
-      ]
+      "required": ["id", "tenantId"]
     },
     "FeatureSettings": {
       "title": "Feature Settings",
