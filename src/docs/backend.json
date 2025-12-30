@@ -521,6 +521,10 @@
             "type": "string",
             "description": "The end time for the second part of an overnight booking (HH:mm)."
         },
+        "flightDetails": {
+          "type": "string",
+          "description": "Additional flight details, often from a logbook."
+        },
         "preFlight": {
             "type": "object",
             "description": "Pre-flight checklist data.",
