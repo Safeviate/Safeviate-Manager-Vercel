@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -21,6 +20,8 @@ import { Eye, CheckCircle, XCircle, Scale, FilePlus } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+
+type UserProfile = PilotProfile | Personnel;
 
 // A consolidated type for display
 type EnrichedBooking = Booking & {
@@ -122,10 +123,10 @@ export default function BookingsHistoryPage() {
     [firestore, tenantId]
   );
   const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'aircrafts') : null), [firestore, tenantId]);
-  const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'personnel')) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'instructors')) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'students')) : null), [firestore, tenantId]);
-  const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'private-pilots')) : null), [firestore, tenantId]);
+  const personnelQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'personnel') : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'instructors') : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'students') : null), [firestore, tenantId]);
+  const privatePilotsQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'private-pilots') : null), [firestore, tenantId]);
 
   const { data: bookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
   const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
@@ -134,30 +135,43 @@ export default function BookingsHistoryPage() {
   const { data: students, isLoading: isLoadingStudents, error: studentsError } = useCollection<PilotProfile>(studentsQuery);
   const { data: privatePilots, isLoading: isLoadingPrivatePilots, error: privatePilotsError } = useCollection<PilotProfile>(privatePilotsQuery);
 
+  const allUsers: UserProfile[] = useMemo(() => [
+      ...(personnel || []), 
+      ...(instructors || []), 
+      ...(students || []), 
+      ...(privatePilots || [])
+  ], [personnel, instructors, students, privatePilots]);
+
   const isLoading = isLoadingBookings || isLoadingAircraft || isLoadingPersonnel || isLoadingInstructors || isLoadingStudents || isLoadingPrivatePilots;
   const error = bookingsError || aircraftError || personnelError || instructorsError || studentsError || privatePilotsError;
 
   // --- Data Processing ---
   const enrichedBookings = useMemo((): EnrichedBooking[] => {
-    if (!bookings || !aircraft || !personnel || !instructors || !students || !privatePilots) return [];
+    if (!bookings || !aircraft || allUsers.length === 0) return [];
 
     const aircraftMap = new Map(aircraft.map(a => [a.id, a]));
-    const allUsers = [...personnel, ...instructors, ...students, ...privatePilots];
     const userMap = new Map(allUsers.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
 
     return bookings.map(b => {
       const bookingAircraft = aircraftMap.get(b.aircraftId);
       const fullStartTime = b.date && b.startTime ? parse(`${b.date} ${b.startTime}`, 'yyyy-MM-dd HH:mm', new Date()) : undefined;
       
+      let creatorName = 'Unknown Creator';
+      if (b.createdById && userMap.has(b.createdById)) {
+          creatorName = userMap.get(b.createdById)!;
+      } else if (b.type === 'Training Flight' && b.instructorId && userMap.has(b.instructorId)) {
+          creatorName = userMap.get(b.instructorId)!;
+      }
+
       return {
         ...b,
         aircraftTailNumber: bookingAircraft?.tailNumber || 'Unknown Aircraft',
-        creatorName: userMap.get(b.createdById || '') || 'Unknown Creator',
+        creatorName,
         fullStartTime: fullStartTime,
         aircraft: bookingAircraft,
       };
     });
-  }, [bookings, aircraft, personnel, instructors, students, privatePilots]);
+  }, [bookings, aircraft, allUsers]);
 
   const trainingBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Training Flight'), [enrichedBookings]);
   const privateBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Private Flight'), [enrichedBookings]);
@@ -212,12 +226,6 @@ export default function BookingsHistoryPage() {
             </div>
         </div>
       <Card className="flex-grow flex flex-col">
-        <CardHeader className="bg-muted/30 p-0">
-            <div className="grid grid-cols-2">
-                <div className="text-sm font-semibold text-muted-foreground text-center p-2 border-r">Pre-Flight</div>
-                <div className="text-sm font-semibold text-muted-foreground text-center p-2">Post-Flight</div>
-            </div>
-        </CardHeader>
         {renderContent()}
       </Card>
     </div>

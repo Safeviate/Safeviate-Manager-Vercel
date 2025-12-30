@@ -1,12 +1,11 @@
-
 'use client';
 
 import { use, useMemo, useState } from 'react';
 import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
-import type { Booking, Photo } from '@/types/booking';
+import type { Booking, Photo, MassAndBalance } from '@/types/booking';
 import type { Aircraft } from '../../../assets/page';
-import type { PilotProfile } from '../../../users/personnel/page';
+import type { PilotProfile, Personnel } from '../../../users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +19,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 interface BookingDetailPageProps {
     params: { id: string };
 }
+
+type UserProfile = PilotProfile | Personnel;
 
 const DetailItem = ({ label, value, children }: { label: string; value?: string | null; children?: React.ReactNode }) => (
     <div>
@@ -78,7 +79,6 @@ const PhotoGrid = ({ photos }: { photos: Photo[] }) => {
     );
 };
 
-// Function to convert camelCase to Title Case
 const camelToTitle = (camelCase: string) => {
   if (!camelCase) return '';
   const result = camelCase.replace(/([A-Z])/g, " $1");
@@ -100,33 +100,50 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
         () => (firestore ? collection(firestore, 'tenants', tenantId, 'aircrafts') : null),
         [firestore, tenantId]
     );
-    const pilotsRef = useMemoFirebase(
-        () => (firestore ? collection(firestore, 'tenants', tenantId, 'pilots') : null),
-        [firestore, tenantId]
-    );
+    const personnelRef = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'personnel') : null), [firestore, tenantId]);
+    const instructorsRef = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'instructors') : null), [firestore, tenantId]);
+    const studentsRef = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'students') : null), [firestore, tenantId]);
+    const privatePilotsRef = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'private-pilots') : null), [firestore, tenantId]);
 
     const { data: booking, isLoading: isLoadingBooking, error: bookingError } = useDoc<Booking>(bookingRef);
     const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsRef);
-    const { data: pilots, isLoading: isLoadingPilots } = useCollection<PilotProfile>(pilotsRef);
+    const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelRef);
+    const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsRef);
+    const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsRef);
+    const { data: privatePilots, isLoading: isLoadingPrivatePilots } = useCollection<PilotProfile>(privatePilotsRef);
+    
+    const allUsers: UserProfile[] = useMemo(() => [
+        ...(personnel || []), 
+        ...(instructors || []), 
+        ...(students || []), 
+        ...(privatePilots || [])
+    ], [personnel, instructors, students, privatePilots]);
 
-    const isLoading = isLoadingBooking || isLoadingAircrafts || isLoadingPilots;
+
+    const isLoading = isLoadingBooking || isLoadingAircrafts || isLoadingPersonnel || isLoadingInstructors || isLoadingStudents || isLoadingPrivatePilots;
 
     const enrichedBooking = useMemo(() => {
-        if (!booking || !aircrafts || !pilots) return null;
+        if (!booking || !aircrafts || allUsers.length === 0) return null;
         
         const aircraft = aircrafts.find(a => a.id === booking.aircraftId);
-        const creator = pilots.find(p => p.id === booking.createdById);
-        const instructor = booking.instructorId ? pilots.find(p => p.id === booking.instructorId) : null;
+        const creator = allUsers.find(p => p.id === booking.createdById);
+        let picName = 'Unknown Creator';
+
+        if (creator) {
+            picName = `${creator.firstName} ${creator.lastName}`;
+        } else if (booking.type === 'Training Flight' && booking.instructorId) {
+            const instructor = allUsers.find(p => p.id === booking.instructorId);
+            if (instructor) picName = `${instructor.firstName} ${instructor.lastName}`;
+        }
 
         return {
             ...booking,
             aircraft,
-            creatorName: creator ? `${creator.firstName} ${creator.lastName}` : 'Unknown Creator',
-            instructorName: instructor ? `${instructor.firstName} ${instructor.lastName}` : null,
+            creatorName: picName,
             fullStartTime: parse(`${booking.date} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date()),
             fullEndTime: parse(`${booking.date} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date()),
         };
-    }, [booking, aircrafts, pilots]);
+    }, [booking, aircrafts, allUsers]);
 
     if (isLoading) {
         return <div className="space-y-6">
@@ -181,14 +198,6 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                            <span>{enrichedBooking.creatorName}</span>
                         </div>
                     </DetailItem>
-                    {enrichedBooking.instructorName && (
-                        <DetailItem label="Instructor">
-                            <div className="flex items-center gap-2">
-                               <User className="h-4 w-4 text-muted-foreground" />
-                               <span>{enrichedBooking.instructorName}</span>
-                            </div>
-                        </DetailItem>
-                    )}
                     <DetailItem label="Booking Type" value={enrichedBooking.type} />
                 </CardContent>
             </Card>
@@ -203,7 +212,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                            {Object.entries(massAndBalance).map(([stationKey, values]) => (
                                 <DetailItem key={stationKey} label={camelToTitle(stationKey)}>
                                     {values && typeof values.weight === 'number' && typeof values.moment === 'number' ? (
-                                        <p className="text-base">{values.weight.toFixed(2)} lbs @ {values.moment.toFixed(2)}</p>
+                                        <p className="text-base">{values.weight.toFixed(1)} lbs @ {values.moment.toFixed(1)}</p>
                                     ) : (
                                         <p className="text-base text-muted-foreground">Invalid data</p>
                                     )}
