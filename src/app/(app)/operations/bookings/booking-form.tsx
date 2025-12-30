@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -94,7 +95,7 @@ export function BookingForm({
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isMassBalanceOpen, setIsMassBalanceOpen] = useState(false);
   
-  const [massAndBalanceData, setMassAndBalanceData = useState<MassAndBalance | null>(existingBooking?.massAndBalance || null);
+  const [massAndBalanceData, setMassAndBalanceData] = useState<MassAndBalance | null>(existingBooking?.massAndBalance || null);
 
   useEffect(() => {
     if (isOpen) {
