@@ -99,7 +99,6 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
     const tenantId = 'safeviate';
     const bookingId = resolvedParams.id;
     
-    const [isMassBalanceOpen, setIsMassBalanceOpen] = useState(false);
 
     const bookingRef = useMemoFirebase(
         () => (firestore ? doc(firestore, 'tenants', tenantId, 'bookings', bookingId) : null),
@@ -190,7 +189,6 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
         if (!bookingRef) return;
         updateDocumentNonBlocking(bookingRef, { massAndBalance: data });
         toast({ title: 'Mass & Balance Updated' });
-        setIsMassBalanceOpen(false);
     };
 
 
@@ -254,72 +252,23 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <CardTitle>Chart</CardTitle>
-                         <Button variant="outline" size="sm" onClick={() => setIsMassBalanceOpen(true)}>
-                             <Edit className="mr-2 h-4 w-4" /> Edit Mass &amp; Balance
-                         </Button>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {cgData && enrichedBooking.aircraft?.cgEnvelope ? (
-                         <div className="h-96 w-full">
-                            <ResponsiveContainer>
-                                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={['dataMin - 2', 'dataMax + 2']} />
-                                    <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={['dataMin - 100', 'dataMax + 100']} />
-                                    <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                    <Scatter name="Envelope" data={cgData.envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))' }} shape={() => null} />
-                                    <ReferenceDot x={cgData.cg} y={cgData.weight} r={10} fill={cgData.isSafe ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="white" />
-                                </ScatterChart>
-                            </ResponsiveContainer>
-                        </div>
-                    ) : (
-                        <p className="text-muted-foreground text-center py-10">Chart data not available. Please complete Mass &amp; Balance.</p>
-                    )}
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Aircraft Base Data</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <DetailItem label="Empty Weight" value={`${enrichedBooking.aircraft?.emptyWeight || 0} lbs`} />
-                    <DetailItem label="Empty Moment" value={`${enrichedBooking.aircraft?.emptyWeightMoment || 0}`} />
-                    <DetailItem label="Max Takeoff Weight" value={`${enrichedBooking.aircraft?.maxTakeoffWeight || 0} lbs`} />
-                    <DetailItem label="Max Landing Weight" value={`${enrichedBooking.aircraft?.maxLandingWeight || 0} lbs`} />
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Loading Stations</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {massAndBalance && Object.keys(massAndBalance).length > 1 ? (
-                        <div className="divide-y divide-border">
-                            {Object.entries(massAndBalance).map(([stationKey, values]) => {
-                                if (stationKey === 'basicEmpty') return null;
-                                const arm = (values.weight > 0 && values.moment > 0) ? (values.moment / values.weight).toFixed(2) : '0.00';
-                                return (
-                                    <div key={stationKey} className="grid grid-cols-3 gap-4 py-3">
-                                        <p className="font-medium">{camelToTitle(stationKey)}</p>
-                                        <p>{values.weight.toFixed(1)} lbs</p>
-                                        <p>{arm} in</p>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <p className="text-muted-foreground text-center py-4">No loading station data saved.</p>
-                    )}
-                </CardContent>
-            </Card>
-
+            {enrichedBooking.aircraft && (
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Mass &amp; Balance Calculator</CardTitle>
+                        <CardDescription>
+                            For {enrichedBooking.aircraft.tailNumber} on {format(new Date(enrichedBooking.date), 'PPP')}.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                       <MassBalanceCalculator 
+                            aircraft={enrichedBooking.aircraft}
+                            initialData={enrichedBooking.massAndBalance || undefined}
+                            onSave={handleMassBalanceSave}
+                        />
+                    </CardContent>
+                 </Card>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>
@@ -378,24 +327,6 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                     </CardContent>
                 </Card>
             </div>
-            
-            {enrichedBooking.aircraft && (
-              <Dialog open={isMassBalanceOpen} onOpenChange={setIsMassBalanceOpen}>
-                <DialogContent className="max-w-7xl">
-                    <DialogHeader>
-                        <DialogTitle>Mass &amp; Balance Calculator</DialogTitle>
-                        <DialogDescription>
-                            For {enrichedBooking.aircraft.tailNumber} on {format(new Date(enrichedBooking.date), 'PPP')}.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <MassBalanceCalculator 
-                        aircraft={enrichedBooking.aircraft}
-                        initialData={enrichedBooking.massAndBalance || undefined}
-                        onSave={handleMassBalanceSave}
-                    />
-                </DialogContent>
-              </Dialog>
-            )}
         </div>
     );
 }
