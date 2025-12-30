@@ -2,7 +2,7 @@
 'use client';
 
 import { use, useMemo, useState, useEffect } from 'react';
-import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase, useCollection, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection, getDocs, query, where } from 'firebase/firestore';
 import type { Booking, Photo, MassAndBalance } from '@/types/booking';
 import type { Aircraft } from '../../../assets/page';
@@ -12,12 +12,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { format, parse } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Check, Plane, User, FileText, Camera, ZoomIn, Scale } from 'lucide-react';
+import { ArrowLeft, Check, Plane, User, FileText, Camera, ZoomIn, Scale, Edit } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ResponsiveContainer, ScatterChart, CartesianGrid, XAxis, YAxis, Tooltip, Scatter, ReferenceDot } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
+import { MassBalanceCalculator } from '../../bookings/mass-balance-calculator';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface BookingDetailPageProps {
@@ -93,8 +95,11 @@ const camelToTitle = (camelCase: string) => {
 export default function BookingDetailPage({ params }: BookingDetailPageProps) {
     const resolvedParams = use(params);
     const firestore = useFirestore();
+    const { toast } = useToast();
     const tenantId = 'safeviate';
     const bookingId = resolvedParams.id;
+    
+    const [isMassBalanceOpen, setIsMassBalanceOpen] = useState(false);
 
     const bookingRef = useMemoFirebase(
         () => (firestore ? doc(firestore, 'tenants', tenantId, 'bookings', bookingId) : null),
@@ -180,6 +185,13 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
             isSafe
         };
     }, [enrichedBooking]);
+    
+    const handleMassBalanceSave = (data: MassAndBalance) => {
+        if (!bookingRef) return;
+        updateDocumentNonBlocking(bookingRef, { massAndBalance: data });
+        toast({ title: 'Mass & Balance Updated' });
+        setIsMassBalanceOpen(false);
+    };
 
 
     if (isLoading) {
@@ -244,30 +256,12 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Mass &amp; Balance</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {massAndBalance && Object.keys(massAndBalance).length > 0 ? (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                           {Object.entries(massAndBalance).map(([stationKey, values]) => (
-                                <DetailItem key={stationKey} label={camelToTitle(stationKey)}>
-                                    {values && typeof values.weight === 'number' && typeof values.moment === 'number' ? (
-                                        <p className="text-base">{values.weight.toFixed(1)} lbs @ {values.moment.toFixed(1)}</p>
-                                    ) : (
-                                        <p className="text-base text-muted-foreground">Invalid data</p>
-                                    )}
-                                </DetailItem>
-                           ))}
-                        </div>
-                    ) : (
-                        <p className="text-muted-foreground">No Mass & Balance calculation has been saved for this booking.</p>
-                    )}
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Chart</CardTitle>
+                    <div className="flex justify-between items-center">
+                        <CardTitle>Chart</CardTitle>
+                         <Button variant="outline" size="sm" onClick={() => setIsMassBalanceOpen(true)}>
+                             <Edit className="mr-2 h-4 w-4" /> Edit Mass &amp; Balance
+                         </Button>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     {cgData && enrichedBooking.aircraft?.cgEnvelope ? (
@@ -284,12 +278,12 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                             </ResponsiveContainer>
                         </div>
                     ) : (
-                        <p className="text-muted-foreground text-center py-10">Chart data not available.</p>
+                        <p className="text-muted-foreground text-center py-10">Chart data not available. Please complete Mass &amp; Balance.</p>
                     )}
                 </CardContent>
             </Card>
-            
-             <Card>
+
+            <Card>
                 <CardHeader>
                     <CardTitle>Aircraft Base Data</CardTitle>
                 </CardHeader>
@@ -310,7 +304,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                         <div className="divide-y divide-border">
                             {Object.entries(massAndBalance).map(([stationKey, values]) => {
                                 if (stationKey === 'basicEmpty') return null;
-                                const arm = (values.weight > 0) ? (values.moment / values.weight).toFixed(2) : '0.00';
+                                const arm = (values.weight > 0 && values.moment > 0) ? (values.moment / values.weight).toFixed(2) : '0.00';
                                 return (
                                     <div key={stationKey} className="grid grid-cols-3 gap-4 py-3">
                                         <p className="font-medium">{camelToTitle(stationKey)}</p>
@@ -384,7 +378,24 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                     </CardContent>
                 </Card>
             </div>
+            
+            {enrichedBooking.aircraft && (
+              <Dialog open={isMassBalanceOpen} onOpenChange={setIsMassBalanceOpen}>
+                <DialogContent className="max-w-7xl">
+                    <DialogHeader>
+                        <DialogTitle>Mass &amp; Balance Calculator</DialogTitle>
+                        <DialogDescription>
+                            For {enrichedBooking.aircraft.tailNumber} on {format(new Date(enrichedBooking.date), 'PPP')}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <MassBalanceCalculator 
+                        aircraft={enrichedBooking.aircraft}
+                        initialData={enrichedBooking.massAndBalance || undefined}
+                        onSave={handleMassBalanceSave}
+                    />
+                </DialogContent>
+              </Dialog>
+            )}
         </div>
     );
-
-    
+}
