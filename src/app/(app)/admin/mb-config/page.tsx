@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -7,6 +8,7 @@ import { useFirestore } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
 import { Save, Plus, Trash2, RotateCcw, Maximize, Fuel, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 const FUEL_WEIGHT_PER_GALLON = 6;
@@ -170,8 +172,7 @@ const WBCalculator = () => {
 
   const updateEnvelopePoint = (index: number, field: string, val: string) => {
     const newEnv = [...graphConfig.envelope];
-    // @ts-ignore
-    newEnv[index][field] = Number(val);
+    (newEnv[index] as any)[field] = Number(val);
     setGraphConfig({ ...graphConfig, envelope: newEnv });
   };
   const addEnvelopePoint = () => setGraphConfig({ ...graphConfig, envelope: [...graphConfig.envelope, { x: 0, y: 0 }] });
@@ -401,14 +402,12 @@ const WBCalculator = () => {
                 </ScatterChart>
               </ResponsiveContainer>
               
-              {/* --- UPDATED DISCLAIMER --- */}
               <p className="absolute bottom-20 left-1/2 transform -translate-x-1/2 text-red-600 font-extrabold text-sm md:text-base uppercase tracking-widest pointer-events-none whitespace-nowrap drop-shadow-md">
                 CONSULT AIRCRAFT POH BEFORE FLIGHT
               </p>
-              {/* --------------------------- */}
 
-              <div className={`absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 ${results.isSafe ? 'bg-green-600/90 text-white' : 'bg-red-600/90 text-white'}`}>
-                <div className={`w-2 h-2 rounded-full ${results.isSafe ? 'bg-white' : 'bg-white animate-pulse'}`}></div>
+              <div className={cn("absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2", results.isSafe ? 'bg-green-600/90 text-white' : 'bg-red-600/90 text-white')}>
+                <div className={cn("w-2 h-2 rounded-full", results.isSafe ? 'bg-white' : 'bg-white animate-pulse')}></div>
                 {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
               </div>
           </div>
@@ -419,3 +418,5 @@ const WBCalculator = () => {
 };
 
 export default WBCalculator;
+
+    
