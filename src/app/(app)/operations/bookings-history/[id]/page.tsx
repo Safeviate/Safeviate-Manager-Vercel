@@ -1,6 +1,7 @@
+
 'use client';
 
-import { use, useMemo, useState } from 'react';
+import { use, useMemo, useState, useEffect } from 'react';
 import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection, getDocs, query, where } from 'firebase/firestore';
 import type { Booking, Photo, MassAndBalance } from '@/types/booking';
@@ -295,3 +296,5 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
         </div>
     );
 }
+
+    
