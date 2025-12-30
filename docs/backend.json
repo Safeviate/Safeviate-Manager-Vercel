@@ -521,6 +521,10 @@
             "type": "string",
             "description": "The end time for the second part of an overnight booking (HH:mm)."
         },
+        "flightDetails": {
+          "type": "string",
+          "description": "Additional flight details, often from a logbook."
+        },
         "preFlight": {
             "type": "object",
             "description": "Pre-flight checklist data.",
@@ -566,18 +570,14 @@
         },
         "massAndBalance": {
             "type": "object",
-            "description": "Mass and Balance calculation data for the flight.",
-            "properties": {
-                "stationWeights": {
-                    "type": "object",
-                    "description": "A map of station IDs to their weights for this flight.",
-                    "additionalProperties": { "type": "number" }
+            "description": "A flat map of station names (camelCase) to their calculated weight and moment for the flight.",
+            "additionalProperties": {
+                "type": "object",
+                "properties": {
+                    "weight": { "type": "number" },
+                    "moment": { "type": "number" }
                 },
-                "totalWeight": { "type": "number" },
-                "totalMoment": { "type": "number" },
-                "centerOfGravity": { "type": "number" },
-                "isWithinLimits": { "type": "boolean" },
-                "calculatedAt": { "type": "string", "format": "date-time" }
+                "required": ["weight", "moment"]
             }
         }
       },

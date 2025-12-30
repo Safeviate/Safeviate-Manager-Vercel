@@ -1,352 +1,254 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useState, useEffect, useMemo, ChangeEvent } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { AlertCircle, Plus, Trash2 } from 'lucide-react';
-import type { Aircraft } from '../../assets/page';
-import type { AircraftModelProfile } from '@/types/aircraft';
+import { Trash2, Plus, FileJson, Save } from 'lucide-react';
 import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
-import { isPointInPolygon } from '@/lib/utils';
-import { updateBooking } from '../../operations/bookings/booking-functions';
-import { useToast } from '@/hooks/use-toast';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+import type { Aircraft } from '../../assets/page';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { isPointInPolygon } from '@/lib/utils';
+import type { Booking } from '@/types/booking';
 
 type Station = {
   id: number;
   name: string;
   weight: number;
   arm: number;
-  type: 'crew' | 'pax' | 'cargo' | 'fuel';
+  type: 'static' | 'editable' | 'fuel';
   gallons?: number;
   maxGallons?: number;
 };
 
-const camelCase = (str: string) => {
-  return str.replace(/(?:^\w|[A-Z]|\b\w)/g, (word, index) => 
-    index === 0 ? word.toLowerCase() : word.toUpperCase()
-  ).replace(/\s+/g, '');
+const toCamelCase = (str: string) => {
+  return str.replace(/(?:^\w|[A-Z]|\b\w)/g, (word, index) => {
+    return index === 0 ? word.toLowerCase() : word.toUpperCase();
+  }).replace(/\s+/g, '');
 };
 
 
-export function MassBalanceCalculator() {
+export default function MassBalanceCalculator() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const firestore = useFirestore();
   const { toast } = useToast();
 
   const aircraftId = searchParams.get('aircraftId');
-  const profileId = searchParams.get('profileId');
   const bookingId = searchParams.get('bookingId');
-  
-  const tenantId = 'safeviate';
-
-  const aircraftRef = useMemoFirebase(() => (firestore && aircraftId ? doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId) : null), [firestore, tenantId, aircraftId]);
-  const profileRef = useMemoFirebase(() => (firestore && profileId ? doc(firestore, `tenants/${tenantId}/massAndBalance`, profileId) : null), [firestore, tenantId, profileId]);
-  const bookingRef = useMemoFirebase(() => (firestore && bookingId ? doc(firestore, `tenants/${tenantId}/bookings`, bookingId) : null), [firestore, tenantId, bookingId]);
-
-  const { data: aircraft, isLoading: isLoadingAircraft } = useDoc<Aircraft>(aircraftRef);
-  const { data: profile, isLoading: isLoadingProfile } = useDoc<AircraftModelProfile>(profileRef);
-  const { data: booking, isLoading: isLoadingBooking } = useDoc(bookingRef);
-
+  const tenantId = 'safeviate'; // Hardcoded for now
 
   const [stations, setStations] = useState<Station[]>([]);
   const [cgEnvelope, setCgEnvelope] = useState<{ x: number, y: number }[]>([]);
+  const [xMin, setXMin] = useState(0);
+  const [xMax, setXMax] = useState(100);
+  const [yMin, setYMin] = useState(0);
+  const [yMax, setYMax] = useState(2500);
+
+  // --- Data Fetching ---
+  const aircraftRef = useMemoFirebase(
+    () => (firestore && aircraftId ? doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId) : null),
+    [firestore, tenantId, aircraftId]
+  );
+  const { data: aircraft, isLoading: isLoadingAircraft } = useDoc<Aircraft>(aircraftRef);
 
   useEffect(() => {
-    const selectedSource = profile || aircraft;
-    if (selectedSource) {
+    if (aircraft) {
       const initialStations: Station[] = [
-        { id: 1, name: 'Basic Empty Weight', weight: selectedSource.emptyWeight || 0, arm: (selectedSource.emptyWeightMoment || 0) / (selectedSource.emptyWeight || 1), type: 'crew' },
-        { id: 2, name: 'Front Seats', weight: 0, arm: selectedSource.stationArms?.frontSeats || 0, type: 'crew' },
-        { id: 3, name: 'Rear Seats', weight: 0, arm: selectedSource.stationArms?.rearSeats || 0, type: 'pax' },
-        { id: 4, name: 'Baggage 1', weight: 0, arm: selectedSource.stationArms?.baggage1 || 0, type: 'cargo' },
-        { id: 5, name: 'Baggage 2', weight: 0, arm: selectedSource.stationArms?.baggage2 || 0, type: 'cargo' },
-        { id: 6, name: 'Fuel', weight: 0, arm: selectedSource.stationArms?.fuel || 0, type: 'fuel', gallons: 0, maxGallons: 40 },
+        { id: 0, name: 'Basic Empty Weight', weight: aircraft.emptyWeight || 0, arm: aircraft.emptyWeightMoment ? (aircraft.emptyWeightMoment / (aircraft.emptyWeight || 1)) : 0, type: 'static' },
       ];
+      if (aircraft.stationArms?.frontSeats) {
+        initialStations.push({ id: 1, name: 'Front Seats', weight: 0, arm: aircraft.stationArms.frontSeats, type: 'editable' });
+      }
+      if (aircraft.stationArms?.rearSeats) {
+        initialStations.push({ id: 2, name: 'Rear Seats', weight: 0, arm: aircraft.stationArms.rearSeats, type: 'editable' });
+      }
+      if (aircraft.stationArms?.baggage1) {
+        initialStations.push({ id: 3, name: 'Baggage Area 1', weight: 0, arm: aircraft.stationArms.baggage1, type: 'editable' });
+      }
+      if (aircraft.stationArms?.baggage2) {
+        initialStations.push({ id: 4, name: 'Baggage Area 2', weight: 0, arm: aircraft.stationArms.baggage2, type: 'editable' });
+      }
+       if (aircraft.stationArms?.fuel) {
+        initialStations.push({ id: 5, name: 'Fuel', weight: 0, arm: aircraft.stationArms.fuel, type: 'fuel', gallons: 0, maxGallons: 50 }); // Assuming max 50 for now
+      }
+
       setStations(initialStations);
-      setCgEnvelope(selectedSource.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || []);
+
+      if (aircraft.cgEnvelope) {
+        setCgEnvelope(aircraft.cgEnvelope.map(p => ({ x: p.cg, y: p.weight })));
+        const xValues = aircraft.cgEnvelope.map(p => p.cg);
+        const yValues = aircraft.cgEnvelope.map(p => p.weight);
+        setXMin(Math.min(...xValues) - 5);
+        setXMax(Math.max(...xValues) + 5);
+        setYMin(Math.min(...yValues) - 200);
+        setYMax(aircraft.maxTakeoffWeight || Math.max(...yValues) + 200);
+      }
     }
-  }, [aircraft, profile]);
+  }, [aircraft]);
 
-  // Load from booking if it exists and has data
-  useEffect(() => {
-    if (booking?.massAndBalance) {
-        const massAndBalanceData = booking.massAndBalance;
-        setStations(prevStations => {
-            const newStations = [...prevStations];
-            Object.keys(massAndBalanceData).forEach(stationKey => {
-                const stationData = massAndBalanceData[stationKey];
-                const stationIndex = newStations.findIndex(s => camelCase(s.name) === stationKey);
-                if (stationIndex !== -1) {
-                    newStations[stationIndex].weight = stationData.weight;
-                    if (newStations[stationIndex].type === 'fuel') {
-                        newStations[stationIndex].gallons = stationData.weight / FUEL_WEIGHT_PER_GALLON;
-                    }
-                }
-            });
-            return newStations;
-        });
+
+  // --- Calculations ---
+  const totals = useMemo(() => {
+    const totalWeight = stations.reduce((acc, station) => acc + station.weight, 0);
+    const totalMoment = stations.reduce((acc, station) => acc + station.weight * station.arm, 0);
+    const centerOfGravity = totalWeight > 0 ? totalMoment / totalWeight : 0;
+    return { totalWeight, totalMoment, centerOfGravity };
+  }, [stations]);
+
+  const isWithinLimits = useMemo(() => {
+    const point = { x: totals.centerOfGravity, y: totals.totalWeight };
+    const maxWeight = aircraft?.maxTakeoffWeight;
+    if (maxWeight && totals.totalWeight > maxWeight) {
+        return false;
     }
-  }, [booking]);
+    return isPointInPolygon(point, cgEnvelope);
+  }, [totals, cgEnvelope, aircraft?.maxTakeoffWeight]);
 
 
-  const handleWeightChange = (id: number, weight: number) => {
-    setStations(stations.map(s => s.id === id ? { ...s, weight, gallons: s.type === 'fuel' ? weight / FUEL_WEIGHT_PER_GALLON : s.gallons } : s));
+  // --- Event Handlers ---
+  const handleWeightChange = (id: number, newWeight: number) => {
+    setStations(stations.map(s => (s.id === id ? { ...s, weight: newWeight } : s)));
   };
   
+  const handleArmChange = (id: number, newArm: number) => {
+    setStations(stations.map(s => (s.id === id ? { ...s, arm: newArm } : s)));
+  };
+
   const handleGallonsChange = (id: number, gallons: number) => {
-    setStations(stations.map(s => s.id === id ? { ...s, gallons, weight: gallons * FUEL_WEIGHT_PER_GALLON } : s));
+    setStations(stations.map(s => (s.id === id ? { ...s, gallons, weight: gallons * FUEL_WEIGHT_PER_GALLON } : s)));
   };
-  
-  const addStation = () => {
-    const newId = stations.length > 0 ? Math.max(...stations.map(s => s.id)) + 1 : 1;
-    setStations([...stations, { id: newId, name: 'New Station', weight: 0, arm: 0, type: 'cargo' }]);
+
+  const addStation = (type: 'editable' | 'fuel') => {
+    const newId = stations.length > 0 ? Math.max(...stations.map(s => s.id)) + 1 : 0;
+    setStations([...stations, { id: newId, name: 'New Station', weight: 0, arm: 0, type }]);
   };
 
   const removeStation = (id: number) => {
     setStations(stations.filter(s => s.id !== id));
   };
-
-  const totalWeight = useMemo(() => stations.reduce((acc, s) => acc + (s.weight || 0), 0), [stations]);
-  const totalMoment = useMemo(() => stations.reduce((acc, s) => acc + (s.weight || 0) * (s.arm || 0), 0), [stations]);
-  const centerOfGravity = useMemo(() => totalWeight > 0 ? totalMoment / totalWeight : 0, [totalWeight, totalMoment]);
   
-  const takeoffCG = { x: centerOfGravity, y: totalWeight };
-  const isWithinLimits = isPointInPolygon(takeoffCG, cgEnvelope);
-
-  const chartData = useMemo(() => {
-    if (cgEnvelope.length === 0) return [];
-    
-    // Find min/max for chart axis
-    const xMin = Math.min(...cgEnvelope.map(p => p.x), centerOfGravity);
-    const xMax = Math.max(...cgEnvelope.map(p => p.x), centerOfGravity);
-    const yMin = Math.min(...cgEnvelope.map(p => p.y), totalWeight);
-    const yMax = Math.max(...cgEnvelope.map(p => p.y), totalWeight);
-
-    const data = [...cgEnvelope, {x: centerOfGravity, y: totalWeight, name: 'Takeoff CG'}];
-    return data;
-
-  }, [cgEnvelope, centerOfGravity, totalWeight]);
-
-
-  const handleSaveToBooking = async () => {
-      if (!firestore || !bookingId || !aircraft) {
-        toast({
-            variant: "destructive",
-            title: "Cannot Save",
-            description: "No booking is associated with this calculation.",
-        });
+  const handleSaveToBooking = () => {
+    if (!firestore || !bookingId) {
+        toast({ variant: "destructive", title: "Error", description: "Booking not found or database not available." });
         return;
-      }
+    }
 
-      const massAndBalanceObject = stations.reduce((acc, station) => {
-        if (station.name !== 'Basic Empty Weight') {
-            const key = camelCase(station.name);
-            acc[key] = {
-                weight: station.weight || 0,
-                moment: (station.weight || 0) * (station.arm || 0)
-            };
-        }
+    const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, bookingId);
+    
+    const massAndBalanceData = stations.reduce((acc, station) => {
+        const key = toCamelCase(station.name);
+        acc[key] = {
+            weight: station.weight,
+            moment: station.weight * station.arm,
+        };
         return acc;
-      }, {} as { [key: string]: { weight: number, moment: number } });
-      
-      try {
-        await updateBooking({
-          firestore,
-          tenantId,
-          bookingId,
-          aircraft,
-          updateData: {
-            massAndBalance: massAndBalanceObject,
-          }
-        });
-        toast({
-          title: "Saved to Booking",
-          description: "Mass & Balance data has been saved to the booking.",
-        });
-      } catch (error: any) {
-        toast({
-            variant: "destructive",
-            title: "Save Failed",
-            description: error.message || "An unknown error occurred.",
-        });
-      }
+    }, {} as Record<string, { weight: number, moment: number }>);
+    
+
+    updateDocumentNonBlocking(bookingRef, { massAndBalance: massAndBalanceData });
+
+    toast({
+      title: "Saved to Booking",
+      description: `Mass & Balance data has been saved to booking #${bookingId}.` // A real app would show the booking number
+    });
   };
-  
-  if (isLoadingAircraft || isLoadingProfile || isLoadingBooking) {
-      return (
-          <div className="space-y-6">
-              <Skeleton className="h-10 w-1/4" />
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                  <Skeleton className="h-96" />
-                  <Skeleton className="h-96" />
-              </div>
-          </div>
-      )
+
+  if (isLoadingAircraft) {
+      return <div className='space-y-6'>
+          <Skeleton className='h-96 w-full' />
+          <Skeleton className='h-64 w-full' />
+      </div>
   }
 
-  const selectedSource = profile || aircraft;
-
-  if (!selectedSource) {
-      return <div className="text-center py-10"><p>Please select an aircraft or profile to begin.</p></div>
+  if (!aircraft) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-muted-foreground">Please select an aircraft to begin.</p>
+        <p className="text-sm text-muted-foreground">(Add `?aircraftId=your-id` to the URL)</p>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      {/* Loading Stations & Totals */}
+      <div className="lg:col-span-2 space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Loading Stations</CardTitle>
-            <CardDescription>Enter weights and fuel amounts to calculate mass and balance.</CardDescription>
+            <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => addStation('fuel')}><FileJson className="mr-2 h-4 w-4" /> Add Fuel</Button>
+                <Button variant="outline" size="sm" onClick={() => addStation('editable')}><Plus className="mr-2 h-4 w-4" /> Add</Button>
+                {bookingId && <Button size="sm" onClick={handleSaveToBooking}><Save className="mr-2 h-4 w-4" /> Save to Booking</Button>}
+            </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Station</TableHead>
-                  <TableHead className='text-right'>Weight (lbs)</TableHead>
-                  <TableHead className='text-right'>Arm (in)</TableHead>
-                  <TableHead className='text-right'>Moment (lb-in)</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stations.map((station) => (
-                  <TableRow key={station.id}>
-                    <TableCell className="font-medium">{station.name}</TableCell>
-                    <TableCell className='text-right'>
-                       {station.type === 'fuel' ? (
-                            <Input
-                                type="number"
-                                value={Math.round(station.weight)}
-                                readOnly
-                                className="w-24 ml-auto text-right bg-muted"
-                            />
-                       ) : (
-                            <Input
-                                type="number"
-                                value={station.weight}
-                                onChange={(e) => handleWeightChange(station.id, parseFloat(e.target.value))}
-                                className="w-24 ml-auto text-right"
-                                readOnly={station.name === 'Basic Empty Weight'}
-                            />
-                       )}
-                    </TableCell>
-                    <TableCell className='text-right'>{station.arm.toFixed(2)}</TableCell>
-                    <TableCell className='text-right'>{((station.weight || 0) * (station.arm || 0)).toFixed(0)}</TableCell>
-                    <TableCell>
-                      {station.name !== 'Basic Empty Weight' && (
-                        <Button variant="ghost" size="icon" className='h-8 w-8 text-destructive' onClick={() => removeStation(station.id)}>
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-          <CardFooter className="flex justify-between items-center">
-            <div>
-              <Button variant="outline" onClick={addStation}>
-                <Plus className="mr-2" /> Add Station
-              </Button>
-            </div>
-            <div className="flex gap-4 items-center">
-              <div className="flex gap-2 items-center">
-                <Label htmlFor="fuel-gallons">Fuel (Gal)</Label>
-                 <Input
-                    id="fuel-gallons"
-                    type="number"
-                    value={stations.find(s => s.type === 'fuel')?.gallons || 0}
-                    onChange={(e) => handleGallonsChange(stations.find(s => s.type === 'fuel')!.id, parseFloat(e.target.value))}
-                    className="w-24"
-                />
+            {stations.map(station => (
+              <div key={station.id} className="grid grid-cols-[1fr,100px,100px,100px,auto] items-center gap-2 mb-2">
+                <Input value={station.name} readOnly={station.type !== 'editable'} className={station.type === 'static' ? 'font-bold bg-muted' : ''} />
+                <Input type="number" value={station.weight.toString()} onChange={(e) => handleWeightChange(station.id, parseFloat(e.target.value) || 0)} readOnly={station.type === 'static' || station.type === 'fuel'} />
+                <Input type="number" value={station.arm.toString()} onChange={(e) => handleArmChange(station.id, parseFloat(e.target.value) || 0)} readOnly={station.type !== 'editable'} />
+                <Input value={(station.weight * station.arm).toFixed(2)} readOnly className="bg-muted" />
+                {station.type === 'editable' ? (
+                  <Button variant="ghost" size="icon" onClick={() => removeStation(station.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                ) : <div className="w-10"></div>}
+
+                {station.type === 'fuel' && (
+                    <div className="col-start-2 col-span-2 flex items-center gap-2 mt-1">
+                        <Label>Gallons</Label>
+                        <Input type="number" value={station.gallons?.toString()} onChange={e => handleGallonsChange(station.id, parseFloat(e.target.value) || 0)} />
+                        <span className="text-sm text-muted-foreground">Max: {station.maxGallons}</span>
+                    </div>
+                )}
               </div>
-              <Button>Add Fuel</Button>
-               {bookingId && <Button>Save</Button>}
-            </div>
-          </CardFooter>
+            ))}
+          </CardContent>
         </Card>
-
-        <div className="space-y-6">
-            <Card>
-            <CardHeader>
-                <CardTitle>Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <Table>
-                <TableBody>
-                    <TableRow>
-                        <TableCell className="font-medium">Total Weight</TableCell>
-                        <TableCell className="text-right">{totalWeight.toFixed(2)} lbs</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell className="font-medium">Total Moment</TableCell>
-                        <TableCell className="text-right">{totalMoment.toFixed(0)} lb-in</TableCell>
-                    </TableRow>
-                     <TableRow>
-                        <TableCell className="font-medium">Center of Gravity</TableCell>
-                        <TableCell className="text-right">{centerOfGravity.toFixed(2)} in</TableCell>
-                    </TableRow>
-                </TableBody>
-                </Table>
-                <div className="mt-4">
-                    {!isWithinLimits ? (
-                        <Alert variant="destructive">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Out of Limits</AlertTitle>
-                            <AlertDescription>
-                            The calculated center of gravity is outside the permissible envelope.
-                            </AlertDescription>
-                        </Alert>
-                    ) : (
-                         <Alert>
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Within Limits</AlertTitle>
-                            <AlertDescription>
-                            The calculated center of gravity is within the permissible envelope.
-                            </AlertDescription>
-                        </Alert>
-                    )}
-                </div>
+        <Card>
+            <CardHeader><CardTitle>Totals</CardTitle></CardHeader>
+            <CardContent className="grid grid-cols-3 gap-4">
+                 <div><Label>Total Weight (lbs)</Label><Input value={totals.totalWeight.toFixed(2)} readOnly /></div>
+                 <div><Label>Total Moment (lbs-in)</Label><Input value={totals.totalMoment.toFixed(2)} readOnly /></div>
+                 <div><Label>Center of Gravity (in)</Label><Input value={totals.centerOfGravity.toFixed(2)} readOnly /></div>
             </CardContent>
-             {bookingId && (
-                <CardFooter>
-                  <Button className="w-full" onClick={handleSaveToBooking}>Save to Booking</Button>
-                </CardFooter>
-              )}
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>CG Envelope</CardTitle>
-                </CardHeader>
-                <CardContent className="h-96">
-                    <ResponsiveContainer width="100%" height="100%">
-                    <LineChart margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" dataKey="x" name="CG (in)" unit=" in" domain={['dataMin - 2', 'dataMax + 2']} label={{ value: "Center of Gravity (in)", position: "bottom" }} />
-                        <YAxis type="number" dataKey="y" name="Weight (lbs)" unit=" lbs" domain={['dataMin - 100', 'dataMax + 100']} label={{ value: "Weight (lbs)", angle: -90, position: "insideLeft" }}/>
-                        <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                        <Legend verticalAlign="top" height={36} />
-                        <Line data={cgEnvelope} dataKey="y" name="CG Envelope" stroke="#8884d8" dot={false} type="monotone" />
-                        <Line data={[{x: centerOfGravity, y: totalWeight}]} dataKey="y" name="Takeoff CG" stroke="#82ca9d" strokeWidth={5} dot={{ r: 5 }} />
-
-                    </LineChart>
-                    </ResponsiveContainer>
-                </CardContent>
-            </Card>
-        </div>
+        </Card>
       </div>
+
+      {/* Envelope Chart */}
+      <Card className="lg:col-span-1">
+        <CardHeader>
+          <CardTitle>CG Envelope</CardTitle>
+           <CardDescription className={isWithinLimits ? 'text-green-600' : 'text-destructive'}>
+            {isWithinLimits ? 'Within operational limits' : 'OUTSIDE operational limits'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+             <svg viewBox={`${xMin} ${yMin} ${xMax-xMin} ${yMax-yMin}`} className="w-full h-auto border rounded-lg">
+                {/* Flip vertically */}
+                <g transform={`scale(1, -1) translate(0, -${yMax + yMin})`}>
+                    {/* Draw Polygon */}
+                    <polygon points={cgEnvelope.map(p => `${p.x},${p.y}`).join(' ')} fill="hsl(var(--primary) / 0.2)" stroke="hsl(var(--primary))" strokeWidth="0.5" />
+                    
+                    {/* Max takeoff weight line */}
+                    {aircraft?.maxTakeoffWeight && (
+                        <line x1={xMin} y1={aircraft.maxTakeoffWeight} x2={xMax} y2={aircraft.maxTakeoffWeight} stroke="red" strokeWidth="0.5" strokeDasharray="2 2" />
+                    )}
+
+                    {/* CG Point */}
+                    <circle cx={totals.centerOfGravity} cy={totals.totalWeight} r="1" fill={isWithinLimits ? 'green' : 'red'} />
+                </g>
+            </svg>
+        </CardContent>
+      </Card>
     </div>
   );
 }
