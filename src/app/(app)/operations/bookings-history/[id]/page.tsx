@@ -15,6 +15,9 @@ import { ArrowLeft, Check, Plane, User, FileText, Camera, ZoomIn, Scale } from '
 import Link from 'next/link';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ResponsiveContainer, ScatterChart, CartesianGrid, XAxis, YAxis, Tooltip, Scatter, ReferenceDot } from 'recharts';
+import { isPointInPolygon } from '@/lib/utils';
+
 
 interface BookingDetailPageProps {
     params: { id: string };
@@ -152,6 +155,32 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
         };
     }, [booking, aircrafts, allUsersMap]);
 
+    const cgData = useMemo(() => {
+        if (!enrichedBooking?.massAndBalance || !enrichedBooking.aircraft?.emptyWeight) return null;
+
+        let totalWeight = enrichedBooking.aircraft.emptyWeight;
+        let totalMoment = enrichedBooking.aircraft.emptyWeightMoment || 0;
+
+        for (const stationKey in enrichedBooking.massAndBalance) {
+            if (stationKey !== 'basicEmpty') {
+                totalWeight += enrichedBooking.massAndBalance[stationKey].weight;
+                totalMoment += enrichedBooking.massAndBalance[stationKey].moment;
+            }
+        }
+        
+        const cg = totalWeight > 0 ? totalMoment / totalWeight : 0;
+        const envelope = enrichedBooking.aircraft.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
+        const isSafe = isPointInPolygon({ x: cg, y: totalWeight }, envelope);
+
+        return {
+            cg,
+            weight: totalWeight,
+            envelope,
+            isSafe
+        };
+    }, [enrichedBooking]);
+
+
     if (isLoading) {
         return <div className="space-y-6">
             <Skeleton className="h-10 w-48" />
@@ -231,6 +260,30 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                         </div>
                     ) : (
                         <p className="text-muted-foreground">No Mass & Balance calculation has been saved for this booking.</p>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Chart</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {cgData && enrichedBooking.aircraft?.cgEnvelope ? (
+                         <div className="h-96 w-full">
+                            <ResponsiveContainer>
+                                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={['dataMin - 2', 'dataMax + 2']} />
+                                    <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={['dataMin - 100', 'dataMax + 100']} />
+                                    <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                                    <Scatter name="Envelope" data={cgData.envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))' }} shape={() => null} />
+                                    <ReferenceDot x={cgData.cg} y={cgData.weight} r={10} fill={cgData.isSafe ? "hsl(var(--primary))" : "hsl(var(--destructive))"} stroke="white" />
+                                </ScatterChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ) : (
+                        <p className="text-muted-foreground text-center py-10">Chart data not available.</p>
                     )}
                 </CardContent>
             </Card>
