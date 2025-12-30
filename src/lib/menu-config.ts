@@ -222,6 +222,11 @@ export const menuConfig: MenuItem[] = [
         description: 'Enable or disable application features.',
       },
       {
+        href: '/admin/mb-config',
+        label: 'M&B Configuration',
+        description: 'Configure mass and balance profiles.',
+      },
+      {
         href: '/admin/database',
         label: 'Database',
         description: 'Manage database seeding and setup.',
