@@ -1,63 +1,72 @@
 
-
 'use client';
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
-import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
-import type { Aircraft, AircraftModelProfile, Station } from '@/types/aircraft';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
-import { useSearchParams } from 'next/navigation';
-import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, LabelList } from 'recharts';
+import type { Aircraft, AircraftModelProfile, Station } from '@/types/aircraft';
+import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
 import { isPointInPolygon } from '@/lib/utils';
-import { AlertCircle, PlusCircle, Save, Trash2, Weight } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from '@/components/ui/dialog';
+import { ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, Tooltip, ReferenceLine, CartesianGrid, Polygon } from 'recharts';
+import { PlusCircle, Trash2, Save, ArrowRight, FolderDown } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
+
+// --- Type Definitions ---
 
 const stationSchema = z.object({
   id: z.number(),
-  name: z.string().min(1, 'Name is required'),
-  weight: z.number().min(0, 'Weight must be positive'),
-  arm: z.number(),
+  name: z.string().min(1, "Name is required"),
+  weight: z.number({ coerce: true }).min(0, "Must be non-negative"),
+  arm: z.number({ coerce: true }),
   type: z.enum(['weight', 'fuel']),
-  gallons: z.number().optional(),
+  gallons: z.number({ coerce: true }).optional(),
   maxGallons: z.number().optional(),
 });
 
 type StationFormValues = z.infer<typeof stationSchema>;
 
-// Helper to convert station name to camelCase
-const toCamelCase = (str: string) => {
-  return str.replace(/(?:^\w|[A-Z]|\b\w)/g, (word, index) => {
-    return index === 0 ? word.toLowerCase() : word.toUpperCase();
-  }).replace(/\s+/g, '');
+const ZodAircraftModelProfile = z.object({
+  id: z.string().optional(),
+  profileName: z.string().min(1, "Profile name is required"),
+  stations: z.array(stationSchema),
+  cgEnvelope: z.array(z.object({ x: z.number(), y: z.number() })).optional(),
+    xMin: z.number({ coerce: true }).optional(),
+    xMax: z.number({ coerce: true }).optional(),
+    yMin: z.number({ coerce: true }).optional(),
+    yMax: z.number({ coerce: true }).optional(),
+});
+
+// --- Helper Functions ---
+
+const camelCase = (str: string) => {
+    if (!str) return '';
+    return str.replace(/(?:^\w|[A-Z]|\b\w)/g, (word, index) => 
+        index === 0 ? word.toLowerCase() : word.toUpperCase()
+    ).replace(/\s+/g, '');
 };
 
 
-export function MassBalanceCalculator({ aircraft, profile }: { aircraft: Aircraft; profile: AircraftModelProfile }) {
+// --- Main Component ---
+
+interface MassBalanceCalculatorProps {
+  aircraft: Aircraft;
+  profile?: AircraftModelProfile | null;
+  onProfileSave: (profileData: Omit<AircraftModelProfile, 'id'>) => void;
+  bookingId?: string | null;
+  tenantId: string;
+}
+
+export function MassBalanceCalculator({ aircraft, profile, onProfileSave, bookingId, tenantId }: MassBalanceCalculatorProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const searchParams = useSearchParams();
-  const bookingId = searchParams.get('bookingId');
-  const tenantId = 'safeviate';
-
   const [stations, setStations] = useState<Station[]>([]);
   const [totalWeight, setTotalWeight] = useState(0);
   const [totalMoment, setTotalMoment] = useState(0);
@@ -66,60 +75,54 @@ export function MassBalanceCalculator({ aircraft, profile }: { aircraft: Aircraf
   const [isNewProfileDialogOpen, setIsNewProfileDialogOpen] = useState(false);
   const [newProfileName, setNewProfileName] = useState('');
 
-
   useEffect(() => {
-    const initialStations = profile.stations.map(station => ({
-      ...station,
-      weight: 0,
-      gallons: station.type === 'fuel' ? 0 : undefined
-    }));
-    setStations(initialStations);
-  }, [profile]);
-
-  useEffect(() => {
-    const { emptyWeight = 0, emptyWeightMoment = 0 } = aircraft;
-    let currentWeight = emptyWeight;
-    let currentMoment = emptyWeightMoment;
-
-    stations.forEach(station => {
-      currentWeight += station.weight;
-      currentMoment += station.weight * station.arm;
-    });
-
-    setTotalWeight(currentWeight);
-    setTotalMoment(currentMoment);
-
-    const cg = currentWeight > 0 ? currentMoment / currentWeight : 0;
-    setCenterOfGravity(cg);
-
-    // Check envelope
-    if (profile.cgEnvelope && profile.cgEnvelope.length > 0) {
-      const point = { x: cg, y: currentWeight };
-      setIsWithinLimits(isPointInPolygon(point, profile.cgEnvelope));
+    if (profile) {
+      setStations(profile.stations);
     } else {
-        setIsWithinLimits(true); // No envelope defined, assume it's within limits
+      // Default stations if no profile exists
+      setStations([
+        { id: 1, name: 'Basic Empty Weight', weight: aircraft.emptyWeight || 0, arm: (aircraft.emptyWeightMoment && aircraft.emptyWeight) ? aircraft.emptyWeightMoment / aircraft.emptyWeight : 0, type: 'weight' },
+        { id: 2, name: 'Front Seats', weight: 0, arm: aircraft.stationArms?.frontSeats || 0, type: 'weight' },
+        { id: 3, name: 'Rear Seats', weight: 0, arm: aircraft.stationArms?.rearSeats || 0, type: 'weight' },
+        { id: 4, name: 'Fuel', weight: 0, arm: aircraft.stationArms?.fuel || 0, type: 'fuel', gallons: 0, maxGallons: 50 },
+        { id: 5, name: 'Baggage 1', weight: 0, arm: aircraft.stationArms?.baggage1 || 0, type: 'weight' },
+      ]);
     }
-  }, [stations, aircraft]);
-
-  const handleWeightChange = (index: number, newWeight: number) => {
-    const newStations = [...stations];
-    newStations[index].weight = newWeight;
-
-    // If it's a fuel station, update gallons as well
-    if (newStations[index].type === 'fuel') {
-      newStations[index].gallons = parseFloat((newWeight / FUEL_WEIGHT_PER_GALLON).toFixed(2));
-    }
-    setStations(newStations);
-  };
+  }, [profile, aircraft]);
   
-  const handleGallonsChange = (index: number, newGallons: number) => {
-    const newStations = [...stations];
-    const maxGallons = newStations[index].maxGallons || Infinity;
-    const clampedGallons = Math.min(newGallons, maxGallons);
+  useEffect(() => {
+    const newTotalWeight = stations.reduce((acc, station) => acc + (station.weight || 0), 0);
+    const newTotalMoment = stations.reduce((acc, station) => acc + (station.weight || 0) * (station.arm || 0), 0);
+    const newCg = newTotalWeight > 0 ? newTotalMoment / newTotalWeight : 0;
+    
+    setTotalWeight(newTotalWeight);
+    setTotalMoment(newTotalMoment);
+    setCenterOfGravity(newCg);
 
-    newStations[index].gallons = clampedGallons;
-    newStations[index].weight = parseFloat((clampedGallons * FUEL_WEIGHT_PER_GALLON).toFixed(2));
-    setStations(newStations);
+    if (profile?.cgEnvelope && profile.cgEnvelope.length > 2) {
+      setIsWithinLimits(isPointInPolygon({ x: newCg, y: newTotalWeight }, profile.cgEnvelope));
+    } else {
+        setIsWithinLimits(true); // Default to true if no envelope is defined
+    }
+  }, [stations, profile]);
+
+
+  const handleStationChange = (id: number, field: keyof Station, value: any) => {
+    setStations(prevStations =>
+      prevStations.map(station => {
+        if (station.id === id) {
+          const updatedStation = { ...station, [field]: value };
+          if (field === 'gallons' && station.type === 'fuel') {
+            updatedStation.weight = value * FUEL_WEIGHT_PER_GALLON;
+          }
+          if (field === 'weight' && station.type === 'fuel') {
+            updatedStation.gallons = value / FUEL_WEIGHT_PER_GALLON;
+          }
+          return updatedStation;
+        }
+        return station;
+      })
+    );
   };
   
   const handleSaveToBooking = () => {
@@ -134,18 +137,21 @@ export function MassBalanceCalculator({ aircraft, profile }: { aircraft: Aircraf
 
     const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', bookingId);
     
-    // Correctly create a flat object with camelCase keys
-    const massAndBalanceData = stations.reduce((acc, station) => {
-        const key = toCamelCase(station.name);
-        acc[key] = {
+    const weights = stations.reduce((acc, station) => {
+        acc[station.id] = {
             weight: station.weight,
             moment: station.weight * station.arm,
         };
         return acc;
-    }, {} as { [key: string]: { weight: number, moment: number } });
+    }, {} as { [key: number]: { weight: number, moment: number } });
 
     const dataToSave = {
-        massAndBalance: massAndBalanceData,
+        massAndBalance: {
+            calculatedAt: new Date().toISOString(),
+            centerOfGravity: centerOfGravity,
+            isWithinLimits: isWithinLimits,
+            weights, // Changed from stationWeights to weights
+        }
     };
 
     updateDocumentNonBlocking(bookingRef, dataToSave);
@@ -156,62 +162,36 @@ export function MassBalanceCalculator({ aircraft, profile }: { aircraft: Aircraf
     });
   };
 
-  const handleSaveAsNewProfile = () => {
-    if (!firestore || !newProfileName.trim()) {
-        toast({ variant: "destructive", title: "Name Required", description: "Please enter a name for the new profile." });
+  const handleSaveAsProfile = () => {
+    if (!newProfileName.trim()) {
+        toast({ variant: 'destructive', title: 'Name Required', description: 'Please enter a name for the new profile.' });
         return;
     }
 
-    const newProfile: Omit<AircraftModelProfile, 'id'> = {
-        profileName: newProfileName,
-        stations: stations.map(({ id, name, arm, type, maxGallons }) => ({ // Only save the structure, not the weights/gallons
-          id,
-          name,
-          arm,
-          type,
-          maxGallons,
-          weight: 0
-        })),
-        cgEnvelope: profile.cgEnvelope,
-        xMin: profile.xMin,
-        xMax: profile.xMax,
-        yMin: profile.yMin,
-        yMax: profile.yMax,
+    const profileData = {
+      profileName: newProfileName,
+      stations: stations,
+      cgEnvelope: profile?.cgEnvelope,
+      xMin: profile?.xMin,
+      xMax: profile?.xMax,
+      yMin: profile?.yMin,
+      yMax: profile?.yMax,
     };
-
-    const profilesCollection = collection(firestore, 'tenants', tenantId, 'massAndBalance');
-    addDocumentNonBlocking(profilesCollection, newProfile);
-    
-    toast({ title: 'Profile Saved', description: `New M&B profile "${newProfileName}" has been created.` });
+    onProfileSave(profileData);
     setIsNewProfileDialogOpen(false);
     setNewProfileName('');
-  }
-
-  const addStation = () => {
-    setStations([
-      ...stations,
-      { id: stations.length, name: 'New Station', weight: 0, arm: 0, type: 'weight' },
-    ]);
+    toast({ title: 'Profile Saved', description: `Profile "${newProfileName}" has been created.` });
   };
 
-  const removeStation = (index: number) => {
-    const newStations = stations.filter((_, i) => i !== index);
-    setStations(newStations);
-  };
-  
-  const handleStationFieldChange = (index: number, field: keyof Station, value: any) => {
-    const newStations = [...stations];
-    const station = newStations[index];
-    (station as any)[field] = value;
-    setStations(newStations);
-  };
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <>
       <Card>
         <CardHeader>
-          <CardTitle>Loading Stations</CardTitle>
-          <CardDescription>Enter weights and fuel quantities for your flight.</CardDescription>
+          <CardTitle>Mass & Balance Calculator</CardTitle>
+          <CardDescription>
+            For aircraft {aircraft.tailNumber}. All weights in lbs, arms in inches.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -219,161 +199,91 @@ export function MassBalanceCalculator({ aircraft, profile }: { aircraft: Aircraf
               <TableRow>
                 <TableHead className="w-1/3">Station</TableHead>
                 <TableHead>Weight (lbs)</TableHead>
-                <TableHead>Arm</TableHead>
-                <TableHead>Moment</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {stations.some(s => s.type === 'fuel') && <TableHead>Gallons</TableHead>}
+                <TableHead>Arm (in)</TableHead>
+                <TableHead>Moment (lb-in)</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow>
-                <TableCell className="font-medium">Basic Empty Weight</TableCell>
-                <TableCell>{aircraft.emptyWeight?.toFixed(2)}</TableCell>
-                <TableCell>{aircraft.emptyWeight && aircraft.emptyWeightMoment ? (aircraft.emptyWeightMoment / aircraft.emptyWeight).toFixed(2) : 'N/A'}</TableCell>
-                <TableCell>{aircraft.emptyWeightMoment?.toFixed(2)}</TableCell>
-                <TableCell></TableCell>
-              </TableRow>
-              {stations.map((station, index) => (
+              {stations.map(station => (
                 <TableRow key={station.id}>
+                  <TableCell className="font-medium">{station.name}</TableCell>
                   <TableCell>
-                      <Input value={station.name} onChange={e => handleStationFieldChange(index, 'name', e.target.value)} className="font-medium bg-transparent border-0 pl-0 focus-visible:ring-1" />
+                    <Input
+                      type="number"
+                      value={station.weight.toFixed(2)}
+                      onChange={e => handleStationChange(station.id, 'weight', parseFloat(e.target.value) || 0)}
+                      className="w-28"
+                      disabled={station.type === 'fuel' || station.name === 'Basic Empty Weight'}
+                    />
                   </TableCell>
-                  <TableCell>
-                    {station.type === 'fuel' ? (
-                       <div className="flex items-center gap-2">
-                           <Input
-                               type="number"
-                               value={station.gallons}
-                               onChange={(e) => handleGallonsChange(index, parseFloat(e.target.value))}
-                               className="w-24"
-                               max={station.maxGallons}
-                           />
-                           <span className="text-muted-foreground text-xs">gal</span>
-                       </div>
-                    ) : (
-                       <Input
-                           type="number"
-                           value={station.weight}
-                           onChange={(e) => handleWeightChange(index, parseFloat(e.target.value))}
-                           className="w-24"
-                       />
-                    )}
-                  </TableCell>
-                  <TableCell>
-                      <Input type="number" value={station.arm} onChange={e => handleStationFieldChange(index, 'arm', parseFloat(e.target.value))} className="w-24 bg-transparent border-0 pl-0 focus-visible:ring-1" />
-                  </TableCell>
+                  {stations.some(s => s.type === 'fuel') && (
+                    <TableCell>
+                      {station.type === 'fuel' ? (
+                        <Input
+                          type="number"
+                          value={station.gallons?.toFixed(2) || 0}
+                          onChange={e => handleStationChange(station.id, 'gallons', parseFloat(e.target.value) || 0)}
+                          className="w-28"
+                        />
+                      ) : <span className="text-muted-foreground">-</span>}
+                    </TableCell>
+                  )}
+                  <TableCell>{station.arm.toFixed(2)}</TableCell>
                   <TableCell>{(station.weight * station.arm).toFixed(2)}</TableCell>
-                  <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => removeStation(index)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          <Button variant="outline" size="sm" onClick={addStation} className="mt-4">
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Station
-          </Button>
         </CardContent>
-        <CardFooter className="flex justify-between border-t pt-6">
-          <Dialog open={isNewProfileDialogOpen} onOpenChange={setIsNewProfileDialogOpen}>
-            <DialogTrigger asChild>
-                <Button variant="secondary">Save as new profile</Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Save New M&B Profile</DialogTitle>
-                    <DialogDescription>
-                        Save the current station layout (names, arms, fuel types) as a new reusable template. Weights will not be saved.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="py-4">
-                    <Label htmlFor="profile-name">New Profile Name</Label>
-                    <Input id="profile-name" value={newProfileName} onChange={(e) => setNewProfileName(e.target.value)} placeholder="e.g., C172 - IFR Config" />
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                    <Button onClick={handleSaveAsNewProfile}>Save Profile</Button>
-                </DialogFooter>
-            </DialogContent>
-          </Dialog>
-           <Button onClick={handleSaveToBooking} disabled={!bookingId}>
-              <Save className="mr-2 h-4 w-4" /> Save to Booking
-           </Button>
-        </CardFooter>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Results</CardTitle>
-          <CardDescription>Calculated totals and center of gravity.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-center">
-                <div className="p-4 rounded-lg bg-muted">
+        <CardFooter className="flex flex-col items-start gap-4 pt-6 border-t">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                <div className="p-4 bg-muted rounded-lg">
                     <p className="text-sm text-muted-foreground">Total Weight</p>
                     <p className="text-2xl font-bold">{totalWeight.toFixed(2)} lbs</p>
                 </div>
-                 <div className="p-4 rounded-lg bg-muted">
+                 <div className="p-4 bg-muted rounded-lg">
                     <p className="text-sm text-muted-foreground">Total Moment</p>
                     <p className="text-2xl font-bold">{totalMoment.toFixed(2)}</p>
                 </div>
-            </div>
-            <div className={cn(
-                "p-4 rounded-lg text-center transition-colors",
-                isWithinLimits ? 'bg-green-100 text-green-900' : 'bg-red-100 text-red-900'
-            )}>
-                 <p className="text-sm">Center of Gravity</p>
-                 <p className="text-3xl font-bold tracking-tight">{centerOfGravity.toFixed(2)}</p>
-                 <p className="text-xs font-semibold uppercase">{isWithinLimits ? 'Within Limits' : 'Out of Limits'}</p>
-            </div>
-            <div className="h-80 w-full pt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                        data={[{ name: 'CG', value: centerOfGravity }]}
-                        layout="vertical"
-                        margin={{ top: 5, right: 30, left: -20, bottom: 20 }}
-                        barCategoryGap={0}
-                    >
-                        <XAxis 
-                            type="number" 
-                            domain={[profile.xMin || 80, profile.xMax || 95]} 
-                            tickCount={8} 
-                            axisLine={false} 
-                            tickLine={false}
-                        />
-                        <YAxis type="category" dataKey="name" hide />
-                        <Tooltip cursor={{ fill: 'transparent' }} />
-                         {profile.cgEnvelope && profile.cgEnvelope.length > 0 && (
-                            <ReferenceLine
-                                x={profile.cgEnvelope[0].x}
-                                stroke="blue"
-                                strokeDasharray="3 3"
-                                label={{ value: 'FWD Limit', position: 'insideBottom', fill: 'blue' }}
+                 <div className="p-4 bg-muted rounded-lg">
+                    <p className="text-sm text-muted-foreground">Center of Gravity</p>
+                    <p className="text-2xl font-bold">{centerOfGravity.toFixed(2)} in</p>
+                </div>
+                 <div className="p-4 bg-muted rounded-lg flex flex-col justify-center" style={{ backgroundColor: isWithinLimits ? '#d4edda' : '#f8d7da', color: isWithinLimits ? '#155724' : '#721c24' }}>
+                    <p className="text-sm">Status</p>
+                    <p className="text-2xl font-bold">{isWithinLimits ? 'Within Limits' : 'Out of Limits'}</p>
+                </div>
+          </div>
+           <div className="flex gap-2 self-end">
+                <Dialog open={isNewProfileDialogOpen} onOpenChange={setIsNewProfileDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="secondary"><Save className="mr-2"/>Save as new profile</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Save New Profile</DialogTitle>
+                            <DialogDescription>Save the current station weights as a new, reusable M&B profile.</DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                            <Input 
+                                placeholder="Enter profile name..."
+                                value={newProfileName}
+                                onChange={(e) => setNewProfileName(e.target.value)}
                             />
-                        )}
-                        {profile.cgEnvelope && profile.cgEnvelope.length > 1 && (
-                            <ReferenceLine
-                                x={profile.cgEnvelope[1].x}
-                                stroke="blue"
-                                strokeDasharray="3 3"
-                                label={{ value: 'AFT Limit', position: 'insideBottom', fill: 'blue' }}
-                            />
-                        )}
-                        <Bar dataKey="value" fill="#8884d8" barSize={30}>
-                             <LabelList
-                                dataKey="value"
-                                position="right"
-                                formatter={(value: number) => value.toFixed(2)}
-                                fill="#fff"
-                                className="font-semibold"
-                            />
-                        </Bar>
-                    </BarChart>
-                </ResponsiveContainer>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                            <Button onClick={handleSaveAsProfile}>Save Profile</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+                <Button onClick={handleSaveToBooking} disabled={!bookingId}>
+                  <ArrowRight className="mr-2"/>Save to Booking
+                </Button>
             </div>
-        </CardContent>
+        </CardFooter>
       </Card>
-    </div>
+    </>
   );
 }
