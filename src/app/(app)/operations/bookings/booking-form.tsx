@@ -28,7 +28,7 @@ import { Label } from '@/components/ui/label';
 import { AlertCircle, Trash2, PlaneTakeoff, LandPlot, Ban, Scale } from 'lucide-react';
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile, Personnel } from '../../users/personnel/page';
-import type { Booking } from '@/types/booking';
+import type { Booking, MassAndBalance } from '@/types/booking';
 import {
   Select,
   SelectContent,
@@ -46,6 +46,7 @@ import { PreFlightChecklistDialog } from './pre-flight-checklist-dialog';
 import { PostFlightChecklistDialog } from './post-flight-checklist-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { MassBalanceCalculator } from './mass-balance-calculator';
 
 
 interface BookingFormProps {
@@ -92,7 +93,10 @@ export function BookingForm({
   const [isPreFlightOpen, setIsPreFlightOpen] = useState(false);
   const [isPostFlightOpen, setIsPostFlightOpen] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [isMassBalanceOpen, setIsMassBalanceOpen] = useState(false);
   
+  const [massAndBalanceData, setMassAndBalanceData] = useState<MassAndBalance | undefined>(existingBooking?.massAndBalance);
+
   useEffect(() => {
     if (isOpen) {
         if (existingBooking) {
@@ -103,6 +107,7 @@ export function BookingForm({
             setStartTimeValue(existingBooking.startTime);
             setEndTimeValue(existingBooking.endTime);
             setIsOvernight(existingBooking.isOvernight || false);
+            setMassAndBalanceData(existingBooking.massAndBalance);
             // Only set overnight end time from booking if it exists, otherwise keep default
             if (existingBooking.overnightEndTime) {
                 setOvernightEndTime(existingBooking.overnightEndTime);
@@ -120,6 +125,7 @@ export function BookingForm({
             setStartTimeValue(formattedStartTime);
             setIsOvernight(false);
             setOvernightEndTime('09:00');
+            setMassAndBalanceData(undefined);
             // setEndTimeValue is handled by the next useEffect
         }
     }
@@ -146,6 +152,12 @@ export function BookingForm({
       refreshBookings();
     }
     setIsOpen(open);
+  };
+
+  const handleMassBalanceSave = (data: MassAndBalance) => {
+    setMassAndBalanceData(data);
+    setIsMassBalanceOpen(false);
+    toast({ title: 'M&B Saved', description: 'Mass and Balance data has been saved to this booking.' });
   };
   
   const handleSave = async () => {
@@ -180,6 +192,7 @@ export function BookingForm({
         startTime: startTimeValue,
         type: bookingType,
         isOvernight,
+        massAndBalance: massAndBalanceData,
     };
     
     if (bookingType === 'Training Flight') {
@@ -445,6 +458,12 @@ export function BookingForm({
                     </Button>
                   </div>
                 )}
+                <div className="pt-6">
+                    <Button variant="outline" className="w-full" onClick={() => setIsMassBalanceOpen(true)}>
+                        <Scale className="mr-2 h-4 w-4" />
+                        Mass & Balance
+                    </Button>
+                </div>
               </div>
           </ScrollArea>
           <DialogFooter className='justify-between pt-6'>
@@ -500,6 +519,22 @@ export function BookingForm({
         </DialogContent>
       </Dialog>
       
+      <Dialog open={isMassBalanceOpen} onOpenChange={setIsMassBalanceOpen}>
+        <DialogContent className="max-w-7xl">
+            <DialogHeader>
+                <DialogTitle>Mass &amp; Balance Calculator</DialogTitle>
+                <DialogDescription>
+                    For {aircraft.tailNumber} on {format(baseDate, 'PPP')}.
+                </DialogDescription>
+            </DialogHeader>
+            <MassBalanceCalculator 
+                aircraft={aircraft} 
+                initialData={massAndBalanceData}
+                onSave={handleMassBalanceSave}
+            />
+        </DialogContent>
+      </Dialog>
+
       {existingBooking && (
         <>
             <PreFlightChecklistDialog
