@@ -174,6 +174,8 @@ export function BookingForm({
     const bookingDate = format(baseDate, 'yyyy-MM-dd');
 
     const commonData: Partial<Booking> = {
+        aircraftId: aircraft.id,
+        createdById: authUser.uid,
         date: bookingDate,
         startTime: startTimeValue,
         type: bookingType,
@@ -223,7 +225,7 @@ export function BookingForm({
 
     } else {
         try {
-            await createBooking(firestore, tenantId, { aircraftId: aircraft.id, createdById: authUser.uid, ...commonData } as Omit<Booking, 'id'>);
+            await createBooking(firestore, tenantId, commonData as Omit<Booking, 'id'>);
             toast({ title: 'Booking Created', description: 'The new booking has been saved successfully.' });
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });

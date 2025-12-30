@@ -68,9 +68,15 @@ export const createBooking = async (
             if (payload.type === 'Training Flight') {
                 payload.studentId = bookingData.studentId || null;
                 payload.instructorId = bookingData.instructorId || null;
+                payload.privatePilotId = null;
+            } else if (payload.type === 'Private Flight') {
+                payload.privatePilotId = bookingData.privatePilotId || null;
+                payload.studentId = null;
+                payload.instructorId = null;
             } else {
                 payload.studentId = null;
                 payload.instructorId = null;
+                payload.privatePilotId = null;
             }
 
             if (!bookingData.isOvernight) {
@@ -118,9 +124,15 @@ export const updateBooking = async ({
     if (updatePayload.type === 'Training Flight') {
         updatePayload.studentId = updateData.studentId || null;
         updatePayload.instructorId = updateData.instructorId || null;
-    } else if (updatePayload.type) { // If type is being changed TO a non-training flight
+        updatePayload.privatePilotId = null;
+    } else if (updatePayload.type === 'Private Flight') {
+        updatePayload.privatePilotId = updateData.privatePilotId || null;
         updatePayload.studentId = null;
         updatePayload.instructorId = null;
+    } else if (updatePayload.type) {
+        updatePayload.studentId = null;
+        updatePayload.instructorId = null;
+        updatePayload.privatePilotId = null;
     }
 
 
