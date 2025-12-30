@@ -73,7 +73,6 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
                   <TableHead>Start Time</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className='text-center'>View</TableHead>
-                  <TableHead className='text-center'>M&B</TableHead>
                   <TableHead className='text-center'>Debrief</TableHead>
               </TableRow>
             </TableHeader>
@@ -92,14 +91,6 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
                                 <Link href={`/operations/bookings-history/${b.id}`}>
                                     <Eye className="h-4 w-4" />
                                     <span className="sr-only">View Details</span>
-                                </Link>
-                            </Button>
-                        </TableCell>
-                        <TableCell className='text-center'>
-                            <Button asChild variant={b.massAndBalance ? 'default' : 'outline'} size="icon" className="h-8 w-8" disabled={b.status === 'Cancelled' || b.status === 'Cancelled with Reason'}>
-                                <Link href={`/assets/mass-balance?bookingId=${b.id}&aircraftId=${b.aircraftId}`}>
-                                    <Scale className="h-4 w-4" />
-                                     <span className="sr-only">Mass & Balance</span>
                                 </Link>
                             </Button>
                         </TableCell>
