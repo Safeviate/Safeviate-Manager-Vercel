@@ -202,7 +202,11 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                            {Object.entries(massAndBalance).map(([stationKey, values]) => (
                                 <DetailItem key={stationKey} label={camelToTitle(stationKey)}>
-                                    <p className="text-base">{values.weight.toFixed(2)} lbs @ {values.moment.toFixed(2)}</p>
+                                    {values && typeof values.weight === 'number' && typeof values.moment === 'number' ? (
+                                        <p className="text-base">{values.weight.toFixed(2)} lbs @ {values.moment.toFixed(2)}</p>
+                                    ) : (
+                                        <p className="text-base text-muted-foreground">Invalid data</p>
+                                    )}
                                 </DetailItem>
                            ))}
                         </div>
