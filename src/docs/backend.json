@@ -566,7 +566,7 @@
         },
         "massAndBalance": {
             "type": "object",
-            "description": "Mass and Balance calculation data for the flight.",
+            "description": "A flat map of station names (camelCase) to their calculated weight and moment for the flight.",
             "additionalProperties": {
                 "type": "object",
                 "properties": {
