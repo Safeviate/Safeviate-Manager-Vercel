@@ -8,6 +8,13 @@ export interface Photo {
     description: string;
 }
 
+export interface MassAndBalance {
+  [station: string]: {
+    weight: number;
+    moment: number;
+  }
+}
+
 export interface Booking {
     id: string;
     bookingNumber: number;
@@ -27,6 +34,7 @@ export interface Booking {
     overnightEndTime?: string | null; // HH:mm
     flightPlanId?: string; // Link to a flight plan document
     flightDetails?: string; // From Gemini Logbook
+    massAndBalance?: MassAndBalance; // From Mass & Balance Calculator
     // Pre-flight data
     preFlight?: {
         actualHobbs?: number;

@@ -10,6 +10,31 @@ export type Station = {
     maxGallons?: number;
 };
 
+export type AircraftModelProfile = {
+  id: string;
+  profileName: string;
+  emptyWeight: number;
+  emptyWeightMoment: number;
+  maxTakeoffWeight: number;
+  maxLandingWeight: number;
+  stationArms: {
+    frontSeats?: number;
+    rearSeats?: number;
+    fuel?: number;
+    baggage1?: number;
+    baggage2?: number;
+  };
+  stations: Station[];
+  cgEnvelope: {
+    x: number;
+    y: number;
+  }[];
+  xMin: number;
+  xMax: number;
+  yMin: number;
+  yMax: number;
+};
+
 export type Aircraft = {
   id: string;
   tailNumber: string;
