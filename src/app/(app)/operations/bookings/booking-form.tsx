@@ -95,7 +95,7 @@ export function BookingForm({
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isMassBalanceOpen, setIsMassBalanceOpen] = useState(false);
   
-  const [massAndBalanceData, setMassAndBalanceData] = useState<MassAndBalance | undefined>(existingBooking?.massAndBalance);
+  const [massAndBalanceData, setMassAndBalanceData] = useState<MassAndBalance | undefined | null>(existingBooking?.massAndBalance);
 
   useEffect(() => {
     if (isOpen) {
@@ -125,7 +125,7 @@ export function BookingForm({
             setStartTimeValue(formattedStartTime);
             setIsOvernight(false);
             setOvernightEndTime('09:00');
-            setMassAndBalanceData(undefined);
+            setMassAndBalanceData(null);
             // setEndTimeValue is handled by the next useEffect
         }
     }
@@ -187,7 +187,7 @@ export function BookingForm({
         startTime: startTimeValue,
         type: bookingType,
         isOvernight,
-        massAndBalance: massAndBalanceData,
+        massAndBalance: massAndBalanceData || null,
     };
     
     if (bookingType === 'Training Flight') {
@@ -233,7 +233,7 @@ export function BookingForm({
 
     } else {
         try {
-            await createBooking(firestore, tenantId, commonData as Omit<Booking, 'id'>);
+            await createBooking(firestore, tenantId, commonData as Omit<Booking, 'id' | 'status'>);
             toast({ title: 'Booking Created', description: 'The new booking has been saved successfully.' });
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
@@ -524,7 +524,7 @@ export function BookingForm({
             </DialogHeader>
             <MassBalanceCalculator 
                 aircraft={aircraft} 
-                initialData={massAndBalanceData}
+                initialData={massAndBalanceData || undefined}
                 onSave={handleMassBalanceSave}
             />
         </DialogContent>
