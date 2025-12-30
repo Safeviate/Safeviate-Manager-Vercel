@@ -103,7 +103,7 @@ export function BookingForm({
             setBookingType(existingBooking.type || '');
             setStudentId(existingBooking.studentId || '');
             setInstructorId(existingBooking.instructorId || '');
-            setPrivatePilotId(existingBooking.privatePilotId || '');
+            setPrivatePilotId((existingBooking as any).privatePilotId || '');
             setStartTimeValue(existingBooking.startTime);
             setEndTimeValue(existingBooking.endTime);
             setIsOvernight(existingBooking.isOvernight || false);
@@ -170,11 +170,6 @@ export function BookingForm({
     
     if (bookingType === 'Training Flight' && (!studentId || !instructorId)) {
         toast({ variant: 'destructive', title: 'Error', description: 'Student and Instructor are required for Training Flights.' });
-        return;
-    }
-
-    if (bookingType === 'Private Flight' && !privatePilotId) {
-        toast({ variant: 'destructive', title: 'Error', description: 'A pilot is required for Private Flights.'});
         return;
     }
 
