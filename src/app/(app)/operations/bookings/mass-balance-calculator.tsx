@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot, Cell } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, Plus, Trash2, Fuel, AlertTriangle } from 'lucide-react';
+import { Save, Plus, Trash2, Fuel, AlertTriangle, Pencil, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -69,19 +69,19 @@ interface MassBalanceCalculatorProps {
 export const MassBalanceCalculator = ({ aircraft, initialData, onSave }: MassBalanceCalculatorProps) => {
   const { toast } = useToast();
 
-  const [stations, setStations] = useState<any[]>(() => {
-    // Initialize stations from aircraft profile or default
-    return [
-      { id: 1, name: "Front Seats", weight: 0, arm: aircraft.stationArms?.frontSeats || 0, type: 'standard' },
-      { id: 2, name: "Rear Seats", weight: 0, arm: aircraft.stationArms?.rearSeats || 0, type: 'standard' },
-      { id: 3, name: "Baggage 1", weight: 0, arm: aircraft.stationArms?.baggage1 || 0, type: 'standard' },
-      { id: 4, name: "Fuel", weight: 0, arm: aircraft.stationArms?.fuel || 0, type: 'fuel', gallons: 0, maxGallons: 50 }, // Assuming 50 gal max
-    ];
-  });
+  const [isEditing, setIsEditing] = useState(!initialData);
+
+  const getInitialStations = () => [
+    { id: 1, name: "Front Seats", weight: 0, arm: aircraft.stationArms?.frontSeats || 0, type: 'standard' },
+    { id: 2, name: "Rear Seats", weight: 0, arm: aircraft.stationArms?.rearSeats || 0, type: 'standard' },
+    { id: 3, name: "Baggage 1", weight: 0, arm: aircraft.stationArms?.baggage1 || 0, type: 'standard' },
+    { id: 4, name: "Fuel", weight: 0, arm: aircraft.stationArms?.fuel || 0, type: 'fuel', gallons: 0, maxGallons: 50 },
+  ];
+
+  const [stations, setStations] = useState<any[]>(getInitialStations);
 
   const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
   
-  // When initialData changes (e.g., loading an existing booking), update the station weights
   useEffect(() => {
     if (initialData) {
         setStations(prevStations => {
@@ -97,8 +97,12 @@ export const MassBalanceCalculator = ({ aircraft, initialData, onSave }: MassBal
                 return station;
             })
         })
+        setIsEditing(false);
+    } else {
+        setStations(getInitialStations());
+        setIsEditing(true);
     }
-  }, [initialData]);
+  }, [initialData, aircraft.stationArms]);
 
   // Main calculation logic
   useEffect(() => {
@@ -146,12 +150,20 @@ export const MassBalanceCalculator = ({ aircraft, initialData, onSave }: MassBal
             moment: (parseFloat(station.weight) || 0) * (parseFloat(station.arm) || 0)
         }
     });
-    // Also include basic empty weight in the saved data for completeness
     saveData.basicEmpty = {
         weight: aircraft.emptyWeight || 0,
         moment: aircraft.emptyWeightMoment || 0,
     };
     onSave(saveData);
+    setIsEditing(false);
+  }
+
+  const handleCancel = () => {
+    // This will trigger the useEffect to reset stations from initialData
+    setStations(getInitialStations());
+    if (initialData) {
+        setIsEditing(false);
+    }
   }
 
   // Chart domain and ticks
@@ -204,23 +216,23 @@ export const MassBalanceCalculator = ({ aircraft, initialData, onSave }: MassBal
                                 {s.name}
                             </div>
                             <div className="col-span-3">
-                                <Input type="number" value={s.weight} onChange={(e) => handleFuelChange(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" />
+                                <Input type="number" value={s.weight} onChange={(e) => handleFuelChange(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" disabled={!isEditing} />
                             </div>
                             <div className="col-span-4">
                                  <Input type="number" value={s.arm} readOnly disabled className="w-full p-1 text-sm text-right bg-muted/50" />
                             </div>
                         </div>
                          <div className="flex items-center bg-muted border border-border rounded px-2 py-0.5 mt-2 shadow-inner">
-                            <Input type="number" value={s.gallons || ''} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)} className="w-16 bg-transparent text-sm font-bold text-right outline-none p-0 h-auto" placeholder="0" />
+                            <Input type="number" value={s.gallons || ''} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)} className="w-16 bg-transparent text-sm font-bold text-right outline-none p-0 h-auto" placeholder="0" disabled={!isEditing}/>
                             <span className="text-xs text-muted-foreground ml-1 font-semibold">gallons</span>
-                            <input type="range" min="0" max={s.maxGallons || 50} value={s.gallons || 0} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)} className="w-full h-1 bg-muted-foreground/20 rounded-lg appearance-none cursor-pointer accent-yellow-500 ml-4" />
+                            <input type="range" min="0" max={s.maxGallons || 50} value={s.gallons || 0} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)} className="w-full h-1 bg-muted-foreground/20 rounded-lg appearance-none cursor-pointer accent-yellow-500 ml-4" disabled={!isEditing} />
                         </div>
                      </div>
                   ) : (
                     <div className="grid grid-cols-12 gap-2 items-center py-1">
                         <div className="col-span-5 font-semibold text-secondary-foreground">{s.name}</div>
                         <div className="col-span-3">
-                            <Input type="number" value={s.weight} onChange={(e) => updateStation(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" placeholder="0" />
+                            <Input type="number" value={s.weight} onChange={(e) => updateStation(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" placeholder="0" disabled={!isEditing} />
                         </div>
                         <div className="col-span-4">
                              <Input type="number" value={s.arm} readOnly disabled className="w-full p-1 text-sm text-right bg-muted/50" />
@@ -265,10 +277,19 @@ export const MassBalanceCalculator = ({ aircraft, initialData, onSave }: MassBal
                   <div className="text-2xl font-bold">{results.cg.toFixed(2)} in</div>
               </div>
           </div>
-          <div className="flex justify-end">
-            <Button onClick={handleSaveToBooking} size="lg">
-                <Save className="mr-2" /> Save to Booking
-            </Button>
+          <div className="flex justify-end gap-2">
+            {isEditing ? (
+                <>
+                    <Button variant="outline" onClick={handleCancel}>Cancel</Button>
+                    <Button onClick={handleSaveToBooking} size="lg">
+                        <Save className="mr-2" /> Save to Booking
+                    </Button>
+                </>
+            ) : (
+                <Button onClick={() => setIsEditing(true)} size="lg">
+                    <Pencil className="mr-2" /> Edit
+                </Button>
+            )}
           </div>
         </div>
       </div>
