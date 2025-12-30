@@ -1,345 +1,379 @@
-'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+
+'use client';
+import { useState, useEffect } from 'react';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { PlusCircle, Trash2, Save, AlertCircle } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
-import type { AircraftModelProfile } from '@/types/aircraft';
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import type { Aircraft, AircraftModelProfile, Station } from '@/types/aircraft';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
 import { useSearchParams } from 'next/navigation';
-import { MassBalanceGraph } from './mass-balance-graph';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, LabelList } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, PlusCircle, Save, Trash2, Weight } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from '@/components/ui/dialog';
 
 const stationSchema = z.object({
-    id: z.number(),
-    name: z.string().min(1, "Name is required"),
-    weight: z.number().min(0, "Weight must be non-negative"),
-    arm: z.number(),
-    type: z.enum(['weight', 'fuel']),
-    gallons: z.number().optional(),
-    maxGallons: z.number().optional(),
+  id: z.number(),
+  name: z.string().min(1, 'Name is required'),
+  weight: z.number().min(0, 'Weight must be positive'),
+  arm: z.number(),
+  type: z.enum(['weight', 'fuel']),
+  gallons: z.number().optional(),
+  maxGallons: z.number().optional(),
 });
 
-type Station = z.infer<typeof stationSchema>;
+type StationFormValues = z.infer<typeof stationSchema>;
 
-const formSchema = z.object({
-  profileName: z.string().min(1, 'Profile name is required'),
-});
-
+// Helper to convert station name to camelCase
 const toCamelCase = (str: string) => {
-    return str.replace(/(?:^\w|[A-Z]|\b\w)/g, (word, index) => {
-        return index === 0 ? word.toLowerCase() : word.toUpperCase();
-    }).replace(/\s+/g, '');
+  return str.replace(/(?:^\w|[A-Z]|\b\w)/g, (word, index) => {
+    return index === 0 ? word.toLowerCase() : word.toUpperCase();
+  }).replace(/\s+/g, '');
 };
 
-export function MassBalanceCalculator() {
-    const firestore = useFirestore();
-    const { toast } = useToast();
-    const searchParams = useSearchParams();
-    const tenantId = 'safeviate';
 
-    const aircraftId = searchParams.get('aircraftId');
-    const bookingId = searchParams.get('bookingId');
+export function MassBalanceCalculator({ aircraft, profile }: { aircraft: Aircraft; profile: AircraftModelProfile }) {
+  const { toast } = useToast();
+  const firestore = useFirestore();
+  const searchParams = useSearchParams();
+  const bookingId = searchParams.get('bookingId');
+  const tenantId = 'safeviate';
 
-    const [stations, setStations] = useState<Station[]>([]);
-    const [profileName, setProfileName] = useState('');
-    
-    // Separate states for CG envelope chart limits
-    const [xMin, setXMin] = useState(0);
-    const [xMax, setXMax] = useState(100);
-    const [yMin, setYMin] = useState(0);
-    const [yMax, setYMax] = useState(1000);
+  const [stations, setStations] = useState<Station[]>([]);
+  const [totalWeight, setTotalWeight] = useState(0);
+  const [totalMoment, setTotalMoment] = useState(0);
+  const [centerOfGravity, setCenterOfGravity] = useState(0);
+  const [isWithinLimits, setIsWithinLimits] = useState(false);
+  const [isNewProfileDialogOpen, setIsNewProfileDialogOpen] = useState(false);
+  const [newProfileName, setNewProfileName] = useState('');
 
-    const [cgEnvelope, setCgEnvelope] = useState<{x: number, y: number}[]>([]);
 
-    const aircraftProfilesQuery = useMemoFirebase(
-        () => (firestore ? collection(firestore, `tenants/${tenantId}/massAndBalance`) : null),
-        [firestore, tenantId]
-    );
-    const { data: savedProfiles, isLoading: isLoadingProfiles } = useCollection<AircraftModelProfile>(aircraftProfilesQuery);
+  useEffect(() => {
+    const initialStations = profile.stations.map(station => ({
+      ...station,
+      weight: 0,
+      gallons: station.type === 'fuel' ? 0 : undefined
+    }));
+    setStations(initialStations);
+  }, [profile]);
 
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
-        defaultValues: {
-          profileName: '',
-        },
+  useEffect(() => {
+    const { emptyWeight = 0, emptyWeightMoment = 0 } = aircraft;
+    let currentWeight = emptyWeight;
+    let currentMoment = emptyWeightMoment;
+
+    stations.forEach(station => {
+      currentWeight += station.weight;
+      currentMoment += station.weight * station.arm;
     });
 
-    const { fields, append, remove } = useFieldArray({
-      name: 'stations'
-    });
+    setTotalWeight(currentWeight);
+    setTotalMoment(currentMoment);
 
-    useEffect(() => {
-        const aircraftProfile = savedProfiles?.find(p => p.id === aircraftId);
-        if (aircraftProfile?.stations) {
-            setStations(aircraftProfile.stations);
-            setProfileName(aircraftProfile.profileName);
-            setCgEnvelope(aircraftProfile.cgEnvelope || []);
-            setXMin(aircraftProfile.xMin ?? 75);
-            setXMax(aircraftProfile.xMax ?? 100);
-            setYMin(aircraftProfile.yMin ?? 1500);
-            setYMax(aircraftProfile.yMax ?? 2600);
-        } else {
-            // Default station if no profile is loaded
-            if (stations.length === 0) {
-                 setStations([{ id: 1, name: 'Empty Weight', weight: 0, arm: 0, type: 'weight' }]);
-            }
-        }
-    }, [aircraftId, savedProfiles, stations.length]);
-    
+    const cg = currentWeight > 0 ? currentMoment / currentWeight : 0;
+    setCenterOfGravity(cg);
 
-    const handleStationChange = (index: number, field: keyof Station, value: any) => {
-        const newStations = [...stations];
-        const station = newStations[index];
+    // Check envelope
+    if (profile.cgEnvelope && profile.cgEnvelope.length > 0) {
+      const point = { x: cg, y: currentWeight };
+      setIsWithinLimits(isPointInPolygon(point, profile.cgEnvelope));
+    } else {
+        setIsWithinLimits(true); // No envelope defined, assume it's within limits
+    }
+  }, [stations, aircraft]);
 
-        if (field === 'weight' || field === 'arm' || field === 'gallons' || field === 'maxGallons') {
-            (station as any)[field] = parseFloat(value) || 0;
-        } else {
-            (station as any)[field] = value;
-        }
+  const handleWeightChange = (index: number, newWeight: number) => {
+    const newStations = [...stations];
+    newStations[index].weight = newWeight;
 
-        if (station.type === 'fuel' && field === 'gallons') {
-            station.weight = station.gallons! * FUEL_WEIGHT_PER_GALLON;
-        }
+    // If it's a fuel station, update gallons as well
+    if (newStations[index].type === 'fuel') {
+      newStations[index].gallons = parseFloat((newWeight / FUEL_WEIGHT_PER_GALLON).toFixed(2));
+    }
+    setStations(newStations);
+  };
+  
+  const handleGallonsChange = (index: number, newGallons: number) => {
+    const newStations = [...stations];
+    const maxGallons = newStations[index].maxGallons || Infinity;
+    const clampedGallons = Math.min(newGallons, maxGallons);
 
-        setStations(newStations);
-    };
-
-    const addStation = (type: 'weight' | 'fuel') => {
-        const newId = stations.length > 0 ? Math.max(...stations.map(s => s.id)) + 1 : 1;
-        const newStation: Station = {
-            id: newId,
-            name: type === 'fuel' ? 'Fuel' : 'New Station',
-            weight: 0,
-            arm: 0,
-            type,
-        };
-        if (type === 'fuel') {
-            newStation.gallons = 0;
-            newStation.maxGallons = 50;
-        }
-        setStations([...stations, newStation]);
-    };
-
-    const removeStation = (index: number) => {
-        const newStations = stations.filter((_, i) => i !== index);
-        setStations(newStations);
-    };
-
-    const totalWeight = stations.reduce((acc, station) => acc + station.weight, 0);
-    const totalMoment = stations.reduce((acc, station) => acc + (station.weight * station.arm), 0);
-    const centerOfGravity = totalWeight > 0 ? totalMoment / totalWeight : 0;
-    
-    const isWithinLimits = isPointInPolygon({ x: centerOfGravity, y: totalWeight }, cgEnvelope);
-    
-    const handleSaveProfile = (name: string) => {
-        if (!firestore) return;
-        const profilesCollection = collection(firestore, `tenants/${tenantId}/massAndBalance`);
-        addDocumentNonBlocking(profilesCollection, { profileName: name, stations, cgEnvelope, xMin, xMax, yMin, yMax });
-        toast({ title: "Profile Saved", description: `Mass & Balance profile "${name}" has been saved.` });
-    };
-
-    const handleSaveToBooking = () => {
-        if (!firestore || !bookingId) {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "No booking is being referenced.",
-            });
-            return;
-        }
-    
-        const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', bookingId);
-        
-        const massAndBalanceData = stations.reduce((acc, station) => {
-            const key = toCamelCase(station.name);
-            acc[key] = {
-                weight: station.weight,
-                moment: station.weight * station.arm,
-            };
-            return acc;
-        }, {} as { [key: string]: { weight: number; moment: number } });
-
-        updateDocumentNonBlocking(bookingRef, { massAndBalance: massAndBalanceData });
-    
+    newStations[index].gallons = clampedGallons;
+    newStations[index].weight = parseFloat((clampedGallons * FUEL_WEIGHT_PER_GALLON).toFixed(2));
+    setStations(newStations);
+  };
+  
+  const handleSaveToBooking = () => {
+    if (!firestore || !bookingId) {
         toast({
-            title: "Saved to Booking",
-            description: "The mass and balance has been saved to the booking.",
+            variant: "destructive",
+            title: "Error",
+            description: "No booking is being referenced.",
         });
+        return;
+    }
+
+    const bookingRef = doc(firestore, 'tenants', tenantId, 'bookings', bookingId);
+    
+    // Correctly create a flat object with camelCase keys
+    const massAndBalanceData = stations.reduce((acc, station) => {
+        const key = toCamelCase(station.name);
+        acc[key] = {
+            weight: station.weight,
+            moment: station.weight * station.arm,
+        };
+        return acc;
+    }, {} as { [key: string]: { weight: number, moment: number } });
+
+    const dataToSave = {
+        massAndBalance: massAndBalanceData,
     };
 
-    const loadProfile = (profileId: string) => {
-        const profile = savedProfiles?.find(p => p.id === profileId);
-        if (profile) {
-            setStations(profile.stations || []);
-            setProfileName(profile.profileName);
-            setCgEnvelope(profile.cgEnvelope || []);
-            setXMin(profile.xMin ?? 75);
-            setXMax(profile.xMax ?? 100);
-            setYMin(profile.yMin ?? 1500);
-            setYMax(profile.yMax ?? 2600);
-            toast({ title: "Profile Loaded", description: `Profile "${profile.profileName}" has been loaded.`});
-        }
+    updateDocumentNonBlocking(bookingRef, dataToSave);
+
+    toast({
+        title: "Saved to Booking",
+        description: "The mass and balance has been saved to the booking.",
+    });
+  };
+
+  const handleSaveAsNewProfile = () => {
+    if (!firestore || !newProfileName.trim()) {
+        toast({ variant: "destructive", title: "Name Required", description: "Please enter a name for the new profile." });
+        return;
+    }
+
+    const newProfile: Omit<AircraftModelProfile, 'id'> = {
+        profileName: newProfileName,
+        stations: stations.map(({ id, name, arm, type, maxGallons }) => ({ // Only save the structure, not the weights/gallons
+          id,
+          name,
+          arm,
+          type,
+          maxGallons,
+          weight: 0
+        })),
+        cgEnvelope: profile.cgEnvelope,
+        xMin: profile.xMin,
+        xMax: profile.xMax,
+        yMin: profile.yMin,
+        yMax: profile.yMax,
     };
 
-    return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-2 space-y-6">
-            <Card>
-                <CardHeader>
-                <CardTitle>Mass &amp; Balance Calculator</CardTitle>
-                <CardDescription>
-                    Enter weights and arms for each station to calculate the total weight and center of gravity.
-                </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="overflow-x-auto">
-                        <Table>
-                        <TableHeader>
-                            <TableRow>
-                            <TableHead className="w-1/3">Station</TableHead>
-                            <TableHead>Weight (lbs)</TableHead>
-                            <TableHead>Arm (in)</TableHead>
-                            <TableHead>Moment (lb-in)</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {stations.map((station, index) => (
-                            <TableRow key={station.id}>
-                                <TableCell>
-                                <Input
-                                    value={station.name}
-                                    onChange={(e) => handleStationChange(index, 'name', e.target.value)}
-                                    className="font-medium"
-                                />
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex items-center gap-2">
-                                        <Input
-                                            type="number"
-                                            value={station.weight.toString()}
-                                            onChange={(e) => handleStationChange(index, 'weight', e.target.value)}
-                                            disabled={station.type === 'fuel'}
-                                        />
-                                        {station.type === 'fuel' && (
-                                            <>
-                                                <Input
-                                                    type="number"
-                                                    value={station.gallons?.toString()}
-                                                    onChange={(e) => handleStationChange(index, 'gallons', e.target.value)}
-                                                    className="w-24"
-                                                />
-                                                <span className="text-muted-foreground text-sm">gal</span>
-                                            </>
-                                        )}
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                <Input
-                                    type="number"
-                                    value={station.arm.toString()}
-                                    onChange={(e) => handleStationChange(index, 'arm', e.target.value)}
-                                />
-                                </TableCell>
-                                <TableCell>
-                                <Input
-                                    readOnly
-                                    value={(station.weight * station.arm).toFixed(2)}
-                                    className="font-mono bg-muted"
-                                />
-                                </TableCell>
-                                <TableCell className="text-right">
-                                <Button
-                                    variant="destructive"
-                                    size="icon"
-                                    onClick={() => removeStation(index)}
-                                    disabled={stations.length <= 1}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                                </TableCell>
-                            </TableRow>
-                            ))}
-                        </TableBody>
-                        </Table>
-                    </div>
-                    <div className="mt-4 flex gap-2">
-                        <Button variant="outline" onClick={() => addStation('weight')}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Weight Station
-                        </Button>
-                        <Button variant="outline" onClick={() => addStation('fuel')}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Fuel Station
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
+    const profilesCollection = collection(firestore, 'tenants', tenantId, 'massAndBalance');
+    addDocumentNonBlocking(profilesCollection, newProfile);
+    
+    toast({ title: 'Profile Saved', description: `New M&B profile "${newProfileName}" has been created.` });
+    setIsNewProfileDialogOpen(false);
+    setNewProfileName('');
+  }
 
-            <MassBalanceGraph
-                totalWeight={totalWeight}
-                centerOfGravity={centerOfGravity}
-                cgEnvelope={cgEnvelope}
-                setCgEnvelope={setCgEnvelope}
-                xMin={xMin} setXMin={setXMin}
-                xMax={xMax} setXMax={setXMax}
-                yMin={yMin} setYMin={setYMin}
-                yMax={yMax} setYMax={setYMax}
-                onSaveProfile={handleSaveProfile}
-                isWithinLimits={isWithinLimits}
-            />
-        </div>
+  const addStation = () => {
+    setStations([
+      ...stations,
+      { id: stations.length, name: 'New Station', weight: 0, arm: 0, type: 'weight' },
+    ]);
+  };
 
-        <Card className="lg:col-span-1 sticky top-6">
-            <CardHeader>
-            <CardTitle>Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="flex justify-between items-baseline">
-                <span className="text-muted-foreground">Total Weight:</span>
-                <span className="font-bold text-2xl">{totalWeight.toFixed(2)} lbs</span>
-                </div>
-                <div className="flex justify-between items-baseline">
-                <span className="text-muted-foreground">Total Moment:</span>
-                <span className="font-bold text-2xl">{totalMoment.toFixed(2)} lb-in</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between items-baseline">
-                <span className="text-muted-foreground">Center of Gravity:</span>
-                <span className="font-bold text-2xl">{centerOfGravity.toFixed(2)} in</span>
-                </div>
+  const removeStation = (index: number) => {
+    const newStations = stations.filter((_, i) => i !== index);
+    setStations(newStations);
+  };
+  
+  const handleStationFieldChange = (index: number, field: keyof Station, value: any) => {
+    const newStations = [...stations];
+    const station = newStations[index];
+    (station as any)[field] = value;
+    setStations(newStations);
+  };
 
-                <div className="pt-4">
-                    {!isWithinLimits && (
-                        <Alert variant="destructive">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Out of Limits</AlertTitle>
-                            <AlertDescription>
-                                The current Center of Gravity is outside the acceptable envelope.
-                            </AlertDescription>
-                        </Alert>
+  return (
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Loading Stations</CardTitle>
+          <CardDescription>Enter weights and fuel quantities for your flight.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-1/3">Station</TableHead>
+                <TableHead>Weight (lbs)</TableHead>
+                <TableHead>Arm</TableHead>
+                <TableHead>Moment</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell className="font-medium">Basic Empty Weight</TableCell>
+                <TableCell>{aircraft.emptyWeight?.toFixed(2)}</TableCell>
+                <TableCell>{aircraft.emptyWeight && aircraft.emptyWeightMoment ? (aircraft.emptyWeightMoment / aircraft.emptyWeight).toFixed(2) : 'N/A'}</TableCell>
+                <TableCell>{aircraft.emptyWeightMoment?.toFixed(2)}</TableCell>
+                <TableCell></TableCell>
+              </TableRow>
+              {stations.map((station, index) => (
+                <TableRow key={station.id}>
+                  <TableCell>
+                      <Input value={station.name} onChange={e => handleStationFieldChange(index, 'name', e.target.value)} className="font-medium bg-transparent border-0 pl-0 focus-visible:ring-1" />
+                  </TableCell>
+                  <TableCell>
+                    {station.type === 'fuel' ? (
+                       <div className="flex items-center gap-2">
+                           <Input
+                               type="number"
+                               value={station.gallons}
+                               onChange={(e) => handleGallonsChange(index, parseFloat(e.target.value))}
+                               className="w-24"
+                               max={station.maxGallons}
+                           />
+                           <span className="text-muted-foreground text-xs">gal</span>
+                       </div>
+                    ) : (
+                       <Input
+                           type="number"
+                           value={station.weight}
+                           onChange={(e) => handleWeightChange(index, parseFloat(e.target.value))}
+                           className="w-24"
+                       />
                     )}
+                  </TableCell>
+                  <TableCell>
+                      <Input type="number" value={station.arm} onChange={e => handleStationFieldChange(index, 'arm', parseFloat(e.target.value))} className="w-24 bg-transparent border-0 pl-0 focus-visible:ring-1" />
+                  </TableCell>
+                  <TableCell>{(station.weight * station.arm).toFixed(2)}</TableCell>
+                  <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => removeStation(index)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <Button variant="outline" size="sm" onClick={addStation} className="mt-4">
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Station
+          </Button>
+        </CardContent>
+        <CardFooter className="flex justify-between border-t pt-6">
+          <Dialog open={isNewProfileDialogOpen} onOpenChange={setIsNewProfileDialogOpen}>
+            <DialogTrigger asChild>
+                <Button variant="secondary">Save as new profile</Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Save New M&B Profile</DialogTitle>
+                    <DialogDescription>
+                        Save the current station layout (names, arms, fuel types) as a new reusable template. Weights will not be saved.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Label htmlFor="profile-name">New Profile Name</Label>
+                    <Input id="profile-name" value={newProfileName} onChange={(e) => setNewProfileName(e.target.value)} placeholder="e.g., C172 - IFR Config" />
                 </div>
-            </CardContent>
-            {bookingId && (
-                <CardFooter>
-                    <Button className="w-full" onClick={handleSaveToBooking}>
-                        <Save className="mr-2 h-4 w-4" /> Save to Booking
-                    </Button>
-                </CardFooter>
-            )}
-        </Card>
-        </div>
-    );
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                    <Button onClick={handleSaveAsNewProfile}>Save Profile</Button>
+                </DialogFooter>
+            </DialogContent>
+          </Dialog>
+           <Button onClick={handleSaveToBooking} disabled={!bookingId}>
+              <Save className="mr-2 h-4 w-4" /> Save to Booking
+           </Button>
+        </CardFooter>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Results</CardTitle>
+          <CardDescription>Calculated totals and center of gravity.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-center">
+                <div className="p-4 rounded-lg bg-muted">
+                    <p className="text-sm text-muted-foreground">Total Weight</p>
+                    <p className="text-2xl font-bold">{totalWeight.toFixed(2)} lbs</p>
+                </div>
+                 <div className="p-4 rounded-lg bg-muted">
+                    <p className="text-sm text-muted-foreground">Total Moment</p>
+                    <p className="text-2xl font-bold">{totalMoment.toFixed(2)}</p>
+                </div>
+            </div>
+            <div className={cn(
+                "p-4 rounded-lg text-center transition-colors",
+                isWithinLimits ? 'bg-green-100 text-green-900' : 'bg-red-100 text-red-900'
+            )}>
+                 <p className="text-sm">Center of Gravity</p>
+                 <p className="text-3xl font-bold tracking-tight">{centerOfGravity.toFixed(2)}</p>
+                 <p className="text-xs font-semibold uppercase">{isWithinLimits ? 'Within Limits' : 'Out of Limits'}</p>
+            </div>
+            <div className="h-80 w-full pt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                        data={[{ name: 'CG', value: centerOfGravity }]}
+                        layout="vertical"
+                        margin={{ top: 5, right: 30, left: -20, bottom: 20 }}
+                        barCategoryGap={0}
+                    >
+                        <XAxis 
+                            type="number" 
+                            domain={[profile.xMin || 80, profile.xMax || 95]} 
+                            tickCount={8} 
+                            axisLine={false} 
+                            tickLine={false}
+                        />
+                        <YAxis type="category" dataKey="name" hide />
+                        <Tooltip cursor={{ fill: 'transparent' }} />
+                         {profile.cgEnvelope && profile.cgEnvelope.length > 0 && (
+                            <ReferenceLine
+                                x={profile.cgEnvelope[0].x}
+                                stroke="blue"
+                                strokeDasharray="3 3"
+                                label={{ value: 'FWD Limit', position: 'insideBottom', fill: 'blue' }}
+                            />
+                        )}
+                        {profile.cgEnvelope && profile.cgEnvelope.length > 1 && (
+                            <ReferenceLine
+                                x={profile.cgEnvelope[1].x}
+                                stroke="blue"
+                                strokeDasharray="3 3"
+                                label={{ value: 'AFT Limit', position: 'insideBottom', fill: 'blue' }}
+                            />
+                        )}
+                        <Bar dataKey="value" fill="#8884d8" barSize={30}>
+                             <LabelList
+                                dataKey="value"
+                                position="right"
+                                formatter={(value: number) => value.toFixed(2)}
+                                fill="#fff"
+                                className="font-semibold"
+                            />
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
