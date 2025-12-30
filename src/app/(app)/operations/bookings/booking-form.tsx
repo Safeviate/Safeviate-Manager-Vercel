@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -95,7 +94,7 @@ export function BookingForm({
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isMassBalanceOpen, setIsMassBalanceOpen] = useState(false);
   
-  const [massAndBalanceData, setMassAndBalanceData] = useState<MassAndBalance | undefined | null>(existingBooking?.massAndBalance);
+  const [massAndBalanceData, setMassAndBalanceData = useState<MassAndBalance | null>(existingBooking?.massAndBalance || null);
 
   useEffect(() => {
     if (isOpen) {
@@ -107,7 +106,7 @@ export function BookingForm({
             setStartTimeValue(existingBooking.startTime);
             setEndTimeValue(existingBooking.endTime);
             setIsOvernight(existingBooking.isOvernight || false);
-            setMassAndBalanceData(existingBooking.massAndBalance);
+            setMassAndBalanceData(existingBooking.massAndBalance || null);
             // Only set overnight end time from booking if it exists, otherwise keep default
             if (existingBooking.overnightEndTime) {
                 setOvernightEndTime(existingBooking.overnightEndTime);
