@@ -80,6 +80,7 @@ const PhotoGrid = ({ photos }: { photos: Photo[] }) => {
 
 // Function to convert camelCase to Title Case
 const camelToTitle = (camelCase: string) => {
+  if (!camelCase) return '';
   const result = camelCase.replace(/([A-Z])/g, " $1");
   return result.charAt(0).toUpperCase() + result.slice(1);
 };
