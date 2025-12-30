@@ -1,276 +1,212 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Trash2, Plus, Scale, Save, FileSignature, AlertTriangle, BookCopy } from 'lucide-react';
 import type { Aircraft, AircraftModelProfile, Station } from '@/types/aircraft';
+import { PlusCircle, Trash2, Scale } from 'lucide-react';
 import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
-import { MassBalanceChart } from './mass-balance-chart';
-import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, query } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { Booking } from '@/types/booking';
+import { useMemo } from 'react';
+import { MassBalanceChart } from './mass-balance-chart';
+
+const stationSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  type: z.enum(['weight', 'fuel']),
+  weight: z.number({ coerce: true }).min(0, 'Must be positive').optional(),
+  gallons: z.number({ coerce: true }).min(0, 'Must be positive').optional(),
+  arm: z.number(),
+  moment: z.number().optional(),
+});
+
+const formSchema = z.object({
+  stations: z.array(stationSchema),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface MassBalanceCalculatorProps {
-    aircraftProfile: Aircraft | AircraftModelProfile | null;
-    onSaveProfile?: (profileName: string, stations: Station[]) => void;
-    onAssignToAircraft?: (profileId: string) => void;
-    onClearAircraftMb?: () => void;
+  aircraftProfile: AircraftModelProfile;
+  onSave: (profile: AircraftModelProfile) => void;
 }
 
-export function MassBalanceCalculator({
-    aircraftProfile,
-    onSaveProfile,
-    onAssignToAircraft,
-    onClearAircraftMb
-}: MassBalanceCalculatorProps) {
-    const { toast } = useToast();
-    const firestore = useFirestore();
-    const tenantId = 'safeviate';
+export function MassBalanceCalculator({ aircraftProfile, onSave }: MassBalanceCalculatorProps) {
+  const { toast } = useToast();
 
-    const [stations, setStations] = useState<Station[]>([]);
-    const [profileName, setProfileName] = useState('');
-    const [selectedBookingId, setSelectedBookingId] = useState<string>('');
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      stations: aircraftProfile.stations,
+    },
+  });
 
-    const bookingsQuery = useMemoFirebase(
-      () => (firestore ? query(collection(firestore, `tenants/${tenantId}/bookings`)) : null),
-      [firestore, tenantId]
-    );
-    const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
+  const { fields, append, remove, update } = useFieldArray({
+    control: form.control,
+    name: 'stations',
+  });
 
-    useEffect(() => {
-        if (aircraftProfile) {
-            setStations(aircraftProfile.stations || []);
-            if ('profileName' in aircraftProfile && aircraftProfile.profileName) {
-                setProfileName(aircraftProfile.profileName);
-            }
-        } else {
-            setStations([]);
-            setProfileName('');
-        }
-    }, [aircraftProfile]);
+  const watchedStations = useWatch({
+    control: form.control,
+    name: 'stations',
+  });
 
-    const handleStationChange = (index: number, field: keyof Station, value: string | number) => {
-        const newStations = [...stations];
-        const station = newStations[index];
+  const calculatedValues = useMemo(() => {
+    let currentTotalWeight = 0;
+    let currentTotalMoment = 0;
 
-        if (field === 'weight' && typeof value === 'number') {
-            station.weight = value;
-            if (station.type === 'fuel') {
-                station.gallons = value / FUEL_WEIGHT_PER_GALLON;
-            }
-        } else if (field === 'gallons' && typeof value === 'number') {
-            station.gallons = value;
-            station.weight = value * FUEL_WEIGHT_PER_GALLON;
-        } else if (field === 'arm' && typeof value === 'number') {
-            station.arm = value;
-        } else if (field === 'name' && typeof value === 'string') {
-            station.name = value;
-        }
-        
-        setStations(newStations);
-    };
+    const updatedStations = watchedStations.map(station => {
+      const weight = station.type === 'fuel' 
+        ? (station.gallons || 0) * FUEL_WEIGHT_PER_GALLON 
+        : station.weight || 0;
+      const moment = weight * station.arm;
+      currentTotalWeight += weight;
+      currentTotalMoment += moment;
+      return { ...station, moment, calculatedWeight: weight };
+    });
+
+    const cg = currentTotalWeight > 0 ? currentTotalMoment / currentTotalWeight : 0;
     
-    const handleSaveToBooking = async () => {
-        if (!selectedBookingId || !firestore) {
-            toast({
-                variant: "destructive",
-                title: "No Booking Selected",
-                description: "Please select a booking to save the M&B data to.",
-            });
-            return;
-        }
-
-        const massAndBalanceData = stations.reduce((acc, station) => {
-            const camelCaseName = station.name.replace(/\s+/g, ' ').trim().replace(/\s(.)/g, (match, group1) => group1.toUpperCase()).replace(/^(.)/, (match, group1) => group1.toLowerCase());
-            acc[camelCaseName] = {
-                weight: station.weight,
-                moment: station.weight * station.arm,
-            };
-            return acc;
-        }, {} as Record<string, { weight: number, moment: number }>);
-        
-        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, selectedBookingId);
-        
-        try {
-            await updateDocumentNonBlocking(bookingRef, { massAndBalance: massAndBalanceData });
-            toast({
-                title: "Mass & Balance Saved",
-                description: "The calculation has been saved to the selected booking.",
-            });
-        } catch (error) {
-            console.error("Error saving M&B to booking:", error);
-            toast({
-                variant: "destructive",
-                title: "Save Failed",
-                description: "Could not save the M&B data to the booking.",
-            });
-        }
+    return {
+      updatedStations,
+      totalWeight: currentTotalWeight,
+      totalMoment: currentTotalMoment,
+      centerOfGravity: cg,
     };
+  }, [watchedStations]);
 
+  const { totalWeight, totalMoment, centerOfGravity } = calculatedValues;
 
-    const addStation = () => setStations([...stations, { id: stations.length, name: 'New Station', weight: 0, arm: 0, type: 'weight' }]);
-    const removeStation = (index: number) => setStations(stations.filter((_, i) => i !== index));
-    const resetCalculator = () => setStations(stations.map(s => ({ ...s, weight: 0, gallons: 0 })));
+  const handleReset = () => {
+    form.reset({ stations: aircraftProfile.stations });
+    toast({
+      title: 'Form Reset',
+      description: 'All values have been reset to the template defaults.',
+    });
+  };
 
-    const { totalWeight, totalMoment, centerOfGravity, isCGInEnvelope, isWeightOk } = useMemo(() => {
-        if (!aircraftProfile) return { totalWeight: 0, totalMoment: 0, centerOfGravity: 0, isCGInEnvelope: false, isWeightOk: true };
+  const handleSaveTemplate = () => {
+    const currentStations = form.getValues('stations');
+    onSave({ ...aircraftProfile, stations: currentStations });
+  }
 
-        const emptyWeight = 'emptyWeight' in aircraftProfile ? aircraftProfile.emptyWeight || 0 : 0;
-        const emptyWeightMoment = 'emptyWeightMoment' in aircraftProfile ? aircraftProfile.emptyWeightMoment || 0 : 0;
-
-        const currentTotalWeight = stations.reduce((acc, station) => acc + (station.weight || 0), emptyWeight);
-        const currentTotalMoment = stations.reduce((acc, station) => acc + ((station.weight || 0) * (station.arm || 0)), emptyWeightMoment);
-        const cg = currentTotalWeight > 0 ? currentTotalMoment / currentTotalWeight : 0;
-        
-        const isWeightOk = currentTotalWeight <= (('maxTakeoffWeight' in aircraftProfile && aircraftProfile.maxTakeoffWeight) || Infinity);
-
-        return {
-            totalWeight: currentTotalWeight,
-            totalMoment: currentTotalMoment,
-            centerOfGravity: cg,
-            isCGInEnvelope: false, // Placeholder, logic needs to be added
-            isWeightOk: isWeightOk
-        };
-    }, [stations, aircraftProfile]);
-
-    return (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="xl:col-span-2 space-y-4">
-                    {stations.map((station, index) => (
-                        <div key={station.id} className="grid grid-cols-[1fr,1fr,1fr,auto] items-center gap-2 p-3 rounded-lg border">
-                           <div className="flex items-center">
-                                <span className="text-sm font-semibold mr-2 bg-muted h-6 w-6 flex items-center justify-center rounded-full">{index + 1}</span>
-                                <Input
-                                    value={station.name}
-                                    onChange={(e) => handleStationChange(index, 'name', e.target.value)}
-                                    className="font-medium"
-                                />
-                            </div>
-                           
-                            {station.type === 'fuel' ? (
-                                 <div className="relative">
-                                    <Input
-                                        type="number"
-                                        value={Math.round(station.gallons || 0)}
-                                        onChange={(e) => handleStationChange(index, 'gallons', parseFloat(e.target.value))}
-                                    />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">gal</span>
-                                 </div>
-                            ) : (
-                                <div className="relative">
-                                    <Input
-                                        type="number"
-                                        value={Math.round(station.weight || 0)}
-                                        onChange={(e) => handleStationChange(index, 'weight', parseFloat(e.target.value))}
-                                    />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">lbs</span>
-                                </div>
-                            )}
-
-                             <div className="relative">
-                                <Input
-                                    type="number"
-                                    value={Math.round(station.arm || 0)}
-                                    onChange={(e) => handleStationChange(index, 'arm', parseFloat(e.target.value))}
-                                />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">in</span>
-                             </div>
-
-                            <Button variant="ghost" size="icon" onClick={() => removeStation(index)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+  return (
+    <Form {...form}>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="xl:col-span-2 space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Loading Stations</CardTitle>
+                    <CardDescription>
+                    Manage the weights and fuel for each station on the aircraft.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {fields.map((field, index) => (
+                    <div key={field.id} className="grid grid-cols-4 items-center gap-4 p-4 border rounded-lg">
+                        <div className="col-span-2">
+                            <FormLabel>{field.name}</FormLabel>
                         </div>
-                    ))}
-                    <Button variant="outline" onClick={addStation}>
-                        <Plus className="mr-2" /> Add Station
-                    </Button>
-                </div>
-
-                <div className="space-y-4">
-                    <MassBalanceChart
-                        cgEnvelope={aircraftProfile?.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight }))}
-                        calculatedCg={{ x: centerOfGravity, y: totalWeight }}
-                        xMin={('xMin' in aircraftProfile && aircraftProfile.xMin) ? aircraftProfile.xMin : undefined}
-                        xMax={('xMax' in aircraftProfile && aircraftProfile.xMax) ? aircraftProfile.xMax : undefined}
-                        yMin={('yMin' in aircraftProfile && aircraftProfile.yMin) ? aircraftProfile.yMin : undefined}
-                        yMax={('yMax' in aircraftProfile && aircraftProfile.yMax) ? aircraftProfile.yMax : undefined}
-                    />
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                             <CardTitle className="text-base flex items-center gap-2">
-                                <Scale /> Summary
-                             </CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-3 gap-4">
-                            <div className="text-center">
-                                <p className="text-sm text-muted-foreground">Total Weight</p>
-                                <p className="text-lg font-bold">{totalWeight.toFixed(2)} lbs</p>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-sm text-muted-foreground">Total Moment</p>
-                                <p className="text-lg font-bold">{totalMoment.toFixed(2)}</p>
-                            </div>
-                             <div className="text-center">
-                                <p className="text-sm text-muted-foreground">C.G.</p>
-                                <p className="text-lg font-bold">{centerOfGravity.toFixed(2)} in</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                     {!isWeightOk && (
-                        <div className="flex items-center gap-2 text-destructive-foreground bg-destructive p-3 rounded-lg">
-                           <AlertTriangle />
-                           <p className="font-semibold">Exceeds Max Takeoff Weight of {('maxTakeoffWeight' in aircraftProfile && aircraftProfile.maxTakeoffWeight) || 'N/A'} lbs</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            <CardFooter className="flex-col sm:flex-row justify-between items-center gap-4 border-t pt-6">
-                <div className="flex flex-wrap gap-2">
-                    {onAssignToAircraft && (
-                        <Button variant="outline" onClick={() => aircraftProfile && onAssignToAircraft(aircraftProfile.id)}>
-                            <FileSignature className="mr-2" /> Assign to Aircraft
+                        {field.type === 'weight' ? (
+                            <FormField
+                                control={form.control}
+                                name={`stations.${index}.weight`}
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Weight (lbs)</FormLabel>
+                                    <FormControl>
+                                    <Input type="number" placeholder="0" {...field} />
+                                    </FormControl>
+                                </FormItem>
+                                )}
+                            />
+                        ) : (
+                            <FormField
+                                control={form.control}
+                                name={`stations.${index}.gallons`}
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Fuel (gal)</FormLabel>
+                                    <FormControl>
+                                    <Input type="number" placeholder="0" {...field} />
+                                    </FormControl>
+                                </FormItem>
+                                )}
+                            />
+                        )}
+                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}>
+                            <Trash2 className="h-4 w-4" />
                         </Button>
-                    )}
-                    {onClearAircraftMb && (
-                        <Button variant="destructive" onClick={onClearAircraftMb}>
-                           <Trash2 className="mr-2" /> Clear Aircraft M&B
-                        </Button>
-                    )}
-                </div>
-                 <div className="flex flex-wrap gap-2">
-                    <div className="flex-1 min-w-[200px]">
-                        <Select onValueChange={setSelectedBookingId} value={selectedBookingId} disabled={isLoadingBookings}>
-                            <SelectTrigger>
-                                <SelectValue placeholder={isLoadingBookings ? "Loading..." : "Select booking to save to..."} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {(bookings || []).map(b => (
-                                    <SelectItem key={b.id} value={b.id}>
-                                        #{b.bookingNumber} - {b.date}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
                     </div>
-                    <Button onClick={handleSaveToBooking} disabled={!selectedBookingId}>
-                        <BookCopy className="mr-2" /> Save to Booking
+                    ))}
+                    <Button type="button" variant="outline" className="w-full" onClick={() => append({ id: Date.now(), name: 'New Station', arm: 0, weight: 0, type: 'weight' })}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Station
                     </Button>
-                    {onSaveProfile && (
-                        <Button onClick={() => onSaveProfile(profileName, stations)}>
-                            <Save className="mr-2" /> Save as New Profile
-                        </Button>
-                    )}
-                </div>
-            </CardFooter>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>CG Envelope</CardTitle>
+                    <CardDescription>The calculated Center of Gravity is plotted against the aircraft&apos;s envelope.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <MassBalanceChart
+                        aircraftProfile={aircraftProfile}
+                        calculatedCg={{ x: centerOfGravity, y: totalWeight }}
+                    />
+                </CardContent>
+            </Card>
+
         </div>
-    );
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Scale /> Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-baseline">
+                <span className="text-muted-foreground">Total Weight:</span>
+                <span className="font-bold text-lg">{totalWeight.toFixed(2)} lbs</span>
+              </div>
+               <div className="flex justify-between items-baseline">
+                <span className="text-muted-foreground">Total Moment:</span>
+                <span className="font-bold text-lg">{totalMoment.toFixed(2)} lbs-in</span>
+              </div>
+               <div className="flex justify-between items-baseline">
+                <span className="text-muted-foreground">Center of Gravity:</span>
+                <span className="font-bold text-lg">{centerOfGravity.toFixed(2)} in</span>
+              </div>
+            </CardContent>
+             <CardFooter>
+                 <p className="text-xs text-muted-foreground">Max Takeoff Weight: {aircraftProfile.maxTakeoffWeight ? `${aircraftProfile.maxTakeoffWeight} lbs` : 'N/A'}</p>
+             </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader>
+                <CardTitle>Actions</CardTitle>
+            </CardHeader>
+             <CardContent>
+                <p className="text-sm text-muted-foreground">
+                    Save the current weights as a new template or reset to the original values.
+                </p>
+            </CardContent>
+            <CardFooter className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={handleReset}>Save</Button>
+                <Button type="button" onClick={handleSaveTemplate}>Save as Template</Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </div>
+    </Form>
+  );
 }
