@@ -1,6 +1,27 @@
 
 {
   "entities": {
+    "User": {
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user's link between authentication and their profile data.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The Firebase Authentication UID."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address, used for lookups."
+        },
+        "profilePath": {
+          "type": "string",
+          "description": "The full Firestore path to the user's detailed profile document (e.g., 'tenants/safeviate/personnel/xyz123')."
+        }
+      },
+      "required": ["id", "email", "profilePath"]
+    },
     "PublishedTable": {
       "title": "Published Table",
       "type": "object",
@@ -134,6 +155,7 @@
             }
           }
         },
+        "massAndBalance": { "$ref": "#/backend/entities/MassAndBalance" },
         "performance": {
           "type": "object",
           "properties": {
@@ -566,6 +588,18 @@
                     }
                 }
             }
+        },
+        "massAndBalance": {
+            "type": "object",
+            "description": "A flat map of station names (camelCase) to their calculated weight and moment for the flight.",
+            "additionalProperties": {
+                "type": "object",
+                "properties": {
+                    "weight": { "type": "number" },
+                    "moment": { "type": "number" }
+                },
+                "required": ["weight", "moment"]
+            }
         }
       },
       "required": ["id", "aircraftId", "type", "date", "startTime", "endTime"]
@@ -597,6 +631,63 @@
             }
         },
         "required": ["id", "label"]
+    },
+    "AircraftModelProfile": {
+      "title": "Aircraft Model Profile",
+      "type": "object",
+      "description": "Represents a mass and balance template for a specific aircraft make and model.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the profile." },
+        "profileName": { "type": "string", "description": "The unique name for this M&B profile." },
+        "emptyWeight": { "type": "number", "description": "The standard empty weight of this aircraft model (in lbs)." },
+        "emptyWeightMoment": { "type": "number", "description": "The standard moment of this model at its empty weight (in lbs-in)." },
+        "maxTakeoffWeight": { "type": "number", "description": "Maximum allowable takeoff weight (in lbs)." },
+        "maxLandingWeight": { "type": "number", "description": "Maximum allowable landing weight (in lbs)." },
+        "stationArms": {
+          "type": "object",
+          "description": "Defines the arm (distance from datum in inches) for each station.",
+          "properties": {
+            "frontSeats": { "type": "number", "description": "Arm for the front seats." },
+            "rearSeats": { "type": "number", "description": "Arm for the rear seats." },
+            "fuel": { "type": "number", "description": "Arm for the fuel tank(s)." },
+            "baggage1": { "type": "number", "description": "Arm for the primary baggage area." },
+            "baggage2": { "type": "number", "description": "Arm for the secondary baggage area, if applicable." }
+          }
+        },
+        "stations": {
+          "type": "array",
+          "description": "A list of loading stations for the aircraft model.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "number" },
+              "name": { "type": "string" },
+              "weight": { "type": "number" },
+              "arm": { "type": "number" },
+              "type": { "type": "string" },
+              "gallons": { "type": "number" },
+              "maxGallons": { "type": "number" }
+            }
+          }
+        },
+        "cgEnvelope": {
+          "type": "array",
+          "description": "An array of {x, y} objects defining the vertices of the CG envelope polygon.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "x": { "type": "number", "description": "Center of Gravity (inches)" },
+              "y": { "type": "number", "description": "Weight (lbs)" }
+            },
+            "required": ["x", "y"]
+          }
+        },
+        "xMin": { "type": "number", "description": "Minimum value for the CG chart's X-axis (CG)." },
+        "xMax": { "type": "number", "description": "Maximum value for the CG chart's X-axis (CG)." },
+        "yMin": { "type": "number", "description": "Minimum value for the CG chart's Y-axis (Weight)." },
+        "yMax": { "type": "number", "description": "Maximum value for the CG chart's Y-axis (Weight)." }
+      },
+      "required": ["id", "profileName"]
     },
     "PilotProfile": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1270,6 +1361,14 @@
   },
   "firestore": {
     "structure": [
+      {
+        "path": "users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": { "$ref": "#/backend/entities/User" },
+          "description": "Stores a link between a Firebase Auth user and their profile document."
+        }
+      },
        {
         "path": "tenants/{tenantId}/published-tables/{pageId}",
         "definition": {
@@ -1407,6 +1506,20 @@
           "params": [
             { "name": "tenantId", "description": "Tenant ID." },
             { "name": "templateId", "description": "Template ID." }
+          ]
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/massAndBalance/{profileId}",
+        "definition": {
+          "entityName": "AircraftModelProfile",
+          "schema": {
+            "$ref": "#/backend/entities/AircraftModelProfile"
+          },
+          "description": "Stores M&B templates for aircraft models.",
+          "params": [
+            { "name": "tenantId", "description": "Tenant ID." },
+            { "name": "profileId", "description": "Profile ID." }
           ]
         }
       },
@@ -1611,6 +1724,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support a multi-tenant aviation academy management application, focusing on security, scalability, and ease of debugging. Authorization Independence is achieved through denormalization where needed, especially for collaborative data. Structural Segregation ensures that each collection has a homogeneous security posture. Access Modeling follows consistent patterns, utilizing path-based ownership for user-specific data and membership maps for collaborative entities. The structure is multi-tenant, where tenants are isolated from each other. The structure uses the tenants collection to keep a list of tenants and provides a tenant id for all other collections in the database. This strategy allows the application to manage multiple academies within the same system, each with its own set of data and settings.\\n\\n*   **Tenants:** The root level collection `tenants` stores individual tenant documents. Each tenant has its own unique ID and associated settings.\\n*   **Users:** User data is now split into `personnel` (non-flying staff), `instructors`, `students`, and `private-pilots` under each tenant to better segregate data models and security rules.\\n*   **Settings:** A generic `settings` collection is added under each tenant. This allows for storing various configuration documents, such as `document-expiry`, in a structured and scalable way without creating new top-level collections for each setting type.\\n\\nQAPs (Rules are not Filters) is addressed by:\\n\\n*   Segregating data into collections with homogeneous security requirements.\\n*   Using path-based ownership for private data.\\n*   Employing membership maps for collaborative data, and storing these maps directly within the documents to avoid `get()` calls in security rules.\\n\\nThis design enables robust security rules that are simple to write, easy to understand, and highly performant."
+    "reasoning": "The Firestore structure is designed to support a multi-tenant aviation academy management application, focusing on security, scalability, and ease of debugging. A top-level `users` collection is introduced to map Firebase Authentication UIDs to their corresponding profile documents, solving the issue of disparate user profile locations. Authorization Independence is achieved through denormalization where needed, especially for collaborative data. Structural Segregation ensures that each collection has a homogeneous security posture. Access Modeling follows consistent patterns, utilizing path-based ownership for user-specific data and membership maps for collaborative entities. The structure is multi-tenant, where tenants are isolated from each other. The structure uses the tenants collection to keep a list of tenants and provides a tenant id for all other collections in the database. This strategy allows the application to manage multiple academies within the same system, each with its own set of data and settings.\\n\\n*   **Users:** A new top-level `users` collection maps auth UIDs to profile paths, centralizing user lookups.\\n*   **Tenants:** The root level collection `tenants` stores individual tenant documents. Each tenant has its own unique ID and associated settings.\\n*   **User Profiles:** User data is split into `personnel` (non-flying staff), `instructors`, `students`, and `private-pilots` under each tenant to better segregate data models and security rules.\\n*   **Settings:** A generic `settings` collection is added under each tenant. This allows for storing various configuration documents, such as `document-expiry`, in a structured and scalable way without creating new top-level collections for each setting type.\\n\\nQAPs (Rules are not Filters) is addressed by:\\n\\n*   Segregating data into collections with homogeneous security requirements.\\n*   Using path-based ownership for private data.\\n*   Employing membership maps for collaborative data, and storing these maps directly within the documents to avoid `get()` calls in security rules.\\n\\nThis design enables robust security rules that are simple to write, easy to understand, and highly performant."
   }
 }

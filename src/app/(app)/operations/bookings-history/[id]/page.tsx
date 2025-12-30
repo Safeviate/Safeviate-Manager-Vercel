@@ -2,7 +2,7 @@
 
 import { use, useMemo, useState } from 'react';
 import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import { doc, collection, getDocs, query, where } from 'firebase/firestore';
 import type { Booking, Photo, MassAndBalance } from '@/types/booking';
 import type { Aircraft } from '../../../assets/page';
 import type { PilotProfile, Personnel } from '../../../users/personnel/page';
@@ -100,50 +100,57 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
         () => (firestore ? collection(firestore, 'tenants', tenantId, 'aircrafts') : null),
         [firestore, tenantId]
     );
-    const personnelRef = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'personnel') : null), [firestore, tenantId]);
-    const instructorsRef = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'instructors') : null), [firestore, tenantId]);
-    const studentsRef = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'students') : null), [firestore, tenantId]);
-    const privatePilotsRef = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'private-pilots') : null), [firestore, tenantId]);
-
+    
+    // We fetch all users to create a map for easy lookup
+    const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
+    const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
+    const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
+    const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
+    
     const { data: booking, isLoading: isLoadingBooking, error: bookingError } = useDoc<Booking>(bookingRef);
     const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsRef);
-    const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelRef);
-    const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsRef);
-    const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsRef);
-    const { data: privatePilots, isLoading: isLoadingPrivatePilots } = useCollection<PilotProfile>(privatePilotsRef);
+    const { data: personnel } = useCollection<Personnel>(personnelQuery);
+    const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
+    const { data: students } = useCollection<PilotProfile>(studentsQuery);
+    const { data: privatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
     
-    const allUsers: UserProfile[] = useMemo(() => [
-        ...(personnel || []), 
-        ...(instructors || []), 
-        ...(students || []), 
-        ...(privatePilots || [])
-    ], [personnel, instructors, students, privatePilots]);
+    const [allUsersMap, setAllUsersMap] = useState<Map<string, UserProfile>>(new Map());
 
+    const isLoading = isLoadingBooking || isLoadingAircrafts || !personnel || !instructors || !students || !privatePilots;
+    
+    useEffect(() => {
+        if (!isLoading) {
+            const userMap = new Map<string, UserProfile>();
+            [...(personnel || []), ...(instructors || []), ...(students || []), ...(privatePilots || [])].forEach(u => userMap.set(u.id, u));
+            setAllUsersMap(userMap);
+        }
+    }, [personnel, instructors, students, privatePilots, isLoading]);
 
-    const isLoading = isLoadingBooking || isLoadingAircrafts || isLoadingPersonnel || isLoadingInstructors || isLoadingStudents || isLoadingPrivatePilots;
 
     const enrichedBooking = useMemo(() => {
-        if (!booking || !aircrafts || allUsers.length === 0) return null;
+        if (!booking || !aircrafts || allUsersMap.size === 0) return null;
         
         const aircraft = aircrafts.find(a => a.id === booking.aircraftId);
-        const creator = allUsers.find(p => p.id === booking.createdById);
-        let picName = 'Unknown Creator';
-
-        if (creator) {
-            picName = `${creator.firstName} ${creator.lastName}`;
-        } else if (booking.type === 'Training Flight' && booking.instructorId) {
-            const instructor = allUsers.find(p => p.id === booking.instructorId);
-            if (instructor) picName = `${instructor.firstName} ${instructor.lastName}`;
+        
+        let pilotInCommand: UserProfile | undefined;
+        if(booking.type === 'Training Flight') {
+            pilotInCommand = allUsersMap.get(booking.instructorId || '');
+        } else {
+             // For private, reposition, etc., it's the person who created it.
+            pilotInCommand = allUsersMap.get(booking.createdById || '');
         }
 
+        const student = booking.studentId ? allUsersMap.get(booking.studentId) : undefined;
+        
         return {
             ...booking,
             aircraft,
-            creatorName: picName,
+            picName: pilotInCommand ? `${pilotInCommand.firstName} ${pilotInCommand.lastName}`: 'Unknown',
+            studentName: student ? `${student.firstName} ${student.lastName}` : undefined,
             fullStartTime: parse(`${booking.date} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date()),
             fullEndTime: parse(`${booking.date} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date()),
         };
-    }, [booking, aircrafts, allUsers]);
+    }, [booking, aircrafts, allUsersMap]);
 
     if (isLoading) {
         return <div className="space-y-6">
@@ -189,16 +196,19 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                      <DetailItem label="Aircraft">
                         <div className="flex items-center gap-2">
                            <Plane className="h-4 w-4 text-muted-foreground" />
-                           <span>{enrichedBooking.aircraft?.tailNumber}</span>
+                           <span>{enrichedBooking.aircraft?.tailNumber} ({enrichedBooking.aircraft?.model})</span>
                         </div>
                     </DetailItem>
                     <DetailItem label="Pilot in Command">
                         <div className="flex items-center gap-2">
                            <User className="h-4 w-4 text-muted-foreground" />
-                           <span>{enrichedBooking.creatorName}</span>
+                           <span>{enrichedBooking.picName}</span>
                         </div>
                     </DetailItem>
                     <DetailItem label="Booking Type" value={enrichedBooking.type} />
+                    {enrichedBooking.studentName && (
+                        <DetailItem label="Student" value={enrichedBooking.studentName} />
+                    )}
                 </CardContent>
             </Card>
 
@@ -257,7 +267,6 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                         )}
                     </CardContent>
                 </Card>
-
                 <Card>
                     <CardHeader>
                         <CardTitle>Post-Flight Checklist</CardTitle>

@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 
 type UserProfile = PilotProfile | Personnel;
@@ -44,40 +44,49 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
             setIsLoading(true);
             const impersonatedEmail = localStorage.getItem('impersonatedUser');
 
+            // This is the developer/admin profile if not impersonating.
             if (!impersonatedEmail) {
-                // This handles the "Developer" login case
                 const devProfile: Personnel = {
                     id: authUser.uid,
                     userType: 'Personnel',
                     firstName: 'Developer',
                     lastName: 'Mode',
                     email: authUser.email || 'dev@safeviate.com',
-                    role: 'dev',
-                    permissions: [],
-                }
+                    role: 'dev', // Special role
+                    permissions: [], // Or all permissions
+                };
                 setUserProfile(devProfile);
                 setIsLoading(false);
                 return;
             }
 
             try {
-                // Define all collections to check, as per the user structure.
-                const collectionsToQuery = ['personnel', 'instructors', 'students', 'private-pilots'];
-                
-                const queries = collectionsToQuery.map(col => 
-                    query(collection(firestore, `tenants/safeviate/${col}`), where('email', '==', impersonatedEmail))
-                );
+                // 1. Find the user link document by email
+                const usersCollectionRef = collection(firestore, 'users');
+                const userQuery = query(usersCollectionRef, where('email', '==', impersonatedEmail));
+                const userQuerySnapshot = await getDocs(userQuery);
 
-                const querySnapshots = await Promise.all(queries.map(q => getDocs(q)));
-
-                let profile: UserProfile | null = null;
-                for (const snapshot of querySnapshots) {
-                    if (!snapshot.empty) {
-                        profile = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as UserProfile;
-                        break; // Found the user, no need to check other collections
-                    }
+                if (userQuerySnapshot.empty) {
+                    throw new Error(`No user profile found for email: ${impersonatedEmail}`);
                 }
-                
+
+                // 2. Get the profile path from the user link document
+                const userLinkDoc = userQuerySnapshot.docs[0];
+                const { profilePath } = userLinkDoc.data() as { profilePath: string };
+
+                if (!profilePath) {
+                    throw new Error("User document is missing the profile path.");
+                }
+
+                // 3. Fetch the actual profile document from the path
+                const profileRef = doc(firestore, profilePath);
+                const profileSnapshot = await getDoc(profileRef);
+
+                if (!profileSnapshot.exists()) {
+                     throw new Error(`Profile document not found at path: ${profilePath}`);
+                }
+
+                const profile = { id: profileSnapshot.id, ...profileSnapshot.data() } as UserProfile;
                 setUserProfile(profile);
 
             } catch (e: any) {

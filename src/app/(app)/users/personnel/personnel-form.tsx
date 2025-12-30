@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { collection } from 'firebase/firestore';
+import { collection, doc, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -56,7 +56,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     if (!userType || !firstName.trim() || !lastName.trim() || !email.trim()) {
       toast({
         variant: 'destructive',
@@ -84,39 +84,62 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
       return;
     }
 
-    const collectionName = determineCollection(userType);
-    let newUser: Omit<UserProfile, 'id'>;
+    try {
+        const collectionName = determineCollection(userType);
+        const userProfileCollection = collection(firestore, 'tenants', tenantId, collectionName);
+        const usersCollection = collection(firestore, 'users');
+        
+        const newUserProfileRef = doc(userProfileCollection);
+        
+        let newUserProfileData: Omit<UserProfile, 'id'>;
 
-    if (userType === 'Personnel') {
-        newUser = {
-            userType,
-            firstName,
-            lastName,
-            email,
-            role: selectedRole.id,
-            department: selectedDepartment?.id,
-            permissions: selectedRole.permissions || [],
+        if (userType === 'Personnel') {
+            newUserProfileData = {
+                userType,
+                firstName,
+                lastName,
+                email,
+                role: selectedRole.id,
+                department: selectedDepartment?.id,
+                permissions: selectedRole.permissions || [],
+            };
+        } else {
+            newUserProfileData = {
+                userType: userType as 'Student' | 'Instructor' | 'Private Pilot',
+                firstName,
+                lastName,
+                email,
+                role: selectedRole.id,
+            };
+        }
+        
+        const userLinkRef = doc(usersCollection, newUserProfileRef.id);
+        const userLinkData = {
+            email: email,
+            profilePath: newUserProfileRef.path
         };
-    } else {
-        newUser = {
-            userType,
-            firstName,
-            lastName,
-            email,
-            role: selectedRole.id,
-        };
+        
+        const batch = writeBatch(firestore);
+        batch.set(newUserProfileRef, newUserProfileData);
+        batch.set(userLinkRef, userLinkData);
+
+        await batch.commit();
+
+        toast({
+          title: 'User Added',
+          description: `User ${firstName} ${lastName} has been created successfully.`,
+        });
+
+        resetForm();
+
+    } catch (error) {
+        console.error("Error creating user:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Creation Failed',
+            description: 'An unexpected error occurred while creating the user.',
+        });
     }
-
-    const collectionRef = collection(firestore, 'tenants', tenantId, collectionName);
-    
-    addDocumentNonBlocking(collectionRef, newUser);
-
-    toast({
-      title: 'User Added',
-      description: `User ${firstName} ${lastName} is being created.`,
-    });
-
-    resetForm();
   };
 
   const resetForm = () => {
