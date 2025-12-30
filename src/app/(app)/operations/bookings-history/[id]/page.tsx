@@ -1,3 +1,4 @@
+
 'use client';
 
 import { use, useMemo, useState, useEffect } from 'react';
@@ -287,6 +288,44 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                     )}
                 </CardContent>
             </Card>
+            
+             <Card>
+                <CardHeader>
+                    <CardTitle>Aircraft Base Data</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <DetailItem label="Empty Weight" value={`${enrichedBooking.aircraft?.emptyWeight || 0} lbs`} />
+                    <DetailItem label="Empty Moment" value={`${enrichedBooking.aircraft?.emptyWeightMoment || 0}`} />
+                    <DetailItem label="Max Takeoff Weight" value={`${enrichedBooking.aircraft?.maxTakeoffWeight || 0} lbs`} />
+                    <DetailItem label="Max Landing Weight" value={`${enrichedBooking.aircraft?.maxLandingWeight || 0} lbs`} />
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Loading Stations</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {massAndBalance && Object.keys(massAndBalance).length > 1 ? (
+                        <div className="divide-y divide-border">
+                            {Object.entries(massAndBalance).map(([stationKey, values]) => {
+                                if (stationKey === 'basicEmpty') return null;
+                                const arm = (values.weight > 0) ? (values.moment / values.weight).toFixed(2) : '0.00';
+                                return (
+                                    <div key={stationKey} className="grid grid-cols-3 gap-4 py-3">
+                                        <p className="font-medium">{camelToTitle(stationKey)}</p>
+                                        <p>{values.weight.toFixed(1)} lbs</p>
+                                        <p>{arm} in</p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <p className="text-muted-foreground text-center py-4">No loading station data saved.</p>
+                    )}
+                </CardContent>
+            </Card>
+
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>
@@ -347,4 +386,5 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
             </div>
         </div>
     );
-}
+
+    
