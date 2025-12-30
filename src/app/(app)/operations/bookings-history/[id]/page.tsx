@@ -296,5 +296,3 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
         </div>
     );
 }
-
-    
