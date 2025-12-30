@@ -272,6 +272,5 @@ export const MassBalanceCalculator = ({ aircraft, initialData, onSave }: MassBal
           </div>
         </div>
       </div>
-    </div>
   );
 };
