@@ -166,10 +166,6 @@ export const menuConfig: MenuItem[] = [
         href: '/assets',
         label: 'Aircraft',
       },
-      {
-        href: '/assets/mass-balance',
-        label: 'Mass & Balance',
-      },
     ],
   },
   {

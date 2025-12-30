@@ -39,11 +39,6 @@ export const permissionsConfig: PermissionResource[] = [
     actions: ['view', 'create', 'edit', 'delete'],
   },
   {
-    id: 'mass-balance',
-    name: 'Mass & Balance',
-    actions: ['view', 'manage-templates', 'calculate-booking'],
-  },
-  {
     id: 'users',
     name: 'Users',
     actions: ['view', 'create', 'edit', 'delete'],

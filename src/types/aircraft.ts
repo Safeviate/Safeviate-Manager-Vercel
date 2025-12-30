@@ -1,4 +1,5 @@
 
+
 export type Station = {
     id: number;
     name: string;
@@ -8,18 +9,6 @@ export type Station = {
     gallons?: number;
     maxGallons?: number;
 };
-
-export type AircraftModelProfile = {
-    id: string;
-    profileName: string;
-    stations: Station[];
-    cgEnvelope?: { x: number, y: number }[];
-    xMin?: number;
-    xMax?: number;
-    yMin?: number;
-    yMax?: number;
-};
-
 
 export type Aircraft = {
   id: string;

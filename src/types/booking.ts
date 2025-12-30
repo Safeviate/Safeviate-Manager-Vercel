@@ -1,17 +1,11 @@
 
 
+
 import type { Timestamp } from "firebase/firestore";
 
 export interface Photo {
     url: string;
     description: string;
-}
-
-export interface MassAndBalance {
-    [station: string]: {
-        weight: number;
-        moment: number;
-    };
 }
 
 export interface Booking {
@@ -50,6 +44,4 @@ export interface Booking {
         fuel?: number;
         photos?: Photo[];
     };
-    // Mass and Balance data
-    massAndBalance?: MassAndBalance;
 }
