@@ -1,4 +1,5 @@
 
+
 import type { Timestamp } from "firebase/firestore";
 
 export interface Photo {
@@ -7,12 +8,12 @@ export interface Photo {
 }
 
 export interface MassAndBalance {
-    stationWeights: { [stationId: string]: number };
-    totalWeight: number;
-    totalMoment: number;
-    centerOfGravity: number;
-    isWithinLimits: boolean;
-    calculatedAt: string; // ISO string
+    // An object where each key is the camelCase name of a station,
+    // and the value is an object containing the weight and moment for that station.
+    [station: string]: {
+        weight: number;
+        moment: number;
+    };
 }
 
 export interface Booking {
@@ -33,7 +34,6 @@ export interface Booking {
     overnightBookingDate?: string | null; // YYYY-MM-DD
     overnightEndTime?: string | null; // HH:mm
     flightPlanId?: string; // Link to a flight plan document
-    flightDetails?: string; // New field for flight details
     // Pre-flight data
     preFlight?: {
         actualHobbs?: number;

@@ -78,6 +78,13 @@ const PhotoGrid = ({ photos }: { photos: Photo[] }) => {
     );
 };
 
+// Function to convert camelCase to Title Case
+const camelToTitle = (camelCase: string) => {
+  const result = camelCase.replace(/([A-Z])/g, " $1");
+  return result.charAt(0).toUpperCase() + result.slice(1);
+};
+
+
 export default function BookingDetailPage({ params }: BookingDetailPageProps) {
     const resolvedParams = use(params);
     const firestore = useFirestore();
@@ -187,19 +194,16 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Planning</CardTitle>
+                    <CardTitle>Mass &amp; Balance</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {massAndBalance ? (
+                    {massAndBalance && Object.keys(massAndBalance).length > 0 ? (
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                            <DetailItem label="Total Weight" value={`${massAndBalance.totalWeight.toFixed(2)} lbs`} />
-                            <DetailItem label="Center of Gravity" value={`${massAndBalance.centerOfGravity.toFixed(2)} in`} />
-                            <DetailItem label="Calculated At" value={format(new Date(massAndBalance.calculatedAt), 'PPp')} />
-                            <DetailItem label="Status">
-                                <Badge variant={massAndBalance.isWithinLimits ? 'default' : 'destructive'}>
-                                    {massAndBalance.isWithinLimits ? 'Within Limits' : 'Out of Limits'}
-                                </Badge>
-                            </DetailItem>
+                           {Object.entries(massAndBalance).map(([stationKey, values]) => (
+                                <DetailItem key={stationKey} label={camelToTitle(stationKey)}>
+                                    <p className="text-base">{values.weight.toFixed(2)} lbs @ {values.moment.toFixed(2)}</p>
+                                </DetailItem>
+                           ))}
                         </div>
                     ) : (
                         <p className="text-muted-foreground">No Mass & Balance calculation has been saved for this booking.</p>

@@ -115,7 +115,6 @@
       "properties": {
         "id": { "type": "string" },
         "bookingId": { "type": "string", "description": "The booking this flight plan is associated with." },
-        "pilotId": { "type": "string" },
         "aircraftId": { "type": "string" },
         "departure": { "type": "string" },
         "destination": { "type": "string" },
@@ -175,7 +174,7 @@
             }
         }
       },
-       "required": ["id", "pilotId", "aircraftId", "departure", "destination"]
+       "required": ["id", "aircraftId", "departure", "destination"]
     },
     "Risk": {
       "title": "Risk",
@@ -522,10 +521,6 @@
             "type": "string",
             "description": "The end time for the second part of an overnight booking (HH:mm)."
         },
-        "flightDetails": {
-            "type": "string",
-            "description": "Details about the flight, such as route or purpose."
-        },
         "preFlight": {
             "type": "object",
             "description": "Pre-flight checklist data.",
@@ -572,17 +567,13 @@
         "massAndBalance": {
             "type": "object",
             "description": "Mass and Balance calculation data for the flight.",
-            "properties": {
-                "stationWeights": {
-                    "type": "object",
-                    "description": "A map of station IDs to their weights for this flight.",
-                    "additionalProperties": { "type": "number" }
+            "additionalProperties": {
+                "type": "object",
+                "properties": {
+                    "weight": { "type": "number" },
+                    "moment": { "type": "number" }
                 },
-                "totalWeight": { "type": "number" },
-                "totalMoment": { "type": "number" },
-                "centerOfGravity": { "type": "number" },
-                "isWithinLimits": { "type": "boolean" },
-                "calculatedAt": { "type": "string", "format": "date-time" }
+                "required": ["weight", "moment"]
             }
         }
       },
@@ -1338,36 +1329,6 @@
             }
         },
         "required": ["id", "auditId", "findingId", "rootCauseAnalysis"]
-    },
-    "StudentProgressEntry": {
-        "title": "Student Progress Entry",
-        "type": "object",
-        "description": "A single entry in a student's progress report for a specific exercise.",
-        "properties": {
-            "id": { "type": "string" },
-            "exercise": { "type": "string" },
-            "rating": { "type": "number", "description": "Performance rating from 1 to 4." },
-            "comment": { "type": "string" }
-        },
-        "required": ["id", "exercise", "rating"]
-    },
-    "StudentProgressReport": {
-        "title": "Student Progress Report",
-        "type": "object",
-        "description": "An instructor's debrief of a student's performance for a single booking.",
-        "properties": {
-            "id": { "type": "string" },
-            "bookingId": { "type": "string" },
-            "studentId": { "type": "string" },
-            "instructorId": { "type": "string" },
-            "date": { "type": "string", "format": "date-time" },
-            "overallComment": { "type": "string", "description": "A summary comment for the entire debrief session." },
-            "entries": {
-                "type": "array",
-                "items": { "$ref": "#/backend/entities/StudentProgressEntry" }
-            }
-        },
-        "required": ["id", "bookingId", "studentId", "instructorId", "date"]
     }
   },
   "auth": {
@@ -1530,14 +1491,6 @@
             { "name": "tenantId", "description": "Tenant ID." },
             { "name": "profileId", "description": "Profile ID." }
           ]
-        }
-      },
-       {
-        "path": "tenants/{tenantId}/student-progress-reports/{reportId}",
-        "definition": {
-          "entityName": "StudentProgressReport",
-          "schema": { "$ref": "#/backend/entities/StudentProgressReport" },
-          "description": "Stores student debriefs from instructors."
         }
       },
       {
