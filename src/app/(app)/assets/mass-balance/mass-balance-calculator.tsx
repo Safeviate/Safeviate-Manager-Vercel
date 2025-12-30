@@ -1,261 +1,284 @@
+
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Save, Plane, BookCopy } from 'lucide-react';
-import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
+import { Trash2, Save, Plane, BookOpen, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { FUEL_WEIGHT_PER_GALLON } from '@/lib/constants';
+import type { AircraftModelProfile, Station, Aircraft } from '@/types/aircraft';
+import { isPointInPolygon } from '@/lib/utils';
 import { MassBalanceChart } from './mass-balance-chart';
-import type { AircraftModelProfile, Station } from '@/types/aircraft';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, query } from 'firebase/firestore';
+import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, collection, query } from 'firebase/firestore';
 import type { Booking } from '@/types/booking';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface MassBalanceCalculatorProps {
-  aircraftProfile: AircraftModelProfile;
-  onSaveAsProfile: (profileName: string, stations: Station[]) => void;
-  onAssignToAircraft: (profileId: string) => void;
-  onClearAircraftMAndB: () => void;
-  isAssigned: boolean;
+    aircraftProfile: Aircraft;
+    onSaveAsProfile: (profileName: string, stations: Station[], cgEnvelope: {x:number, y:number}[]) => void;
+    onAssignToAircraft: (stations: Station[], cgEnvelope: {x:number, y:number}[]) => void;
+    onClearAircraftMB: () => void;
 }
 
 export function MassBalanceCalculator({
-  aircraftProfile,
-  onSaveAsProfile,
-  onAssignToAircraft,
-  onClearAircraftMAndB,
-  isAssigned,
+    aircraftProfile,
+    onSaveAsProfile,
+    onAssignToAircraft,
+    onClearAircraftMB
 }: MassBalanceCalculatorProps) {
-  const [stations, setStations] = useState<Station[]>([]);
-  const [profileName, setProfileName] = useState(aircraftProfile.profileName || '');
-  const [selectedBookingId, setSelectedBookingId] = useState<string>('');
-  const { toast } = useToast();
-  const firestore = useFirestore();
-  const tenantId = 'safeviate';
+    const { toast } = useToast();
+    const firestore = useFirestore();
+    const [stations, setStations] = useState<Station[]>([]);
+    const [profileName, setProfileName] = useState('');
+    const [selectedBookingId, setSelectedBookingId] = useState<string>('');
 
-  const bookingsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/bookings`)) : null),
-    [firestore, tenantId]
-  );
-  const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
+    const bookingsQuery = useMemoFirebase(
+      () => (firestore ? query(collection(firestore, 'tenants', 'safeviate', 'bookings')) : null),
+      [firestore]
+    );
+    const { data: bookings } = useCollection<Booking>(bookingsQuery);
 
-  useEffect(() => {
-    setStations(JSON.parse(JSON.stringify(aircraftProfile.stations || [])));
-    setProfileName(aircraftProfile.profileName || '');
-  }, [aircraftProfile]);
-
-  const handleStationChange = (index: number, field: keyof Station, value: string | number) => {
-    const newStations = [...stations];
-    const station = newStations[index];
-    if (!station) return;
-
-    let numericValue = typeof value === 'string' ? parseFloat(value) : value;
-    if (isNaN(numericValue)) numericValue = 0;
-
-    if (field === 'weight') {
-        station.weight = numericValue;
-        if (station.type === 'fuel') {
-            station.gallons = numericValue / FUEL_WEIGHT_PER_GALLON;
+    useEffect(() => {
+        if (aircraftProfile?.stations) {
+            setStations(JSON.parse(JSON.stringify(aircraftProfile.stations)));
+        } else {
+            setStations([]);
         }
-    } else if (field === 'gallons' && station.type === 'fuel') {
-        station.gallons = numericValue;
-        station.weight = numericValue * FUEL_WEIGHT_PER_GALLON;
-    }
-    
-    setStations(newStations);
-  };
-  
-  const handleSaveToBooking = () => {
-    if (!selectedBookingId || !firestore) {
-      toast({
-        variant: "destructive",
-        title: "No Booking Selected",
-        description: "Please select a booking to save the M&B data to.",
-      });
-      return;
-    }
+    }, [aircraftProfile]);
 
-    const { totalWeight, totalMoment, centerOfGravity } = calculatedCg;
+    const { totalWeight, totalMoment, centerOfGravity, isCGInEnvelope, isWeightOk } = useMemo(() => {
+        if (!aircraftProfile) {
+            return { totalWeight: 0, totalMoment: 0, centerOfGravity: 0, isCGInEnvelope: false, isWeightOk: true };
+        }
 
-    const massAndBalanceData = stations.reduce((acc, station) => {
-      const stationKey = station.name.toLowerCase().replace(/\s+/g, '');
-      acc[stationKey] = {
-        weight: station.weight,
-        moment: station.weight * station.arm,
-      };
-      return acc;
-    }, {} as Record<string, { weight: number, moment: number }>);
-    
-    // Add totals
-    massAndBalanceData['total'] = { weight: totalWeight, moment: totalMoment };
-    massAndBalanceData['centerOfGravity'] = { weight: centerOfGravity, moment: 0 };
+        let currentTotalWeight = aircraftProfile.emptyWeight || 0;
+        let currentTotalMoment = aircraftProfile.emptyWeightMoment || 0;
 
+        stations.forEach(station => {
+            const weight = station.weight || 0;
+            const arm = station.arm || 0;
+            currentTotalWeight += weight;
+            currentTotalMoment += weight * arm;
+        });
+        
+        const cg = currentTotalWeight > 0 ? currentTotalMoment / currentTotalWeight : 0;
+        const cgEnvelopePoints = (aircraftProfile.cgEnvelope || []).map(p => ({ x: p.cg, y: p.weight }));
+        const isCGInEnvelope = isPointInPolygon({ x: cg, y: currentTotalWeight }, cgEnvelopePoints);
+        const isWeightOk = currentTotalWeight <= (aircraftProfile.maxTakeoffWeight || Infinity);
+        
+        return {
+            totalWeight: currentTotalWeight,
+            totalMoment: currentTotalMoment,
+            centerOfGravity: cg,
+            isCGInEnvelope,
+            isWeightOk,
+        };
+    }, [stations, aircraftProfile]);
 
-    const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, selectedBookingId);
-    updateDocumentNonBlocking(bookingRef, { massAndBalance: massAndBalanceData });
-
-    toast({
-      title: "Saved to Booking",
-      description: `Mass & Balance data has been saved to booking #${bookings?.find(b => b.id === selectedBookingId)?.bookingNumber}.`,
-    });
-  };
-
-  const calculatedCg = useMemo(() => {
-    const currentTotalWeight = stations.reduce((acc, station) => acc + (station.weight || 0), 0);
-    const currentTotalMoment = stations.reduce((acc, station) => acc + (station.weight || 0) * (station.arm || 0), 0);
-    const cg = currentTotalWeight > 0 ? currentTotalMoment / currentTotalWeight : 0;
-    
-    const isCGInEnvelope = false; // Placeholder
-    const isWeightOk = currentTotalWeight <= (aircraftProfile.maxTakeoffWeight || Infinity);
-    
-    return {
-      totalWeight: currentTotalWeight,
-      totalMoment: currentTotalMoment,
-      centerOfGravity: cg,
-      isCGInEnvelope,
-      isWeightOk,
+    const handleStationChange = (index: number, field: 'weight' | 'gallons', value: string) => {
+        const newStations = [...stations];
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+            if (field === 'gallons') {
+                newStations[index].gallons = numValue;
+                newStations[index].weight = numValue * FUEL_WEIGHT_PER_GALLON;
+            } else {
+                newStations[index].weight = numValue;
+                if (newStations[index].type === 'fuel') {
+                  newStations[index].gallons = numValue / FUEL_WEIGHT_PER_GALLON;
+                }
+            }
+            setStations(newStations);
+        } else {
+             if (field === 'gallons') {
+                newStations[index].gallons = 0;
+                newStations[index].weight = 0;
+            } else {
+                newStations[index].weight = 0;
+                 if (newStations[index].type === 'fuel') {
+                  newStations[index].gallons = 0;
+                }
+            }
+            setStations(newStations);
+        }
     };
-  }, [stations, aircraftProfile]);
+    
+    const handleSaveToBooking = async () => {
+        if (!selectedBookingId || !firestore) {
+            toast({
+                variant: 'destructive',
+                title: 'No Booking Selected',
+                description: 'Please select a booking from the dropdown.',
+            });
+            return;
+        }
 
-  const { totalWeight, totalMoment, centerOfGravity, isWeightOk, isCGInEnvelope } = calculatedCg;
+        const massAndBalanceData = stations.reduce((acc, station) => {
+            const weight = station.weight || 0;
+            const arm = station.arm || 0;
+            const stationKey = station.name.toLowerCase().replace(/\s+/g, '');
+            if (stationKey) {
+                acc[stationKey] = {
+                    weight: weight,
+                    moment: weight * arm,
+                };
+            }
+            return acc;
+        }, {} as Record<string, { weight: number, moment: number }>);
+        
+        const bookingRef = doc(firestore, 'tenants', 'safeviate', 'bookings', selectedBookingId);
+        
+        try {
+            await updateDocumentNonBlocking(bookingRef, { massAndBalance: massAndBalanceData });
+            toast({
+                title: 'Saved to Booking',
+                description: 'Mass & Balance data has been saved to the selected booking.',
+            });
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Save Failed',
+                description: 'Could not save data to the booking.',
+            });
+        }
+    };
+    
+    if (!aircraftProfile) {
+        return <p>Select an aircraft to view its Mass & Balance configuration.</p>;
+    }
+    
+    if (!aircraftProfile.stations || !aircraftProfile.cgEnvelope) {
+        return <p className="text-destructive">Aircraft configuration missing stations or CG envelope.</p>
+    }
 
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-      <Card>
-        <CardHeader>
-          <CardTitle>{profileName || 'New Mass & Balance Profile'}</CardTitle>
-          <CardDescription>
-            Enter weights for each station to calculate the aircraft's center of gravity.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {stations.map((station, index) => (
-              <div key={station.id} className="grid grid-cols-3 gap-4 items-center">
-                <Label htmlFor={`station-${index}`} className="text-right">
-                  {station.name}
-                </Label>
-                <div className="col-span-2 grid grid-cols-3 gap-2">
-                  <Input
-                    id={`station-${index}`}
-                    type="number"
-                    value={station.weight.toFixed(2)}
-                    onChange={(e) => handleStationChange(index, 'weight', e.target.value)}
-                    className="col-span-1"
-                  />
-                  {station.type === 'fuel' && (
-                    <>
-                       <Input
-                            type="number"
-                            value={station.gallons?.toFixed(2) ?? ''}
-                            onChange={(e) => handleStationChange(index, 'gallons', e.target.value)}
-                            placeholder="Gallons"
-                            className="col-span-1"
-                        />
-                         <span className="col-span-1 text-sm text-muted-foreground self-center">
-                            / {station.maxGallons || 'N/A'} gal
-                        </span>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-        <CardFooter className="flex-wrap gap-2 justify-end border-t pt-6">
-            <div className="flex-grow flex items-center gap-2">
-                <Select onValueChange={setSelectedBookingId} value={selectedBookingId} disabled={isLoadingBookings}>
-                    <SelectTrigger className="w-[280px]">
-                        <SelectValue placeholder={isLoadingBookings ? "Loading bookings..." : "Select a booking to save to..."} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {(bookings || []).map(b => (
-                            <SelectItem key={b.id} value={b.id}>
-                                #{b.bookingNumber} - {b.type} ({b.date})
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                 <Button onClick={handleSaveToBooking} disabled={!selectedBookingId}>
-                    <BookCopy className="mr-2" /> Save to Booking
-                </Button>
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>{aircraftProfile.tailNumber} - Loading Stations</CardTitle>
+                        <CardDescription>Enter weights for each station. Fuel can be entered in gallons or lbs.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {stations.map((station, index) => (
+                                <Card key={station.id} className="p-4">
+                                    <Label className="font-semibold">{station.name}</Label>
+                                    <div className="flex gap-2 mt-2">
+                                        {station.type === 'fuel' ? (
+                                             <Input
+                                                type="number"
+                                                placeholder="gallons"
+                                                value={station.gallons ? Math.round(station.gallons * 100) / 100 : ''}
+                                                onChange={(e) => handleStationChange(index, 'gallons', e.target.value)}
+                                            />
+                                        ) : (
+                                            <Input
+                                                type="number"
+                                                placeholder="lbs"
+                                                value={station.weight || ''}
+                                                onChange={(e) => handleStationChange(index, 'weight', e.target.value)}
+                                            />
+                                        )}
+                                        <Input
+                                            type="number"
+                                            readOnly
+                                            disabled
+                                            value={Math.round(station.weight * 100) / 100 || ''}
+                                            className="bg-muted"
+                                            placeholder="lbs"
+                                        />
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Actions</CardTitle>
+                    </CardHeader>
+                    <CardFooter className="flex flex-wrap gap-2">
+                         <div className="flex items-center gap-2">
+                           <Select onValueChange={setSelectedBookingId}>
+                               <SelectTrigger className="w-[180px]">
+                                   <SelectValue placeholder="Select Booking..." />
+                               </SelectTrigger>
+                               <SelectContent>
+                                   {bookings?.map((booking) => (
+                                       <SelectItem key={booking.id} value={booking.id}>
+                                           #{booking.bookingNumber} - {booking.type}
+                                       </SelectItem>
+                                   ))}
+                               </SelectContent>
+                           </Select>
+                           <Button onClick={handleSaveToBooking} disabled={!selectedBookingId}>
+                               <Save className="mr-2" /> Save to Booking
+                           </Button>
+                       </div>
+                        <Button variant="secondary" onClick={() => onAssignToAircraft(stations, (aircraftProfile.cgEnvelope || []).map(p => ({ x: p.cg, y: p.weight })))}>
+                            <Plane className="mr-2" /> Assign to Aircraft
+                        </Button>
+                        <Button variant="destructive" onClick={onClearAircraftMB}>
+                            <Trash2 className="mr-2" /> Clear Aircraft M&B
+                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Input
+                                placeholder="New profile name..."
+                                value={profileName}
+                                onChange={(e) => setProfileName(e.target.value)}
+                                className="w-48"
+                            />
+                            <Button onClick={() => onSaveAsProfile(profileName, stations, (aircraftProfile.cgEnvelope || []).map(p => ({ x: p.cg, y: p.weight })))} disabled={!profileName.trim()}>
+                                <PlusCircle className="mr-2" /> Save as New Profile
+                            </Button>
+                        </div>
+                    </CardFooter>
+                </Card>
             </div>
-            <Button variant="secondary" onClick={() => onAssignToAircraft(aircraftProfile.id)} disabled={!aircraftProfile.id || isAssigned}>
-                <Plane className="mr-2" /> {isAssigned ? 'Assigned to Aircraft' : 'Assign to Aircraft'}
-            </Button>
-            {isAssigned && (
-                <Button variant="destructive" onClick={onClearAircraftMAndB}>
-                    Clear Aircraft M&amp;B
-                </Button>
-            )}
-            <Button onClick={() => onSaveAsProfile(profileName, stations)}>
-                <Save className="mr-2" /> Save as New Profile
-            </Button>
-        </CardFooter>
-      </Card>
-      <div className="space-y-6">
-        <MassBalanceChart
-            aircraftProfile={aircraftProfile}
-            calculatedCg={{
-              x: calculatedCg.centerOfGravity,
-              y: calculatedCg.totalWeight,
-            }}
-        />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card>
-                <CardHeader className="pb-2">
-                    <CardDescription>Total Weight</CardDescription>
-                    <CardTitle className={`text-2xl ${isWeightOk ? '' : 'text-destructive'}`}>
-                        {totalWeight.toFixed(2)} lbs
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-xs text-muted-foreground">
-                        Max: {aircraftProfile.maxTakeoffWeight || 'N/A'} lbs
-                    </p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="pb-2">
-                    <CardDescription>Total Moment</CardDescription>
-                    <CardTitle className="text-2xl">
-                        {totalMoment.toFixed(2)}
-                    </CardTitle>
-                </CardHeader>
-                 <CardContent>
-                    <p className="text-xs text-muted-foreground">&nbsp;</p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="pb-2">
-                    <CardDescription>C.G.</CardDescription>
-                     <CardTitle className={`text-2xl ${isCGInEnvelope ? '' : 'text-destructive'}`}>
-                        {centerOfGravity.toFixed(2)} in
-                    </CardTitle>
-                </CardHeader>
-                 <CardContent>
-                    <p className="text-xs text-muted-foreground">&nbsp;</p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="pb-2">
-                    <CardDescription>Status</CardDescription>
-                    <CardTitle className={`text-2xl ${isWeightOk && isCGInEnvelope ? 'text-green-600' : 'text-destructive'}`}>
-                        {isWeightOk && isCGInEnvelope ? 'In Limits' : 'Out of Limits'}
-                    </CardTitle>
-                </CardHeader>
-                 <CardContent>
-                    <p className="text-xs text-muted-foreground">&nbsp;</p>
-                </CardContent>
-            </Card>
+
+            <div className="space-y-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>CG Envelope</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <MassBalanceChart
+                            envelopePoints={(aircraftProfile.cgEnvelope || []).map(p => ({ x: p.cg, y: p.weight }))}
+                            cgPoint={{ x: centerOfGravity, y: totalWeight }}
+                            xMin={aircraftProfile.xMin}
+                            xMax={aircraftProfile.xMax}
+                            yMin={aircraftProfile.yMin}
+                            yMax={aircraftProfile.yMax}
+                            isCGInEnvelope={isCGInEnvelope}
+                        />
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Summary</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                       <div className={`p-4 rounded-lg ${isWeightOk ? 'bg-green-100' : 'bg-red-100'}`}>
+                           <p className="text-sm font-medium">Total Weight</p>
+                           <p className="text-2xl font-bold">{totalWeight.toFixed(2)} lbs</p>
+                           <p className="text-xs text-muted-foreground">Max: {aircraftProfile.maxTakeoffWeight} lbs</p>
+                       </div>
+                       <div className={`p-4 rounded-lg ${isCGInEnvelope ? 'bg-green-100' : 'bg-red-100'}`}>
+                           <p className="text-sm font-medium">Center of Gravity</p>
+                           <p className="text-2xl font-bold">{centerOfGravity.toFixed(2)} in</p>
+                       </div>
+                       <div className="p-4 rounded-lg bg-muted">
+                           <p className="text-sm font-medium">Total Moment</p>
+                           <p className="text-2xl font-bold">{totalMoment.toFixed(2)} lbs-in</p>
+                       </div>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }
