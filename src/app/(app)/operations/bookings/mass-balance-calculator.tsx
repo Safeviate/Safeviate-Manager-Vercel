@@ -114,7 +114,7 @@ export const MassBalanceCalculator = ({ aircraft, initialData, onSave }: MassBal
 
     const cg = totalWt > 0 ? (totalMom / totalWt) : 0;
     const safe = aircraft.cgEnvelope && aircraft.cgEnvelope.length > 2
-        ? isPointInPolygon({ x: cg, y: totalWt }, aircraft.cgEnvelope)
+        ? isPointInPolygon({ x: cg, y: totalWt }, aircraft.cgEnvelope.map(p => ({ x: p.cg, y: p.weight })))
         : false;
 
     setResults({
@@ -246,7 +246,7 @@ export const MassBalanceCalculator = ({ aircraft, initialData, onSave }: MassBal
                     <Label value="Gross Weight (lbs)" angle={-90} position="insideLeft" fill="hsl(var(--muted-foreground))" />
                   </YAxis>
                   <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}/>
-                  {aircraft.cgEnvelope && <Scatter name="Envelope" data={aircraft.cgEnvelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} isAnimationActive={false} />}
+                  {aircraft.cgEnvelope && <Scatter name="Envelope" data={aircraft.cgEnvelope.map(p => ({ x: p.cg, y: p.weight }))} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} isAnimationActive={false} />}
                   <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={2} isFront={true} />
                 </ScatterChart>
               </ResponsiveContainer>
