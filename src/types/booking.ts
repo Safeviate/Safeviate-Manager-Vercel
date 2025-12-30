@@ -8,8 +8,6 @@ export interface Photo {
 }
 
 export interface MassAndBalance {
-    // An object where each key is the camelCase name of a station,
-    // and the value is an object containing the weight and moment for that station.
     [station: string]: {
         weight: number;
         moment: number;
@@ -55,4 +53,3 @@ export interface Booking {
     // Mass and Balance data
     massAndBalance?: MassAndBalance;
 }
-
