@@ -3,12 +3,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot, Cell } from 'recharts';
-import { doc, setDoc } from "firebase/firestore";
-import { useFirestore } from '@/firebase';
+import { doc, setDoc, collection } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
 import { Save, Plus, Trash2, RotateCcw, Maximize, Fuel, AlertTriangle, Plane } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import type { Aircraft } from '../../assets/page';
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 const FUEL_WEIGHT_PER_GALLON = 6;
@@ -60,6 +65,15 @@ const OffScreenWarning = ({ direction, value, label }: { direction: string, valu
 
 const WBCalculator = () => {
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const tenantId = 'safeviate';
+
+  const aircraftsQuery = useMemoFirebase(
+      () => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null),
+      [firestore, tenantId]
+  );
+  const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
+
   // 1. STATE: Graph Config
   const [graphConfig, setGraphConfig] = useState({
     modelName: "Piper PA-28-180",
@@ -91,6 +105,7 @@ const WBCalculator = () => {
   ]);
 
   const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
+  const [isSaveAircraftDialogOpen, setIsSaveAircraftDialogOpen] = useState(false);
 
   // 4. LOGIC
   useEffect(() => {
@@ -151,7 +166,6 @@ const WBCalculator = () => {
 
   const updateStation = (id: number, field: string, val: string) => setStations(stations.map(s => s.id === id ? { ...s, [field]: val } : s));
 
-  // ADD STATION (Handles both Types)
   const addStation = (type = 'standard') => {
     const newStation = {
         id: Date.now(),
@@ -196,7 +210,7 @@ const WBCalculator = () => {
     }
   };
 
-  const saveToFirebase = async () => {
+  const saveAsTemplate = async () => {
     if (!firestore) {
         alert("Firestore not initialized.");
         return;
@@ -206,11 +220,41 @@ const WBCalculator = () => {
             graphConfig,
             stations
         });
-        alert("Saved!");
+        toast({ title: 'Template Saved', description: `M&B Template "${graphConfig.modelName}" has been saved.` });
     } catch (e) {
         console.error("Error adding document: ", e);
+        toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the template.' });
     }
   };
+  
+  const handleSaveToAircraft = (aircraftId: string) => {
+    if (!firestore) return;
+    
+    const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId);
+    
+    // Construct the M&B data to save based on the current state of the calculator
+    const mbDataToSave = {
+        emptyWeight: basicEmpty.weight,
+        emptyWeightMoment: basicEmpty.moment,
+        maxTakeoffWeight: graphConfig.yMax, // Simplified assumption
+        maxLandingWeight: graphConfig.yMax, // Simplified assumption
+        cgEnvelope: graphConfig.envelope.map(p => ({ weight: p.y, cg: p.x })),
+        stationArms: stations.reduce((acc, st) => {
+            const key = st.name.toLowerCase().replace(/ & /g, '').replace(/ /g, '');
+            acc[key] = st.arm;
+            return acc;
+        }, {}),
+    };
+
+    updateDocumentNonBlocking(aircraftRef, mbDataToSave);
+    
+    toast({
+        title: 'Saved to Aircraft',
+        description: `M&B profile has been saved to the selected aircraft.`
+    });
+    
+    setIsSaveAircraftDialogOpen(false);
+  }
 
   // SAFETY DOMAIN
   const allX = [...graphConfig.envelope.map(p => p.x), results.cg].filter(n => !isNaN(n));
@@ -232,9 +276,45 @@ const WBCalculator = () => {
       <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-foreground tracking-tight">W&B Configurator</h1>
         <div className="flex gap-3">
-          <button onClick={handleReset} className="flex items-center gap-2 bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/50 px-4 py-2 rounded text-sm font-semibold transition"><RotateCcw size={16} /> Reset</button>
-          <button onClick={saveToFirebase} className="flex items-center gap-2 bg-primary/80 hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded text-sm font-semibold transition shadow"><Save size={16} /> Save as Template</button>
-          <button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded text-sm font-semibold transition shadow-lg"><Plane size={16} /> Save to Aircraft</button>
+          <Button onClick={handleReset} variant="destructive" className="flex items-center gap-2 transition"><RotateCcw size={16} /> Reset</Button>
+          <Button onClick={saveAsTemplate} variant="outline" className="flex items-center gap-2 transition"><Save size={16} /> Save as Template</Button>
+           <Dialog open={isSaveAircraftDialogOpen} onOpenChange={setIsSaveAircraftDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground transition shadow-lg"><Plane size={16} /> Save to Aircraft</Button>
+              </DialogTrigger>
+              <DialogContent>
+                  <DialogHeader>
+                      <DialogTitle>Save Configuration to Aircraft</DialogTitle>
+                      <DialogDescription>
+                          Select an aircraft to apply this Mass & Balance configuration. This will overwrite the aircraft's existing M&B data.
+                      </DialogDescription>
+                  </DialogHeader>
+                  <ScrollArea className="max-h-60">
+                      <div className="space-y-2 p-1">
+                          {isLoadingAircrafts ? (
+                              <p>Loading aircraft...</p>
+                          ) : (aircrafts || []).map(ac => (
+                              <Button
+                                  key={ac.id}
+                                  variant="ghost"
+                                  className="w-full justify-start"
+                                  onClick={() => handleSaveToAircraft(ac.id)}
+                              >
+                                {ac.tailNumber} ({ac.model})
+                              </Button>
+                          ))}
+                          {(!aircrafts || aircrafts.length === 0) && !isLoadingAircrafts && (
+                              <p className="text-muted-foreground text-sm text-center py-4">No aircraft found.</p>
+                          )}
+                      </div>
+                  </ScrollArea>
+                   <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                    </DialogFooter>
+              </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -419,3 +499,5 @@ const WBCalculator = () => {
 };
 
 export default WBCalculator;
+
+    
