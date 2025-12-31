@@ -933,6 +933,22 @@
             "baggage2": { "type": "number", "description": "Arm for the secondary baggage area." }
           }
         },
+        "stations": {
+          "type": "array",
+          "description": "A list of loading stations for the aircraft.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "number" },
+              "name": { "type": "string" },
+              "weight": { "type": "number" },
+              "arm": { "type": "number" },
+              "type": { "type": "string" },
+              "gallons": { "type": "number" },
+              "maxGallons": { "type": "number" }
+            }
+          }
+        },
         "cgEnvelope": {
           "type": "array",
           "description": "An array of {weight, cg} objects defining the vertices of the CG envelope polygon.",
@@ -1724,6 +1740,8 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support a multi-tenant aviation academy management application, focusing on security, scalability, and ease of debugging. A top-level `users` collection is introduced to map Firebase Authentication UIDs to their corresponding profile documents, solving the issue of disparate user profile locations. Authorization Independence is achieved through denormalization where needed, especially for collaborative data. Structural Segregation ensures that each collection has a homogeneous security posture. Access Modeling follows consistent patterns, utilizing path-based ownership for user-specific data and membership maps for collaborative entities. The structure is multi-tenant, where tenants are isolated from each other. The structure uses the tenants collection to keep a list of tenants and provides a tenant id for all other collections in the database. This strategy allows the application to manage multiple academies within the same system, each with its own set of data and settings.\\n\\n*   **Users:** A new top-level `users` collection maps auth UIDs to profile paths, centralizing user lookups.\\n*   **Tenants:** The root level collection `tenants` stores individual tenant documents. Each tenant has its own unique ID and associated settings.\\n*   **User Profiles:** User data is split into `personnel` (non-flying staff), `instructors`, `students`, and `private-pilots` under each tenant to better segregate data models and security rules.\\n*   **Settings:** A generic `settings` collection is added under each tenant. This allows for storing various configuration documents, such as `document-expiry`, in a structured and scalable way without creating new top-level collections for each setting type.\\n\\nQAPs (Rules are not Filters) is addressed by:\\n\\n*   Segregating data into collections with homogeneous security requirements.\\n*   Using path-based ownership for private data.\\n*   Employing membership maps for collaborative data, and storing these maps directly within the documents to avoid `get()` calls in security rules.\\n\\nThis design enables robust security rules that are simple to write, easy to understand, and highly performant."
+    "reasoning": "The Firestore structure is designed to support a multi-tenant aviation academy management application, focusing on security, scalability, and ease of debugging. Authorization Independence is achieved through denormalization where needed, especially for collaborative data. Structural Segregation ensures that each collection has a homogeneous security posture. Access Modeling follows consistent patterns, utilizing path-based ownership for user-specific data and membership maps for collaborative entities. The structure is multi-tenant, where tenants are isolated from each other. The structure uses the tenants collection to keep a list of tenants and provides a tenant id for all other collections in the database. This strategy allows the application to manage multiple academies within the same system, each with its own set of data and settings.\\n\\n*   **Tenants:** The root level collection `tenants` stores individual tenant documents. Each tenant has its own unique ID and associated settings.\\n*   **Users:** User data is now split into `personnel` (non-flying staff), `instructors`, `students`, and `private-pilots` under each tenant to better segregate data models and security rules.\\n*   **Settings:** A generic `settings` collection is added under each tenant. This allows for storing various configuration documents, such as `document-expiry`, in a structured and scalable way without creating new top-level collections for each setting type.\\n\\nQAPs (Rules are not Filters) is addressed by:\\n\\n*   Segregating data into collections with homogeneous security requirements.\\n*   Using path-based ownership for private data.\\n*   Employing membership maps for collaborative data, and storing these maps directly within the documents to avoid `get()` calls in security rules.\\n\\nThis design enables robust security rules that are simple to write, easy to understand, and highly performant."
   }
 }
+
+    

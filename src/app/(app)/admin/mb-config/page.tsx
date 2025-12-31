@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -243,6 +244,7 @@ const WBCalculator = () => {
         maxTakeoffWeight: graphConfig.yMax, // Simplified assumption
         maxLandingWeight: graphConfig.yMax, // Simplified assumption
         cgEnvelope: graphConfig.envelope.map(p => ({ weight: p.y, cg: p.x })),
+        stations: stations.map(s => ({...s, weight: parseFloat(s.weight) || 0})),
         stationArms: stations.reduce((acc, st) => {
             const key = st.name.toLowerCase().replace(/ & /g, '').replace(/ /g, '');
             acc[key] = st.arm;
@@ -283,11 +285,10 @@ const WBCalculator = () => {
     });
 
     // Reset stations to a default based on the loaded aircraft's station arms if available
-    const newStations: any[] = [];
-    if (aircraft.stationArms?.frontSeats) newStations.push({ id: 2, name: "Pilot & Front Pax", weight: 0, arm: aircraft.stationArms.frontSeats, type: 'standard' });
-    if (aircraft.stationArms?.rearSeats) newStations.push({ id: 4, name: "Rear Pax", weight: 0, arm: aircraft.stationArms.rearSeats, type: 'standard' });
-    if (aircraft.stationArms?.fuel) newStations.push({ id: 3, name: "Fuel", weight: 0, arm: aircraft.stationArms.fuel, type: 'fuel', gallons: 0, maxGallons: 50 });
-    if (aircraft.stationArms?.baggage1) newStations.push({ id: 5, name: "Baggage", weight: 0, arm: aircraft.stationArms.baggage1, type: 'standard' });
+    const newStations = aircraft.stations && aircraft.stations.length > 0 
+        ? aircraft.stations 
+        : [];
+        
     setStations(newStations);
     
     setLoadedAircraft(aircraft);
@@ -335,7 +336,7 @@ const WBCalculator = () => {
                   <DialogHeader>
                       <DialogTitle>Load W&B from Aircraft</DialogTitle>
                       <DialogDescription>
-                          Select an aircraft to load its saved Mass & Balance configuration into the calculator.
+                          Select an aircraft to load its saved Mass &amp; Balance configuration into the calculator.
                       </DialogDescription>
                   </DialogHeader>
                   <ScrollArea className="max-h-60">
@@ -375,7 +376,7 @@ const WBCalculator = () => {
                   <DialogHeader>
                       <DialogTitle>Save Configuration to Aircraft</DialogTitle>
                       <DialogDescription>
-                          Select an aircraft to apply this Mass & Balance configuration. This will overwrite the aircraft's existing M&B data.
+                          Select an aircraft to apply this Mass &amp; Balance configuration. This will overwrite the aircraft's existing M&B data.
                       </DialogDescription>
                   </DialogHeader>
                   <ScrollArea className="max-h-60">
@@ -588,3 +589,5 @@ const WBCalculator = () => {
 };
 
 export default WBCalculator;
+
+    
