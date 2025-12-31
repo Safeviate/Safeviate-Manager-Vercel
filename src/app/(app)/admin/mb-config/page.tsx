@@ -243,10 +243,20 @@ const WBCalculator = () => {
         maxTakeoffWeight: graphConfig.yMax, // Simplified assumption
         maxLandingWeight: graphConfig.yMax, // Simplified assumption
         cgEnvelope: graphConfig.envelope.map(p => ({ weight: p.y, cg: p.x })),
-        stations: stations.map(s => ({...s, weight: parseFloat(s.weight) || 0})),
-        stationArms: stations.reduce((acc, st) => {
+        stations: stations.map(s => ({
+            id: s.id,
+            name: s.name,
+            weight: parseFloat(s.weight) || 0,
+            arm: parseFloat(s.arm) || 0,
+            type: s.type,
+            gallons: parseFloat(s.gallons) || 0,
+            maxGallons: parseFloat(s.maxGallons) || 0,
+        })),
+        stationArms: stations.reduce((acc: { [key: string]: number }, st) => {
             const key = st.name.toLowerCase().replace(/ & /g, '').replace(/ /g, '');
-            acc[key] = st.arm;
+            if (key) {
+                acc[key] = parseFloat(st.arm) || 0;
+            }
             return acc;
         }, {}),
     };
