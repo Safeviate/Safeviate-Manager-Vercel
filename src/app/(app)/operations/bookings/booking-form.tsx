@@ -197,23 +197,24 @@ export function BookingForm({
                                 <FormField control={form.control} name="startTime" render={({ field }) => ( <FormItem><FormLabel>Start Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
                                 <FormField control={form.control} name="endTime" render={({ field }) => ( <FormItem><FormLabel>End Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
                             </div>
-                            <FormField control={form.control} name="isOvernight" render={({ field }) => ( <FormItem className="flex items-center gap-2"><FormLabel>Overnight?</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem> )} />
+                            <FormField control={form.control} name="isOvernight" render={({ field }) => ( <FormItem className="flex items-center gap-2 pt-2"><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel>Overnight?</FormLabel></FormItem> )} />
                             {isOvernight && (
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Return Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn(!field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem> )} />
                                     <FormField control={form.control} name="overnightEndTime" render={({ field }) => ( <FormItem><FormLabel>Return Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
                                 </div>
                             )}
-                             <DialogFooter className="pt-4 gap-2">
+                             <DialogFooter className="pt-4 flex-wrap gap-2">
                                 {existingBooking && (
-                                    <>
+                                    <div className="flex flex-wrap gap-2">
                                         <Button type="button" variant="outline" onClick={() => setIsPreFlightOpen(true)} disabled={!!existingBooking.postFlight}>Pre-Flight</Button>
                                         <Button type="button" variant="outline" onClick={() => setIsPostFlightOpen(true)} disabled={!existingBooking.preFlight}>Post-Flight</Button>
-                                        <Button type="button" variant="outline" onClick={() => setIsMassBalanceOpen(true)}><Scale className="mr-2" /> W&amp;B</Button>
+                                        <Button type="button" variant="outline" onClick={() => setIsMassBalanceOpen(true)}><Scale className="mr-2" /> W&B</Button>
                                         <Button type="button" variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>Delete</Button>
                                         <Button type="button" variant="secondary" onClick={() => setIsCancelDialogOpen(true)}>Cancel Booking</Button>
-                                    </>
+                                    </div>
                                 )}
+                                <div className="flex-grow"></div>
                                 <Button type="submit">{existingBooking ? 'Save Changes' : 'Create Booking'}</Button>
                             </DialogFooter>
                         </form>
