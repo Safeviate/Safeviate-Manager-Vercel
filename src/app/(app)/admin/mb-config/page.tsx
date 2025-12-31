@@ -522,10 +522,48 @@ const WBCalculator = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="flex flex-col gap-6">
 
-        {/* LEFT COLUMN: CONTROLS */}
-        <div className="lg:col-span-5 space-y-6 h-[85vh] overflow-y-auto pr-2 custom-scrollbar">
+        {/* TOP ROW: GRAPH */}
+        <div className="bg-card border border-border rounded-xl p-4 shadow-2xl relative min-h-[500px] flex flex-col justify-center items-center overflow-hidden">
+            {offScreenStatus && (
+            <OffScreenWarning direction={offScreenStatus.dir} value={offScreenStatus.val} label={offScreenStatus.axis === 'x' ? 'CG' : 'Weight'} />
+            )}
+
+            <ResponsiveContainer width="100%" height={500}>
+            <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[finalXMin, finalXMax]} ticks={xAxisTicks} allowDataOverflow={true} stroke="hsl(var(--muted-foreground))" tick={{fill: 'hsl(var(--muted-foreground))'}} dy={10}>
+                <Label value="CG (inches)" offset={0} position="insideBottom" fill="hsl(var(--muted-foreground))" dy={10} />
+                </XAxis>
+                <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[finalYMin, finalYMax]} ticks={yAxisTicks} allowDataOverflow={true} stroke="hsl(var(--muted-foreground))" tick={{fill: 'hsl(var(--muted-foreground))'}}>
+                <Label value="Gross Weight (lbs)" angle={-90} position="insideLeft" fill="hsl(var(--muted-foreground))" />
+                </YAxis>
+                <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}/>
+                <Scatter name="Envelope Line" data={graphConfig.envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} isAnimationActive={false} />
+                <Scatter name="Envelope Points" data={graphConfig.envelope} isAnimationActive={false}>
+                {graphConfig.envelope.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={POINT_COLORS[index % POINT_COLORS.length]} stroke="white" strokeWidth={1}/>
+                ))}
+                </Scatter>
+                <Scatter name="Current Load" data={[{ x: results.cg, y: results.weight }]} fill={results.isSafe ? "#10b981" : "#ef4444"} isAnimationActive={false}>
+                    <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={2} />
+                </Scatter>
+            </ScatterChart>
+            </ResponsiveContainer>
+            
+            <p className="absolute bottom-20 left-1/2 transform -translate-x-1/2 text-red-600 font-extrabold text-sm md:text-base uppercase tracking-widest pointer-events-none whitespace-nowrap drop-shadow-md">
+            CONSULT AIRCRAFT POH BEFORE FLIGHT
+            </p>
+
+            <div className={cn("absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2", results.isSafe ? 'bg-green-600/90 text-white' : 'bg-red-600/90 text-white')}>
+            <div className={cn("w-2 h-2 rounded-full", results.isSafe ? 'bg-white' : 'bg-white animate-pulse')}></div>
+            {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
+            </div>
+        </div>
+
+        {/* BOTTOM ROW: CONTROLS */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* 1. BASIC EMPTY WEIGHT */}
           <div className="bg-card p-5 rounded-xl border border-border shadow-xl">
@@ -656,6 +694,7 @@ const WBCalculator = () => {
                      <div className="w-5 h-5 rounded flex items-center justify-center text-[10px] text-black font-bold" style={{ backgroundColor: POINT_COLORS[i % POINT_COLORS.length] }}>{i + 1}</div>
                      <Input type="number" value={pt.x || ''} onChange={(e) => updateEnvelopePoint(i, 'x', e.target.value)} className="w-full p-1 text-xs text-center rounded-sm" />
                      <Input type="number" value={pt.y || ''} onChange={(e) => updateEnvelopePoint(i, 'y', e.target.value)} className="w-full p-1 text-xs text-center rounded-sm" />
+                     <button onClick={() => removeEnvelopePoint(i)} className="text-muted-foreground hover:text-destructive transition"><Trash2 size={12}/></button>
                   </div>
                ))}
                <button onClick={addEnvelopePoint} className="w-full py-1.5 text-xs bg-muted hover:bg-muted/80 rounded mt-2 border border-border transition text-muted-foreground"><Plus size={12} className="inline mr-1"/> Add Point</button>
@@ -663,50 +702,11 @@ const WBCalculator = () => {
           </div>
 
         </div>
-
-        {/* RIGHT COLUMN: GRAPH */}
-        <div className="lg:col-span-7 flex flex-col">
-          <div className="bg-card border border-border rounded-xl p-4 shadow-2xl relative min-h-[600px] flex flex-col justify-center items-center overflow-hidden">
-
-             {offScreenStatus && (
-               <OffScreenWarning direction={offScreenStatus.dir} value={offScreenStatus.val} label={offScreenStatus.axis === 'x' ? 'CG' : 'Weight'} />
-             )}
-
-             <ResponsiveContainer width="100%" height={600}>
-                <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[finalXMin, finalXMax]} ticks={xAxisTicks} allowDataOverflow={true} stroke="hsl(var(--muted-foreground))" tick={{fill: 'hsl(var(--muted-foreground))'}} dy={10}>
-                    <Label value="CG (inches)" offset={0} position="insideBottom" fill="hsl(var(--muted-foreground))" dy={10} />
-                  </XAxis>
-                  <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[finalYMin, finalYMax]} ticks={yAxisTicks} allowDataOverflow={true} stroke="hsl(var(--muted-foreground))" tick={{fill: 'hsl(var(--muted-foreground))'}}>
-                    <Label value="Gross Weight (lbs)" angle={-90} position="insideLeft" fill="hsl(var(--muted-foreground))" />
-                  </YAxis>
-                  <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}/>
-                  <Scatter name="Envelope Line" data={graphConfig.envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} isAnimationActive={false} />
-                  <Scatter name="Envelope Points" data={graphConfig.envelope} isAnimationActive={false}>
-                    {graphConfig.envelope.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={POINT_COLORS[index % POINT_COLORS.length]} stroke="white" strokeWidth={1}/>
-                    ))}
-                  </Scatter>
-                  <Scatter name="Current Load" data={[{ x: results.cg, y: results.weight }]} fill={results.isSafe ? "#10b981" : "#ef4444"} isAnimationActive={false}>
-                      <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={2} />
-                  </Scatter>
-                </ScatterChart>
-              </ResponsiveContainer>
-              
-              <p className="absolute bottom-20 left-1/2 transform -translate-x-1/2 text-red-600 font-extrabold text-sm md:text-base uppercase tracking-widest pointer-events-none whitespace-nowrap drop-shadow-md">
-                CONSULT AIRCRAFT POH BEFORE FLIGHT
-              </p>
-
-              <div className={cn("absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2", results.isSafe ? 'bg-green-600/90 text-white' : 'bg-red-600/90 text-white')}>
-                <div className={cn("w-2 h-2 rounded-full", results.isSafe ? 'bg-white' : 'bg-white animate-pulse')}></div>
-                {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
-              </div>
-          </div>
-        </div>
       </div>
     </div>
   );
 };
 
 export default WBCalculator;
+
+    
