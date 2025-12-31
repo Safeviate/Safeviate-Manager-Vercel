@@ -122,12 +122,12 @@ const WBCalculator = () => {
 
   // 4. LOGIC
   useEffect(() => {
-    let totalMom = parseFloat(basicEmpty.moment as any) || 0;
-    let totalWt = parseFloat(basicEmpty.weight as any) || 0;
+    let totalMom = parseFloat(String(basicEmpty.moment)) || 0;
+    let totalWt = parseFloat(String(basicEmpty.weight)) || 0;
 
     stations.forEach(st => {
-      const wt = parseFloat(st.weight) || 0;
-      const arm = parseFloat(st.arm) || 0;
+      const wt = parseFloat(String(st.weight)) || 0;
+      const arm = parseFloat(String(st.arm)) || 0;
       totalWt += wt;
       totalMom += (wt * arm);
     });
@@ -269,11 +269,11 @@ const WBCalculator = () => {
         stations: stations.map(s => ({
             id: s.id,
             name: s.name,
-            weight: parseFloat(s.weight) || 0,
-            arm: parseFloat(s.arm) || 0,
+            weight: parseFloat(String(s.weight)) || 0,
+            arm: parseFloat(String(s.arm)) || 0,
             type: s.type,
-            gallons: parseFloat(s.gallons) || 0,
-            maxGallons: parseFloat(s.maxGallons) || 0,
+            gallons: parseFloat(String(s.gallons)) || 0,
+            maxGallons: parseFloat(String(s.maxGallons)) || 0,
         })),
     };
 
@@ -293,13 +293,15 @@ const WBCalculator = () => {
         return;
     }
     
+    const envelope = aircraft.cgEnvelope.map(p => ({ x: p.cg, y: p.weight }));
+    
     setGraphConfig({
         modelName: aircraft.model,
-        xMin: Math.min(...aircraft.cgEnvelope.map(p => p.cg)) - 2,
-        xMax: Math.max(...aircraft.cgEnvelope.map(p => p.cg)) + 2,
-        yMin: Math.min(...aircraft.cgEnvelope.map(p => p.weight)) - 100,
-        yMax: Math.max(...aircraft.cgEnvelope.map(p => p.weight)) + 100,
-        envelope: aircraft.cgEnvelope.map(p => ({ x: p.cg, y: p.weight })),
+        xMin: Math.min(...envelope.map(p => p.x)) - 2,
+        xMax: Math.max(...envelope.map(p => p.x)) + 2,
+        yMin: Math.min(...envelope.map(p => p.y)) - 100,
+        yMax: Math.max(...envelope.map(p => p.y)) + 100,
+        envelope,
     });
 
     const arm = aircraft.emptyWeight > 0 ? aircraft.emptyWeightMoment / aircraft.emptyWeight : 0;
@@ -354,17 +356,21 @@ const WBCalculator = () => {
 
 
   // SAFETY DOMAIN
-  const allX = [...graphConfig.envelope.map(p => p.x), results.cg].filter(n => !isNaN(n));
-  const allY = [...graphConfig.envelope.map(p => p.y), results.weight].filter(n => !isNaN(n));
-  const paddingX = 0.5; const paddingY = 50;
-  const finalXMin = Math.min(Number(graphConfig.xMin), Math.min(...allX) - paddingX);
-  const finalXMax = Math.max(Number(graphConfig.xMax), Math.max(...allX) + paddingX);
-  const finalYMin = Math.min(Number(graphConfig.yMin), Math.min(...allY) - paddingY);
-  const finalYMax = Math.max(Number(graphConfig.yMax), Math.max(...allY) + paddingY);
+  const allX = [...graphConfig.envelope.map(p => p.x), results.cg].filter(n => !isNaN(n) && isFinite(n));
+  const allY = [...graphConfig.envelope.map(p => p.y), results.weight].filter(n => !isNaN(n) && isFinite(n));
+  
+  const paddingX = allX.length > 1 ? (Math.max(...allX) - Math.min(...allX)) * 0.1 : 5;
+  const paddingY = allY.length > 1 ? (Math.max(...allY) - Math.min(...allY)) * 0.1 : 100;
+  
+  const finalXMin = allX.length > 0 ? Math.min(Number(graphConfig.xMin), ...allX) - paddingX : 70;
+  const finalXMax = allX.length > 0 ? Math.max(Number(graphConfig.xMax), ...allX) + paddingX : 100;
+  const finalYMin = allY.length > 0 ? Math.min(Number(graphConfig.yMin), ...allY) - paddingY : 1000;
+  const finalYMax = allY.length > 0 ? Math.max(Number(graphConfig.yMax), ...allY) + paddingY : 3000;
+
   const xAxisTicks = generateNiceTicks(finalXMin, finalXMax, 8);
   const yAxisTicks = generateNiceTicks(finalYMin, finalYMax, 8);
-  const isOffScreen = () => { if (results.cg < finalXMin) return { axis: 'x', dir: 'left', val: results.cg }; return null; };
-  const offScreenStatus = isOffScreen();
+  
+  const offScreenStatus = results.cg < finalXMin ? { axis: 'x', dir: 'left', val: results.cg } : null;
 
   return (
     <div className="min-h-screen bg-background text-foreground p-6 font-sans">
@@ -708,5 +714,3 @@ const WBCalculator = () => {
 };
 
 export default WBCalculator;
-
-    
