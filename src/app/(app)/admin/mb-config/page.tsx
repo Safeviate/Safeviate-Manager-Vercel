@@ -183,8 +183,8 @@ const WBCalculator = () => {
     const newStation = {
         id: Date.now(),
         name: type === 'fuel' ? "New Fuel Tank" : "New Item",
-        weight: type === 'fuel' ? 0 : "",
-        arm: "",
+        weight: 0,
+        arm: 0,
         type: type,
         ...(type === 'fuel' ? { gallons: 0, maxGallons: 50 } : {})
     };
@@ -536,17 +536,17 @@ const WBCalculator = () => {
              <div className="grid grid-cols-3 gap-3">
                 <div className="group">
                     <label className="text-[10px] text-muted-foreground uppercase font-semibold mb-1 block group-focus-within:text-primary">Weight</label>
-                    <Input type="number" value={basicEmpty.weight} onChange={(e) => handleBasicEmptyChange('weight', e.target.value)}
+                    <Input type="number" value={basicEmpty.weight || ''} onChange={(e) => handleBasicEmptyChange('weight', e.target.value)}
                         className="w-full text-right" />
                 </div>
                 <div className="group">
                     <label className="text-[10px] text-muted-foreground uppercase font-semibold mb-1 block group-focus-within:text-primary">Arm</label>
-                    <Input type="number" value={basicEmpty.arm} onChange={(e) => handleBasicEmptyChange('arm', e.target.value)}
+                    <Input type="number" value={basicEmpty.arm || ''} onChange={(e) => handleBasicEmptyChange('arm', e.target.value)}
                         className="w-full text-right" />
                 </div>
                 <div className="group">
                     <label className="text-[10px] text-muted-foreground uppercase font-semibold mb-1 block group-focus-within:text-primary">Moment</label>
-                    <Input type="number" value={basicEmpty.moment} onChange={(e) => handleBasicEmptyChange('moment', e.target.value)}
+                    <Input type="number" value={basicEmpty.moment || ''} onChange={(e) => handleBasicEmptyChange('moment', e.target.value)}
                         className="w-full text-right" />
                 </div>
              </div>
@@ -583,13 +583,13 @@ const WBCalculator = () => {
                         <div className="grid grid-cols-12 gap-2 items-center mb-1">
                             <div className="col-span-5 flex items-center gap-2">
                                 <Fuel size={12} className="text-yellow-500"/>
-                                <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="bg-transparent text-sm font-bold text-secondary-foreground focus:text-foreground border-b border-transparent focus:border-primary outline-none w-full mr-2 placeholder-gray-600" />
+                                <Input value={s.name || ''} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="bg-transparent text-sm font-bold text-secondary-foreground focus:text-foreground border-b border-transparent focus:border-primary outline-none w-full mr-2 placeholder-gray-600" />
                             </div>
                             <div className="col-span-3">
-                                <Input type="number" value={s.weight} onChange={(e) => handleFuelChange(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" />
+                                <Input type="number" value={s.weight || ''} onChange={(e) => handleFuelChange(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" />
                             </div>
                             <div className="col-span-3">
-                                <Input type="number" value={s.arm} onChange={(e) => handleFuelChange(s.id, 'arm', e.target.value)} className="w-full p-1 text-sm text-right" />
+                                <Input type="number" value={s.arm || ''} onChange={(e) => handleFuelChange(s.id, 'arm', e.target.value)} className="w-full p-1 text-sm text-right" />
                             </div>
                              <div className="col-span-1 flex justify-end">
                                 <button onClick={() => removeStation(s.id)} className="text-muted-foreground hover:text-destructive transition"><Trash2 size={12}/></button>
@@ -615,13 +615,13 @@ const WBCalculator = () => {
                     // STANDARD ROW
                     <div className="grid grid-cols-12 gap-2 items-center py-1">
                         <div className="col-span-5">
-                            <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="bg-transparent text-sm font-medium text-secondary-foreground focus:text-foreground border-none outline-none w-full placeholder-gray-600 h-auto p-1" placeholder="Item Name" />
+                            <Input value={s.name || ''} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="bg-transparent text-sm font-medium text-secondary-foreground focus:text-foreground border-none outline-none w-full placeholder-gray-600 h-auto p-1" placeholder="Item Name" />
                         </div>
                         <div className="col-span-3">
-                            <Input type="number" value={s.weight} onChange={(e) => updateStation(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" />
+                            <Input type="number" value={s.weight || ''} onChange={(e) => updateStation(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" />
                         </div>
                         <div className="col-span-3">
-                             <Input type="number" value={s.arm} onChange={(e) => updateStation(s.id, 'arm', e.target.value)} className="w-full p-1 text-sm text-right" />
+                             <Input type="number" value={s.arm || ''} onChange={(e) => updateStation(s.id, 'arm', e.target.value)} className="w-full p-1 text-sm text-right" />
                         </div>
                         <div className="col-span-1 flex justify-end">
                             <button onClick={() => removeStation(s.id)} className="text-muted-foreground hover:text-destructive transition opacity-0 group-hover:opacity-100"><Trash2 size={12}/></button>
@@ -645,17 +645,17 @@ const WBCalculator = () => {
                </button>
             </div>
              <div className="grid grid-cols-2 gap-3 mb-4">
-              <div><label className="text-[9px] text-muted-foreground uppercase">Min CG</label><Input type="number" value={graphConfig.xMin} onChange={(e) => setGraphConfig({...graphConfig, xMin: Number(e.target.value)})} className="w-full p-1.5 text-xs" /></div>
-              <div><label className="text-[9px] text-muted-foreground uppercase">Max CG</label><Input type="number" value={graphConfig.xMax} onChange={(e) => setGraphConfig({...graphConfig, xMax: Number(e.target.value)})} className="w-full p-1.5 text-xs" /></div>
-              <div><label className="text-[9px] text-muted-foreground uppercase">Min Weight</label><Input type="number" value={graphConfig.yMin} onChange={(e) => setGraphConfig({...graphConfig, yMin: Number(e.target.value)})} className="w-full p-1.5 text-xs" /></div>
-              <div><label className="text-[9px] text-muted-foreground uppercase">Max Weight</label><Input type="number" value={graphConfig.yMax} onChange={(e) => setGraphConfig({...graphConfig, yMax: Number(e.target.value)})} className="w-full p-1.5 text-xs" /></div>
+              <div><label className="text-[9px] text-muted-foreground uppercase">Min CG</label><Input type="number" value={graphConfig.xMin || ''} onChange={(e) => setGraphConfig({...graphConfig, xMin: Number(e.target.value)})} className="w-full p-1.5 text-xs" /></div>
+              <div><label className="text-[9px] text-muted-foreground uppercase">Max CG</label><Input type="number" value={graphConfig.xMax || ''} onChange={(e) => setGraphConfig({...graphConfig, xMax: Number(e.target.value)})} className="w-full p-1.5 text-xs" /></div>
+              <div><label className="text-[9px] text-muted-foreground uppercase">Min Weight</label><Input type="number" value={graphConfig.yMin || ''} onChange={(e) => setGraphConfig({...graphConfig, yMin: Number(e.target.value)})} className="w-full p-1.5 text-xs" /></div>
+              <div><label className="text-[9px] text-muted-foreground uppercase">Max Weight</label><Input type="number" value={graphConfig.yMax || ''} onChange={(e) => setGraphConfig({...graphConfig, yMax: Number(e.target.value)})} className="w-full p-1.5 text-xs" /></div>
             </div>
             <div className="space-y-1 max-h-32 overflow-y-auto custom-scrollbar">
                {graphConfig.envelope.map((pt, i) => (
                   <div key={i} className="flex gap-1 items-center">
                      <div className="w-5 h-5 rounded flex items-center justify-center text-[10px] text-black font-bold" style={{ backgroundColor: POINT_COLORS[i % POINT_COLORS.length] }}>{i + 1}</div>
-                     <Input type="number" value={pt.x} onChange={(e) => updateEnvelopePoint(i, 'x', e.target.value)} className="w-full p-1 text-xs text-center rounded-sm" />
-                     <Input type="number" value={pt.y} onChange={(e) => updateEnvelopePoint(i, 'y', e.target.value)} className="w-full p-1 text-xs text-center rounded-sm" />
+                     <Input type="number" value={pt.x || ''} onChange={(e) => updateEnvelopePoint(i, 'x', e.target.value)} className="w-full p-1 text-xs text-center rounded-sm" />
+                     <Input type="number" value={pt.y || ''} onChange={(e) => updateEnvelopePoint(i, 'y', e.target.value)} className="w-full p-1 text-xs text-center rounded-sm" />
                   </div>
                ))}
                <button onClick={addEnvelopePoint} className="w-full py-1.5 text-xs bg-muted hover:bg-muted/80 rounded mt-2 border border-border transition text-muted-foreground"><Plus size={12} className="inline mr-1"/> Add Point</button>
