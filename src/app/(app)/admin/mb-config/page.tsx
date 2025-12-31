@@ -107,6 +107,7 @@ const WBCalculator = () => {
   const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
   const [isSaveAircraftDialogOpen, setIsSaveAircraftDialogOpen] = useState(false);
   const [isLoadAircraftDialogOpen, setIsLoadAircraftDialogOpen] = useState(false);
+  const [loadedAircraft, setLoadedAircraft] = useState<Aircraft | null>(null);
 
 
   // 4. LOGIC
@@ -209,6 +210,7 @@ const WBCalculator = () => {
         { id: 2, name: "Pilot & Front Pax", weight: 340, arm: 85.5, type: 'standard' },
         { id: 3, name: "Fuel", weight: 288, arm: 95.0, type: 'fuel', gallons: 48, maxGallons: 50 }
       ]);
+      setLoadedAircraft(null);
     }
   };
 
@@ -287,6 +289,8 @@ const WBCalculator = () => {
     if (aircraft.stationArms?.fuel) newStations.push({ id: 3, name: "Fuel", weight: 0, arm: aircraft.stationArms.fuel, type: 'fuel', gallons: 0, maxGallons: 50 });
     if (aircraft.stationArms?.baggage1) newStations.push({ id: 5, name: "Baggage", weight: 0, arm: aircraft.stationArms.baggage1, type: 'standard' });
     setStations(newStations);
+    
+    setLoadedAircraft(aircraft);
 
     toast({ title: 'Aircraft W&B Loaded', description: `Configuration for ${aircraft.tailNumber} loaded.` });
     setIsLoadAircraftDialogOpen(false);
@@ -311,7 +315,14 @@ const WBCalculator = () => {
 
       {/* HEADER */}
       <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">W&B Configurator</h1>
+        <div>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">W&B Configurator</h1>
+            {loadedAircraft && (
+                <p className="text-sm text-muted-foreground">
+                    Loaded: <span className="font-semibold text-primary">{loadedAircraft.tailNumber}</span> ({loadedAircraft.model})
+                </p>
+            )}
+        </div>
         <div className="flex gap-3">
           <Button onClick={handleReset} variant="destructive" className="flex items-center gap-2 transition"><RotateCcw size={16} /> Reset</Button>
           <Button onClick={saveAsTemplate} variant="outline" className="flex items-center gap-2 transition"><Save size={16} /> Save as Template</Button>
@@ -577,5 +588,3 @@ const WBCalculator = () => {
 };
 
 export default WBCalculator;
-
-    
