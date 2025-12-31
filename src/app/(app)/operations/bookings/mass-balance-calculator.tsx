@@ -167,117 +167,120 @@ export const MassBalanceCalculator = ({ aircraft, initialData, onSave }: MassBal
   }
 
   // Chart domain and ticks
-  const xDomain: [number, number] = [ Math.min(...(aircraft.cgEnvelope?.map(p => p.cg) || [0])), Math.max(...(aircraft.cgEnvelope?.map(p => p.cg) || [100])) ];
-  const yDomain: [number, number] = [ Math.min(...(aircraft.cgEnvelope?.map(p => p.weight) || [0])), Math.max(...(aircraft.cgEnvelope?.map(p => p.weight) || [3000])) ];
+  const allX = [...(aircraft.cgEnvelope || []).map(p => p.cg), results.cg].filter(n => !isNaN(n) && isFinite(n));
+  const allY = [...(aircraft.cgEnvelope || []).map(p => p.weight), results.weight].filter(n => !isNaN(n) && isFinite(n));
+
+  const paddingX = allX.length > 1 ? (Math.max(...allX) - Math.min(...allX)) * 0.1 : 5;
+  const paddingY = allY.length > 1 ? (Math.max(...allY) - Math.min(...allY)) * 0.1 : 100;
+
+  const xDomain: [number, number] = [ allX.length > 0 ? Math.min(...allX) - paddingX : 0, allX.length > 0 ? Math.max(...allX) + paddingX : 100 ];
+  const yDomain: [number, number] = [ allY.length > 0 ? Math.min(...allY) - paddingY : 0, allY.length > 0 ? Math.max(...allY) + paddingY : 3000 ];
 
   const xAxisTicks = generateNiceTicks(xDomain[0], xDomain[1]);
   const yAxisTicks = generateNiceTicks(yDomain[0], yDomain[1]);
 
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-4">
+    <div className="flex flex-col gap-6 p-4 h-full">
 
-        {/* LEFT COLUMN: CONTROLS */}
-        <div className="lg:col-span-5 space-y-6 h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-
-          {/* 1. AIRCRAFT DATA */}
-          <div className="bg-card p-5 rounded-xl border border-border shadow-md">
-             <h3 className="text-primary font-bold text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
-                1. Aircraft Base Data
-             </h3>
-             <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-muted-foreground">Empty Wt:</span> {aircraft.emptyWeight || 'N/A'} lbs</div>
-                <div><span className="text-muted-foreground">Empty Moment:</span> {aircraft.emptyWeightMoment || 'N/A'}</div>
-                <div><span className="text-muted-foreground">Max Takeoff Wt:</span> {aircraft.maxTakeoffWeight || 'N/A'} lbs</div>
-                <div><span className="text-muted-foreground">Max Landing Wt:</span> {aircraft.maxLandingWeight || 'N/A'} lbs</div>
-             </div>
-          </div>
-
-          {/* 2. LOADING STATIONS */}
-          <div className="bg-card p-5 rounded-xl border border-border shadow-md">
-             <h3 className="text-primary font-bold text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
-                 2. Loading Stations
-              </h3>
-
-            <div className="grid grid-cols-12 gap-2 text-[10px] uppercase text-muted-foreground font-bold px-1 mb-2 tracking-wider">
-               <div className="col-span-5">Station</div>
-               <div className="col-span-3 text-right">Weight (lbs)</div>
-               <div className="col-span-4 text-right">Arm (in)</div>
-            </div>
-
-            <div className="space-y-1">
-              {stations.map((s) => (
-                <div key={s.id} className="group relative border-b border-border last:border-0 pb-2 mb-1">
-                  {s.type === 'fuel' ? (
-                     <div className="pt-1">
-                        <div className="grid grid-cols-12 gap-2 items-center mb-1">
-                            <div className="col-span-5 flex items-center gap-2 font-semibold">
-                                <Fuel size={14} className="text-yellow-500"/>
-                                {s.name}
-                            </div>
-                            <div className="col-span-3">
-                                <Input type="number" value={s.weight} onChange={(e) => handleFuelChange(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" disabled={!isEditing} />
-                            </div>
-                            <div className="col-span-4">
-                                 <Input type="number" value={s.arm} readOnly disabled className="w-full p-1 text-sm text-right bg-muted/50" />
-                            </div>
-                        </div>
-                         <div className="flex items-center bg-muted border border-border rounded px-2 py-0.5 mt-2 shadow-inner">
-                            <Input type="number" value={s.gallons || ''} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)} className="w-16 bg-transparent text-sm font-bold text-right outline-none p-0 h-auto" placeholder="0" disabled={!isEditing}/>
-                            <span className="text-xs text-muted-foreground ml-1 font-semibold">gallons</span>
-                            <input type="range" min="0" max={s.maxGallons || 50} value={s.gallons || 0} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)} className="w-full h-1 bg-muted-foreground/20 rounded-lg appearance-none cursor-pointer accent-yellow-500 ml-4" disabled={!isEditing} />
-                        </div>
-                     </div>
-                  ) : (
-                    <div className="grid grid-cols-12 gap-2 items-center py-1">
-                        <div className="col-span-5 font-semibold text-secondary-foreground">{s.name}</div>
-                        <div className="col-span-3">
-                            <Input type="number" value={s.weight} onChange={(e) => updateStation(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" placeholder="0" disabled={!isEditing} />
-                        </div>
-                        <div className="col-span-4">
-                             <Input type="number" value={s.arm} readOnly disabled className="w-full p-1 text-sm text-right bg-muted/50" />
-                        </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: GRAPH & RESULTS */}
-        <div className="lg:col-span-7 flex flex-col gap-6">
-          <div className="bg-card border border-border rounded-xl p-4 shadow-md relative min-h-[400px] flex flex-col justify-center items-center overflow-hidden">
-             <ResponsiveContainer width="100%" height={400}>
+        {/* TOP ROW: GRAPH & RESULTS */}
+        <div className="bg-card border border-border rounded-xl p-4 shadow-md relative min-h-[400px] flex flex-col justify-center items-center overflow-hidden">
+            <ResponsiveContainer width="100%" height={350}>
                 <ScatterChart margin={{ top: 20, right: 30, bottom: 20, left: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[xDomain[0] - 2, xDomain[1] + 2]} ticks={xAxisTicks} allowDataOverflow={true} stroke="hsl(var(--muted-foreground))" tick={{fill: 'hsl(var(--muted-foreground))'}} dy={10}>
-                    <Label value="CG (inches)" offset={-10} position="insideBottom" fill="hsl(var(--muted-foreground))" />
-                  </XAxis>
-                  <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[yDomain[0] - 100, yDomain[1] + 100]} ticks={yAxisTicks} allowDataOverflow={true} stroke="hsl(var(--muted-foreground))" tick={{fill: 'hsl(var(--muted-foreground))'}}>
-                    <Label value="Gross Weight (lbs)" angle={-90} position="insideLeft" fill="hsl(var(--muted-foreground))" />
-                  </YAxis>
-                  <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}/>
-                  {aircraft.cgEnvelope && <Scatter name="Envelope" data={aircraft.cgEnvelope.map(p => ({ x: p.cg, y: p.weight }))} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} isAnimationActive={false} />}
-                  <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={2} isFront={true} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={xDomain} ticks={xAxisTicks} allowDataOverflow={true} stroke="hsl(var(--muted-foreground))" tick={{fill: 'hsl(var(--muted-foreground))'}} dy={10}>
+                        <Label value="CG (inches)" offset={-10} position="insideBottom" fill="hsl(var(--muted-foreground))" />
+                    </XAxis>
+                    <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={yDomain} ticks={yAxisTicks} allowDataOverflow={true} stroke="hsl(var(--muted-foreground))" tick={{fill: 'hsl(var(--muted-foreground))'}}>
+                        <Label value="Gross Weight (lbs)" angle={-90} position="insideLeft" fill="hsl(var(--muted-foreground))" />
+                    </YAxis>
+                    <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}/>
+                    {aircraft.cgEnvelope && <Scatter name="Envelope" data={aircraft.cgEnvelope.map(p => ({ x: p.cg, y: p.weight }))} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} isAnimationActive={false} />}
+                    <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={2} isFront={true} />
                 </ScatterChart>
-              </ResponsiveContainer>
-              <div className={`absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 ${results.isSafe ? 'bg-green-600/90 text-white' : 'bg-red-600/90 text-white'}`}>
+            </ResponsiveContainer>
+            <div className={`absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 ${results.isSafe ? 'bg-green-600/90 text-white' : 'bg-red-600/90 text-white'}`}>
                 <div className={`w-2 h-2 rounded-full ${results.isSafe ? 'bg-white' : 'bg-white animate-pulse'}`}></div>
                 {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
-              </div>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-4 shadow-md grid grid-cols-2 gap-4">
-              <div className="text-center">
-                  <div className="text-xs text-muted-foreground uppercase">Total Weight</div>
-                  <div className="text-2xl font-bold">{results.weight.toFixed(1)} lbs</div>
-              </div>
-               <div className="text-center">
-                  <div className="text-xs text-muted-foreground uppercase">Center of Gravity</div>
-                  <div className="text-2xl font-bold">{results.cg.toFixed(2)} in</div>
-              </div>
-          </div>
-          <div className="flex justify-end gap-2">
+            </div>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-4 shadow-md grid grid-cols-2 gap-4">
+            <div className="text-center">
+                <div className="text-xs text-muted-foreground uppercase">Total Weight</div>
+                <div className="text-2xl font-bold">{results.weight.toFixed(1)} lbs</div>
+            </div>
+            <div className="text-center">
+                <div className="text-xs text-muted-foreground uppercase">Center of Gravity</div>
+                <div className="text-2xl font-bold">{results.cg.toFixed(2)} in</div>
+            </div>
+        </div>
+        
+        {/* BOTTOM ROW: CONTROLS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow overflow-y-auto pr-2 custom-scrollbar">
+            {/* 1. AIRCRAFT DATA */}
+            <div className="bg-card p-5 rounded-xl border border-border shadow-md">
+                <h3 className="text-primary font-bold text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
+                    1. Aircraft Base Data
+                </h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div><span className="text-muted-foreground">Empty Wt:</span> {aircraft.emptyWeight || 'N/A'} lbs</div>
+                    <div><span className="text-muted-foreground">Empty Moment:</span> {aircraft.emptyWeightMoment || 'N/A'}</div>
+                    <div><span className="text-muted-foreground">Max Takeoff Wt:</span> {aircraft.maxTakeoffWeight || 'N/A'} lbs</div>
+                    <div><span className="text-muted-foreground">Max Landing Wt:</span> {aircraft.maxLandingWeight || 'N/A'} lbs</div>
+                </div>
+            </div>
+
+            {/* 2. LOADING STATIONS */}
+            <div className="bg-card p-5 rounded-xl border border-border shadow-md">
+                <h3 className="text-primary font-bold text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
+                    2. Loading Stations
+                </h3>
+                <div className="grid grid-cols-12 gap-2 text-[10px] uppercase text-muted-foreground font-bold px-1 mb-2 tracking-wider">
+                    <div className="col-span-5">Station</div>
+                    <div className="col-span-3 text-right">Weight (lbs)</div>
+                    <div className="col-span-4 text-right">Arm (in)</div>
+                </div>
+                <div className="space-y-1">
+                {stations.map((s) => (
+                    <div key={s.id} className="group relative border-b border-border last:border-0 pb-2 mb-1">
+                    {s.type === 'fuel' ? (
+                        <div className="pt-1">
+                            <div className="grid grid-cols-12 gap-2 items-center mb-1">
+                                <div className="col-span-5 flex items-center gap-2 font-semibold">
+                                    <Fuel size={14} className="text-yellow-500"/>
+                                    {s.name}
+                                </div>
+                                <div className="col-span-3">
+                                    <Input type="number" value={s.weight} onChange={(e) => handleFuelChange(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" disabled={!isEditing} />
+                                </div>
+                                <div className="col-span-4">
+                                    <Input type="number" value={s.arm} readOnly disabled className="w-full p-1 text-sm text-right bg-muted/50" />
+                                </div>
+                            </div>
+                            <div className="flex items-center bg-muted border border-border rounded px-2 py-0.5 mt-2 shadow-inner">
+                                <Input type="number" value={s.gallons || ''} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)} className="w-16 bg-transparent text-sm font-bold text-right outline-none p-0 h-auto" placeholder="0" disabled={!isEditing}/>
+                                <span className="text-xs text-muted-foreground ml-1 font-semibold">gallons</span>
+                                <input type="range" min="0" max={s.maxGallons || 50} value={s.gallons || 0} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)} className="w-full h-1 bg-muted-foreground/20 rounded-lg appearance-none cursor-pointer accent-yellow-500 ml-4" disabled={!isEditing} />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-12 gap-2 items-center py-1">
+                            <div className="col-span-5 font-semibold text-secondary-foreground">{s.name}</div>
+                            <div className="col-span-3">
+                                <Input type="number" value={s.weight} onChange={(e) => updateStation(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" placeholder="0" disabled={!isEditing} />
+                            </div>
+                            <div className="col-span-4">
+                                <Input type="number" value={s.arm} readOnly disabled className="w-full p-1 text-sm text-right bg-muted/50" />
+                            </div>
+                        </div>
+                    )}
+                    </div>
+                ))}
+                </div>
+            </div>
+        </div>
+
+        <div className="flex justify-end gap-2 mt-auto">
             {isEditing ? (
                 <>
                     <Button variant="outline" onClick={handleCancel}>Cancel</Button>
@@ -290,7 +293,6 @@ export const MassBalanceCalculator = ({ aircraft, initialData, onSave }: MassBal
                     <Pencil className="mr-2" /> Edit
                 </Button>
             )}
-          </div>
         </div>
       </div>
   );
