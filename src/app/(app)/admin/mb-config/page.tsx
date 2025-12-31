@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot, Cell } from 'recharts';
 import { doc, setDoc, collection } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
 import { Save, Plus, Trash2, RotateCcw, Maximize, Fuel, AlertTriangle, Plane, Upload, Library } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -80,7 +80,7 @@ const WBCalculator = () => {
     () => (firestore ? collection(firestore, `tenants/${tenantId}/massAndBalance`) : null),
     [firestore, tenantId]
   );
-  const { data: savedTemplates, isLoading: isLoadingTemplates } = useCollection<AircraftModelProfile>(templatesQuery);
+  const { data: savedTemplates, isLoading: isLoadingTemplates, deleteDocument } = useCollection<AircraftModelProfile>(templatesQuery);
 
   // 1. STATE: Graph Config
   const [graphConfig, setGraphConfig] = useState({
@@ -328,7 +328,7 @@ const WBCalculator = () => {
       xMax: template.xMax,
       yMin: template.yMin,
       yMax: template.yMax,
-      envelope: template.cgEnvelope.map(p => ({ x: p.x, y: p.y })),
+      envelope: (template.cgEnvelope || []).map(p => ({ x: p.x, y: p.y })),
     });
 
     const arm = template.emptyWeight > 0 ? template.emptyWeightMoment / template.emptyWeight : 0;
@@ -343,6 +343,13 @@ const WBCalculator = () => {
 
     toast({ title: 'Template Loaded', description: `Template "${template.profileName}" has been loaded.` });
     setIsLoadTemplateDialogOpen(false);
+  }
+  
+  const handleDeleteTemplate = (templateId: string) => {
+      if (!firestore) return;
+      const templateRef = doc(firestore, `tenants/${tenantId}/massAndBalance`, templateId);
+      deleteDocumentNonBlocking(templateRef);
+      toast({ title: "Template Deleted" });
   }
 
 
@@ -412,9 +419,14 @@ const WBCalculator = () => {
                       <div className="space-y-2 p-1">
                           {isLoadingTemplates ? (<p>Loading templates...</p>) 
                             : (savedTemplates || []).map(template => (
-                                <Button key={template.id} variant="ghost" className="w-full justify-start" onClick={() => handleLoadTemplate(template)}>
-                                    {template.profileName}
-                                </Button>
+                                <div key={template.id} className="flex items-center justify-between">
+                                  <Button variant="ghost" className="w-full justify-start" onClick={() => handleLoadTemplate(template)}>
+                                      {template.profileName}
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteTemplate(template.id)}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
                             ))
                           }
                           {(!savedTemplates || savedTemplates.length === 0) && !isLoadingTemplates && (
@@ -698,5 +710,3 @@ const WBCalculator = () => {
 };
 
 export default WBCalculator;
-
-    
