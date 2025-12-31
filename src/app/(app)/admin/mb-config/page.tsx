@@ -58,7 +58,7 @@ const OffScreenWarning = ({ direction, value, label }: { direction: string, valu
     <span className="font-bold text-xs uppercase">{label} Off Scale!</span>
     <span className="text-lg font-mono">{value}</span>
     <span className="text-xs text-gray-300">
-      {direction === 'left' ? '← Move Left' : 'Move Right →'}
+      {direction === 'left' ? '← Move Left' : 'Move Right →' }
     </span>
   </div>
 );
@@ -108,6 +108,7 @@ const WBCalculator = () => {
   const [isSaveAircraftDialogOpen, setIsSaveAircraftDialogOpen] = useState(false);
   const [isLoadAircraftDialogOpen, setIsLoadAircraftDialogOpen] = useState(false);
   const [loadedAircraft, setLoadedAircraft] = useState<Aircraft | null>(null);
+  const [templateName, setTemplateName] = useState('');
 
 
   // 4. LOGIC
@@ -219,12 +220,20 @@ const WBCalculator = () => {
         alert("Firestore not initialized.");
         return;
     }
+    if (!templateName.trim()) {
+        toast({ variant: 'destructive', title: 'Name Required', description: 'Please enter a name for the template.' });
+        return;
+    }
     try {
-        await setDoc(doc(firestore, "tenants/safeviate/massAndBalance", graphConfig.modelName), {
+        const templateId = templateName.trim().toLowerCase().replace(/\s+/g, '-');
+        await setDoc(doc(firestore, "tenants/safeviate/massAndBalance", templateId), {
+            id: templateId,
+            profileName: templateName.trim(),
             graphConfig,
             stations
         });
-        toast({ title: 'Template Saved', description: `M&B Template "${graphConfig.modelName}" has been saved.` });
+        toast({ title: 'Template Saved', description: `M&B Template "${templateName.trim()}" has been saved.` });
+        setTemplateName('');
     } catch (e) {
         console.error("Error adding document: ", e);
         toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the template.' });
@@ -236,12 +245,11 @@ const WBCalculator = () => {
     
     const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId);
     
-    // Construct the M&B data to save based on the current state of the calculator
     const mbDataToSave = {
         emptyWeight: basicEmpty.weight,
         emptyWeightMoment: basicEmpty.moment,
-        maxTakeoffWeight: graphConfig.yMax, // Simplified assumption
-        maxLandingWeight: graphConfig.yMax, // Simplified assumption
+        maxTakeoffWeight: graphConfig.yMax,
+        maxLandingWeight: graphConfig.yMax,
         cgEnvelope: graphConfig.envelope.map(p => ({ weight: p.y, cg: p.x })),
         stations: stations.map(s => ({
             id: s.id,
@@ -252,13 +260,6 @@ const WBCalculator = () => {
             gallons: parseFloat(s.gallons) || 0,
             maxGallons: parseFloat(s.maxGallons) || 0,
         })),
-        stationArms: stations.reduce((acc: { [key: string]: number }, st) => {
-            const key = st.name.toLowerCase().replace(/ & /g, '').replace(/ /g, '');
-            if (key) {
-                acc[key] = parseFloat(st.arm) || 0;
-            }
-            return acc;
-        }, {}),
     };
 
     updateDocumentNonBlocking(aircraftRef, mbDataToSave);
@@ -293,7 +294,6 @@ const WBCalculator = () => {
         arm: parseFloat(arm.toFixed(2)),
     });
 
-    // Reset stations to a default based on the loaded aircraft's station arms if available
     const newStations = aircraft.stations && aircraft.stations.length > 0 
         ? aircraft.stations 
         : [];
@@ -335,7 +335,30 @@ const WBCalculator = () => {
         </div>
         <div className="flex gap-3">
           <Button onClick={handleReset} variant="destructive" className="flex items-center gap-2 transition"><RotateCcw size={16} /> Reset</Button>
-          <Button onClick={saveAsTemplate} variant="outline" className="flex items-center gap-2 transition"><Save size={16} /> Save as Template</Button>
+          <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2 transition"><Save size={16} /> Save as Template</Button>
+              </DialogTrigger>
+              <DialogContent>
+                  <DialogHeader>
+                      <DialogTitle>Save M&B Template</DialogTitle>
+                      <DialogDescription>Give this configuration a unique name to save it as a reusable template.</DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4">
+                      <Input 
+                        placeholder="e.g., PA-28-180 Standard"
+                        value={templateName}
+                        onChange={(e) => setTemplateName(e.target.value)}
+                      />
+                  </div>
+                  <DialogFooter>
+                      <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                      <DialogClose asChild>
+                          <Button onClick={saveAsTemplate} disabled={!templateName.trim()}>Save Template</Button>
+                      </DialogClose>
+                  </DialogFooter>
+              </DialogContent>
+          </Dialog>
            
            <Dialog open={isLoadAircraftDialogOpen} onOpenChange={setIsLoadAircraftDialogOpen}>
               <DialogTrigger asChild>
