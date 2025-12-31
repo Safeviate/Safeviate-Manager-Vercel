@@ -3,13 +3,26 @@
 
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { GeminiLogbook } from './gemini-logbook';
+import { DynamicLogbook } from './dynamic-logbook';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { TableTemplate } from '@/types/table-template';
 
 export default function MyDashboardPage() {
     const { userProfile, isLoading: isLoadingProfile } = useUserProfile();
+    const firestore = useFirestore();
+    const tenantId = 'safeviate';
+    const publishedTableRef = useMemoFirebase(
+      () => firestore ? doc(firestore, `tenants/${tenantId}/published-tables`, 'my-dashboard') : null,
+      [firestore, tenantId]
+    );
+    const { data: publishedTable, isLoading: isLoadingTable } = useDoc<TableTemplate>(publishedTableRef);
+    
+    const isLoading = isLoadingProfile || isLoadingTable;
 
-    if (isLoadingProfile) {
+    if (isLoading) {
         return (
             <div className="w-full space-y-6">
                 <Skeleton className="h-64 w-full" />
@@ -49,7 +62,11 @@ export default function MyDashboardPage() {
 
     return (
         <div className="w-full space-y-6">
-            <GeminiLogbook userProfile={userProfile} />
+            {publishedTable ? (
+                <DynamicLogbook template={publishedTable} userProfile={userProfile} />
+            ) : (
+                <GeminiLogbook userProfile={userProfile} />
+            )}
         </div>
     );
 }

@@ -32,7 +32,7 @@ export interface Booking {
     overnightEndTime?: string | null; // HH:mm
     flightPlanId?: string; // Link to a flight plan document
     flightDetails?: string; // From Gemini Logbook
-    massAndBalance?: MassAndBalance; // From Mass & Balance Calculator
+    massAndBalance: MassAndBalance | null; // From Mass & Balance Calculator
     // Pre-flight data
     preFlight?: {
         actualHobbs?: number;
