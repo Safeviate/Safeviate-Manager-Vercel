@@ -6,7 +6,7 @@ import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Responsive
 import { doc, setDoc, collection } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, Plus, Trash2, RotateCcw, Maximize, Fuel, AlertTriangle, Plane } from 'lucide-react';
+import { Save, Plus, Trash2, RotateCcw, Maximize, Fuel, AlertTriangle, Plane, Upload } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -106,6 +106,8 @@ const WBCalculator = () => {
 
   const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
   const [isSaveAircraftDialogOpen, setIsSaveAircraftDialogOpen] = useState(false);
+  const [isLoadAircraftDialogOpen, setIsLoadAircraftDialogOpen] = useState(false);
+
 
   // 4. LOGIC
   useEffect(() => {
@@ -256,6 +258,41 @@ const WBCalculator = () => {
     setIsSaveAircraftDialogOpen(false);
   }
 
+  const handleLoadFromAircraft = (aircraft: Aircraft) => {
+    if (!aircraft.emptyWeight || !aircraft.emptyWeightMoment || !aircraft.cgEnvelope) {
+        toast({ variant: 'destructive', title: 'Load Failed', description: 'Selected aircraft does not have a complete M&B profile.' });
+        return;
+    }
+    
+    setGraphConfig({
+        modelName: aircraft.model,
+        xMin: Math.min(...aircraft.cgEnvelope.map(p => p.cg)) - 2,
+        xMax: Math.max(...aircraft.cgEnvelope.map(p => p.cg)) + 2,
+        yMin: Math.min(...aircraft.cgEnvelope.map(p => p.weight)) - 100,
+        yMax: Math.max(...aircraft.cgEnvelope.map(p => p.weight)) + 100,
+        envelope: aircraft.cgEnvelope.map(p => ({ x: p.cg, y: p.weight })),
+    });
+
+    const arm = aircraft.emptyWeight > 0 ? aircraft.emptyWeightMoment / aircraft.emptyWeight : 0;
+    setBasicEmpty({
+        weight: aircraft.emptyWeight,
+        moment: aircraft.emptyWeightMoment,
+        arm: parseFloat(arm.toFixed(2)),
+    });
+
+    // Reset stations to a default based on the loaded aircraft's station arms if available
+    const newStations: any[] = [];
+    if (aircraft.stationArms?.frontSeats) newStations.push({ id: 2, name: "Pilot & Front Pax", weight: 0, arm: aircraft.stationArms.frontSeats, type: 'standard' });
+    if (aircraft.stationArms?.rearSeats) newStations.push({ id: 4, name: "Rear Pax", weight: 0, arm: aircraft.stationArms.rearSeats, type: 'standard' });
+    if (aircraft.stationArms?.fuel) newStations.push({ id: 3, name: "Fuel", weight: 0, arm: aircraft.stationArms.fuel, type: 'fuel', gallons: 0, maxGallons: 50 });
+    if (aircraft.stationArms?.baggage1) newStations.push({ id: 5, name: "Baggage", weight: 0, arm: aircraft.stationArms.baggage1, type: 'standard' });
+    setStations(newStations);
+
+    toast({ title: 'Aircraft W&B Loaded', description: `Configuration for ${aircraft.tailNumber} loaded.` });
+    setIsLoadAircraftDialogOpen(false);
+  };
+
+
   // SAFETY DOMAIN
   const allX = [...graphConfig.envelope.map(p => p.x), results.cg].filter(n => !isNaN(n));
   const allY = [...graphConfig.envelope.map(p => p.y), results.weight].filter(n => !isNaN(n));
@@ -278,6 +315,47 @@ const WBCalculator = () => {
         <div className="flex gap-3">
           <Button onClick={handleReset} variant="destructive" className="flex items-center gap-2 transition"><RotateCcw size={16} /> Reset</Button>
           <Button onClick={saveAsTemplate} variant="outline" className="flex items-center gap-2 transition"><Save size={16} /> Save as Template</Button>
+           
+           <Dialog open={isLoadAircraftDialogOpen} onOpenChange={setIsLoadAircraftDialogOpen}>
+              <DialogTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2 transition"><Upload size={16} /> Load Aircraft W&B</Button>
+              </DialogTrigger>
+              <DialogContent>
+                  <DialogHeader>
+                      <DialogTitle>Load W&B from Aircraft</DialogTitle>
+                      <DialogDescription>
+                          Select an aircraft to load its saved Mass & Balance configuration into the calculator.
+                      </DialogDescription>
+                  </DialogHeader>
+                  <ScrollArea className="max-h-60">
+                      <div className="space-y-2 p-1">
+                          {isLoadingAircrafts ? (
+                              <p>Loading aircraft...</p>
+                          ) : (aircrafts || []).map(ac => (
+                              <Button
+                                  key={ac.id}
+                                  variant="ghost"
+                                  className="w-full justify-start"
+                                  onClick={() => handleLoadFromAircraft(ac)}
+                                  disabled={!ac.emptyWeight || !ac.cgEnvelope}
+                                  title={!ac.emptyWeight || !ac.cgEnvelope ? 'No M&B profile saved' : ''}
+                              >
+                                {ac.tailNumber} ({ac.model})
+                              </Button>
+                          ))}
+                          {(!aircrafts || aircrafts.length === 0) && !isLoadingAircrafts && (
+                              <p className="text-muted-foreground text-sm text-center py-4">No aircraft found.</p>
+                          )}
+                      </div>
+                  </ScrollArea>
+                  <DialogFooter>
+                      <DialogClose asChild>
+                          <Button variant="outline">Cancel</Button>
+                      </DialogClose>
+                  </DialogFooter>
+              </DialogContent>
+          </Dialog>
+
            <Dialog open={isSaveAircraftDialogOpen} onOpenChange={setIsSaveAircraftDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground transition shadow-lg"><Plane size={16} /> Save to Aircraft</Button>
