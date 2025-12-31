@@ -185,10 +185,10 @@ export const MassBalanceCalculator = ({ aircraft, initialData, onSave }: MassBal
                 1. Aircraft Base Data
              </h3>
              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-muted-foreground">Empty Wt:</span> {aircraft.emptyWeight} lbs</div>
-                <div><span className="text-muted-foreground">Empty Moment:</span> {aircraft.emptyWeightMoment}</div>
-                <div><span className="text-muted-foreground">Max Takeoff Wt:</span> {aircraft.maxTakeoffWeight} lbs</div>
-                <div><span className="text-muted-foreground">Max Landing Wt:</span> {aircraft.maxLandingWeight} lbs</div>
+                <div><span className="text-muted-foreground">Empty Wt:</span> {aircraft.emptyWeight || 'N/A'} lbs</div>
+                <div><span className="text-muted-foreground">Empty Moment:</span> {aircraft.emptyWeightMoment || 'N/A'}</div>
+                <div><span className="text-muted-foreground">Max Takeoff Wt:</span> {aircraft.maxTakeoffWeight || 'N/A'} lbs</div>
+                <div><span className="text-muted-foreground">Max Landing Wt:</span> {aircraft.maxLandingWeight || 'N/A'} lbs</div>
              </div>
           </div>
 
