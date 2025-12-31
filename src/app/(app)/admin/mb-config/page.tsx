@@ -6,7 +6,7 @@ import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Responsive
 import { doc, setDoc, collection } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, Plus, Trash2, RotateCcw, Maximize, Fuel, AlertTriangle, Plane, Upload } from 'lucide-react';
+import { Save, Plus, Trash2, RotateCcw, Maximize, Fuel, AlertTriangle, Plane, Upload, Library } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Aircraft } from '../../assets/page';
+import type { AircraftModelProfile } from '@/types/aircraft';
+
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 const FUEL_WEIGHT_PER_GALLON = 6;
@@ -74,6 +76,12 @@ const WBCalculator = () => {
   );
   const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
 
+  const templatesQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, `tenants/${tenantId}/massAndBalance`) : null),
+    [firestore, tenantId]
+  );
+  const { data: savedTemplates, isLoading: isLoadingTemplates } = useCollection<AircraftModelProfile>(templatesQuery);
+
   // 1. STATE: Graph Config
   const [graphConfig, setGraphConfig] = useState({
     modelName: "Piper PA-28-180",
@@ -107,6 +115,7 @@ const WBCalculator = () => {
   const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
   const [isSaveAircraftDialogOpen, setIsSaveAircraftDialogOpen] = useState(false);
   const [isLoadAircraftDialogOpen, setIsLoadAircraftDialogOpen] = useState(false);
+  const [isLoadTemplateDialogOpen, setIsLoadTemplateDialogOpen] = useState(false);
   const [loadedAircraft, setLoadedAircraft] = useState<Aircraft | null>(null);
   const [templateName, setTemplateName] = useState('');
 
@@ -229,7 +238,13 @@ const WBCalculator = () => {
         await setDoc(doc(firestore, "tenants/safeviate/massAndBalance", templateId), {
             id: templateId,
             profileName: templateName.trim(),
-            graphConfig,
+            emptyWeight: basicEmpty.weight,
+            emptyWeightMoment: basicEmpty.moment,
+            xMin: graphConfig.xMin,
+            xMax: graphConfig.xMax,
+            yMin: graphConfig.yMin,
+            yMax: graphConfig.yMax,
+            cgEnvelope: graphConfig.envelope,
             stations
         });
         toast({ title: 'Template Saved', description: `M&B Template "${templateName.trim()}" has been saved.` });
@@ -306,6 +321,30 @@ const WBCalculator = () => {
     setIsLoadAircraftDialogOpen(false);
   };
 
+  const handleLoadTemplate = (template: AircraftModelProfile) => {
+    setGraphConfig({
+      modelName: template.profileName,
+      xMin: template.xMin,
+      xMax: template.xMax,
+      yMin: template.yMin,
+      yMax: template.yMax,
+      envelope: template.cgEnvelope.map(p => ({ x: p.x, y: p.y })),
+    });
+
+    const arm = template.emptyWeight > 0 ? template.emptyWeightMoment / template.emptyWeight : 0;
+    setBasicEmpty({
+        weight: template.emptyWeight,
+        moment: template.emptyWeightMoment,
+        arm: parseFloat(arm.toFixed(2)),
+    });
+
+    setStations(template.stations || []);
+    setLoadedAircraft(null);
+
+    toast({ title: 'Template Loaded', description: `Template "${template.profileName}" has been loaded.` });
+    setIsLoadTemplateDialogOpen(false);
+  }
+
 
   // SAFETY DOMAIN
   const allX = [...graphConfig.envelope.map(p => p.x), results.cg].filter(n => !isNaN(n));
@@ -359,10 +398,41 @@ const WBCalculator = () => {
                   </DialogFooter>
               </DialogContent>
           </Dialog>
+
+          <Dialog open={isLoadTemplateDialogOpen} onOpenChange={setIsLoadTemplateDialogOpen}>
+              <DialogTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2 transition"><Library size={16} /> Load Template</Button>
+              </DialogTrigger>
+              <DialogContent>
+                  <DialogHeader>
+                      <DialogTitle>Load M&B Template</DialogTitle>
+                      <DialogDescription>Select a saved template to load its configuration into the calculator.</DialogDescription>
+                  </DialogHeader>
+                  <ScrollArea className="max-h-60">
+                      <div className="space-y-2 p-1">
+                          {isLoadingTemplates ? (<p>Loading templates...</p>) 
+                            : (savedTemplates || []).map(template => (
+                                <Button key={template.id} variant="ghost" className="w-full justify-start" onClick={() => handleLoadTemplate(template)}>
+                                    {template.profileName}
+                                </Button>
+                            ))
+                          }
+                          {(!savedTemplates || savedTemplates.length === 0) && !isLoadingTemplates && (
+                              <p className="text-muted-foreground text-sm text-center py-4">No templates saved yet.</p>
+                          )}
+                      </div>
+                  </ScrollArea>
+                   <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                    </DialogFooter>
+              </DialogContent>
+          </Dialog>
            
            <Dialog open={isLoadAircraftDialogOpen} onOpenChange={setIsLoadAircraftDialogOpen}>
               <DialogTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2 transition"><Upload size={16} /> Load Aircraft W&B</Button>
+                  <Button variant="outline" className="flex items-center gap-2 transition"><Upload size={16} /> Load from Aircraft</Button>
               </DialogTrigger>
               <DialogContent>
                   <DialogHeader>
@@ -628,3 +698,5 @@ const WBCalculator = () => {
 };
 
 export default WBCalculator;
+
+    

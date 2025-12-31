@@ -4,7 +4,7 @@ export type Station = {
     name: string;
     weight: number;
     arm: number;
-    type: 'weight' | 'fuel';
+    type: 'standard' | 'fuel';
     gallons?: number;
     maxGallons?: number;
 };
@@ -66,10 +66,12 @@ export type Aircraft = {
     baggage1?: number;
     baggage2?: number;
   };
+   stations?: Station[];
   cgEnvelope?: {
     weight: number;
     cg: number;
   }[];
 };
 
+    
     
