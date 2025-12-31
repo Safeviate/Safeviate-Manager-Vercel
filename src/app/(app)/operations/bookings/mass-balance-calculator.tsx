@@ -213,6 +213,9 @@ export const MassBalanceCalculator = ({ aircraft, initialData, onSave }: MassBal
                   <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={2} isFront={true} />
               </ScatterChart>
           </ResponsiveContainer>
+          <p className="absolute bottom-20 left-1/2 transform -translate-x-1/2 text-red-600 font-extrabold text-sm md:text-base uppercase tracking-widest pointer-events-none whitespace-nowrap drop-shadow-md">
+            CONSULT AIRCRAFT POH BEFORE FLIGHT
+          </p>
           <div className={`absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 ${results.isSafe ? 'bg-green-600/90 text-white' : 'bg-red-600/90 text-white'}`}>
               <div className={`w-2 h-2 rounded-full ${results.isSafe ? 'bg-white' : 'bg-white animate-pulse'}`}></div>
               {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
