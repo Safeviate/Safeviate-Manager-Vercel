@@ -912,6 +912,22 @@
             "baggage2": { "type": "number", "description": "Arm for the secondary baggage area." }
           }
         },
+        "stations": {
+          "type": "array",
+          "description": "A list of loading stations for the aircraft.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "number" },
+              "name": { "type": "string" },
+              "weight": { "type": "number" },
+              "arm": { "type": "number" },
+              "type": { "type": "string" },
+              "gallons": { "type": "number" },
+              "maxGallons": { "type": "number" }
+            }
+          }
+        },
         "cgEnvelope": {
           "type": "array",
           "description": "An array of {weight, cg} objects defining the vertices of the CG envelope polygon.",
@@ -1127,10 +1143,7 @@
             "$ref": "#/backend/entities/FindingLevelsSettings"
         }
       },
-      "required": [
-        "id",
-        "tenantId"
-      ]
+      "required": ["id", "tenantId"]
     },
     "FeatureSettings": {
       "title": "Feature Settings",
@@ -1343,10 +1356,16 @@
   },
   "firestore": {
     "structure": [
+      {
+        "path": "users/{userId}",
+        "definition": {
+          "schema": { "$ref": "#/backend/entities/User" },
+          "description": "Stores a link between a Firebase Auth user and their profile document."
+        }
+      },
        {
         "path": "tenants/{tenantId}/published-tables/{pageId}",
         "definition": {
-          "entityName": "PublishedTable",
           "schema": { "$ref": "#/backend/entities/PublishedTable" },
           "description": "Stores table structures published to specific pages."
         }
@@ -1354,7 +1373,6 @@
       {
         "path": "tenants/{tenantId}/table-templates/{templateId}",
         "definition": {
-          "entityName": "TableTemplate",
           "schema": { "$ref": "#/backend/entities/TableTemplate" },
           "description": "Stores saved table designs from the Table Builder."
         }
@@ -1362,7 +1380,6 @@
        {
         "path": "tenants/{tenantId}/compliance-matrix/{itemId}",
         "definition": {
-          "entityName": "ComplianceRequirement",
           "schema": { "$ref": "#/backend/entities/ComplianceRequirement" },
           "description": "Stores individual regulatory compliance items."
         }
@@ -1370,7 +1387,6 @@
       {
         "path": "tenants/{tenantId}/audit-schedule-items/{itemId}",
         "definition": {
-          "entityName": "AuditScheduleItem",
           "schema": { "$ref": "#/backend/entities/AuditScheduleItem" },
           "description": "Stores the status of audit areas for specific quarters."
         }
@@ -1378,7 +1394,6 @@
       {
         "path": "tenants/{tenantId}/quality-audit-templates/{templateId}",
         "definition": {
-          "entityName": "QualityAuditChecklistTemplate",
           "schema": { "$ref": "#/backend/entities/QualityAuditChecklistTemplate" },
           "description": "Stores templates for quality audits."
         }
@@ -1386,7 +1401,6 @@
       {
         "path": "tenants/{tenantId}/quality-audits/{auditId}",
         "definition": {
-          "entityName": "QualityAudit",
           "schema": { "$ref": "#/backend/entities/QualityAudit" },
           "description": "Stores instances of quality audits."
         }
@@ -1394,7 +1408,6 @@
       {
         "path": "tenants/{tenantId}/corrective-action-plans/{capId}",
         "definition": {
-          "entityName": "CorrectiveActionPlan",
           "schema": { "$ref": "#/backend/entities/CorrectiveActionPlan" },
           "description": "Stores corrective action plans for audit findings."
         }
@@ -1402,302 +1415,156 @@
        {
         "path": "tenants/{tenantId}/flight-plans/{flightPlanId}",
         "definition": {
-          "entityName": "FlightPlan",
           "schema": {
             "$ref": "#/backend/entities/FlightPlan"
           },
-          "description": "Stores flight plans for each tenant.",
-          "params": [
-            { "name": "tenantId", "description": "Tenant ID." },
-            { "name": "flightPlanId", "description": "Flight Plan ID." }
-          ]
+          "description": "Stores flight plans for each tenant."
         }
       },
       {
         "path": "tenants/{tenantId}/risks/{riskId}",
         "definition": {
-          "entityName": "Risk",
           "schema": {
             "$ref": "#/backend/entities/Risk"
           },
-          "description": "Stores organizational risks for each tenant.",
-          "params": [
-            { "name": "tenantId", "description": "Tenant ID." },
-            { "name": "riskId", "description": "Risk ID." }
-          ]
+          "description": "Stores organizational risks for each tenant."
         }
       },
       {
         "path": "tenants/{tenantId}/safety-reports/{reportId}",
         "definition": {
-          "entityName": "SafetyReport",
           "schema": {
             "$ref": "#/backend/entities/SafetyReport"
           },
-          "description": "Stores safety reports for each tenant.",
-          "params": [
-            { "name": "tenantId", "description": "Tenant ID." },
-            { "name": "reportId", "description": "Safety Report ID." }
-          ]
+          "description": "Stores safety reports for each tenant."
         }
       },
        {
         "path": "tenants/{tenantId}/management-of-change/{mocId}",
         "definition": {
-          "entityName": "ManagementOfChange",
           "schema": {
             "$ref": "#/backend/entities/ManagementOfChange"
           },
-          "description": "Stores Management of Change records for each tenant.",
-          "params": [
-            { "name": "tenantId", "description": "Tenant ID." },
-            { "name": "mocId", "description": "MOC ID." }
-          ]
+          "description": "Stores Management of Change records for each tenant."
         }
       },
        {
         "path": "tenants/{tenantId}/bookings/{bookingId}",
         "definition": {
-          "entityName": "Booking",
           "schema": {
             "$ref": "#/backend/entities/Booking"
           },
-          "description": "Stores individual booking records for each tenant.",
-          "params": [
-            { "name": "tenantId", "description": "Tenant ID." },
-            { "name": "bookingId", "description": "Booking ID." }
-          ]
+          "description": "Stores individual booking records for each tenant."
         }
       },
       {
         "path": "tenants/{tenantId}/logbook-templates/{templateId}",
         "definition": {
-          "entityName": "LogbookTemplate",
           "schema": {
             "$ref": "#/backend/entities/LogbookTemplate"
           },
-          "description": "Stores saved structures for flight logbooks.",
-          "params": [
-            { "name": "tenantId", "description": "Tenant ID." },
-            { "name": "templateId", "description": "Template ID." }
-          ]
+          "description": "Stores saved structures for flight logbooks."
         }
       },
       {
         "path": "tenants/{tenantId}/massAndBalance/{profileId}",
         "definition": {
-          "entityName": "AircraftModelProfile",
           "schema": {
             "$ref": "#/backend/entities/AircraftModelProfile"
           },
-          "description": "Stores M&B templates for aircraft models.",
-          "params": [
-            { "name": "tenantId", "description": "Tenant ID." },
-            { "name": "profileId", "description": "Profile ID." }
-          ]
+          "description": "Stores M&B templates for aircraft models."
         }
       },
       {
         "path": "tenants/{tenantId}",
         "definition": {
-          "entityName": "Tenant",
           "schema": {
             "$ref": "#/backend/entities/Tenant"
           },
-          "description": "Stores tenant information. All other collections except users are tenant specific.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "Unique identifier for the tenant."
-            }
-          ]
+          "description": "Stores tenant information. All other collections except users are tenant specific."
         }
       },
       {
         "path": "tenants/{tenantId}/personnel/{personnelId}",
         "definition": {
-          "entityName": "Personnel",
           "schema": {
             "$ref": "#/backend/entities/Personnel"
           },
-          "description": "Stores non-flying staff information, scoped to a specific tenant.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "Unique identifier for the tenant."
-            },
-            {
-              "name": "personnelId",
-              "description": "Unique identifier for the personnel."
-            }
-          ]
+          "description": "Stores non-flying staff information, scoped to a specific tenant."
         }
       },
        {
         "path": "tenants/{tenantId}/pilots/{pilotId}",
         "definition": {
-          "entityName": "PilotProfile",
           "schema": {
             "$ref": "#/backend/entities/PilotProfile"
           },
-          "description": "Stores pilot profile information (students, instructors, private pilots), scoped to a specific tenant.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "Unique identifier for the tenant."
-            },
-            {
-              "name": "pilotId",
-              "description": "Unique identifier for the pilot profile."
-            }
-          ]
+          "description": "Stores pilot profile information (students, instructors, private pilots), scoped to a specific tenant."
         }
       },
       {
         "path": "tenants/{tenantId}/aircrafts/{aircraftId}",
         "definition": {
-          "entityName": "Aircraft",
           "schema": {
             "$ref": "#/backend/entities/Aircraft"
           },
-          "description": "Stores aircraft information, scoped to a specific tenant.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "Unique identifier for the tenant."
-            },
-            {
-              "name": "aircraftId",
-              "description": "Unique identifier for the aircraft."
-            }
-          ]
+          "description": "Stores aircraft information, scoped to a specific tenant."
         }
       },
       {
         "path": "tenants/{tenantId}/aircrafts/{aircraftId}/maintenanceLogs/{maintenanceLogId}",
         "definition": {
-          "entityName": "MaintenanceLog",
           "schema": {
             "$ref": "#/backend/entities/MaintenanceLog"
           },
-          "description": "Stores maintenance log entries for a specific aircraft, scoped to a specific tenant.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "Unique identifier for the tenant."
-            },
-            {
-              "name": "aircraftId",
-              "description": "Unique identifier for the aircraft."
-            },
-            {
-              "name": "maintenanceLogId",
-              "description": "Unique identifier for the maintenance log entry."
-            }
-          ]
+          "description": "Stores maintenance log entries for a specific aircraft, scoped to a specific tenant."
         }
       },
       {
         "path": "tenants/{tenantId}/roles/{roleId}",
         "definition": {
-          "entityName": "Role",
           "schema": {
             "$ref": "#/backend/entities/Role"
           },
-          "description": "Stores roles, scoped to a specific tenant.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "Unique identifier for the tenant."
-            },
-            {
-              "name": "roleId",
-              "description": "Unique identifier for the role."
-            }
-          ]
+          "description": "Stores roles, scoped to a specific tenant."
         }
       },
       {
         "path": "tenants/{tenantId}/permissions/{permissionId}",
         "definition": {
-          "entityName": "Permission",
           "schema": {
             "$ref": "#/backend/entities/Permission"
           },
-          "description": "Stores all available application permissions, scoped to a specific tenant.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "Unique identifier for the tenant."
-            },
-            {
-              "name": "permissionId",
-              "description": "Unique identifier for the permission."
-            }
-          ]
+          "description": "Stores all available application permissions, scoped to a specific tenant."
         }
       },
       {
         "path": "tenants/{tenantId}/settings/{settingsId}",
         "definition": {
-          "entityName": "Settings",
           "schema": {
             "$ref": "#/backend/entities/Settings"
           },
-          "description": "Stores application settings for a tenant. A single document can hold multiple settings, e.g., 'document-expiry', 'features', 'finding-levels'.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "Unique identifier for the tenant."
-            },
-            {
-              "name": "settingsId",
-              "description": "Unique identifier for the settings document (e.g., 'theme', 'document-expiry', 'features', 'finding-levels')."
-            }
-          ]
+          "description": "Stores application settings for a tenant. A single document can hold multiple settings, e.g., 'document-expiry', 'features', 'finding-levels'."
         }
       },
        {
         "path": "tenants/{tenantId}/departments/{departmentId}",
         "definition": {
-          "entityName": "Department",
           "schema": {
             "$ref": "#/backend/entities/Department"
           },
-          "description": "Stores departments, scoped to a specific tenant.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "Unique identifier for the tenant."
-            },
-            {
-              "name": "departmentId",
-              "description": "Unique identifier for the department."
-            }
-          ]
+          "description": "Stores departments, scoped to a specific tenant."
         }
       },
       {
         "path": "tenants/{tenantId}/counters/{counterId}",
         "definition": {
-          "entityName": "Counter",
           "schema": {
             "$ref": "#/backend/entities/Counter"
           },
-          "description": "Stores distributed counters for generating sequential IDs.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "Unique identifier for the tenant."
-            },
-            {
-              "name": "counterId",
-              "description": "The name of the counter (e.g., 'bookings')."
-            }
-          ]
+          "description": "Stores distributed counters for generating sequential IDs."
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to support a multi-tenant aviation academy management application, focusing on security, scalability, and ease of debugging. Authorization Independence is achieved through denormalization where needed, especially for collaborative data. Structural Segregation ensures that each collection has a homogeneous security posture. Access Modeling follows consistent patterns, utilizing path-based ownership for user-specific data and membership maps for collaborative entities. The structure is multi-tenant, where tenants are isolated from each other. The structure uses the tenants collection to keep a list of tenants and provides a tenant id for all other collections in the database. This strategy allows the application to manage multiple academies within the same system, each with its own set of data and settings.\\n\\n*   **Tenants:** The root level collection `tenants` stores individual tenant documents. Each tenant has its own unique ID and associated settings.\\n*   **Users:** User data is now split into `personnel` (non-flying staff), `instructors`, `students`, and `private-pilots` under each tenant to better segregate data models and security rules.\\n*   **Settings:** A generic `settings` collection is added under each tenant. This allows for storing various configuration documents, such as `document-expiry`, in a structured and scalable way without creating new top-level collections for each setting type.\\n\\nQAPs (Rules are not Filters) is addressed by:\\n\\n*   Segregating data into collections with homogeneous security requirements.\\n*   Using path-based ownership for private data.\\n*   Employing membership maps for collaborative data, and storing these maps directly within the documents to avoid `get()` calls in security rules.\\n\\nThis design enables robust security rules that are simple to write, easy to understand, and highly performant."
+    ]
   }
 }

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -470,11 +469,6 @@ const WBCalculator = () => {
                             <div className="col-span-5 flex items-center gap-2">
                                 <Fuel size={12} className="text-yellow-500"/>
                                 <Input value={s.name} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="bg-transparent text-sm font-bold text-secondary-foreground focus:text-foreground border-b border-transparent focus:border-primary outline-none w-full mr-2 placeholder-gray-600" />
-                                <div className="flex items-center bg-muted border border-border rounded px-2 py-0.5 ml-auto shrink-0 shadow-inner">
-                                   <Input type="number" value={s.gallons || 0} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
-                                      className="w-10 bg-transparent text-sm font-bold text-right text-yellow-600 outline-none p-0 h-auto" />
-                                   <span className="text-[10px] text-muted-foreground ml-1 font-semibold">gal</span>
-                                </div>
                             </div>
                             <div className="col-span-3">
                                 <Input type="number" value={s.weight} onChange={(e) => handleFuelChange(s.id, 'weight', e.target.value)} className="w-full p-1 text-sm text-right" />
@@ -486,9 +480,21 @@ const WBCalculator = () => {
                                 <button onClick={() => removeStation(s.id)} className="text-muted-foreground hover:text-destructive transition"><Trash2 size={12}/></button>
                             </div>
                         </div>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                            <div className="flex items-center bg-muted border border-border rounded px-2 py-0.5 shadow-inner">
+                                <Input type="number" value={s.gallons || ''} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
+                                    className="w-10 bg-transparent text-sm font-bold text-right text-yellow-600 outline-none p-0 h-auto" placeholder="0" />
+                                <span className="text-[10px] text-muted-foreground ml-1 font-semibold">gal</span>
+                            </div>
+                             <div className="flex items-center bg-muted border border-border rounded px-2 py-0.5 shadow-inner">
+                                <Input type="number" value={s.maxGallons || ''} onChange={(e) => updateStation(s.id, 'maxGallons', e.target.value)}
+                                    className="w-10 bg-transparent text-sm font-bold text-right outline-none p-0 h-auto" placeholder="0" />
+                                <span className="text-[10px] text-muted-foreground ml-1 font-semibold">max gal</span>
+                            </div>
+                        </div>
                         <input type="range" min="0" max={s.maxGallons || 50} value={s.gallons || 0}
                                 onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
-                                className="w-full h-1 bg-muted-foreground/20 rounded-lg appearance-none cursor-pointer accent-yellow-500 block" />
+                                className="w-full h-1 bg-muted-foreground/20 rounded-lg appearance-none cursor-pointer accent-yellow-500 block mt-2" />
                      </div>
                   ) : (
                     // STANDARD ROW
@@ -589,5 +595,3 @@ const WBCalculator = () => {
 };
 
 export default WBCalculator;
-
-    
