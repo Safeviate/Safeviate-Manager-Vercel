@@ -6,7 +6,7 @@ import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Responsive
 import { doc, setDoc } from "firebase/firestore";
 import { useFirestore } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, Plus, Trash2, RotateCcw, Maximize, Fuel, AlertTriangle } from 'lucide-react';
+import { Save, Plus, Trash2, RotateCcw, Maximize, Fuel, AlertTriangle, Plane } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
@@ -233,7 +233,8 @@ const WBCalculator = () => {
         <h1 className="text-2xl font-bold text-foreground tracking-tight">W&B Configurator</h1>
         <div className="flex gap-3">
           <button onClick={handleReset} className="flex items-center gap-2 bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/50 px-4 py-2 rounded text-sm font-semibold transition"><RotateCcw size={16} /> Reset</button>
-          <button onClick={saveToFirebase} className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded text-sm font-semibold transition shadow-lg"><Save size={16} /> Save</button>
+          <button onClick={saveToFirebase} className="flex items-center gap-2 bg-primary/80 hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded text-sm font-semibold transition shadow"><Save size={16} /> Save as Template</button>
+          <button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded text-sm font-semibold transition shadow-lg"><Plane size={16} /> Save to Aircraft</button>
         </div>
       </div>
 
@@ -418,5 +419,3 @@ const WBCalculator = () => {
 };
 
 export default WBCalculator;
-
-    
