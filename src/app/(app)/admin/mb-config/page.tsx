@@ -235,18 +235,21 @@ const WBCalculator = () => {
     }
     try {
         const templateId = templateName.trim().toLowerCase().replace(/\s+/g, '-');
-        await setDoc(doc(firestore, "tenants/safeviate/massAndBalance", templateId), {
+        const dataToSave = {
             id: templateId,
             profileName: templateName.trim(),
-            emptyWeight: basicEmpty.weight,
-            emptyWeightMoment: basicEmpty.moment,
-            xMin: graphConfig.xMin,
-            xMax: graphConfig.xMax,
-            yMin: graphConfig.yMin,
-            yMax: graphConfig.yMax,
+            emptyWeight: Number(basicEmpty.weight) || 0,
+            emptyWeightMoment: Number(basicEmpty.moment) || 0,
+            xMin: Number(graphConfig.xMin) || 0,
+            xMax: Number(graphConfig.xMax) || 0,
+            yMin: Number(graphConfig.yMin) || 0,
+            yMax: Number(graphConfig.yMax) || 0,
             cgEnvelope: graphConfig.envelope,
             stations
-        });
+        };
+
+        await setDoc(doc(firestore, "tenants/safeviate/massAndBalance", templateId), dataToSave);
+
         toast({ title: 'Template Saved', description: `M&B Template "${templateName.trim()}" has been saved.` });
         setTemplateName('');
     } catch (e) {
@@ -714,3 +717,4 @@ const WBCalculator = () => {
 };
 
 export default WBCalculator;
+
