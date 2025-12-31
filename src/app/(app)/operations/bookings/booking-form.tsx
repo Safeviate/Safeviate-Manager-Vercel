@@ -193,7 +193,7 @@ export function BookingForm({
                                     <FormField control={form.control} name="instructorId" render={({ field }) => ( <FormItem><FormLabel>Instructor</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select instructor..." /></SelectTrigger></FormControl><SelectContent>{instructors.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )} />
                                 </div>
                             )}
-                            <div className="grid grid-cols-2 gap-4">
+                             <div className="grid grid-cols-2 gap-4">
                                 <FormField control={form.control} name="startTime" render={({ field }) => ( <FormItem><FormLabel>Start Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
                                 <FormField control={form.control} name="endTime" render={({ field }) => ( <FormItem><FormLabel>End Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
                             </div>
@@ -229,6 +229,12 @@ export function BookingForm({
                     <PostFlightChecklistDialog isOpen={isPostFlightOpen} setIsOpen={setIsPostFlightOpen} booking={existingBooking} aircraft={aircraft} tenantId={tenantId} onChecklistSubmitted={refreshBookings} />
                      <Dialog open={isMassBalanceOpen} onOpenChange={setIsMassBalanceOpen}>
                         <DialogContent className="max-w-7xl h-[90vh]">
+                            <DialogHeader>
+                                <DialogTitle>Mass &amp; Balance Calculator</DialogTitle>
+                                <DialogDescription>
+                                    Calculate the weight and balance for this specific flight.
+                                </DialogDescription>
+                            </DialogHeader>
                             <MassBalanceCalculator
                                 aircraft={aircraft}
                                 initialData={form.getValues('massAndBalance')}
