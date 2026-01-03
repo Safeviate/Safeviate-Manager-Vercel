@@ -5,7 +5,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useFirestore, useDoc, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -66,13 +66,15 @@ export function StudentDebriefForm() {
     () => (firestore && bookingId ? doc(firestore, `tenants/${tenantId}/bookings`, bookingId) : null),
     [firestore, bookingId]
   );
-  const studentRef = useMemoFirebase(
-    () => (firestore && bookingRef ? doc(firestore, 'tenants', tenantId, 'students', bookingRef.id) : null),
-    [firestore, bookingRef]
-);
-
 
   const { data: booking, isLoading: isLoadingBooking } = useDoc<Booking>(bookingRef);
+
+  // Correctly construct studentRef only AFTER booking data (and thus studentId) is available.
+  const studentRef = useMemoFirebase(
+    () => (firestore && booking?.studentId ? doc(firestore, 'tenants', tenantId, 'students', booking.studentId) : null),
+    [firestore, tenantId, booking?.studentId]
+  );
+
   const { data: student, isLoading: isLoadingStudent } = useDoc<PilotProfile>(studentRef);
 
 
