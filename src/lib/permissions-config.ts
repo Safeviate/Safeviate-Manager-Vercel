@@ -28,58 +28,42 @@ export const permissionsConfig: PermissionResource[] = [
   },
   
   // --- Core Features ---
-  {
-    id: 'bookings',
-    name: 'Bookings',
-    actions: ['view', 'create', 'edit', 'delete'],
-  },
-  {
-    id: 'assets',
-    name: 'Assets',
-    actions: ['view', 'create', 'edit', 'delete'],
-  },
-  {
-    id: 'users',
-    name: 'Users',
-    actions: ['view', 'create', 'edit', 'delete'],
-  },
-  {
-    id: 'training-debriefs',
-    name: 'Training: Student Debriefs',
-    actions: ['view', 'edit'],
-  },
+  { id: 'operations', name: 'Operations', actions: ['view'] },
+  { id: 'bookings', name: 'Bookings', actions: ['view', 'create', 'edit', 'delete'] },
+  { id: 'flight-plans', name: 'Flight Plans', actions: ['manage'] },
+
+  { id: 'safety', name: 'Safety', actions: ['view'] },
+  { id: 'safety-reports', name: 'Safety Reports', actions: ['manage'] },
+  { id: 'risk-register', name: 'Risk Register', actions: ['view'] },
+  { id: 'risk-matrix', name: 'Risk Matrix', actions: ['view'] },
+  { id: 'safety-indicators', name: 'Safety Indicators', actions: ['view'] },
+  { id: 'moc', name: 'Management of Change', actions: ['manage'] },
+
+  { id: 'quality', name: 'Quality', actions: ['view'] },
+  { id: 'quality-audits', name: 'Quality Audits', actions: ['view', 'manage'] },
+  { id: 'quality-templates', name: 'Quality Templates', actions: ['manage'] },
+  { id: 'quality-caps', name: 'Quality CAPs', actions: ['view'] },
+  { id: 'quality-tasks', name: 'Quality Tasks', actions: ['view'] },
+  { id: 'quality-matrix', name: 'Quality Coherence Matrix', actions: ['manage'] },
+
+  { id: 'training', name: 'Training', actions: ['view'] },
+  { id: 'training-debriefs', name: 'Training: Student Debriefs', actions: ['view', 'edit'] },
+
+  { id: 'assets', name: 'Assets', actions: ['view', 'create', 'edit', 'delete'] },
+  { id: 'users', name: 'Users', actions: ['view', 'create', 'edit', 'delete'] },
 
   // --- Admin Section ---
-  {
-    id: 'admin-roles',
-    name: 'Admin: Roles',
-    actions: ['view', 'create', 'edit', 'delete'],
-  },
-  {
-    id: 'admin-permissions',
-    name: 'Admin: Permissions',
-    actions: ['view'],
-  },
-  {
-    id: 'admin-department',
-    name: 'Admin: Departments',
-    actions: ['view', 'create', 'edit', 'delete'],
-  },
-  {
-    id: 'admin-document-dates',
-    name: 'Admin: Document Dates',
-    actions: ['view', 'manage'],
-  },
-  {
-    id: 'admin-database',
-    name: 'Admin: Database Seeding',
-    actions: ['manage'],
-  },
+  { id: 'admin', name: 'Admin', actions: ['view'] },
+  { id: 'admin-roles', name: 'Admin: Roles', actions: ['manage'] },
+  { id: 'admin-permissions', name: 'Admin: Permissions', actions: ['view'] },
+  { id: 'admin-departments', name: 'Admin: Departments', actions: ['manage'] },
+  { id: 'admin-settings', name: 'Admin: General Settings', actions: ['manage'] },
+  { id: 'admin-database', name: 'Admin: Database Seeding', actions: ['manage'] },
 
   // --- Settings Section ---
   {
-    id: 'settings-appearance',
-    name: 'Settings: Appearance',
+    id: 'settings',
+    name: 'Settings',
     actions: ['manage'],
   },
 

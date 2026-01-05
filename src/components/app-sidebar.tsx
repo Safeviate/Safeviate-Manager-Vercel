@@ -43,21 +43,32 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SheetHeader, SheetTitle } from './ui/sheet';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { usePermissions } from '@/hooks/use-permissions';
 
 const SidebarItems = () => {
     const pathname = usePathname();
     const { setOpenMobile } = useSidebar();
+    const { hasPermission } = usePermissions();
   
     const renderMenuItem = (item: MenuItemType) => {
+      if (item.permissionId && !hasPermission(item.permissionId)) {
+        return null;
+      }
+      
       const isParentActive = pathname.startsWith(item.href);
       const Icon = item.icon;
   
       if (item.subItems) {
+        const visibleSubItems = item.subItems.filter(sub => !sub.permissionId || hasPermission(sub.permissionId));
+        if (visibleSubItems.length === 0) {
+            return null; // Don't render parent if no sub-items are visible
+        }
+
         return (
           <SidebarCollapsible defaultOpen={isParentActive}>
             <SidebarCollapsibleTrigger asChild>
               <SidebarMenuButton
-                isActive={isParentActive && !item.subItems.some(sub => pathname.startsWith(sub.href))}
+                isActive={isParentActive && !visibleSubItems.some(sub => pathname.startsWith(sub.href))}
                 tooltip={item.label}
                 className="justify-between"
               >
@@ -70,7 +81,7 @@ const SidebarItems = () => {
             </SidebarCollapsibleTrigger>
             <SidebarCollapsibleContent>
               <SidebarMenuSub>
-                {item.subItems.map((subItem) => (
+                {visibleSubItems.map((subItem) => (
                   <SidebarMenuSubItem key={subItem.href} onClick={() => setOpenMobile(false)}>
                     <Link href={subItem.href}>
                       <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
@@ -108,7 +119,7 @@ const SidebarItems = () => {
             {visibleMenuConfig.map((item, index) => (
             <React.Fragment key={item.href}>
                 <SidebarMenuItem>{renderMenuItem(item)}</SidebarMenuItem>
-                {index < visibleMenuConfig.length - 1 && <SidebarSeparator />}
+                {index > 0 && index < visibleMenuConfig.length - 1 && item.subItems && <SidebarSeparator />}
             </React.Fragment>
             ))}
         </SidebarMenu>
@@ -120,6 +131,7 @@ const SidebarFooterContent = () => {
     const router = useRouter();
     const { setOpenMobile } = useSidebar();
     const { userProfile } = useUserProfile();
+    const { hasPermission } = usePermissions();
 
     const handleSignOut = () => {
       if (auth) {
@@ -139,18 +151,22 @@ const SidebarFooterContent = () => {
     return (
         <SidebarGroup>
           <SidebarMenu>
-            <SidebarMenuItem>
-                <Link href={settingsMenuItem.href} className="w-full" onClick={() => setOpenMobile(false)}>
-                    <SidebarMenuButton
-                        isActive={usePathname().startsWith(settingsMenuItem.href)}
-                        tooltip={settingsMenuItem.label}
-                    >
-                        <settingsMenuItem.icon className="h-5 w-5" />
-                        <span>{settingsMenuItem.label}</span>
-                    </SidebarMenuButton>
-                </Link>
-            </SidebarMenuItem>
-            <SidebarSeparator className="my-1 mx-2" />
+            {settingsMenuItem.permissionId && hasPermission(settingsMenuItem.permissionId) && (
+              <>
+              <SidebarMenuItem>
+                  <Link href={settingsMenuItem.href} className="w-full" onClick={() => setOpenMobile(false)}>
+                      <SidebarMenuButton
+                          isActive={usePathname().startsWith(settingsMenuItem.href)}
+                          tooltip={settingsMenuItem.label}
+                      >
+                          <settingsMenuItem.icon className="h-5 w-5" />
+                          <span>{settingsMenuItem.label}</span>
+                      </SidebarMenuButton>
+                  </Link>
+              </SidebarMenuItem>
+              <SidebarSeparator className="my-1 mx-2" />
+              </>
+            )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton
