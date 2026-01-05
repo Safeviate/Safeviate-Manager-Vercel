@@ -10,10 +10,13 @@ import { StudentsTable } from './students-table';
 import { PersonnelForm } from '../personnel/personnel-form';
 import type { Role } from '../../admin/roles/page';
 import type { Department } from '../../admin/department/page';
+import { usePermissions } from '@/hooks/use-permissions';
 
 export default function StudentsPage() {
   const firestore = useFirestore();
+  const { hasPermission } = usePermissions();
   const tenantId = 'safeviate'; // Hardcoded for now
+  const canCreateUsers = hasPermission('users-create');
 
   const studentsQuery = useMemoFirebase(
     () =>
@@ -55,7 +58,7 @@ export default function StudentsPage() {
                 <h1 className="text-3xl font-bold tracking-tight">Students</h1>
                 <p className="text-muted-foreground">Manage all students in your organization.</p>
             </div>
-            <PersonnelForm tenantId={tenantId} roles={roles || []} departments={departments || []} />
+            {canCreateUsers && <PersonnelForm tenantId={tenantId} roles={roles || []} departments={departments || []} />}
         </div>
       <Card>
         <CardContent className="p-0">

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -15,6 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { usePermissions } from '@/hooks/use-permissions';
 
 export type Role = {
   id: string;
@@ -25,7 +27,9 @@ export type Role = {
 
 export default function RolesPage() {
   const firestore = useFirestore();
+  const { hasPermission } = usePermissions();
   const tenantId = 'safeviate'; // Hardcoded for now
+  const canManage = hasPermission('admin-roles-manage');
 
   const rolesQuery = useMemoFirebase(
     () =>
@@ -44,7 +48,7 @@ export default function RolesPage() {
   return (
     <div className="flex flex-col gap-6 h-full">
       <div className="flex justify-end">
-        <RoleForm tenantId={tenantId} />
+        {canManage && <RoleForm tenantId={tenantId} />}
       </div>
 
       <Card>

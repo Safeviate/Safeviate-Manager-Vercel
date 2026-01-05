@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -14,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { usePermissions } from '@/hooks/use-permissions';
 
 export type Department = {
   id: string;
@@ -22,7 +24,9 @@ export type Department = {
 
 export default function DepartmentPage() {
   const firestore = useFirestore();
+  const { hasPermission } = usePermissions();
   const tenantId = 'safeviate'; // Hardcoded for now
+  const canManage = hasPermission('admin-departments-manage');
 
   const departmentsQuery = useMemoFirebase(
     () =>
@@ -41,7 +45,7 @@ export default function DepartmentPage() {
   return (
     <div className="flex flex-col gap-6 h-full">
       <div className="flex justify-end">
-        <DepartmentForm tenantId={tenantId} />
+        {canManage && <DepartmentForm tenantId={tenantId} />}
       </div>
 
       <Card>
@@ -98,5 +102,3 @@ export default function DepartmentPage() {
     </div>
   );
 }
-
-    

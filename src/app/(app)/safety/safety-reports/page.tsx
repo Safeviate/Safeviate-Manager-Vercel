@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -11,10 +12,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { usePermissions } from '@/hooks/use-permissions';
 
 export default function SafetyReportsPage() {
   const firestore = useFirestore();
+  const { hasPermission } = usePermissions();
   const tenantId = 'safeviate'; // Hardcoded for now
+
+  const canManage = hasPermission('safety-reports-manage');
 
   const reportsQuery = useMemoFirebase(
     () => 
@@ -35,12 +40,14 @@ export default function SafetyReportsPage() {
             View and manage all filed safety reports.
           </p>
         </div>
-        <Button asChild>
-            <Link href="/safety/new-report">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                File Safety Report
-            </Link>
-        </Button>
+        {canManage && (
+            <Button asChild>
+                <Link href="/safety/new-report">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    File Safety Report
+                </Link>
+            </Button>
+        )}
       </div>
 
       <Card>

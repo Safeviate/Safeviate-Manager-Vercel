@@ -42,6 +42,7 @@ import { Separator } from '@/components/ui/separator';
 import { permissionsConfig } from '@/lib/permissions-config';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface Role {
     id: string;
@@ -58,6 +59,7 @@ interface RoleActionsProps {
 export function RoleActions({ tenantId, role }: RoleActionsProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
 
   const [roleName, setRoleName] = useState(role.name);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(role.permissions || []);
@@ -67,6 +69,8 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
+
+  const canManage = hasPermission('admin-roles-manage');
 
   const allPermissionIds = useMemo(() => 
     permissionsConfig.flatMap(resource => 
@@ -86,6 +90,10 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
         setRequiredDocuments(role.requiredDocuments || []);
     }
   }, [role, isEditDialogOpen]);
+  
+  if (!canManage) {
+    return null;
+  }
 
   const handleUpdateRole = () => {
     if (!roleName.trim()) {
@@ -313,5 +321,3 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
     </>
   );
 }
-
-    

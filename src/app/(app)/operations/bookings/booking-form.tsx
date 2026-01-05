@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { format, addMinutes, set } from 'date-fns';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
+import { usePermissions } from '@/hooks/use-permissions';
 
 import type { Aircraft } from '../../assets/page';
 import type { PilotProfile, Personnel } from '../../users/personnel/page';
@@ -82,6 +83,7 @@ export function BookingForm({
     const firestore = useFirestore();
     const { user: authUser } = useUser();
     const { toast } = useToast();
+    const { hasPermission } = usePermissions();
 
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [cancellationReason, setCancellationReason] = useState('');
@@ -90,6 +92,10 @@ export function BookingForm({
     const [isPreFlightOpen, setIsPreFlightOpen] = useState(false);
     const [isPostFlightOpen, setIsPostFlightOpen] = useState(false);
     const [isMassBalanceOpen, setIsMassBalanceOpen] = useState(false);
+
+    const canCreate = hasPermission('bookings-create');
+    const canEdit = hasPermission('bookings-edit');
+    const canDelete = hasPermission('bookings-delete');
 
     const instructors = useMemo(() => pilots.filter(p => p.userType === 'Instructor') as PilotProfile[], [pilots]);
     const students = useMemo(() => pilots.filter(p => p.userType === 'Student') as PilotProfile[], [pilots]);
@@ -131,9 +137,11 @@ export function BookingForm({
 
         try {
             if (existingBooking) {
+                if (!canEdit) throw new Error("You don't have permission to edit bookings.");
                 await updateBooking({ firestore, tenantId, bookingId: existingBooking.id, updateData: bookingPayload, aircraft });
                 toast({ title: 'Booking Updated', description: 'The booking details have been saved.' });
             } else {
+                if (!canCreate) throw new Error("You don't have permission to create bookings.");
                 await createBooking(firestore, tenantId, bookingPayload);
                 toast({ title: 'Booking Created', description: 'The new booking has been added to the schedule.' });
             }
@@ -145,7 +153,7 @@ export function BookingForm({
     };
     
     const handleDelete = async () => {
-        if (!firestore || !existingBooking) return;
+        if (!firestore || !existingBooking || !canDelete) return;
         try {
             await deleteBooking(firestore, tenantId, existingBooking.id);
             toast({ title: 'Booking Deleted' });
@@ -158,7 +166,7 @@ export function BookingForm({
     }
     
     const handleCancelBooking = async () => {
-        if (!firestore || !existingBooking) return;
+        if (!firestore || !existingBooking || !canEdit) return;
         try {
             await cancelBooking(firestore, tenantId, existingBooking.id, cancellationReason);
             toast({ title: 'Booking Cancelled'});
@@ -178,6 +186,7 @@ export function BookingForm({
 
     const bookingType = form.watch('type');
     const isOvernight = form.watch('isOvernight');
+    const isFormDisabled = existingBooking ? !canEdit : !canCreate;
 
     return (
         <>
@@ -189,39 +198,41 @@ export function BookingForm({
                     </DialogHeader>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                            <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Training Flight">Training Flight</SelectItem><SelectItem value="Private Flight">Private Flight</SelectItem><SelectItem value="Reposition Flight">Reposition Flight</SelectItem><SelectItem value="Maintenance Flight">Maintenance Flight</SelectItem></SelectContent></Select><FormMessage /></FormItem> )} />
-                            {bookingType === 'Training Flight' && (
+                            <fieldset disabled={isFormDisabled}>
+                                <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Training Flight">Training Flight</SelectItem><SelectItem value="Private Flight">Private Flight</SelectItem><SelectItem value="Reposition Flight">Reposition Flight</SelectItem><SelectItem value="Maintenance Flight">Maintenance Flight</SelectItem></SelectContent></Select><FormMessage /></FormItem> )} />
+                                {bookingType === 'Training Flight' && (
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <FormField control={form.control} name="studentId" render={({ field }) => ( <FormItem><FormLabel>Student</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select student..." /></SelectTrigger></FormControl><SelectContent>{students.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )} />
+                                        <FormField control={form.control} name="instructorId" render={({ field }) => ( <FormItem><FormLabel>Instructor</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select instructor..." /></SelectTrigger></FormControl><SelectContent>{instructors.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )} />
+                                    </div>
+                                )}
+                                {bookingType === 'Private Flight' && (
+                                    <FormField control={form.control} name="privatePilotId" render={({ field }) => ( <FormItem><FormLabel>Pilot</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select pilot..." /></SelectTrigger></FormControl><SelectContent>{privatePilots.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )} />
+                                )}
                                 <div className="grid grid-cols-2 gap-4">
-                                    <FormField control={form.control} name="studentId" render={({ field }) => ( <FormItem><FormLabel>Student</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select student..." /></SelectTrigger></FormControl><SelectContent>{students.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )} />
-                                    <FormField control={form.control} name="instructorId" render={({ field }) => ( <FormItem><FormLabel>Instructor</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select instructor..." /></SelectTrigger></FormControl><SelectContent>{instructors.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )} />
+                                    <FormField control={form.control} name="startTime" render={({ field }) => ( <FormItem><FormLabel>Start Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                    <FormField control={form.control} name="endTime" render={({ field }) => ( <FormItem><FormLabel>End Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
                                 </div>
-                            )}
-                            {bookingType === 'Private Flight' && (
-                                <FormField control={form.control} name="privatePilotId" render={({ field }) => ( <FormItem><FormLabel>Pilot</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select pilot..." /></SelectTrigger></FormControl><SelectContent>{privatePilots.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )} />
-                            )}
-                             <div className="grid grid-cols-2 gap-4">
-                                <FormField control={form.control} name="startTime" render={({ field }) => ( <FormItem><FormLabel>Start Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                                <FormField control={form.control} name="endTime" render={({ field }) => ( <FormItem><FormLabel>End Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                            </div>
-                            <FormField control={form.control} name="isOvernight" render={({ field }) => ( <FormItem className="flex items-center gap-2 pt-2"><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel>Overnight?</FormLabel></FormItem> )} />
-                            {isOvernight && (
-                                <div className="grid grid-cols-2 gap-4">
-                                    <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Return Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn(!field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem> )} />
-                                    <FormField control={form.control} name="overnightEndTime" render={({ field }) => ( <FormItem><FormLabel>Return Time</FormLabel><FormControl><Input type="time" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem> )} />
-                                </div>
-                            )}
+                                <FormField control={form.control} name="isOvernight" render={({ field }) => ( <FormItem className="flex items-center gap-2 pt-2"><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel>Overnight?</FormLabel></FormItem> )} />
+                                {isOvernight && (
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Return Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn(!field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem> )} />
+                                        <FormField control={form.control} name="overnightEndTime" render={({ field }) => ( <FormItem><FormLabel>Return Time</FormLabel><FormControl><Input type="time" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem> )} />
+                                    </div>
+                                )}
+                            </fieldset>
                              <DialogFooter className="pt-4 flex-wrap gap-2">
                                 {existingBooking && (
                                     <div className="flex flex-wrap gap-2">
-                                        <Button type="button" variant="outline" onClick={() => setIsPreFlightOpen(true)} disabled={!!existingBooking.postFlight}>Pre-Flight</Button>
-                                        <Button type="button" variant="outline" onClick={() => setIsPostFlightOpen(true)} disabled={!existingBooking.preFlight}>Post-Flight</Button>
-                                        <Button type="button" variant="outline" onClick={() => setIsMassBalanceOpen(true)}><Scale className="mr-2" /> W&B</Button>
-                                        <Button type="button" variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>Delete</Button>
-                                        <Button type="button" variant="secondary" onClick={() => setIsCancelDialogOpen(true)}>Cancel Booking</Button>
+                                        <Button type="button" variant="outline" onClick={() => setIsPreFlightOpen(true)} disabled={!!existingBooking.postFlight || !canEdit}>Pre-Flight</Button>
+                                        <Button type="button" variant="outline" onClick={() => setIsPostFlightOpen(true)} disabled={!existingBooking.preFlight || !canEdit}>Post-Flight</Button>
+                                        {canEdit && <Button type="button" variant="outline" onClick={() => setIsMassBalanceOpen(true)}><Scale className="mr-2" /> W&B</Button>}
+                                        {canDelete && <Button type="button" variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>Delete</Button>}
+                                        {canEdit && <Button type="button" variant="secondary" onClick={() => setIsCancelDialogOpen(true)}>Cancel Booking</Button>}
                                     </div>
                                 )}
                                 <div className="flex-grow"></div>
-                                <Button type="submit">{existingBooking ? 'Save Changes' : 'Create Booking'}</Button>
+                                <Button type="submit" disabled={isFormDisabled}>{existingBooking ? 'Save Changes' : 'Create Booking'}</Button>
                             </DialogFooter>
                         </form>
                     </Form>

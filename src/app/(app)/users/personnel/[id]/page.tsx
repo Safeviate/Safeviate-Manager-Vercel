@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, use, Suspense } from 'react';
@@ -15,6 +16,7 @@ import { Pencil } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
 import { TrainingRecords } from './training-records';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface UserProfilePageProps {
     params: { id: string };
@@ -31,10 +33,12 @@ function UserProfileContent({ params }: UserProfilePageProps) {
     const firestore = useFirestore();
     const searchParams = useSearchParams();
     const userType = searchParams.get('type') || 'Personnel';
+    const { hasPermission } = usePermissions();
 
     const tenantId = 'safeviate'; // Hardcoded for now
     const userId = resolvedParams.id;
     const [isEditing, setIsEditing] = useState(false);
+    const canEditUsers = hasPermission('users-edit');
 
     const collectionName = useMemo(() => {
         switch(userType) {
@@ -123,10 +127,12 @@ function UserProfileContent({ params }: UserProfilePageProps) {
             ) : (
                 <>
                     <div className="flex justify-end">
-                        <Button onClick={() => setIsEditing(true)}>
-                            <Pencil className='mr-2' />
-                            Edit Profile
-                        </Button>
+                        {canEditUsers && (
+                            <Button onClick={() => setIsEditing(true)}>
+                                <Pencil className='mr-2' />
+                                Edit Profile
+                            </Button>
+                        )}
                     </div>
                     <Tabs defaultValue="details">
                         <TabsList className="grid w-full grid-cols-2">

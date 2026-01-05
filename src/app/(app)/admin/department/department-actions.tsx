@@ -11,7 +11,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
 import {
@@ -38,6 +37,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu"
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface Department {
     id: string;
@@ -52,9 +52,16 @@ interface DepartmentActionsProps {
 export function DepartmentActions({ tenantId, department }: DepartmentActionsProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
   const [departmentName, setDepartmentName] = useState(department.name);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+  const canManage = hasPermission('admin-departments-manage');
+
+  if (!canManage) {
+    return null;
+  }
 
   const handleUpdateDepartment = () => {
     if (!departmentName.trim()) {

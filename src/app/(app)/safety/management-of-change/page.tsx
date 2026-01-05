@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -12,11 +13,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import type { ManagementOfChange } from '@/types/moc';
+import { usePermissions } from '@/hooks/use-permissions';
 
 
 export default function ManagementOfChangePage() {
     const firestore = useFirestore();
+    const { hasPermission } = usePermissions();
     const tenantId = 'safeviate';
+
+    const canManage = hasPermission('moc-manage');
 
     const mocsQuery = useMemoFirebase(
         () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'management-of-change'), orderBy('proposalDate', 'desc')) : null),
@@ -34,12 +39,14 @@ export default function ManagementOfChangePage() {
                         A formal process to proactively identify and manage risks associated with significant changes.
                     </p>
                 </div>
-                <Button asChild>
-                    <Link href="/safety/management-of-change/new">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Propose Change
-                    </Link>
-                </Button>
+                {canManage && (
+                    <Button asChild>
+                        <Link href="/safety/management-of-change/new">
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Propose Change
+                        </Link>
+                    </Button>
+                )}
             </div>
             <Card>
                 <CardHeader>

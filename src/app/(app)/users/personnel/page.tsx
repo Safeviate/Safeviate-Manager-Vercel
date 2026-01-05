@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import type { Role } from '../../admin/roles/page';
 import type { Department } from '../../admin/department/page';
 import { PersonnelTable } from './personnel-table';
+import { usePermissions } from '@/hooks/use-permissions';
 
 export type PilotProfile = {
   id: string;
@@ -80,7 +81,9 @@ export type Personnel = {
 
 export default function PersonnelPage() {
   const firestore = useFirestore();
+  const { hasPermission } = usePermissions();
   const tenantId = 'safeviate'; // Hardcoded for now
+  const canCreateUsers = hasPermission('users-create');
 
   const personnelQuery = useMemoFirebase(
     () =>
@@ -131,7 +134,7 @@ export default function PersonnelPage() {
             <h1 className="text-3xl font-bold tracking-tight">Personnel</h1>
             <p className="text-muted-foreground">Manage all non-flying staff in your organization.</p>
         </div>
-        <PersonnelForm tenantId={tenantId} roles={roles || []} departments={departments || []} />
+        {canCreateUsers && <PersonnelForm tenantId={tenantId} roles={roles || []} departments={departments || []} />}
       </div>
 
       <Card>
