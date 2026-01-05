@@ -24,6 +24,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { parse, isAfter, format, startOfToday } from 'date-fns';
 import type { Aircraft } from '../../assets/page';
+import { StudentProgressReport } from '@/types/training';
 
 type BookingCreationData = Omit<Booking, 'id' | 'bookingNumber' | 'status'>;
 
@@ -160,12 +161,26 @@ export const updateBooking = async ({
             currentHobbs: updateData.postFlight.actualHobbs,
             currentTacho: updateData.postFlight.actualTacho,
         });
+
+        // If it's a training flight, create a draft progress report
+        const originalBooking = (await getDoc(bookingRef)).data() as Booking;
+        if (originalBooking.type === 'Training Flight' && originalBooking.studentId && originalBooking.instructorId) {
+            const reportRef = doc(collection(firestore, `tenants/${tenantId}/student-progress-reports`));
+            const reportData: Partial<StudentProgressReport> = {
+                bookingId: originalBooking.id,
+                studentId: originalBooking.studentId,
+                instructorId: originalBooking.instructorId,
+                date: new Date().toISOString(),
+                entries: [],
+            };
+            batch.set(reportRef, reportData);
+        }
     }
 
     await batch.commit().catch(error => {
         const contextualError = new FirestorePermissionError({
           operation: 'write',
-          path: `tenants/${tenantId}/bookings/${bookingId} (and possibly aircraft)`,
+          path: `tenants/${tenantId}/bookings/${bookingId} (and possibly others)`,
           requestResourceData: updatePayload,
         });
         errorEmitter.emit('permission-error', contextualError);

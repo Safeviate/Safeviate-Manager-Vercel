@@ -1162,6 +1162,9 @@
         },
         "findingLevels": {
             "$ref": "#/backend/entities/FindingLevelsSettings"
+        },
+        "studentMilestoneSettings": {
+            "$ref": "#/backend/entities/StudentMilestoneSettings"
         }
       },
       "required": ["id", "tenantId"]
@@ -1384,7 +1387,7 @@
           "items": { "$ref": "#/backend/entities/StudentProgressEntry" }
         }
       },
-      "required": ["id", "bookingId", "studentId", "instructorId", "date", "entries"]
+      "required": ["id", "bookingId"]
     },
     "StudentProgressEntry": {
       "title": "Student Progress Entry",
@@ -1397,6 +1400,29 @@
         "comment": { "type": "string" }
       },
       "required": ["id", "exercise", "rating", "comment"]
+    },
+    "StudentMilestoneSettings": {
+      "title": "Student Milestone Settings",
+      "type": "object",
+      "description": "Settings for student flight hour milestone warnings.",
+      "properties": {
+        "id": { "type": "string" },
+        "milestones": {
+          "type": "array",
+          "items": { "$ref": "#/backend/entities/MilestoneWarning" }
+        }
+      },
+      "required": ["id", "milestones"]
+    },
+    "MilestoneWarning": {
+      "title": "Milestone Warning",
+      "type": "object",
+      "description": "A single milestone warning configuration.",
+      "properties": {
+        "milestone": { "type": "number", "description": "The target hour milestone (e.g., 10, 20)." },
+        "warningHours": { "type": "number", "description": "The hour threshold at which to show a warning." }
+      },
+      "required": ["milestone", "warningHours"]
     }
   },
   "auth": {
@@ -1628,5 +1654,3 @@
     ]
   }
 }
-
-    

@@ -11,8 +11,8 @@ export interface StudentProgressEntry {
 export interface StudentProgressReport {
     id: string;
     bookingId: string;
-    studentId: string;
-    instructorId: string;
+    studentId?: string;
+    instructorId?: string;
     date: string; // ISO String
     overallComment?: string;
     entries: StudentProgressEntry[];

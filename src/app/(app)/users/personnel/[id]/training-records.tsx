@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -185,7 +186,7 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
                 <CardContent>
                     {reports && reports.length > 0 ? (
                          <Accordion type="multiple" className="w-full">
-                            {reports.map(report => (
+                            {reports.filter(r => r.entries.length > 0).map(report => (
                                 <AccordionItem key={report.id} value={report.id}>
                                     <AccordionTrigger>
                                         <div className="flex justify-between items-center w-full pr-4">
@@ -200,7 +201,7 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
                                             <div key={entry.id} className="p-4 rounded-md bg-muted/50">
                                                 <div className="flex justify-between items-start">
                                                     <p className="font-semibold">{entry.exercise}</p>
-                                                    <Badge className={getRatingColor(entry.rating)}>{entry.rating}/4</Badge>
+                                                    <Badge className={cn(getRatingColor(entry.rating), "text-white")}>{entry.rating}/4</Badge>
                                                 </div>
                                                 <p className="text-sm text-muted-foreground mt-2">{entry.comment}</p>
                                             </div>
