@@ -68,7 +68,8 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
                 const userLinkSnap = await getDoc(userLinkRef);
 
                 if (!userLinkSnap.exists()) {
-                     // Instead of throwing an error, we'll just determine there's no profile.
+                     // This is NOT an error. It means the user's profile setup is incomplete
+                     // or they are a new user who hasn't been fully provisioned.
                      // The AuthGuard will handle redirecting to login.
                      console.warn(`No user link document found for UID: ${authUser.uid}`);
                      setUserProfile(null);

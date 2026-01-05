@@ -81,18 +81,17 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
     }
 
     try {
+        // 1. Create the Firebase Auth user
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        
-        if (!userCredential || !userCredential.user) {
-            throw new Error("User creation failed, no user returned from auth.");
-        }
-
         const authUser = userCredential.user;
+
+        // 2. Prepare the batch write for atomicity
+        const batch = writeBatch(firestore);
+
+        // 3. Define the path and data for the user's detailed profile
         const collectionName = determineCollectionName(userType);
-
         const profileRef = doc(firestore, 'tenants', tenantId, collectionName, authUser.uid);
-        const userLinkRef = doc(firestore, 'users', authUser.uid);
-
+        
         let profileData: Partial<UserProfile> = {
             id: authUser.uid,
             userType,
@@ -100,24 +99,26 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
             lastName,
             email,
             role: selectedRole.id,
-        }; 
+        };
 
         if (userType === 'Personnel') {
             (profileData as Personnel).department = selectedDepartment?.id;
             (profileData as Personnel).permissions = selectedRole.permissions || [];
         }
-
+        
+        // 4. Define the path and data for the crucial linking document
+        const userLinkRef = doc(firestore, 'users', authUser.uid);
         const userLinkData = {
             id: authUser.uid,
             email: email,
             profilePath: profileRef.path
         };
 
-        const batch = writeBatch(firestore);
-        
+        // 5. Add both operations to the batch
         batch.set(profileRef, profileData);
         batch.set(userLinkRef, userLinkData);
 
+        // 6. Commit the batch
         await batch.commit();
 
         toast({
