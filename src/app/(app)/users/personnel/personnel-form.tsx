@@ -99,8 +99,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
 
         // Step 2: Create the user profile document in the appropriate collection
         const collectionName = determineCollection(userType);
-        const userProfileCollection = collection(firestore, 'tenants', tenantId, collectionName);
-        const newUserProfileRef = doc(userProfileCollection, authUser.uid); // Use the actual Auth UID
+        const newUserProfileRef = doc(firestore, 'tenants', tenantId, collectionName, authUser.uid);
 
         let newUserProfileData: Omit<UserProfile, 'id'> = {
             userType,
@@ -116,7 +115,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
         }
 
         // Step 3: Create the user link document in the top-level 'users' collection
-        const userLinkRef = doc(collection(firestore, 'users'), authUser.uid);
+        const userLinkRef = doc(firestore, 'users', authUser.uid);
         const userLinkData = {
             id: authUser.uid,
             email: email,
