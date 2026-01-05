@@ -26,11 +26,10 @@ import type { Personnel, PilotProfile } from './page';
 
 type UserProfile = Personnel | PilotProfile;
 type UserType = UserProfile['userType'];
-type CollectionName = UserProfile['collection'];
 
 const userTypes: UserType[] = ["Personnel", "Instructor", "Student", "Private Pilot"];
 
-const determineCollection = (userType: UserType | ''): CollectionName => {
+const determineCollection = (userType: UserType | ''): string => {
     switch(userType) {
         case 'Personnel': return 'personnel';
         case 'Instructor': return 'instructors';
@@ -93,15 +92,14 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
         const profileRef = doc(firestore, 'tenants', tenantId, collectionName, authUser.uid);
         const userLinkRef = doc(firestore, 'users', authUser.uid);
 
-        let profileData: UserProfile = {
+        let profileData: Partial<UserProfile> = {
             id: authUser.uid,
             userType,
-            collection: collectionName,
             firstName,
             lastName,
             email,
             role: selectedRole.id,
-        } as any; 
+        }; 
 
         if (userType === 'Personnel') {
             (profileData as Personnel).department = selectedDepartment?.id;
