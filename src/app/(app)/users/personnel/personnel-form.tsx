@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -88,83 +89,60 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
 
     try {
         // Step 1: Create the Firebase Auth user
-        await initiateEmailSignUp(auth, email, password);
-        // We can't get the UID directly here due to the non-blocking nature,
-        // so we'll handle the Firestore document creation via a backend function or a more complex flow later.
-        // For now, this creates the Auth user which is the main goal.
+        const userCredential = await initiateEmailSignUp(auth, email, password);
         
-        // The user profile document creation should ideally be done in a secure backend environment
-        // listening to Auth user creation events. For this dev environment, we'll proceed on the client.
-        // This part assumes a short delay for auth propagation. In a real app, use Cloud Functions.
+        if (!userCredential || !userCredential.user) {
+            throw new Error("User creation failed, no user returned from auth.");
+        }
 
-        // Placeholder: Manually create the firestore documents after a short delay
-        setTimeout(async () => {
-            try {
-                // This is a simplified client-side creation. A real app would use a Cloud Function.
-                const collectionName = determineCollection(userType);
-                const userProfileCollection = collection(firestore, 'tenants', tenantId, collectionName);
-                
-                // We don't have the UID here, so we will have to link it later.
-                // This is a limitation of client-side-only logic.
-                // In this simplified example, we'll use a temporary ID and expect manual linking or a backend process.
-                const newUserProfileRef = doc(userProfileCollection);
+        const authUser = userCredential.user;
 
-                let newUserProfileData: Omit<UserProfile, 'id'> = {
-                    userType,
-                    firstName,
-                    lastName,
-                    email,
-                    role: selectedRole.id,
-                } as any;
+        // Step 2: Create the user profile document in the appropriate collection
+        const collectionName = determineCollection(userType);
+        const userProfileCollection = collection(firestore, 'tenants', tenantId, collectionName);
+        const newUserProfileRef = doc(userProfileCollection, authUser.uid); // Use the actual Auth UID
 
-                if (userType === 'Personnel') {
-                    (newUserProfileData as Personnel).department = selectedDepartment?.id;
-                    (newUserProfileData as Personnel).permissions = selectedRole.permissions || [];
-                }
+        let newUserProfileData: Omit<UserProfile, 'id'> = {
+            userType,
+            firstName,
+            lastName,
+            email,
+            role: selectedRole.id,
+        } as any;
 
-                const usersCollection = collection(firestore, 'users');
-                const userLinkRef = doc(usersCollection, newUserProfileRef.id);
-                const userLinkData = {
-                    email: email,
-                    profilePath: newUserProfileRef.path
-                };
+        if (userType === 'Personnel') {
+            (newUserProfileData as Personnel).department = selectedDepartment?.id;
+            (newUserProfileData as Personnel).permissions = selectedRole.permissions || [];
+        }
 
-                const batch = writeBatch(firestore);
-                batch.set(newUserProfileRef, newUserProfileData);
-                // This user link is crucial for the login flow
-                // We create it with a queryable email field.
-                batch.set(doc(collection(firestore, 'users'), email), userLinkData);
+        // Step 3: Create the user link document in the top-level 'users' collection
+        const userLinkRef = doc(collection(firestore, 'users'), authUser.uid);
+        const userLinkData = {
+            id: authUser.uid,
+            email: email,
+            profilePath: newUserProfileRef.path
+        };
 
-                await batch.commit();
+        // Step 4: Commit all changes in a batch
+        const batch = writeBatch(firestore);
+        batch.set(newUserProfileRef, newUserProfileData);
+        batch.set(userLinkRef, userLinkData);
 
-                 toast({
-                    title: 'User Profile Created',
-                    description: `Firestore profile for ${firstName} ${lastName} created.`,
-                });
-
-            } catch (fsError) {
-                console.error("Firestore user creation failed:", fsError);
-                toast({
-                    variant: 'destructive',
-                    title: 'Firestore Error',
-                    description: 'Auth user was created, but Firestore profile creation failed.',
-                });
-            }
-        }, 2000); // 2-second delay to allow auth to process
+        await batch.commit();
 
         toast({
-          title: 'User Creation Initiated',
-          description: `Auth user for ${email} is being created.`,
+          title: 'User Created Successfully',
+          description: `Auth user and profile for ${email} have been created.`,
         });
 
         resetForm();
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error creating user:", error);
         toast({
             variant: 'destructive',
             title: 'Creation Failed',
-            description: 'An unexpected error occurred while creating the user.',
+            description: error.message || 'An unexpected error occurred while creating the user.',
         });
     }
   };
