@@ -62,16 +62,20 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
                     setIsLoading(false);
                     return;
                 }
+                
+                const impersonatedEmail = localStorage.getItem('impersonatedUser');
+                if (impersonatedEmail !== authUser.email) {
+                    setUserProfile(null);
+                    setIsLoading(false);
+                    return;
+                }
 
                 // Standard user lookup
                 const userLinkRef = doc(firestore, 'users', authUser.uid);
                 const userLinkSnap = await getDoc(userLinkRef);
 
                 if (!userLinkSnap.exists()) {
-                     // This is NOT an error. It means the user's profile setup is incomplete
-                     // or they are a new user who hasn't been fully provisioned.
-                     // The AuthGuard will handle redirecting to login.
-                     console.warn(`No user link document found for UID: ${authUser.uid}`);
+                     console.warn(`No user link document found for UID: ${authUser.uid}. This may be a new user or a data inconsistency.`);
                      setUserProfile(null);
                      setIsLoading(false);
                      return;
