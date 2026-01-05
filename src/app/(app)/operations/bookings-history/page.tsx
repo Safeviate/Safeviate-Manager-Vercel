@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -123,10 +124,10 @@ export default function BookingsHistoryPage() {
     [firestore, tenantId]
   );
   const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'aircrafts') : null), [firestore, tenantId]);
-  const personnelQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'personnel') : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'instructors') : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'students') : null), [firestore, tenantId]);
-  const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'private-pilots') : null), [firestore, tenantId]);
+  const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'personnel')) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
+  const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
 
   const { data: bookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
   const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
