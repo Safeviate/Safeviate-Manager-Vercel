@@ -13,6 +13,7 @@ import { PersonnelTable } from './personnel-table';
 export type PilotProfile = {
   id: string;
   userType: 'Student' | 'Private Pilot' | 'Instructor';
+  collection: 'students' | 'private-pilots' | 'instructors';
   firstName: string;
   lastName: string;
   email: string;
@@ -50,6 +51,7 @@ export type PilotProfile = {
 export type Personnel = {
   id: string;
   userType: 'Personnel';
+  collection: 'personnel';
   firstName: string;
   lastName: string;
   email: string;
@@ -138,11 +140,6 @@ export default function PersonnelPage() {
         <CardContent className="p-0">
           {isLoading && (
             <div className="text-center p-8">Loading personnel...</div>
-          )}
-          {!isLoading && error && (
-            <div className="text-center p-8 text-destructive">
-              Error: {error.message}
-            </div>
           )}
           {!isLoading && !error && (
             <PersonnelTable 

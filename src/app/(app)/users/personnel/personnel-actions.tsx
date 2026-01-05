@@ -68,6 +68,10 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
     const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
     deleteDocumentNonBlocking(userRef);
 
+    // Also delete the user link document
+    const userLinkRef = doc(firestore, 'users', user.id);
+    deleteDocumentNonBlocking(userLinkRef);
+
     // Check if the deleted user is the one being impersonated
     const impersonatedEmail = localStorage.getItem('impersonatedUser');
     if (impersonatedEmail === user.email) {

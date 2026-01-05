@@ -52,6 +52,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
                     const devProfile: Personnel = {
                         id: authUser.uid,
                         userType: 'Personnel',
+                        collection: 'personnel',
                         firstName: 'Developer',
                         lastName: 'Mode',
                         email: authUser.email || 'dev@safeviate.com',

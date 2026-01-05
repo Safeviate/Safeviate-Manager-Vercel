@@ -25,16 +25,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { Personnel, PilotProfile } from './page';
 
 type UserProfile = Personnel | PilotProfile;
+type UserType = UserProfile['userType'];
+type CollectionName = UserProfile['collection'];
 
-interface PersonnelFormProps {
-  tenantId: string;
-  roles: Role[];
-  departments: Department[];
-}
+const userTypes: UserType[] = ["Personnel", "Instructor", "Student", "Private Pilot"];
 
-const userTypes: UserProfile['userType'][] = ["Personnel", "Instructor", "Student", "Private Pilot"];
-
-const determineCollection = (userType: UserProfile['userType'] | ''): string => {
+const determineCollection = (userType: UserType | ''): CollectionName => {
     switch(userType) {
         case 'Personnel': return 'personnel';
         case 'Instructor': return 'instructors';
@@ -44,6 +40,12 @@ const determineCollection = (userType: UserProfile['userType'] | ''): string => 
     }
 }
 
+interface PersonnelFormProps {
+  tenantId: string;
+  roles: Role[];
+  departments: Department[];
+}
+
 export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormProps) {
   const firestore = useFirestore();
   const auth = useAuth();
@@ -51,7 +53,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
   const [isOpen, setIsOpen] = useState(false);
 
   // Form state
-  const [userType, setUserType] = useState<UserProfile['userType'] | ''>('');
+  const [userType, setUserType] = useState<UserType | ''>('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -94,6 +96,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
         let profileData: UserProfile = {
             id: authUser.uid,
             userType,
+            collection: collectionName,
             firstName,
             lastName,
             email,
@@ -180,7 +183,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div className="space-y-2 col-span-2">
                     <Label htmlFor="userType">User Type</Label>
-                    <Select onValueChange={(value) => setUserType(value as UserProfile['userType'])} value={userType}>
+                    <Select onValueChange={(value) => setUserType(value as UserType)} value={userType}>
                         <SelectTrigger id="userType">
                             <SelectValue placeholder="Select a user type" />
                         </SelectTrigger>
