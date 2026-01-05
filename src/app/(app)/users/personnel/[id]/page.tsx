@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, use, Suspense } from 'react';
@@ -28,12 +27,13 @@ const isPilotProfile = (user: UserProfile): user is PilotProfile => {
 }
 
 function UserProfileContent({ params }: UserProfilePageProps) {
+    const resolvedParams = use(params);
     const firestore = useFirestore();
     const searchParams = useSearchParams();
     const userType = searchParams.get('type') || 'Personnel';
 
     const tenantId = 'safeviate'; // Hardcoded for now
-    const userId = params.id;
+    const userId = resolvedParams.id;
     const [isEditing, setIsEditing] = useState(false);
 
     const collectionName = useMemo(() => {
