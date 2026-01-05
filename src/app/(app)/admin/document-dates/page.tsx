@@ -47,7 +47,7 @@ export default function DocumentDatesPage() {
   // --- Document Expiry State & Logic ---
   const expirySettingsId = 'document-expiry';
   const expirySettingsRef = useMemoFirebase(() => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', expirySettingsId) : null), [firestore, tenantId]);
-  const { data: expirySettings, isLoading: isLoadingExpiry } = useDoc<DocumentExpirySettings>(expirySettingsRef);
+  const { data: expirySettings, isLoading: isLoadingExpiry, error: expiryError } = useDoc<DocumentExpirySettings>(expirySettingsRef);
   const [newPeriod, setNewPeriod] = useState('');
   const [newPeriodColor, setNewPeriodColor] = useState(defaultPeriodColor);
   const [defaultColorState, setDefaultColorState] = useState(expirySettings?.defaultColor || defaultSafeColor);
@@ -60,7 +60,7 @@ export default function DocumentDatesPage() {
   // --- Milestone State & Logic ---
   const milestoneSettingsId = 'student-milestones';
   const milestoneSettingsRef = useMemoFirebase(() => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', milestoneSettingsId) : null), [firestore, tenantId]);
-  const { data: milestoneSettings, isLoading: isLoadingMilestones } = useDoc<StudentMilestoneSettings>(milestoneSettingsRef);
+  const { data: milestoneSettings, isLoading: isLoadingMilestones, error: milestoneError } = useDoc<StudentMilestoneSettings>(milestoneSettingsRef);
   const [milestoneState, setMilestoneState] = useState(milestoneSettings?.milestones || defaultMilestones);
   const debouncedMilestoneState = useDebounce(milestoneState, 500);
 
@@ -144,7 +144,10 @@ export default function DocumentDatesPage() {
     }
   }
 
-  if (isLoadingExpiry || isLoadingMilestones) {
+  const isLoading = isLoadingExpiry || isLoadingMilestones;
+  const error = expiryError || milestoneError;
+
+  if (isLoading) {
     return (
       <div className="w-full max-w-2xl mx-auto space-y-6">
         <Skeleton className="h-80 w-full" />
