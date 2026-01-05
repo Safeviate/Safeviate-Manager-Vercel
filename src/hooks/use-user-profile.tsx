@@ -38,47 +38,47 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
                 return;
             }
             if (!firestore || !authUser) {
-                setIsLoading(false);
                 setUserProfile(null);
+                setIsLoading(false);
                 return;
             }
 
             setIsLoading(true);
-            const impersonatedEmail = localStorage.getItem('impersonatedUser');
-
-            // Handle developer login (not impersonating)
-            if (!impersonatedEmail || authUser.isAnonymous) {
-                const devProfile: Personnel = {
-                    id: authUser.uid,
-                    userType: 'Personnel',
-                    firstName: 'Developer',
-                    lastName: 'Mode',
-                    email: authUser.email || 'dev@safeviate.com',
-                    role: 'dev',
-                    permissions: [],
-                };
-                setUserProfile(devProfile);
-                setIsLoading(false);
-                return;
-            }
-
+            setError(null);
+            
             try {
-                // 1. Find the user link document by the authenticated user's UID
+                // Developer mode (anonymous user)
+                if (authUser.isAnonymous) {
+                    const devProfile: Personnel = {
+                        id: authUser.uid,
+                        userType: 'Personnel',
+                        firstName: 'Developer',
+                        lastName: 'Mode',
+                        email: authUser.email || 'dev@safeviate.com',
+                        role: 'dev',
+                        permissions: [],
+                    };
+                    setUserProfile(devProfile);
+                    setIsLoading(false);
+                    return;
+                }
+
+                // Standard user lookup
                 const userLinkRef = doc(firestore, 'users', authUser.uid);
                 const userLinkSnap = await getDoc(userLinkRef);
 
                 if (!userLinkSnap.exists()) {
-                     throw new Error(`No user link document found for UID: ${authUser.uid}`);
+                    console.warn(`No user link document found for UID: ${authUser.uid}. This user may need to be re-created.`);
+                    setUserProfile(null); // Set to null instead of throwing an error
+                    setIsLoading(false);
+                    return; // Stop execution
                 }
 
-                // 2. Get the profile path from the user link document
                 const { profilePath } = userLinkSnap.data() as { profilePath: string };
-
                 if (!profilePath) {
                     throw new Error("User document is missing the profile path.");
                 }
 
-                // 3. Fetch the actual profile document from the path
                 const profileRef = doc(firestore, profilePath);
                 const profileSnapshot = await getDoc(profileRef);
 
@@ -92,6 +92,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
             } catch (e: any) {
                 setError(e);
                 console.error("Failed to fetch user profile:", e);
+                setUserProfile(null);
             } finally {
                 setIsLoading(false);
             }

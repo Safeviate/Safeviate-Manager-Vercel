@@ -79,7 +79,6 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
     }
 
     try {
-        // Step 1: Create the Firebase Auth user
         const userCredential = await initiateEmailSignUp(auth, email, password);
         
         if (!userCredential || !userCredential.user) {
@@ -89,7 +88,6 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
         const authUser = userCredential.user;
         const collectionName = determineCollection(userType);
 
-        // Step 2: Define paths and data for Firestore documents
         const profileRef = doc(firestore, 'tenants', tenantId, collectionName, authUser.uid);
         const userLinkRef = doc(firestore, 'users', authUser.uid);
 
@@ -113,7 +111,6 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
             profilePath: profileRef.path
         };
 
-        // Step 3: Commit all changes in a single atomic batch
         const batch = writeBatch(firestore);
         
         batch.set(profileRef, profileData);

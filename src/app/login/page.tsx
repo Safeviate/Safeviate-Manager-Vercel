@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -7,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/firebase';
-import { signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInAnonymously, signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 
@@ -18,6 +19,13 @@ export default function LoginPage() {
   const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  
+  const handleLogoutFirst = async () => {
+    if (auth.currentUser) {
+      await signOut(auth);
+    }
+    localStorage.removeItem('impersonatedUser');
+  }
 
   const handleUserLogin = async () => {
     if (!email || !password) {
@@ -31,7 +39,7 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      // Store the email for impersonation before signing in
+      await handleLogoutFirst();
       localStorage.setItem('impersonatedUser', email);
       await signInWithEmailAndPassword(auth, email, password);
       toast({
@@ -40,7 +48,6 @@ export default function LoginPage() {
       });
       router.push('/dashboard');
     } catch (error: any) {
-      // Clear impersonation on failure
       localStorage.removeItem('impersonatedUser');
       console.error('Login failed:', error);
       toast({
@@ -56,8 +63,7 @@ export default function LoginPage() {
   const handleDeveloperLogin = async () => {
     setIsLoading(true);
     try {
-      // Clear any previous impersonation
-      localStorage.removeItem('impersonatedUser');
+      await handleLogoutFirst();
       await signInAnonymously(auth);
       toast({
         title: 'Developer Login',
@@ -119,7 +125,7 @@ export default function LoginPage() {
           </div>
 
           <Button variant="outline" className="w-full" onClick={handleDeveloperLogin} disabled={isLoading}>
-            Login as Developer
+            {isLoading ? 'Logging in...' : 'Login as Developer'}
           </Button>
         </CardFooter>
       </Card>
