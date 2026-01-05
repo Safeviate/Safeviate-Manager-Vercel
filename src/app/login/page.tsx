@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/firebase';
-import { signInWithEmailAndPassword, signInAnonymously, signOut } from 'firebase/auth';
+import { useAuth, initiateAnonymousSignIn, initiateEmailSignIn } from '@/firebase';
+import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 
@@ -40,7 +40,7 @@ export default function LoginPage() {
     setIsUserLoginLoading(true);
     try {
       await handleLogoutFirst();
-      await signInWithEmailAndPassword(auth, email, password);
+      await initiateEmailSignIn(auth, email, password);
       localStorage.setItem('impersonatedUser', email);
       toast({
         title: 'Login Successful',
@@ -64,7 +64,7 @@ export default function LoginPage() {
     setIsDevLoginLoading(true);
     try {
       await handleLogoutFirst();
-      await signInAnonymously(auth);
+      await initiateAnonymousSignIn(auth);
       toast({
         title: 'Developer Login',
         description: 'You are now logged in as a developer.',

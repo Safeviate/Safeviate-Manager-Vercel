@@ -17,7 +17,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlusCircle } from 'lucide-react';
-import { useFirestore, useAuth, initiateEmailSignUp } from '@/firebase';
+import { useFirestore, useAuth } from '@/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import type { Role } from '../../admin/roles/page';
 import type { Department } from '../../admin/department/page';
@@ -80,7 +81,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
     }
 
     try {
-        const userCredential = await initiateEmailSignUp(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         
         if (!userCredential || !userCredential.user) {
             throw new Error("User creation failed, no user returned from auth.");
