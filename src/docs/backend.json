@@ -1,6 +1,27 @@
 
 {
   "entities": {
+    "User": {
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user's link between authentication and their profile data.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The Firebase Authentication UID."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address, used for lookups."
+        },
+        "profilePath": {
+          "type": "string",
+          "description": "The full Firestore path to the user's detailed profile document (e.g., 'tenants/safeviate/personnel/xyz123')."
+        }
+      },
+      "required": ["id", "email", "profilePath"]
+    },
     "PublishedTable": {
       "title": "Published Table",
       "type": "object",
@@ -1141,6 +1162,9 @@
         },
         "findingLevels": {
             "$ref": "#/backend/entities/FindingLevelsSettings"
+        },
+        "studentMilestoneSettings": {
+            "$ref": "#/backend/entities/StudentMilestoneSettings"
         }
       },
       "required": ["id", "tenantId"]
@@ -1346,6 +1370,59 @@
             }
         },
         "required": ["id", "auditId", "findingId", "rootCauseAnalysis"]
+    },
+    "StudentProgressReport": {
+      "title": "Student Progress Report",
+      "type": "object",
+      "description": "Represents a student's progress report for a specific training session.",
+      "properties": {
+        "id": { "type": "string" },
+        "bookingId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "instructorId": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "overallComment": { "type": "string" },
+        "entries": {
+          "type": "array",
+          "items": { "$ref": "#/backend/entities/StudentProgressEntry" }
+        }
+      },
+      "required": ["id", "bookingId", "studentId", "instructorId", "date", "entries"]
+    },
+    "StudentProgressEntry": {
+      "title": "Student Progress Entry",
+      "type": "object",
+      "description": "A single entry within a student progress report.",
+      "properties": {
+        "id": { "type": "string" },
+        "exercise": { "type": "string" },
+        "rating": { "type": "number", "enum": [1, 2, 3, 4] },
+        "comment": { "type": "string" }
+      },
+      "required": ["id", "exercise", "rating", "comment"]
+    },
+    "StudentMilestoneSettings": {
+      "title": "Student Milestone Settings",
+      "type": "object",
+      "description": "Settings for student flight hour milestone warnings.",
+      "properties": {
+        "id": { "type": "string" },
+        "milestones": {
+          "type": "array",
+          "items": { "$ref": "#/backend/entities/MilestoneWarning" }
+        }
+      },
+      "required": ["id", "milestones"]
+    },
+    "MilestoneWarning": {
+      "title": "Milestone Warning",
+      "type": "object",
+      "description": "A single milestone warning configuration.",
+      "properties": {
+        "milestone": { "type": "number", "description": "The target hour milestone (e.g., 10, 20)." },
+        "warningHours": { "type": "number", "description": "The hour threshold at which to show a warning." }
+      },
+      "required": ["milestone", "warningHours"]
     }
   },
   "auth": {
@@ -1563,6 +1640,15 @@
             "$ref": "#/backend/entities/Counter"
           },
           "description": "Stores distributed counters for generating sequential IDs."
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/student-progress-reports/{reportId}",
+        "definition": {
+          "schema": {
+            "$ref": "#/backend/entities/StudentProgressReport"
+          },
+          "description": "Stores student progress reports for training flights."
         }
       }
     ]

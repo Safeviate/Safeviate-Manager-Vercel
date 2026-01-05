@@ -1,18 +1,20 @@
-
 'use client';
 
 import { useMemo } from 'react';
 import { collection, query, where } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { FilePlus } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, differenceInMinutes, parse } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import type { StudentProgressReport } from '@/types/training';
+import type { StudentProgressReport, StudentMilestoneSettings } from '@/types/training';
 import type { Booking } from '@/types/booking';
 import type { PilotProfile } from '../page';
+import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 interface TrainingRecordsProps {
     studentId: string;
@@ -27,6 +29,28 @@ const getRatingColor = (rating: number) => {
         case 4: return 'bg-green-500';
         default: return 'bg-gray-400';
     }
+}
+
+const MilestoneProgress = ({ totalHours, milestone, warningThreshold }: { totalHours: number, milestone: number, warningThreshold: number }) => {
+    const progress = Math.min((totalHours / milestone) * 100, 100);
+    const isWarning = totalHours >= warningThreshold && totalHours < milestone;
+    const isComplete = totalHours >= milestone;
+
+    const getIndicatorColor = () => {
+        if (isComplete) return 'bg-green-500';
+        if (isWarning) return 'bg-yellow-500';
+        return 'bg-primary';
+    }
+
+    return (
+        <div className="space-y-2">
+            <div className="flex justify-between items-baseline">
+                <p className="font-semibold">{milestone} Hour Milestone</p>
+                <p className="text-sm text-muted-foreground">{totalHours.toFixed(1)} / {milestone} hrs</p>
+            </div>
+            <Progress value={progress} indicatorClassName={getIndicatorColor()} />
+        </div>
+    )
 }
 
 export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
@@ -44,8 +68,7 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
         () => (firestore ? query(
             collection(firestore, `tenants/${tenantId}/bookings`),
             where('studentId', '==', studentId),
-            where('type', '==', 'Training Flight'),
-            where('status', '==', 'Completed') // Correctly filter for completed bookings
+            where('status', '==', 'Completed')
         ) : null),
         [firestore, tenantId, studentId]
     );
@@ -54,10 +77,16 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
         () => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null),
         [firestore, tenantId]
     );
+    
+    const milestoneSettingsRef = useMemoFirebase(
+        () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'student-milestones') : null),
+        [firestore, tenantId]
+    );
 
     const { data: reports, isLoading: isLoadingReports } = useCollection<StudentProgressReport>(progressReportsQuery);
     const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
     const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
+    const { data: milestoneSettings } = useDoc<StudentMilestoneSettings>(milestoneSettingsRef);
 
     const isLoading = isLoadingReports || isLoadingBookings || isLoadingInstructors;
 
@@ -71,6 +100,30 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
         const reportBookingIds = new Set(reports.map(r => r.bookingId));
         return bookings.filter(b => !reportBookingIds.has(b.id));
     }, [bookings, reports]);
+    
+    const totalFlightHours = useMemo(() => {
+        if (!bookings) return 0;
+        return bookings.reduce((total, booking) => {
+            if (booking.startTime && booking.endTime) {
+                const start = parse(`${booking.date} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date());
+                const end = parse(`${booking.date} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date());
+                if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                    const minutes = differenceInMinutes(end, start);
+                    return total + (minutes / 60);
+                }
+            }
+            return total;
+        }, 0);
+    }, [bookings]);
+    
+    const defaultMilestones = [
+        { milestone: 10, warningHours: 7 },
+        { milestone: 20, warningHours: 17 },
+        { milestone: 30, warningHours: 27 },
+        { milestone: 40, warningHours: 37 },
+    ];
+    
+    const milestones = milestoneSettings?.milestones.length ? milestoneSettings.milestones : defaultMilestones;
 
     if (isLoading) {
         return <p>Loading training records...</p>;
@@ -78,6 +131,23 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
     
     return (
         <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Flight Hour Milestones</CardTitle>
+                    <CardDescription>Visual progress towards key flight hour goals.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    {milestones.map(ms => (
+                        <MilestoneProgress 
+                            key={ms.milestone}
+                            totalHours={totalFlightHours}
+                            milestone={ms.milestone}
+                            warningThreshold={ms.warningHours}
+                        />
+                    ))}
+                </CardContent>
+            </Card>
+
             <Card>
                 <CardHeader>
                     <CardTitle>Debriefs Needed</CardTitle>
@@ -92,9 +162,11 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
                                        <p className="font-medium">Booking #{booking.bookingNumber} - {format(new Date(booking.date), 'PPP')}</p>
                                        <p className="text-sm text-muted-foreground">Instructor: {instructorsMap.get(booking.instructorId || '') || 'N/A'}</p>
                                    </div>
-                                   <Button size="sm">
-                                        <FilePlus className="mr-2 h-4 w-4" />
-                                        Create Debrief
+                                   <Button asChild size="sm">
+                                        <Link href={`/training/student-progress/new?bookingId=${booking.id}`}>
+                                            <FilePlus className="mr-2 h-4 w-4" />
+                                            Create Debrief
+                                        </Link>
                                    </Button>
                                </li>
                            ))}

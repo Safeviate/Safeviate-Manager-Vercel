@@ -17,3 +17,13 @@ export interface StudentProgressReport {
     overallComment?: string;
     entries: StudentProgressEntry[];
 }
+
+export interface MilestoneWarning {
+    milestone: number;
+    warningHours: number;
+}
+
+export interface StudentMilestoneSettings {
+    id: string;
+    milestones: MilestoneWarning[];
+}
