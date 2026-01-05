@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -43,9 +42,17 @@ export default function StudentProgressPage() {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
   const reportsQuery = useMemoFirebase(
-    () => firestore ? query(collection(firestore, `tenants/${tenantId}/student-progress-reports`), orderBy('date', 'desc')) : null,
-    [firestore, tenantId]
+    () => {
+      if (!firestore) return null;
+      const reportsCollection = collection(firestore, `tenants/${tenantId}/student-progress-reports`);
+      if (selectedStudentId) {
+        return query(reportsCollection, where('studentId', '==', selectedStudentId), orderBy('date', 'desc'));
+      }
+      return query(reportsCollection, orderBy('date', 'desc'));
+    },
+    [firestore, tenantId, selectedStudentId]
   );
+  
   const bookingsQuery = useMemoFirebase(
     () => firestore ? query(collection(firestore, `tenants/${tenantId}/bookings`)) : null,
     [firestore, tenantId]
@@ -73,19 +80,13 @@ export default function StudentProgressPage() {
     const studentsMap = new Map(students.map(s => [s.id, `${s.firstName} ${s.lastName}`]));
     const instructorsMap = new Map(instructors.map(i => [i.id, `${i.firstName} ${i.lastName}`]));
 
-    let filteredReports = reports;
-
-    if (selectedStudentId) {
-        filteredReports = reports.filter(report => report.studentId === selectedStudentId);
-    }
-    
-    return filteredReports.map(report => ({
+    return reports.map(report => ({
       ...report,
       bookingNumber: bookingsMap.get(report.bookingId)?.bookingNumber,
-      studentName: studentsMap.get(report.studentId),
-      instructorName: instructorsMap.get(report.instructorId),
+      studentName: studentsMap.get(report.studentId!),
+      instructorName: instructorsMap.get(report.instructorId!),
     }));
-  }, [reports, bookings, students, instructors, selectedStudentId]);
+  }, [reports, bookings, students, instructors]);
 
   const handleDeleteReport = (reportId: string) => {
     if (!firestore) return;
