@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -59,22 +60,13 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   
   const handleAddUser = async () => {
-    if (!userType || !firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
+    if (!userType || !firstName.trim() || !lastName.trim() || !email.trim() || !password.trim() || !selectedRole) {
       toast({
         variant: 'destructive',
         title: 'Missing Fields',
-        description: 'User Type, Name, Email, and Password are required.',
+        description: 'User Type, Name, Email, Password, and Role are all required.',
       });
       return;
-    }
-
-    if (!selectedRole) {
-        toast({
-            variant: 'destructive',
-            title: 'Missing Fields',
-            description: 'Role is required for all users.',
-        });
-        return;
     }
 
     if (!firestore || !auth) {
@@ -97,7 +89,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
         const authUser = userCredential.user;
         const collectionName = determineCollection(userType);
 
-        // Step 2 & 3: Define paths and data for Firestore documents
+        // Step 2: Define paths and data for Firestore documents
         const profileRef = doc(firestore, 'tenants', tenantId, collectionName, authUser.uid);
         const userLinkRef = doc(firestore, 'users', authUser.uid);
 
@@ -108,7 +100,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
             lastName,
             email,
             role: selectedRole.id,
-        } as any; // Cast to 'any' to build the object conditionally
+        } as any; 
 
         if (userType === 'Personnel') {
             (profileData as Personnel).department = selectedDepartment?.id;
@@ -121,13 +113,10 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
             profilePath: profileRef.path
         };
 
-        // Step 4: Commit all changes in a single atomic batch
+        // Step 3: Commit all changes in a single atomic batch
         const batch = writeBatch(firestore);
         
-        // Write the main profile document (e.g., in /personnel)
         batch.set(profileRef, profileData);
-
-        // Write the crucial linking document in the top-level /users collection
         batch.set(userLinkRef, userLinkData);
 
         await batch.commit();

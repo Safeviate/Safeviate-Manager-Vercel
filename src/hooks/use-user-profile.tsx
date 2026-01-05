@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 
 type UserProfile = PilotProfile | Personnel;
@@ -46,7 +46,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
             setIsLoading(true);
             const impersonatedEmail = localStorage.getItem('impersonatedUser');
 
-            // This is the developer/admin profile if not impersonating.
+            // Handle developer login (not impersonating)
             if (!impersonatedEmail || authUser.isAnonymous) {
                 const devProfile: Personnel = {
                     id: authUser.uid,
@@ -54,8 +54,8 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
                     firstName: 'Developer',
                     lastName: 'Mode',
                     email: authUser.email || 'dev@safeviate.com',
-                    role: 'dev', // Special role
-                    permissions: [], // Or all permissions
+                    role: 'dev',
+                    permissions: [],
                 };
                 setUserProfile(devProfile);
                 setIsLoading(false);
@@ -63,7 +63,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
             }
 
             try {
-                // 1. Find the user link document by UID
+                // 1. Find the user link document by the authenticated user's UID
                 const userLinkRef = doc(firestore, 'users', authUser.uid);
                 const userLinkSnap = await getDoc(userLinkRef);
 
