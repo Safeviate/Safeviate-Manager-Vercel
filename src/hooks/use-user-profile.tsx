@@ -64,33 +64,40 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
                 }
                 
                 const impersonatedEmail = localStorage.getItem('impersonatedUser');
-                if (impersonatedEmail !== authUser.email) {
+                if (impersonatedEmail && impersonatedEmail !== authUser.email) {
+                    console.warn("Mismatched impersonation. Clearing profile.");
                     setUserProfile(null);
                     setIsLoading(false);
                     return;
                 }
 
-                // Standard user lookup
+                // Standard user lookup via the linking document
                 const userLinkRef = doc(firestore, 'users', authUser.uid);
                 const userLinkSnap = await getDoc(userLinkRef);
 
                 if (!userLinkSnap.exists()) {
-                     console.warn(`No user link document found for UID: ${authUser.uid}. This may be a new user or a data inconsistency.`);
+                     console.warn(`No user link document found for UID: ${authUser.uid}. User profile cannot be loaded.`);
                      setUserProfile(null);
                      setIsLoading(false);
-                     return;
+                     return; // This is a key change: Stop execution if the link is missing.
                 }
 
                 const { profilePath } = userLinkSnap.data() as { profilePath: string };
                 if (!profilePath) {
-                    throw new Error("User document is missing the profile path.");
+                    console.error(`User link document for ${authUser.uid} is missing the 'profilePath' field.`);
+                    setUserProfile(null);
+                    setIsLoading(false);
+                    return;
                 }
 
                 const profileRef = doc(firestore, profilePath);
                 const profileSnapshot = await getDoc(profileRef);
 
                 if (!profileSnapshot.exists()) {
-                     throw new Error(`Profile document not found at path: ${profilePath}`);
+                     console.error(`Profile document not found at path: ${profilePath}`);
+                     setUserProfile(null);
+                     setIsLoading(false);
+                     return;
                 }
 
                 const profile = { id: profileSnapshot.id, ...profileSnapshot.data() } as UserProfile;

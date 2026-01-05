@@ -81,14 +81,15 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
     }
 
     try {
-        // 1. Create the Firebase Auth user
+        // 1. Create the Firebase Auth user first. This is the only part that isn't in the batch.
+        // If this fails, the process stops before any Firestore documents are created.
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const authUser = userCredential.user;
 
         // 2. Prepare the batch write for atomicity
         const batch = writeBatch(firestore);
 
-        // 3. Define the path and data for the user's detailed profile
+        // 3. Define the path for the user's detailed profile
         const collectionName = determineCollectionName(userType);
         const profileRef = doc(firestore, 'tenants', tenantId, collectionName, authUser.uid);
         
@@ -106,19 +107,19 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
             (profileData as Personnel).permissions = selectedRole.permissions || [];
         }
         
-        // 4. Define the path and data for the crucial linking document
+        // 4. Define the path for the crucial linking document in the top-level 'users' collection
         const userLinkRef = doc(firestore, 'users', authUser.uid);
         const userLinkData = {
             id: authUser.uid,
             email: email,
-            profilePath: profileRef.path
+            profilePath: profileRef.path // Store the full path to the detailed profile
         };
 
-        // 5. Add both operations to the batch
+        // 5. Add both document creations to the batch
         batch.set(profileRef, profileData);
         batch.set(userLinkRef, userLinkData);
 
-        // 6. Commit the batch
+        // 6. Commit the batch. This is an atomic operation.
         await batch.commit();
 
         toast({

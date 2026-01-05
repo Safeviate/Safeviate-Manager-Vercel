@@ -25,6 +25,7 @@ export default function LoginPage() {
     if (auth.currentUser) {
       await signOut(auth);
     }
+    // Clear any previous impersonation state
     localStorage.removeItem('impersonatedUser');
   }
 
@@ -40,8 +41,10 @@ export default function LoginPage() {
 
     setIsUserLoginLoading(true);
     try {
+      // Always sign out first to ensure a clean session.
       await handleLogoutFirst();
       await initiateEmailSignIn(auth, email, password);
+      // Set the impersonation flag AFTER successful login
       localStorage.setItem('impersonatedUser', email);
       toast({
         title: 'Login Successful',
@@ -49,7 +52,6 @@ export default function LoginPage() {
       });
       router.push('/dashboard');
     } catch (error: any) {
-      localStorage.removeItem('impersonatedUser');
       console.error('Login failed:', error);
       toast({
         variant: 'destructive',
@@ -64,6 +66,7 @@ export default function LoginPage() {
   const handleDeveloperLogin = async () => {
     setIsDevLoginLoading(true);
     try {
+      // Always sign out first to ensure a clean session.
       await handleLogoutFirst();
       await initiateAnonymousSignIn(auth);
       toast({
