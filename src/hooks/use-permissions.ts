@@ -2,11 +2,12 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useUserProfile } from './use-user-profile';
-import type { Role } from '@/app/(app)/users/roles/page';
+import type { Role } from '@/app/(app)/admin/roles/page';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
+import { permissionsConfig } from '@/lib/permissions-config';
 
 /**
  * A custom hook to manage and check user permissions.
@@ -21,23 +22,26 @@ export const usePermissions = () => {
     [firestore, userProfile?.role]
   );
   
-  const { data: role, isLoading: isRoleLoading } = useCollection<Role>(roleRef as any);
+  const { data: role, isLoading: isRoleLoading } = useDoc<Role>(roleRef);
 
   const permissions = useMemo(() => {
     if (!userProfile) {
       return new Set<string>();
     }
 
-    // For anonymous dev user, grant all permissions
+    // For anonymous dev user, grant all permissions by creating a list of all possible permission IDs
     if (userProfile.firstName === 'Developer' && userProfile.lastName === 'Mode') {
-        return new Set<string>(['dashboard-view', 'my-dashboard-view', 'operations-view', 'safety-view', 'quality-view', 'training-view', 'assets-view', 'users-view', 'admin-view', 'settings-manage', 'development-view', 'bookings-view', 'bookings-create', 'bookings-edit', 'bookings-delete', 'flight-plans-manage', 'safety-reports-manage', 'risk-register-view', 'risk-matrix-view', 'safety-indicators-view', 'moc-manage', 'quality-audits-manage', 'quality-audits-view', 'quality-templates-manage', 'quality-caps-view', 'quality-tasks-view', 'quality-matrix-manage', 'training-debriefs-view', 'assets-view', 'users-view', 'admin-roles-manage', 'admin-permissions-view', 'admin-departments-manage', 'admin-settings-manage', 'admin-database-manage']);
+      const allPermissions = permissionsConfig.flatMap(resource =>
+        resource.actions.map(action => `${resource.id}-${action}`)
+      );
+      return new Set<string>(allPermissions);
     }
 
     let combinedPermissions: string[] = [];
 
     // Add permissions from the user's role
-    if (role && role.length > 0 && role[0].permissions) {
-      combinedPermissions.push(...role[0].permissions);
+    if (role && role.permissions) {
+      combinedPermissions.push(...role.permissions);
     }
 
     // For Personnel, add their individual custom permissions
