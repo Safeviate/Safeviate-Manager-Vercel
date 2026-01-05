@@ -184,7 +184,6 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-3xl">
             <DialogHeader>
@@ -294,7 +293,6 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
         </DialogContent>
       </Dialog>
       
-      {/* Delete Alert Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
             <AlertDialogHeader>
