@@ -1,3 +1,4 @@
+
 'use client';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -38,7 +39,7 @@ export default function LoginPage() {
     // Store the impersonated email in localStorage to fetch the correct profile
     localStorage.setItem('impersonatedUser', email);
     initiateEmailSignIn(auth, email, password);
-    // The onAuthStateChanged listener in the provider will handle the redirect.
+    // The onAuthStateChanged listener in AuthGuard will handle the redirect.
   };
   
   const handleDeveloperLogin = () => {
@@ -52,7 +53,7 @@ export default function LoginPage() {
      // Clear any impersonation
     localStorage.removeItem('impersonatedUser');
     initiateAnonymousSignIn(auth);
-    router.push('/dashboard');
+    // The onAuthStateChanged listener in AuthGuard will handle the redirect.
   };
 
   return (

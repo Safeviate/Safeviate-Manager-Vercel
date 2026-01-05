@@ -33,11 +33,13 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         const fetchUserProfile = async () => {
+            if (isAuthLoading) {
+                setIsLoading(true);
+                return;
+            }
             if (!firestore || !authUser) {
-                if (!isAuthLoading) {
-                    setIsLoading(false);
-                    setUserProfile(null);
-                }
+                setIsLoading(false);
+                setUserProfile(null);
                 return;
             }
 
@@ -45,7 +47,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
             const impersonatedEmail = localStorage.getItem('impersonatedUser');
 
             // This is the developer/admin profile if not impersonating.
-            if (!impersonatedEmail) {
+            if (!impersonatedEmail || authUser.isAnonymous) {
                 const devProfile: Personnel = {
                     id: authUser.uid,
                     userType: 'Personnel',
@@ -61,18 +63,16 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
             }
 
             try {
-                // 1. Find the user link document by email
-                const usersCollectionRef = collection(firestore, 'users');
-                const userQuery = query(usersCollectionRef, where('email', '==', impersonatedEmail));
-                const userQuerySnapshot = await getDocs(userQuery);
+                // 1. Find the user link document by UID
+                const userLinkRef = doc(firestore, 'users', authUser.uid);
+                const userLinkSnap = await getDoc(userLinkRef);
 
-                if (userQuerySnapshot.empty) {
-                    throw new Error(`No user profile found for email: ${impersonatedEmail}`);
+                if (!userLinkSnap.exists()) {
+                     throw new Error(`No user link document found for UID: ${authUser.uid}`);
                 }
 
                 // 2. Get the profile path from the user link document
-                const userLinkDoc = userQuerySnapshot.docs[0];
-                const { profilePath } = userLinkDoc.data() as { profilePath: string };
+                const { profilePath } = userLinkSnap.data() as { profilePath: string };
 
                 if (!profilePath) {
                     throw new Error("User document is missing the profile path.");

@@ -96,12 +96,13 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
         }
 
         const authUser = userCredential.user;
-
-        // Step 2: Create the user profile document in the appropriate collection
         const collectionName = determineCollection(userType);
-        const newUserProfileRef = doc(firestore, 'tenants', tenantId, collectionName, authUser.uid);
 
-        let newUserProfileData: Omit<UserProfile, 'id'> = {
+        // Step 2 & 3: Define paths and data for Firestore documents
+        const profileRef = doc(firestore, 'tenants', tenantId, collectionName, authUser.uid);
+        const userLinkRef = doc(firestore, 'users', authUser.uid);
+
+        let profileData: Omit<UserProfile, 'id'> = {
             userType,
             firstName,
             lastName,
@@ -110,21 +111,23 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
         } as any;
 
         if (userType === 'Personnel') {
-            (newUserProfileData as Personnel).department = selectedDepartment?.id;
-            (newUserProfileData as Personnel).permissions = selectedRole.permissions || [];
+            (profileData as Personnel).department = selectedDepartment?.id;
+            (profileData as Personnel).permissions = selectedRole.permissions || [];
         }
 
-        // Step 3: Create the user link document in the top-level 'users' collection
-        const userLinkRef = doc(firestore, 'users', authUser.uid);
         const userLinkData = {
             id: authUser.uid,
             email: email,
-            profilePath: newUserProfileRef.path
+            profilePath: profileRef.path
         };
 
-        // Step 4: Commit all changes in a batch
+        // Step 4: Commit all changes in a single atomic batch
         const batch = writeBatch(firestore);
-        batch.set(newUserProfileRef, newUserProfileData);
+        
+        // Write the main profile document (e.g., in /personnel)
+        batch.set(profileRef, profileData);
+
+        // Write the crucial linking document in the top-level /users collection
         batch.set(userLinkRef, userLinkData);
 
         await batch.commit();
