@@ -134,8 +134,7 @@ export default function StudentProgressPage() {
                     <TableCell>{report.instructorName || 'Unknown Instructor'}</TableCell>
                     <TableCell className="text-right">
                        <Button asChild variant="outline" size="sm">
-                          {/* This link will need a proper destination once a detail view is created */}
-                          <Link href="#">
+                          <Link href={`/training/student-progress/${report.id}`}>
                               <Eye className="mr-2 h-4 w-4" /> View
                           </Link>
                       </Button>
