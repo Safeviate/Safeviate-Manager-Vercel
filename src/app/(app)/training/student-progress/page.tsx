@@ -2,20 +2,32 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, query, orderBy } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Eye, User } from 'lucide-react';
+import { Eye, User, Trash2 } from 'lucide-react';
 import type { StudentProgressReport } from '@/types/training';
 import type { Booking } from '@/types/booking';
 import type { PilotProfile } from '../../users/personnel/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 
 type EnrichedReport = StudentProgressReport & {
@@ -26,6 +38,7 @@ type EnrichedReport = StudentProgressReport & {
 
 export default function StudentProgressPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const tenantId = 'safeviate';
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
@@ -73,6 +86,16 @@ export default function StudentProgressPage() {
       instructorName: instructorsMap.get(report.instructorId),
     }));
   }, [reports, bookings, students, instructors, selectedStudentId]);
+
+  const handleDeleteReport = (reportId: string) => {
+    if (!firestore) return;
+    const reportRef = doc(firestore, `tenants/${tenantId}/student-progress-reports`, reportId);
+    deleteDocumentNonBlocking(reportRef);
+    toast({
+        title: "Report Deleted",
+        description: "The student progress report has been deleted.",
+    });
+  }
 
   return (
     <Card>
@@ -132,12 +155,33 @@ export default function StudentProgressPage() {
                     <TableCell>{report.bookingNumber || 'N/A'}</TableCell>
                     <TableCell>{report.studentName || 'Unknown Student'}</TableCell>
                     <TableCell>{report.instructorName || 'Unknown Instructor'}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-2">
                        <Button asChild variant="outline" size="sm">
                           <Link href={`/training/student-progress/${report.id}`}>
                               <Eye className="mr-2 h-4 w-4" /> View
                           </Link>
                       </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                           <Button variant="destructive" size="icon" className="h-9 w-9">
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will permanently delete the progress report. This action cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteReport(report.id)}>
+                                    Delete
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </TableCell>
                   </TableRow>
                 ))
