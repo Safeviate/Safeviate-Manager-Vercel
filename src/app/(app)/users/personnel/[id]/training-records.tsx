@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useMemo } from 'react';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -16,6 +15,7 @@ import type { PilotProfile } from '../page';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface TrainingRecordsProps {
     studentId: string;
@@ -57,21 +57,23 @@ const MilestoneProgress = ({ totalHours, milestone, warningThreshold }: { totalH
 export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
     const firestore = useFirestore();
 
+    const shouldFetch = firestore && studentId;
+
     const progressReportsQuery = useMemoFirebase(
-        () => (firestore ? query(
+        () => (shouldFetch ? query(
             collection(firestore, `tenants/${tenantId}/student-progress-reports`),
             where('studentId', '==', studentId)
         ) : null),
-        [firestore, tenantId, studentId]
+        [firestore, tenantId, studentId, shouldFetch]
     );
 
     const bookingsQuery = useMemoFirebase(
-        () => (firestore ? query(
+        () => (shouldFetch ? query(
             collection(firestore, `tenants/${tenantId}/bookings`),
             where('studentId', '==', studentId),
             where('status', '==', 'Completed')
         ) : null),
-        [firestore, tenantId, studentId]
+        [firestore, tenantId, studentId, shouldFetch]
     );
 
     const instructorsQuery = useMemoFirebase(
@@ -127,7 +129,13 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
     const milestones = milestoneSettings?.milestones.length ? milestoneSettings.milestones : defaultMilestones;
 
     if (isLoading) {
-        return <p>Loading training records...</p>;
+        return (
+            <div className="space-y-6">
+                <Skeleton className="h-48 w-full" />
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-64 w-full" />
+            </div>
+        );
     }
     
     return (
