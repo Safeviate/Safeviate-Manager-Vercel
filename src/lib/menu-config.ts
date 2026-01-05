@@ -1,4 +1,3 @@
-
 import {
   LayoutDashboard,
   Users,
@@ -151,8 +150,8 @@ export const menuConfig: MenuItem[] = [
     icon: GraduationCap,
     subItems: [
       {
-        href: '/training/student-debriefs',
-        label: 'Student Debriefs',
+        href: '/training/student-progress',
+        label: 'Student Progress',
         description: 'View and manage student progress reports.',
       },
     ],

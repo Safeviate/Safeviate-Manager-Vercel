@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { StudentProgressReport } from '@/types/training';
+import { useEffect } from 'react';
 
 const performanceRatingSchema = z.union([
   z.literal(1),
@@ -69,12 +70,11 @@ export function StudentDebriefForm() {
 
   const { data: booking, isLoading: isLoadingBooking } = useDoc<Booking>(bookingRef);
 
-  // Correctly construct studentRef only AFTER booking data (and thus studentId) is available.
   const studentRef = useMemoFirebase(
-    () => (firestore && booking?.studentId ? doc(firestore, 'tenants', tenantId, 'students', booking.studentId) : null),
-    [firestore, tenantId, booking?.studentId]
+    () => (firestore && booking?.studentId ? doc(firestore, `tenants/${tenantId}/students`, booking.studentId) : null),
+    [firestore, booking?.studentId, tenantId]
   );
-
+  
   const { data: student, isLoading: isLoadingStudent } = useDoc<PilotProfile>(studentRef);
 
 
@@ -111,7 +111,7 @@ export function StudentDebriefForm() {
     await addDocumentNonBlocking(collection(firestore, `tenants/${tenantId}/student-progress-reports`), reportData);
 
     toast({ title: "Debrief Saved", description: "The student's progress report has been filed." });
-    router.push('/training/student-debriefs');
+    router.push('/training/student-progress');
   };
 
   if (!bookingId) {

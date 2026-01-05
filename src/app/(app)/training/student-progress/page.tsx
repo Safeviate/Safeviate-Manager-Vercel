@@ -24,7 +24,7 @@ type EnrichedReport = StudentProgressReport & {
   bookingNumber?: number;
 };
 
-export default function StudentDebriefsPage() {
+export default function StudentProgressPage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate';
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
@@ -79,7 +79,7 @@ export default function StudentDebriefsPage() {
       <CardHeader>
         <div className="flex justify-between items-center">
             <div>
-                <CardTitle>All Student Debriefs</CardTitle>
+                <CardTitle>All Student Progress Reports</CardTitle>
                 <CardDescription>A complete history of all training debriefs filed by instructors.</CardDescription>
             </div>
             <div className="w-64">
@@ -145,7 +145,7 @@ export default function StudentDebriefsPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center">
-                    No student debriefs found.
+                    No student progress reports found.
                   </TableCell>
                 </TableRow>
               )}
