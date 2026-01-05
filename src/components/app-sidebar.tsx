@@ -129,6 +129,7 @@ const SidebarItems = () => {
 const SidebarFooterContent = () => {
     const auth = useAuth();
     const router = useRouter();
+    const pathname = usePathname(); // Moved hook to top level
     const { setOpenMobile } = useSidebar();
     const { userProfile } = useUserProfile();
     const { hasPermission } = usePermissions();
@@ -156,7 +157,7 @@ const SidebarFooterContent = () => {
               <SidebarMenuItem>
                   <Link href={settingsMenuItem.href} className="w-full" onClick={() => setOpenMobile(false)}>
                       <SidebarMenuButton
-                          isActive={usePathname().startsWith(settingsMenuItem.href)}
+                          isActive={pathname.startsWith(settingsMenuItem.href)}
                           tooltip={settingsMenuItem.label}
                       >
                           <settingsMenuItem.icon className="h-5 w-5" />
