@@ -17,9 +17,11 @@ export const usePermissions = () => {
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   const firestore = useFirestore();
 
+  const roleId = userProfile?.role;
+
   const roleRef = useMemoFirebase(
-    () => (firestore && userProfile?.role ? doc(firestore, `tenants/safeviate/roles`, userProfile.role) : null),
-    [firestore, userProfile?.role]
+    () => (firestore && roleId ? doc(firestore, `tenants/safeviate/roles`, roleId) : null),
+    [firestore, roleId]
   );
   
   const { data: role, isLoading: isRoleLoading } = useDoc<Role>(roleRef);
