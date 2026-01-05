@@ -502,6 +502,10 @@
             "type": "string",
             "description": "The ID of the instructor for a training flight."
         },
+        "privatePilotId": {
+            "type": "string",
+            "description": "The ID of the private pilot for a flight."
+        },
         "type": {
           "type": "string",
           "description": "The type of booking.",
@@ -1387,7 +1391,7 @@
           "items": { "$ref": "#/backend/entities/StudentProgressEntry" }
         }
       },
-      "required": ["id", "bookingId", "studentId", "instructorId", "date", "entries"]
+      "required": ["id", "bookingId"]
     },
     "StudentProgressEntry": {
       "title": "Student Progress Entry",

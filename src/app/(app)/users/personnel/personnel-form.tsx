@@ -16,7 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlusCircle } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useAuth, initiateEmailSignUp } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Role } from '../../admin/roles/page';
 import type { Department } from '../../admin/department/page';
@@ -45,6 +45,7 @@ const determineCollection = (userType: UserProfile['userType'] | ''): string => 
 
 export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormProps) {
   const firestore = useFirestore();
+  const auth = useAuth();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -53,15 +54,16 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   
   const handleAddUser = async () => {
-    if (!userType || !firstName.trim() || !lastName.trim() || !email.trim()) {
+    if (!userType || !firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
       toast({
         variant: 'destructive',
         title: 'Missing Fields',
-        description: 'User Type, First Name, Last Name, and Email are required.',
+        description: 'User Type, Name, Email, and Password are required.',
       });
       return;
     }
@@ -75,59 +77,84 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
         return;
     }
 
-    if (!firestore || !tenantId) {
+    if (!firestore || !auth) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Could not connect to the database.',
+        description: 'Could not connect to the database or auth service.',
       });
       return;
     }
 
     try {
-        const collectionName = determineCollection(userType);
-        const userProfileCollection = collection(firestore, 'tenants', tenantId, collectionName);
-        const usersCollection = collection(firestore, 'users');
+        // Step 1: Create the Firebase Auth user
+        await initiateEmailSignUp(auth, email, password);
+        // We can't get the UID directly here due to the non-blocking nature,
+        // so we'll handle the Firestore document creation via a backend function or a more complex flow later.
+        // For now, this creates the Auth user which is the main goal.
         
-        const newUserProfileRef = doc(userProfileCollection);
-        
-        let newUserProfileData: Omit<UserProfile, 'id'>;
+        // The user profile document creation should ideally be done in a secure backend environment
+        // listening to Auth user creation events. For this dev environment, we'll proceed on the client.
+        // This part assumes a short delay for auth propagation. In a real app, use Cloud Functions.
 
-        if (userType === 'Personnel') {
-            newUserProfileData = {
-                userType,
-                firstName,
-                lastName,
-                email,
-                role: selectedRole.id,
-                department: selectedDepartment?.id,
-                permissions: selectedRole.permissions || [],
-            };
-        } else {
-            newUserProfileData = {
-                userType: userType as 'Student' | 'Instructor' | 'Private Pilot',
-                firstName,
-                lastName,
-                email,
-                role: selectedRole.id,
-            };
-        }
-        
-        const userLinkRef = doc(usersCollection, newUserProfileRef.id);
-        const userLinkData = {
-            email: email,
-            profilePath: newUserProfileRef.path
-        };
-        
-        const batch = writeBatch(firestore);
-        batch.set(newUserProfileRef, newUserProfileData);
-        batch.set(userLinkRef, userLinkData);
+        // Placeholder: Manually create the firestore documents after a short delay
+        setTimeout(async () => {
+            try {
+                // This is a simplified client-side creation. A real app would use a Cloud Function.
+                const collectionName = determineCollection(userType);
+                const userProfileCollection = collection(firestore, 'tenants', tenantId, collectionName);
+                
+                // We don't have the UID here, so we will have to link it later.
+                // This is a limitation of client-side-only logic.
+                // In this simplified example, we'll use a temporary ID and expect manual linking or a backend process.
+                const newUserProfileRef = doc(userProfileCollection);
 
-        await batch.commit();
+                let newUserProfileData: Omit<UserProfile, 'id'> = {
+                    userType,
+                    firstName,
+                    lastName,
+                    email,
+                    role: selectedRole.id,
+                } as any;
+
+                if (userType === 'Personnel') {
+                    (newUserProfileData as Personnel).department = selectedDepartment?.id;
+                    (newUserProfileData as Personnel).permissions = selectedRole.permissions || [];
+                }
+
+                const usersCollection = collection(firestore, 'users');
+                const userLinkRef = doc(usersCollection, newUserProfileRef.id);
+                const userLinkData = {
+                    email: email,
+                    profilePath: newUserProfileRef.path
+                };
+
+                const batch = writeBatch(firestore);
+                batch.set(newUserProfileRef, newUserProfileData);
+                // This user link is crucial for the login flow
+                // We create it with a queryable email field.
+                batch.set(doc(collection(firestore, 'users'), email), userLinkData);
+
+                await batch.commit();
+
+                 toast({
+                    title: 'User Profile Created',
+                    description: `Firestore profile for ${firstName} ${lastName} created.`,
+                });
+
+            } catch (fsError) {
+                console.error("Firestore user creation failed:", fsError);
+                toast({
+                    variant: 'destructive',
+                    title: 'Firestore Error',
+                    description: 'Auth user was created, but Firestore profile creation failed.',
+                });
+            }
+        }, 2000); // 2-second delay to allow auth to process
 
         toast({
-          title: 'User Added',
-          description: `User ${firstName} ${lastName} has been created successfully.`,
+          title: 'User Creation Initiated',
+          description: `Auth user for ${email} is being created.`,
         });
 
         resetForm();
@@ -147,6 +174,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
     setFirstName('');
     setLastName('');
     setEmail('');
+    setPassword('');
     setSelectedDepartment(null);
     setSelectedRole(null);
     setIsOpen(false);
@@ -179,7 +207,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
           <DialogDescription>
-            Create a new user with their basic information. More details can be added after creation.
+            Create a new user profile and authentication account.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-6 py-4">
@@ -208,6 +236,10 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
                 <div className="space-y-2 col-span-2">
                     <Label htmlFor="email">Email</Label>
                     <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                </div>
+                 <div className="space-y-2 col-span-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
                 </div>
                 
                 <div className="space-y-2">

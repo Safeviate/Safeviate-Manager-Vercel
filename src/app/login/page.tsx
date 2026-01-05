@@ -1,15 +1,14 @@
-
 'use client';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { User, Code, Mail } from 'lucide-react';
+import { User, Code, Mail, KeyRound } from 'lucide-react';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth, initiateAnonymousSignIn } from '@/firebase';
+import { useAuth, initiateEmailSignIn, initiateAnonymousSignIn } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
@@ -18,6 +17,7 @@ export default function LoginPage() {
   const auth = useAuth();
   const { toast } = useToast();
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleUserLogin = () => {
     if (!auth) {
@@ -27,18 +27,18 @@ export default function LoginPage() {
         });
         return;
     }
-    if (!email) {
+    if (!email || !password) {
         toast({
             variant: "destructive",
-            title: "Email required",
-            description: "Please enter an email to log in as a user.",
+            title: "Email and Password required",
+            description: "Please enter an email and password to log in.",
         });
         return;
     }
-    // Store the impersonated email in localStorage
+    // Store the impersonated email in localStorage to fetch the correct profile
     localStorage.setItem('impersonatedUser', email);
-    initiateAnonymousSignIn(auth);
-    router.push('/dashboard');
+    initiateEmailSignIn(auth, email, password);
+    // The onAuthStateChanged listener in the provider will handle the redirect.
   };
   
   const handleDeveloperLogin = () => {
@@ -84,6 +84,20 @@ export default function LoginPage() {
                             className="pl-9"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                        />
+                    </div>
+                </div>
+                 <div className='space-y-2'>
+                    <Label htmlFor="password">Password</Label>
+                    <div className="relative">
+                        <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                            id="password"
+                            type="password"
+                            placeholder="Enter password"
+                            className="pl-9"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
                         />
                     </div>
                 </div>

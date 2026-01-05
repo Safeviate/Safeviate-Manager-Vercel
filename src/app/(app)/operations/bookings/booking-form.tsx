@@ -45,10 +45,13 @@ const bookingSchema = z.object({
     if (data.type === 'Training Flight') {
         return !!data.studentId && !!data.instructorId;
     }
+    if (data.type === 'Private Flight') {
+        return !!data.privatePilotId;
+    }
     return true;
 }, {
-    message: "Student and Instructor are required for a Training Flight.",
-    path: ["studentId"], // You can associate the error with a field
+    message: "A pilot is required for this flight type.",
+    path: ["privatePilotId"], // Associate the error with a field
 });
 
 type BookingFormValues = z.infer<typeof bookingSchema>;
@@ -193,6 +196,9 @@ export function BookingForm({
                                     <FormField control={form.control} name="instructorId" render={({ field }) => ( <FormItem><FormLabel>Instructor</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select instructor..." /></SelectTrigger></FormControl><SelectContent>{instructors.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )} />
                                 </div>
                             )}
+                            {bookingType === 'Private Flight' && (
+                                <FormField control={form.control} name="privatePilotId" render={({ field }) => ( <FormItem><FormLabel>Pilot</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select pilot..." /></SelectTrigger></FormControl><SelectContent>{privatePilots.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )} />
+                            )}
                              <div className="grid grid-cols-2 gap-4">
                                 <FormField control={form.control} name="startTime" render={({ field }) => ( <FormItem><FormLabel>Start Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
                                 <FormField control={form.control} name="endTime" render={({ field }) => ( <FormItem><FormLabel>End Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
@@ -201,7 +207,7 @@ export function BookingForm({
                             {isOvernight && (
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Return Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn(!field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem> )} />
-                                    <FormField control={form.control} name="overnightEndTime" render={({ field }) => ( <FormItem><FormLabel>Return Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                    <FormField control={form.control} name="overnightEndTime" render={({ field }) => ( <FormItem><FormLabel>Return Time</FormLabel><FormControl><Input type="time" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem> )} />
                                 </div>
                             )}
                              <DialogFooter className="pt-4 flex-wrap gap-2">

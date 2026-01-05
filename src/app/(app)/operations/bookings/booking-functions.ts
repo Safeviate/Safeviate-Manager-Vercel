@@ -71,7 +71,7 @@ export const createBooking = async (
                 payload.instructorId = bookingData.instructorId || null;
                 payload.privatePilotId = null;
             } else if (payload.type === 'Private Flight') {
-                payload.privatePilotId = bookingData.privatePilotId || null;
+                payload.privatePilotId = bookingData.createdById; // Private pilot is the creator
                 payload.studentId = null;
                 payload.instructorId = null;
             } else {
@@ -127,7 +127,7 @@ export const updateBooking = async ({
         updatePayload.instructorId = updateData.instructorId || null;
         updatePayload.privatePilotId = null;
     } else if (updatePayload.type === 'Private Flight') {
-        updatePayload.privatePilotId = updateData.privatePilotId || null;
+        updatePayload.privatePilotId = updateData.createdById;
         updatePayload.studentId = null;
         updatePayload.instructorId = null;
     } else if (updatePayload.type) {
