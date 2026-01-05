@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -102,13 +101,14 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
         const profileRef = doc(firestore, 'tenants', tenantId, collectionName, authUser.uid);
         const userLinkRef = doc(firestore, 'users', authUser.uid);
 
-        let profileData: Omit<UserProfile, 'id'> = {
+        let profileData: UserProfile = {
+            id: authUser.uid,
             userType,
             firstName,
             lastName,
             email,
             role: selectedRole.id,
-        } as any;
+        } as any; // Cast to 'any' to build the object conditionally
 
         if (userType === 'Personnel') {
             (profileData as Personnel).department = selectedDepartment?.id;

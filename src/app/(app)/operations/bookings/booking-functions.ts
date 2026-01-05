@@ -71,7 +71,7 @@ export const createBooking = async (
                 payload.instructorId = bookingData.instructorId || null;
                 payload.privatePilotId = null;
             } else if (payload.type === 'Private Flight') {
-                payload.privatePilotId = bookingData.createdById; // Private pilot is the creator
+                payload.privatePilotId = bookingData.privatePilotId || null;
                 payload.studentId = null;
                 payload.instructorId = null;
             } else {
@@ -127,7 +127,7 @@ export const updateBooking = async ({
         updatePayload.instructorId = updateData.instructorId || null;
         updatePayload.privatePilotId = null;
     } else if (updatePayload.type === 'Private Flight') {
-        updatePayload.privatePilotId = updateData.createdById;
+        updatePayload.privatePilotId = updateData.privatePilotId || null;
         updatePayload.studentId = null;
         updatePayload.instructorId = null;
     } else if (updatePayload.type) {
@@ -166,12 +166,13 @@ export const updateBooking = async ({
         const originalBooking = (await getDoc(bookingRef)).data() as Booking;
         if (originalBooking.type === 'Training Flight' && originalBooking.studentId && originalBooking.instructorId) {
             const reportRef = doc(collection(firestore, `tenants/${tenantId}/student-progress-reports`));
-            const reportData: Partial<StudentProgressReport> = {
+            const reportData: Omit<StudentProgressReport, 'id'> = {
                 bookingId: originalBooking.id,
                 studentId: originalBooking.studentId,
                 instructorId: originalBooking.instructorId,
                 date: new Date().toISOString(),
                 entries: [],
+                overallComment: '',
             };
             batch.set(reportRef, reportData);
         }
