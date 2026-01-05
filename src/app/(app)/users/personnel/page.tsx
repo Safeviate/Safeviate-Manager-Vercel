@@ -10,6 +10,8 @@ import type { Role } from '../../admin/roles/page';
 import type { Department } from '../../admin/department/page';
 import { PersonnelTable } from './personnel-table';
 import { usePermissions } from '@/hooks/use-permissions';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
 
 export type PilotProfile = {
   id: string;
@@ -134,7 +136,17 @@ export default function PersonnelPage() {
             <h1 className="text-3xl font-bold tracking-tight">Personnel</h1>
             <p className="text-muted-foreground">Manage all non-flying staff in your organization.</p>
         </div>
-        {canCreateUsers && <PersonnelForm tenantId={tenantId} roles={roles || []} departments={departments || []} />}
+        <PersonnelForm 
+            tenantId={tenantId} 
+            roles={roles || []} 
+            departments={departments || []}
+            trigger={
+                <Button disabled={!canCreateUsers}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add User
+                </Button>
+            }
+        />
       </div>
 
       <Card>

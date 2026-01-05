@@ -51,17 +51,28 @@ const SidebarItems = () => {
     const { hasPermission } = usePermissions();
   
     const renderMenuItem = (item: MenuItemType) => {
-      if (item.permissionId && !hasPermission(item.permissionId)) {
-        return null;
-      }
-      
+      const canAccess = !item.permissionId || hasPermission(item.permissionId);
       const isParentActive = pathname.startsWith(item.href);
       const Icon = item.icon;
   
       if (item.subItems) {
         const visibleSubItems = item.subItems.filter(sub => !sub.permissionId || hasPermission(sub.permissionId));
-        if (visibleSubItems.length === 0) {
-            return null; // Don't render parent if no sub-items are visible
+        const allSubItemsDisabled = item.subItems.every(sub => !hasPermission(sub.permissionId));
+
+        if (item.subItems.length > 0 && visibleSubItems.length === 0) {
+            // Render a disabled parent item if no sub-items are accessible
+             return (
+                <SidebarMenuButton
+                    disabled
+                    tooltip={item.label}
+                    className="justify-between"
+                >
+                    <div className="flex items-center gap-2">
+                        <Icon className="h-5 w-5" />
+                        <span>{item.label}</span>
+                    </div>
+                </SidebarMenuButton>
+            );
         }
 
         return (
@@ -71,6 +82,7 @@ const SidebarItems = () => {
                 isActive={isParentActive && !visibleSubItems.some(sub => pathname.startsWith(sub.href))}
                 tooltip={item.label}
                 className="justify-between"
+                disabled={allSubItemsDisabled}
               >
                 <div className="flex items-center gap-2">
                   <Icon className="h-5 w-5" />
@@ -81,15 +93,18 @@ const SidebarItems = () => {
             </SidebarCollapsibleTrigger>
             <SidebarCollapsibleContent>
               <SidebarMenuSub>
-                {visibleSubItems.map((subItem) => (
-                  <SidebarMenuSubItem key={subItem.href} onClick={() => setOpenMobile(false)}>
-                    <Link href={subItem.href}>
-                      <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
-                        <span>{subItem.label}</span>
-                      </SidebarMenuSubButton>
-                    </Link>
-                  </SidebarMenuSubItem>
-                ))}
+                {item.subItems.map((subItem) => {
+                    const canAccessSub = !subItem.permissionId || hasPermission(subItem.permissionId);
+                    return (
+                        <SidebarMenuSubItem key={subItem.href} onClick={() => canAccessSub && setOpenMobile(false)}>
+                            <Link href={canAccessSub ? subItem.href : '#'} aria-disabled={!canAccessSub} className={!canAccessSub ? 'pointer-events-none' : ''}>
+                                <SidebarMenuSubButton asChild isActive={pathname === subItem.href} disabled={!canAccessSub}>
+                                    <span>{subItem.label}</span>
+                                </SidebarMenuSubButton>
+                            </Link>
+                        </SidebarMenuSubItem>
+                    )
+                })}
               </SidebarMenuSub>
             </SidebarCollapsibleContent>
           </SidebarCollapsible>
@@ -97,10 +112,11 @@ const SidebarItems = () => {
       }
   
       return (
-        <Link href={item.href} className="w-full" onClick={() => setOpenMobile(false)}>
+        <Link href={canAccess ? item.href : '#'} className={!canAccess ? 'pointer-events-none' : ''} aria-disabled={!canAccess}>
           <SidebarMenuButton
             isActive={pathname === item.href}
             tooltip={item.label}
+            disabled={!canAccess}
           >
             <Icon className="h-5 w-5" />
             <span>{item.label}</span>
@@ -133,6 +149,7 @@ const SidebarFooterContent = () => {
     const { setOpenMobile } = useSidebar();
     const { userProfile } = useUserProfile();
     const { hasPermission } = usePermissions();
+    const canAccessSettings = !settingsMenuItem.permissionId || hasPermission(settingsMenuItem.permissionId);
 
     const handleSignOut = () => {
       if (auth) {
@@ -152,13 +169,14 @@ const SidebarFooterContent = () => {
     return (
         <SidebarGroup>
           <SidebarMenu>
-            {settingsMenuItem.permissionId && hasPermission(settingsMenuItem.permissionId) && (
               <>
+              <SidebarSeparator className="my-1 mx-2" />
               <SidebarMenuItem>
-                  <Link href={settingsMenuItem.href} className="w-full" onClick={() => setOpenMobile(false)}>
+                  <Link href={canAccessSettings ? settingsMenuItem.href : '#'} className={!canAccessSettings ? 'pointer-events-none' : ''} aria-disabled={!canAccessSettings}>
                       <SidebarMenuButton
                           isActive={pathname.startsWith(settingsMenuItem.href)}
                           tooltip={settingsMenuItem.label}
+                          disabled={!canAccessSettings}
                       >
                           <settingsMenuItem.icon className="h-5 w-5" />
                           <span>{settingsMenuItem.label}</span>
@@ -167,7 +185,6 @@ const SidebarFooterContent = () => {
               </SidebarMenuItem>
               <SidebarSeparator className="my-1 mx-2" />
               </>
-            )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton

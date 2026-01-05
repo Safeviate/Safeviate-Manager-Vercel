@@ -70,7 +70,7 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
 
-  const canManage = hasPermission('admin-roles-manage');
+  const canManageRoles = hasPermission('admin-roles-manage');
   const canManagePermissions = hasPermission('admin-permissions-manage');
 
   const allPermissionIds = useMemo(() => 
@@ -92,10 +92,6 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
     }
   }, [role, isEditDialogOpen]);
   
-  if (!canManage) {
-    return null;
-  }
-
   const handleUpdateRole = () => {
     if (!roleName.trim()) {
       toast({
@@ -176,7 +172,7 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
+            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!canManageRoles}>
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal className="h-4 w-4" />
             </Button>
