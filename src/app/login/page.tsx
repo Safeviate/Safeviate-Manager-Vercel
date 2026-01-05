@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -15,7 +14,8 @@ import { Separator } from '@/components/ui/separator';
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isUserLoginLoading, setIsUserLoginLoading] = useState(false);
+  const [isDevLoginLoading, setIsDevLoginLoading] = useState(false);
   const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -37,11 +37,11 @@ export default function LoginPage() {
       return;
     }
 
-    setIsLoading(true);
+    setIsUserLoginLoading(true);
     try {
       await handleLogoutFirst();
-      localStorage.setItem('impersonatedUser', email);
       await signInWithEmailAndPassword(auth, email, password);
+      localStorage.setItem('impersonatedUser', email);
       toast({
         title: 'Login Successful',
         description: `Now logged in as ${email}.`,
@@ -56,12 +56,12 @@ export default function LoginPage() {
         description: error.message || 'An unknown error occurred.',
       });
     } finally {
-      setIsLoading(false);
+      setIsUserLoginLoading(false);
     }
   };
 
   const handleDeveloperLogin = async () => {
-    setIsLoading(true);
+    setIsDevLoginLoading(true);
     try {
       await handleLogoutFirst();
       await signInAnonymously(auth);
@@ -78,7 +78,7 @@ export default function LoginPage() {
         description: error.message || 'An unknown error occurred.',
       });
     } finally {
-      setIsLoading(false);
+      setIsDevLoginLoading(false);
     }
   };
 
@@ -98,7 +98,7 @@ export default function LoginPage() {
               placeholder="user@safeviate.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
+              disabled={isUserLoginLoading || isDevLoginLoading}
             />
           </div>
           <div className="space-y-2">
@@ -108,13 +108,13 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
+              disabled={isUserLoginLoading || isDevLoginLoading}
             />
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-          <Button className="w-full" onClick={handleUserLogin} disabled={isLoading}>
-            {isLoading ? 'Logging in...' : 'Login as User'}
+          <Button className="w-full" onClick={handleUserLogin} disabled={isUserLoginLoading || isDevLoginLoading}>
+            {isUserLoginLoading ? 'Logging in...' : 'Login as User'}
           </Button>
 
           <div className="relative w-full">
@@ -124,8 +124,8 @@ export default function LoginPage() {
             </span>
           </div>
 
-          <Button variant="outline" className="w-full" onClick={handleDeveloperLogin} disabled={isLoading}>
-            {isLoading ? 'Logging in...' : 'Login as Developer'}
+          <Button variant="outline" className="w-full" onClick={handleDeveloperLogin} disabled={isUserLoginLoading || isDevLoginLoading}>
+            {isDevLoginLoading ? 'Logging in...' : 'Login as Developer'}
           </Button>
         </CardFooter>
       </Card>
