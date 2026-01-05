@@ -50,8 +50,8 @@ export const usePermissions = () => {
     }
 
     // For Personnel users, add their individual custom permission overrides.
-    if (userProfile.userType === 'Personnel' && (userProfile as Personnel).permissions) {
-      combinedPermissions.push(...(userProfile as Personnel).permissions);
+    if (userProfile.userType === 'Personnel' && 'permissions' in userProfile && userProfile.permissions) {
+      combinedPermissions.push(...userProfile.permissions);
     }
     
     // Use a Set for efficient lookup and to automatically handle duplicates.

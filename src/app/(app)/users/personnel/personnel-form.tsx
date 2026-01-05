@@ -29,7 +29,7 @@ type UserType = UserProfile['userType'];
 
 const userTypes: UserType[] = ["Personnel", "Instructor", "Student", "Private Pilot"];
 
-const determineCollection = (userType: UserType | ''): string => {
+const determineCollectionName = (userType: UserType | ''): string => {
     switch(userType) {
         case 'Personnel': return 'personnel';
         case 'Instructor': return 'instructors';
@@ -87,7 +87,7 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
         }
 
         const authUser = userCredential.user;
-        const collectionName = determineCollection(userType);
+        const collectionName = determineCollectionName(userType);
 
         const profileRef = doc(firestore, 'tenants', tenantId, collectionName, authUser.uid);
         const userLinkRef = doc(firestore, 'users', authUser.uid);

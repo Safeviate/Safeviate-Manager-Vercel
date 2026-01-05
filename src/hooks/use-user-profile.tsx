@@ -50,9 +50,8 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
                 // Developer mode (anonymous user)
                 if (authUser.isAnonymous) {
                     const devProfile: Personnel = {
-                        id: authUser.uid,
+                        id: 'DEVELOPER_MODE',
                         userType: 'Personnel',
-                        collection: 'personnel',
                         firstName: 'Developer',
                         lastName: 'Mode',
                         email: authUser.email || 'dev@safeviate.com',
@@ -69,10 +68,12 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
                 const userLinkSnap = await getDoc(userLinkRef);
 
                 if (!userLinkSnap.exists()) {
-                    console.warn(`No user link document found for UID: ${authUser.uid}. This user may need to be re-created.`);
-                    setUserProfile(null); // Set to null instead of throwing an error
-                    setIsLoading(false);
-                    return; // Stop execution
+                     // Instead of throwing an error, we'll just determine there's no profile.
+                     // The AuthGuard will handle redirecting to login.
+                     console.warn(`No user link document found for UID: ${authUser.uid}`);
+                     setUserProfile(null);
+                     setIsLoading(false);
+                     return;
                 }
 
                 const { profilePath } = userLinkSnap.data() as { profilePath: string };
