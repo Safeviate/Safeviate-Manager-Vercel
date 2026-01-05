@@ -25,6 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import { permissionsConfig } from '@/lib/permissions-config';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface RoleFormProps {
   tenantId: string;
@@ -33,6 +34,7 @@ interface RoleFormProps {
 export function RoleForm({ tenantId }: RoleFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
   const [roleName, setRoleName] = useState('');
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -41,6 +43,8 @@ export function RoleForm({ tenantId }: RoleFormProps) {
   // Required Documents state
   const [requiredDocuments, setRequiredDocuments] = useState<string[]>([]);
   const [currentDocument, setCurrentDocument] = useState('');
+
+  const canManagePermissions = hasPermission('admin-permissions-manage');
 
   const allPermissionIds = useMemo(() => 
     permissionsConfig.flatMap(resource => 
@@ -187,9 +191,11 @@ export function RoleForm({ tenantId }: RoleFormProps) {
                                 </Button>
                             </CollapsibleTrigger>
                         </div>
-                        <Button variant="link" onClick={handleSelectAllToggle} className="p-0 h-auto">
-                            {areAllSelected ? 'Deselect All' : 'Select All'}
-                        </Button>
+                        {canManagePermissions && (
+                            <Button variant="link" onClick={handleSelectAllToggle} className="p-0 h-auto">
+                                {areAllSelected ? 'Deselect All' : 'Select All'}
+                            </Button>
+                        )}
                     </div>
                     <CollapsibleContent>
                         <ScrollArea className="h-72 w-full rounded-md border mt-2">
@@ -210,6 +216,7 @@ export function RoleForm({ tenantId }: RoleFormProps) {
                                                         id={`add-${permissionId}`}
                                                         checked={selectedPermissions.includes(permissionId)}
                                                         onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)}
+                                                        disabled={!canManagePermissions}
                                                     />
                                                     <label
                                                         htmlFor={`add-${permissionId}`}

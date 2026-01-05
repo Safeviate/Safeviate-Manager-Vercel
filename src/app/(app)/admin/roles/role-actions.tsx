@@ -71,6 +71,7 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
 
   const canManage = hasPermission('admin-roles-manage');
+  const canManagePermissions = hasPermission('admin-permissions-manage');
 
   const allPermissionIds = useMemo(() => 
     permissionsConfig.flatMap(resource => 
@@ -249,9 +250,11 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
                                     </Button>
                                 </CollapsibleTrigger>
                             </div>
-                            <Button variant="link" onClick={handleSelectAllToggle} className="p-0 h-auto">
-                                {areAllSelected ? 'Deselect All' : 'Select All'}
-                            </Button>
+                            {canManagePermissions && (
+                                <Button variant="link" onClick={handleSelectAllToggle} className="p-0 h-auto">
+                                    {areAllSelected ? 'Deselect All' : 'Select All'}
+                                </Button>
+                            )}
                         </div>
                         <CollapsibleContent>
                             <ScrollArea className="h-72 w-full rounded-md border mt-2">
@@ -272,6 +275,7 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
                                                             id={`edit-${permissionId}`}
                                                             checked={selectedPermissions.includes(permissionId)}
                                                             onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)}
+                                                            disabled={!canManagePermissions}
                                                         />
                                                         <label
                                                             htmlFor={`edit-${permissionId}`}

@@ -55,7 +55,7 @@ export const permissionsConfig: PermissionResource[] = [
   // --- Admin Section ---
   { id: 'admin', name: 'Admin', actions: ['view'] },
   { id: 'admin-roles', name: 'Admin: Roles', actions: ['manage'] },
-  { id: 'admin-permissions', name: 'Admin: Permissions', actions: ['view'] },
+  { id: 'admin-permissions', name: 'Admin: Permissions', actions: ['view', 'manage'] },
   { id: 'admin-departments', name: 'Admin: Departments', actions: ['manage'] },
   { id: 'admin-settings', name: 'Admin: General Settings', actions: ['manage'] },
   { id: 'admin-database', name: 'Admin: Database Seeding', actions: ['manage'] },
