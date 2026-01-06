@@ -120,6 +120,9 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
           title: 'User Created Successfully',
           description: `Auth user and profile for ${email} have been created.`,
         });
+        
+        // Introduce a small delay to allow Firebase Auth to propagate the new user
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
         resetForm();
 
