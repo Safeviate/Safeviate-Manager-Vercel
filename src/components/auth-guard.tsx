@@ -28,7 +28,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
     // After loading is complete, check the conditions.
     // If there is no authenticated user and we are not on the login page, redirect to login.
     if (!authUser && pathname !== '/login') {
-      console.log("AuthGuard: No authenticated user. Redirecting to /login.");
       router.push('/login');
       return;
     }
@@ -37,7 +36,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     // this indicates an error state (e.g., failed profile creation).
     // Redirect them to login to clear the session.
     if (authUser && !userProfile && pathname !== '/login') {
-      console.warn("AuthGuard: Authenticated user has no profile. Redirecting to /login.");
+      console.warn("AuthGuard: Authenticated user has no profile. Redirecting to /login to clear session.");
       router.push('/login');
       return;
     }
@@ -45,7 +44,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
     // If the user is fully authenticated and has a profile, and they are on the login page,
     // redirect them to the dashboard.
     if (authUser && userProfile && pathname === '/login') {
-      console.log("AuthGuard: Authenticated user on login page. Redirecting to /dashboard.");
       router.push('/dashboard');
     }
 
