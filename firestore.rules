@@ -4,14 +4,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Grant any authenticated user full access to their user-link document.
+    // Grant any authenticated user full access to their own user-link document.
     match /users/{userId} {
        allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
     // This rule allows any authenticated user to read and write to any document
     // in any subcollection under any tenant. This is the correct way to
-    // grant broad access for development.
+    // grant broad access for development while maintaining a proper structure.
     match /tenants/{tenantId}/{document=**} {
       allow read, write: if request.auth != null;
     }
