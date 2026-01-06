@@ -44,9 +44,10 @@ interface PersonnelFormProps {
   tenantId: string;
   roles: Role[];
   departments: Department[];
+  trigger?: React.ReactNode;
 }
 
-export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormProps) {
+export function PersonnelForm({ tenantId, roles, departments, trigger }: PersonnelFormProps) {
   const firestore = useFirestore();
   const auth = useAuth();
   const { toast } = useToast();
@@ -167,12 +168,16 @@ export function PersonnelForm({ tenantId, roles, departments }: PersonnelFormPro
         }
         setIsOpen(open);
     }}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add User
-        </Button>
-      </DialogTrigger>
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : (
+        <DialogTrigger asChild>
+          <Button>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add User
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
