@@ -4,10 +4,21 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Allow any authenticated user full read and write access to any document.
-    // This is a temporary permissive rule to unblock development.
-    match /{document=**} {
-      allow get, list, create, update, delete: if request.auth != null;
+    // Grant any authenticated user full access to their user-link document.
+    match /users/{userId} {
+       allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Grant read-only access to all authenticated users for all tenant data.
+    // In a production app, you would restrict this further based on user roles and tenant membership.
+    match /tenants/{tenantId}/{document=**} {
+      allow get, list: if request.auth != null;
+    }
+    
+    // As a development-only rule, allow any authenticated user to write to any tenant data.
+    // WARNING: This is insecure for production. You should replace this with role-based access control.
+    match /tenants/{tenantId}/{document=**} {
+      allow create, update, delete: if request.auth != null;
     }
   }
 }
