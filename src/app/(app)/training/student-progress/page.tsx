@@ -46,7 +46,7 @@ export default function StudentProgressPage() {
       if (!firestore) return null;
       const reportsCollection = collection(firestore, `tenants/${tenantId}/student-progress-reports`);
       if (selectedStudentId) {
-        return query(reportsCollection, where('studentId', '==', selectedStudentId), orderBy('date', 'desc'));
+        return query(reportsCollection, where('studentId', '==', selectedStudentId));
       }
       return query(reportsCollection, orderBy('date', 'desc'));
     },
@@ -80,13 +80,20 @@ export default function StudentProgressPage() {
     const studentsMap = new Map(students.map(s => [s.id, `${s.firstName} ${s.lastName}`]));
     const instructorsMap = new Map(instructors.map(i => [i.id, `${i.firstName} ${i.lastName}`]));
 
-    return reports.map(report => ({
+    const mappedReports = reports.map(report => ({
       ...report,
       bookingNumber: bookingsMap.get(report.bookingId)?.bookingNumber,
       studentName: studentsMap.get(report.studentId!),
       instructorName: instructorsMap.get(report.instructorId!),
     }));
-  }, [reports, bookings, students, instructors]);
+
+    // If a student is selected, sort the data here on the client-side.
+    if (selectedStudentId) {
+        return mappedReports.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
+
+    return mappedReports;
+  }, [reports, bookings, students, instructors, selectedStudentId]);
 
   const handleDeleteReport = (reportId: string) => {
     if (!firestore) return;
