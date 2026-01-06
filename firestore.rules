@@ -9,7 +9,9 @@ service cloud.firestore {
        allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Rules for all sub-collections within a tenant.
+    // This rule allows any authenticated user to read and write to any document
+    // in any subcollection under any tenant. This is the correct way to
+    // grant broad access for development.
     match /tenants/{tenantId}/{document=**} {
       allow read, write: if request.auth != null;
     }
