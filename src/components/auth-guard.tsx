@@ -20,25 +20,33 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const isLoading = isAuthLoading || isProfileLoading;
 
   useEffect(() => {
-    // While loading, do nothing.
+    // If we are still loading authentication state or the user profile, don't do anything yet.
     if (isLoading) {
       return;
     }
 
-    // After loading, if there's no authenticated user, always redirect to login.
+    // After loading is complete, check the conditions.
+    // If there is no authenticated user and we are not on the login page, redirect to login.
     if (!authUser && pathname !== '/login') {
-      console.log("AuthGuard: No auth user, redirecting to login.");
+      console.log("AuthGuard: No authenticated user. Redirecting to /login.");
       router.push('/login');
       return;
     }
 
-    // After loading, if there IS an authUser, but NO profile document was found
-    // (could be a new user, or a data issue), redirect to login.
-    // This is the key check to prevent access to a broken state.
+    // If the user is authenticated but the profile is missing (and it's finished loading),
+    // this indicates an error state (e.g., failed profile creation).
+    // Redirect them to login to clear the session.
     if (authUser && !userProfile && pathname !== '/login') {
-      console.warn("AuthGuard: User is authenticated but profile is missing. Redirecting to login to clear state.");
+      console.warn("AuthGuard: Authenticated user has no profile. Redirecting to /login.");
       router.push('/login');
       return;
+    }
+
+    // If the user is fully authenticated and has a profile, and they are on the login page,
+    // redirect them to the dashboard.
+    if (authUser && userProfile && pathname === '/login') {
+      console.log("AuthGuard: Authenticated user on login page. Redirecting to /dashboard.");
+      router.push('/dashboard');
     }
 
   }, [authUser, userProfile, isLoading, router, pathname]);
@@ -63,16 +71,16 @@ export function AuthGuard({ children }: AuthGuardProps) {
     )
   }
 
-  // If on the login page, always render it.
+  // If on the login page, always render it while auth state resolves.
   if (pathname === '/login') {
     return <>{children}</>;
   }
   
-  // If we are done loading, and we have both an authUser and userProfile, render the app.
+  // If we are done loading, and we have a user and profile, render the app's children.
   if (!isLoading && authUser && userProfile) {
     return <>{children}</>;
   }
 
-  // Otherwise, render nothing while the redirect is in progress.
+  // Otherwise, render nothing, as a redirect is likely in progress.
   return null;
 }
