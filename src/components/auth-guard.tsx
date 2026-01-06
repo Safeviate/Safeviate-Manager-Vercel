@@ -20,27 +20,23 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const isLoading = isAuthLoading || isProfileLoading;
 
   useEffect(() => {
-    // If we are still loading authentication state or the user profile, don't do anything yet.
+    // If authentication is still loading, we don't do anything yet.
     if (isLoading) {
       return;
     }
 
-    // After loading is complete, check the conditions.
-    // If there is no authenticated user and we are not on the login page, redirect to login.
+    // If there's no authenticated user and we're not on the login page, redirect.
     if (!authUser && pathname !== '/login') {
       router.push('/login');
-      return;
     }
-    
-    // If the user is fully authenticated and has a profile, and they are on the login page,
-    // redirect them to the dashboard.
+
+    // If the user is authenticated and has a profile, and they are trying to access the login page, redirect to dashboard.
     if (authUser && userProfile && pathname === '/login') {
       router.push('/dashboard');
     }
-
   }, [authUser, userProfile, isLoading, router, pathname]);
 
-  // Show a loading skeleton for any protected route while we check auth/profile.
+  // While loading, show a skeleton UI for any page other than login.
   if (isLoading && pathname !== '/login') {
     return (
         <div className="flex flex-col flex-1 h-screen overflow-hidden">
@@ -60,7 +56,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     )
   }
 
-  // If on the login page, always render it while auth state resolves.
+  // On the login page, render children immediately. The useEffect handles redirection.
   if (pathname === '/login') {
     return <>{children}</>;
   }
@@ -70,6 +66,8 @@ export function AuthGuard({ children }: AuthGuardProps) {
     return <>{children}</>;
   }
 
-  // Otherwise, render nothing, as a redirect is likely in progress.
+  // If none of the above conditions are met (e.g., authUser exists but userProfile doesn't after loading),
+  // we're in an invalid state. The useEffect should have already triggered a redirect to /login.
+  // Rendering null here prevents rendering children in this invalid state.
   return null;
 }
