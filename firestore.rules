@@ -8,11 +8,86 @@ service cloud.firestore {
     match /users/{userId} {
        allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-
-    // Grant any authenticated user full access to all data within any tenant.
-    // In a production app, you would restrict this further based on user roles and tenant membership.
-    match /tenants/{tenantId}/{document=**} {
+    
+    match /tenants/{tenantId} {
       allow read, write: if request.auth != null;
+
+      match /published-tables/{pageId} {
+        allow read, write: if request.auth != null;
+      }
+      match /table-templates/{templateId} {
+        allow read, write: if request.auth != null;
+      }
+      match /compliance-matrix/{itemId} {
+        allow read, write: if request.auth != null;
+      }
+      match /audit-schedule-items/{itemId} {
+        allow read, write: if request.auth != null;
+      }
+      match /quality-audit-templates/{templateId} {
+        allow read, write: if request.auth != null;
+      }
+      match /quality-audits/{auditId} {
+        allow read, write: if request.auth != null;
+      }
+      match /corrective-action-plans/{capId} {
+        allow read, write: if request.auth != null;
+      }
+      match /flight-plans/{flightPlanId} {
+        allow read, write: if request.auth != null;
+      }
+      match /risks/{riskId} {
+        allow read, write: if request.auth != null;
+      }
+      match /safety-reports/{reportId} {
+        allow read, write: if request.auth != null;
+      }
+      match /management-of-change/{mocId} {
+        allow read, write: if request.auth != null;
+      }
+      match /bookings/{bookingId} {
+        allow read, write: if request.auth != null;
+      }
+      match /logbook-templates/{templateId} {
+        allow read, write: if request.auth != null;
+      }
+      match /massAndBalance/{profileId} {
+        allow read, write: if request.auth != null;
+      }
+      match /personnel/{personnelId} {
+        allow read, write: if request.auth != null;
+      }
+      match /pilots/{pilotId} {
+        allow read, write: if request.auth != null;
+      }
+      match /aircrafts/{aircraftId} {
+        allow read, write: if request.auth != null;
+        match /maintenanceLogs/{maintenanceLogId} {
+            allow read, write: if request.auth != null;
+        }
+      }
+      match /roles/{roleId} {
+        allow read, write: if request.auth != null;
+      }
+      match /permissions/{permissionId} {
+        allow read, write: if request.auth != null;
+      }
+      match /settings/{settingsId} {
+        allow read, write: if request.auth != null;
+      }
+      match /departments/{departmentId} {
+        allow read, write: if request.auth != null;
+      }
+      match /counters/{counterId} {
+        allow read, write: if request.auth != null;
+      }
+      match /student-progress-reports/{reportId} {
+        allow read, write: if request.auth != null;
+      }
+      // Rule for any other collections that might be added
+      match /{document=**} {
+        allow read, write: if request.auth != null;
+      }
     }
   }
 }
