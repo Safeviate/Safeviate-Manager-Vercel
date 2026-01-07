@@ -123,7 +123,8 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
     
     const headerCells = tableData.cells.filter(cell => cell.r < headerRowsCount);
     
-    const dataColumns = headerCells.filter(cell => {
+    // Original data columns from the template
+    const originalDataColumns = headerCells.filter(cell => {
         const hasChildren = headerCells.some(otherCell => 
             otherCell.r > cell.r && 
             otherCell.c >= cell.c && 
@@ -131,7 +132,32 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
         );
         return !hasChildren;
     }).sort((a,b) => a.c - b.c);
+
+    // Forcefully add "Flight Time" if it doesn't exist
+    const flightTimeColumnExists = originalDataColumns.some(col => col.content.toLowerCase() === 'flight time');
     
+    const finalDataColumns = [...originalDataColumns];
+    if (!flightTimeColumnExists) {
+        // Find the "Flight Details" column to insert "Flight Time" after it
+        const flightDetailsIndex = finalDataColumns.findIndex(col => col.content.toLowerCase() === 'flight details');
+        
+        const flightTimeCol = {
+            r: 0,
+            c: finalDataColumns.length, // Add to the end
+            content: "Flight Time",
+            rowSpan: headerRowsCount, // Assume it spans all header rows
+            colSpan: 1,
+            hidden: false,
+        };
+
+        if (flightDetailsIndex !== -1) {
+            finalDataColumns.splice(flightDetailsIndex + 1, 0, flightTimeCol);
+        } else {
+            finalDataColumns.push(flightTimeCol);
+        }
+    }
+
+
     const bodyRows = userBookings.length > 0 ? userBookings : [null]; 
 
     if (isLoading) {
@@ -173,22 +199,30 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
                                                 {cell.content}
                                             </TableHead>
                                         ))}
+                                     {!flightTimeColumnExists && rowIndex === 0 && (
+                                         <TableHead rowSpan={headerRowsCount} className="border text-center align-middle font-semibold">Flight Time</TableHead>
+                                     )}
                                 </TableRow>
                             ))}
                         </TableHeader>
                          <TableBody>
                             {bodyRows.map((booking, index) => (
                                 <TableRow key={booking ? booking.id : 'empty-row'}>
-                                    {dataColumns.map(col => (
+                                    {originalDataColumns.map(col => (
                                         <TableCell key={`cell-${index}-${col.c}`} className="text-center border">
                                             {booking ? getCellDataForBooking(booking, col.content) : ''}
                                         </TableCell>
                                     ))}
+                                    {!flightTimeColumnExists && (
+                                        <TableCell className="text-center border">
+                                            {booking ? getCellDataForBooking(booking, 'flight time') : ''}
+                                        </TableCell>
+                                    )}
                                 </TableRow>
                             ))}
                             {userBookings.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={dataColumns.length} className="h-24 text-center">
+                                    <TableCell colSpan={finalDataColumns.length} className="h-24 text-center">
                                         No completed flights found.
                                     </TableCell>
                                 </TableRow>
