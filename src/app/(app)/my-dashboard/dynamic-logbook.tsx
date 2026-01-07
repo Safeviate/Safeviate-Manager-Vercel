@@ -6,6 +6,7 @@ import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/app/(app)/assets/page';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { differenceInMinutes, format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 type UserProfile = PilotProfile | Personnel;
 
@@ -77,21 +78,14 @@ export function DynamicLogbook({ templateData, bookings }: DynamicLogbookProps) 
         break;
     }
     
-    const headers = [];
+    const headers: { text: string, colSpan: number }[] = [];
     if (dataStartRow > 0) {
+        // We only care about the last row of the headers for data mapping
+        const lastHeaderRowIndex = dataStartRow - 1;
         for(let c = 0; c < cols; c++) {
-            const headerCell = getCell(dataStartRow - 1, c);
-            if (headerCell && !headerCell.hidden) {
-                headers.push(headerCell.content);
-            } else {
-                // Find the cell that spans over this column
-                for(let r = 0; r < dataStartRow; r++) {
-                    const spanningCell = cells.find(cell => cell.r === r && cell.c <= c && (cell.c + cell.colSpan) > c);
-                    if(spanningCell) {
-                         headers.push(spanningCell.content);
-                         break;
-                    }
-                }
+            const cell = getCell(lastHeaderRowIndex, c);
+            if (cell && !cell.hidden) {
+                headers.push({ text: cell.content, colSpan: cell.colSpan });
             }
         }
     }
@@ -99,56 +93,62 @@ export function DynamicLogbook({ templateData, bookings }: DynamicLogbookProps) 
 
   return (
     <div className="overflow-x-auto rounded-lg border">
-      <Table>
-        <thead
-          style={{
-            display: 'grid',
-            gridTemplateColumns: colWidths.map(w => `${w}px`).join(' '),
-          }}
-        >
-          {Array.from({ length: dataStartRow }).map((_, rIndex) => (
-            <tr key={`header-row-${rIndex}`} className="flex contents">
-              {Array.from({ length: cols }).map((_, cIndex) => {
-                const cell = getCell(rIndex, cIndex);
-                if (!cell || cell.hidden) return null;
-                return (
-                  <th
-                    key={`header-cell-${rIndex}-${cIndex}`}
-                    className="p-2 border font-semibold text-sm"
-                    style={{
-                      gridRowStart: rIndex + 1,
-                      gridRowEnd: rIndex + cell.rowSpan + 1,
-                      gridColumnStart: cIndex + 1,
-                      gridColumnEnd: cIndex + cell.colSpan + 1,
-                      height: rowHeights.slice(rIndex, rIndex + cell.rowSpan).reduce((a, b) => a + b, 0),
-                    }}
-                  >
-                    {cell.content}
-                  </th>
-                );
-              })}
-            </tr>
-          ))}
-        </thead>
-        <TableBody>
-            {bookings.map((booking) => (
-                <TableRow key={booking.id}>
-                    {headers.map((header, index) => (
-                        <TableCell key={index} style={{minWidth: `${colWidths[index]}px`}}>
-                            {getCellDataForBooking(header, booking)}
-                        </TableCell>
-                    ))}
-                </TableRow>
+      <div className="grid" style={{ gridTemplateColumns: colWidths.map(w => `${w}px`).join(' ') }}>
+          {/* Header */}
+          <div className="contents" role="rowgroup">
+            {Array.from({ length: dataStartRow }).map((_, rIndex) => (
+                <div className="contents" key={`header-row-${rIndex}`} role="row">
+                {Array.from({ length: cols }).map((_, cIndex) => {
+                    const cell = getCell(rIndex, cIndex);
+                    if (!cell || cell.hidden) return null;
+                    return (
+                    <div
+                        key={`header-cell-${rIndex}-${cIndex}`}
+                        className="p-2 border-b border-r bg-muted/20 font-semibold text-sm flex items-center justify-center text-center"
+                        style={{
+                            gridRow: `${rIndex + 1} / span ${cell.rowSpan}`,
+                            gridColumn: `${cIndex + 1} / span ${cell.colSpan}`,
+                            minHeight: rowHeights.slice(rIndex, rIndex + cell.rowSpan).reduce((a, b) => a + b, 0),
+                        }}
+                        role="columnheader"
+                    >
+                        {cell.content}
+                    </div>
+                    );
+                })}
+                </div>
             ))}
-            {bookings.length === 0 && (
-                <TableRow>
-                    <TableCell colSpan={cols} className="h-24 text-center">
-                        No bookings to display.
-                    </TableCell>
-                </TableRow>
-            )}
-        </TableBody>
-      </Table>
+          </div>
+
+          {/* Body */}
+           <div className="contents" role="rowgroup">
+              {bookings.map((booking, bookingIndex) => (
+                  <div className="contents" key={booking.id} role="row">
+                      {headers.map((header, headerIndex) => {
+                          const data = getCellDataForBooking(header.text, booking);
+                          return (
+                              <div
+                                key={`${booking.id}-${headerIndex}`}
+                                className="p-2 border-b border-r text-sm flex items-center"
+                                style={{
+                                    gridRow: dataStartRow + bookingIndex + 1,
+                                    gridColumn: `${headers.slice(0, headerIndex).reduce((acc, h) => acc + h.colSpan, 0) + 1} / span ${header.colSpan}`,
+                                }}
+                                role="cell"
+                              >
+                                  {data}
+                              </div>
+                          );
+                      })}
+                  </div>
+              ))}
+          </div>
+      </div>
+      {bookings.length === 0 && (
+          <div className="h-24 text-center flex items-center justify-center text-muted-foreground">
+              No bookings to display.
+          </div>
+      )}
     </div>
   );
 }
