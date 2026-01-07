@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { TableData } from '@/app/(app)/development/table-builder/page';
