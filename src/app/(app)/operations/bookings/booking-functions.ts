@@ -163,13 +163,17 @@ export const updateBooking = async ({
         });
 
         // If it's a training flight, create a draft progress report
-        const originalBooking = (await getDoc(bookingRef)).data() as Booking;
-        if (originalBooking.type === 'Training Flight' && originalBooking.studentId && originalBooking.instructorId) {
+        const bookingDoc = await getDoc(bookingRef);
+        const originalBooking = bookingDoc.data() as Booking;
+
+        const finalBookingData = { ...originalBooking, ...updatePayload };
+
+        if (finalBookingData.type === 'Training Flight' && finalBookingData.studentId && finalBookingData.instructorId) {
             const reportRef = doc(collection(firestore, `tenants/${tenantId}/student-progress-reports`));
             const reportData: Omit<StudentProgressReport, 'id'> = {
-                bookingId: originalBooking.id,
-                studentId: originalBooking.studentId,
-                instructorId: originalBooking.instructorId,
+                bookingId: finalBookingData.id,
+                studentId: finalBookingData.studentId,
+                instructorId: finalBookingData.instructorId,
                 date: new Date().toISOString(),
                 entries: [],
                 overallComment: '',
