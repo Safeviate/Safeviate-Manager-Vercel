@@ -142,7 +142,7 @@ export const updateBooking = async ({
         updatePayload.overnightEndTime = deleteField();
     }
     
-    // Explicitly include photos if they exist in the payload. This was the fix.
+    // Explicitly include photos if they exist in the payload.
     if (updateData.preFlight?.photos) {
       updatePayload.preFlight.photos = updateData.preFlight.photos;
     }
