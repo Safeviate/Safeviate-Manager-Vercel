@@ -5,7 +5,6 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { GeminiLogbook } from './gemini-logbook';
 import { DynamicLogbook } from './dynamic-logbook';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { TableTemplate } from '@/types/table-template';
@@ -65,7 +64,16 @@ export default function MyDashboardPage() {
             {publishedTable ? (
                 <DynamicLogbook template={publishedTable} userProfile={userProfile} />
             ) : (
-                <GeminiLogbook userProfile={userProfile} />
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Logbook Not Configured</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-muted-foreground text-center py-10">
+                            No logbook template has been published to this dashboard. Please configure one in the Table Builder.
+                        </p>
+                    </CardContent>
+                </Card>
             )}
         </div>
     );
