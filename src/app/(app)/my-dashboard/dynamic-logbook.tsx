@@ -17,19 +17,19 @@ type EnrichedBooking = Booking & {
     picName?: string;
 };
 
-// This helper function will contain the logic to get the correct data for each cell
+// This helper function contains the explicit mapping logic.
 const getCellDataForBooking = (
     booking: EnrichedBooking,
-    columnLabel: string,
+    headerText: string,
 ): string => {
-    // Normalize label to a machine-readable key
-    const key = columnLabel.toLowerCase().replace(/\s+/g, ' ').trim();
+    // Normalize header to a machine-readable key (lowercase)
+    const key = headerText.toLowerCase().trim();
 
     switch (key) {
         case 'date':
-            return format(new Date(booking.date), 'PPP');
+            return booking.date ? format(new Date(booking.date), 'PPP') : 'N/A';
         case 'booking number':
-            return booking.bookingNumber.toString();
+            return booking.bookingNumber?.toString() || 'N/A';
         case 'type':
             return booking.aircraft?.type || 'N/A';
         case 'registration':
@@ -40,8 +40,14 @@ const getCellDataForBooking = (
             return booking.flightDetails || 'N/A';
         case 'flight time':
              return `${booking.flightTimeHours}h`;
+        // Add cases for 'From' and 'To' if flight plan data is integrated later
+        case 'from':
+             return booking.flightPlanId || 'N/A'; // Placeholder
+        case 'to':
+             return booking.flightPlanId || 'N/A'; // Placeholder
         default:
-            return ''; // Return empty string for unhandled columns
+            // If the header doesn't match a known field, return an empty string.
+            return ''; 
     }
 };
 
@@ -68,17 +74,24 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
     }, [firestore, tenantId, userProfile]);
     
     // Fetch all users to map IDs to names.
-    const allUsersQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/pilots`) : null), [firestore, tenantId]);
-    const { data: allUsers, isLoading: isLoadingUsers } = useCollection<PilotProfile>(allUsersQuery);
-    const { data: allAircraft, isLoading: isLoadingAircraft } = useCollection<Aircraft>(useMemoFirebase(() => firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null, [firestore, tenantId]));
+    const allPilotsQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        // This is simplified. In a real app, you'd query 'personnel', 'instructors', etc.
+        return query(collection(firestore, `tenants/${tenantId}/pilots`));
+    }, [firestore, tenantId]);
+    
+    const { data: allPilots, isLoading: isLoadingPilots } = useCollection<PilotProfile>(allPilotsQuery);
+    
+    const allAircraftQuery = useMemoFirebase(() => firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null, [firestore, tenantId]);
+    const { data: allAircraft, isLoading: isLoadingAircraft } = useCollection<Aircraft>(allAircraftQuery);
 
 
     const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
 
     const allUsersMap = useMemo(() => {
-        if (!allUsers) return new Map();
-        return new Map(allUsers.map(u => [u.id, u]));
-    }, [allUsers]);
+        if (!allPilots) return new Map();
+        return new Map(allPilots.map(u => [u.id, u]));
+    }, [allPilots]);
     
     const aircraftMap = useMemo(() => {
         if (!allAircraft) return new Map();
@@ -110,7 +123,7 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
 
     const getCell = (r: number, c: number) => template.cells.find(cell => cell.r === r && cell.c === c);
 
-    if (isLoadingBookings || isLoadingUsers || isLoadingAircraft) {
+    if (isLoadingBookings || isLoadingPilots || isLoadingAircraft) {
         return (
              <Card>
                 <CardHeader>
@@ -124,30 +137,17 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
         );
     }
 
-    const headerRows: JSX.Element[] = [];
+    const headerRows: {cell: NonNullable<ReturnType<typeof getCell>>, headerText: string}[][] = [];
     let headerRowCount = 0;
     while(true) {
-        const rowCells = template.cells.filter(c => c.r === headerRowCount && !c.hidden);
-        if (rowCells.length === 0 || rowCells.every(c => !c.content.trim())) {
+        const rowCells = template.cells
+            .filter(c => c.r === headerRowCount && !c.hidden)
+            .map(cell => ({ cell, headerText: cell.content || ''}));
+
+        if (rowCells.length === 0 || rowCells.every(c => !c.headerText.trim())) {
             break;
         }
-        headerRows.push(
-             <tr key={`header-row-${headerRowCount}`}>
-                {rowCells.map(cell => {
-                    return (
-                        <th
-                            key={`${cell.r}-${cell.c}`}
-                            colSpan={cell.colSpan}
-                            rowSpan={cell.rowSpan}
-                            className="px-4 py-2 border text-left font-semibold"
-                            style={{ minWidth: template.colWidths[cell.c] }}
-                        >
-                            {cell.content}
-                        </th>
-                    );
-                })}
-            </tr>
-        );
+        headerRows.push(rowCells);
         headerRowCount++;
     }
 
@@ -162,7 +162,21 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
                 <div className="overflow-x-auto border rounded-lg">
                     <table className="w-full text-sm text-left table-fixed">
                         <thead className="bg-muted/50">
-                           {headerRows}
+                           {headerRows.map((row, rIndex) => (
+                               <tr key={`header-row-${rIndex}`}>
+                                   {row.map(({cell}) => (
+                                       <th
+                                           key={`${cell.r}-${cell.c}`}
+                                           colSpan={cell.colSpan}
+                                           rowSpan={cell.rowSpan}
+                                           className="px-4 py-2 border text-left font-semibold"
+                                           style={{ minWidth: template.colWidths[cell.c] }}
+                                       >
+                                           {cell.content}
+                                       </th>
+                                   ))}
+                               </tr>
+                           ))}
                         </thead>
                         <tbody>
                             {enrichedBookings.map(booking => {
@@ -172,10 +186,9 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
                                     // Iterate upwards from the last header row to find the most specific header
                                     for(let r = headerRowCount - 1; r >= 0; r--) {
                                         const cell = getCell(r, c);
-                                        // If a cell exists and it's not a column-spanning header that we've passed
                                         if (cell && !cell.hidden) {
                                             headerCellLabel = cell.content;
-                                            break; // Found the most specific header for this column
+                                            break; 
                                         }
                                     }
                                     rowData.push(getCellDataForBooking(booking, headerCellLabel));
