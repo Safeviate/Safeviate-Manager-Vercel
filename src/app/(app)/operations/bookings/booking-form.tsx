@@ -29,6 +29,7 @@ import type { Booking, MassAndBalance } from '@/types/booking';
 import { PreFlightChecklistDialog } from './pre-flight-checklist-dialog';
 import { PostFlightChecklistDialog } from './post-flight-checklist-dialog';
 import { MassBalanceCalculator } from './mass-balance-calculator';
+import { Textarea } from '@/components/ui/textarea';
 
 const bookingSchema = z.object({
     type: z.enum(['Training Flight', 'Private Flight', 'Reposition Flight', 'Maintenance Flight']),
@@ -38,6 +39,7 @@ const bookingSchema = z.object({
     date: z.date(),
     startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid HH:mm format"),
     endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid HH:mm format"),
+    flightDetails: z.string().optional(),
     isOvernight: z.boolean().default(false),
     overnightBookingDate: z.date().optional(),
     overnightEndTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid HH:mm format").optional(),
@@ -115,6 +117,7 @@ export function BookingForm({
                 date: existingBooking ? new Date(existingBooking.date) : new Date(startTime),
                 startTime: existingBooking?.startTime || format(startTime, 'HH:mm'),
                 endTime: existingBooking?.endTime || format(addMinutes(startTime, 120), 'HH:mm'),
+                flightDetails: existingBooking?.flightDetails || '',
                 isOvernight: existingBooking?.isOvernight || false,
                 overnightBookingDate: existingBooking?.overnightBookingDate ? new Date(existingBooking.overnightBookingDate) : undefined,
                 overnightEndTime: existingBooking?.overnightEndTime || '09:00',
@@ -213,6 +216,7 @@ export function BookingForm({
                                     <FormField control={form.control} name="startTime" render={({ field }) => ( <FormItem><FormLabel>Start Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
                                     <FormField control={form.control} name="endTime" render={({ field }) => ( <FormItem><FormLabel>End Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
                                 </div>
+                                <FormField control={form.control} name="flightDetails" render={({ field }) => ( <FormItem><FormLabel>Flight Details</FormLabel><FormControl><Textarea placeholder="e.g., Local flight for circuits" {...field} /></FormControl><FormMessage /></FormItem> )} />
                                 <FormField control={form.control} name="isOvernight" render={({ field }) => ( <FormItem className="flex items-center gap-2 pt-2"><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel>Overnight?</FormLabel></FormItem> )} />
                                 {isOvernight && (
                                     <div className="grid grid-cols-2 gap-4">
