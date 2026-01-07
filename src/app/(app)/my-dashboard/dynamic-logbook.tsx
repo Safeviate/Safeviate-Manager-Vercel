@@ -112,6 +112,7 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
             case 'pilot in command': return creatorName;
             case 'student': return student ? `${student.firstName} ${student.lastName}` : '---';
             case 'instructor': return instructor ? `${instructor.firstName} ${instructor.lastName}` : '---';
+            case 'flight details': return booking.flightDetails || '';
             case 'flight time': return `${flightHours}h`;
             default: return '';
         }
