@@ -14,8 +14,9 @@ import type { Aircraft } from '@/app/(app)/assets/page';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { DynamicLogbook } from './dynamic-logbook';
 import { differenceInMinutes } from 'date-fns';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
-type UserProfile = PilotProfile | Personnel;
+type UserProfileData = PilotProfile | Personnel;
 type PublishedTable = Omit<TableTemplate, 'id' | 'name'> & { pageId: string };
 type EnrichedBooking = Booking & {
   aircraft?: Aircraft;
@@ -29,6 +30,7 @@ type EnrichedBooking = Booking & {
 export default function MyDashboardPage() {
     const firestore = useFirestore();
     const tenantId = 'safeviate';
+    const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
     const publishedTableRef = useMemoFirebase(
         () => (firestore ? doc(firestore, `tenants/${tenantId}/published-tables`, 'my-dashboard') : null),
@@ -40,6 +42,8 @@ export default function MyDashboardPage() {
     const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
     const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
     const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
+    const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
+
 
     const { data: publishedTable, isLoading: isLoadingTable } = useDoc<PublishedTable>(publishedTableRef);
     const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
@@ -47,19 +51,29 @@ export default function MyDashboardPage() {
     const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
     const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
     const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsQuery);
+    const { data: privatePilots, isLoading: isLoadingPrivatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
 
-    const allUsers: UserProfile[] = useMemo(() => [
+
+    const allUsers: UserProfileData[] = useMemo(() => [
         ...(personnel || []),
         ...(instructors || []),
         ...(students || []),
-    ], [personnel, instructors, students]);
+        ...(privatePilots || []),
+    ], [personnel, instructors, students, privatePilots]);
 
     const enrichedBookings: EnrichedBooking[] = useMemo(() => {
-        if (!bookings || !aircrafts || allUsers.length === 0) return [];
+        if (!bookings || !aircrafts || allUsers.length === 0 || !userProfile) return [];
+
         const aircraftMap = new Map(aircrafts.map(a => [a.id, a]));
         const userMap = new Map(allUsers.map(u => [u.id, `${u.firstName} ${u.lastName}`]));
 
-        return bookings.map(booking => {
+        return bookings
+        .filter(booking => 
+            booking.studentId === userProfile.id || 
+            booking.instructorId === userProfile.id || 
+            booking.privatePilotId === userProfile.id
+        )
+        .map(booking => {
             const flightTimeMinutes = booking.startTime && booking.endTime 
                 ? differenceInMinutes(new Date(`1970-01-01T${booking.endTime}`), new Date(`1970-01-01T${booking.startTime}`))
                 : 0;
@@ -74,9 +88,9 @@ export default function MyDashboardPage() {
                 flightTimeHours,
             };
         });
-    }, [bookings, aircrafts, allUsers]);
+    }, [bookings, aircrafts, allUsers, userProfile]);
 
-    const isLoading = isLoadingTable || isLoadingBookings || isLoadingAircrafts || isLoadingPersonnel || isLoadingInstructors || isLoadingStudents;
+    const isLoading = isLoadingTable || isLoadingBookings || isLoadingAircrafts || isProfileLoading || isLoadingPersonnel || isLoadingInstructors || isLoadingStudents || isLoadingPrivatePilots;
 
     return (
         <div className="w-full space-y-6">
