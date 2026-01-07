@@ -152,6 +152,11 @@ export const updateBooking = async ({
 
     const batch = writeBatch(firestore);
 
+    // If submitting a post-flight, also update the end time to now
+    if (isSubmittingPostFlight) {
+        updatePayload.endTime = format(new Date(), 'HH:mm');
+    }
+
     batch.set(bookingRef, updatePayload, { merge: true });
     
     // If submitting a post-flight, update the aircraft's core metrics
