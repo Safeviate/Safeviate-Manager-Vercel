@@ -189,3 +189,5 @@ export function DynamicLogbook({ templateData, bookings }: DynamicLogbookProps) 
     </div>
   );
 }
+
+    

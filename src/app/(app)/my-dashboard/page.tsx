@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -67,7 +68,7 @@ export default function MyDashboardPage() {
             return {
                 ...booking,
                 aircraft: aircraftMap.get(booking.aircraftId),
-                picName: userMap.get(booking.instructorId || booking.privatePilotId || ''),
+                picName: userMap.get(booking.instructorId || ''),
                 studentName: userMap.get(booking.studentId || ''),
                 instructorName: userMap.get(booking.instructorId || ''),
                 flightTimeHours,
@@ -102,3 +103,5 @@ export default function MyDashboardPage() {
         </div>
     );
 }
+
+    
