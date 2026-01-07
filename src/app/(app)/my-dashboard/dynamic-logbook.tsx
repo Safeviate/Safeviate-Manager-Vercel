@@ -1,21 +1,20 @@
 'use client';
 
-import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import type { TableData } from '@/app/(app)/development/table-builder/page';
-import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/app/(app)/assets/page';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
-import { differenceInMinutes, format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
-type UserProfile = PilotProfile | Personnel;
-
-type EnrichedBooking = Booking & {
+type EnrichedBooking = {
+  id: string;
+  date?: string;
+  bookingNumber?: number;
   aircraft?: Aircraft;
   picName?: string;
   studentName?: string;
   instructorName?: string;
   flightTimeHours?: string;
+  flightDetails?: string;
 };
 
 interface DynamicLogbookProps {
@@ -47,13 +46,13 @@ const getCellDataForBooking = (header: string, booking: EnrichedBooking): string
         case 'flight time':
             return booking.flightTimeHours || '0.0';
         case 'from':
-             // Placeholder, assuming flight plan is not integrated yet
             return 'TBD';
         case 'to':
-            // Placeholder
             return 'TBD';
+        case 'aircraft': // This is a parent header, should not contain data directly
+            return '';
         default:
-            return ''; // Return empty for headers that don't match
+            return ''; 
     }
 }
 
@@ -63,33 +62,69 @@ export function DynamicLogbook({ templateData, bookings }: DynamicLogbookProps) 
 
     const getCell = (r: number, c: number) => cells.find(cell => cell.r === r && cell.c === c);
 
-    // Find the first row that isn't part of a merged cell starting from row 0
-    let dataStartRow = 0;
-    for (let r = 0; r < rows; r++) {
-        const cell = getCell(r, 0);
+    let headerRowCount = 0;
+    let maxRowSpan = 0;
+    for (let c = 0; c < cols; c++) {
+        const cell = getCell(0, c);
         if (cell && !cell.hidden) {
-            dataStartRow = r + cell.rowSpan;
-            break;
+            maxRowSpan = Math.max(maxRowSpan, cell.rowSpan);
         }
-         if (r > 0 && getCell(r-1, 0)?.rowSpan > 1) {
-            continue;
-        }
-        dataStartRow = r + 1;
-        break;
     }
     
-    const headers: { text: string, colSpan: number }[] = [];
-    if (dataStartRow > 0) {
-        // We only care about the last row of the headers for data mapping
-        const lastHeaderRowIndex = dataStartRow - 1;
-        for(let c = 0; c < cols; c++) {
-            const cell = getCell(lastHeaderRowIndex, c);
-            if (cell && !cell.hidden) {
-                headers.push({ text: cell.content, colSpan: cell.colSpan });
+    let tempHeaderRowCount = 0;
+    let visitedRows = new Set();
+    for (let c = 0; c < cols; c++) {
+        const cell = getCell(0, c);
+        if (cell && !cell.hidden) {
+            if (!visitedRows.has(cell.r)) {
+                visitedRows.add(cell.r);
+                tempHeaderRowCount += cell.rowSpan > 1 ? 1 : 0;
             }
         }
     }
 
+    let minRowSpanOfFirstRow = Infinity;
+    for(let c=0; c<cols; c++){
+      const cell = getCell(0,c);
+      if(cell && !cell.hidden){
+        minRowSpanOfFirstRow = Math.min(minRowSpanOfFirstRow, cell.rowSpan);
+      }
+    }
+    headerRowCount = minRowSpanOfFirstRow > 1 ? 1 : maxRowSpan;
+
+    const dataStartRow = headerRowCount > 0 ? headerRowCount : 1;
+
+    const getLeafHeaders = () => {
+        const leafHeaders: { text: string; colIndex: number }[] = [];
+        const maxRow = dataStartRow -1;
+
+        for (let c = 0; c < cols; c++) {
+            let foundHeader = false;
+            for (let r = maxRow; r >= 0; r--) {
+                const cell = getCell(r, c);
+                if (cell && !cell.hidden) {
+                     // Check if this cell is the one that actually occupies this column `c`
+                    const isCorrectCell = c >= cell.c && c < cell.c + cell.colSpan;
+                    if(isCorrectCell){
+                      // Check if it's a leaf node in its hierarchy
+                      const isLeaf = !cells.some(other => other.r > r && other.c >= cell.c && other.c < cell.c + cell.colSpan && !other.hidden);
+                      if (isLeaf) {
+                          leafHeaders.push({ text: cell.content, colIndex: c });
+                          foundHeader = true;
+                          break; 
+                      }
+                    }
+                }
+            }
+            if(!foundHeader) {
+                // If no header is found for a column (which shouldn't happen in a well-formed table)
+                leafHeaders.push({ text: '', colIndex: c });
+            }
+        }
+        return leafHeaders;
+    };
+    
+    const leafHeaders = getLeafHeaders();
 
   return (
     <div className="overflow-x-auto rounded-lg border">
@@ -124,7 +159,7 @@ export function DynamicLogbook({ templateData, bookings }: DynamicLogbookProps) 
            <div className="contents" role="rowgroup">
               {bookings.map((booking, bookingIndex) => (
                   <div className="contents" key={booking.id} role="row">
-                      {headers.map((header, headerIndex) => {
+                      {leafHeaders.map((header, headerIndex) => {
                           const data = getCellDataForBooking(header.text, booking);
                           return (
                               <div
@@ -132,7 +167,8 @@ export function DynamicLogbook({ templateData, bookings }: DynamicLogbookProps) 
                                 className="p-2 border-b border-r text-sm flex items-center"
                                 style={{
                                     gridRow: dataStartRow + bookingIndex + 1,
-                                    gridColumn: `${headers.slice(0, headerIndex).reduce((acc, h) => acc + h.colSpan, 0) + 1} / span ${header.colSpan}`,
+                                    gridColumn: `${header.colIndex + 1} / span 1`,
+                                    minHeight: rowHeights[dataStartRow + bookingIndex] || '48px',
                                 }}
                                 role="cell"
                               >
