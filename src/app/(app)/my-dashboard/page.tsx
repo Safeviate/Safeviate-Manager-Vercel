@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -6,72 +5,71 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import type { TableTemplate } from '@/app/(app)/development/table-builder/page';
+import { DynamicLogbook } from './dynamic-logbook';
+import type { TableTemplate } from '@/types/table-template';
 
 export default function MyDashboardPage() {
     const { userProfile, isLoading: isLoadingProfile } = useUserProfile();
     const firestore = useFirestore();
     const tenantId = 'safeviate';
 
-    // Fetch the published table template for the dashboard
+    // Fetch the table template that has been published to the 'my-dashboard' page ID.
     const publishedTableRef = useMemoFirebase(
       () => (firestore ? doc(firestore, `tenants/${tenantId}/published-tables`, 'my-dashboard') : null),
       [firestore, tenantId]
     );
-    const { data: publishedTable, isLoading: isLoadingTable } = useDoc<TableTemplate>(publishedTableRef);
+    const { data: publishedTable, isLoading: isLoadingTable } = useDoc<{ tableData: TableTemplate }>(publishedTableRef);
     
     const isLoading = isLoadingProfile || isLoadingTable;
 
     if (isLoading) {
         return (
             <div className="w-full space-y-6">
-                <Skeleton className="h-64 w-full" />
+                <Card>
+                    <CardHeader>
+                        <CardTitle>My Logbook</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-64 w-full" />
+                    </CardContent>
+                </Card>
             </div>
         );
     }
 
-    if (!userProfile) {
+    if (!userProfile || (userProfile.userType !== 'Student' && userProfile.userType !== 'Private Pilot' && userProfile.userType !== 'Instructor')) {
         return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>My Dashboard</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground text-center py-10">
-                        User profile not found. Unable to display dashboard content.
-                    </p>
-                </CardContent>
-            </Card>
-        );
-    }
-    
-    if (userProfile.userType !== 'Student' && userProfile.userType !== 'Instructor' && userProfile.userType !== 'Private Pilot') {
-         return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>My Dashboard</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground text-center py-10">
-                        This dashboard is only available for pilot user types.
-                    </p>
-                </CardContent>
-            </Card>
-        );
-    }
+           <Card>
+               <CardHeader>
+                   <CardTitle>My Logbook</CardTitle>
+               </CardHeader>
+               <CardContent>
+                   <p className="text-muted-foreground text-center py-10">
+                       This logbook is only available for pilot user types.
+                   </p>
+               </CardContent>
+           </Card>
+       );
+   }
 
     return (
         <div className="w-full space-y-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>My Logbook</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground text-center py-10">
-                        We will build the new logbook here, step by step.
-                    </p>
-                </CardContent>
-            </Card>
+             {publishedTable && publishedTable.tableData ? (
+                <DynamicLogbook template={publishedTable.tableData} userProfile={userProfile} />
+            ) : (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>My Logbook</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-muted-foreground text-center py-10">
+                            No logbook template has been published for this page.
+                            <br />
+                            Please publish a template from the Table Builder in the Development section.
+                        </p>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 }
