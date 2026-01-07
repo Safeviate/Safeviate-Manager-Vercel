@@ -8,33 +8,38 @@ import type { PilotProfile } from '@/app/(app)/users/personnel/page';
 import type { TableData } from '@/types/table-template';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { parse, differenceInMinutes } from 'date-fns';
+import { format, parse, differenceInMinutes } from 'date-fns';
+import type { Aircraft } from '@/app/(app)/assets/page';
 
 type EnrichedBooking = Booking & {
     flightTimeHours: string;
+    aircraft?: Aircraft;
+    picName?: string;
 };
 
 // This helper function will contain the logic to get the correct data for each cell
 const getCellDataForBooking = (
     booking: EnrichedBooking,
     columnLabel: string,
-    allUsersMap: Map<string, PilotProfile>,
 ): string => {
     // Normalize label to a machine-readable key
-    const key = columnLabel.toLowerCase().replace(/\s+/g, ' ');
-
-    const creator = booking.createdById ? allUsersMap.get(booking.createdById) : null;
-    const creatorName = creator ? `${creator.firstName} ${creator.lastName}` : 'N/A';
+    const key = columnLabel.toLowerCase().replace(/\s+/g, ' ').trim();
 
     switch (key) {
+        case 'date':
+            return format(new Date(booking.date), 'PPP');
+        case 'booking number':
+            return booking.bookingNumber.toString();
+        case 'type':
+            return booking.aircraft?.type || 'N/A';
+        case 'registration':
+            return booking.aircraft?.tailNumber || 'N/A';
+        case 'pilot in command':
+            return booking.picName || 'N/A';
         case 'flight details':
             return booking.flightDetails || 'N/A';
         case 'flight time':
              return `${booking.flightTimeHours}h`;
-        case 'pilot in command':
-            return creatorName;
-        // Add more cases here as new columns are needed
-        // e.g., case 'date': return format(new Date(booking.date), 'PPP');
         default:
             return ''; // Return empty string for unhandled columns
     }
@@ -63,8 +68,10 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
     }, [firestore, tenantId, userProfile]);
     
     // Fetch all users to map IDs to names.
-    const usersQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/pilots`) : null), [firestore, tenantId]);
-    const { data: allUsers, isLoading: isLoadingUsers } = useCollection<PilotProfile>(usersQuery);
+    const allUsersQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/pilots`) : null), [firestore, tenantId]);
+    const { data: allUsers, isLoading: isLoadingUsers } = useCollection<PilotProfile>(allUsersQuery);
+    const { data: allAircraft, isLoading: isLoadingAircraft } = useCollection<Aircraft>(useMemoFirebase(() => firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null, [firestore, tenantId]));
+
 
     const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
 
@@ -72,6 +79,11 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
         if (!allUsers) return new Map();
         return new Map(allUsers.map(u => [u.id, u]));
     }, [allUsers]);
+    
+    const aircraftMap = useMemo(() => {
+        if (!allAircraft) return new Map();
+        return new Map(allAircraft.map(a => [a.id, a]));
+    }, [allAircraft]);
 
     const enrichedBookings = useMemo((): EnrichedBooking[] => {
         if (!bookings) return [];
@@ -82,13 +94,23 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
             ) : 0;
             const flightTimeHours = (flightMinutes / 60).toFixed(1);
 
-            return { ...booking, flightTimeHours };
+            const aircraft = aircraftMap.get(booking.aircraftId);
+            
+            let pic: PilotProfile | undefined;
+            if (booking.type === 'Training Flight') {
+                pic = allUsersMap.get(booking.instructorId || '');
+            } else {
+                pic = allUsersMap.get(booking.createdById || '');
+            }
+            const picName = pic ? `${pic.firstName} ${pic.lastName}` : 'N/A';
+
+            return { ...booking, flightTimeHours, aircraft, picName };
         });
-    }, [bookings]);
+    }, [bookings, allUsersMap, aircraftMap]);
 
     const getCell = (r: number, c: number) => template.cells.find(cell => cell.r === r && cell.c === c);
 
-    if (isLoadingBookings || isLoadingUsers) {
+    if (isLoadingBookings || isLoadingUsers || isLoadingAircraft) {
         return (
              <Card>
                 <CardHeader>
@@ -105,17 +127,16 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
     const headerRows: JSX.Element[] = [];
     let headerRowCount = 0;
     while(true) {
-        const rowCells = template.cells.filter(c => c.r === headerRowCount);
-        if (rowCells.every(c => !c.content)) { // Stop if we hit an empty row
+        const rowCells = template.cells.filter(c => c.r === headerRowCount && !c.hidden);
+        if (rowCells.length === 0 || rowCells.every(c => !c.content.trim())) {
             break;
         }
         headerRows.push(
              <tr key={`header-row-${headerRowCount}`}>
                 {rowCells.map(cell => {
-                    if (cell.hidden) return null;
                     return (
                         <th
-                            key={cell.c}
+                            key={`${cell.r}-${cell.c}`}
                             colSpan={cell.colSpan}
                             rowSpan={cell.rowSpan}
                             className="px-4 py-2 border text-left font-semibold"
@@ -147,19 +168,17 @@ export function DynamicLogbook({ template, userProfile }: DynamicLogbookProps) {
                             {enrichedBookings.map(booking => {
                                 const rowData: (string | React.ReactNode)[] = [];
                                 for (let c = 0; c < template.cols; c++) {
-                                     // Find the header cell for this column to get its label
                                     let headerCellLabel = '';
-                                    for(let r = 0; r < headerRowCount; r++) {
+                                    // Iterate upwards from the last header row to find the most specific header
+                                    for(let r = headerRowCount - 1; r >= 0; r--) {
                                         const cell = getCell(r, c);
-                                        if (cell && cell.content) {
-                                            // Find the most specific header
-                                            if (cell.colSpan === 1) {
-                                                headerCellLabel = cell.content;
-                                                break;
-                                            }
+                                        // If a cell exists and it's not a column-spanning header that we've passed
+                                        if (cell && !cell.hidden) {
+                                            headerCellLabel = cell.content;
+                                            break; // Found the most specific header for this column
                                         }
                                     }
-                                    rowData.push(getCellDataForBooking(booking, headerCellLabel, allUsersMap));
+                                    rowData.push(getCellDataForBooking(booking, headerCellLabel));
                                 }
 
                                 return (
