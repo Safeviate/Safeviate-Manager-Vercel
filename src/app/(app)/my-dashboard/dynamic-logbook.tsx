@@ -30,8 +30,8 @@ const getCellDataForBooking = (header: string, booking: EnrichedBooking): string
             return booking.date ? format(new Date(booking.date), 'dd/MM/yyyy') : 'N/A';
         case 'booking number':
             return booking.bookingNumber?.toString() || 'N/A';
-        case 'type':
-            return booking.aircraft?.type || 'N/A';
+        case 'model':
+            return booking.aircraft?.model || 'N/A';
         case 'registration':
             return booking.aircraft?.tailNumber || 'N/A';
         case 'pic':
