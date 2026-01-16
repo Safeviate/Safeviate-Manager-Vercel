@@ -50,3 +50,4 @@ export type {
     StudentProgressEntry,
     PerformanceRating
 } from './training';
+export type { Alert, AlertType, AlertStatus } from './alert';

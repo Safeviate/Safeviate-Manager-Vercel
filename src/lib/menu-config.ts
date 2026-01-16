@@ -85,7 +85,7 @@ export const menuConfig: MenuItem[] = [
       {
         href: '/operations/alerts',
         label: 'Alerts',
-        description: 'View and manage system alerts.',
+        description: 'View and manage critical system alerts.',
         permissionId: 'operations-alerts-view',
       },
     ],

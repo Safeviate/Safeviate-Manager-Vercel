@@ -1437,6 +1437,21 @@
         "warningHours": { "type": "number", "description": "The hour threshold at which to show a warning." }
       },
       "required": ["milestone", "warningHours"]
+    },
+    "Alert": {
+      "title": "Alert",
+      "type": "object",
+      "description": "Represents a system-wide alert or notice.",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["Red Tag", "Yellow Tag", "Company Notice"] },
+        "title": { "type": "string", "description": "A short, descriptive title for the alert." },
+        "content": { "type": "string", "description": "The full content of the alert or notice." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string", "description": "The user ID of the person who created the alert." },
+        "status": { "type": "string", "enum": ["Active", "Archived"] }
+      },
+      "required": ["id", "type", "title", "content", "createdAt", "createdBy", "status"]
     }
   },
   "auth": {
@@ -1663,6 +1678,13 @@
             "$ref": "#/backend/entities/StudentProgressReport"
           },
           "description": "Stores student progress reports for training flights."
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/alerts/{alertId}",
+        "definition": {
+          "schema": { "$ref": "#/backend/entities/Alert" },
+          "description": "Stores system-wide alerts and notices."
         }
       }
     ]
