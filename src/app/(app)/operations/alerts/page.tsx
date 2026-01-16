@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -15,7 +16,8 @@ export default function AlertsPage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate';
   const { hasPermission } = usePermissions();
-  const canManageAlerts = hasPermission('operations-alerts-manage');
+  const canCreateAlerts = hasPermission('operations-alerts-create');
+  const canEditAlerts = hasPermission('operations-alerts-edit');
 
   const alertsQuery = useMemoFirebase(
     () => (firestore ? query(
@@ -40,7 +42,7 @@ export default function AlertsPage() {
             View and manage critical alerts and company-wide notices.
           </p>
         </div>
-        {canManageAlerts && <AlertForm tenantId={tenantId} />}
+        {canCreateAlerts && <AlertForm tenantId={tenantId} />}
       </div>
 
       {isLoading ? (
@@ -58,7 +60,7 @@ export default function AlertsPage() {
             <TabsContent value="red-tags">
                 <div className="space-y-4 pt-4">
                     {redTags.length > 0 ? (
-                        redTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canManageAlerts} />)
+                        redTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
                     ) : (
                         <Card className="flex h-48 items-center justify-center">
                             <p className="text-muted-foreground text-sm">No active red tags.</p>
@@ -69,7 +71,7 @@ export default function AlertsPage() {
             <TabsContent value="yellow-tags">
                 <div className="space-y-4 pt-4">
                     {yellowTags.length > 0 ? (
-                        yellowTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canManageAlerts} />)
+                        yellowTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
                     ) : (
                          <Card className="flex h-48 items-center justify-center">
                             <p className="text-muted-foreground text-sm">No active yellow tags.</p>
@@ -80,7 +82,7 @@ export default function AlertsPage() {
             <TabsContent value="company-notices">
                 <div className="space-y-4 pt-4">
                     {companyNotices.length > 0 ? (
-                        companyNotices.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canManageAlerts} />)
+                        companyNotices.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
                     ) : (
                          <Card className="flex h-48 items-center justify-center">
                             <p className="text-muted-foreground text-sm">No active company notices.</p>
