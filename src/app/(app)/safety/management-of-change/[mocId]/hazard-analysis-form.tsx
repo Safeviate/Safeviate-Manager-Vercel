@@ -12,10 +12,10 @@ import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { ManagementOfChange, MocPhase, MocStep, MocHazard, MocRisk, MocMitigation } from '@/types/moc';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { PlusCircle, Trash2, CalendarIcon } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarIcon, ChevronDown } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -213,21 +213,33 @@ const HazardsArray = ({ phaseIndex, stepIndex, personnel }: { phaseIndex: number
     return (
         <div className="pl-6 mt-4 space-y-4">
             {fields.map((field, hazardIndex) => (
-                <Card key={field.id}>
-                    <CardHeader className="flex flex-row items-center justify-between bg-muted/20">
-                         <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.description`} render={({ field }) => ( <FormItem className="flex-1"><FormLabel>Hazard Description</FormLabel><FormControl><Input placeholder='Describe the hazard...' {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                         <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(hazardIndex)}><Trash2 className="h-4 w-4" /></Button>
-                    </CardHeader>
-                    <CardContent className="pt-4 space-y-4">
-                         <RiskAssessmentEditor 
-                            path={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.0.initialRiskAssessment`} 
-                            label="Initial Risk Assessment"
-                         />
-                        <h4 className="font-semibold text-sm pt-4 border-t">Mitigations</h4>
-                        {/* We assume one risk per hazard for UI simplification */}
-                        <MitigationsArray phaseIndex={phaseIndex} stepIndex={stepIndex} hazardIndex={hazardIndex} riskIndex={0} personnel={personnel} />
-                    </CardContent>
-                </Card>
+                <Collapsible key={field.id} asChild defaultOpen>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between bg-muted/20">
+                            <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.description`} render={({ field }) => ( <FormItem className="flex-1"><FormLabel>Hazard Description</FormLabel><FormControl><Input placeholder='Describe the hazard...' {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                            <div className="flex items-center gap-1">
+                                <CollapsibleTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="[&[data-state=open]>svg]:rotate-180">
+                                        <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+                                        <span className="sr-only">Toggle Hazard Details</span>
+                                    </Button>
+                                </CollapsibleTrigger>
+                                <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(hazardIndex)}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                        </CardHeader>
+                        <CollapsibleContent>
+                            <CardContent className="pt-4 space-y-4">
+                                <RiskAssessmentEditor 
+                                    path={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.0.initialRiskAssessment`} 
+                                    label="Initial Risk Assessment"
+                                />
+                                <h4 className="font-semibold text-sm pt-4 border-t">Mitigations</h4>
+                                {/* We assume one risk per hazard for UI simplification */}
+                                <MitigationsArray phaseIndex={phaseIndex} stepIndex={stepIndex} hazardIndex={hazardIndex} riskIndex={0} personnel={personnel} />
+                            </CardContent>
+                        </CollapsibleContent>
+                    </Card>
+                </Collapsible>
             ))}
              <Button type="button" variant="secondary" onClick={addHazard}><PlusCircle className="mr-2 h-4 w-4" /> Add Hazard</Button>
         </div>
@@ -270,23 +282,19 @@ export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisF
     <FormProvider {...form}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Accordion type="multiple" defaultValue={(moc.phases || []).map(p => p.id)} className="w-full space-y-4">
+          <div className="space-y-4">
             {(phaseFields || []).map((phase, phaseIndex) => (
-              <AccordionItem key={phase.id} value={phase.id} className="border rounded-lg">
-                  <AccordionTrigger className="p-4 text-lg font-semibold bg-muted/20 hover:no-underline rounded-t-lg">
-                      {phase.title}
-                  </AccordionTrigger>
-                  <AccordionContent className="p-4">
-                      {(phase.steps || []).map((step, stepIndex) => (
-                          <div key={step.id} className="py-4 border-b last:border-0">
-                              <p className="font-medium">{stepIndex + 1}. {step.description}</p>
-                              <HazardsArray phaseIndex={phaseIndex} stepIndex={stepIndex} personnel={personnel} />
-                          </div>
-                      ))}
-                  </AccordionContent>
-              </AccordionItem>
+              <div key={phase.id} className="border-b last:border-0 pb-4">
+                  <h3 className="text-lg font-semibold">{phase.title}</h3>
+                  {(phase.steps || []).map((step, stepIndex) => (
+                      <div key={step.id} className="py-2 pl-4">
+                          <p className="font-medium">{stepIndex + 1}. {step.description}</p>
+                          <HazardsArray phaseIndex={phaseIndex} stepIndex={stepIndex} personnel={personnel} />
+                      </div>
+                  ))}
+              </div>
             ))}
-          </Accordion>
+          </div>
           {phaseFields.length === 0 && (
               <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
                   <p>No implementation plan defined.</p>
@@ -301,3 +309,5 @@ export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisF
     </FormProvider>
   );
 }
+
+    
