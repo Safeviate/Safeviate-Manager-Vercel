@@ -69,7 +69,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                     <Controller control={control} name={`${path}.severity`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel>Severity: {value}</FormLabel><FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl></FormItem> )}/>
                 </div>
                 <div className="flex justify-center items-center">
-                    <div className={cn("flex items-center justify-center h-20 w-20 rounded-full text-white text-2xl font-bold", colorClass)}>
+                    <div className={cn("flex items-center justify-center h-16 w-16 rounded-full text-white text-xl font-bold", colorClass)}>
                         {riskScore}
                     </div>
                 </div>
