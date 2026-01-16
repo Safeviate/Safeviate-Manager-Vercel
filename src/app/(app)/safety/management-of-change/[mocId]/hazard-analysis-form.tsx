@@ -26,58 +26,6 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import React from 'react';
 
-// --- Risk Assessment Component ---
-const getRiskScoreColorClass = (score: number) => {
-    if (score <= 4) return 'bg-green-500';
-    if (score <= 9) return 'bg-yellow-500 text-black';
-    if (score <= 16) return 'bg-orange-500';
-    return 'bg-red-500';
-};
-const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => {
-    if (score <= 4) return 'Low';
-    if (score <= 9) return 'Medium';
-    if (score <= 16) return 'High';
-    return 'Critical';
-}
-
-interface RiskAssessmentEditorProps {
-    path: string;
-    label: string;
-}
-
-const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label }) => {
-    const { control, setValue, watch } = useFormContext();
-    const likelihood = watch(`${path}.likelihood`, 1);
-    const severity = watch(`${path}.severity`, 1);
-    const riskScore = likelihood * severity;
-    const riskLevel = getRiskLevel(riskScore);
-    const colorClass = getRiskScoreColorClass(riskScore);
-
-    React.useEffect(() => {
-        setValue(`${path}.riskScore`, riskScore, { shouldDirty: true });
-        setValue(`${path}.riskLevel`, riskLevel, { shouldDirty: true });
-    }, [riskScore, riskLevel, path, setValue]);
-
-    return (
-        <Card className="bg-background">
-            <CardHeader className="pb-4">
-                <CardTitle className="text-base">{label}</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                <div className="space-y-4">
-                    <Controller control={control} name={`${path}.likelihood`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel>Likelihood: {value}</FormLabel><FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl></FormItem> )} />
-                    <Controller control={control} name={`${path}.severity`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel>Severity: {value}</FormLabel><FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl></FormItem> )}/>
-                </div>
-                <div className="flex justify-center items-center">
-                    <div className={cn("flex items-center justify-center h-16 w-16 rounded-full text-white text-xl font-bold", colorClass)}>
-                        {riskScore}
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-    );
-}
-
 // --- Zod Schemas ---
 const riskAssessmentSchema = z.object({
     severity: z.number().min(1).max(5),
@@ -126,6 +74,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+
 // --- Helper Functions to map dates for form and Firestore ---
 const mapDatesToObjects = (phases: MocPhase[]): FormValues['phases'] => {
     return (phases || []).map(phase => ({
@@ -165,6 +114,57 @@ const mapDatesToStrings = (phases: FormValues['phases']): MocPhase[] => {
     }));
 };
 
+// --- Risk Assessment Component ---
+const getRiskScoreColorClass = (score: number) => {
+    if (score <= 4) return 'bg-green-500';
+    if (score <= 9) return 'bg-yellow-500 text-black';
+    if (score <= 16) return 'bg-orange-500';
+    return 'bg-red-500';
+};
+const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => {
+    if (score <= 4) return 'Low';
+    if (score <= 9) return 'Medium';
+    if (score <= 16) return 'High';
+    return 'Critical';
+}
+
+interface RiskAssessmentEditorProps {
+    path: string;
+    label: string;
+}
+
+const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label }) => {
+    const { control, setValue, watch } = useFormContext();
+    const likelihood = watch(`${path}.likelihood`, 1);
+    const severity = watch(`${path}.severity`, 1);
+    const riskScore = likelihood * severity;
+    const riskLevel = getRiskLevel(riskScore);
+    const colorClass = getRiskScoreColorClass(riskScore);
+
+    React.useEffect(() => {
+        setValue(`${path}.riskScore`, riskScore, { shouldDirty: true });
+        setValue(`${path}.riskLevel`, riskLevel, { shouldDirty: true });
+    }, [riskScore, riskLevel, path, setValue]);
+
+    return (
+        <Card className="bg-background">
+            <CardHeader className="pb-4">
+                <CardTitle className="text-base">{label}</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div className="space-y-4">
+                    <Controller control={control} name={`${path}.likelihood`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel>Likelihood: {value}</FormLabel><FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl></FormItem> )} />
+                    <Controller control={control} name={`${path}.severity`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel>Severity: {value}</FormLabel><FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl></FormItem> )}/>
+                </div>
+                <div className="flex justify-center items-center">
+                    <div className={cn("flex items-center justify-center h-12 w-12 rounded-full text-white text-lg font-bold", colorClass)}>
+                        {riskScore}
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
 
 // --- Sub-Components (Moved outside main component) ---
 
@@ -268,34 +268,36 @@ export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisF
 
   return (
     <FormProvider {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <Accordion type="multiple" defaultValue={(moc.phases || []).map(p => p.id)} className="w-full space-y-4">
-          {(phaseFields || []).map((phase, phaseIndex) => (
-            <AccordionItem key={phase.id} value={phase.id} className="border rounded-lg">
-                <AccordionTrigger className="p-4 text-lg font-semibold bg-muted/20 hover:no-underline rounded-t-lg">
-                    {phase.title}
-                </AccordionTrigger>
-                <AccordionContent className="p-4">
-                    {(phase.steps || []).map((step, stepIndex) => (
-                        <div key={step.id} className="py-4 border-b last:border-0">
-                            <p className="font-medium">{stepIndex + 1}. {step.description}</p>
-                            <HazardsArray phaseIndex={phaseIndex} stepIndex={stepIndex} personnel={personnel} />
-                        </div>
-                    ))}
-                </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-         {phaseFields.length === 0 && (
-            <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
-                <p>No implementation plan defined.</p>
-                <p className="text-sm">Please add phases and steps in the &quot;Implementation Plan&quot; tab first.</p>
-            </div>
-        )}
-        <div className="flex justify-end pt-4">
-          <Button type="submit">Save Hazard Analysis</Button>
-        </div>
-      </form>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <Accordion type="multiple" defaultValue={(moc.phases || []).map(p => p.id)} className="w-full space-y-4">
+            {(phaseFields || []).map((phase, phaseIndex) => (
+              <AccordionItem key={phase.id} value={phase.id} className="border rounded-lg">
+                  <AccordionTrigger className="p-4 text-lg font-semibold bg-muted/20 hover:no-underline rounded-t-lg">
+                      {phase.title}
+                  </AccordionTrigger>
+                  <AccordionContent className="p-4">
+                      {(phase.steps || []).map((step, stepIndex) => (
+                          <div key={step.id} className="py-4 border-b last:border-0">
+                              <p className="font-medium">{stepIndex + 1}. {step.description}</p>
+                              <HazardsArray phaseIndex={phaseIndex} stepIndex={stepIndex} personnel={personnel} />
+                          </div>
+                      ))}
+                  </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+          {phaseFields.length === 0 && (
+              <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
+                  <p>No implementation plan defined.</p>
+                  <p className="text-sm">Please add phases and steps in the &quot;Implementation Plan&quot; tab first.</p>
+              </div>
+          )}
+          <div className="flex justify-end pt-4">
+            <Button type="submit">Save Hazard Analysis</Button>
+          </div>
+        </form>
+      </Form>
     </FormProvider>
   );
 }
