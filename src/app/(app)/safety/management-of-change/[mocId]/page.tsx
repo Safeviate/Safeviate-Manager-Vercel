@@ -1,3 +1,4 @@
+
 'use client';
 
 import { use } from 'react';
@@ -11,6 +12,7 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import type { ManagementOfChange } from '@/types/moc';
+import { ImplementationPlanForm } from './implementation-plan-form';
 
 interface MocDetailPageProps {
   params: { mocId: string };
@@ -95,12 +97,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
           <TabsTrigger value="approval">Approval & Sign-off</TabsTrigger>
         </TabsList>
         <TabsContent value="implementation">
-          <Card>
-             <CardHeader><CardTitle>Implementation Plan</CardTitle></CardHeader>
-            <CardContent>
-              <p>Phases and steps will be managed here.</p>
-            </CardContent>
-          </Card>
+          <ImplementationPlanForm moc={moc} tenantId={tenantId} />
         </TabsContent>
         <TabsContent value="analysis">
           <Card>

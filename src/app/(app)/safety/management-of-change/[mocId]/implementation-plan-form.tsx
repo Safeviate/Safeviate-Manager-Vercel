@@ -1,0 +1,152 @@
+
+'use client';
+
+import { useForm, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import type { ManagementOfChange, MocPhase } from '@/types/moc';
+import { PlusCircle, Trash2, GripVertical } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+
+const stepSchema = z.object({
+  id: z.string(),
+  description: z.string().min(1, 'Step description is required.'),
+  // hazards will be handled in another form
+});
+
+const phaseSchema = z.object({
+  id: z.string(),
+  title: z.string().min(1, 'Phase title is required.'),
+  steps: z.array(stepSchema),
+});
+
+const formSchema = z.object({
+  phases: z.array(phaseSchema),
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
+interface ImplementationPlanFormProps {
+  moc: ManagementOfChange;
+  tenantId: string;
+}
+
+export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanFormProps) {
+  const firestore = useFirestore();
+  const { toast } = useToast();
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      phases: moc.phases || [],
+    },
+  });
+
+  const { fields: phaseFields, append: appendPhase, remove: removePhase } = useFieldArray({
+    control: form.control,
+    name: 'phases',
+  });
+
+  const onSubmit = (values: FormValues) => {
+    if (!firestore) return;
+    const mocRef = doc(firestore, `tenants/${tenantId}/management-of-change`, moc.id);
+    updateDocumentNonBlocking(mocRef, { phases: values.phases });
+    toast({
+      title: 'Implementation Plan Saved',
+    });
+  };
+
+  const StepsArray = ({ phaseIndex }: { phaseIndex: number }) => {
+    const { fields, append, remove } = useFieldArray({
+      control: form.control,
+      name: `phases.${phaseIndex}.steps`,
+    });
+
+    return (
+      <div className="pl-6 border-l ml-3 space-y-3 pt-4">
+        {fields.map((field, stepIndex) => (
+          <div key={field.id} className="flex items-center gap-2">
+            <GripVertical className="h-5 w-5 text-muted-foreground" />
+            <FormField
+              control={form.control}
+              name={`phases.${phaseIndex}.steps.${stepIndex}.description`}
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormControl>
+                    <Input placeholder="Describe the step..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="button" variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => remove(stepIndex)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => append({ id: uuidv4(), description: '', hazards: [] })}
+        >
+          <PlusCircle className="mr-2 h-4 w-4" /> Add Step
+        </Button>
+      </div>
+    );
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="flex justify-end">
+            <Button type="button" variant="outline" onClick={() => appendPhase({ id: uuidv4(), title: '', steps: [] })}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Phase
+            </Button>
+        </div>
+        <div className="space-y-6">
+          {phaseFields.map((field, index) => (
+            <Card key={field.id}>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <FormField
+                  control={form.control}
+                  name={`phases.${index}.title`}
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormControl>
+                        <Input className="text-lg font-semibold border-none shadow-none p-0 focus-visible:ring-0" placeholder="Phase Title" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="button" variant="destructive" size="sm" onClick={() => removePhase(index)}>
+                  Delete Phase
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <StepsArray phaseIndex={index} />
+              </CardContent>
+            </Card>
+          ))}
+          {phaseFields.length === 0 && (
+            <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
+                <p>No implementation phases defined.</p>
+                <p className="text-sm">Click "Add Phase" to get started.</p>
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end pt-4">
+          <Button type="submit">Save Implementation Plan</Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
