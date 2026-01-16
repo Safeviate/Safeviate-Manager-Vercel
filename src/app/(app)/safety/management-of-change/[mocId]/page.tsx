@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import type { ManagementOfChange } from '@/types/moc';
 import { ImplementationPlanForm } from './implementation-plan-form';
 import { HazardAnalysisForm } from './hazard-analysis-form';
+import { ApprovalForm } from './approval-form';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 
 interface MocDetailPageProps {
@@ -112,12 +113,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
           <HazardAnalysisForm moc={moc} tenantId={tenantId} personnel={personnel || []} />
         </TabsContent>
         <TabsContent value="approval">
-          <Card>
-             <CardHeader><CardTitle>Approval & Sign-off</CardTitle></CardHeader>
-            <CardContent>
-                <p>Signature management will be here.</p>
-            </CardContent>
-          </Card>
+          <ApprovalForm moc={moc} tenantId={tenantId} personnel={personnel || []} />
         </TabsContent>
       </Tabs>
     </div>
