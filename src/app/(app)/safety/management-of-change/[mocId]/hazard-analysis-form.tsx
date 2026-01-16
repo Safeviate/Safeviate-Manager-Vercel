@@ -41,23 +41,21 @@ const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => 
 }
 
 interface RiskAssessmentEditorProps {
-    control: any;
     path: string;
     label: string;
 }
 
-const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ control, path, label }) => {
-    const likelihood = useWatch({ control, name: `${path}.likelihood`, defaultValue: 1 });
-    const severity = useWatch({ control, name: `${path}.severity`, defaultValue: 1 });
+const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label }) => {
+    const { control, setValue, watch } = useFormContext();
+    const likelihood = watch(`${path}.likelihood`, 1);
+    const severity = watch(`${path}.severity`, 1);
     const riskScore = likelihood * severity;
     const riskLevel = getRiskLevel(riskScore);
     const colorClass = getRiskScoreColorClass(riskScore);
 
-    // Update riskScore and riskLevel in the form state
-    const { setValue } = useFormContext();
     React.useEffect(() => {
-        setValue(`${path}.riskScore`, riskScore, { shouldValidate: true });
-        setValue(`${path}.riskLevel`, riskLevel, { shouldValidate: true });
+        setValue(`${path}.riskScore`, riskScore, { shouldDirty: true });
+        setValue(`${path}.riskLevel`, riskLevel, { shouldDirty: true });
     }, [riskScore, riskLevel, path, setValue]);
 
     return (
@@ -128,15 +126,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-// --- Main Component ---
-
-interface HazardAnalysisFormProps {
-  moc: ManagementOfChange;
-  tenantId: string;
-  personnel: Personnel[];
-}
-
-// Helper to convert date strings to Date objects for the form
+// --- Helper Functions to map dates for form and Firestore ---
 const mapDatesToObjects = (phases: MocPhase[]): FormValues['phases'] => {
     return (phases || []).map(phase => ({
         ...phase,
@@ -156,7 +146,6 @@ const mapDatesToObjects = (phases: MocPhase[]): FormValues['phases'] => {
     }));
 };
 
-// Helper to convert Date objects back to strings for Firestore
 const mapDatesToStrings = (phases: FormValues['phases']): MocPhase[] => {
     return phases.map(phase => ({
         ...phase,
@@ -175,6 +164,80 @@ const mapDatesToStrings = (phases: FormValues['phases']): MocPhase[] => {
         })),
     }));
 };
+
+
+// --- Sub-Components (Moved outside main component) ---
+
+const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, control, personnel }: { phaseIndex: number, stepIndex: number, hazardIndex: number, riskIndex: number, control: any, personnel: Personnel[] }) => {
+    const { fields, append, remove } = useFieldArray({
+        control,
+        name: `phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations`,
+    });
+
+    return (
+        <div className='pl-6 mt-4 space-y-3'>
+            {fields.map((field, mitigationIndex) => (
+                <div key={field.id} className="p-4 border rounded-md bg-background">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                      <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.description`} render={({ field }) => ( <FormItem className="md:col-span-4"><FormLabel>Mitigation</FormLabel><FormControl><Textarea placeholder='Describe the mitigation...' {...field} /></FormControl><FormMessage /></FormItem> )} />
+                      <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.responsiblePersonId`} render={({ field }) => ( <FormItem><FormLabel>Assignee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Assign..." /></SelectTrigger></FormControl><SelectContent>{personnel.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                      <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.completionDate`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
+                      <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.status`} render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{['Open', 'In Progress', 'Closed', 'Cancelled'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                      <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(mitigationIndex)}><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+                   <div className="mt-4">
+                      <RiskAssessmentEditor
+                          path={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.residualRiskAssessment`}
+                          label="Residual Risk Assessment"
+                      />
+                  </div>
+                </div>
+            ))}
+            <Button type="button" variant="outline" size="sm" onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', completionDate: new Date(), status: 'Open', residualRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' } })}><PlusCircle className="mr-2 h-4 w-4" />Add Mitigation</Button>
+        </div>
+    )
+}
+  
+const HazardsArray = ({ phaseIndex, stepIndex, control, personnel }: { phaseIndex: number, stepIndex: number, control: any, personnel: Personnel[] }) => {
+    const { fields, append, remove } = useFieldArray({
+        control: control,
+        name: `phases.${phaseIndex}.steps.${stepIndex}.hazards`,
+    });
+
+    const addHazard = () => {
+        append({ id: uuidv4(), description: '', risks: [{ id: uuidv4(), description: 'Default Risk', initialRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' }, mitigations: [] }] });
+    }
+
+    return (
+        <div className="pl-6 mt-4 space-y-4">
+            {fields.map((field, hazardIndex) => (
+                <Card key={field.id}>
+                    <CardHeader className="flex flex-row items-center justify-between bg-muted/20">
+                         <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.description`} render={({ field }) => ( <FormItem className="flex-1"><FormLabel>Hazard Description</FormLabel><FormControl><Input placeholder='Describe the hazard...' {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                         <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(hazardIndex)}><Trash2 className="h-4 w-4" /></Button>
+                    </CardHeader>
+                    <CardContent className="pt-4 space-y-4">
+                         <RiskAssessmentEditor 
+                            path={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.0.initialRiskAssessment`} 
+                            label="Initial Risk Assessment"
+                         />
+                        <h4 className="font-semibold text-sm pt-4 border-t">Mitigations</h4>
+                        {/* We assume one risk per hazard for UI simplification */}
+                        <MitigationsArray phaseIndex={phaseIndex} stepIndex={stepIndex} hazardIndex={hazardIndex} riskIndex={0} control={control} personnel={personnel} />
+                    </CardContent>
+                </Card>
+            ))}
+             <Button type="button" variant="secondary" onClick={addHazard}><PlusCircle className="mr-2 h-4 w-4" /> Add Hazard</Button>
+        </div>
+    )
+}
+
+// --- Main Component ---
+interface HazardAnalysisFormProps {
+  moc: ManagementOfChange;
+  tenantId: string;
+  personnel: Personnel[];
+}
 
 export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisFormProps) {
   const firestore = useFirestore();
@@ -201,72 +264,6 @@ export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisF
     });
   };
 
-  const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex }: { phaseIndex: number, stepIndex: number, hazardIndex: number, riskIndex: number }) => {
-    const { fields, append, remove } = useFieldArray({
-        control: form.control,
-        name: `phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations`,
-    });
-
-    return (
-        <div className='pl-6 mt-4 space-y-3'>
-            {fields.map((field, mitigationIndex) => (
-                <div key={field.id} className="p-4 border rounded-md bg-background">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                      <FormField control={form.control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.description`} render={({ field }) => ( <FormItem className="md:col-span-4"><FormLabel>Mitigation</FormLabel><FormControl><Textarea placeholder='Describe the mitigation...' {...field} /></FormControl><FormMessage /></FormItem> )} />
-                      <FormField control={form.control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.responsiblePersonId`} render={({ field }) => ( <FormItem><FormLabel>Assignee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Assign..." /></SelectTrigger></FormControl><SelectContent>{personnel.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                      <FormField control={form.control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.completionDate`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
-                      <FormField control={form.control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.status`} render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{['Open', 'In Progress', 'Closed', 'Cancelled'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                      <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(mitigationIndex)}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                   <div className="mt-4">
-                      <RiskAssessmentEditor
-                          control={form.control}
-                          path={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.residualRiskAssessment`}
-                          label="Residual Risk Assessment"
-                      />
-                  </div>
-                </div>
-            ))}
-            <Button type="button" variant="outline" size="sm" onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', completionDate: new Date(), status: 'Open', residualRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' } })}><PlusCircle className="mr-2 h-4 w-4" />Add Mitigation</Button>
-        </div>
-    )
-  }
-  
-  const HazardsArray = ({ phaseIndex, stepIndex }: { phaseIndex: number, stepIndex: number }) => {
-      const { fields, append, remove } = useFieldArray({
-          control: form.control,
-          name: `phases.${phaseIndex}.steps.${stepIndex}.hazards`,
-      });
-
-      const addHazard = () => {
-          append({ id: uuidv4(), description: '', risks: [{ id: uuidv4(), description: 'Default Risk', initialRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' }, mitigations: [] }] });
-      }
-
-      return (
-          <div className="pl-6 mt-4 space-y-4">
-              {fields.map((field, hazardIndex) => (
-                  <Card key={field.id}>
-                      <CardHeader className="flex flex-row items-center justify-between bg-muted/20">
-                           <FormField control={form.control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.description`} render={({ field }) => ( <FormItem className="flex-1"><FormLabel>Hazard Description</FormLabel><FormControl><Input placeholder='Describe the hazard...' {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                           <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(hazardIndex)}><Trash2 className="h-4 w-4" /></Button>
-                      </CardHeader>
-                      <CardContent className="pt-4 space-y-4">
-                           <RiskAssessmentEditor 
-                              control={form.control} 
-                              path={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.0.initialRiskAssessment`} 
-                              label="Initial Risk Assessment"
-                           />
-                          <h4 className="font-semibold text-sm pt-4 border-t">Mitigations</h4>
-                          {/* We assume one risk per hazard for UI simplification */}
-                          <MitigationsArray phaseIndex={phaseIndex} stepIndex={stepIndex} hazardIndex={hazardIndex} riskIndex={0} />
-                      </CardContent>
-                  </Card>
-              ))}
-               <Button type="button" variant="secondary" onClick={addHazard}><PlusCircle className="mr-2 h-4 w-4" /> Add Hazard</Button>
-          </div>
-      )
-  }
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -280,7 +277,7 @@ export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisF
                     {(phase.steps || []).map((step, stepIndex) => (
                         <div key={step.id} className="py-4 border-b last:border-0">
                             <p className="font-medium">{stepIndex + 1}. {step.description}</p>
-                             <HazardsArray phaseIndex={phaseIndex} stepIndex={stepIndex} />
+                            <HazardsArray phaseIndex={phaseIndex} stepIndex={stepIndex} control={form.control} personnel={personnel} />
                         </div>
                     ))}
                 </AccordionContent>
