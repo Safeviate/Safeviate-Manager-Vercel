@@ -1,15 +1,15 @@
-
 'use client';
 
 import { useMemo } from 'react';
 import { collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Alert } from '@/types/alert';
 import { AlertForm } from './alert-form';
 import { AlertCard } from './alert-card';
 import { usePermissions } from '@/hooks/use-permissions';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function AlertsPage() {
   const firestore = useFirestore();
@@ -44,38 +44,51 @@ export default function AlertsPage() {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Skeleton className="h-64" />
-          <Skeleton className="h-64" />
-          <Skeleton className="h-64" />
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-64 w-full" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-red-600">Red Tags</h2>
-            {redTags.length > 0 ? (
-              redTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canManageAlerts} />)
-            ) : (
-              <p className="text-muted-foreground text-sm">No active red tags.</p>
-            )}
-          </div>
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-yellow-500">Yellow Tags</h2>
-             {yellowTags.length > 0 ? (
-              yellowTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canManageAlerts} />)
-            ) : (
-              <p className="text-muted-foreground text-sm">No active yellow tags.</p>
-            )}
-          </div>
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Company Notices</h2>
-             {companyNotices.length > 0 ? (
-              companyNotices.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canManageAlerts} />)
-            ) : (
-              <p className="text-muted-foreground text-sm">No active company notices.</p>
-            )}
-          </div>
-        </div>
+        <Tabs defaultValue="red-tags" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="red-tags">Red Tags ({redTags.length})</TabsTrigger>
+                <TabsTrigger value="yellow-tags">Yellow Tags ({yellowTags.length})</TabsTrigger>
+                <TabsTrigger value="company-notices">Company Notices ({companyNotices.length})</TabsTrigger>
+            </TabsList>
+            <TabsContent value="red-tags">
+                <div className="space-y-4 pt-4">
+                    {redTags.length > 0 ? (
+                        redTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canManageAlerts} />)
+                    ) : (
+                        <Card className="flex h-48 items-center justify-center">
+                            <p className="text-muted-foreground text-sm">No active red tags.</p>
+                        </Card>
+                    )}
+                </div>
+            </TabsContent>
+            <TabsContent value="yellow-tags">
+                <div className="space-y-4 pt-4">
+                    {yellowTags.length > 0 ? (
+                        yellowTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canManageAlerts} />)
+                    ) : (
+                         <Card className="flex h-48 items-center justify-center">
+                            <p className="text-muted-foreground text-sm">No active yellow tags.</p>
+                        </Card>
+                    )}
+                </div>
+            </TabsContent>
+            <TabsContent value="company-notices">
+                <div className="space-y-4 pt-4">
+                    {companyNotices.length > 0 ? (
+                        companyNotices.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canManageAlerts} />)
+                    ) : (
+                         <Card className="flex h-48 items-center justify-center">
+                            <p className="text-muted-foreground text-sm">No active company notices.</p>
+                        </Card>
+                    )}
+                </div>
+            </TabsContent>
+        </Tabs>
       )}
     </div>
   );
