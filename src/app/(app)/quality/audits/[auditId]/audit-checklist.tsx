@@ -16,7 +16,7 @@ import { doc, writeBatch, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { QualityAudit, QualityAuditChecklistTemplate, QualityFinding, AuditChecklistItem, CorrectiveActionPlan } from '@/types/quality';
 import { DocumentUploader } from '../../../users/personnel/[id]/document-uploader';
-import { FileUp, Camera, Trash2, ZoomIn } from 'lucide-react';
+import { FileUp, Camera, Trash2, ZoomIn, Edit } from 'lucide-react';
 import Image from 'next/image';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -36,13 +36,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import type { Personnel } from '@/app/(app)/users/personnel/page';
+import { ManageCapDialog } from '../../cap-tracker/manage-cap-dialog';
+import { Badge } from '@/components/ui/badge';
 
 type EnrichedAudit = QualityAudit & { template: QualityAuditChecklistTemplate };
+type EnrichedCorrectiveActionPlan = CorrectiveActionPlan & {
+  auditNumber: string;
+  findingDescription: string;
+};
 
 interface AuditChecklistProps {
   audit: EnrichedAudit;
   tenantId: string;
   findingLevels: FindingLevel[];
+  caps: CorrectiveActionPlan[];
+  personnel: Personnel[];
 }
 
 const evidenceSchema = z.object({
@@ -65,11 +74,14 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklistProps) {
+export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel }: AuditChecklistProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
     const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+
+    const [isCapDialogOpen, setIsCapDialogOpen] = useState(false);
+    const [selectedCap, setSelectedCap] = useState<EnrichedCorrectiveActionPlan | null>(null);
 
     const isReadOnly = audit.status === 'Finalized' || audit.status === 'Closed' || audit.status === 'Archived';
 
@@ -97,6 +109,25 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
         name: 'findings',
         keyName: 'formId'
     });
+
+     const handleOpenCapDialog = (findingId: string, findingDescription: string) => {
+        const capForFinding = caps.find(c => c.findingId === findingId);
+        if (capForFinding) {
+            setSelectedCap({
+                ...capForFinding,
+                auditNumber: audit.auditNumber,
+                findingDescription: findingDescription
+            });
+            setIsCapDialogOpen(true);
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'CAP Not Found',
+                description: 'A corrective action plan has not been generated for this finding yet. Finalize the audit to create it.',
+            });
+        }
+    };
+
 
     const onSubmit = (values: FormValues) => {
         if (!firestore) return;
@@ -195,6 +226,9 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
         const selectedLevel = findingLevels.find(l => l.name === selectedLevelName);
         const observationLevel = findingLevels.find(l => l.name === 'Observation');
         const otherLevels = findingLevels.filter(l => l.name !== 'Observation');
+        
+        const cap = caps.find(c => c.findingId === item.id);
+        const openActionsCount = cap?.actions?.filter(a => a.status === 'Open' || a.status === 'In Progress').length || 0;
 
         return (
             <Card key={item.id} className="mb-4">
@@ -202,33 +236,50 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                     <CardTitle className="text-base">{item.text}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                     <FormField
-                        control={form.control}
-                        name={`findings.${itemIndex}.finding`}
-                        render={({ field }) => (
-                            <FormItem className="space-y-3">
-                                <FormControl>
-                                    <RadioGroup
-                                      onValueChange={(value) => {
-                                        field.onChange(value);
-                                        form.setValue(`findings.${itemIndex}.level`, '');
-                                      }}
-                                      defaultValue={field.value}
-                                      className="flex flex-wrap gap-4"
-                                      disabled={isReadOnly}
-                                    >
-                                        {(['Compliant', 'Non Compliant', 'Not Applicable'] as const).map(value => (
-                                            <FormItem key={value} className="flex items-center space-x-2 space-y-0">
-                                                <FormControl><RadioGroupItem value={value} /></FormControl>
-                                                <FormLabel className="font-normal">{value}</FormLabel>
-                                            </FormItem>
-                                        ))}
-                                    </RadioGroup>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                     <div className='flex justify-between items-start'>
+                        <FormField
+                            control={form.control}
+                            name={`findings.${itemIndex}.finding`}
+                            render={({ field }) => (
+                                <FormItem className="space-y-3">
+                                    <FormControl>
+                                        <RadioGroup
+                                        onValueChange={(value) => {
+                                            field.onChange(value);
+                                            form.setValue(`findings.${itemIndex}.level`, '');
+                                        }}
+                                        defaultValue={field.value}
+                                        className="flex flex-wrap gap-4"
+                                        disabled={isReadOnly}
+                                        >
+                                            {(['Compliant', 'Non Compliant', 'Not Applicable'] as const).map(value => (
+                                                <FormItem key={value} className="flex items-center space-x-2 space-y-0">
+                                                    <FormControl><RadioGroupItem value={value} /></FormControl>
+                                                    <FormLabel className="font-normal">{value}</FormLabel>
+                                                </FormItem>
+                                            ))}
+                                        </RadioGroup>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        {findingType === 'Non Compliant' && audit.status !== 'Scheduled' && audit.status !== 'In Progress' && (
+                            <div className='flex items-center gap-2'>
+                                {cap ? (
+                                    <Badge variant={openActionsCount > 0 ? 'destructive' : 'default'}>
+                                        {openActionsCount} Open Action(s)
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="outline">CAP Pending</Badge>
+                                )}
+                                 <Button variant="secondary" size="sm" onClick={() => handleOpenCapDialog(item.id, item.text)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Manage CAP
+                                </Button>
+                            </div>
                         )}
-                    />
+                     </div>
                     
                     <Separator />
 
@@ -362,6 +413,15 @@ export function AuditChecklist({ audit, tenantId, findingLevels }: AuditChecklis
                     {viewingImageUrl && <div className="relative h-[80vh]"><Image src={viewingImageUrl} alt="Evidence" fill style={{ objectFit: 'contain' }}/></div>}
                 </DialogContent>
             </Dialog>
+            {selectedCap && (
+                <ManageCapDialog
+                    isOpen={isCapDialogOpen}
+                    onClose={() => setIsCapDialogOpen(false)}
+                    cap={selectedCap}
+                    tenantId={tenantId}
+                    personnel={personnel}
+                />
+            )}
         </>
     );
 }

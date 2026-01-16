@@ -3,22 +3,21 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { QualityAudit, CorrectiveActionPlan } from '@/types/quality';
-import { ManageCapDialog } from './cap-tracker/manage-cap-dialog';
-import type { Personnel } from '@/app/(app)/users/personnel/page';
+import Link from 'next/link';
+import { format } from 'date-fns';
 
-export type EnrichedCorrectiveActionPlan = CorrectiveActionPlan & {
-  auditNumber: string;
-  findingDescription: string;
-  findingLevel?: string;
+type EnrichedAudit = QualityAudit & {
+  nonCompliantFindings: number;
+  openCapActions: number;
 };
 
 
@@ -26,71 +25,57 @@ export default function CapTracker() {
   const firestore = useFirestore();
   const tenantId = 'safeviate';
 
-  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
-  const [selectedCap, setSelectedCap] = useState<EnrichedCorrectiveActionPlan | null>(null);
-
   const auditsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/quality-audits`)) : null),
     [firestore, tenantId]
   );
   
-   const capsQuery = useMemoFirebase(
+  const capsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`)) : null),
-    [firestore, tenantId]
-  );
-  
-  const personnelQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
     [firestore, tenantId]
   );
 
   const { data: audits, isLoading: isLoadingAudits } = useCollection<QualityAudit>(auditsQuery);
   const { data: caps, isLoading: isLoadingCaps } = useCollection<CorrectiveActionPlan>(capsQuery);
-  const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
 
-  const isLoading = isLoadingAudits || isLoadingCaps || isLoadingPersonnel;
+  const isLoading = isLoadingAudits || isLoadingCaps;
 
-  const openCaps = useMemo((): EnrichedCorrectiveActionPlan[] => {
+  const auditsWithCaps = useMemo((): EnrichedAudit[] => {
     if (!audits || !caps) return [];
-  
-    const openCapsList = caps.filter(cap => cap.status === 'Open');
-  
-    const auditsMap = new Map(audits.map(a => [a.id, a]));
-  
-    return openCapsList.map(cap => {
-      const audit = auditsMap.get(cap.auditId);
-      if (!audit) return null;
-      
-      const finding = audit.findings.find(f => f.checklistItemId === cap.findingId);
-      const checklistItem = audit.template?.sections.flatMap(s => s.items).find(i => i.id === cap.findingId);
-  
-      return {
-        ...cap,
-        auditNumber: audit.auditNumber,
-        findingDescription: checklistItem?.text || 'Finding description not found.',
-        findingLevel: finding?.level,
-      };
-    }).filter((cap): cap is EnrichedCorrectiveActionPlan => cap !== null);
+
+    const capsByAuditId = caps.reduce((acc, cap) => {
+        if (!acc[cap.auditId]) {
+            acc[cap.auditId] = [];
+        }
+        acc[cap.auditId].push(cap);
+        return acc;
+    }, {} as Record<string, CorrectiveActionPlan[]>);
+
+    return audits
+        .filter(audit => audit.findings?.some(f => f.finding === 'Non Compliant'))
+        .map(audit => {
+            const nonCompliantFindings = audit.findings?.filter(f => f.finding === 'Non Compliant').length || 0;
+            const relatedCaps = capsByAuditId[audit.id] || [];
+            const openCapActions = relatedCaps.reduce((total, cap) => {
+                const openActions = cap.actions?.filter(action => action.status === 'Open' || action.status === 'In Progress').length || 0;
+                return total + openActions;
+            }, 0);
+
+            return {
+                ...audit,
+                nonCompliantFindings,
+                openCapActions,
+            };
+        })
+        .filter(audit => audit.nonCompliantFindings > 0); // Only show audits that actually have non-compliant findings
+
   }, [audits, caps]);
   
-
-  const handleOpenUpdateDialog = (cap: EnrichedCorrectiveActionPlan) => {
-    setSelectedCap(cap);
-    setIsUpdateDialogOpen(true);
-  };
-
-  const handleCloseUpdateDialog = () => {
-    setSelectedCap(null);
-    setIsUpdateDialogOpen(false);
-  };
-
-
   return (
-    <>
-      <Card>
+    <Card>
         <CardHeader>
           <CardTitle>Corrective Action Plan (CAP) Tracker</CardTitle>
-          <CardDescription>A centralized list of all open corrective actions from all audits.</CardDescription>
+          <CardDescription>A summary of all audits with open findings requiring corrective action.</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -104,32 +89,40 @@ export default function CapTracker() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Audit ID</TableHead>
-                  <TableHead className="w-[40%]">Finding</TableHead>
-                  <TableHead>Level</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="w-[40%]">Audit Title</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Findings</TableHead>
+                  <TableHead>Open Actions</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {openCaps.length > 0 ? (
-                  openCaps.map(cap => (
-                    <TableRow key={cap.id}>
-                      <TableCell className="font-medium">{cap.auditNumber}</TableCell>
-                      <TableCell>{cap.findingDescription}</TableCell>
-                      <TableCell><Badge variant={cap.findingLevel ? 'destructive' : 'outline'}>{cap.findingLevel || 'N/A'}</Badge></TableCell>
-                      <TableCell><Badge variant="secondary">{cap.status}</Badge></TableCell>
+                {auditsWithCaps.length > 0 ? (
+                  auditsWithCaps.map(audit => (
+                    <TableRow key={audit.id}>
+                      <TableCell className="font-medium">{audit.auditNumber}</TableCell>
+                      <TableCell>{audit.title}</TableCell>
+                      <TableCell>{format(new Date(audit.auditDate), 'PPP')}</TableCell>
+                      <TableCell>
+                          <Badge variant="destructive">{audit.nonCompliantFindings}</Badge>
+                      </TableCell>
+                       <TableCell>
+                          <Badge variant={audit.openCapActions > 0 ? 'secondary' : 'default'}>{audit.openCapActions}</Badge>
+                      </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => handleOpenUpdateDialog(cap)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Manage
+                        <Button asChild variant="outline" size="sm">
+                            <Link href={`/quality/audits/${audit.id}`}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                Manage
+                            </Link>
                         </Button>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      No open corrective actions found.
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      No audits with open corrective actions found.
                     </TableCell>
                   </TableRow>
                 )}
@@ -138,15 +131,5 @@ export default function CapTracker() {
           )}
         </CardContent>
       </Card>
-      {selectedCap && (
-        <ManageCapDialog 
-            isOpen={isUpdateDialogOpen}
-            onClose={handleCloseUpdateDialog}
-            cap={selectedCap}
-            tenantId={tenantId}
-            personnel={personnel || []}
-        />
-      )}
-    </>
   );
 }

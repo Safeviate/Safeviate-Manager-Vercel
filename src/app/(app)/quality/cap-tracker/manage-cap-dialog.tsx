@@ -1,10 +1,17 @@
+
 'use client';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CapActionsForm } from './cap-actions-form';
-import type { EnrichedCorrectiveActionPlan } from '../cap-tracker';
+import type { CorrectiveActionPlan } from '@/types/quality';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+// Define the enriched type right here where it's used or import from a shared types file if needed elsewhere
+export type EnrichedCorrectiveActionPlan = CorrectiveActionPlan & {
+  auditNumber: string;
+  findingDescription: string;
+};
 
 interface ManageCapDialogProps {
     isOpen: boolean;

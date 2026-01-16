@@ -2,18 +2,19 @@
 'use client';
 
 import { use, useMemo } from 'react';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, collection, query, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import type { QualityAudit, QualityAuditChecklistTemplate } from '@/types/quality';
+import type { QualityAudit, QualityAuditChecklistTemplate, CorrectiveActionPlan } from '@/types/quality';
 import { AuditChecklist } from './audit-checklist';
 import type { FindingLevelsSettings } from '@/app/(app)/admin/features/page';
 import { Progress } from '@/components/ui/progress';
+import type { Personnel } from '@/app/(app)/users/personnel/page';
 
 interface AuditDetailPageProps {
   params: { auditId: string };
@@ -51,7 +52,20 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
   );
   const { data: findingLevelsSettings, isLoading: isLoadingFindingLevels } = useDoc<FindingLevelsSettings>(findingLevelsRef);
 
-  const isLoading = isLoadingAudit || isLoadingTemplate || isLoadingFindingLevels;
+  const capsQuery = useMemoFirebase(
+      () => (firestore && auditId ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`), where('auditId', '==', auditId)) : null),
+      [firestore, tenantId, auditId]
+  );
+  const { data: caps, isLoading: isLoadingCaps } = useCollection<CorrectiveActionPlan>(capsQuery);
+
+  const personnelQuery = useMemoFirebase(
+      () => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
+      [firestore, tenantId]
+  );
+  const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
+
+
+  const isLoading = isLoadingAudit || isLoadingTemplate || isLoadingFindingLevels || isLoadingCaps || isLoadingPersonnel;
 
   const enrichedAudit = useMemo(() => {
     if (!audit || !template) return null;
@@ -135,6 +149,8 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
           audit={enrichedAudit} 
           tenantId={tenantId}
           findingLevels={findingLevelsSettings?.levels || []}
+          caps={caps || []}
+          personnel={personnel || []}
       />
     </div>
   );
