@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -7,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertCard } from '@/app/(app)/operations/alerts/alert-card';
 import type { Alert } from '@/types/alert';
-import { useFirestore, useUserProfile, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { doc, arrayUnion, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
