@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Edit } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { QualityAudit, CorrectiveActionPlan } from '@/types/quality';
-import { UpdateActionStatusDialog } from './cap-tracker/update-action-status-dialog';
+import { ManageCapDialog } from './cap-tracker/manage-cap-dialog';
+import type { Personnel } from '@/app/(app)/users/personnel/page';
 
 export type EnrichedCorrectiveActionPlan = CorrectiveActionPlan & {
   auditNumber: string;
@@ -37,11 +38,17 @@ export default function CapTracker() {
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`)) : null),
     [firestore, tenantId]
   );
+  
+  const personnelQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
+    [firestore, tenantId]
+  );
 
   const { data: audits, isLoading: isLoadingAudits } = useCollection<QualityAudit>(auditsQuery);
   const { data: caps, isLoading: isLoadingCaps } = useCollection<CorrectiveActionPlan>(capsQuery);
+  const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
 
-  const isLoading = isLoadingAudits || isLoadingCaps;
+  const isLoading = isLoadingAudits || isLoadingCaps || isLoadingPersonnel;
 
   const openCaps = useMemo((): EnrichedCorrectiveActionPlan[] => {
     if (!audits || !caps) return [];
@@ -114,7 +121,7 @@ export default function CapTracker() {
                       <TableCell className="text-right">
                         <Button variant="outline" size="sm" onClick={() => handleOpenUpdateDialog(cap)}>
                           <Edit className="mr-2 h-4 w-4" />
-                          Update
+                          Manage
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -132,11 +139,12 @@ export default function CapTracker() {
         </CardContent>
       </Card>
       {selectedCap && (
-        <UpdateActionStatusDialog 
+        <ManageCapDialog 
             isOpen={isUpdateDialogOpen}
             onClose={handleCloseUpdateDialog}
             cap={selectedCap}
             tenantId={tenantId}
+            personnel={personnel || []}
         />
       )}
     </>

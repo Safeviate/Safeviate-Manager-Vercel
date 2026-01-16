@@ -1,3 +1,4 @@
+import type { CorrectiveAction } from './safety-report';
 
 
 export type AuditChecklistItemType = 'Checkbox' | 'Textbox' | 'Number' | 'Date';
@@ -80,6 +81,5 @@ export interface CorrectiveActionPlan {
     findingId: string;
     rootCauseAnalysis: string;
     status: CorrectiveActionStatus;
-    responsiblePersonId?: string;
-    dueDate?: string; // ISO String
+    actions?: CorrectiveAction[];
 }
