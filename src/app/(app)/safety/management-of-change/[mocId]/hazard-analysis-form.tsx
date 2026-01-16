@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useForm, useFieldArray, useWatch, Controller } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, Controller, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -104,6 +104,12 @@ const riskSchema = z.object({
     mitigations: z.array(mitigationSchema),
 });
 
+const hazardSchema = z.object({
+    id: z.string(),
+    description: z.string().min(1, 'Hazard description is required.'),
+    risks: z.array(riskSchema),
+});
+
 const stepSchema = z.object({
     id: z.string(),
     description: z.string(),
@@ -173,7 +179,7 @@ const mapDatesToStrings = (phases: FormValues['phases']): MocPhase[] => {
 export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const { FormProvider, ...form } = useForm<FormValues>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       phases: mapDatesToObjects(moc.phases || []),
@@ -262,7 +268,7 @@ export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisF
   }
 
   return (
-    <FormProvider {...form}>
+    <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Accordion type="multiple" defaultValue={(moc.phases || []).map(p => p.id)} className="w-full space-y-4">
           {(phaseFields || []).map((phase, phaseIndex) => (
@@ -291,7 +297,6 @@ export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisF
           <Button type="submit">Save Hazard Analysis</Button>
         </div>
       </form>
-    </FormProvider>
+    </Form>
   );
 }
-
