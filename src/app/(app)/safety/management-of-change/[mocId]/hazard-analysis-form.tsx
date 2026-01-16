@@ -43,18 +43,18 @@ const mitigationSchema = z.object({
     residualRiskAssessment: riskAssessmentSchema.optional(),
 });
 
-const riskSchema = z.object({
+const riskSchema: z.ZodType<MocRisk> = z.lazy(() => z.object({
     id: z.string(),
-    description: z.string(),
+    description: z.string().min(1, "Risk description is required"),
     initialRiskAssessment: riskAssessmentSchema.optional(),
     mitigations: z.array(mitigationSchema),
-});
+}));
 
-const hazardSchema = z.object({
+const hazardSchema: z.ZodType<MocHazard> = z.lazy(() => z.object({
     id: z.string(),
     description: z.string().min(1, 'Hazard description is required.'),
     risks: z.array(riskSchema),
-});
+}));
 
 const stepSchema = z.object({
     id: z.string(),
@@ -166,8 +166,6 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
     );
 }
 
-// --- Sub-Components (Moved outside main component) ---
-
 const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, personnel }: { phaseIndex: number, stepIndex: number, hazardIndex: number, riskIndex: number, personnel: Personnel[] }) => {
     const { control } = useFormContext();
     const { fields, append, remove } = useFieldArray({
@@ -198,6 +196,55 @@ const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, perso
         </div>
     )
 }
+
+const RisksArray = ({ phaseIndex, stepIndex, hazardIndex, personnel }: { phaseIndex: number, stepIndex: number, hazardIndex: number, personnel: Personnel[] }) => {
+    const { control } = useFormContext();
+    const { fields, append, remove } = useFieldArray({
+        control,
+        name: `phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks`,
+    });
+
+    return (
+        <div className="pl-6 mt-4 space-y-4 border-l">
+            {fields.map((field, riskIndex) => (
+                <Collapsible key={field.id} asChild defaultOpen>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between bg-muted/30">
+                             <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.description`} render={({ field }) => ( <FormItem className="flex-1"><FormLabel>Risk Description</FormLabel><FormControl><Input placeholder='Describe the risk...' {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                            <div className="flex items-center gap-1">
+                                <CollapsibleTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="[&[data-state=open]>svg]:rotate-180">
+                                        <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+                                        <span className="sr-only">Toggle Risk Details</span>
+                                    </Button>
+                                </CollapsibleTrigger>
+                                <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(riskIndex)}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                        </CardHeader>
+                        <CollapsibleContent>
+                            <CardContent className="pt-4 space-y-4">
+                                <RiskAssessmentEditor
+                                    path={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.initialRiskAssessment`}
+                                    label="Initial Risk Assessment"
+                                />
+                                <h4 className="font-semibold text-sm pt-4 border-t">Mitigations</h4>
+                                <MitigationsArray phaseIndex={phaseIndex} stepIndex={stepIndex} hazardIndex={hazardIndex} riskIndex={riskIndex} personnel={personnel} />
+                            </CardContent>
+                        </CollapsibleContent>
+                    </Card>
+                </Collapsible>
+            ))}
+            <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => append({ id: uuidv4(), description: '', initialRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' }, mitigations: [] })}
+            >
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Risk
+            </Button>
+        </div>
+    )
+}
   
 const HazardsArray = ({ phaseIndex, stepIndex, personnel }: { phaseIndex: number, stepIndex: number, personnel: Personnel[] }) => {
     const { control } = useFormContext();
@@ -207,7 +254,7 @@ const HazardsArray = ({ phaseIndex, stepIndex, personnel }: { phaseIndex: number
     });
 
     const addHazard = () => {
-        append({ id: uuidv4(), description: '', risks: [{ id: uuidv4(), description: 'Default Risk', initialRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' }, mitigations: [] }] });
+        append({ id: uuidv4(), description: '', risks: [] });
     }
 
     return (
@@ -217,27 +264,12 @@ const HazardsArray = ({ phaseIndex, stepIndex, personnel }: { phaseIndex: number
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between bg-muted/20">
                             <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.description`} render={({ field }) => ( <FormItem className="flex-1"><FormLabel>Hazard Description</FormLabel><FormControl><Input placeholder='Describe the hazard...' {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                            <div className="flex items-center gap-1">
-                                <CollapsibleTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="[&[data-state=open]>svg]:rotate-180">
-                                        <ChevronDown className="h-4 w-4 transition-transform duration-200" />
-                                        <span className="sr-only">Toggle Hazard Details</span>
-                                    </Button>
-                                </CollapsibleTrigger>
-                                <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(hazardIndex)}><Trash2 className="h-4 w-4" /></Button>
-                            </div>
+                            <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(hazardIndex)}><Trash2 className="h-4 w-4" /></Button>
                         </CardHeader>
-                        <CollapsibleContent>
-                            <CardContent className="pt-4 space-y-4">
-                                <RiskAssessmentEditor 
-                                    path={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.0.initialRiskAssessment`} 
-                                    label="Initial Risk Assessment"
-                                />
-                                <h4 className="font-semibold text-sm pt-4 border-t">Mitigations</h4>
-                                {/* We assume one risk per hazard for UI simplification */}
-                                <MitigationsArray phaseIndex={phaseIndex} stepIndex={stepIndex} hazardIndex={hazardIndex} riskIndex={0} personnel={personnel} />
-                            </CardContent>
-                        </CollapsibleContent>
+                        <CardContent className="pt-4 space-y-4">
+                           <h4 className="font-semibold text-sm">Identified Risks</h4>
+                           <RisksArray phaseIndex={phaseIndex} stepIndex={stepIndex} hazardIndex={hazardIndex} personnel={personnel} />
+                        </CardContent>
                     </Card>
                 </Collapsible>
             ))}
@@ -309,5 +341,3 @@ export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisF
     </FormProvider>
   );
 }
-
-    
