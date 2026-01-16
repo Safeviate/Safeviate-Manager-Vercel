@@ -29,6 +29,7 @@ export const permissionsConfig: PermissionResource[] = [
   
   // --- Core Features ---
   { id: 'operations', name: 'Operations', actions: ['view'] },
+  { id: 'operations-alerts', name: 'Operations Alerts', actions: ['view'] },
   { id: 'bookings', name: 'Bookings', actions: ['view', 'create', 'edit', 'delete'] },
   { id: 'flight-plans', name: 'Flight Plans', actions: ['manage'] },
 

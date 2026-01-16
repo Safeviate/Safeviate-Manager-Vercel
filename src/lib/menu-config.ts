@@ -27,6 +27,7 @@ import {
   CalendarDays,
   FileJson,
   Table,
+  AlertCircle,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -80,6 +81,12 @@ export const menuConfig: MenuItem[] = [
         label: 'Bookings History',
         description: 'View and manage past bookings.',
         permissionId: 'bookings-view',
+      },
+      {
+        href: '/operations/alerts',
+        label: 'Alerts',
+        description: 'View and manage system alerts.',
+        permissionId: 'operations-alerts-view',
       },
     ],
   },
