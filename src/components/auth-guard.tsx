@@ -1,11 +1,14 @@
 
 'use client';
 
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Skeleton } from './ui/skeleton';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { MandatoryAlerts } from './mandatory-alerts';
+import { query, collection, where } from 'firebase/firestore';
+import type { Alert } from '@/types/alert';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -16,8 +19,34 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   const router = useRouter();
   const pathname = usePathname();
+  const firestore = useFirestore();
+  const tenantId = 'safeviate';
 
-  const isLoading = isAuthLoading || isProfileLoading;
+  const [unreadAlerts, setUnreadAlerts] = useState<Alert[] | null>(null);
+
+  const mandatoryAlertsQuery = useMemoFirebase(
+    () => (firestore && userProfile && userProfile.id !== 'DEVELOPER_MODE'
+        ? query(
+            collection(firestore, `tenants/${tenantId}/alerts`),
+            where('status', '==', 'Active'),
+            where('mustRead', '==', true)
+          )
+        : null),
+    [firestore, userProfile]
+  );
+
+  const { data: mandatoryAlerts, isLoading: isLoadingAlerts } = useCollection<Alert>(mandatoryAlertsQuery);
+
+  useEffect(() => {
+    if (mandatoryAlerts && userProfile) {
+        const unread = mandatoryAlerts.filter(alert => 
+            !alert.readBy?.some(receipt => receipt.userId === userProfile.id)
+        );
+        setUnreadAlerts(unread);
+    }
+  }, [mandatoryAlerts, userProfile]);
+
+  const isLoading = isAuthLoading || isProfileLoading || isLoadingAlerts;
 
   useEffect(() => {
     // If loading is finished and there's no authenticated user, redirect to login.
@@ -56,8 +85,16 @@ export function AuthGuard({ children }: AuthGuardProps) {
     return <>{children}</>;
   }
   
+  if (!isLoading && authUser && unreadAlerts && unreadAlerts.length > 0) {
+    return (
+        <MandatoryAlerts 
+            alerts={unreadAlerts} 
+            onAcknowledged={() => setUnreadAlerts(null)} // On acknowledge, clear the state to render children
+        />
+    );
+  }
+
   // If we are done loading, and we have a user, render the app's children.
-  // The profile check is implicitly handled by the redirects and loading state.
   if (!isLoading && authUser) {
     return <>{children}</>;
   }

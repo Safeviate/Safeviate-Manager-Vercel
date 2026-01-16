@@ -1450,7 +1450,21 @@
         "createdAt": { "type": "string", "format": "date-time" },
         "createdBy": { "type": "string", "description": "The user ID of the person who created the alert." },
         "status": { "type": "string", "enum": ["Active", "Archived"] },
-        "signatureUrl": { "type": "string", "format": "uri", "description": "Data URL of the creator's signature image." }
+        "signatureUrl": { "type": "string", "format": "uri", "description": "Data URL of the creator's signature image." },
+        "mustRead": { "type": "boolean", "description": "If true, users must acknowledge this alert before proceeding." },
+        "readBy": {
+            "type": "array",
+            "description": "A list of users who have read the alert.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "userId": { "type": "string" },
+                    "userName": { "type": "string" },
+                    "readAt": { "type": "string", "format": "date-time" }
+                },
+                "required": ["userId", "userName", "readAt"]
+            }
+        }
       },
       "required": ["id", "type", "title", "content", "createdAt", "createdBy", "status"]
     }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -6,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { AlertType } from '@/types/alert';
 import { collection } from 'firebase/firestore';
 import { SignaturePad } from '@/components/ui/signature-pad';
+import { Switch } from '@/components/ui/switch';
 
 const alertTypes: AlertType[] = ['Red Tag', 'Yellow Tag', 'Company Notice'];
 
@@ -24,6 +26,7 @@ const formSchema = z.object({
     title: z.string().min(1, 'Title is required'),
     content: z.string().min(1, 'Content is required'),
     signatureUrl: z.string().optional(),
+    mustRead: z.boolean().default(false),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -45,6 +48,7 @@ export function AlertForm({ tenantId }: AlertFormProps) {
             title: '',
             content: '',
             signatureUrl: '',
+            mustRead: false,
         },
     });
 
@@ -60,6 +64,7 @@ export function AlertForm({ tenantId }: AlertFormProps) {
             createdAt: new Date().toISOString(),
             createdBy: user.uid,
             status: 'Active' as const,
+            readBy: [],
         };
         
         const alertsCollection = collection(firestore, `tenants/${tenantId}/alerts`);
@@ -115,6 +120,26 @@ export function AlertForm({ tenantId }: AlertFormProps) {
                                 <FormMessage />
                             </FormItem>
                         )} />
+                         <FormField
+                            control={form.control}
+                            name="mustRead"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                    <div className="space-y-0.5">
+                                        <FormLabel>Must Read</FormLabel>
+                                        <FormDescription>
+                                            If enabled, users must acknowledge this alert upon login.
+                                        </FormDescription>
+                                    </div>
+                                    <FormControl>
+                                        <Switch
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                            )}
+                        />
                         <FormField
                             control={form.control}
                             name="signatureUrl"
