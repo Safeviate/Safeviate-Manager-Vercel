@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useForm, useFieldArray, useWatch, Controller, useFormContext } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, Controller, useFormContext, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -69,7 +69,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                     <Controller control={control} name={`${path}.severity`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel>Severity: {value}</FormLabel><FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl></FormItem> )}/>
                 </div>
                 <div className="flex justify-center items-center">
-                    <div className={cn("flex items-center justify-center h-24 w-24 rounded-full text-white text-3xl font-bold", colorClass)}>
+                    <div className={cn("flex items-center justify-center h-20 w-20 rounded-full text-white text-2xl font-bold", colorClass)}>
                         {riskScore}
                     </div>
                 </div>
@@ -168,7 +168,8 @@ const mapDatesToStrings = (phases: FormValues['phases']): MocPhase[] => {
 
 // --- Sub-Components (Moved outside main component) ---
 
-const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, control, personnel }: { phaseIndex: number, stepIndex: number, hazardIndex: number, riskIndex: number, control: any, personnel: Personnel[] }) => {
+const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, personnel }: { phaseIndex: number, stepIndex: number, hazardIndex: number, riskIndex: number, personnel: Personnel[] }) => {
+    const { control } = useFormContext();
     const { fields, append, remove } = useFieldArray({
         control,
         name: `phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations`,
@@ -198,7 +199,8 @@ const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, contr
     )
 }
   
-const HazardsArray = ({ phaseIndex, stepIndex, control, personnel }: { phaseIndex: number, stepIndex: number, control: any, personnel: Personnel[] }) => {
+const HazardsArray = ({ phaseIndex, stepIndex, personnel }: { phaseIndex: number, stepIndex: number, personnel: Personnel[] }) => {
+    const { control } = useFormContext();
     const { fields, append, remove } = useFieldArray({
         control: control,
         name: `phases.${phaseIndex}.steps.${stepIndex}.hazards`,
@@ -223,7 +225,7 @@ const HazardsArray = ({ phaseIndex, stepIndex, control, personnel }: { phaseInde
                          />
                         <h4 className="font-semibold text-sm pt-4 border-t">Mitigations</h4>
                         {/* We assume one risk per hazard for UI simplification */}
-                        <MitigationsArray phaseIndex={phaseIndex} stepIndex={stepIndex} hazardIndex={hazardIndex} riskIndex={0} control={control} personnel={personnel} />
+                        <MitigationsArray phaseIndex={phaseIndex} stepIndex={stepIndex} hazardIndex={hazardIndex} riskIndex={0} personnel={personnel} />
                     </CardContent>
                 </Card>
             ))}
@@ -265,7 +267,7 @@ export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisF
   };
 
   return (
-    <Form {...form}>
+    <FormProvider {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Accordion type="multiple" defaultValue={(moc.phases || []).map(p => p.id)} className="w-full space-y-4">
           {(phaseFields || []).map((phase, phaseIndex) => (
@@ -277,7 +279,7 @@ export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisF
                     {(phase.steps || []).map((step, stepIndex) => (
                         <div key={step.id} className="py-4 border-b last:border-0">
                             <p className="font-medium">{stepIndex + 1}. {step.description}</p>
-                            <HazardsArray phaseIndex={phaseIndex} stepIndex={stepIndex} control={form.control} personnel={personnel} />
+                            <HazardsArray phaseIndex={phaseIndex} stepIndex={stepIndex} personnel={personnel} />
                         </div>
                     ))}
                 </AccordionContent>
@@ -294,6 +296,6 @@ export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisF
           <Button type="submit">Save Hazard Analysis</Button>
         </div>
       </form>
-    </Form>
+    </FormProvider>
   );
 }
