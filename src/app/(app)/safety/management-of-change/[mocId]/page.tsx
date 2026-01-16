@@ -1,9 +1,8 @@
-
 'use client';
 
-import { use } from 'react';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { use, useMemo } from 'react';
+import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,6 +12,8 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import type { ManagementOfChange } from '@/types/moc';
 import { ImplementationPlanForm } from './implementation-plan-form';
+import { HazardAnalysisForm } from './hazard-analysis-form';
+import type { Personnel } from '@/app/(app)/users/personnel/page';
 
 interface MocDetailPageProps {
   params: { mocId: string };
@@ -28,8 +29,16 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
     () => (firestore ? doc(firestore, 'tenants', tenantId, 'management-of-change', mocId) : null),
     [firestore, tenantId, mocId]
   );
+  
+  const personnelQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null),
+    [firestore, tenantId]
+  );
 
-  const { data: moc, isLoading, error } = useDoc<ManagementOfChange>(mocRef);
+  const { data: moc, isLoading: isLoadingMoc, error } = useDoc<ManagementOfChange>(mocRef);
+  const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
+
+  const isLoading = isLoadingMoc || isLoadingPersonnel;
 
   if (isLoading) {
     return (
@@ -100,12 +109,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
           <ImplementationPlanForm moc={moc} tenantId={tenantId} />
         </TabsContent>
         <TabsContent value="analysis">
-          <Card>
-             <CardHeader><CardTitle>Hazard Analysis</CardTitle></CardHeader>
-            <CardContent>
-              <p>Risk and mitigation management will be here.</p>
-            </CardContent>
-          </Card>
+          <HazardAnalysisForm moc={moc} tenantId={tenantId} personnel={personnel || []} />
         </TabsContent>
         <TabsContent value="approval">
           <Card>
