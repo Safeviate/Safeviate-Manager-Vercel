@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
@@ -8,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { Alert } from '@/types/alert';
 import { format } from 'date-fns';
-import { Archive } from 'lucide-react';
+import { Archive, Printer } from 'lucide-react';
 import Image from 'next/image';
 
 interface AlertCardProps {
@@ -20,6 +21,7 @@ interface AlertCardProps {
 export function AlertCard({ alert, tenantId, canManage }: AlertCardProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
+    const cardRef = useRef<HTMLDivElement>(null);
 
     const getCardClass = () => {
         switch (alert.type) {
@@ -36,8 +38,39 @@ export function AlertCard({ alert, tenantId, canManage }: AlertCardProps) {
         toast({ title: 'Alert Archived', description: `"${alert.title}" has been archived.` });
     };
 
+    const handlePrint = () => {
+        if (!cardRef.current) return;
+
+        const printWindow = window.open('', '_blank', 'height=600,width=800');
+
+        if (printWindow) {
+            printWindow.document.write('<html><head><title>Print Alert</title>');
+
+            // Copy styles from the main document
+            const styles = document.querySelectorAll('style, link[rel="stylesheet"]');
+            styles.forEach(style => {
+                printWindow.document.head.appendChild(style.cloneNode(true));
+            });
+            
+            // Add a basic print style to hide the footer actions
+            printWindow.document.head.innerHTML += '<style>@media print { .no-print { display: none !important; } body { padding: 1rem; } }</style>';
+
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(cardRef.current.outerHTML);
+            printWindow.document.write('</body></html>');
+
+            // Timeout to allow styles to load before printing
+            setTimeout(() => {
+                printWindow.document.close();
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+        }
+    };
+
+
     return (
-        <Card className={cn(getCardClass())}>
+        <Card className={cn(getCardClass())} ref={cardRef}>
             <CardHeader>
                 <CardTitle>{alert.title}</CardTitle>
             </CardHeader>
@@ -58,11 +91,16 @@ export function AlertCard({ alert, tenantId, canManage }: AlertCardProps) {
             </CardContent>
             <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
                 <span>Posted on {format(new Date(alert.createdAt), 'PPP')}</span>
-                {canManage && (
-                    <Button variant="ghost" size="sm" onClick={handleArchive}>
-                        <Archive className="mr-2 h-4 w-4" /> Archive
+                <div className="flex items-center gap-2 no-print">
+                    <Button variant="ghost" size="sm" onClick={handlePrint}>
+                        <Printer className="mr-2 h-4 w-4" /> Print
                     </Button>
-                )}
+                    {canManage && (
+                        <Button variant="ghost" size="sm" onClick={handleArchive}>
+                            <Archive className="mr-2 h-4 w-4" /> Archive
+                        </Button>
+                    )}
+                </div>
             </CardFooter>
         </Card>
     )
