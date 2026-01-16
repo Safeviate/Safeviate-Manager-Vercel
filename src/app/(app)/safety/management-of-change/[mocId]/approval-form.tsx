@@ -16,6 +16,7 @@ import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { format } from 'date-fns';
 import Image from 'next/image';
+import { Label } from '@/components/ui/label';
 
 const signatureSchema = z.object({
   userId: z.string(),
