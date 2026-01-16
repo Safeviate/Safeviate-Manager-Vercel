@@ -502,6 +502,10 @@
             "type": "string",
             "description": "The ID of the instructor for a training flight."
         },
+        "privatePilotId": {
+            "type": "string",
+            "description": "The ID of the private pilot for a flight."
+        },
         "type": {
           "type": "string",
           "description": "The type of booking.",
@@ -1385,6 +1389,16 @@
         "entries": {
           "type": "array",
           "items": { "$ref": "#/backend/entities/StudentProgressEntry" }
+        },
+        "instructorSignatureUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Data URL of the instructor's signature image."
+        },
+        "studentSignatureUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Data URL of the student's signature image."
         }
       },
       "required": ["id", "bookingId"]

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -220,6 +221,20 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
                                                 <p className="text-sm text-muted-foreground mt-1">{report.overallComment}</p>
                                             </div>
                                         )}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                                            {report.instructorSignatureUrl && (
+                                                <div>
+                                                    <p className="text-sm font-semibold text-muted-foreground">Instructor Signature</p>
+                                                    <img src={report.instructorSignatureUrl} alt="Instructor Signature" className="mt-2 border rounded-md bg-white" />
+                                                </div>
+                                            )}
+                                            {report.studentSignatureUrl && (
+                                                <div>
+                                                    <p className="text-sm font-semibold text-muted-foreground">Student Signature</p>
+                                                    <img src={report.studentSignatureUrl} alt="Student Signature" className="mt-2 border rounded-md bg-white" />
+                                                </div>
+                                            )}
+                                        </div>
                                     </AccordionContent>
                                 </AccordionItem>
                             ))}

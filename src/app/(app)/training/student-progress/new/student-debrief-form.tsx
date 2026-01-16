@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -22,6 +23,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { StudentProgressReport } from '@/types/training';
 import { useEffect } from 'react';
+import { Separator } from '@/components/ui/separator';
+import { SignaturePad } from '@/components/ui/signature-pad';
 
 const performanceRatingSchema = z.union([
   z.literal(1),
@@ -40,6 +43,8 @@ const progressEntrySchema = z.object({
 const formSchema = z.object({
   entries: z.array(progressEntrySchema).min(1, 'At least one exercise entry is required.'),
   overallComment: z.string().optional(),
+  instructorSignatureUrl: z.string().optional(),
+  studentSignatureUrl: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -83,6 +88,8 @@ export function StudentDebriefForm() {
     defaultValues: {
       entries: [],
       overallComment: '',
+      instructorSignatureUrl: '',
+      studentSignatureUrl: '',
     },
   });
 
@@ -106,6 +113,8 @@ export function StudentDebriefForm() {
         date: new Date().toISOString(),
         entries: values.entries,
         overallComment: values.overallComment,
+        instructorSignatureUrl: values.instructorSignatureUrl,
+        studentSignatureUrl: values.studentSignatureUrl,
     };
     
     await addDocumentNonBlocking(collection(firestore, `tenants/${tenantId}/student-progress-reports`), reportData);
@@ -193,6 +202,46 @@ export function StudentDebriefForm() {
             </div>
             
             <FormField control={form.control} name="overallComment" render={({ field }) => ( <FormItem><FormLabel>Overall Comments & Plan for Next Session</FormLabel><FormControl><Textarea placeholder="Summarize the session and outline goals for the next flight..." className="min-h-32" {...field} /></FormControl><FormMessage /></FormItem> )} />
+
+            <Separator />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <FormField
+                control={form.control}
+                name="instructorSignatureUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Instructor Signature</FormLabel>
+                    <FormControl>
+                      <SignaturePad
+                        onSignatureEnd={field.onChange}
+                        initialDataUrl={field.value}
+                        width={350}
+                        height={150}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="studentSignatureUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Student Signature</FormLabel>
+                    <FormControl>
+                      <SignaturePad
+                        onSignatureEnd={field.onChange}
+                        initialDataUrl={field.value}
+                        width={350}
+                        height={150}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="flex justify-end">
               <Button type="submit">Submit Debrief</Button>

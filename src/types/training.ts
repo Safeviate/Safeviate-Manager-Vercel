@@ -16,6 +16,8 @@ export interface StudentProgressReport {
     date: string; // ISO String
     overallComment?: string;
     entries: StudentProgressEntry[];
+    instructorSignatureUrl?: string;
+    studentSignatureUrl?: string;
 }
 
 export interface MilestoneWarning {
