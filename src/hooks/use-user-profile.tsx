@@ -2,11 +2,12 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
-import { useFirestore, useUser } from '@/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 
 type UserProfile = PilotProfile | Personnel;
+type UserLink = { profilePath: string };
 
 interface UserProfileContextType {
     userProfile: UserProfile | null;
@@ -27,99 +28,76 @@ export const useUserProfile = () => {
 export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     const firestore = useFirestore();
     const { user: authUser, isUserLoading: isAuthLoading } = useUser();
-    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+    // 1. Create a reactive reference to the user link document
+    const userLinkRef = useMemoFirebase(
+        () => (firestore && authUser && !authUser.isAnonymous ? doc(firestore, 'users', authUser.uid) : null),
+        [firestore, authUser]
+    );
+
+    // 2. Use `useDoc` to listen for the user link data
+    const { data: userLink, isLoading: isUserLinkLoading, error: userLinkError } = useDoc<UserLink>(userLinkRef);
+
+    // 3. Based on the user link, create a reactive reference to the actual profile document
+    const userProfileRef = useMemoFirebase(
+        () => (firestore && userLink?.profilePath ? doc(firestore, userLink.profilePath) : null),
+        [firestore, userLink]
+    );
+
+    // 4. Use `useDoc` again to listen for the final profile data
+    const { data: userProfileData, isLoading: isProfileDocLoading, error: profileError } = useDoc<UserProfile>(userProfileRef);
+
+    const [finalUserProfile, setFinalUserProfile] = useState<UserProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
-
+    
     useEffect(() => {
-        const fetchUserProfile = async () => {
-            if (isAuthLoading) {
-                setIsLoading(true);
-                return;
-            }
-            if (!firestore || !authUser) {
-                setUserProfile(null);
-                setIsLoading(false);
-                return;
-            }
+        // Overall loading state
+        const loading = isAuthLoading || isUserLinkLoading || isProfileDocLoading;
+        setIsLoading(loading);
 
-            setIsLoading(true);
-            setError(null);
-            
-            try {
-                // Developer mode (anonymous user)
-                if (authUser.isAnonymous) {
-                    const devProfile: Personnel = {
-                        id: 'DEVELOPER_MODE',
-                        userType: 'Personnel',
-                        firstName: 'Developer',
-                        lastName: 'Mode',
-                        email: authUser.email || 'dev@safeviate.com',
-                        role: 'dev',
-                        permissions: [],
-                    };
-                    setUserProfile(devProfile);
-                    setIsLoading(false);
-                    return;
-                }
-                
-                const impersonatedEmail = localStorage.getItem('impersonatedUser');
-                if (impersonatedEmail && impersonatedEmail !== authUser.email) {
-                    console.warn("Mismatched impersonation. Clearing profile.");
-                    setUserProfile(null);
-                    setIsLoading(false);
-                    return;
-                }
+        // Overall error state
+        const combinedError = userLinkError || profileError;
+        setError(combinedError);
 
-                // Standard user lookup via the linking document
-                const userLinkRef = doc(firestore, 'users', authUser.uid);
-                const userLinkSnap = await getDoc(userLinkRef);
-
-                if (!userLinkSnap.exists()) {
-                     console.warn(`No user link document found for UID: ${authUser.uid}. User profile cannot be loaded.`);
-                     setUserProfile(null);
-                     setIsLoading(false);
-                     return; // This is a key change: Stop execution if the link is missing.
-                }
-
-                const { profilePath } = userLinkSnap.data() as { profilePath: string };
-                if (!profilePath) {
-                    console.error(`User link document for ${authUser.uid} is missing the 'profilePath' field.`);
-                    setUserProfile(null);
-                    setIsLoading(false);
-                    return;
-                }
-
-                const profileRef = doc(firestore, profilePath);
-                const profileSnapshot = await getDoc(profileRef);
-
-                if (!profileSnapshot.exists()) {
-                     console.error(`Profile document not found at path: ${profilePath}`);
-                     setUserProfile(null);
-                     setIsLoading(false);
-                     return;
-                }
-
-                const profile = { id: profileSnapshot.id, ...profileSnapshot.data() } as UserProfile;
-                setUserProfile(profile);
-
-            } catch (e: any) {
-                setError(e);
-                console.error("Failed to fetch user profile:", e);
-                setUserProfile(null);
-            } finally {
-                setIsLoading(false);
-            }
+        if (loading) {
+            setFinalUserProfile(null);
+            return;
         };
 
-        fetchUserProfile();
-    }, [firestore, authUser, isAuthLoading]);
+        if (!authUser) {
+            setFinalUserProfile(null);
+            return;
+        }
+
+        if (authUser.isAnonymous) {
+             const devProfile: Personnel = {
+                id: 'DEVELOPER_MODE',
+                userType: 'Personnel',
+                firstName: 'Developer',
+                lastName: 'Mode',
+                email: authUser.email || 'dev@safeviate.com',
+                role: 'dev',
+                permissions: [],
+            };
+            setFinalUserProfile(devProfile);
+            return;
+        }
+
+        if (userProfileData) {
+            setFinalUserProfile(userProfileData);
+        } else {
+            // This handles cases where the user is authenticated but the profile docs don't exist (yet or at all)
+            setFinalUserProfile(null);
+        }
+
+    }, [isAuthLoading, isUserLinkLoading, isProfileDocLoading, userLinkError, profileError, authUser, userProfileData]);
 
     const value = useMemo(() => ({
-        userProfile,
+        userProfile: finalUserProfile,
         isLoading,
         error,
-    }), [userProfile, isLoading, error]);
+    }), [finalUserProfile, isLoading, error]);
 
     return (
         <UserProfileContext.Provider value={value}>
