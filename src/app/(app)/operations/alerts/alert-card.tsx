@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -10,6 +9,7 @@ import { cn } from '@/lib/utils';
 import type { Alert } from '@/types/alert';
 import { format } from 'date-fns';
 import { Archive } from 'lucide-react';
+import Image from 'next/image';
 
 interface AlertCardProps {
     alert: Alert;
@@ -43,6 +43,18 @@ export function AlertCard({ alert, tenantId, canManage }: AlertCardProps) {
             </CardHeader>
             <CardContent>
                 <p className="text-sm whitespace-pre-wrap">{alert.content}</p>
+                 {alert.signatureUrl && (
+                    <div className="mt-4 pt-4 border-t">
+                        <p className="text-xs text-muted-foreground mb-1">Signed:</p>
+                        <Image
+                            src={alert.signatureUrl}
+                            alt="Signature"
+                            width={200}
+                            height={100}
+                            className="bg-white border rounded-md p-1"
+                        />
+                    </div>
+                )}
             </CardContent>
             <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
                 <span>Posted on {format(new Date(alert.createdAt), 'PPP')}</span>

@@ -10,4 +10,5 @@ export interface Alert {
     createdAt: string; // ISO String
     createdBy: string;
     status: AlertStatus;
+    signatureUrl?: string;
 }

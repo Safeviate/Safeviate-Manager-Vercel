@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -16,6 +15,7 @@ import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { AlertType } from '@/types/alert';
 import { collection } from 'firebase/firestore';
+import { SignaturePad } from '@/components/ui/signature-pad';
 
 const alertTypes: AlertType[] = ['Red Tag', 'Yellow Tag', 'Company Notice'];
 
@@ -23,6 +23,7 @@ const formSchema = z.object({
     type: z.string().min(1, 'Type is required'),
     title: z.string().min(1, 'Title is required'),
     content: z.string().min(1, 'Content is required'),
+    signatureUrl: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -43,6 +44,7 @@ export function AlertForm({ tenantId }: AlertFormProps) {
             type: '',
             title: '',
             content: '',
+            signatureUrl: '',
         },
     });
 
@@ -113,6 +115,19 @@ export function AlertForm({ tenantId }: AlertFormProps) {
                                 <FormMessage />
                             </FormItem>
                         )} />
+                        <FormField
+                            control={form.control}
+                            name="signatureUrl"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Signature</FormLabel>
+                                    <FormControl>
+                                        <SignaturePad onSignatureEnd={field.onChange} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                         <DialogFooter>
                             <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
                             <Button type="submit">Post Alert</Button>
