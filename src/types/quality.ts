@@ -1,6 +1,5 @@
 
 
-
 export type AuditChecklistItemType = 'Checkbox' | 'Textbox' | 'Number' | 'Date';
 export type AuditFinding = 'Compliant' | 'Non Compliant' | 'Not Applicable';
 export type AuditStatus = 'Scheduled' | 'In Progress' | 'Finalized' | 'Closed' | 'Archived';

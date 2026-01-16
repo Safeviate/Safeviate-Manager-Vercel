@@ -13,8 +13,14 @@ import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/app/(app)/assets/page';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { DynamicLogbook } from './dynamic-logbook';
-import { differenceInMinutes } from 'date-fns';
+import { differenceInMinutes, format } from 'date-fns';
 import { useUserProfile } from '@/hooks/use-user-profile';
+
+import type { SafetyReport } from '@/types/safety-report';
+import type { CorrectiveActionPlan, QualityAudit } from '@/types/quality';
+import type { ManagementOfChange } from '@/types/moc';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 
 type UserProfileData = PilotProfile | Personnel;
 type PublishedTable = Omit<TableTemplate, 'id' | 'name'> & { pageId: string };
@@ -24,6 +30,18 @@ type EnrichedBooking = Booking & {
   studentName?: string;
   instructorName?: string,
   flightTimeHours?: string;
+};
+
+type UnifiedTask = {
+    id: string;
+    description: string;
+    sourceType: 'MOC' | 'Audit' | 'Safety Report';
+    sourceIdentifier: string;
+    link: string;
+    assigneeId: string;
+    assigneeName?: string;
+    dueDate: string; // ISO string
+    status: 'Open' | 'In Progress' | 'Completed' | 'Closed' | 'Cancelled';
 };
 
 
@@ -39,20 +57,31 @@ export default function MyDashboardPage() {
 
     const bookingsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/bookings`)) : null), [firestore, tenantId]);
     const aircraftsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null), [firestore, tenantId]);
+    
+    // Use `personnel` as the collection for instructors, students, and private pilots
     const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
     const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
     const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
     const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
-
+    
+    const mocsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `tenants/${tenantId}/management-of-change`)) : null, [firestore, tenantId]);
+    const auditsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `tenants/${tenantId}/quality-audits`)) : null, [firestore, tenantId]);
+    const reportsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `tenants/${tenantId}/safety-reports`)) : null, [firestore, tenantId]);
+    const capsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`)) : null, [firestore, tenantId]);
 
     const { data: publishedTable, isLoading: isLoadingTable } = useDoc<PublishedTable>(publishedTableRef);
     const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
     const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
+    
     const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
     const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
     const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsQuery);
     const { data: privatePilots, isLoading: isLoadingPrivatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
 
+    const { data: mocs, isLoading: isLoadingMocs } = useCollection<ManagementOfChange>(mocsQuery);
+    const { data: audits, isLoading: isLoadingAudits } = useCollection<QualityAudit>(auditsQuery);
+    const { data: reports, isLoading: isLoadingReports } = useCollection<SafetyReport>(reportsQuery);
+    const { data: caps, isLoading: isLoadingCaps } = useCollection<CorrectiveActionPlan>(capsQuery);
 
     const allUsers: UserProfileData[] = useMemo(() => [
         ...(personnel || []),
@@ -90,10 +119,133 @@ export default function MyDashboardPage() {
         });
     }, [bookings, aircrafts, allUsers, userProfile]);
 
-    const isLoading = isLoadingTable || isLoadingBookings || isLoadingAircrafts || isProfileLoading || isLoadingPersonnel || isLoadingInstructors || isLoadingStudents || isLoadingPrivatePilots;
+    const allTasks = useMemo((): UnifiedTask[] => {
+        if (isLoadingMocs || isLoadingAudits || isLoadingReports || isLoadingCaps || !allUsers) return [];
+    
+        const userMap = new Map(allUsers.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
+        const tasks: UnifiedTask[] = [];
+    
+        (mocs || []).forEach(moc => {
+          moc.phases?.forEach(phase => {
+            phase.steps?.forEach(step => {
+              step.hazards?.forEach(hazard => {
+                hazard.risks?.forEach(risk => {
+                  risk.mitigations?.forEach(mitigation => {
+                    if (mitigation.status !== 'Closed' && mitigation.status !== 'Cancelled') {
+                      tasks.push({
+                        id: mitigation.id,
+                        description: mitigation.description,
+                        sourceType: 'MOC',
+                        sourceIdentifier: moc.mocNumber,
+                        link: `/safety/management-of-change/${moc.id}`,
+                        assigneeId: mitigation.responsiblePersonId,
+                        assigneeName: userMap.get(mitigation.responsiblePersonId) || 'Unassigned',
+                        dueDate: mitigation.completionDate,
+                        status: mitigation.status,
+                      });
+                    }
+                  });
+                });
+              });
+            });
+          });
+        });
+        
+        (reports || []).forEach(report => {
+            (report.investigationTasks || []).forEach(task => {
+                if (task.status !== 'Completed') {
+                     tasks.push({
+                        id: task.id,
+                        description: task.description,
+                        sourceType: 'Safety Report',
+                        sourceIdentifier: report.reportNumber,
+                        link: `/safety/safety-reports/${report.id}`,
+                        assigneeId: task.assigneeId,
+                        assigneeName: userMap.get(task.assigneeId) || 'Unassigned',
+                        dueDate: task.dueDate,
+                        status: task.status,
+                    });
+                }
+            });
+        });
+    
+        const auditsMap = new Map((audits || []).map(a => [a.id, a]));
+        (caps || []).forEach(cap => {
+          if (cap.status !== 'Closed' && cap.status !== 'Cancelled') {
+            const audit = auditsMap.get(cap.auditId);
+            tasks.push({
+              id: cap.id,
+              description: `Corrective action for finding on audit ${audit?.auditNumber || cap.auditId}`,
+              sourceType: 'Audit',
+              sourceIdentifier: audit?.auditNumber || 'Unknown Audit',
+              link: `/quality/audits/${cap.auditId}`,
+              assigneeId: cap.responsiblePersonId || '',
+              assigneeName: userMap.get(cap.responsiblePersonId || '') || 'Unassigned',
+              dueDate: new Date().toISOString(), // Placeholder, CorrectiveActionPlan needs a due date
+              status: cap.status,
+            });
+          }
+        });
+    
+        return tasks.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+    
+      }, [mocs, reports, caps, audits, allUsers, isLoadingMocs, isLoadingAudits, isLoadingReports, isLoadingCaps]);
+
+    const myTasks = useMemo(() => {
+        if (!userProfile || !allTasks) return [];
+        return allTasks.filter(task => task.assigneeId === userProfile.id);
+    }, [allTasks, userProfile]);
+
+    const isLoading = isLoadingTable || isLoadingBookings || isLoadingAircrafts || isProfileLoading || isLoadingPersonnel || isLoadingInstructors || isLoadingStudents || isLoadingPrivatePilots || isLoadingMocs || isLoadingAudits || isLoadingReports || isLoadingCaps;
 
     return (
         <div className="w-full space-y-6">
+             <Card>
+                <CardHeader>
+                    <CardTitle>My Outstanding Tasks</CardTitle>
+                    <CardDescription>A list of all tasks assigned to you across all modules.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? (
+                         <Skeleton className="h-48 w-full" />
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[40%]">Task</TableHead>
+                                    <TableHead>Source</TableHead>
+                                    <TableHead>Due Date</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {myTasks.length > 0 ? (
+                                    myTasks.map(task => (
+                                        <TableRow key={task.id}>
+                                            <TableCell className="font-medium">{task.description}</TableCell>
+                                            <TableCell><Badge variant="outline">{task.sourceIdentifier}</Badge></TableCell>
+                                            <TableCell>{format(new Date(task.dueDate), 'PPP')}</TableCell>
+                                            <TableCell><Badge variant="secondary">{task.status}</Badge></TableCell>
+                                            <TableCell className="text-right">
+                                                <Button asChild variant="outline" size="sm">
+                                                    <Link href={task.link}>View</Link>
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="h-24 text-center">
+                                            You have no outstanding tasks.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
             <Card>
                 <CardHeader>
                     <CardTitle>My Logbook</CardTitle>
@@ -117,5 +269,3 @@ export default function MyDashboardPage() {
         </div>
     );
 }
-
-    

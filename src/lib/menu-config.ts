@@ -48,7 +48,7 @@ export type MenuItem = {
 export const menuConfig: MenuItem[] = [
   {
     href: '/dashboard',
-    label: 'Dashboard',
+    label: 'Company Dashboard',
     icon: GaugeCircle,
     permissionId: 'dashboard-view',
   },
