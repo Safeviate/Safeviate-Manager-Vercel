@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -116,7 +117,7 @@ export default function TaskTrackerPage() {
           link: `/quality/audits/${cap.auditId}`,
           assigneeId: cap.responsiblePersonId || '',
           assigneeName: personnelMap.get(cap.responsiblePersonId || '') || 'Unassigned',
-          dueDate: cap.dueDate || new Date().toISOString(),
+          dueDate: new Date().toISOString(), // Placeholder, CorrectiveActionPlan needs a due date
           status: cap.status,
         });
       }

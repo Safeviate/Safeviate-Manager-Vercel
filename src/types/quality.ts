@@ -1,5 +1,6 @@
 
 
+
 export type AuditChecklistItemType = 'Checkbox' | 'Textbox' | 'Number' | 'Date';
 export type AuditFinding = 'Compliant' | 'Non Compliant' | 'Not Applicable';
 export type AuditStatus = 'Scheduled' | 'In Progress' | 'Finalized' | 'Closed' | 'Archived';
@@ -79,7 +80,7 @@ export interface CorrectiveActionPlan {
     auditId: string;
     findingId: string;
     rootCauseAnalysis: string;
-    status: 'Open' | 'In Progress' | 'Closed' | 'Cancelled';
+    status: CorrectiveActionStatus;
     responsiblePersonId?: string;
     dueDate?: string; // ISO String
 }
