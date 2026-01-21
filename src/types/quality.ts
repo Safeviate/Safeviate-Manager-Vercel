@@ -11,7 +11,7 @@ export type AuditScheduleStatus = 'Scheduled' | 'Completed' | 'Pending' | 'Not S
 export interface AuditScheduleItem {
     id: string;
     area: string;
-    quarter: 'Q1' | 'Q2' | 'Q3' | 'Q4';
+    month: string;
     year: number;
     status: AuditScheduleStatus;
 }

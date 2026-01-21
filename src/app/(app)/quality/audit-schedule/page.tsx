@@ -42,7 +42,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  CheckCircle,
   MoreHorizontal,
   Pencil,
   PlusCircle,
@@ -65,30 +64,12 @@ const INITIAL_AUDIT_AREAS = [
   'Security',
 ];
 
-const QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4'] as const;
-type Quarter = typeof QUARTERS[number];
-
 const STATUSES: AuditScheduleStatus[] = [
   'Scheduled',
   'Completed',
   'Pending',
   'Not Scheduled',
 ];
-
-const getStatusBadgeVariant = (
-  status: AuditScheduleStatus
-): 'default' | 'secondary' | 'destructive' | 'outline' => {
-  switch (status) {
-    case 'Completed':
-      return 'default'; // Green in default theme
-    case 'Scheduled':
-      return 'secondary';
-    case 'Pending':
-      return 'destructive'; // Using destructive for yellow/warning
-    default:
-      return 'outline';
-  }
-};
 
 const getStatusBadgeClass = (status: AuditScheduleStatus): string => {
     switch (status) {
@@ -192,6 +173,11 @@ export default function AuditSchedulePage() {
   const tenantId = 'safeviate';
   const currentYear = new Date().getFullYear();
 
+  const [quarters, setQuarters] = useState(['Q1', 'Q2', 'Q3', 'Q4']);
+  const [months, setMonths] = useState([
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ]);
   const [auditAreas, setAuditAreas] = useState<string[]>(INITIAL_AUDIT_AREAS);
   const [isAddAreaOpen, setIsAddAreaOpen] = useState(false);
   const [newAreaName, setNewAreaName] = useState('');
@@ -208,15 +194,27 @@ export default function AuditSchedulePage() {
   
   const { data: schedule, isLoading, error } = useCollection<AuditScheduleItem>(scheduleQuery);
 
-  const handleStatusChange = (area: string, quarter: Quarter, status: AuditScheduleStatus) => {
+  const handleQuarterChange = (index: number, value: string) => {
+    const newQuarters = [...quarters];
+    newQuarters[index] = value;
+    setQuarters(newQuarters);
+  };
+
+  const handleMonthChange = (index: number, value: string) => {
+    const newMonths = [...months];
+    newMonths[index] = value;
+    setMonths(newMonths);
+  };
+
+  const handleStatusChange = (area: string, month: string, status: AuditScheduleStatus) => {
     if (!firestore) return;
     setOpenPopoverId(null);
     const itemsCollection = collection(firestore, `tenants/${tenantId}/audit-schedule-items`);
-    const existingItem = schedule?.find(item => item.area === area && item.quarter === quarter);
+    const existingItem = schedule?.find(item => item.area === area && item.month === month);
 
     const newItemData = {
         area,
-        quarter,
+        month,
         year: currentYear,
         status,
     };
@@ -267,13 +265,13 @@ export default function AuditSchedulePage() {
   }
 
 
-  const getScheduleItem = (area: string, quarter: Quarter): AuditScheduleItem => {
-    const found = schedule?.find(item => item.area === area && item.quarter === quarter);
+  const getScheduleItem = (area: string, month: string): AuditScheduleItem => {
+    const found = schedule?.find(item => item.area === area && item.month === month);
     if (found) return found;
     return { 
-        id: `${area}-${quarter}`, 
+        id: `${area}-${month}`, 
         area, 
-        quarter, 
+        month, 
         year: currentYear, 
         status: 'Not Scheduled' 
     };
@@ -297,7 +295,6 @@ export default function AuditSchedulePage() {
     return <p className="text-destructive">Error loading schedule: {error.message}</p>;
   }
 
-
   return (
     <>
     <Card>
@@ -312,26 +309,42 @@ export default function AuditSchedulePage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[250px]">Audit Area</TableHead>
-              {QUARTERS.map((q) => (
-                <TableHead key={q} className="text-center">{q}</TableHead>
+              <TableHead rowSpan={2} className="w-[250px] align-middle sticky left-0 bg-card z-10">Audit Area</TableHead>
+              {quarters.map((q, index) => (
+                <TableHead key={index} colSpan={3} className="text-center p-1 border-l">
+                    <Input
+                        value={q}
+                        onChange={(e) => handleQuarterChange(index, e.target.value)}
+                        className="text-center font-semibold bg-transparent border-none"
+                    />
+                </TableHead>
               ))}
-               <TableHead className="text-right w-[50px]">Actions</TableHead>
+              <TableHead rowSpan={2} className="text-right w-[50px] align-middle sticky right-0 bg-card z-10"></TableHead>
+            </TableRow>
+            <TableRow>
+              {months.map((m, index) => (
+                  <TableHead key={index} className="text-center p-1 border-l">
+                      <Input
+                          value={m}
+                          onChange={(e) => handleMonthChange(index, e.target.value)}
+                          className="text-center font-semibold bg-transparent border-none w-20"
+                      />
+                  </TableHead>
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
             {auditAreas.map((area) => (
               <TableRow key={area}>
-                <TableCell className="font-medium">{area}</TableCell>
-                {QUARTERS.map((quarter) => {
-                  const item = getScheduleItem(area, quarter);
-                  const popoverId = `${area}-${quarter}`;
+                <TableCell className="font-medium sticky left-0 bg-card z-10">{area}</TableCell>
+                {months.map((month) => {
+                  const item = getScheduleItem(area, month);
+                  const popoverId = `${area}-${month}`;
                   return (
-                    <TableCell key={quarter} className="text-center">
+                    <TableCell key={month} className="text-center border-l">
                       <Popover open={openPopoverId === popoverId} onOpenChange={(isOpen) => setOpenPopoverId(isOpen ? popoverId : null)}>
                         <PopoverTrigger asChild>
                           <Badge
-                            variant={getStatusBadgeVariant(item.status)}
                             className={cn("cursor-pointer", getStatusBadgeClass(item.status))}
                           >
                             {item.status}
@@ -340,7 +353,7 @@ export default function AuditSchedulePage() {
                         <PopoverContent className="w-48 p-0">
                           <StatusSelector
                             onSelect={(status) =>
-                              handleStatusChange(area, quarter, status)
+                              handleStatusChange(area, month, status)
                             }
                           />
                         </PopoverContent>
@@ -348,7 +361,7 @@ export default function AuditSchedulePage() {
                     </TableCell>
                   );
                 })}
-                <TableCell className='text-right'>
+                <TableCell className='text-right sticky right-0 bg-card z-10'>
                     <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
                 </TableCell>
               </TableRow>

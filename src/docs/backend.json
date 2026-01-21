@@ -1263,15 +1263,15 @@
     "AuditScheduleItem": {
         "title": "Audit Schedule Item",
         "type": "object",
-        "description": "Represents the status of a single audit area for a specific quarter and year.",
+        "description": "Represents the status of a single audit area for a specific month and year.",
         "properties": {
             "id": { "type": "string" },
             "area": { "type": "string" },
-            "quarter": { "type": "string" },
+            "month": { "type": "string" },
             "year": { "type": "number" },
             "status": { "type": "string", "enum": ["Scheduled", "Completed", "Pending", "Not Scheduled"] }
         },
-        "required": ["id", "area", "quarter", "year", "status"]
+        "required": ["id", "area", "month", "year", "status"]
     },
     "QualityAuditChecklistTemplate": {
         "title": "Quality Audit Checklist Template",
@@ -1509,7 +1509,7 @@
         "path": "tenants/{tenantId}/audit-schedule-items/{itemId}",
         "definition": {
           "schema": { "$ref": "#/backend/entities/AuditScheduleItem" },
-          "description": "Stores the status of audit areas for specific quarters."
+          "description": "Stores the status of audit areas for specific months."
         }
       },
       {
