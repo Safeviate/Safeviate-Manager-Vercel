@@ -337,11 +337,11 @@ export default function AuditSchedulePage() {
             {auditAreas.map((area) => (
               <TableRow key={area}>
                 <TableCell className="font-medium sticky left-0 bg-card z-10">{area}</TableCell>
-                {months.map((month) => {
+                {months.map((month, index) => {
                   const item = getScheduleItem(area, month);
                   const popoverId = `${area}-${month}`;
                   return (
-                    <TableCell key={month} className="text-center border-l">
+                    <TableCell key={`${area}-${month}-${index}`} className="text-center border-l">
                       <Popover open={openPopoverId === popoverId} onOpenChange={(isOpen) => setOpenPopoverId(isOpen ? popoverId : null)}>
                         <PopoverTrigger asChild>
                           <Badge
