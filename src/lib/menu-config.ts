@@ -153,12 +153,6 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'quality-templates-manage',
       },
       {
-        href: '/quality/cap-tracker',
-        label: 'CAP Tracker',
-        description: 'Track corrective action plans.',
-        permissionId: 'quality-caps-view',
-      },
-      {
         href: '/quality/task-tracker',
         label: 'Task Tracker',
         description: 'Track all quality-related tasks.',

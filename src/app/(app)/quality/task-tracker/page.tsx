@@ -107,20 +107,22 @@ export default function TaskTrackerPage() {
     // 3. Extract tasks from Corrective Action Plans
     const auditsMap = new Map((audits || []).map(a => [a.id, a]));
     (caps || []).forEach(cap => {
-      if (cap.status !== 'Closed' && cap.status !== 'Cancelled') {
-        const audit = auditsMap.get(cap.auditId);
-        tasks.push({
-          id: cap.id,
-          description: `Corrective action for finding on audit ${audit?.auditNumber || cap.auditId}`,
-          sourceType: 'Audit',
-          sourceIdentifier: audit?.auditNumber || 'Unknown Audit',
-          link: `/quality/audits/${cap.auditId}`,
-          assigneeId: cap.responsiblePersonId || '',
-          assigneeName: personnelMap.get(cap.responsiblePersonId || '') || 'Unassigned',
-          dueDate: new Date().toISOString(), // Placeholder, CorrectiveActionPlan needs a due date
-          status: cap.status,
-        });
-      }
+      const audit = auditsMap.get(cap.auditId);
+      (cap.actions || []).forEach(action => {
+        if (action.status !== 'Closed' && action.status !== 'Cancelled') {
+          tasks.push({
+            id: action.id,
+            description: action.description,
+            sourceType: 'Audit',
+            sourceIdentifier: audit?.auditNumber || 'Unknown Audit',
+            link: `/quality/audits/${cap.auditId}`,
+            assigneeId: action.responsiblePersonId,
+            assigneeName: personnelMap.get(action.responsiblePersonId) || 'Unassigned',
+            dueDate: action.deadline,
+            status: action.status,
+          });
+        }
+      });
     });
 
     // Sort all tasks by due date
