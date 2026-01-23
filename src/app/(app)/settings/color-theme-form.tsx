@@ -77,11 +77,11 @@ export function ColorThemeForm() {
         return;
     }
     
-    // Create a theme object that matches the structure `applySavedTheme` expects
-    const themeToApply: Partial<SavedTheme> = {
+    const themeToApply: SavedTheme = {
         name: tenant.name,
         colors: {
             primary: tenant.theme.primaryColour || theme.primary,
+            'primary-foreground': theme['primary-foreground'], // Keep current
             background: tenant.theme.backgroundColour || theme.background,
             accent: tenant.theme.accentColour || theme.accent,
         },
@@ -93,13 +93,13 @@ export function ColorThemeForm() {
         },
         cardColors: { card: tenant.theme.backgroundColour || cardTheme.card, 'card-foreground': cardTheme['card-foreground'] },
         popoverColors: { popover: tenant.theme.backgroundColour || popoverTheme.popover, 'popover-foreground': popoverTheme['popover-foreground'] },
-        sidebarColors: sidebarTheme, // Keep sidebar as is or define in tenant
+        sidebarColors: sidebarTheme,
         headerColors: { 'header-background': tenant.theme.backgroundColour || headerTheme['header-background'], 'header-foreground': headerTheme['header-foreground'], 'header-border': headerTheme['header-border'] },
         swimlaneColors: swimlaneTheme,
         scale: scale,
     };
 
-    applySavedTheme(themeToApply as SavedTheme);
+    applySavedTheme(themeToApply);
     
     toast({
         title: "Tenant Theme Applied",
@@ -197,7 +197,7 @@ export function ColorThemeForm() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {Object.entries(theme).map(([name, value]) => (
               <div key={name} className="space-y-2">
-                <Label htmlFor={name} className="capitalize">{name}</Label>
+                <Label htmlFor={name} className="capitalize">{name.replace('-', ' ')}</Label>
                 <div className='relative'>
                   <Input
                     id={name}

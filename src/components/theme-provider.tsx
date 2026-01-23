@@ -8,6 +8,7 @@ import { hexToHsl } from '@/lib/utils';
 type ThemeColors = {
   background: string;
   primary: string;
+  'primary-foreground': string;
   accent: string;
 };
 
@@ -101,6 +102,7 @@ export const SAVED_THEMES_KEY = 'safeviate-saved-themes';
 const defaultColors: ThemeColors = {
   background: '#ebf5fb',
   primary: '#7cc4f7',
+  'primary-foreground': '#1e293b',
   accent: '#63b2a7',
 };
 const defaultButtonColors: ButtonThemeColors = {
