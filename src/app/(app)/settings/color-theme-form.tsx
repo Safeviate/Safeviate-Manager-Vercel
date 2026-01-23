@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -193,23 +192,31 @@ export function ColorThemeForm() {
         <Separator />
       
         <div>
-          <h3 className="text-lg font-medium mb-4">Main Theme</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {Object.entries(theme).map(([name, value]) => (
-              <div key={name} className="space-y-2">
-                <Label htmlFor={name} className="capitalize">{name.replace('-', ' ')}</Label>
-                <div className='relative'>
-                  <Input
-                    id={name}
-                    type="color"
-                    value={value}
-                    onChange={(e) => setThemeValue(name as keyof typeof theme, e.target.value)}
-                    className="p-1 h-10"
-                  />
+            <h3 className="text-lg font-medium mb-4">Main Theme</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4 p-4 border rounded-lg">
+                    <h4 className="font-semibold">Primary Colors</h4>
+                    <div className="space-y-2">
+                        <Label htmlFor="primary">Primary</Label>
+                        <Input id="primary" type="color" value={theme.primary} onChange={(e) => setThemeValue('primary', e.target.value)} className="p-1 h-10" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="primary-foreground">Primary Foreground</Label>
+                        <Input id="primary-foreground" type="color" value={theme['primary-foreground']} onChange={(e) => setThemeValue('primary-foreground', e.target.value)} className="p-1 h-10" />
+                    </div>
                 </div>
-              </div>
-            ))}
-          </div>
+                <div className="space-y-4 p-4 border rounded-lg">
+                    <h4 className="font-semibold">Accent &amp; Background</h4>
+                    <div className="space-y-2">
+                        <Label htmlFor="background">Background</Label>
+                        <Input id="background" type="color" value={theme.background} onChange={(e) => setThemeValue('background', e.target.value)} className="p-1 h-10" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="accent">Accent</Label>
+                        <Input id="accent" type="color" value={theme.accent} onChange={(e) => setThemeValue('accent', e.target.value)} className="p-1 h-10" />
+                    </div>
+                </div>
+            </div>
         </div>
 
         <Separator />
@@ -303,7 +310,7 @@ export function ColorThemeForm() {
         <Separator />
         
         <div>
-          <h3 className="text-lg font-medium mb-4">Popover & Dropdown Theme</h3>
+          <h3 className="text-lg font-medium mb-4">Popover &amp; Dropdown Theme</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {Object.entries(popoverTheme).map(([name, value]) => (
               <div key={name} className="space-y-2">
