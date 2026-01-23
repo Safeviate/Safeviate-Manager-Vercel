@@ -153,13 +153,14 @@ const applyScaleToDOM = (scale: number) => {
     document.documentElement.style.fontSize = `${scale}%`;
 };
 
-const getInitialState = <T>(key: string, defaultValue: T): T => {
+const getInitialState = <T extends object>(key: string, defaultValue: T): T => {
     if (typeof window === 'undefined') {
         return defaultValue;
     }
     try {
         const item = window.localStorage.getItem(key);
-        return item ? JSON.parse(item) : defaultValue;
+        const stored = item ? JSON.parse(item) : {};
+        return { ...defaultValue, ...stored };
     } catch (error) {
         console.warn(`Error reading localStorage key “${key}”:`, error);
         return defaultValue;
@@ -228,32 +229,41 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
 
   const applySavedTheme = (themeToApply: SavedTheme) => {
-    setTheme(themeToApply.colors);
-    setButtonTheme(themeToApply.buttonColors || defaultButtonColors);
-    setCardTheme(themeToApply.cardColors);
-    setPopoverTheme(themeToApply.popoverColors);
-    setSidebarTheme(themeToApply.sidebarColors);
-    setHeaderTheme(themeToApply.headerColors);
-    setSwimlaneTheme(themeToApply.swimlaneColors || defaultSwimlaneColors);
-    setScaleState(themeToApply.scale || defaultScale);
-    
-    applyColorsToDOM(themeToApply.colors);
-    applyColorsToDOM(themeToApply.buttonColors || defaultButtonColors);
-    applyColorsToDOM(themeToApply.cardColors);
-    applyColorsToDOM(themeToApply.popoverColors);
-    applyColorsToDOM(themeToApply.sidebarColors);
-    applyColorsToDOM(themeToApply.headerColors);
-    applyColorsToDOM(themeToApply.swimlaneColors || defaultSwimlaneColors);
-    applyScaleToDOM(themeToApply.scale || defaultScale);
+    const newTheme = { ...defaultColors, ...themeToApply.colors };
+    const newButtonTheme = { ...defaultButtonColors, ...themeToApply.buttonColors };
+    const newCardTheme = { ...defaultCardColors, ...themeToApply.cardColors };
+    const newPopoverTheme = { ...defaultPopoverColors, ...themeToApply.popoverColors };
+    const newSidebarTheme = { ...defaultSidebarColors, ...themeToApply.sidebarColors };
+    const newHeaderTheme = { ...defaultHeaderColors, ...themeToApply.headerColors };
+    const newSwimlaneTheme = { ...defaultSwimlaneColors, ...themeToApply.swimlaneColors };
+    const newScale = themeToApply.scale || defaultScale;
 
-    localStorage.setItem(THEME_KEY, JSON.stringify(themeToApply.colors));
-    localStorage.setItem(BUTTON_THEME_KEY, JSON.stringify(themeToApply.buttonColors || defaultButtonColors));
-    localStorage.setItem(CARD_THEME_KEY, JSON.stringify(themeToApply.cardColors));
-    localStorage.setItem(POPOVER_THEME_KEY, JSON.stringify(themeToApply.popoverColors));
-    localStorage.setItem(SIDEBAR_THEME_KEY, JSON.stringify(themeToApply.sidebarColors));
-    localStorage.setItem(HEADER_THEME_KEY, JSON.stringify(themeToApply.headerColors));
-    localStorage.setItem(SWIMLANE_THEME_KEY, JSON.stringify(themeToApply.swimlaneColors || defaultSwimlaneColors));
-    localStorage.setItem(SCALE_KEY, JSON.stringify(themeToApply.scale || defaultScale));
+    setTheme(newTheme);
+    setButtonTheme(newButtonTheme);
+    setCardTheme(newCardTheme);
+    setPopoverTheme(newPopoverTheme);
+    setSidebarTheme(newSidebarTheme);
+    setHeaderTheme(newHeaderTheme);
+    setSwimlaneTheme(newSwimlaneTheme);
+    setScaleState(newScale);
+    
+    applyColorsToDOM(newTheme);
+    applyColorsToDOM(newButtonTheme);
+    applyColorsToDOM(newCardTheme);
+    applyColorsToDOM(newPopoverTheme);
+    applyColorsToDOM(newSidebarTheme);
+    applyColorsToDOM(newHeaderTheme);
+    applyColorsToDOM(newSwimlaneTheme);
+    applyScaleToDOM(newScale);
+
+    localStorage.setItem(THEME_KEY, JSON.stringify(newTheme));
+    localStorage.setItem(BUTTON_THEME_KEY, JSON.stringify(newButtonTheme));
+    localStorage.setItem(CARD_THEME_KEY, JSON.stringify(newCardTheme));
+    localStorage.setItem(POPOVER_THEME_KEY, JSON.stringify(newPopoverTheme));
+    localStorage.setItem(SIDEBAR_THEME_KEY, JSON.stringify(newSidebarTheme));
+    localStorage.setItem(HEADER_THEME_KEY, JSON.stringify(newHeaderTheme));
+    localStorage.setItem(SWIMLANE_THEME_KEY, JSON.stringify(newSwimlaneTheme));
+    localStorage.setItem(SCALE_KEY, JSON.stringify(newScale));
   };
 
   const saveCurrentTheme = (name: string) => {
