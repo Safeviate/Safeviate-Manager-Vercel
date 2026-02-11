@@ -1,17 +1,18 @@
-
 'use client';
 
 import { Bar, BarChart, Line, LineChart, ReferenceLine, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import type { MonthlySpiData } from './use-spi-data';
+import type { SpiDataPoint } from './use-spi-data';
 import type { SpiConfig } from './edit-spi-form';
+import type { TimeScale } from './page';
 
 interface SpiChartProps {
-    data: MonthlySpiData[];
+    data: SpiDataPoint[];
     spi: SpiConfig;
+    timeScale: TimeScale;
 }
 
-export function SpiChart({ data, spi }: SpiChartProps) {
+export function SpiChart({ data, spi, timeScale }: SpiChartProps) {
     const chartConfig = {
         value: {
             label: spi.unit,
@@ -19,7 +20,13 @@ export function SpiChart({ data, spi }: SpiChartProps) {
         },
     };
 
-    const yAxisDomain = [0, spi.levels.urgentAction * 1.25];
+    let targetMultiplier = 1;
+    if (spi.unit === 'Count') {
+        if (timeScale === 'quarterly') targetMultiplier = 3;
+        if (timeScale === 'yearly') targetMultiplier = 12;
+    }
+
+    const yAxisDomain = [0, (spi.levels.urgentAction * targetMultiplier) * 1.25];
 
     const commonProps = {
         data: data,
@@ -33,14 +40,14 @@ export function SpiChart({ data, spi }: SpiChartProps) {
 
     const commonComponents = (
         <>
-            <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => value.slice(0, 3)} />
+            <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => value.slice(0, 3)} />
             <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickMargin={5} domain={yAxisDomain} />
             <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-            <ReferenceLine y={spi.target} label="Target" stroke="hsl(var(--primary))" strokeDasharray="3 3" />
-            <ReferenceLine y={spi.levels.acceptable} stroke="green" strokeDasharray="3 3" />
-            <ReferenceLine y={spi.levels.monitor} stroke="gold" strokeDasharray="3 3" />
-            <ReferenceLine y={spi.levels.actionRequired} stroke="orange" strokeDasharray="3 3" />
-            <ReferenceLine y={spi.levels.urgentAction} label="Urgent" stroke="red" strokeDasharray="3 3" />
+            <ReferenceLine y={spi.target * targetMultiplier} label="Target" stroke="hsl(var(--primary))" strokeDasharray="3 3" />
+            <ReferenceLine y={spi.levels.acceptable * targetMultiplier} stroke="green" strokeDasharray="3 3" />
+            <ReferenceLine y={spi.levels.monitor * targetMultiplier} stroke="gold" strokeDasharray="3 3" />
+            <ReferenceLine y={spi.levels.actionRequired * targetMultiplier} stroke="orange" strokeDasharray="3 3" />
+            <ReferenceLine y={spi.levels.urgentAction * targetMultiplier} label="Urgent" stroke="red" strokeDasharray="3 3" />
         </>
     );
 
