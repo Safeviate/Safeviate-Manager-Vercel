@@ -11,11 +11,12 @@ import type { Booking } from '@/types/booking';
 import { SPICard } from './spi-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
+// Updated initialSpiConfig
 const initialSpiConfig: SpiConfig[] = [
     {
         id: 'unstable-approach',
         name: 'Unstable Approach Rate',
-        type: 'Lagging',
+        comparison: 'lower-is-better',
         unit: 'Rate per 100 fh',
         description: 'Number of reported unstable approaches per 100 flight hours.',
         target: 0.5,
@@ -29,7 +30,7 @@ const initialSpiConfig: SpiConfig[] = [
     {
         id: 'tech-defect',
         name: 'Aircraft Technical Defect Rate',
-        type: 'Lagging',
+        comparison: 'lower-is-better',
         unit: 'Rate per 100 fh',
         description: 'Number of aircraft technical defects reported per 100 flight hours.',
         target: 1.0,
@@ -43,7 +44,7 @@ const initialSpiConfig: SpiConfig[] = [
     {
         id: 'ground-incidents',
         name: 'Ground Incidents',
-        type: 'Lagging',
+        comparison: 'lower-is-better',
         unit: 'Count',
         description: 'Total number of ground incidents reported per month.',
         target: 0,
@@ -57,7 +58,7 @@ const initialSpiConfig: SpiConfig[] = [
     {
         id: 'proactive-reports',
         name: 'Proactive Reports',
-        type: 'Leading',
+        comparison: 'greater-is-better',
         unit: 'Count',
         description: 'Total number of proactive safety reports filed by personnel.',
         target: 10,

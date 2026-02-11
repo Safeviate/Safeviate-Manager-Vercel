@@ -103,6 +103,8 @@ export const useSpiData = (spi: SpiConfig, reports: SafetyReport[] | null, booki
                 value = data.count;
             } else if (spi.unit === 'Rate per 100 fh') {
                 value = data.flightHours > 0 ? (data.count / data.flightHours) * 100 : 0;
+            } else if (spi.unit === 'Rate per flight hour') {
+                value = data.flightHours > 0 ? data.count / data.flightHours : 0;
             }
         
             finalData.push({ label, value: parseFloat(value.toFixed(2)) });

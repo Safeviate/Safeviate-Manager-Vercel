@@ -29,12 +29,12 @@ export function SPICard({ spi, onEdit, reports, bookings, timeScale }: SPICardPr
             targetMultiplier = timeScale === 'quarterly' ? 3 : 12;
         }
 
-        if (spi.type === 'Leading') { // Lower is worse for leading indicators
+        if (spi.comparison === 'greater-is-better') { // Higher is better
             if (value >= spi.levels.acceptable * targetMultiplier) return 'text-green-600';
             if (value >= spi.levels.monitor * targetMultiplier) return 'text-yellow-600';
             if (value >= spi.levels.actionRequired * targetMultiplier) return 'text-orange-600';
             return 'text-red-600';
-        } else { // Higher is worse for lagging indicators
+        } else { // Lower is better
             if (value <= spi.levels.acceptable * targetMultiplier) return 'text-green-600';
             if (value <= spi.levels.monitor * targetMultiplier) return 'text-yellow-600';
             if (value <= spi.levels.actionRequired * targetMultiplier) return 'text-orange-600';

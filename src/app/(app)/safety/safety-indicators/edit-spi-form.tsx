@@ -7,12 +7,18 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+// Add new types for comparison and unit
+export type SpiComparison = 'lower-is-better' | 'greater-is-better';
+export type SpiUnit = 'Count' | 'Rate per 100 fh' | 'Rate per flight hour';
 
 export type SpiConfig = {
     id: string;
     name: string;
-    type: 'Lagging' | 'Leading';
-    unit: 'Count' | 'Rate per 100 fh';
+    type?: 'Lagging' | 'Leading'; // Keep for backward compatibility if needed, but prefer comparison
+    comparison: SpiComparison;
+    unit: SpiUnit;
     description: string;
     target: number;
     levels: {
@@ -25,6 +31,8 @@ export type SpiConfig = {
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required."),
+  comparison: z.enum(['lower-is-better', 'greater-is-better']),
+  unit: z.enum(['Count', 'Rate per 100 fh', 'Rate per flight hour']),
   target: z.number({ coerce: true }),
   levels: z.object({
     acceptable: z.number({ coerce: true }),
@@ -47,6 +55,9 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
         resolver: zodResolver(formSchema),
         defaultValues: {
             name: spi.name,
+            // Handle old 'type' property for backward compatibility
+            comparison: spi.comparison || (spi.type === 'Leading' ? 'greater-is-better' : 'lower-is-better'),
+            unit: spi.unit,
             target: spi.target,
             levels: spi.levels,
         },
@@ -72,6 +83,48 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
                         </FormItem>
                     )}
                 />
+                
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="comparison"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Target Direction</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="lower-is-better">Lower is Better</SelectItem>
+                                        <SelectItem value="greater-is-better">Greater is Better</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="unit"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Unit</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Count">Count per Period</SelectItem>
+                                        <SelectItem value="Rate per 100 fh">Rate per 100 fh</SelectItem>
+                                        <SelectItem value="Rate per flight hour">Rate per flight hour</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
 
                 <Separator />
 
@@ -81,7 +134,7 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
                         name="target"
                         render={({ field }) => (
                             <FormItem className='col-span-2'>
-                                <FormLabel>Overall Target ({spi.unit})</FormLabel>
+                                <FormLabel>Overall Target</FormLabel>
                                 <FormControl>
                                     <Input type="number" step="0.1" {...field} />
                                 </FormControl>
