@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { EditSpiForm, type SpiConfig } from './edit-spi-form';
@@ -75,7 +75,8 @@ const initialSpiConfig: SpiConfig[] = [
     }
 ];
 
-export type TimeScale = 'monthly' | 'quarterly' | 'yearly';
+const SPI_CONFIG_STORAGE_KEY = 'safeviate-spi-config';
+
 
 export default function SafetyIndicatorsPage() {
   const [spiConfig, setSpiConfig] = useState<SpiConfig[]>(initialSpiConfig);
@@ -96,6 +97,27 @@ export default function SafetyIndicatorsPage() {
 
   const { data: reports, isLoading: isLoadingReports } = useCollection<SafetyReport>(reportsQuery);
   const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
+  
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedConfig = localStorage.getItem(SPI_CONFIG_STORAGE_KEY);
+      if (savedConfig) {
+        setSpiConfig(JSON.parse(savedConfig));
+      }
+    } catch (error) {
+      console.error("Failed to load SPI config from localStorage", error);
+    }
+  }, []);
+
+  // Save to localStorage whenever spiConfig changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(SPI_CONFIG_STORAGE_KEY, JSON.stringify(spiConfig));
+    } catch (error) {
+      console.error("Failed to save SPI config to localStorage", error);
+    }
+  }, [spiConfig]);
 
 
   const handleEdit = (spi: SpiConfig) => {
