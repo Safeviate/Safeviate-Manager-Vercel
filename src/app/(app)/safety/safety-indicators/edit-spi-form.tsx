@@ -71,15 +71,12 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
     });
 
     const onSubmit = (values: FormValues) => {
-        onSave({ 
-            ...spi, 
-            name: values.name,
-            comparison: values.comparison,
-            unit: values.unit,
+        onSave({
+            ...spi,
+            ...values,
+            // Ensure conditional fields are handled correctly based on the new unit value
             rateFactor: values.unit === 'Rate' ? values.rateFactor : undefined,
             periodLabel: values.unit === 'Count' ? values.periodLabel : undefined,
-            target: values.target,
-            levels: values.levels
         });
     };
     
@@ -111,7 +108,7 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Target Direction</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                             </FormControl>
@@ -130,7 +127,7 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Unit</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                             </FormControl>
