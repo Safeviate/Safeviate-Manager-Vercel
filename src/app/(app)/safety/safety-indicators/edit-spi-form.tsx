@@ -10,28 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-
-export type SpiComparison = 'lower-is-better' | 'greater-is-better';
-export type SpiUnit = 'Count' | 'Rate';
-
-export type SpiConfig = {
-    id: string;
-    name: string;
-    type?: 'Lagging' | 'Leading'; // Keep for backward compatibility if needed, but prefer comparison
-    comparison: SpiComparison;
-    unit: SpiUnit;
-    rateFactor?: number;
-    periodLabel?: string;
-    description: string;
-    target: number;
-    levels: {
-        acceptable: number;
-        monitor: number;
-        actionRequired: number;
-        urgentAction: number;
-    };
-    monthlyData?: number[]; // Array of 12 numbers for manual data
-};
+import type { SpiConfig } from '@/types/spi';
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required."),
@@ -61,7 +40,7 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
         resolver: zodResolver(formSchema),
         defaultValues: {
             name: spi.name,
-            comparison: spi.comparison || (spi.type === 'Leading' ? 'greater-is-better' : 'lower-is-better'),
+            comparison: spi.comparison || 'lower-is-better',
             unit: spi.unit,
             rateFactor: spi.rateFactor || 100,
             periodLabel: spi.periodLabel || 'Month',
@@ -74,7 +53,6 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
         onSave({
             ...spi,
             ...values,
-            // Ensure conditional fields are handled correctly based on the new unit value
             rateFactor: values.unit === 'Rate' ? values.rateFactor : undefined,
             periodLabel: values.unit === 'Count' ? values.periodLabel : undefined,
         });

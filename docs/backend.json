@@ -1144,35 +1144,6 @@
         }
       }
     },
-    "Settings": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Settings",
-      "type": "object",
-      "description": "Represents the application settings for a tenant.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Settings."
-        },
-        "tenantId": {
-          "type": "string",
-          "description": "The tenant this setting belongs to."
-        },
-        "theme": {
-          "$ref": "#/backend/entities/Theme"
-        },
-        "documentExpiry": {
-            "$ref": "#/backend/entities/DocumentExpiry"
-        },
-        "findingLevels": {
-            "$ref": "#/backend/entities/FindingLevelsSettings"
-        },
-        "studentMilestoneSettings": {
-            "$ref": "#/backend/entities/StudentMilestoneSettings"
-        }
-      },
-      "required": ["id", "tenantId"]
-    },
     "FeatureSettings": {
       "title": "Feature Settings",
       "type": "object",
@@ -1452,6 +1423,48 @@
         "status": { "type": "string", "enum": ["Active", "Archived"] }
       },
       "required": ["id", "type", "title", "content", "createdAt", "createdBy", "status"]
+    },
+    "SpiConfig": {
+        "title": "SPI Config",
+        "type": "object",
+        "description": "Defines a single Safety Performance Indicator.",
+        "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "comparison": { "type": "string", "enum": ["lower-is-better", "greater-is-better"] },
+            "unit": { "type": "string", "enum": ["Count", "Rate"] },
+            "rateFactor": { "type": "number" },
+            "periodLabel": { "type": "string" },
+            "description": { "type": "string" },
+            "target": { "type": "number" },
+            "levels": {
+                "type": "object",
+                "properties": {
+                    "acceptable": { "type": "number" },
+                    "monitor": { "type": "number" },
+                    "actionRequired": { "type": "number" },
+                    "urgentAction": { "type": "number" }
+                }
+            },
+            "monthlyData": {
+                "type": "array",
+                "items": { "type": "number" }
+            }
+        },
+        "required": ["id", "name", "comparison", "unit", "description", "target", "levels"]
+    },
+    "SpiConfigurations": {
+        "title": "SPI Configurations",
+        "type": "object",
+        "description": "A document that stores the list of all SPI configurations for a tenant.",
+        "properties": {
+            "id": { "type": "string" },
+            "configurations": {
+                "type": "array",
+                "items": { "$ref": "#/backend/entities/SpiConfig" }
+            }
+        },
+        "required": ["id", "configurations"]
     }
   },
   "auth": {
@@ -1645,13 +1658,39 @@
         }
       },
       {
-        "path": "tenants/{tenantId}/settings/{settingsId}",
+        "path": "tenants/{tenantId}/settings/document-expiry",
         "definition": {
-          "schema": {
-            "$ref": "#/backend/entities/Settings"
-          },
-          "description": "Stores application settings for a tenant. A single document can hold multiple settings, e.g., 'document-expiry', 'features', 'finding-levels'."
+            "schema": { "$ref": "#/backend/entities/DocumentExpiry" },
+            "description": "Stores document expiry warning settings."
         }
+      },
+      {
+          "path": "tenants/{tenantId}/settings/finding-levels",
+          "definition": {
+              "schema": { "$ref": "#/backend/entities/FindingLevelsSettings" },
+              "description": "Stores audit finding levels."
+          }
+      },
+      {
+          "path": "tenants/{tenantId}/settings/features",
+          "definition": {
+              "schema": { "$ref": "#/backend/entities/FeatureSettings" },
+              "description": "Stores feature flags."
+          }
+      },
+      {
+          "path": "tenants/{tenantId}/settings/student-milestones",
+          "definition": {
+              "schema": { "$ref": "#/backend/entities/StudentMilestoneSettings" },
+              "description": "Stores student milestone settings."
+          }
+      },
+      {
+          "path": "tenants/{tenantId}/settings/spi-configurations",
+          "definition": {
+            "schema": { "$ref": "#/backend/entities/SpiConfigurations" },
+            "description": "Stores the configuration for Safety Performance Indicators."
+          }
       },
        {
         "path": "tenants/{tenantId}/departments/{departmentId}",

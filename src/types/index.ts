@@ -51,3 +51,4 @@ export type {
     PerformanceRating
 } from './training';
 export type { Alert, AlertType, AlertStatus } from './alert';
+export type { SpiConfig, SpiConfigurations, SpiComparison, SpiUnit } from './spi';

@@ -1,16 +1,19 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { EditSpiForm, type SpiConfig } from './edit-spi-form';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { EditSpiForm } from './edit-spi-form';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
+import { collection, query, doc } from 'firebase/firestore';
 import type { SafetyReport } from '@/types/safety-report';
 import type { Booking } from '@/types/booking';
 import { SPICard } from './spi-card';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
+import type { SpiConfig, SpiConfigurations } from '@/types/spi';
+
 
 // Updated initialSpiConfig
 const initialSpiConfig: SpiConfig[] = [
@@ -80,8 +83,6 @@ const initialSpiConfig: SpiConfig[] = [
     }
 ];
 
-const SPI_CONFIG_STORAGE_KEY = 'safeviate-spi-config';
-
 
 export default function SafetyIndicatorsPage() {
   const [spiConfig, setSpiConfig] = useState<SpiConfig[]>(initialSpiConfig);
@@ -90,6 +91,7 @@ export default function SafetyIndicatorsPage() {
 
   const firestore = useFirestore();
   const tenantId = 'safeviate';
+  const settingsDocId = 'spi-configurations';
 
   const reportsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'safety-reports')) : null),
@@ -99,30 +101,31 @@ export default function SafetyIndicatorsPage() {
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'bookings')) : null),
     [firestore, tenantId]
   );
+  const spiConfigRef = useMemoFirebase(
+    () => (firestore ? doc(firestore, `tenants/${tenantId}/settings`, settingsDocId) : null),
+    [firestore, tenantId]
+  );
 
   const { data: reports, isLoading: isLoadingReports } = useCollection<SafetyReport>(reportsQuery);
   const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
+  const { data: spiDocument } = useDoc<SpiConfigurations>(spiConfigRef);
   
-  // Load from localStorage on mount
   useEffect(() => {
-    try {
-      const savedConfig = localStorage.getItem(SPI_CONFIG_STORAGE_KEY);
-      if (savedConfig) {
-        setSpiConfig(JSON.parse(savedConfig));
-      }
-    } catch (error) {
-      console.error("Failed to load SPI config from localStorage", error);
+    if (spiDocument && spiDocument.configurations) {
+        setSpiConfig(spiDocument.configurations);
+    } else {
+        setSpiConfig(initialSpiConfig);
     }
-  }, []);
+  }, [spiDocument]);
 
-  // Save to localStorage whenever spiConfig changes
-  useEffect(() => {
-    try {
-      localStorage.setItem(SPI_CONFIG_STORAGE_KEY, JSON.stringify(spiConfig));
-    } catch (error) {
-      console.error("Failed to save SPI config to localStorage", error);
-    }
-  }, [spiConfig]);
+  const saveConfigToFirestore = (updatedConfig: SpiConfig[]) => {
+    if (!firestore || !spiConfigRef) return;
+    const configToSave: SpiConfigurations = {
+        id: settingsDocId,
+        configurations: updatedConfig
+    };
+    setDocumentNonBlocking(spiConfigRef, configToSave, { merge: true });
+  };
 
 
   const handleEdit = (spi: SpiConfig) => {
@@ -131,18 +134,17 @@ export default function SafetyIndicatorsPage() {
   };
 
   const handleSave = (spiToSave: SpiConfig) => {
-    setSpiConfig(prev => {
-        const index = prev.findIndex(s => s.id === spiToSave.id);
+    const newConfig = [...spiConfig];
+    if (spiToSave.id === 'new-spi') {
+        newConfig.push({ ...spiToSave, id: `spi-${Date.now()}` });
+    } else {
+        const index = newConfig.findIndex(s => s.id === spiToSave.id);
         if (index > -1) {
-            // Update existing
-            const newConfig = [...prev];
             newConfig[index] = spiToSave;
-            return newConfig;
-        } else {
-            // Add new with a unique ID
-            return [...prev, { ...spiToSave, id: `spi-${Date.now()}` }];
         }
-    });
+    }
+    setSpiConfig(newConfig);
+    saveConfigToFirestore(newConfig);
     setIsEditDialogOpen(false);
     setSelectedSpi(null);
   };
@@ -164,22 +166,24 @@ export default function SafetyIndicatorsPage() {
 
   const handleDelete = (spiId: string) => {
     if (window.confirm('Are you sure you want to delete this SPI?')) {
-        setSpiConfig(prev => prev.filter(spi => spi.id !== spiId));
+        const newConfig = spiConfig.filter(spi => spi.id !== spiId);
+        setSpiConfig(newConfig);
+        saveConfigToFirestore(newConfig);
     }
   };
 
 
   const handleMonthDataSave = (spiId: string, monthIndex: number, newValue: number) => {
-      setSpiConfig(prevConfig => 
-          prevConfig.map(spi => {
-              if (spi.id === spiId) {
-                  const newMonthlyData = [...(spi.monthlyData || Array(12).fill(0))];
-                  newMonthlyData[monthIndex] = newValue;
-                  return { ...spi, monthlyData: newMonthlyData };
-              }
-              return spi;
-          })
-      );
+      const newConfig = spiConfig.map(spi => {
+          if (spi.id === spiId) {
+              const newMonthlyData = [...(spi.monthlyData || Array(12).fill(0))];
+              newMonthlyData[monthIndex] = newValue;
+              return { ...spi, monthlyData: newMonthlyData };
+          }
+          return spi;
+      });
+      setSpiConfig(newConfig);
+      saveConfigToFirestore(newConfig);
   };
 
   return (
