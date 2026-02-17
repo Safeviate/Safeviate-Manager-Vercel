@@ -153,14 +153,24 @@ const applyScaleToDOM = (scale: number) => {
     document.documentElement.style.fontSize = `${scale}%`;
 };
 
-const getInitialState = <T extends object>(key: string, defaultValue: T): T => {
+const getInitialState = <T,>(key: string, defaultValue: T): T => {
     if (typeof window === 'undefined') {
         return defaultValue;
     }
     try {
         const item = window.localStorage.getItem(key);
-        const stored = item ? JSON.parse(item) : {};
-        return { ...defaultValue, ...stored };
+        if (item === null) {
+            return defaultValue;
+        }
+        const stored = JSON.parse(item);
+
+        // For objects (but not arrays), merge with defaults.
+        if (typeof defaultValue === 'object' && defaultValue !== null && !Array.isArray(defaultValue)) {
+             return { ...(defaultValue as object), ...stored };
+        }
+        
+        // For primitives and arrays, return the stored value directly.
+        return stored;
     } catch (error) {
         console.warn(`Error reading localStorage key “${key}”:`, error);
         return defaultValue;
