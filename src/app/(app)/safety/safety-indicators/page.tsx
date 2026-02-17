@@ -122,19 +122,25 @@ export default function SafetyIndicatorsPage() {
     setDocumentNonBlocking(spiConfigRef, configToSave, { merge: true });
   }, [firestore, spiConfigRef]);
   
-  useEffect(() => {
-    if (isLoadingSpiDocument) {
-        return;
-    }
-    
-    if (spiDocument && spiDocument.configurations) {
-        if (JSON.stringify(spiConfig) !== JSON.stringify(spiDocument.configurations)) {
-            setSpiConfig(spiDocument.configurations);
+    useEffect(() => {
+        if (isLoadingSpiDocument) {
+            return;
         }
-    } else if (!spiDocument) {
-        saveConfigToFirestore(initialSpiConfig);
-    }
-  }, [spiDocument, isLoadingSpiDocument, saveConfigToFirestore, spiConfig]);
+
+        if (spiDocument && spiDocument.configurations) {
+            // This comparison prevents an infinite loop if the data from Firestore
+            // is the same as the current state, which can happen on re-renders.
+            if (JSON.stringify(spiConfig) !== JSON.stringify(spiDocument.configurations)) {
+                setSpiConfig(spiDocument.configurations);
+            }
+        } else if (!spiDocument) {
+            // If the document doesn't exist in Firestore, create it with the default config.
+            saveConfigToFirestore(initialSpiConfig);
+        }
+    // We intentionally omit spiConfig from the dependency array to break the infinite render loop.
+    // The state is updated only when the document from firestore changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [spiDocument, isLoadingSpiDocument, saveConfigToFirestore]);
 
 
   const handleEdit = (spi: SpiConfig) => {
@@ -143,14 +149,11 @@ export default function SafetyIndicatorsPage() {
   };
 
   const handleSave = (spiToSave: SpiConfig) => {
-    const newConfig = [...spiConfig];
+    let newConfig: SpiConfig[];
     if (spiToSave.id === 'new-spi') {
-        newConfig.push({ ...spiToSave, id: `spi-${Date.now()}` });
+        newConfig = [...spiConfig, { ...spiToSave, id: `spi-${Date.now()}` }];
     } else {
-        const index = newConfig.findIndex(s => s.id === spiToSave.id);
-        if (index > -1) {
-            newConfig[index] = spiToSave;
-        }
+        newConfig = spiConfig.map(s => s.id === spiToSave.id ? spiToSave : s);
     }
     setSpiConfig(newConfig);
     saveConfigToFirestore(newConfig);
