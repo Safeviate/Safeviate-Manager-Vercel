@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -11,9 +10,11 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { SpiConfig } from '@/types/spi';
+import { Textarea } from '@/components/ui/textarea';
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required."),
+  description: z.string().optional(),
   comparison: z.enum(['lower-is-better', 'greater-is-better']),
   unit: z.enum(['Count', 'Rate']),
   rateFactor: z.number({ coerce: true }).optional(),
@@ -40,6 +41,7 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
         resolver: zodResolver(formSchema),
         defaultValues: {
             name: spi.name,
+            description: spi.description || '',
             comparison: spi.comparison || 'lower-is-better',
             unit: spi.unit,
             rateFactor: spi.rateFactor || 100,
@@ -73,6 +75,20 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
                                     <FormLabel>Indicator Name</FormLabel>
                                     <FormControl>
                                         <Input {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="description"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Description</FormLabel>
+                                    <FormControl>
+                                        <Textarea placeholder="A brief description of this indicator..." {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
