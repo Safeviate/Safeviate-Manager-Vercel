@@ -69,6 +69,22 @@ export function SPICard({ spi, onEdit, reports, bookings, onMonthDataSave }: SPI
         }
     };
     
+    const getMonthStatusClass = (value: number) => {
+        const { levels, comparison } = spi;
+
+        if (comparison === 'greater-is-better') {
+            if (value >= levels.acceptable) return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
+            if (value >= levels.monitor) return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
+            if (value >= levels.actionRequired) return 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300';
+            return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+        } else { // lower-is-better
+            if (value <= levels.acceptable) return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
+            if (value <= levels.monitor) return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
+            if (value <= levels.actionRequired) return 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300';
+            return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+        }
+    };
+
     const handleMonthClick = (index: number, label: string, value: number) => {
         setSelectedMonth({ index, label, value });
         setMonthValue(value);
@@ -120,10 +136,13 @@ export function SPICard({ spi, onEdit, reports, bookings, onMonthDataSave }: SPI
                                 {spiData.map((dataPoint, index) => (
                                     <button 
                                         key={dataPoint.label} 
-                                        className="text-center p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                                        className={cn(
+                                            "text-center p-2 rounded-lg transition-colors hover:opacity-90",
+                                            getMonthStatusClass(dataPoint.value)
+                                        )}
                                         onClick={() => handleMonthClick(index, dataPoint.label, dataPoint.value)}
                                     >
-                                        <p className="text-xs font-medium text-muted-foreground">{dataPoint.label.split(' ')[0]}</p>
+                                        <p className="text-xs font-medium opacity-80">{dataPoint.label.split(' ')[0]}</p>
                                         <p className="text-lg font-bold">{dataPoint.value}</p>
                                     </button>
                                 ))}
