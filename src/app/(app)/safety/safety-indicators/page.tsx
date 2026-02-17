@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -131,7 +130,7 @@ export default function SafetyIndicatorsPage() {
                     {isLoadingReports || isLoadingBookings ? (
                         <p>Loading SPI data...</p>
                     ) : (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 gap-6">
                             {spiConfig.map(spi => (
                                 <SPICard 
                                     key={spi.id} 
