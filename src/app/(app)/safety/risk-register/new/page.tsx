@@ -29,9 +29,6 @@ export default function NewRiskPage() {
         riskScore,
         status: 'Open',
         mitigation: '',
-        residualLikelihood: undefined,
-        residualSeverity: undefined,
-        residualRiskScore: undefined,
       };
 
       await addDocumentNonBlocking(risksCollection, newRisk);
