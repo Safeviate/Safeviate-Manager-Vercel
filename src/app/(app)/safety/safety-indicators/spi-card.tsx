@@ -68,6 +68,7 @@ export function SPICard({ spi, onEdit, reports, bookings, onMonthDataSave }: SPI
     const getMonthStatusClass = (value: number) => {
         const { levels, comparison } = spi;
 
+        if (value === 0 && comparison === 'greater-is-better') return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
         if (comparison === 'greater-is-better') {
             if (value >= levels.acceptable) return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
             if (value >= levels.monitor) return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
@@ -106,7 +107,12 @@ export function SPICard({ spi, onEdit, reports, bookings, onMonthDataSave }: SPI
                     <div className="flex justify-between items-start">
                         <div>
                             <CardTitle className="text-lg">{spi.name}</CardTitle>
-                            <CardDescription>{spi.description}</CardDescription>
+                            <CardDescription>
+                                {spi.description}
+                                <span className="block text-xs text-muted-foreground mt-1">
+                                    Target Direction: <span className="font-semibold">{spi.comparison === 'lower-is-better' ? 'Lower is Better' : 'Greater is Better'}</span>
+                                </span>
+                            </CardDescription>
                         </div>
                         <Button variant="ghost" size="icon" className="w-8 h-8 flex-shrink-0" onClick={() => onEdit(spi)}>
                             <Edit className="w-4 h-4" />
