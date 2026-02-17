@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -9,7 +10,6 @@ import { collection, query } from 'firebase/firestore';
 import type { SafetyReport } from '@/types/safety-report';
 import type { Booking } from '@/types/booking';
 import { SPICard } from './spi-card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Updated initialSpiConfig
 const initialSpiConfig: SpiConfig[] = [
@@ -81,7 +81,6 @@ export default function SafetyIndicatorsPage() {
   const [spiConfig, setSpiConfig] = useState<SpiConfig[]>(initialSpiConfig);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedSpi, setSelectedSpi] = useState<SpiConfig | null>(null);
-  const [timeScale, setTimeScale] = useState<TimeScale>('monthly');
 
   const firestore = useFirestore();
   const tenantId = 'safeviate';
@@ -120,31 +119,24 @@ export default function SafetyIndicatorsPage() {
                   </p>
               </div>
           </div>
-            <Tabs defaultValue="monthly" onValueChange={(value) => setTimeScale(value as TimeScale)}>
-                <TabsList>
-                    <TabsTrigger value="monthly">Monthly</TabsTrigger>
-                    <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
-                    <TabsTrigger value="yearly">Yearly</TabsTrigger>
-                </TabsList>
-                <TabsContent value={timeScale} className="mt-6">
-                    {isLoadingReports || isLoadingBookings ? (
-                        <p>Loading SPI data...</p>
-                    ) : (
-                        <div className="grid grid-cols-1 gap-6">
-                            {spiConfig.map(spi => (
-                                <SPICard 
-                                    key={spi.id} 
-                                    spi={spi} 
-                                    onEdit={handleEdit} 
-                                    reports={reports} 
-                                    bookings={bookings}
-                                    timeScale={timeScale}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </TabsContent>
-            </Tabs>
+          <div className="mt-6">
+              {isLoadingReports || isLoadingBookings ? (
+                  <p>Loading SPI data...</p>
+              ) : (
+                  <div className="grid grid-cols-1 gap-6">
+                      {spiConfig.map(spi => (
+                          <SPICard 
+                              key={spi.id} 
+                              spi={spi} 
+                              onEdit={handleEdit} 
+                              reports={reports} 
+                              bookings={bookings}
+                              timeScale='yearly'
+                          />
+                      ))}
+                  </div>
+              )}
+          </div>
       </div>
       
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
