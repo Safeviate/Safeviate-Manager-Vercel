@@ -21,7 +21,7 @@ export const useSpiData = (spi: SpiConfig, reports: SafetyReport[] | null, booki
             const currentYear = new Date().getFullYear();
             for (let i = 0; i < 12; i++) {
                 const date = new Date(currentYear, i, 1);
-                const label = format(date, 'MMM');
+                const label = format(date, 'MMM yy');
                 finalData.push({ label, value: spi.monthlyData[i] || 0 });
             }
             return finalData;
@@ -99,7 +99,7 @@ export const useSpiData = (spi: SpiConfig, reports: SafetyReport[] | null, booki
                 value = data.flightHours > 0 ? data.count / data.flightHours : 0;
             }
         
-            finalData.push({ label: format(date, 'MMM'), value: parseFloat(value.toFixed(2)) });
+            finalData.push({ label: format(date, 'MMM yy'), value: parseFloat(value.toFixed(2)) });
         }
         return finalData;
 
