@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -27,6 +28,13 @@ export function SPICard({ spi, onEdit, reports, bookings, onMonthDataSave }: SPI
     const [isMonthEditDialogOpen, setIsMonthEditDialogOpen] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState<{ index: number; label: string; value: number } | null>(null);
     const [monthValue, setMonthValue] = useState<number | string>('');
+
+    const unitLabel = useMemo(() => {
+        if (spi.unit === 'Rate') {
+            return `per ${spi.rateFactor || 1} fh`;
+        }
+        return spi.unit;
+    }, [spi.unit, spi.rateFactor]);
 
     const yearlySummary = useMemo(() => {
         if (yearlyValue === undefined) return null;
@@ -117,7 +125,7 @@ export function SPICard({ spi, onEdit, reports, bookings, onMonthDataSave }: SPI
                                     <p className={cn('text-5xl font-bold tracking-tighter', getStatusClass(yearlySummary.value))}>
                                         {yearlySummary.value}
                                     </p>
-                                    <p className='text-sm text-muted-foreground mt-1'>{spi.unit} {yearlySummary.label}</p>
+                                    <p className='text-sm text-muted-foreground mt-1'>{unitLabel} {yearlySummary.label}</p>
                                 </>
                             ) : (
                                 <p className="text-sm text-muted-foreground">No data</p>
@@ -149,7 +157,7 @@ export function SPICard({ spi, onEdit, reports, bookings, onMonthDataSave }: SPI
                         <DialogTitle>Edit Data for {selectedMonth?.label}</DialogTitle>
                     </DialogHeader>
                     <div className="py-4">
-                        <Label htmlFor="month-value">Value ({spi.unit})</Label>
+                        <Label htmlFor="month-value">Value ({unitLabel})</Label>
                         <Input 
                             id="month-value"
                             type="number"

@@ -116,10 +116,9 @@ export const useSpiData = (spi: SpiConfig, reports: SafetyReport[] | null, booki
             let value = 0;
             if (spi.unit === 'Count') {
                 value = data.count;
-            } else if (spi.unit === 'Rate per 100 fh') {
-                value = data.flightHours > 0 ? (data.count / data.flightHours) * 100 : 0;
-            } else if (spi.unit === 'Rate per flight hour') {
-                value = data.flightHours > 0 ? data.count / data.flightHours : 0;
+            } else if (spi.unit === 'Rate') {
+                const rateFactor = spi.rateFactor || 1;
+                value = data.flightHours > 0 ? (data.count / data.flightHours) * rateFactor : 0;
             }
         
             monthlyData.push({ label: format(date, 'MMM yy'), value: parseFloat(value.toFixed(2)) });
@@ -128,10 +127,9 @@ export const useSpiData = (spi: SpiConfig, reports: SafetyReport[] | null, booki
         let yearlyValue = 0;
         if (spi.unit === 'Count') {
             yearlyValue = totalYearlyCount;
-        } else if (spi.unit === 'Rate per 100 fh') {
-            yearlyValue = totalYearlyFlightHours > 0 ? (totalYearlyCount / totalYearlyFlightHours) * 100 : 0;
-        } else if (spi.unit === 'Rate per flight hour') {
-            yearlyValue = totalYearlyFlightHours > 0 ? totalYearlyCount / totalYearlyFlightHours : 0;
+        } else if (spi.unit === 'Rate') {
+            const rateFactor = spi.rateFactor || 1;
+            yearlyValue = totalYearlyFlightHours > 0 ? (totalYearlyCount / totalYearlyFlightHours) * rateFactor : 0;
         }
 
         return {

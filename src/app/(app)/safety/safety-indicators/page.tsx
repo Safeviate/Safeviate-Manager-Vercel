@@ -17,7 +17,8 @@ const initialSpiConfig: SpiConfig[] = [
         id: 'unstable-approach',
         name: 'Unstable Approach Rate',
         comparison: 'lower-is-better',
-        unit: 'Rate per 100 fh',
+        unit: 'Rate',
+        rateFactor: 100,
         description: 'Number of reported unstable approaches per 100 flight hours.',
         target: 0.5,
         levels: {
@@ -32,7 +33,8 @@ const initialSpiConfig: SpiConfig[] = [
         id: 'tech-defect',
         name: 'Aircraft Technical Defect Rate',
         comparison: 'lower-is-better',
-        unit: 'Rate per 100 fh',
+        unit: 'Rate',
+        rateFactor: 100,
         description: 'Number of aircraft technical defects reported per 100 flight hours.',
         target: 1.0,
         levels: {

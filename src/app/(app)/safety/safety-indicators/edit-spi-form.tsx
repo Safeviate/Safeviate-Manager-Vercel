@@ -11,9 +11,8 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-// Add new types for comparison and unit
 export type SpiComparison = 'lower-is-better' | 'greater-is-better';
-export type SpiUnit = 'Count' | 'Rate per 100 fh' | 'Rate per flight hour';
+export type SpiUnit = 'Count' | 'Rate';
 
 export type SpiConfig = {
     id: string;
@@ -21,6 +20,7 @@ export type SpiConfig = {
     type?: 'Lagging' | 'Leading'; // Keep for backward compatibility if needed, but prefer comparison
     comparison: SpiComparison;
     unit: SpiUnit;
+    rateFactor?: number;
     description: string;
     target: number;
     levels: {
@@ -35,7 +35,8 @@ export type SpiConfig = {
 const formSchema = z.object({
   name: z.string().min(1, "Name is required."),
   comparison: z.enum(['lower-is-better', 'greater-is-better']),
-  unit: z.enum(['Count', 'Rate per 100 fh', 'Rate per flight hour']),
+  unit: z.enum(['Count', 'Rate']),
+  rateFactor: z.number({ coerce: true }).optional(),
   target: z.number({ coerce: true }),
   levels: z.object({
     acceptable: z.number({ coerce: true }),
@@ -60,24 +61,26 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
             name: spi.name,
             comparison: spi.comparison || (spi.type === 'Leading' ? 'greater-is-better' : 'lower-is-better'),
             unit: spi.unit,
+            rateFactor: spi.rateFactor || 100,
             target: spi.target,
             levels: spi.levels,
         },
     });
 
     const onSubmit = (values: FormValues) => {
-        // We only save the config here, not the monthly data
         onSave({ 
             ...spi, 
             name: values.name,
             comparison: values.comparison,
             unit: values.unit,
+            rateFactor: values.unit === 'Rate' ? values.rateFactor : undefined,
             target: values.target,
             levels: values.levels
-            // monthlyData is preserved from the original spi object
         });
     };
     
+    const unit = form.watch('unit');
+
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
@@ -129,14 +132,28 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
                                             </FormControl>
                                             <SelectContent>
                                                 <SelectItem value="Count">Count per Period</SelectItem>
-                                                <SelectItem value="Rate per 100 fh">Rate per 100 fh</SelectItem>
-                                                <SelectItem value="Rate per flight hour">Rate per flight hour</SelectItem>
+                                                <SelectItem value="Rate">Rate per Flight Hours</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
+                             {unit === 'Rate' && (
+                                <FormField
+                                    control={form.control}
+                                    name="rateFactor"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-2">
+                                            <FormLabel>Flight Hour Rate (per X fh)</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" placeholder="e.g., 100" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            )}
                         </div>
 
                         <Separator />
