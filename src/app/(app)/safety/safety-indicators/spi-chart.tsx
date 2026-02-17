@@ -5,15 +5,13 @@ import { Bar, BarChart, Line, LineChart, ReferenceLine, XAxis, YAxis } from 'rec
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import type { SpiDataPoint } from './use-spi-data';
 import type { SpiConfig } from './edit-spi-form';
-import type { TimeScale } from './page';
 
 interface SpiChartProps {
     data: SpiDataPoint[];
     spi: SpiConfig;
-    timeScale: TimeScale;
 }
 
-export function SpiChart({ data, spi, timeScale }: SpiChartProps) {
+export function SpiChart({ data, spi }: SpiChartProps) {
     const chartConfig = {
         value: {
             label: spi.unit,
@@ -21,11 +19,8 @@ export function SpiChart({ data, spi, timeScale }: SpiChartProps) {
         },
     };
 
-    let targetMultiplier = 1;
-    if (spi.unit === 'Count') {
-        if (timeScale === 'quarterly') targetMultiplier = 3;
-        if (timeScale === 'yearly') targetMultiplier = 12;
-    }
+    // The chart always shows monthly data, so targets are monthly targets
+    const targetMultiplier = 1;
 
     const maxValue = Math.max(...data.map(d => d.value), spi.levels.urgentAction * targetMultiplier);
     const yAxisDomain = [0, maxValue * 1.25];

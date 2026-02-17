@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -131,7 +130,6 @@ export default function SafetyIndicatorsPage() {
                               onEdit={handleEdit} 
                               reports={reports} 
                               bookings={bookings}
-                              timeScale='yearly'
                           />
                       ))}
                   </div>
