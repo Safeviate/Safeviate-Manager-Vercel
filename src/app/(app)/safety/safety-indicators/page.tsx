@@ -154,12 +154,12 @@ export default function SafetyIndicatorsPage() {
                   </p>
               </div>
           </div>
-          <div className="mt-6">
+          <div className="grid grid-cols-1 gap-6">
               {isLoadingReports || isLoadingBookings ? (
                   <p>Loading SPI data...</p>
               ) : (
-                  <div className="grid grid-cols-1 gap-6">
-                      {spiConfig.map(spi => (
+                  
+                      spiConfig.map(spi => (
                           <SPICard 
                               key={spi.id} 
                               spi={spi} 
@@ -168,8 +168,8 @@ export default function SafetyIndicatorsPage() {
                               bookings={bookings}
                               onMonthDataSave={handleMonthDataSave}
                           />
-                      ))}
-                  </div>
+                      ))
+                  
               )}
           </div>
       </div>
