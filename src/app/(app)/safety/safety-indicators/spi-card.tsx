@@ -33,38 +33,34 @@ export function SPICard({ spi, onEdit, reports, bookings, onMonthDataSave }: SPI
         if (spi.unit === 'Rate') {
             return `per ${spi.rateFactor || 1} fh`;
         }
-        return spi.unit;
-    }, [spi.unit, spi.rateFactor]);
+        return spi.periodLabel || spi.unit;
+    }, [spi.unit, spi.rateFactor, spi.periodLabel]);
 
     const yearlySummary = useMemo(() => {
         if (yearlyValue === undefined) return null;
         
+        const label = spi.unit === 'Count' 
+            ? `avg per ${spi.periodLabel || 'Month'}`
+            : `for ${new Date().getFullYear()}`;
+
         return {
-            label: `for ${new Date().getFullYear()}`,
+            label,
             value: yearlyValue
         };
-    }, [yearlyValue]);
+    }, [yearlyValue, spi]);
 
     const getStatusClass = (value: number) => {
-        const isCount = spi.unit === 'Count';
+        const { levels, comparison } = spi;
         
-        const acceptable = spi.levels.acceptable;
-        const monitor = spi.levels.monitor;
-        const actionRequired = spi.levels.actionRequired;
-        
-        if (spi.comparison === 'greater-is-better') {
-            const annualAcceptable = isCount ? acceptable * 12 : acceptable;
-            const annualMonitor = isCount ? monitor * 12 : monitor;
-            const annualActionRequired = isCount ? actionRequired * 12 : actionRequired;
-
-            if (value >= annualAcceptable) return 'text-green-600';
-            if (value >= annualMonitor) return 'text-yellow-600';
-            if (value >= annualActionRequired) return 'text-orange-600';
+        if (comparison === 'greater-is-better') {
+            if (value >= levels.acceptable) return 'text-green-600';
+            if (value >= levels.monitor) return 'text-yellow-600';
+            if (value >= levels.actionRequired) return 'text-orange-600';
             return 'text-red-600';
-        } else { 
-            if (value <= acceptable) return 'text-green-600';
-            if (value <= monitor) return 'text-yellow-600';
-            if (value <= actionRequired) return 'text-orange-600';
+        } else { // lower-is-better
+            if (value <= levels.acceptable) return 'text-green-600';
+            if (value <= levels.monitor) return 'text-yellow-600';
+            if (value <= levels.actionRequired) return 'text-orange-600';
             return 'text-red-600';
         }
     };
@@ -157,7 +153,7 @@ export function SPICard({ spi, onEdit, reports, bookings, onMonthDataSave }: SPI
                         <DialogTitle>Edit Data for {selectedMonth?.label}</DialogTitle>
                     </DialogHeader>
                     <div className="py-4">
-                        <Label htmlFor="month-value">Value ({unitLabel})</Label>
+                        <Label htmlFor="month-value">Value</Label>
                         <Input 
                             id="month-value"
                             type="number"

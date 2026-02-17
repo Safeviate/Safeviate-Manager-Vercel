@@ -32,9 +32,8 @@ export const useSpiData = (spi: SpiConfig, reports: SafetyReport[] | null, booki
             
             let yearlyValue = 0;
             if (spi.unit === 'Count') {
-                yearlyValue = spi.monthlyData.reduce((sum, val) => sum + val, 0);
-            } else {
-                // For rates with manual data, we can only average the monthly entries.
+                yearlyValue = spi.monthlyData.reduce((sum, val) => sum + val, 0) / 12;
+            } else { // Rate
                 const nonZeroMonths = spi.monthlyData.filter(v => v > 0);
                 if(nonZeroMonths.length > 0) {
                      yearlyValue = nonZeroMonths.reduce((sum, val) => sum + val, 0) / nonZeroMonths.length;
@@ -126,7 +125,7 @@ export const useSpiData = (spi: SpiConfig, reports: SafetyReport[] | null, booki
 
         let yearlyValue = 0;
         if (spi.unit === 'Count') {
-            yearlyValue = totalYearlyCount;
+            yearlyValue = totalYearlyCount / 12;
         } else if (spi.unit === 'Rate') {
             const rateFactor = spi.rateFactor || 1;
             yearlyValue = totalYearlyFlightHours > 0 ? (totalYearlyCount / totalYearlyFlightHours) * rateFactor : 0;
