@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,6 +9,8 @@ import { collection, query } from 'firebase/firestore';
 import type { SafetyReport } from '@/types/safety-report';
 import type { Booking } from '@/types/booking';
 import { SPICard } from './spi-card';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
 
 // Updated initialSpiConfig
 const initialSpiConfig: SpiConfig[] = [
@@ -129,10 +130,44 @@ export default function SafetyIndicatorsPage() {
     setIsEditDialogOpen(true);
   };
 
-  const handleSave = (updatedSpi: SpiConfig) => {
-    setSpiConfig(prev => prev.map(spi => spi.id === updatedSpi.id ? updatedSpi : spi));
+  const handleSave = (spiToSave: SpiConfig) => {
+    setSpiConfig(prev => {
+        const index = prev.findIndex(s => s.id === spiToSave.id);
+        if (index > -1) {
+            // Update existing
+            const newConfig = [...prev];
+            newConfig[index] = spiToSave;
+            return newConfig;
+        } else {
+            // Add new with a unique ID
+            return [...prev, { ...spiToSave, id: `spi-${Date.now()}` }];
+        }
+    });
     setIsEditDialogOpen(false);
+    setSelectedSpi(null);
   };
+
+  const handleNewSpi = () => {
+    setSelectedSpi({
+        id: 'new-spi', // Temporary ID
+        name: '',
+        comparison: 'lower-is-better',
+        unit: 'Count',
+        periodLabel: 'Month',
+        description: '',
+        target: 0,
+        levels: { acceptable: 0, monitor: 1, actionRequired: 2, urgentAction: 3 },
+        monthlyData: Array(12).fill(0),
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDelete = (spiId: string) => {
+    if (window.confirm('Are you sure you want to delete this SPI?')) {
+        setSpiConfig(prev => prev.filter(spi => spi.id !== spiId));
+    }
+  };
+
 
   const handleMonthDataSave = (spiId: string, monthIndex: number, newValue: number) => {
       setSpiConfig(prevConfig => 
@@ -157,6 +192,9 @@ export default function SafetyIndicatorsPage() {
                       Monitoring key safety metrics and trends over time.
                   </p>
               </div>
+              <Button onClick={handleNewSpi}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add New SPI
+              </Button>
           </div>
           <div className="grid grid-cols-1 gap-6">
               {isLoadingReports || isLoadingBookings ? (
@@ -167,7 +205,8 @@ export default function SafetyIndicatorsPage() {
                           <SPICard 
                               key={spi.id} 
                               spi={spi} 
-                              onEdit={handleEdit} 
+                              onEdit={handleEdit}
+                              onDelete={handleDelete}
                               reports={reports} 
                               bookings={bookings}
                               onMonthDataSave={handleMonthDataSave}
@@ -181,9 +220,9 @@ export default function SafetyIndicatorsPage() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="sm:max-w-xl">
               <DialogHeader>
-                  <DialogTitle>Edit SPI: {selectedSpi?.name}</DialogTitle>
+                  <DialogTitle>{selectedSpi?.id === 'new-spi' ? 'Create New SPI' : `Edit SPI: ${selectedSpi?.name}`}</DialogTitle>
                   <DialogDescription>
-                      Adjust the targets and alert levels for this Safety Performance Indicator.
+                      {selectedSpi?.id === 'new-spi' ? 'Define a new Safety Performance Indicator.' : 'Adjust the targets and alert levels for this SPI.'}
                   </DialogDescription>
               </DialogHeader>
               {selectedSpi && (

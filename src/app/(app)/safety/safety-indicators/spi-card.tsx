@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit } from 'lucide-react';
+import { Edit, MoreVertical, Trash2 } from 'lucide-react';
 import { SpiConfig } from './edit-spi-form';
 import { useSpiData } from './use-spi-data';
 import type { SafetyReport } from '@/types/safety-report';
@@ -13,16 +12,18 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface SPICardProps {
     spi: SpiConfig;
     onEdit: (spi: SpiConfig) => void;
+    onDelete: (spiId: string) => void;
     reports: SafetyReport[] | null;
     bookings: Booking[] | null;
     onMonthDataSave: (spiId: string, monthIndex: number, newValue: number) => void;
 }
 
-export function SPICard({ spi, onEdit, reports, bookings, onMonthDataSave }: SPICardProps) {
+export function SPICard({ spi, onEdit, onDelete, reports, bookings, onMonthDataSave }: SPICardProps) {
     const { monthlyData: spiData, yearlyValue } = useSpiData(spi, reports, bookings);
 
     const [isMonthEditDialogOpen, setIsMonthEditDialogOpen] = useState(false);
@@ -68,7 +69,7 @@ export function SPICard({ spi, onEdit, reports, bookings, onMonthDataSave }: SPI
     const getMonthStatusClass = (value: number) => {
         const { levels, comparison } = spi;
 
-        if (value === 0 && comparison === 'greater-is-better') return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+        if (value === 0 && comparison === 'greater-is-better') return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
         if (comparison === 'greater-is-better') {
             if (value >= levels.acceptable) return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
             if (value >= levels.monitor) return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
@@ -114,9 +115,23 @@ export function SPICard({ spi, onEdit, reports, bookings, onMonthDataSave }: SPI
                                 </span>
                             </CardDescription>
                         </div>
-                        <Button variant="ghost" size="icon" className="w-8 h-8 flex-shrink-0" onClick={() => onEdit(spi)}>
-                            <Edit className="w-4 h-4" />
-                        </Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="w-8 h-8 flex-shrink-0">
+                                    <MoreVertical className="w-4 h-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onSelect={() => onEdit(spi)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    <span>Edit</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => onDelete(spi.id)} className="text-destructive focus:text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Delete</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </CardHeader>
                 <CardContent>
