@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -91,7 +92,7 @@ export function SPICard({ spi, onEdit, reports, bookings }: SPICardProps) {
                             <p className="text-sm text-muted-foreground">No data</p>
                         )}
                     </div>
-                    <div className="h-48 w-full flex-grow">
+                    <div className="h-64 w-full flex-grow">
                         <SpiChart data={spiData} spi={spi} />
                     </div>
                 </div>

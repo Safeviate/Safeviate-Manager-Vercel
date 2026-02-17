@@ -28,16 +28,16 @@ export function SpiChart({ data, spi }: SpiChartProps) {
     const commonProps = {
         data: data,
         margin: {
-            top: 5,
+            top: 10,
             right: 15,
             left: -15,
-            bottom: 0,
+            bottom: 20,
         },
     };
 
     const commonComponents = (
         <>
-            <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
+            <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
             <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickMargin={5} domain={yAxisDomain} />
             <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
             <ReferenceLine y={spi.target * targetMultiplier} label="Target" stroke="hsl(var(--primary))" strokeDasharray="3 3" />
