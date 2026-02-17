@@ -34,8 +34,8 @@ export function SpiChart({ data, spi, timeScale }: SpiChartProps) {
         data: data,
         margin: {
             top: 5,
-            right: 10,
-            left: -20,
+            right: 15,
+            left: -15,
             bottom: 0,
         },
     };
