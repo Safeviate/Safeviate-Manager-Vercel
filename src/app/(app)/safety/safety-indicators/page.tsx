@@ -23,7 +23,7 @@ const initialSpiConfig: SpiConfig[] = [
         comparison: 'lower-is-better',
         unit: 'Rate',
         rateFactor: 100,
-        description: 'Number of reported unstable approaches per 100 flight hours.',
+        description: '',
         target: 0.5,
         levels: {
             acceptable: 0.5,
@@ -128,18 +128,10 @@ export default function SafetyIndicatorsPage() {
         }
 
         if (spiDocument && spiDocument.configurations) {
-            // This comparison prevents an infinite loop if the data from Firestore
-            // is the same as the current state, which can happen on re-renders.
-            if (JSON.stringify(spiConfig) !== JSON.stringify(spiDocument.configurations)) {
-                setSpiConfig(spiDocument.configurations);
-            }
+            setSpiConfig(spiDocument.configurations);
         } else if (!spiDocument) {
-            // If the document doesn't exist in Firestore, create it with the default config.
             saveConfigToFirestore(initialSpiConfig);
         }
-    // We intentionally omit spiConfig from the dependency array to break the infinite render loop.
-    // The state is updated only when the document from firestore changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [spiDocument, isLoadingSpiDocument, saveConfigToFirestore]);
 
 
