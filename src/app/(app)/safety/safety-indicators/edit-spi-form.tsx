@@ -201,34 +201,6 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
                                 )}
                             />
                         </div>
-                        
-                        <Separator />
-                        
-                        <div>
-                            <h3 className="text-base font-medium">Manual Monthly Data</h3>
-                            <p className="text-sm text-muted-foreground">Optionally override calculated data by entering values for each month of the current year.</p>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                                {Array.from({ length: 12 }).map((_, index) => {
-                                    const month = new Date(0, index).toLocaleString('default', { month: 'short' });
-                                    return (
-                                        <FormField
-                                            key={index}
-                                            control={form.control}
-                                            name={`monthlyData.${index}`}
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>{month}</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="number" step="0.1" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    );
-                                })}
-                            </div>
-                        </div>
                     </div>
                 </ScrollArea>
 

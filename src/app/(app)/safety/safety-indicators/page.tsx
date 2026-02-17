@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -107,6 +108,19 @@ export default function SafetyIndicatorsPage() {
     setIsEditDialogOpen(false);
   };
 
+  const handleMonthDataSave = (spiId: string, monthIndex: number, newValue: number) => {
+      setSpiConfig(prevConfig => 
+          prevConfig.map(spi => {
+              if (spi.id === spiId) {
+                  const newMonthlyData = [...(spi.monthlyData || Array(12).fill(0))];
+                  newMonthlyData[monthIndex] = newValue;
+                  return { ...spi, monthlyData: newMonthlyData };
+              }
+              return spi;
+          })
+      );
+  };
+
   return (
     <>
       <div className="flex flex-col gap-6 h-full">
@@ -130,6 +144,7 @@ export default function SafetyIndicatorsPage() {
                               onEdit={handleEdit} 
                               reports={reports} 
                               bookings={bookings}
+                              onMonthDataSave={handleMonthDataSave}
                           />
                       ))}
                   </div>
