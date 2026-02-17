@@ -50,6 +50,7 @@ const initialSpiConfig: SpiConfig[] = [
         name: 'Ground Incidents',
         comparison: 'lower-is-better',
         unit: 'Count',
+        periodLabel: 'Month',
         description: 'Total number of ground incidents reported per month.',
         target: 0,
         levels: {
@@ -65,6 +66,7 @@ const initialSpiConfig: SpiConfig[] = [
         name: 'Proactive Reports',
         comparison: 'greater-is-better',
         unit: 'Count',
+        periodLabel: 'Month',
         description: 'Total number of proactive safety reports filed by personnel.',
         target: 10,
         levels: {

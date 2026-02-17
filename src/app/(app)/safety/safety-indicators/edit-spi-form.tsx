@@ -21,6 +21,7 @@ export type SpiConfig = {
     comparison: SpiComparison;
     unit: SpiUnit;
     rateFactor?: number;
+    periodLabel?: string;
     description: string;
     target: number;
     levels: {
@@ -37,6 +38,7 @@ const formSchema = z.object({
   comparison: z.enum(['lower-is-better', 'greater-is-better']),
   unit: z.enum(['Count', 'Rate']),
   rateFactor: z.number({ coerce: true }).optional(),
+  periodLabel: z.string().optional(),
   target: z.number({ coerce: true }),
   levels: z.object({
     acceptable: z.number({ coerce: true }),
@@ -62,6 +64,7 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
             comparison: spi.comparison || (spi.type === 'Leading' ? 'greater-is-better' : 'lower-is-better'),
             unit: spi.unit,
             rateFactor: spi.rateFactor || 100,
+            periodLabel: spi.periodLabel || 'Month',
             target: spi.target,
             levels: spi.levels,
         },
@@ -74,6 +77,7 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
             comparison: values.comparison,
             unit: values.unit,
             rateFactor: values.unit === 'Rate' ? values.rateFactor : undefined,
+            periodLabel: values.unit === 'Count' ? values.periodLabel : undefined,
             target: values.target,
             levels: values.levels
         });
@@ -131,7 +135,7 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
                                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                <SelectItem value="Count">Count per Period</SelectItem>
+                                                <SelectItem value="Count">Count</SelectItem>
                                                 <SelectItem value="Rate">Rate per Flight Hours</SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -148,6 +152,21 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
                                             <FormLabel>Flight Hour Rate (per X fh)</FormLabel>
                                             <FormControl>
                                                 <Input type="number" placeholder="e.g., 100" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            )}
+                            {unit === 'Count' && (
+                                <FormField
+                                    control={form.control}
+                                    name="periodLabel"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-2">
+                                            <FormLabel>Period Name</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="e.g., Month, Quarter" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
