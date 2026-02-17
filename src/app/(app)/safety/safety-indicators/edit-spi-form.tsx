@@ -43,7 +43,6 @@ const formSchema = z.object({
     actionRequired: z.number({ coerce: true }),
     urgentAction: z.number({ coerce: true }),
   }),
-  monthlyData: z.array(z.number({ coerce: true })).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -63,12 +62,20 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
             unit: spi.unit,
             target: spi.target,
             levels: spi.levels,
-            monthlyData: spi.monthlyData || Array(12).fill(0),
         },
     });
 
     const onSubmit = (values: FormValues) => {
-        onSave({ ...spi, ...values });
+        // We only save the config here, not the monthly data
+        onSave({ 
+            ...spi, 
+            name: values.name,
+            comparison: values.comparison,
+            unit: values.unit,
+            target: values.target,
+            levels: values.levels
+            // monthlyData is preserved from the original spi object
+        });
     };
     
     return (
