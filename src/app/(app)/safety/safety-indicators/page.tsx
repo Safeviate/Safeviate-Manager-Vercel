@@ -113,7 +113,6 @@ export default function SafetyIndicatorsPage() {
   const saveConfigToFirestore = useCallback((updatedConfig: SpiConfig[]) => {
     if (!firestore || !spiConfigRef) return;
 
-    // Use JSON stringify/parse to strip undefined values, which are not allowed by Firestore.
     const cleanedConfigurations = JSON.parse(JSON.stringify(updatedConfig));
     
     const configToSave: SpiConfigurations = {
@@ -125,16 +124,17 @@ export default function SafetyIndicatorsPage() {
   
   useEffect(() => {
     if (isLoadingSpiDocument) {
-        return; // Wait until loading is complete
+        return;
     }
     
     if (spiDocument && spiDocument.configurations) {
-        setSpiConfig(spiDocument.configurations);
+        if (JSON.stringify(spiConfig) !== JSON.stringify(spiDocument.configurations)) {
+            setSpiConfig(spiDocument.configurations);
+        }
     } else if (!spiDocument) {
-        // If there's no document in Firestore after loading, save the initial config.
         saveConfigToFirestore(initialSpiConfig);
     }
-  }, [spiDocument, isLoadingSpiDocument, saveConfigToFirestore]);
+  }, [spiDocument, isLoadingSpiDocument, saveConfigToFirestore, spiConfig]);
 
 
   const handleEdit = (spi: SpiConfig) => {
