@@ -92,7 +92,7 @@ export function SPICard({ spi, onEdit, reports, bookings }: SPICardProps) {
                             <p className="text-sm text-muted-foreground">No data</p>
                         )}
                     </div>
-                    <div className="h-48 w-full flex-grow">
+                    <div className="h-36 w-full flex-grow border rounded-lg p-2">
                         <SpiChart data={spiData} spi={spi} />
                     </div>
                 </div>
