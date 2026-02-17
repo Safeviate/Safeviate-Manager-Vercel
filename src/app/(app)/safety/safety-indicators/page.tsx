@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { EditSpiForm } from './edit-spi-form';
@@ -108,24 +108,33 @@ export default function SafetyIndicatorsPage() {
 
   const { data: reports, isLoading: isLoadingReports } = useCollection<SafetyReport>(reportsQuery);
   const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
-  const { data: spiDocument } = useDoc<SpiConfigurations>(spiConfigRef);
+  const { data: spiDocument, isLoading: isLoadingSpiDocument } = useDoc<SpiConfigurations>(spiConfigRef);
   
-  useEffect(() => {
-    if (spiDocument && spiDocument.configurations) {
-        setSpiConfig(spiDocument.configurations);
-    } else {
-        setSpiConfig(initialSpiConfig);
-    }
-  }, [spiDocument]);
-
-  const saveConfigToFirestore = (updatedConfig: SpiConfig[]) => {
+  const saveConfigToFirestore = useCallback((updatedConfig: SpiConfig[]) => {
     if (!firestore || !spiConfigRef) return;
+
+    // Use JSON stringify/parse to strip undefined values, which are not allowed by Firestore.
+    const cleanedConfigurations = JSON.parse(JSON.stringify(updatedConfig));
+    
     const configToSave: SpiConfigurations = {
         id: settingsDocId,
-        configurations: updatedConfig
+        configurations: cleanedConfigurations
     };
     setDocumentNonBlocking(spiConfigRef, configToSave, { merge: true });
-  };
+  }, [firestore, spiConfigRef]);
+  
+  useEffect(() => {
+    if (isLoadingSpiDocument) {
+        return; // Wait until loading is complete
+    }
+    
+    if (spiDocument && spiDocument.configurations) {
+        setSpiConfig(spiDocument.configurations);
+    } else if (!spiDocument) {
+        // If there's no document in Firestore after loading, save the initial config.
+        saveConfigToFirestore(initialSpiConfig);
+    }
+  }, [spiDocument, isLoadingSpiDocument, saveConfigToFirestore]);
 
 
   const handleEdit = (spi: SpiConfig) => {
