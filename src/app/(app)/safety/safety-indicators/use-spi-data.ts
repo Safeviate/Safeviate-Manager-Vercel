@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -12,23 +11,42 @@ export type SpiDataPoint = {
     value: number;
 }
 
-export const useSpiData = (spi: SpiConfig, reports: SafetyReport[] | null, bookings: Booking[] | null) => {
+export interface SpiCalculationResult {
+    monthlyData: SpiDataPoint[];
+    yearlyValue: number;
+}
+
+
+export const useSpiData = (spi: SpiConfig, reports: SafetyReport[] | null, bookings: Booking[] | null): SpiCalculationResult => {
     return useMemo(() => {
+        const currentYear = new Date().getFullYear();
+        const emptyResult = { monthlyData: Array(12).fill(0).map((_, i) => ({ label: format(new Date(currentYear, i), 'MMM yy'), value: 0})), yearlyValue: 0 };
+        
         // ---- MANUAL DATA OVERRIDE ----
-        // If manual data exists, use it to generate monthly data points.
-        if (spi.monthlyData && spi.monthlyData.length === 12 && spi.monthlyData.some(d => d > 0)) {
-            const finalData: SpiDataPoint[] = [];
-            const currentYear = new Date().getFullYear();
-            for (let i = 0; i < 12; i++) {
-                const date = new Date(currentYear, i, 1);
-                const label = format(date, 'MMM yy');
-                finalData.push({ label, value: spi.monthlyData[i] || 0 });
+        if (spi.monthlyData && spi.monthlyData.length === 12) {
+            const monthlyData = spi.monthlyData.map((value, i) => ({
+                label: format(new Date(currentYear, i), 'MMM yy'),
+                value: value || 0
+            }));
+            
+            let yearlyValue = 0;
+            if (spi.unit === 'Count') {
+                yearlyValue = spi.monthlyData.reduce((sum, val) => sum + val, 0);
+            } else {
+                // For rates with manual data, we can only average the monthly entries.
+                const nonZeroMonths = spi.monthlyData.filter(v => v > 0);
+                if(nonZeroMonths.length > 0) {
+                     yearlyValue = nonZeroMonths.reduce((sum, val) => sum + val, 0) / nonZeroMonths.length;
+                }
             }
-            return finalData;
+
+            return {
+                monthlyData,
+                yearlyValue: parseFloat(yearlyValue.toFixed(2))
+            };
         }
         
-        // ---- AUTOMATIC CALCULATION ----
-        if (!reports || !bookings) return [];
+        if (!reports || !bookings) return emptyResult;
 
         const dataMap: { [key: string]: { count: number, flightHours: number } } = {};
 
@@ -66,7 +84,6 @@ export const useSpiData = (spi: SpiConfig, reports: SafetyReport[] | null, booki
         });
 
         // 2. Calculate flight hours per month for the current year
-        const currentYear = new Date().getFullYear();
         bookings.filter(b => b.status === 'Completed' && b.postFlight && new Date(b.date).getFullYear() === currentYear).forEach(booking => {
             const preFlightTime = parse(`${booking.date} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date());
             const postFlightTime = parse(`${booking.date} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date());
@@ -83,12 +100,17 @@ export const useSpiData = (spi: SpiConfig, reports: SafetyReport[] | null, booki
         });
         
         // 3. Generate final data points for each month of the current year
-        const finalData: SpiDataPoint[] = [];
+        const monthlyData: SpiDataPoint[] = [];
+        let totalYearlyCount = 0;
+        let totalYearlyFlightHours = 0;
         
         for (let i = 0; i < 12; i++) {
             const date = new Date(currentYear, i, 1);
             const key = format(date, 'yyyy-MM');
             const data = dataMap[key] || { count: 0, flightHours: 0 };
+
+            totalYearlyCount += data.count;
+            totalYearlyFlightHours += data.flightHours;
             
             let value = 0;
             if (spi.unit === 'Count') {
@@ -99,9 +121,22 @@ export const useSpiData = (spi: SpiConfig, reports: SafetyReport[] | null, booki
                 value = data.flightHours > 0 ? data.count / data.flightHours : 0;
             }
         
-            finalData.push({ label: format(date, 'MMM yy'), value: parseFloat(value.toFixed(2)) });
+            monthlyData.push({ label: format(date, 'MMM yy'), value: parseFloat(value.toFixed(2)) });
         }
-        return finalData;
+
+        let yearlyValue = 0;
+        if (spi.unit === 'Count') {
+            yearlyValue = totalYearlyCount;
+        } else if (spi.unit === 'Rate per 100 fh') {
+            yearlyValue = totalYearlyFlightHours > 0 ? (totalYearlyCount / totalYearlyFlightHours) * 100 : 0;
+        } else if (spi.unit === 'Rate per flight hour') {
+            yearlyValue = totalYearlyFlightHours > 0 ? totalYearlyCount / totalYearlyFlightHours : 0;
+        }
+
+        return {
+            monthlyData,
+            yearlyValue: parseFloat(yearlyValue.toFixed(2))
+        };
 
     }, [spi, reports, bookings]);
 };

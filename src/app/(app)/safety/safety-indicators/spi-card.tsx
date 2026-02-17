@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -23,43 +22,36 @@ interface SPICardProps {
 }
 
 export function SPICard({ spi, onEdit, reports, bookings, onMonthDataSave }: SPICardProps) {
-    const spiData = useSpiData(spi, reports, bookings);
+    const { monthlyData: spiData, yearlyValue } = useSpiData(spi, reports, bookings);
 
     const [isMonthEditDialogOpen, setIsMonthEditDialogOpen] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState<{ index: number; label: string; value: number } | null>(null);
     const [monthValue, setMonthValue] = useState<number | string>('');
 
     const yearlySummary = useMemo(() => {
-        if (!spiData || spiData.length === 0) return null;
-        
-        let summaryValue = 0;
-        if (spi.unit === 'Count') {
-            summaryValue = spiData.reduce((sum, data) => sum + data.value, 0);
-        } else {
-            const nonZeroMonths = spiData.filter(d => d.value > 0);
-            if (nonZeroMonths.length > 0) {
-                summaryValue = nonZeroMonths.reduce((sum, data) => sum + data.value, 0) / nonZeroMonths.length;
-            }
-        }
+        if (yearlyValue === undefined) return null;
         
         return {
             label: `for ${new Date().getFullYear()}`,
-            value: parseFloat(summaryValue.toFixed(2))
+            value: yearlyValue
         };
-    }, [spiData, spi.unit]);
+    }, [yearlyValue]);
 
     const getStatusClass = (value: number) => {
         const isCount = spi.unit === 'Count';
-        const multiplier = isCount ? 12 : 1;
-
-        const acceptable = spi.levels.acceptable * multiplier;
-        const monitor = spi.levels.monitor * multiplier;
-        const actionRequired = spi.levels.actionRequired * multiplier;
+        
+        const acceptable = spi.levels.acceptable;
+        const monitor = spi.levels.monitor;
+        const actionRequired = spi.levels.actionRequired;
         
         if (spi.comparison === 'greater-is-better') {
-            if (value >= acceptable) return 'text-green-600';
-            if (value >= monitor) return 'text-yellow-600';
-            if (value >= actionRequired) return 'text-orange-600';
+            const annualAcceptable = isCount ? acceptable * 12 : acceptable;
+            const annualMonitor = isCount ? monitor * 12 : monitor;
+            const annualActionRequired = isCount ? actionRequired * 12 : actionRequired;
+
+            if (value >= annualAcceptable) return 'text-green-600';
+            if (value >= annualMonitor) return 'text-yellow-600';
+            if (value >= annualActionRequired) return 'text-orange-600';
             return 'text-red-600';
         } else { 
             if (value <= acceptable) return 'text-green-600';
