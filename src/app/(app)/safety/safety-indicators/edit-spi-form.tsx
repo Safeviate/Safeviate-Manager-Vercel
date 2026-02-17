@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -8,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Add new types for comparison and unit
 export type SpiComparison = 'lower-is-better' | 'greater-is-better';
@@ -27,6 +29,7 @@ export type SpiConfig = {
         actionRequired: number;
         urgentAction: number;
     };
+    monthlyData?: number[]; // Array of 12 numbers for manual data
 };
 
 const formSchema = z.object({
@@ -40,6 +43,7 @@ const formSchema = z.object({
     actionRequired: z.number({ coerce: true }),
     urgentAction: z.number({ coerce: true }),
   }),
+  monthlyData: z.array(z.number({ coerce: true })).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -55,11 +59,11 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
         resolver: zodResolver(formSchema),
         defaultValues: {
             name: spi.name,
-            // Handle old 'type' property for backward compatibility
             comparison: spi.comparison || (spi.type === 'Leading' ? 'greater-is-better' : 'lower-is-better'),
             unit: spi.unit,
             target: spi.target,
             levels: spi.levels,
+            monthlyData: spi.monthlyData || Array(12).fill(0),
         },
     });
 
@@ -70,133 +74,165 @@ export function EditSpiForm({ spi, onSave, onCancel }: EditSpiFormProps) {
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
-                <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Indicator Name</FormLabel>
-                            <FormControl>
-                                <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                
-                <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                        control={form.control}
-                        name="comparison"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Target Direction</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <ScrollArea className="h-[70vh] pr-4">
+                    <div className="space-y-6">
+                        <FormField
+                            control={form.control}
+                            name="name"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Indicator Name</FormLabel>
                                     <FormControl>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <Input {...field} />
                                     </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="lower-is-better">Lower is Better</SelectItem>
-                                        <SelectItem value="greater-is-better">Greater is Better</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                     <FormField
-                        control={form.control}
-                        name="unit"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Unit</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="Count">Count per Period</SelectItem>
-                                        <SelectItem value="Rate per 100 fh">Rate per 100 fh</SelectItem>
-                                        <SelectItem value="Rate per flight hour">Rate per flight hour</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="comparison"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Target Direction</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="lower-is-better">Lower is Better</SelectItem>
+                                                <SelectItem value="greater-is-better">Greater is Better</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="unit"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Unit</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="Count">Count per Period</SelectItem>
+                                                <SelectItem value="Rate per 100 fh">Rate per 100 fh</SelectItem>
+                                                <SelectItem value="Rate per flight hour">Rate per flight hour</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
 
-                <Separator />
+                        <Separator />
 
-                <div className='grid grid-cols-2 gap-x-6 gap-y-4'>
-                    <FormField
-                        control={form.control}
-                        name="target"
-                        render={({ field }) => (
-                            <FormItem className='col-span-2'>
-                                <FormLabel>Overall Target</FormLabel>
-                                <FormControl>
-                                    <Input type="number" step="0.1" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="levels.acceptable"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Acceptable</FormLabel>
-                                <FormControl>
-                                    <Input type="number" step="0.1" {...field} className="border-green-500 focus-visible:ring-green-500" />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="levels.monitor"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Monitor</FormLabel>
-                                <FormControl>
-                                    <Input type="number" step="0.1" {...field} className="border-yellow-500 focus-visible:ring-yellow-500" />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                     <FormField
-                        control={form.control}
-                        name="levels.actionRequired"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Action Required</FormLabel>
-                                <FormControl>
-                                    <Input type="number" step="0.1" {...field} className="border-orange-500 focus-visible:ring-orange-500" />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="levels.urgentAction"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Urgent Action</FormLabel>
-                                <FormControl>
-                                    <Input type="number" step="0.1" {...field} className="border-red-500 focus-visible:ring-red-500" />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
+                        <div className='grid grid-cols-2 gap-x-6 gap-y-4'>
+                            <FormField
+                                control={form.control}
+                                name="target"
+                                render={({ field }) => (
+                                    <FormItem className='col-span-2'>
+                                        <FormLabel>Overall Target</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" step="0.1" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="levels.acceptable"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Acceptable</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" step="0.1" {...field} className="border-green-500 focus-visible:ring-green-500" />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="levels.monitor"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Monitor</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" step="0.1" {...field} className="border-yellow-500 focus-visible:ring-yellow-500" />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="levels.actionRequired"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Action Required</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" step="0.1" {...field} className="border-orange-500 focus-visible:ring-orange-500" />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="levels.urgentAction"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Urgent Action</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" step="0.1" {...field} className="border-red-500 focus-visible:ring-red-500" />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div>
+                            <h3 className="text-base font-medium">Manual Monthly Data</h3>
+                            <p className="text-sm text-muted-foreground">Optionally override calculated data by entering values for each month of the current year.</p>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                                {Array.from({ length: 12 }).map((_, index) => {
+                                    const month = new Date(0, index).toLocaleString('default', { month: 'short' });
+                                    return (
+                                        <FormField
+                                            key={index}
+                                            control={form.control}
+                                            name={`monthlyData.${index}`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>{month}</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="number" step="0.1" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </ScrollArea>
 
-                <div className="flex justify-end gap-2 pt-4">
+                <div className="flex justify-end gap-2 pt-4 border-t">
                     <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
                     <Button type="submit">Save Changes</Button>
                 </div>

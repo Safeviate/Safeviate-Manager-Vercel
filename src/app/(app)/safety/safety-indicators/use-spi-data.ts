@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -14,6 +15,55 @@ export type SpiDataPoint = {
 
 export const useSpiData = (spi: SpiConfig, reports: SafetyReport[] | null, bookings: Booking[] | null, timeScale: TimeScale) => {
     return useMemo(() => {
+        // ---- MANUAL DATA OVERRIDE ----
+        // Check if manual data exists and is not just an array of zeros
+        if (spi.monthlyData && spi.monthlyData.length === 12 && spi.monthlyData.some(d => d > 0)) {
+            const finalData: SpiDataPoint[] = [];
+            const today = new Date();
+            const currentYear = today.getFullYear();
+
+            if (timeScale === 'monthly') {
+                for (let i = 0; i < 12; i++) {
+                    const date = new Date(currentYear, i, 1);
+                    const label = format(date, 'MMM');
+                    finalData.push({ label, value: spi.monthlyData[i] || 0 });
+                }
+                return finalData;
+            }
+
+            if (timeScale === 'quarterly') {
+                const quarters = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]];
+                quarters.forEach((quarterMonths, index) => {
+                    const label = `Q${index + 1}`;
+                    let quarterValue = 0;
+                    const values = quarterMonths.map(m => spi.monthlyData![m] || 0);
+
+                    if (spi.unit === 'Count') {
+                        quarterValue = values.reduce((sum, v) => sum + v, 0);
+                    } else { // For rates, average the monthly rates
+                        const nonZeroValues = values.filter(v => v > 0);
+                        quarterValue = nonZeroValues.length > 0 ? nonZeroValues.reduce((sum, v) => sum + v, 0) / nonZeroValues.length : 0;
+                    }
+                    finalData.push({ label, value: parseFloat(quarterValue.toFixed(2)) });
+                });
+                return finalData;
+            }
+
+            if (timeScale === 'yearly') {
+                const label = `${currentYear}`;
+                let yearValue = 0;
+                if (spi.unit === 'Count') {
+                    yearValue = spi.monthlyData.reduce((sum, val) => sum + (val || 0), 0);
+                } else { // For rates, average the monthly rates for the year
+                    const nonZeroValues = spi.monthlyData.filter(v => v > 0);
+                    yearValue = nonZeroValues.length > 0 ? nonZeroValues.reduce((sum, v) => sum + v, 0) / nonZeroValues.length : 0;
+                }
+                finalData.push({ label, value: parseFloat(yearValue.toFixed(2)) });
+                return finalData;
+            }
+        }
+        
+        // ---- AUTOMATIC CALCULATION ----
         if (!reports || !bookings) return [];
 
         const dataMap: { [key: string]: { count: number, flightHours: number } } = {};
@@ -79,14 +129,14 @@ export const useSpiData = (spi: SpiConfig, reports: SafetyReport[] | null, booki
         // 3. Generate final data with empty periods
         const finalData: SpiDataPoint[] = [];
         const today = new Date();
-        const periods = timeScale === 'monthly' ? 6 : (timeScale === 'quarterly' ? 4 : 3);
+        const periods = timeScale === 'monthly' ? 12 : (timeScale === 'quarterly' ? 4 : 3);
 
         for (let i = periods - 1; i >= 0; i--) {
             let date, label;
             
             if (timeScale === 'monthly') {
                 date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-                label = format(date, 'MMM yyyy');
+                label = format(date, 'MMM');
             } else if (timeScale === 'quarterly') {
                 date = new Date(today.getFullYear(), today.getMonth() - (i * 3), 1);
                 label = `${format(date, 'yyyy')} Q${getQuarter(date)}`;

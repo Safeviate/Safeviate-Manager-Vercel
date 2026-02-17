@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Bar, BarChart, Line, LineChart, ReferenceLine, XAxis, YAxis } from 'recharts';
@@ -26,7 +27,8 @@ export function SpiChart({ data, spi, timeScale }: SpiChartProps) {
         if (timeScale === 'yearly') targetMultiplier = 12;
     }
 
-    const yAxisDomain = [0, (spi.levels.urgentAction * targetMultiplier) * 1.25];
+    const maxValue = Math.max(...data.map(d => d.value), spi.levels.urgentAction * targetMultiplier);
+    const yAxisDomain = [0, maxValue * 1.25];
 
     const commonProps = {
         data: data,
@@ -40,7 +42,7 @@ export function SpiChart({ data, spi, timeScale }: SpiChartProps) {
 
     const commonComponents = (
         <>
-            <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => value.slice(0, 3)} />
+            <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
             <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickMargin={5} domain={yAxisDomain} />
             <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
             <ReferenceLine y={spi.target * targetMultiplier} label="Target" stroke="hsl(var(--primary))" strokeDasharray="3 3" />

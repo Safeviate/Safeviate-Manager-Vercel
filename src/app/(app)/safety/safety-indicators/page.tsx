@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -25,7 +26,8 @@ const initialSpiConfig: SpiConfig[] = [
             monitor: 1.0,
             actionRequired: 1.5,
             urgentAction: 2.0,
-        }
+        },
+        monthlyData: Array(12).fill(0),
     },
     {
         id: 'tech-defect',
@@ -39,7 +41,8 @@ const initialSpiConfig: SpiConfig[] = [
             monitor: 2.0,
             actionRequired: 3.0,
             urgentAction: 4.0,
-        }
+        },
+        monthlyData: Array(12).fill(0),
     },
     {
         id: 'ground-incidents',
@@ -53,7 +56,8 @@ const initialSpiConfig: SpiConfig[] = [
             monitor: 1,
             actionRequired: 2,
             urgentAction: 3,
-        }
+        },
+        monthlyData: Array(12).fill(0),
     },
     {
         id: 'proactive-reports',
@@ -67,7 +71,8 @@ const initialSpiConfig: SpiConfig[] = [
             monitor: 8,
             actionRequired: 5,
             urgentAction: 2,
-        }
+        },
+        monthlyData: Array(12).fill(0),
     }
 ];
 
