@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -9,7 +8,6 @@ import { SpiConfig } from './edit-spi-form';
 import { useSpiData } from './use-spi-data';
 import type { SafetyReport } from '@/types/safety-report';
 import type { Booking } from '@/types/booking';
-import { SpiChart } from './spi-chart';
 import { cn } from '@/lib/utils';
 
 interface SPICardProps {
@@ -79,8 +77,8 @@ export function SPICard({ spi, onEdit, reports, bookings }: SPICardProps) {
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="flex flex-col md:flex-row gap-6 items-center">
-                    <div className="flex-shrink-0 text-center">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-center">
+                    <div className="lg:col-span-1 text-center lg:border-r lg:pr-6">
                         {yearlySummary ? (
                             <>
                                 <p className={cn('text-5xl font-bold tracking-tighter', getStatusClass(yearlySummary.value))}>
@@ -92,8 +90,15 @@ export function SPICard({ spi, onEdit, reports, bookings }: SPICardProps) {
                             <p className="text-sm text-muted-foreground">No data</p>
                         )}
                     </div>
-                    <div className="h-36 w-full flex-grow border rounded-lg p-2">
-                        <SpiChart data={spiData} spi={spi} />
+                    <div className="lg:col-span-3">
+                        <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+                            {spiData.map((dataPoint) => (
+                                <div key={dataPoint.label} className="text-center p-2 rounded-lg bg-muted/50">
+                                    <p className="text-xs font-medium text-muted-foreground">{dataPoint.label.split(' ')[0]}</p>
+                                    <p className="text-lg font-bold">{dataPoint.value}</p>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </CardContent>
