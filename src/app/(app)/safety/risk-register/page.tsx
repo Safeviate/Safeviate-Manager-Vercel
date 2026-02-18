@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -114,13 +115,13 @@ export default function RiskRegisterPage() {
                             <TableBody>
                               {areaRisks.length > 0 ? (
                                 areaRisks.flatMap(hazard =>
-                                  hazard.risks.map(riskItem => {
-                                    const nextReviewDate = riskItem.mitigations.reduce((earliest: Date | null, m) => {
+                                  (hazard.risks || []).map(riskItem => {
+                                    const nextReviewDate = (riskItem.mitigations || []).reduce((earliest: Date | null, m) => {
                                         const d = new Date(m.reviewDate);
                                         return (!earliest || d < earliest) ? d : earliest;
                                     }, null);
-                                    const responsiblePeople = [...new Set(riskItem.mitigations.map(m => personnelMap.get(m.responsiblePersonId) || 'N/A'))];
-                                    const minResidualScore = Math.min(...riskItem.mitigations.map(m => m.residualRiskAssessment?.riskScore ?? 25));
+                                    const responsiblePeople = [...new Set((riskItem.mitigations || []).map(m => personnelMap.get(m.responsiblePersonId) || 'N/A'))];
+                                    const minResidualScore = Math.min(...(riskItem.mitigations || []).map(m => m.residualRiskAssessment?.riskScore ?? 25));
 
                                     return (
                                     <TableRow key={`${hazard.id}-${riskItem.id}`}>
