@@ -16,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { Risk, RiskItem, Mitigation } from '@/types/risk';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { format } from 'date-fns';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { RiskForm } from './risk-form';
 import { useToast } from '@/hooks/use-toast';
 import { getRiskScoreStyle } from './utils';
@@ -135,22 +135,20 @@ export default function RiskRegisterPage() {
                                     ) : hazardRisks.flatMap((risk, riskIndex) => {
                                       const mitigations = (risk.mitigations && risk.mitigations.length > 0) ? risk.mitigations : [{} as Mitigation];
                                       const riskRowSpan = mitigations.length;
-                                      const isLastRiskInHazard = riskIndex === hazardRisks.length - 1;
 
                                       return mitigations.map((mitigation, mitigationIndex) => {
                                         const showHazardCell = isFirstRowOfHazard;
                                         isFirstRowOfHazard = false;
                                         const showRiskCell = mitigationIndex === 0;
-                                        const isLastMitigation = mitigationIndex === mitigations.length - 1;
-                                        const isLastRowOfRiskGroup = isLastMitigation && !isLastRiskInHazard;
+                                        const isLastRowOfRisk = mitigationIndex === mitigations.length - 1;
                                         
                                         return (
                                           <TableRow key={mitigation.id || risk.id} className='border-0'>
                                             {showHazardCell && <TableCell rowSpan={totalRowsForHazard} className="font-medium whitespace-normal align-top sticky left-0 bg-card">{hazard.hazard}</TableCell>}
                                             {showRiskCell && (
                                               <>
-                                                <TableCell rowSpan={riskRowSpan} className={cn("whitespace-normal align-top", isLastRowOfRiskGroup && "border-b")}>{risk.description}</TableCell>
-                                                <TableCell rowSpan={riskRowSpan} className={cn("align-top", isLastRowOfRiskGroup && "border-b")}>
+                                                <TableCell rowSpan={riskRowSpan} className={cn("whitespace-normal align-top", isLastRowOfRisk && 'border-b')}>{risk.description}</TableCell>
+                                                <TableCell rowSpan={riskRowSpan} className={cn("align-top", isLastRowOfRisk && 'border-b')}>
                                                   {risk.initialRiskAssessment?.riskScore !== undefined && (
                                                     <Badge style={getRiskScoreStyle(risk.initialRiskAssessment.riskScore)}>
                                                       {risk.initialRiskAssessment.riskScore}
@@ -159,16 +157,16 @@ export default function RiskRegisterPage() {
                                                 </TableCell>
                                               </>
                                             )}
-                                            <TableCell className={cn("whitespace-normal", isLastRowOfRiskGroup && "border-b")}>{mitigation.description}</TableCell>
-                                            <TableCell className={cn(isLastRowOfRiskGroup && "border-b")}>
+                                            <TableCell className={cn(isLastRowOfRisk && "border-b")}>{mitigation.description}</TableCell>
+                                            <TableCell className={cn(isLastRowOfRisk && "border-b")}>
                                                 {mitigation.residualRiskAssessment?.riskScore !== undefined ? (
                                                   <Badge style={getRiskScoreStyle(mitigation.residualRiskAssessment.riskScore)}>
                                                       {mitigation.residualRiskAssessment.riskScore}
                                                   </Badge>
                                                 ) : <Badge variant="outline">N/A</Badge>}
                                             </TableCell>
-                                            <TableCell className={cn(isLastRowOfRiskGroup && "border-b")}>{personnelMap.get(mitigation.responsiblePersonId) || 'N/A'}</TableCell>
-                                            <TableCell className={cn(isLastRowOfRiskGroup && "border-b")}>{mitigation.reviewDate ? format(new Date(mitigation.reviewDate), 'PPP') : 'N/A'}</TableCell>
+                                            <TableCell className={cn(isLastRowOfRisk && "border-b")}>{personnelMap.get(mitigation.responsiblePersonId) || 'N/A'}</TableCell>
+                                            <TableCell className={cn(isLastRowOfRisk && "border-b")}>{mitigation.reviewDate ? format(new Date(mitigation.reviewDate), 'PPP') : 'N/A'}</TableCell>
                                             {showHazardCell && (
                                                 <TableCell rowSpan={totalRowsForHazard} className="text-right align-top sticky right-0 bg-card">
                                                   <Button variant="ghost" size="icon" onClick={() => handleEditClick(hazard)}>
@@ -205,9 +203,16 @@ export default function RiskRegisterPage() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                <DialogTitle>Edit Hazard</DialogTitle>
+                <DialogDescription>
+                  Update the details for the selected hazard and its associated risks.
+                </DialogDescription>
+              </DialogHeader>
               <ScrollArea className="max-h-[80vh]">
                 <div className="p-1">
                     <RiskForm
+                      hideHeader
                       existingRisk={editingRisk}
                       personnel={personnel || []}
                       onCancel={() => setIsDialogOpen(false)}

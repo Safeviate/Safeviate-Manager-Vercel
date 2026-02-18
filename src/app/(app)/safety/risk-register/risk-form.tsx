@@ -92,10 +92,13 @@ const mapDatesToObjects = (risk?: Risk | null): RiskFormValues => {
 
 // --- Risk Assessment Component ---
 const getRiskScoreColorClass = (score: number) => {
-    if (score <= 4) return 'bg-green-500';
-    if (score <= 9) return 'bg-yellow-500 text-black';
-    if (score <= 16) return 'bg-orange-500';
-    return 'bg-red-500';
+    if (score > 9) {
+        return 'bg-red-500';
+    }
+    if (score > 4) {
+        return 'bg-yellow-500 text-black';
+    }
+    return 'bg-green-500';
 };
 const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => {
     if (score <= 4) return 'Low';
@@ -202,9 +205,10 @@ interface RiskFormProps {
   existingRisk?: Risk | null;
   personnel: Personnel[];
   onCancel?: () => void;
+  hideHeader?: boolean;
 }
 
-export function RiskForm({ existingRisk, personnel, onCancel }: RiskFormProps) {
+export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false }: RiskFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const router = useRouter();
   const firestore = useFirestore();
@@ -256,10 +260,12 @@ export function RiskForm({ existingRisk, personnel, onCancel }: RiskFormProps) {
     <FormProvider {...form}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <CardHeader className="px-0">
-            <CardTitle>{existingRisk ? 'Edit Hazard' : 'Add New Hazard'}</CardTitle>
-            <CardDescription>A hazard can have multiple associated risks, and each risk can have multiple mitigations.</CardDescription>
-          </CardHeader>
+          {!hideHeader && (
+            <CardHeader className="px-0">
+                <CardTitle>{existingRisk ? 'Edit Hazard' : 'Add New Hazard'}</CardTitle>
+                <CardDescription>A hazard can have multiple associated risks, and each risk can have multiple mitigations.</CardDescription>
+            </CardHeader>
+          )}
           <CardContent className="px-0 space-y-6">
             <FormField control={form.control} name="hazardArea" render={({ field }) => ( <FormItem><FormLabel>Hazard Area</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a hazard area" /></SelectTrigger></FormControl><SelectContent>{HAZARD_AREAS.map(area => ( <SelectItem key={area} value={area}>{area}</SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="hazard" render={({ field }) => ( <FormItem><FormLabel>Hazard</FormLabel><FormControl><Textarea placeholder="Describe the hazard..." {...field} /></FormControl><FormMessage /></FormItem> )} />
