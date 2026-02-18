@@ -1,9 +1,8 @@
-
 'use client';
 
 import * as React from 'react';
-import { collection, query, doc, updateDoc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, query } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -17,8 +16,7 @@ import type { Risk, RiskItem, Mitigation } from '@/types/risk';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { RiskForm } from './risk-form';
-import { useToast } from '@/hooks/use-toast';
+import { RiskForm } from '../risk-form';
 import { getRiskScoreStyle } from './utils';
 import { cn } from '@/lib/utils';
 
@@ -115,81 +113,88 @@ export default function RiskRegisterPage() {
                                 <TableHead className="text-right">Actions</TableHead>
                               </TableRow>
                             </TableHeader>
-                            {areaRisks.map((hazard) => {
-                                const hazardRisks = hazard.risks || [];
-                                const totalRowsForHazard = hazardRisks.reduce((acc, r) => acc + Math.max(1, (r.mitigations || []).length), 0);
-                                let isFirstRowOfHazard = true;
+                            <TableBody>
+                                {areaRisks.length > 0 ? (
+                                    areaRisks.flatMap((hazard) => {
+                                        const hazardRisks = hazard.risks || [];
+                                        const totalRowsForHazard = hazardRisks.reduce((acc, r) => acc + Math.max(1, (r.mitigations || []).length), 0);
+                                        let isFirstRowOfHazard = true;
 
-                                return (
-                                  <tbody key={hazard.id} className="border-b-2 last:border-b-0">
-                                    {hazardRisks.length === 0 ? (
-                                      <TableRow className='border-0'>
-                                        <TableCell rowSpan={1} className="font-medium whitespace-normal align-top">{hazard.hazard}</TableCell>
-                                        <TableCell colSpan={6} className="text-center text-muted-foreground">No risks defined for this hazard.</TableCell>
-                                        <TableCell className="text-right align-top">
-                                            <Button variant="ghost" size="icon" onClick={() => handleEditClick(hazard)}>
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                        </TableCell>
-                                      </TableRow>
-                                    ) : hazardRisks.flatMap((risk, riskIndex) => {
-                                      const mitigations = (risk.mitigations && risk.mitigations.length > 0) ? risk.mitigations : [{} as Mitigation];
-                                      const riskRowSpan = mitigations.length;
+                                        const hazardContent = hazardRisks.length > 0 ? hazardRisks.flatMap((risk, riskIndex) => {
+                                            const mitigations = (risk.mitigations && risk.mitigations.length > 0) ? risk.mitigations : [{} as Mitigation];
+                                            const riskRowSpan = mitigations.length;
 
-                                      return mitigations.map((mitigation, mitigationIndex) => {
-                                        const showHazardCell = isFirstRowOfHazard;
-                                        isFirstRowOfHazard = false;
-                                        const showRiskCell = mitigationIndex === 0;
-                                        const isLastRowOfRisk = mitigationIndex === mitigations.length - 1;
-                                        
-                                        return (
-                                          <TableRow key={mitigation.id || risk.id} className='border-0'>
-                                            {showHazardCell && <TableCell rowSpan={totalRowsForHazard} className="font-medium whitespace-normal align-top sticky left-0 bg-card">{hazard.hazard}</TableCell>}
-                                            {showRiskCell && (
-                                              <>
-                                                <TableCell rowSpan={riskRowSpan} className={cn("whitespace-normal align-top", isLastRowOfRisk && 'border-b')}>{risk.description}</TableCell>
-                                                <TableCell rowSpan={riskRowSpan} className={cn("align-top", isLastRowOfRisk && 'border-b')}>
-                                                  {risk.initialRiskAssessment?.riskScore !== undefined && (
-                                                    <Badge style={getRiskScoreStyle(risk.initialRiskAssessment.riskScore)}>
-                                                      {risk.initialRiskAssessment.riskScore}
-                                                    </Badge>
-                                                  )}
-                                                </TableCell>
-                                              </>
-                                            )}
-                                            <TableCell className={cn(isLastRowOfRisk && "border-b")}>{mitigation.description}</TableCell>
-                                            <TableCell className={cn(isLastRowOfRisk && "border-b")}>
-                                                {mitigation.residualRiskAssessment?.riskScore !== undefined ? (
-                                                  <Badge style={getRiskScoreStyle(mitigation.residualRiskAssessment.riskScore)}>
-                                                      {mitigation.residualRiskAssessment.riskScore}
-                                                  </Badge>
-                                                ) : <Badge variant="outline">N/A</Badge>}
-                                            </TableCell>
-                                            <TableCell className={cn(isLastRowOfRisk && "border-b")}>{personnelMap.get(mitigation.responsiblePersonId) || 'N/A'}</TableCell>
-                                            <TableCell className={cn(isLastRowOfRisk && "border-b")}>{mitigation.reviewDate ? format(new Date(mitigation.reviewDate), 'PPP') : 'N/A'}</TableCell>
-                                            {showHazardCell && (
-                                                <TableCell rowSpan={totalRowsForHazard} className="text-right align-top sticky right-0 bg-card">
-                                                  <Button variant="ghost" size="icon" onClick={() => handleEditClick(hazard)}>
-                                                    <Edit className="h-4 w-4" />
-                                                  </Button>
-                                                </TableCell>
-                                            )}
-                                          </TableRow>
-                                        );
-                                      });
-                                    })}
-                                  </tbody>
-                                )
-                            })}
-                            {areaRisks.length === 0 && (
-                                <TableBody>
+                                            return mitigations.map((mitigation, mitigationIndex) => {
+                                                const showHazardCell = isFirstRowOfHazard;
+                                                isFirstRowOfHazard = false;
+                                                const showRiskCell = mitigationIndex === 0;
+                                                
+                                                const isLastMitigationOfRisk = mitigationIndex === mitigations.length - 1;
+                                                const isLastRiskOfHazard = riskIndex === hazardRisks.length - 1;
+                                                
+                                                const rowBorderClass = isLastMitigationOfRisk && isLastRiskOfHazard
+                                                  ? 'border-b-2'
+                                                  : isLastMitigationOfRisk
+                                                  ? 'border-b'
+                                                  : 'border-0';
+
+
+                                                return (
+                                                <TableRow key={`${hazard.id}-${risk.id}-${mitigation.id || mitigationIndex}`} className={rowBorderClass}>
+                                                    {showHazardCell && <TableCell rowSpan={totalRowsForHazard} className="font-medium whitespace-normal align-top sticky left-0 bg-card">{hazard.hazard}</TableCell>}
+                                                    {showRiskCell && (
+                                                    <>
+                                                        <TableCell rowSpan={riskRowSpan} className="whitespace-normal align-top">{risk.description}</TableCell>
+                                                        <TableCell rowSpan={riskRowSpan} className="align-top">
+                                                        {risk.initialRiskAssessment?.riskScore !== undefined && (
+                                                            <Badge style={getRiskScoreStyle(risk.initialRiskAssessment.riskScore)}>
+                                                            {risk.initialRiskAssessment.riskScore}
+                                                            </Badge>
+                                                        )}
+                                                        </TableCell>
+                                                    </>
+                                                    )}
+                                                    <TableCell>{mitigation.description}</TableCell>
+                                                    <TableCell>
+                                                        {mitigation.residualRiskAssessment?.riskScore !== undefined ? (
+                                                        <Badge style={getRiskScoreStyle(mitigation.residualRiskAssessment.riskScore)}>
+                                                            {mitigation.residualRiskAssessment.riskScore}
+                                                        </Badge>
+                                                        ) : <Badge variant="outline">N/A</Badge>}
+                                                    </TableCell>
+                                                    <TableCell>{personnelMap.get(mitigation.responsiblePersonId) || 'N/A'}</TableCell>
+                                                    <TableCell>{mitigation.reviewDate ? format(new Date(mitigation.reviewDate), 'PPP') : 'N/A'}</TableCell>
+                                                    {showHazardCell && (
+                                                        <TableCell rowSpan={totalRowsForHazard} className="text-right align-top sticky right-0 bg-card">
+                                                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(hazard)}>
+                                                            <Edit className="h-4 w-4" />
+                                                        </Button>
+                                                        </TableCell>
+                                                    )}
+                                                </TableRow>
+                                                );
+                                            });
+                                            }) : (
+                                                <TableRow key={hazard.id} className='border-b-2'>
+                                                    <TableCell className="font-medium whitespace-normal align-top">{hazard.hazard}</TableCell>
+                                                    <TableCell colSpan={6} className="text-center text-muted-foreground">No risks defined for this hazard.</TableCell>
+                                                    <TableCell className="text-right align-top">
+                                                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(hazard)}>
+                                                            <Edit className="h-4 w-4" />
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        return hazardContent;
+                                    })
+                                ) : (
                                     <TableRow>
                                         <TableCell colSpan={8} className="h-24 text-center">
                                             No open risks in this area.
                                         </TableCell>
                                     </TableRow>
-                                </TableBody>
-                            )}
+                                )}
+                            </TableBody>
                           </Table>
                       </div>
                     </TabsContent>
