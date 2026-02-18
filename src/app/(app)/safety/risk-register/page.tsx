@@ -123,7 +123,7 @@ export default function RiskRegisterPage() {
                                     }, null);
                                     const responsiblePeople = [...new Set((riskItem.mitigations || []).map(m => personnelMap.get(m.responsiblePersonId) || 'N/A'))];
                                     const minResidualScore = Math.min(...(riskItem.mitigations || []).map(m => m.residualRiskAssessment?.riskScore ?? 25));
-                                    const mitigations = (riskItem.mitigations || []).map(m => m.description).join('; ');
+                                    const mitigations = (riskItem.mitigations || []);
 
                                     return (
                                     <TableRow key={`${hazard.id}-${riskItem.id}`}>
@@ -136,7 +136,11 @@ export default function RiskRegisterPage() {
                                             </Badge>
                                         )}
                                         </TableCell>
-                                        <TableCell className="whitespace-normal">{mitigations}</TableCell>
+                                        <TableCell className="whitespace-normal">
+                                            {mitigations.map((m, index) => (
+                                                <div key={index}>{m.description}</div>
+                                            ))}
+                                        </TableCell>
                                         <TableCell>
                                         {isFinite(minResidualScore) ? (
                                             <Badge style={{ backgroundColor: getRiskScoreColor(minResidualScore), color: 'white' }}>
