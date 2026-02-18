@@ -240,7 +240,7 @@ export function RiskForm({ existingRisk, personnel, onCancel }: RiskFormProps) {
         } else {
             const risksCollection = collection(firestore, `tenants/${tenantId}/risks`);
             await addDocumentNonBlocking(risksCollection, { ...dataToSave, status: 'Open' });
-            toast({ title: "Risk Added", description: "The new risk has been added to the register." });
+            toast({ title: "Hazard Added", description: "The new hazard and its risks have been added to the register." });
         }
         if (onCancel) onCancel();
         else router.push('/safety/risk-register');
@@ -257,7 +257,7 @@ export function RiskForm({ existingRisk, personnel, onCancel }: RiskFormProps) {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <CardHeader className="px-0">
-            <CardTitle>{existingRisk ? 'Edit Risk' : 'Add New Risk'}</CardTitle>
+            <CardTitle>{existingRisk ? 'Edit Hazard' : 'Add New Hazard'}</CardTitle>
             <CardDescription>A hazard can have multiple associated risks, and each risk can have multiple mitigations.</CardDescription>
           </CardHeader>
           <CardContent className="px-0 space-y-6">
@@ -272,7 +272,7 @@ export function RiskForm({ existingRisk, personnel, onCancel }: RiskFormProps) {
           </CardContent>
           <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={onCancel || (() => router.back())} disabled={isSubmitting}>Cancel</Button>
-              <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Submitting...' : (existingRisk ? 'Save Changes' : 'Add Risk')}</Button>
+              <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Submitting...' : (existingRisk ? 'Save Changes' : 'Add Hazard')}</Button>
           </div>
         </form>
       </Form>

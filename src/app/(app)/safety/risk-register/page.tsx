@@ -74,7 +74,7 @@ export default function RiskRegisterPage() {
           </div>
           <Button asChild>
             <Link href="/safety/risk-register/new">
-              <PlusCircle className="mr-2 h-4 w-4" /> Add New Risk
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New Hazard
             </Link>
           </Button>
         </div>
