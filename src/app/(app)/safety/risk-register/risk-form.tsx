@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useForm, useFieldArray, Controller, FormProvider } from 'react-hook-form';
+import { useForm, useFieldArray, Controller, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -104,7 +105,7 @@ const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => 
 }
 
 const RiskAssessmentEditor: React.FC<{ path: string; label: string; }> = ({ path, label }) => {
-    const { control, setValue, watch } = useForm<RiskFormValues>();
+    const { control, setValue, watch } = useFormContext<RiskFormValues>();
     const likelihood = watch(`${path}.likelihood` as any, 1);
     const severity = watch(`${path}.severity` as any, 1);
     const riskScore = (likelihood || 1) * (severity || 1);
