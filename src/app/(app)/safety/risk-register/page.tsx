@@ -103,9 +103,10 @@ export default function RiskRegisterPage() {
                           <Table>
                             <TableHeader>
                               <TableRow>
-                                <TableHead className="w-[20%]">Hazard</TableHead>
-                                <TableHead className="w-[20%]">Risk</TableHead>
+                                <TableHead className="w-[15%]">Hazard</TableHead>
+                                <TableHead className="w-[15%]">Risk</TableHead>
                                 <TableHead>Initial Score</TableHead>
+                                <TableHead className="w-[20%]">Mitigation</TableHead>
                                 <TableHead>Residual Score</TableHead>
                                 <TableHead>Responsible</TableHead>
                                 <TableHead>Next Review</TableHead>
@@ -122,6 +123,7 @@ export default function RiskRegisterPage() {
                                     }, null);
                                     const responsiblePeople = [...new Set((riskItem.mitigations || []).map(m => personnelMap.get(m.responsiblePersonId) || 'N/A'))];
                                     const minResidualScore = Math.min(...(riskItem.mitigations || []).map(m => m.residualRiskAssessment?.riskScore ?? 25));
+                                    const mitigations = (riskItem.mitigations || []).map(m => m.description).join('; ');
 
                                     return (
                                     <TableRow key={`${hazard.id}-${riskItem.id}`}>
@@ -134,6 +136,7 @@ export default function RiskRegisterPage() {
                                             </Badge>
                                         )}
                                         </TableCell>
+                                        <TableCell className="whitespace-normal">{mitigations}</TableCell>
                                         <TableCell>
                                         {isFinite(minResidualScore) ? (
                                             <Badge style={{ backgroundColor: getRiskScoreColor(minResidualScore), color: 'white' }}>
@@ -155,7 +158,7 @@ export default function RiskRegisterPage() {
                                 )
                               ) : (
                                 <TableRow>
-                                  <TableCell colSpan={7} className="h-24 text-center">
+                                  <TableCell colSpan={8} className="h-24 text-center">
                                     No open risks in this area.
                                   </TableCell>
                                 </TableRow>
