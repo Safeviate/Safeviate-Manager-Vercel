@@ -74,7 +74,8 @@ export default function RiskRegisterPage() {
           </div>
           <Button asChild>
             <Link href="/safety/risk-register/new">
-              <PlusCircle className="mr-2 h-4 w-4" /> Add New Hazard
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add New Hazard
             </Link>
           </Button>
         </div>
@@ -116,49 +117,70 @@ export default function RiskRegisterPage() {
                             <TableBody>
                               {areaRisks.length > 0 ? (
                                 areaRisks.flatMap(hazard =>
-                                  (hazard.risks || []).map(riskItem => {
-                                    const nextReviewDate = (riskItem.mitigations || []).reduce((earliest: Date | null, m) => {
-                                        const d = new Date(m.reviewDate);
-                                        return (!earliest || d < earliest) ? d : earliest;
-                                    }, null);
-                                    const responsiblePeople = [...new Set((riskItem.mitigations || []).map(m => personnelMap.get(m.responsiblePersonId) || 'N/A'))];
-                                    const minResidualScore = Math.min(...(riskItem.mitigations || []).map(m => m.residualRiskAssessment?.riskScore ?? 25));
-                                    const mitigations = (riskItem.mitigations || []);
-
-                                    return (
-                                    <TableRow key={`${hazard.id}-${riskItem.id}`}>
-                                        <TableCell className="font-medium whitespace-normal">{hazard.hazard}</TableCell>
-                                        <TableCell className="whitespace-normal">{riskItem.description}</TableCell>
-                                        <TableCell>
-                                        {riskItem.initialRiskAssessment?.riskScore !== undefined && (
-                                            <Badge style={{ backgroundColor: getRiskScoreColor(riskItem.initialRiskAssessment.riskScore), color: 'white' }}>
-                                            {riskItem.initialRiskAssessment.riskScore}
-                                            </Badge>
-                                        )}
-                                        </TableCell>
-                                        <TableCell className="whitespace-normal">
-                                            {mitigations.map((m, index) => (
-                                                <div key={index}>{m.description}</div>
-                                            ))}
-                                        </TableCell>
-                                        <TableCell>
-                                        {isFinite(minResidualScore) ? (
-                                            <Badge style={{ backgroundColor: getRiskScoreColor(minResidualScore), color: 'white' }}>
-                                            {minResidualScore}
-                                            </Badge>
-                                        ) : (
-                                            <Badge variant="outline">N/A</Badge>
-                                        )}
-                                        </TableCell>
-                                        <TableCell>{responsiblePeople.join(', ')}</TableCell>
-                                        <TableCell>{nextReviewDate ? format(nextReviewDate, 'PPP') : 'N/A'}</TableCell>
-                                        <TableCell className="text-right">
+                                  (hazard.risks || []).flatMap(riskItem => {
+                                    const mitigations = riskItem.mitigations || [];
+                                    if (mitigations.length === 0) {
+                                      // Render a single row for the risk with N/A for mitigation details
+                                      return (
+                                        <TableRow key={`${hazard.id}-${riskItem.id}`}>
+                                          <TableCell className="font-medium whitespace-normal">{hazard.hazard}</TableCell>
+                                          <TableCell className="whitespace-normal">{riskItem.description}</TableCell>
+                                          <TableCell>
+                                            {riskItem.initialRiskAssessment?.riskScore !== undefined && (
+                                              <Badge style={{ backgroundColor: getRiskScoreColor(riskItem.initialRiskAssessment.riskScore), color: 'white' }}>
+                                                {riskItem.initialRiskAssessment.riskScore}
+                                              </Badge>
+                                            )}
+                                          </TableCell>
+                                          <TableCell>N/A</TableCell>
+                                          <TableCell><Badge variant="outline">N/A</Badge></TableCell>
+                                          <TableCell>N/A</TableCell>
+                                          <TableCell>N/A</TableCell>
+                                          <TableCell className="text-right">
                                             <Button variant="ghost" size="icon" onClick={() => handleEditClick(hazard)}>
-                                                <Edit className="h-4 w-4" />
+                                              <Edit className="h-4 w-4" />
                                             </Button>
+                                          </TableCell>
+                                        </TableRow>
+                                      );
+                                    }
+                                    
+                                    // Render a row for each mitigation
+                                    return mitigations.map((mitigation, mitigationIndex) => (
+                                      <TableRow key={`${hazard.id}-${riskItem.id}-${mitigation.id}`}>
+                                        {mitigationIndex === 0 ? (
+                                          <>
+                                            <TableCell rowSpan={mitigations.length} className="font-medium whitespace-normal align-top border-b">{hazard.hazard}</TableCell>
+                                            <TableCell rowSpan={mitigations.length} className="whitespace-normal align-top border-b">{riskItem.description}</TableCell>
+                                            <TableCell rowSpan={mitigations.length} className="align-top border-b">
+                                              {riskItem.initialRiskAssessment?.riskScore !== undefined && (
+                                                <Badge style={{ backgroundColor: getRiskScoreColor(riskItem.initialRiskAssessment.riskScore), color: 'white' }}>
+                                                  {riskItem.initialRiskAssessment.riskScore}
+                                                </Badge>
+                                              )}
+                                            </TableCell>
+                                          </>
+                                        ) : null}
+                                        <TableCell className="whitespace-normal">{mitigation.description}</TableCell>
+                                        <TableCell>
+                                          {mitigation.residualRiskAssessment?.riskScore !== undefined ? (
+                                            <Badge style={{ backgroundColor: getRiskScoreColor(mitigation.residualRiskAssessment.riskScore), color: 'white' }}>
+                                              {mitigation.residualRiskAssessment.riskScore}
+                                            </Badge>
+                                          ) : <Badge variant="outline">N/A</Badge>}
                                         </TableCell>
-                                    </TableRow>
-                                  )})
+                                        <TableCell>{personnelMap.get(mitigation.responsiblePersonId) || 'N/A'}</TableCell>
+                                        <TableCell>{mitigation.reviewDate ? format(new Date(mitigation.reviewDate), 'PPP') : 'N/A'}</TableCell>
+                                        {mitigationIndex === 0 ? (
+                                          <TableCell rowSpan={mitigations.length} className="text-right align-top border-b">
+                                            <Button variant="ghost" size="icon" onClick={() => handleEditClick(hazard)}>
+                                              <Edit className="h-4 w-4" />
+                                            </Button>
+                                          </TableCell>
+                                        ) : null}
+                                      </TableRow>
+                                    ));
+                                  })
                                 )
                               ) : (
                                 <TableRow>
