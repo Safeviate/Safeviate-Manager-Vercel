@@ -12,4 +12,6 @@ export type Risk = {
     residualRiskScore?: number;
     status: 'Open' | 'Closed' | 'Archived';
     hazardArea: 'Flight Operations' | 'Ground Operations' | 'Maintenance' | 'Cabin Safety' | 'Occupational Safety' | 'Security' | 'Administration & Management';
+    responsiblePersonId?: string;
+    reviewDate?: string; // ISO String
 };

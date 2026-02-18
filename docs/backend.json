@@ -213,7 +213,9 @@
         "residualSeverity": { "type": "number" },
         "residualRiskScore": { "type": "number" },
         "status": { "type": "string", "enum": ["Open", "Closed", "Archived"] },
-        "mitigation": { "type": "string" }
+        "mitigation": { "type": "string" },
+        "responsiblePersonId": { "type": "string" },
+        "reviewDate": { "type": "string", "format": "date" }
       },
       "required": ["id", "hazard", "risk", "hazardArea", "likelihood", "severity", "riskScore", "status"]
     },
