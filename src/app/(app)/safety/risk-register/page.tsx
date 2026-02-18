@@ -162,12 +162,12 @@ export default function RiskRegisterPage() {
                                       const isLastMitigationInRisk = mitigationIndex === mitigations.length - 1;
 
                                       return (
-                                        <TableRow key={mitigation.id} className="border-0">
-                                          {showHazardCell && <TableCell rowSpan={totalRowsForHazard} className="font-medium whitespace-normal align-top">{hazard.hazard}</TableCell>}
+                                        <TableRow key={mitigation.id} className={cn("border-0", mitigationIndex > 0 && "bg-muted/20")}>
+                                          {showHazardCell && <TableCell rowSpan={totalRowsForHazard} className="font-medium whitespace-normal align-top border-b-2">{hazard.hazard}</TableCell>}
                                           {showRiskCell && (
                                             <>
-                                              <TableCell rowSpan={riskRowSpan} className="whitespace-normal align-top">{risk.description}</TableCell>
-                                              <TableCell rowSpan={riskRowSpan} className="align-top">
+                                              <TableCell rowSpan={riskRowSpan} className={cn("whitespace-normal align-top", isLastMitigationInRisk && "border-b-2")}>{risk.description}</TableCell>
+                                              <TableCell rowSpan={riskRowSpan} className={cn("align-top", isLastMitigationInRisk && "border-b-2")}>
                                                 {risk.initialRiskAssessment?.riskScore !== undefined && (
                                                   <Badge style={{ backgroundColor: getRiskScoreColor(risk.initialRiskAssessment.riskScore), color: 'white' }}>
                                                     {risk.initialRiskAssessment.riskScore}
@@ -187,7 +187,7 @@ export default function RiskRegisterPage() {
                                           <TableCell className={cn(!isLastMitigationInRisk && "border-b")}>{personnelMap.get(mitigation.responsiblePersonId) || 'N/A'}</TableCell>
                                           <TableCell className={cn(!isLastMitigationInRisk && "border-b")}>{mitigation.reviewDate ? format(new Date(mitigation.reviewDate), 'PPP') : 'N/A'}</TableCell>
                                           {showHazardCell && (
-                                              <TableCell rowSpan={totalRowsForHazard} className="text-right align-top">
+                                              <TableCell rowSpan={totalRowsForHazard} className="text-right align-top border-b-2">
                                                 <Button variant="ghost" size="icon" onClick={() => handleEditClick(hazard)}>
                                                   <Edit className="h-4 w-4" />
                                                 </Button>
