@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -177,7 +176,6 @@ export default function RiskRegisterPage() {
               <ScrollArea className="max-h-[80vh]">
                 <div className="p-1">
                     <RiskForm
-                      isSubmitting={isSubmitting}
                       existingRisk={editingRisk}
                       personnel={personnel || []}
                       onCancel={() => setIsDialogOpen(false)}

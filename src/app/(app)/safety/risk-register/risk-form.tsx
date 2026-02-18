@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm, useFieldArray, Controller, FormProvider } from 'react-hook-form';
@@ -199,13 +198,13 @@ const RisksArray = ({ personnel }: { personnel: Personnel[] }) => {
 
 // --- Main Form Component ---
 interface RiskFormProps {
-  isSubmitting: boolean;
   existingRisk?: Risk | null;
   personnel: Personnel[];
   onCancel?: () => void;
 }
 
-export function RiskForm({ isSubmitting, existingRisk, personnel, onCancel }: RiskFormProps) {
+export function RiskForm({ existingRisk, personnel, onCancel }: RiskFormProps) {
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const router = useRouter();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -218,6 +217,7 @@ export function RiskForm({ isSubmitting, existingRisk, personnel, onCancel }: Ri
 
   const onSubmit = async (data: RiskFormValues) => {
     if (!firestore) return;
+    setIsSubmitting(true);
     
     // Convert dates back to ISO strings before saving
     const dataToSave = {
@@ -246,6 +246,8 @@ export function RiskForm({ isSubmitting, existingRisk, personnel, onCancel }: Ri
     } catch (error) {
         console.error("Error saving risk:", error);
         toast({ variant: "destructive", title: "Error", description: "Could not save the risk." });
+    } finally {
+        setIsSubmitting(false);
     }
   };
   

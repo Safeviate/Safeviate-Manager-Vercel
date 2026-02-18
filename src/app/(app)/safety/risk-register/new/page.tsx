@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -24,5 +23,5 @@ export default function NewRiskPage() {
   }
 
   // The submission logic is now handled within RiskForm
-  return <RiskForm isSubmitting={false} personnel={personnel || []} />;
+  return <RiskForm personnel={personnel || []} />;
 }
