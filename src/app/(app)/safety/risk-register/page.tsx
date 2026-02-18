@@ -20,6 +20,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { RiskForm } from './risk-form';
 import { useToast } from '@/hooks/use-toast';
 import { getRiskScoreColor } from './utils';
+import { cn } from '@/lib/utils';
 
 const HAZARD_AREAS = [
     'Flight Operations', 
@@ -147,11 +148,18 @@ export default function RiskRegisterPage() {
                                     
                                     // Render a row for each mitigation
                                     return mitigations.map((mitigation, mitigationIndex) => (
-                                      <TableRow key={`${hazard.id}-${riskItem.id}-${mitigation.id}`}>
+                                      <TableRow
+                                        key={`${hazard.id}-${riskItem.id}-${mitigation.id}`}
+                                        className="border-b-0"
+                                      >
                                         {mitigationIndex === 0 ? (
                                           <>
-                                            <TableCell rowSpan={mitigations.length} className="font-medium whitespace-normal align-top border-b">{hazard.hazard}</TableCell>
-                                            <TableCell rowSpan={mitigations.length} className="whitespace-normal align-top border-b">{riskItem.description}</TableCell>
+                                            <TableCell rowSpan={mitigations.length} className="font-medium whitespace-normal align-top border-b">
+                                              {hazard.hazard}
+                                            </TableCell>
+                                            <TableCell rowSpan={mitigations.length} className="whitespace-normal align-top border-b">
+                                              {riskItem.description}
+                                            </TableCell>
                                             <TableCell rowSpan={mitigations.length} className="align-top border-b">
                                               {riskItem.initialRiskAssessment?.riskScore !== undefined && (
                                                 <Badge style={{ backgroundColor: getRiskScoreColor(riskItem.initialRiskAssessment.riskScore), color: 'white' }}>
@@ -161,16 +169,22 @@ export default function RiskRegisterPage() {
                                             </TableCell>
                                           </>
                                         ) : null}
-                                        <TableCell className="whitespace-normal">{mitigation.description}</TableCell>
-                                        <TableCell>
+                                        <TableCell className={cn("whitespace-normal", { "border-b": mitigationIndex < mitigations.length - 1 })}>
+                                          {mitigation.description}
+                                        </TableCell>
+                                        <TableCell className={cn({ "border-b": mitigationIndex < mitigations.length - 1 })}>
                                           {mitigation.residualRiskAssessment?.riskScore !== undefined ? (
                                             <Badge style={{ backgroundColor: getRiskScoreColor(mitigation.residualRiskAssessment.riskScore), color: 'white' }}>
                                               {mitigation.residualRiskAssessment.riskScore}
                                             </Badge>
                                           ) : <Badge variant="outline">N/A</Badge>}
                                         </TableCell>
-                                        <TableCell>{personnelMap.get(mitigation.responsiblePersonId) || 'N/A'}</TableCell>
-                                        <TableCell>{mitigation.reviewDate ? format(new Date(mitigation.reviewDate), 'PPP') : 'N/A'}</TableCell>
+                                        <TableCell className={cn({ "border-b": mitigationIndex < mitigations.length - 1 })}>
+                                          {personnelMap.get(mitigation.responsiblePersonId) || 'N/A'}
+                                        </TableCell>
+                                        <TableCell className={cn({ "border-b": mitigationIndex < mitigations.length - 1 })}>
+                                          {mitigation.reviewDate ? format(new Date(mitigation.reviewDate), 'PPP') : 'N/A'}
+                                        </TableCell>
                                         {mitigationIndex === 0 ? (
                                           <TableCell rowSpan={mitigations.length} className="text-right align-top border-b">
                                             <Button variant="ghost" size="icon" onClick={() => handleEditClick(hazard)}>
