@@ -17,8 +17,9 @@ import type { Risk } from '@/types/risk';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { format } from 'date-fns';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { RiskForm, type RiskFormValues } from './risk-form';
+import { RiskForm } from './risk-form';
 import { useToast } from '@/hooks/use-toast';
+import { getRiskScoreColor } from './utils';
 
 const HAZARD_AREAS = [
     'Flight Operations', 
@@ -30,22 +31,12 @@ const HAZARD_AREAS = [
     'Administration & Management'
 ];
 
-function getRiskScoreColor(score: number): string {
-    if (score <= 4) return 'bg-green-500';
-    if (score <= 9) return 'bg-yellow-500';
-    if (score <= 16) return 'bg-orange-500';
-    return 'bg-red-500';
-}
-
 export default function RiskRegisterPage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate';
-  const { toast } = useToast();
 
   const [editingRisk, setEditingRisk] = React.useState<Risk | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
-
 
   const risksQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/risks`)) : null),
@@ -73,46 +64,6 @@ export default function RiskRegisterPage() {
     setIsDialogOpen(true);
   };
   
-  const handleUpdateRisk = async (data: RiskFormValues) => {
-    if (!firestore || !editingRisk) return;
-
-    setIsSubmitting(true);
-    try {
-      const riskRef = doc(firestore, `tenants/${tenantId}/risks`, editingRisk.id);
-      
-      const riskScore = (data.likelihood || 1) * (data.severity || 1);
-      const residualRiskScore = (data.residualLikelihood || 1) * (data.residualSeverity || 1);
-      
-      const updatedRisk = {
-        ...data,
-        riskScore,
-        residualRiskScore,
-        reviewDate: data.reviewDate ? data.reviewDate.toISOString() : undefined,
-      };
-
-      // Clean up undefined values before sending to Firestore
-      Object.keys(updatedRisk).forEach(key => updatedRisk[key as keyof typeof updatedRisk] === undefined && delete updatedRisk[key as keyof typeof updatedRisk]);
-
-      await updateDoc(riskRef, updatedRisk);
-
-      toast({
-        title: "Risk Updated",
-        description: "The risk has been updated in the register.",
-      });
-      setIsDialogOpen(false);
-      setEditingRisk(null);
-    } catch (error) {
-      console.error("Error updating risk:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Could not update the risk.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <>
       <div className="flex flex-col gap-6 h-full">
@@ -154,42 +105,54 @@ export default function RiskRegisterPage() {
                               <TableRow>
                                 <TableHead className="w-[20%]">Hazard</TableHead>
                                 <TableHead className="w-[20%]">Risk</TableHead>
-                                <TableHead>Score</TableHead>
+                                <TableHead>Initial Score</TableHead>
                                 <TableHead>Residual Score</TableHead>
-                                <TableHead>Responsible Person</TableHead>
-                                <TableHead>Review Date</TableHead>
+                                <TableHead>Responsible</TableHead>
+                                <TableHead>Next Review</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
                               {areaRisks.length > 0 ? (
-                                areaRisks.map(risk => (
-                                  <TableRow key={risk.id}>
-                                    <TableCell className="font-medium whitespace-normal">{risk.hazard}</TableCell>
-                                    <TableCell className="whitespace-normal">{risk.risk}</TableCell>
-                                    <TableCell>
-                                      <Badge style={{ backgroundColor: getRiskScoreColor(risk.riskScore), color: 'white' }}>
-                                        {risk.riskScore}
-                                      </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                      {risk.residualRiskScore !== undefined ? (
-                                        <Badge style={{ backgroundColor: getRiskScoreColor(risk.residualRiskScore), color: 'white' }}>
-                                          {risk.residualRiskScore}
-                                        </Badge>
-                                      ) : (
-                                        <Badge variant="outline">N/A</Badge>
-                                      )}
-                                    </TableCell>
-                                    <TableCell>{personnelMap.get(risk.responsiblePersonId || '') || 'N/A'}</TableCell>
-                                    <TableCell>{risk.reviewDate ? format(new Date(risk.reviewDate), 'PPP') : 'N/A'}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(risk)}>
-                                            <Edit className="h-4 w-4" />
-                                        </Button>
-                                    </TableCell>
-                                  </TableRow>
-                                ))
+                                areaRisks.flatMap(hazard =>
+                                  hazard.risks.map(riskItem => {
+                                    const nextReviewDate = riskItem.mitigations.reduce((earliest: Date | null, m) => {
+                                        const d = new Date(m.reviewDate);
+                                        return (!earliest || d < earliest) ? d : earliest;
+                                    }, null);
+                                    const responsiblePeople = [...new Set(riskItem.mitigations.map(m => personnelMap.get(m.responsiblePersonId) || 'N/A'))];
+                                    const minResidualScore = Math.min(...riskItem.mitigations.map(m => m.residualRiskAssessment?.riskScore ?? 25));
+
+                                    return (
+                                    <TableRow key={`${hazard.id}-${riskItem.id}`}>
+                                        <TableCell className="font-medium whitespace-normal">{hazard.hazard}</TableCell>
+                                        <TableCell className="whitespace-normal">{riskItem.description}</TableCell>
+                                        <TableCell>
+                                        {riskItem.initialRiskAssessment?.riskScore !== undefined && (
+                                            <Badge style={{ backgroundColor: getRiskScoreColor(riskItem.initialRiskAssessment.riskScore), color: 'white' }}>
+                                            {riskItem.initialRiskAssessment.riskScore}
+                                            </Badge>
+                                        )}
+                                        </TableCell>
+                                        <TableCell>
+                                        {isFinite(minResidualScore) ? (
+                                            <Badge style={{ backgroundColor: getRiskScoreColor(minResidualScore), color: 'white' }}>
+                                            {minResidualScore}
+                                            </Badge>
+                                        ) : (
+                                            <Badge variant="outline">N/A</Badge>
+                                        )}
+                                        </TableCell>
+                                        <TableCell>{responsiblePeople.join(', ')}</TableCell>
+                                        <TableCell>{nextReviewDate ? format(nextReviewDate, 'PPP') : 'N/A'}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => handleEditClick(hazard)}>
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                  )})
+                                )
                               ) : (
                                 <TableRow>
                                   <TableCell colSpan={7} className="h-24 text-center">
@@ -214,7 +177,6 @@ export default function RiskRegisterPage() {
               <ScrollArea className="max-h-[80vh]">
                 <div className="p-1">
                     <RiskForm
-                      onSubmit={handleUpdateRisk}
                       isSubmitting={isSubmitting}
                       existingRisk={editingRisk}
                       personnel={personnel || []}

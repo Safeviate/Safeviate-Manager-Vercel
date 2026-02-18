@@ -1,17 +1,25 @@
 
-export type Risk = {
+import type { RiskAssessment } from './safety-report';
+
+export interface Mitigation {
     id: string;
-    hazard: string;
-    risk: string;
-    mitigation?: string;
-    likelihood: number;
-    severity: number;
-    riskScore: number;
-    residualLikelihood?: number;
-    residualSeverity?: number;
-    residualRiskScore?: number;
-    status: 'Open' | 'Closed' | 'Archived';
+    description: string;
+    responsiblePersonId: string;
+    reviewDate: string; // ISO String
+    residualRiskAssessment?: RiskAssessment;
+}
+
+export interface RiskItem {
+    id: string;
+    description: string;
+    initialRiskAssessment?: RiskAssessment;
+    mitigations: Mitigation[];
+}
+
+export type Risk = { // This is the top-level document, which is a Hazard
+    id: string;
     hazardArea: 'Flight Operations' | 'Ground Operations' | 'Maintenance' | 'Cabin Safety' | 'Occupational Safety' | 'Security' | 'Administration & Management';
-    responsiblePersonId?: string;
-    reviewDate?: string; // ISO String
+    hazard: string;
+    status: 'Open' | 'Closed' | 'Archived';
+    risks: RiskItem[];
 };

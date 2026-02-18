@@ -200,22 +200,44 @@
     "Risk": {
       "title": "Risk",
       "type": "object",
-      "description": "Represents an identified organizational risk.",
+      "description": "Represents an identified organizational hazard and its associated risks.",
       "properties": {
         "id": { "type": "string" },
-        "hazard": { "type": "string" },
-        "risk": { "type": "string" },
         "hazardArea": { "type": "string" },
-        "likelihood": { "type": "number" },
-        "severity": { "type": "number" },
-        "riskScore": { "type": "number" },
-        "residualLikelihood": { "type": "number" },
-        "residualSeverity": { "type": "number" },
-        "residualRiskScore": { "type": "number" },
+        "hazard": { "type": "string" },
         "status": { "type": "string", "enum": ["Open", "Closed", "Archived"] },
-        "mitigation": { "type": "string" }
+        "risks": {
+          "type": "array",
+          "items": { "$ref": "#/backend/entities/RiskItem" }
+        }
       },
-      "required": ["id", "hazard", "risk", "hazardArea", "likelihood", "severity", "riskScore", "status"]
+      "required": ["id", "hazard", "hazardArea", "status"]
+    },
+    "RiskItem": {
+      "title": "Risk Item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "initialRiskAssessment": { "$ref": "#/backend/entities/RiskAssessment" },
+        "mitigations": {
+          "type": "array",
+          "items": { "$ref": "#/backend/entities/MitigationItem" }
+        }
+      },
+      "required": ["id", "description"]
+    },
+    "MitigationItem": {
+      "title": "Mitigation Item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "responsiblePersonId": { "type": "string" },
+        "reviewDate": { "type": "string", "format": "date" },
+        "residualRiskAssessment": { "$ref": "#/backend/entities/RiskAssessment" }
+      },
+      "required": ["id", "description", "responsiblePersonId"]
     },
     "SafetyReport": {
       "title": "Safety Report",
@@ -1467,6 +1489,48 @@
         }
       },
       "required": ["id", "type", "title", "content", "createdAt", "createdBy", "status"]
+    },
+    "SpiConfig": {
+        "title": "SPI Config",
+        "type": "object",
+        "description": "Defines a single Safety Performance Indicator.",
+        "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "comparison": { "type": "string", "enum": ["lower-is-better", "greater-is-better"] },
+            "unit": { "type": "string", "enum": ["Count", "Rate"] },
+            "rateFactor": { "type": "number" },
+            "periodLabel": { "type": "string" },
+            "description": { "type": "string" },
+            "target": { "type": "number" },
+            "levels": {
+                "type": "object",
+                "properties": {
+                    "acceptable": { "type": "number" },
+                    "monitor": { "type": "number" },
+                    "actionRequired": { "type": "number" },
+                    "urgentAction": { "type": "number" }
+                }
+            },
+            "monthlyData": {
+                "type": "array",
+                "items": { "type": "number" }
+            }
+        },
+        "required": ["id", "name", "comparison", "unit", "description", "target", "levels"]
+    },
+    "SpiConfigurations": {
+        "title": "SPI Configurations",
+        "type": "object",
+        "description": "A document that stores the list of all SPI configurations for a tenant.",
+        "properties": {
+            "id": { "type": "string" },
+            "configurations": {
+                "type": "array",
+                "items": { "$ref": "#/backend/entities/SpiConfig" }
+            }
+        },
+        "required": ["id", "configurations"]
     }
   },
   "auth": {
