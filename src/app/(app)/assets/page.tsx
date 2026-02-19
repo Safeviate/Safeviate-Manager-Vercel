@@ -4,14 +4,13 @@
 import { useMemo } from 'react';
 import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { Eye, PlusCircle } from 'lucide-react';
+import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AircraftTable } from './aircraft-table';
-import { AircraftForm } from './aircraft-form';
-import type { Aircraft as AircraftType } from '@/types/aircraft';
-
+import type { Aircraft } from '@/types/aircraft';
 
 export default function AssetsPage() {
     const firestore = useFirestore();
@@ -22,28 +21,72 @@ export default function AssetsPage() {
         [firestore, tenantId]
     );
 
-    const { data: aircrafts, isLoading, error } = useCollection<AircraftType>(aircraftsQuery);
+    const { data: aircrafts, isLoading } = useCollection<Aircraft>(aircraftsQuery);
 
     return (
-        <div className="flex flex-col gap-6 h-full">
+        <div className="flex flex-col gap-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Aircraft</h1>
-                    <p className="text-muted-foreground">Manage all aircraft in your fleet.</p>
+                    <h1 className="text-3xl font-bold tracking-tight">Aircraft Fleet</h1>
+                    <p className="text-muted-foreground">
+                        Manage all aircraft in your organization's fleet.
+                    </p>
                 </div>
-                <AircraftForm tenantId={tenantId} />
+                {/* <Button asChild>
+                    <Link href="/assets/new">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Aircraft
+                    </Link>
+                </Button> */}
             </div>
-
             <Card>
-                <CardContent className="p-0">
-                    {isLoading && (
-                        <div className="p-6">
-                            <Skeleton className="h-40 w-full" />
+                <CardHeader>
+                    <CardTitle>All Aircraft</CardTitle>
+                    <CardDescription>A list of all registered aircraft.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? (
+                        <div className="space-y-2">
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-full" />
                         </div>
-                    )}
-                    {error && <p className="p-6 text-destructive">Error: {error.message}</p>}
-                    {!isLoading && !error && aircrafts && (
-                        <AircraftTable data={aircrafts} tenantId={tenantId} />
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Tail Number</TableHead>
+                                    <TableHead>Model</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {aircrafts && aircrafts.length > 0 ? (
+                                    aircrafts.map((aircraft) => (
+                                        <TableRow key={aircraft.id}>
+                                            <TableCell className="font-medium">{aircraft.tailNumber}</TableCell>
+                                            <TableCell>{aircraft.model}</TableCell>
+                                            <TableCell>{aircraft.type || 'N/A'}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Button asChild variant="outline" size="sm">
+                                                    <Link href={`/assets/${aircraft.id}`}>
+                                                        <Eye className="mr-2 h-4 w-4" />
+                                                        View
+                                                    </Link>
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center h-24">
+                                            No aircraft found.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
                     )}
                 </CardContent>
             </Card>

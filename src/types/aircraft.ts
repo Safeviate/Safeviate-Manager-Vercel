@@ -72,6 +72,3 @@ export type Aircraft = {
     cg: number;
   }[];
 };
-
-    
-    

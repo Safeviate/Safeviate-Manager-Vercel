@@ -1,426 +1,120 @@
 
 'use client';
 
-import { useState, use, useMemo, useEffect, useCallback } from 'react';
+import { use } from 'react';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import type { Aircraft, AircraftDocument } from '../page';
-import { EditAircraftForm } from './edit-aircraft-form';
-import { ViewAircraftDetails } from './view-aircraft-details';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Pencil, Camera, FileUp, Upload, View, Trash2, CalendarIcon, ListChecks, Scale } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { DocumentUploader } from './document-uploader';
-import { useToast } from '@/hooks/use-toast';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { format, differenceInDays } from 'date-fns';
-import Image from 'next/image';
-import type { DocumentExpirySettings } from '../../admin/document-dates/page';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { useDebounce } from '@/hooks/use-debounce';
 import Link from 'next/link';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import type { Aircraft } from '@/types/aircraft';
 
-interface AircraftProfilePageProps {
+interface AircraftDetailPageProps {
     params: { id: string };
 }
 
-const requiredAircraftDocuments = [
-    'Certificate of Release to service',
-    'Certificate of Registration',
-    'Certificate of Airworthiness',
-    'Radio',
-    'Insurance',
-];
+const DetailItem = ({ label, value, unit }: { label: string; value?: string | number | null; unit?: string }) => (
+    <div>
+        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        <p className="text-lg font-semibold">
+            {value !== null && value !== undefined ? `${value} ${unit || ''}`.trim() : 'N/A'}
+        </p>
+    </div>
+);
 
-export default function AircraftProfilePage({ params }: AircraftProfilePageProps) {
+export default function AircraftDetailPage({ params }: AircraftDetailPageProps) {
     const resolvedParams = use(params);
     const firestore = useFirestore();
-    const tenantId = 'safeviate'; // Hardcoded for now
+    const tenantId = 'safeviate';
     const aircraftId = resolvedParams.id;
-    const [isEditing, setIsEditing] = useState(false);
 
-    const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-    const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
-    const { toast } = useToast();
-
-    // State for document abbreviations
-    const [abbreviations, setAbbreviations] = useState<Record<string, string>>({});
-
-    const debouncedAbbreviations = useDebounce(abbreviations, 500);
-
-    const aircraftDocRef = useMemoFirebase(
-        () => (firestore ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId) : null),
+    const aircraftRef = useMemoFirebase(
+        () => (firestore ? doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId) : null),
         [firestore, tenantId, aircraftId]
     );
 
-    const expirySettingsRef = useMemoFirebase(
-      () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
-      [firestore, tenantId]
-    );
-
-    const { data: aircraft, isLoading, error } = useDoc<Aircraft>(aircraftDocRef);
-    const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
-
-    useEffect(() => {
-        if (aircraft?.documents) {
-          const initialAbbrs = aircraft.documents.reduce((acc, doc) => {
-            if (doc.name) {
-              acc[doc.name] = doc.abbreviation || '';
-            }
-            return acc;
-          }, {} as Record<string, string>);
-          setAbbreviations(initialAbbrs);
-        }
-      }, [aircraft]);
-
-    // Effect to save debounced abbreviations
-    useEffect(() => {
-    if (!isEditing || !aircraftDocRef || !aircraft || !aircraft.documents || Object.keys(debouncedAbbreviations).length === 0) return;
-
-    const hasChanged = aircraft.documents.some(
-        (doc) => (debouncedAbbreviations[doc.name] || '') !== (doc.abbreviation || '')
-    );
-
-    if (hasChanged) {
-        const updatedDocuments = aircraft.documents.map(doc => ({
-            ...doc,
-            abbreviation: debouncedAbbreviations[doc.name] || '',
-        }));
-        handleDocumentUpdate(updatedDocuments);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [debouncedAbbreviations, aircraft, aircraftDocRef, isEditing]);
-
-
-    const handleAbbreviationChange = (docName: string, value: string) => {
-        setAbbreviations(prev => ({ ...prev, [docName]: value }));
-    };
-
-    const getStatusColor = (expirationDate: string | null | undefined): string | null => {
-      if (!expirationDate || !expirySettings) return null;
-  
-      const today = new Date();
-      const expiry = new Date(expirationDate);
-      const daysUntilExpiry = differenceInDays(expiry, today);
-  
-      if (daysUntilExpiry < 0) {
-        return expirySettings.expiredColor || '#ef4444'; // Expired
-      }
-  
-      const sortedPeriods = (expirySettings.warningPeriods || []).sort((a, b) => a.period - b.period);
-      for (const warning of sortedPeriods) {
-        if (daysUntilExpiry <= warning.period) {
-          return warning.color;
-        }
-      }
-  
-      return expirySettings.defaultColor || null; // Safe color
-    };
-  
-    const handleViewImage = (url: string) => {
-      setViewingImageUrl(url);
-      setIsImageViewerOpen(true);
-    };
-
-    const handleDocumentUpdate = (updatedDocuments: AircraftDocument[]) => {
-      if (!aircraftDocRef) {
-          toast({
-              variant: "destructive",
-              title: "Error",
-              description: "Could not connect to the database.",
-          });
-          return;
-      }
-      updateDocumentNonBlocking(aircraftDocRef, { documents: updatedDocuments });
-    };
-  
-    const onDocumentUploaded = (docDetails: Omit<AircraftDocument, 'expirationDate' | 'abbreviation'> & { expirationDate: string | null }) => {
-      if (!aircraft) return;
-      const currentDocs = aircraft.documents || [];
-      const existingDocIndex = currentDocs.findIndex(d => d.name === docDetails.name);
-  
-      let updatedDocs;
-      if (existingDocIndex > -1) {
-          updatedDocs = [...currentDocs];
-          const existingDoc = updatedDocs[existingDocIndex];
-          updatedDocs[existingDocIndex] = { ...existingDoc, ...docDetails };
-      } else {
-          updatedDocs = [...currentDocs, docDetails];
-      }
-      handleDocumentUpdate(updatedDocs);
-    };
-  
-    const handleExpirationDateChange = (docName: string, date: Date | undefined) => {
-      if (!aircraft) return;
-      const currentDocs = aircraft.documents || [];
-      const docIndex = currentDocs.findIndex(d => d.name === docName);
-      
-      if (docIndex > -1) {
-          const updatedDocs = [...currentDocs];
-          updatedDocs[docIndex].expirationDate = date ? date.toISOString() : null;
-          handleDocumentUpdate(updatedDocs);
-      }
-    };
-  
-    const handleDocumentDelete = (docNameToDelete: string) => {
-      if (!aircraft || !user.documents) return;
-      const currentDocs = user.documents || [];
-      const updatedDocs = currentDocs.filter(doc => doc.name !== docNameToDelete);
-      handleDocumentUpdate(updatedDocs);
-      toast({
-          title: "Document Deleted",
-          description: `"${docNameToDelete}" has been removed.`,
-      });
-    };
-    
-    const combinedDocuments = useMemo(() => {
-      if (!aircraft) return [];
-      const uploaded = aircraft.documents || [];
-      const allDocNames = new Set([...requiredAircraftDocuments, ...uploaded.map(d => d.name)]);
-  
-      return Array.from(allDocNames).map(docName => {
-          const uploadedDoc = uploaded.find(upDoc => upDoc.name === docName);
-          const isRequired = requiredAircraftDocuments.includes(docName);
-          return {
-              name: docName,
-              isUploaded: !!uploadedDoc?.url,
-              url: uploadedDoc?.url,
-              expirationDate: uploadedDoc?.expirationDate,
-              abbreviation: uploadedDoc?.abbreviation,
-              isRequired: isRequired,
-          };
-      });
-    }, [aircraft]);
-
+    const { data: aircraft, isLoading, error } = useDoc<Aircraft>(aircraftRef);
 
     if (isLoading) {
         return (
-            <div className="space-y-8">
-                <Skeleton className="h-10 w-1/4" />
-                <div className="space-y-6">
-                    <Skeleton className="h-48 w-full" />
-                </div>
+            <div className="space-y-6">
+                <Skeleton className="h-10 w-48" />
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-8 w-1/2" />
+                        <Skeleton className="h-4 w-1/4 mt-2" />
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <Skeleton className="h-16 w-full" />
+                            <Skeleton className="h-16 w-full" />
+                            <Skeleton className="h-16 w-full" />
+                            <Skeleton className="h-16 w-full" />
+                        </div>
+                        <Skeleton className="h-32 w-full" />
+                    </CardContent>
+                </Card>
             </div>
         );
     }
-
+    
     if (error) {
-        return <div className="text-destructive">Error: {error.message}</div>;
+        return <p className="text-destructive">Error loading aircraft: {error.message}</p>;
     }
 
     if (!aircraft) {
         return <div>Aircraft not found.</div>;
     }
 
-    const documentsCardContent = (
-      <CardContent>
-          {combinedDocuments.length > 0 ? (
-          <Table>
-              <TableHeader>
-                  <TableRow>
-                      <TableHead>Document Name</TableHead>
-                      <TableHead>Abbr.</TableHead>
-                      <TableHead>Expiry</TableHead>
-                      {isEditing && <TableHead className='text-center'>Set Expiry</TableHead>}
-                      <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-              </TableHeader>
-              <TableBody>
-                  {combinedDocuments.map((doc) => {
-                      const statusColor = getStatusColor(doc.expirationDate);
-                      return (
-                          <TableRow key={doc.name}>
-                              <TableCell className="font-medium">{doc.name}</TableCell>
-                              <TableCell>
-                                {isEditing ? (
-                                    <Input
-                                        value={abbreviations[doc.name] || ''}
-                                        onChange={(e) => handleAbbreviationChange(doc.name, e.target.value)}
-                                        maxLength={5}
-                                        className="h-8 w-20"
-                                        placeholder="e.g., C172"
-                                    />
-                                ) : (
-                                    doc.abbreviation || 'N/A'
-                                )}
-                               </TableCell>
-                              <TableCell className="min-w-[150px] whitespace-nowrap">
-                                  <div className="flex items-center gap-2">
-                                      {statusColor && (
-                                          <span 
-                                              className="h-2.5 w-2.5 rounded-full flex-shrink-0"
-                                              style={{ backgroundColor: statusColor }}
-                                          />
-                                      )}
-                                      {doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'N/A'}
-                                  </div>
-                              </TableCell>
-                              {isEditing && (
-                                <TableCell className='text-center'>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button variant="outline" size="icon" className='h-8 w-8'>
-                                                <CalendarIcon className="h-4 w-4" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <CustomCalendar
-                                                selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined}
-                                                onDateSelect={(date) => handleExpirationDateChange(doc.name, date)}
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                </TableCell>
-                              )}
-                              <TableCell className="text-right">
-                                  {doc.isUploaded ? (
-                                      <div className="flex gap-2 justify-end">
-                                        <Button variant="outline" size="sm" onClick={() => handleViewImage(doc.url!)}>
-                                            <View className="mr-2 h-4 w-4" /> View
-                                        </Button>
-                                        {isEditing && (
-                                            <Button variant="destructive" size="icon" onClick={() => handleDocumentDelete(doc.name)}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        )}
-                                      </div>
-                                  ) : (
-                                    <>
-                                      {isEditing && (
-                                        <DocumentUploader
-                                            defaultFileName={doc.name}
-                                            onDocumentUploaded={onDocumentUploaded}
-                                            trigger={(openDialog) => (
-                                              <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                  <Button size="sm">
-                                                    <Upload className="mr-2 h-4 w-4" /> Upload
-                                                  </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent>
-                                                  <DropdownMenuItem onSelect={() => openDialog('file')}>
-                                                    <FileUp className="mr-2 h-4 w-4" />
-                                                    Upload File
-                                                  </DropdownMenuItem>
-                                                  <DropdownMenuItem onSelect={() => openDialog('camera')}>
-                                                    <Camera className="mr-2 h-4 w-4" />
-                                                    Take Photo
-                                                  </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                              </DropdownMenu>
-                                            )}
-                                        />
-                                      )}
-                                    </>
-                                  )}
-                              </TableCell>
-                          </TableRow>
-                      )
-                  })}
-              </TableBody>
-          </Table>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">No documents configured for this aircraft.</p>
-          )}
-      </CardContent>
-  );
-
-  const checklistStatus = aircraft.checklistStatus || 'ready';
+    const tachoToNext50 = aircraft.tachoAtNext50Inspection ? (aircraft.tachoAtNext50Inspection - (aircraft.currentTacho || 0)).toFixed(1) : 'N/A';
+    const tachoToNext100 = aircraft.tachoAtNext100Inspection ? (aircraft.tachoAtNext100Inspection - (aircraft.currentTacho || 0)).toFixed(1) : 'N/A';
 
     return (
-        <div className='space-y-6'>
-             <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold tracking-tight">{isEditing ? `Editing ${aircraft.tailNumber}` : aircraft.tailNumber}</h1>
-                <div className='flex items-center gap-2'>
-                  {!isEditing && (
-                    <Button asChild variant="outline">
-                      <Link href={`/assets/mass-balance?aircraftId=${aircraftId}`}>
-                        <Scale className="mr-2 h-4 w-4" />
-                        Mass & Balance
-                      </Link>
-                    </Button>
-                  )}
-                  <Button onClick={() => setIsEditing(!isEditing)}>
-                      {isEditing ? 'Cancel' : <><Pencil className='mr-2 h-4 w-4' /> Edit Aircraft</>}
-                  </Button>
-                </div>
-            </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-6">
-                    {isEditing ? (
-                        <EditAircraftForm
-                            tenantId={tenantId}
-                            aircraft={aircraft}
-                            onCancel={() => setIsEditing(false)}
-                        />
-                    ) : (
-                        <ViewAircraftDetails 
-                            aircraft={aircraft}
-                        />
-                    )}
-                    {!isEditing && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Technical History</CardTitle>
-                                <CardDescription>View the technical history of the aircraft.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-sm text-muted-foreground">Technical history details will be displayed here.</p>
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Documents</CardTitle>
-                            <CardDescription>Manage documents for {aircraft.tailNumber}.</CardDescription>
-                        </CardHeader>
-                        <ScrollArea className="h-[calc(100vh-25rem)]">
-                            {documentsCardContent}
-                        </ScrollArea>
-                    </Card>
-                    {!isEditing && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Checklist History</CardTitle>
-                                <CardDescription>View and start pre-flight or post-flight checklists.</CardDescription>
-                            </CardHeader>
-                            <CardContent className='flex flex-col gap-4'>
-                                <p className="text-sm text-muted-foreground">No recent checklists found for this aircraft.</p>
-                                <p className="text-sm text-muted-foreground">Please start a checklist from a booking page.</p>
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
-            </div>
+        <div className="space-y-6">
+            <Button asChild variant="outline">
+                <Link href="/assets">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Fleet
+                </Link>
+            </Button>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-2xl">{aircraft.tailNumber}</CardTitle>
+                    <CardDescription>{aircraft.model}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-8">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        <DetailItem label="Type" value={aircraft.type} />
+                        <DetailItem label="Abbreviation" value={aircraft.abbreviation} />
+                        <DetailItem label="Frame Hours" value={aircraft.frameHours} unit="hrs" />
+                        <DetailItem label="Engine Hours" value={aircraft.engineHours} unit="hrs" />
+                    </div>
+                </CardContent>
+            </Card>
 
-            <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
-              <DialogContent className="max-w-4xl">
-                  <DialogHeader>
-                      <DialogTitle>Document Viewer</DialogTitle>
-                      <DialogDescription>Viewing uploaded document.</DialogDescription>
-                  </DialogHeader>
-                  {viewingImageUrl && (
-                      <div className="relative h-[80vh]">
-                          <Image 
-                              src={viewingImageUrl}
-                              alt="Document" 
-                              fill
-                              style={{ objectFit: 'contain' }}
-                          />
-                      </div>
-                  )}
-              </DialogContent>
-            </Dialog>
-           
+            <Card>
+                <CardHeader>
+                    <CardTitle>Hours & Inspections</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                     <DetailItem label="Current Hobbs" value={aircraft.currentHobbs} unit="hrs" />
+                     <DetailItem label="Current Tacho" value={aircraft.currentTacho} unit="hrs" />
+                     <DetailItem label="Tacho to 50hr" value={tachoToNext50} unit="hrs" />
+                     <DetailItem label="Tacho to 100hr" value={tachoToNext100} unit="hrs" />
+                </CardContent>
+            </Card>
+
+            {/* Placeholder for Documents and Maintenance */}
+            <Card>
+                 <CardHeader>
+                    <CardTitle>Documents & Maintenance</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground">Document and maintenance log display coming soon.</p>
+                </CardContent>
+            </Card>
         </div>
     );
 }
