@@ -34,6 +34,17 @@ export type AircraftModelProfile = {
   yMax: number;
 };
 
+export type AircraftComponent = {
+  id: string;
+  name: string;
+  partNumber: string;
+  serialNumber?: string;
+  installDate?: string; // ISO String
+  installHours?: number;
+  maxHours?: number;
+  notes?: string;
+};
+
 export type Aircraft = {
   id: string;
   tailNumber: string;
@@ -55,6 +66,7 @@ export type Aircraft = {
     uploadDate: string;
     expirationDate?: string | null;
   }[];
+  components?: AircraftComponent[];
   emptyWeight?: number;
   emptyWeightMoment?: number;
   maxTakeoffWeight?: number;

@@ -1,7 +1,5 @@
-
 'use client';
 
-import * as React from 'react';
 import {
   Table,
   TableBody,
@@ -10,58 +8,64 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Eye } from 'lucide-react';
-import { ViewAircraftDialog } from './view-aircraft-dialog';
 import type { Aircraft } from '@/types/aircraft';
 import { AircraftActions } from './aircraft-actions';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface AircraftTableProps {
   data: Aircraft[];
   tenantId: string;
+  isLoading: boolean;
+  error: Error | null;
 }
 
-export function AircraftTable({ data, tenantId }: AircraftTableProps) {
-  const [selectedAircraft, setSelectedAircraft] = React.useState<Aircraft | null>(null);
+export function AircraftTable({ data, tenantId, isLoading, error }: AircraftTableProps) {
+  if (isLoading) {
+      return (
+          <div className="space-y-2">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+          </div>
+      )
+  }
 
+  if (error) {
+      return <div className="text-center text-destructive">Error loading aircraft: {error.message}</div>
+  }
+
+  if (data.length === 0) {
+    return (
+        <div className="text-center h-24 flex items-center justify-center text-muted-foreground">
+            No aircraft found. Add one to get started.
+        </div>
+    );
+  }
+  
   return (
-    <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Tail Number</TableHead>
-            <TableHead>Model</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>View</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Tail Number</TableHead>
+          <TableHead>Model</TableHead>
+          <TableHead>Type</TableHead>
+          <TableHead>Current Hobbs</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {data.map((aircraft) => (
+          <TableRow key={aircraft.id}>
+            <TableCell className="font-medium">{aircraft.tailNumber}</TableCell>
+            <TableCell>{aircraft.model}</TableCell>
+            <TableCell>{aircraft.type || 'N/A'}</TableCell>
+            <TableCell>{aircraft.currentHobbs ? `${aircraft.currentHobbs.toFixed(1)} hrs` : 'N/A'}</TableCell>
+            <TableCell className="text-right">
+              <AircraftActions aircraft={aircraft} tenantId={tenantId} />
+            </TableCell>
           </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.map((aircraft) => (
-            <TableRow key={aircraft.id}>
-              <TableCell className="font-medium">{aircraft.tailNumber}</TableCell>
-              <TableCell>{aircraft.model}</TableCell>
-              <TableCell>{aircraft.type ?? 'N/A'}</TableCell>
-              <TableCell>
-                <Button variant="outline" size="sm" onClick={() => setSelectedAircraft(aircraft)}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  View
-                </Button>
-              </TableCell>
-              <TableCell className="text-right">
-                <AircraftActions aircraft={aircraft} tenantId={tenantId} />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      {selectedAircraft && (
-        <ViewAircraftDialog
-          aircraft={selectedAircraft}
-          isOpen={!!selectedAircraft}
-          onClose={() => setSelectedAircraft(null)}
-        />
-      )}
-    </>
+        ))}
+      </TableBody>
+    </Table>
   );
 }

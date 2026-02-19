@@ -912,6 +912,10 @@
         "documents": {
            "$ref": "#/backend/entities/Documents"
         },
+        "components": {
+           "type": "array",
+           "items": { "$ref": "#/backend/entities/AircraftComponent" }
+        },
         "emptyWeight": {
           "type": "number",
           "description": "The basic empty weight of the aircraft (in lbs)."
@@ -972,6 +976,22 @@
         "tailNumber",
         "model"
       ]
+    },
+    "AircraftComponent": {
+      "title": "Aircraft Component",
+      "type": "object",
+      "description": "Represents a single trackable component on an aircraft.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "partNumber": { "type": "string" },
+        "serialNumber": { "type": "string" },
+        "installDate": { "type": "string", "format": "date" },
+        "installHours": { "type": "number" },
+        "maxHours": { "type": "number" },
+        "notes": { "type": "string" }
+      },
+      "required": ["id", "name", "partNumber"]
     },
     "MaintenanceLog": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1630,6 +1650,13 @@
             "$ref": "#/backend/entities/Aircraft"
           },
           "description": "Stores aircraft information, scoped to a specific tenant."
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/aircrafts/{aircraftId}/components/{componentId}",
+        "definition": {
+          "schema": { "$ref": "#/backend/entities/AircraftComponent" },
+          "description": "Stores trackable components for a specific aircraft."
         }
       },
       {
