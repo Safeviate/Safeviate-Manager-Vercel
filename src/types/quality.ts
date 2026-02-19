@@ -72,7 +72,6 @@ export interface QualityAudit {
     status: AuditStatus;
     findings: QualityFinding[];
     complianceScore?: number;
-    template: QualityAuditChecklistTemplate;
 }
 
 export interface CorrectiveActionPlan {

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -9,13 +8,14 @@ import type { CorrectiveActionPlan, QualityAudit } from '@/types/quality';
 import type { Booking } from '@/types/booking';
 import type { SpiConfig } from '../safety/safety-indicators/edit-spi-form';
 import { SPICard } from '../safety/safety-indicators/spi-card';
-import { AlertTriangle, BookCheck, CalendarClock, Plane } from 'lucide-react';
+import { AlertTriangle, BookCheck, CalendarClock, Plane, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import type { Aircraft } from '../assets/page';
 
 const kpiCardData = [
     {
@@ -45,8 +45,9 @@ const initialSpiConfig: SpiConfig[] = [
     {
         id: 'unstable-approach',
         name: 'Unstable Approach Rate',
-        type: 'Lagging',
-        unit: 'Rate per 100 fh',
+        comparison: 'lower-is-better',
+        unit: 'Rate',
+        rateFactor: 100,
         description: 'Number of reported unstable approaches per 100 flight hours.',
         target: 0.5,
         levels: {
@@ -54,13 +55,15 @@ const initialSpiConfig: SpiConfig[] = [
             monitor: 1.0,
             actionRequired: 1.5,
             urgentAction: 2.0,
-        }
+        },
+        monthlyData: Array(12).fill(0),
     },
     {
         id: 'proactive-reports',
         name: 'Proactive Reports',
-        type: 'Leading',
+        comparison: 'greater-is-better',
         unit: 'Count',
+        periodLabel: 'Month',
         description: 'Total number of proactive safety reports filed by personnel.',
         target: 10,
         levels: {
@@ -68,7 +71,8 @@ const initialSpiConfig: SpiConfig[] = [
             monitor: 8,
             actionRequired: 5,
             urgentAction: 2,
-        }
+        },
+        monthlyData: Array(12).fill(0),
     }
 ];
 
@@ -89,10 +93,15 @@ export default function DashboardPage() {
         () => firestore ? query(collection(firestore, `tenants/${tenantId}/bookings`)) : null,
         [firestore, tenantId]
     );
+    const aircraftsQuery = useMemoFirebase(
+        () => firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null,
+        [firestore, tenantId]
+    );
 
     const { data: reports } = useCollection<SafetyReport>(reportsQuery);
     const { data: caps } = useCollection<CorrectiveActionPlan>(capsQuery);
     const { data: bookings } = useCollection<Booking>(bookingsQuery);
+    const { data: aircrafts } = useCollection<Aircraft>(aircraftsQuery);
 
     const kpiData = useMemo(() => {
         const today = new Date();
@@ -101,7 +110,7 @@ export default function DashboardPage() {
 
         return {
             openReports: reports?.filter(r => r.status === 'Open').length || 0,
-            openCaps: caps?.filter(cap => cap.status === 'Open').length || 0,
+            openCaps: caps?.filter(cap => (cap as any).status === 'Open').length || 0,
             upcomingBookings: bookings?.filter(b => {
                 if (!b.date) return false;
                 const bookingDate = new Date(b.date);
@@ -132,10 +141,45 @@ export default function DashboardPage() {
                 ))}
             </div>
 
+            <Card>
+                <CardHeader>
+                    <CardTitle>Aircraft Fleet Hours</CardTitle>
+                    <CardDescription>A summary of the current Hobbs and Tacho times for each aircraft.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Tail Number</TableHead>
+                                <TableHead>Model</TableHead>
+                                <TableHead>Hobbs</TableHead>
+                                <TableHead>Tacho</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {aircrafts && aircrafts.length > 0 ? (
+                                aircrafts.map(ac => (
+                                    <TableRow key={ac.id}>
+                                        <TableCell className="font-medium">{ac.tailNumber}</TableCell>
+                                        <TableCell>{ac.model}</TableCell>
+                                        <TableCell>{ac.currentHobbs?.toFixed(1) || 'N/A'} hrs</TableCell>
+                                        <TableCell>{ac.currentTacho?.toFixed(1) || 'N/A'} hrs</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">No aircraft data available.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
             <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
                  {initialSpiConfig.map(spi => (
                     <SPICard 
-                        key={spi.id}
+                        key={spi.id} 
                         spi={spi} 
                         onEdit={() => {}} // No edit functionality from dashboard
                         reports={reports} 

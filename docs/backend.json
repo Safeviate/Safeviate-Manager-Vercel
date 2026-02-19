@@ -1361,6 +1361,7 @@
             "auditId": { "type": "string" },
             "findingId": { "type": "string" },
             "rootCauseAnalysis": { "type": "string" },
+            "status": { "type": "string", "enum": ["Open", "In Progress", "Closed", "Cancelled"] },
             "actions": {
                 "type": "array",
                 "items": { "$ref": "#/backend/entities/CorrectiveAction" }
