@@ -1,26 +1,43 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import type { Aircraft } from './page';
+import type { Aircraft } from '../page';
 
 const formSchema = z.object({
   tailNumber: z.string().min(1, 'Tail number is required.'),
   model: z.string().min(1, 'Model is required.'),
   abbreviation: z.string().optional(),
   type: z.enum(['Single-Engine', 'Multi-Engine']),
-  frameHours: z.number({ coerce: true }).optional(),
-  engineHours: z.number({ coerce: true }).optional(),
+  initialHobbs: z.number({ coerce: true }).optional(),
   currentHobbs: z.number({ coerce: true }).optional(),
+  initialTacho: z.number({ coerce: true }).optional(),
   currentTacho: z.number({ coerce: true }).optional(),
   tachoAtNext50Inspection: z.number({ coerce: true }).optional(),
   tachoAtNext100Inspection: z.number({ coerce: true }).optional(),
@@ -29,79 +46,83 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface EditAircraftFormProps {
-  aircraft: Partial<Aircraft>;
-  onCancel: () => void;
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  existingAircraft: Aircraft;
+  tenantId: string;
 }
 
-export function EditAircraftForm({ aircraft, onCancel }: EditAircraftFormProps) {
+export function EditAircraftForm({ isOpen, setIsOpen, existingAircraft, tenantId }: EditAircraftFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const tenantId = 'safeviate';
-  const isNew = !aircraft.id;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      tailNumber: aircraft?.tailNumber || '',
-      model: aircraft?.model || '',
-      abbreviation: aircraft?.abbreviation || '',
-      type: aircraft?.type || 'Single-Engine',
-      frameHours: aircraft?.frameHours || 0,
-      engineHours: aircraft?.engineHours || 0,
-      currentHobbs: aircraft?.currentHobbs || 0,
-      currentTacho: aircraft?.currentTacho || 0,
-      tachoAtNext50Inspection: aircraft?.tachoAtNext50Inspection || 0,
-      tachoAtNext100Inspection: aircraft?.tachoAtNext100Inspection || 0,
+      tailNumber: existingAircraft.tailNumber || '',
+      model: existingAircraft.model || '',
+      abbreviation: existingAircraft.abbreviation || '',
+      type: existingAircraft.type || 'Single-Engine',
+      initialHobbs: existingAircraft.initialHobbs || 0,
+      currentHobbs: existingAircraft.currentHobbs || 0,
+      initialTacho: existingAircraft.initialTacho || 0,
+      currentTacho: existingAircraft.currentTacho || 0,
+      tachoAtNext50Inspection: existingAircraft.tachoAtNext50Inspection || 0,
+      tachoAtNext100Inspection: existingAircraft.tachoAtNext100Inspection || 0,
     },
   });
 
   const onSubmit = (values: FormValues) => {
     if (!firestore) return;
 
-    if (isNew) {
-        const aircraftsCollection = collection(firestore, 'tenants', tenantId, 'aircrafts');
-        addDocumentNonBlocking(aircraftsCollection, values);
-        toast({
-            title: "Aircraft Added",
-            description: `${values.tailNumber} has been added to the fleet.`
-        });
-    } else {
-        const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraft.id!);
-        updateDocumentNonBlocking(aircraftRef, values);
-        toast({
-            title: "Aircraft Updated",
-            description: `${values.tailNumber} has been updated.`
-        });
-    }
-    onCancel();
+    const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', existingAircraft.id);
+    updateDocumentNonBlocking(aircraftRef, values);
+
+    toast({
+      title: 'Aircraft Updated',
+      description: `Details for ${values.tailNumber} have been updated.`,
+    });
+    setIsOpen(false);
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        <Card>
-          <CardHeader>
-            <CardTitle>{isNew ? 'Add New Aircraft' : 'Edit Aircraft'}</CardTitle>
-            <CardDescription>{isNew ? 'Enter the details for the new aircraft.' : `Update the details for ${aircraft.tailNumber}.`}</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <FormField control={form.control} name="tailNumber" render={({ field }) => ( <FormItem><FormLabel>Tail Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
-            <FormField control={form.control} name="model" render={({ field }) => ( <FormItem><FormLabel>Model</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
-            <FormField control={form.control} name="abbreviation" render={({ field }) => ( <FormItem><FormLabel>Abbreviation</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
-            <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Single-Engine">Single-Engine</SelectItem><SelectItem value="Multi-Engine">Multi-Engine</SelectItem></SelectContent></Select><FormMessage /></FormItem> )}/>
-            <FormField control={form.control} name="frameHours" render={({ field }) => ( <FormItem><FormLabel>Frame Hours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-            <FormField control={form.control} name="engineHours" render={({ field }) => ( <FormItem><FormLabel>Engine Hours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-            <FormField control={form.control} name="currentHobbs" render={({ field }) => ( <FormItem><FormLabel>Current Hobbs</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-            <FormField control={form.control} name="currentTacho" render={({ field }) => ( <FormItem><FormLabel>Current Tacho</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-            <FormField control={form.control} name="tachoAtNext50Inspection" render={({ field }) => ( <FormItem><FormLabel>Tacho at Next 50hr</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-            <FormField control={form.control} name="tachoAtNext100Inspection" render={({ field }) => ( <FormItem><FormLabel>Tacho at Next 100hr</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-          </CardContent>
-          <CardFooter className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-            <Button type="submit">Save Changes</Button>
-          </CardFooter>
-        </Card>
-      </form>
-    </Form>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Edit Aircraft: {existingAircraft.tailNumber}</DialogTitle>
+          <DialogDescription>
+            Update the details for this aircraft.
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <ScrollArea className="h-[60vh] pr-6">
+                <div className="space-y-6 py-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="tailNumber" render={({ field }) => ( <FormItem><FormLabel>Tail Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="model" render={({ field }) => ( <FormItem><FormLabel>Model</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="abbreviation" render={({ field }) => ( <FormItem><FormLabel>Abbreviation (5 Chars)</FormLabel><FormControl><Input maxLength={5} {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Single-Engine">Single-Engine</SelectItem><SelectItem value="Multi-Engine">Multi-Engine</SelectItem></SelectContent></Select><FormMessage /></FormItem> )} />
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <FormField control={form.control} name="initialHobbs" render={({ field }) => ( <FormItem><FormLabel>Initial Hobbs</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="currentHobbs" render={({ field }) => ( <FormItem><FormLabel>Current Hobbs</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="initialTacho" render={({ field }) => ( <FormItem><FormLabel>Initial Tacho</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="currentTacho" render={({ field }) => ( <FormItem><FormLabel>Current Tacho</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="tachoAtNext50Inspection" render={({ field }) => ( <FormItem><FormLabel>Next 50hr Tacho</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="tachoAtNext100Inspection" render={({ field }) => ( <FormItem><FormLabel>Next 100hr Tacho</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                    </div>
+                </div>
+            </ScrollArea>
+            <DialogFooter className="pt-6 border-t">
+                <DialogClose asChild>
+                    <Button type="button" variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button type="submit">Save Changes</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }
