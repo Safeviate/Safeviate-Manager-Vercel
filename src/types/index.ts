@@ -1,5 +1,5 @@
 
-export type { Aircraft } from './aircraft';
+export type { Aircraft, AircraftComponent } from './aircraft';
 export type { Booking, Photo, MassAndBalance } from './booking';
 export type {
   ManagementOfChange,
@@ -52,3 +52,4 @@ export type {
 } from './training';
 export type { Alert, AlertType, AlertStatus } from './alert';
 export type { SpiConfig, SpiConfigurations, SpiComparison, SpiUnit } from './spi';
+export type { MaintenanceLog } from './maintenance';

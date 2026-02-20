@@ -1,201 +1,137 @@
-
 'use client';
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useState, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, Trash2 } from 'lucide-react';
-import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { doc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import type { Aircraft, MaintenanceLog } from '@/types/aircraft';
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
+import type { MaintenanceLog } from '@/types/maintenance';
 import { format } from 'date-fns';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { v4 as uuidv4 } from 'uuid';
-
-const snagSchema = z.object({
-  description: z.string().min(1, 'Description is required.'),
-  procedure: z.string().optional(),
-});
-
-type SnagFormValues = z.infer<typeof snagSchema>;
-
-interface NewSnagFormProps {
-  aircraftId: string;
-  tenantId: string;
-  onSnagAdded: () => void;
-}
-
-function NewSnagForm({ aircraftId, tenantId, onSnagAdded }: NewSnagFormProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const { toast } = useToast();
-  const firestore = useFirestore();
-
-  const form = useForm<SnagFormValues>({
-    resolver: zodResolver(snagSchema),
-    defaultValues: {
-      description: '',
-      procedure: '',
-    },
-  });
-
-  const onSubmit = async (values: SnagFormValues) => {
-    if (!firestore) return;
-
-    const newSnag: MaintenanceLog = {
-      id: uuidv4(),
-      aircraftId: aircraftId,
-      date: new Date().toISOString(),
-      description: values.description,
-      procedure: values.procedure || '',
-    };
-
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);
-    await updateDocumentNonBlocking(aircraftRef, {
-      maintenanceLogs: arrayUnion(newSnag)
-    });
-
-    toast({ title: 'Snag Added', description: 'The new maintenance snag has been logged.' });
-    setIsOpen(false);
-    onSnagAdded();
-    form.reset();
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" /> Add Snag
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add New Maintenance Snag</DialogTitle>
-          <DialogDescription>Log a new issue or maintenance task for this aircraft.</DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Snag / Issue Description</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Describe the issue found..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="procedure"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Rectification / Procedure</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Describe the steps taken to fix the issue (optional)..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
-              </DialogClose>
-              <Button type="submit">Save Snag</Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 
 interface AircraftSnagsProps {
-  aircraft: Aircraft | null;
+  aircraftId: string;
   tenantId: string;
-  onUpdate: () => void;
 }
 
-export function AircraftSnags({ aircraft, tenantId, onUpdate }: AircraftSnagsProps) {
+const NewSnagForm = ({ onAddSnag }: { onAddSnag: (description: string, procedure: string) => void }) => {
+    const [description, setDescription] = useState('');
+    const [procedure, setProcedure] = useState('');
+    const { toast } = useToast();
+
+    const handleAdd = () => {
+        if (!description.trim()) {
+            toast({ variant: 'destructive', title: 'Missing Description', description: 'Please describe the snag.' });
+            return;
+        }
+        onAddSnag(description, procedure);
+    }
+
+    return (
+        <div className="grid gap-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="snag-description">Description of Snag</Label>
+            <Textarea id="snag-description" value={description} onChange={(e) => setDescription(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="snag-procedure">Rectification / Procedure</Label>
+            <Textarea id="snag-procedure" value={procedure} onChange={(e) => setProcedure(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+                <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button onClick={handleAdd}>Save Snag</Button>
+          </DialogFooter>
+        </div>
+    )
+}
+
+export function AircraftSnags({ aircraftId, tenantId }: AircraftSnagsProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
-  
-  if (!aircraft) {
-      return (
-          <div className="p-4">
-              <Skeleton className="h-48 w-full" />
-          </div>
-      );
-  }
 
-  const handleDeleteSnag = async (snagToDelete: MaintenanceLog) => {
+  const snagsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`), orderBy('date', 'desc')) : null),
+    [firestore, tenantId, aircraftId]
+  );
+  const { data: snags, isLoading } = useCollection<MaintenanceLog>(snagsQuery);
+
+  const handleAddSnag = (description: string, procedure: string) => {
     if (!firestore) return;
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
-    await updateDocumentNonBlocking(aircraftRef, {
-        maintenanceLogs: arrayRemove(snagToDelete)
-    });
-    toast({ title: 'Snag Removed', description: 'The snag has been removed from the log.'});
-    onUpdate();
-  }
+    const newSnag: Omit<MaintenanceLog, 'id'> = {
+        aircraftId,
+        date: new Date().toISOString(),
+        description,
+        procedure
+    };
+    const snagsCollection = collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`);
+    addDocumentNonBlocking(snagsCollection, newSnag);
+    toast({ title: 'Snag Logged' });
+    setIsOpen(false);
+  };
 
-  const sortedLogs = [...(aircraft.maintenanceLogs || [])].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const handleRemoveSnag = (snagId: string) => {
+    if (!firestore) return;
+    const snagRef = doc(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`, snagId);
+    deleteDocumentNonBlocking(snagRef);
+    toast({ title: 'Snag Removed' });
+  }
 
   return (
-    <div>
-        <div className="flex justify-end mb-4">
-            <NewSnagForm aircraftId={aircraft.id} tenantId={tenantId} onSnagAdded={onUpdate} />
+    <Card>
+      <CardHeader className="flex flex-row justify-between items-center">
+        <div>
+            <CardTitle>Maintenance Snags</CardTitle>
+            <CardDescription>A log of reported defects and maintenance actions for this aircraft.</CardDescription>
         </div>
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="w-[40%]">Description</TableHead>
-                    <TableHead className="w-[40%]">Procedure</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {sortedLogs.length > 0 ? (
-                    sortedLogs.map((log) => (
-                        <TableRow key={log.id}>
-                            <TableCell>{format(new Date(log.date), 'PPP')}</TableCell>
-                            <TableCell className="whitespace-pre-wrap">{log.description}</TableCell>
-                            <TableCell className="whitespace-pre-wrap">{log.procedure || 'N/A'}</TableCell>
-                            <TableCell className="text-right">
-                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteSnag(log)}>
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </TableCell>
-                        </TableRow>
-                    ))
-                ) : (
-                    <TableRow>
-                        <TableCell colSpan={4} className="text-center h-24">No snags or maintenance logs recorded.</TableCell>
-                    </TableRow>
+         <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Snag
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Log New Snag</DialogTitle>
+                    <DialogDescription>Describe the defect or maintenance action taken.</DialogDescription>
+                </DialogHeader>
+                <NewSnagForm onAddSnag={handleAddSnag} />
+            </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+            <div className="space-y-4">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+            </div>
+        ) : (
+            <div className="space-y-4">
+                {(snags || []).map(snag => (
+                    <div key={snag.id} className="flex justify-between items-start p-4 border rounded-md">
+                        <div>
+                            <p className="font-semibold">{snag.description}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{snag.procedure}</p>
+                            <p className="text-xs text-muted-foreground mt-2">{format(new Date(snag.date), 'PPP p')}</p>
+                        </div>
+                        <Button variant="destructive" size="icon" className="flex-shrink-0" onClick={() => handleRemoveSnag(snag.id)}>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                ))}
+                {(snags || []).length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">No snags logged for this aircraft.</p>
                 )}
-            </TableBody>
-        </Table>
-    </div>
+            </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
