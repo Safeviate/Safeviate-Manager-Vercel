@@ -36,6 +36,7 @@ export type AircraftModelProfile = {
 
 export type AircraftComponent = {
   id: string;
+  manufacturer?: string | null;
   name: string;
   partNumber: string;
   serialNumber?: string | null;
@@ -86,4 +87,3 @@ export type Aircraft = {
     cg: number;
   }[];
 };
-

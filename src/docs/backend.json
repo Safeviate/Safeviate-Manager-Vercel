@@ -983,6 +983,7 @@
       "description": "Represents a single trackable component on an aircraft.",
       "properties": {
         "id": { "type": "string" },
+        "manufacturer": { "type": "string" },
         "name": { "type": "string" },
         "partNumber": { "type": "string" },
         "serialNumber": { "type": "string" },
@@ -990,8 +991,8 @@
         "installHours": { "type": "number" },
         "maxHours": { "type": "number" },
         "notes": { "type": "string" },
-        "tso": { "type": "number", "description": "Time Since Overhaul in hours." },
-        "tsn": { "type": "number", "description": "Time Since New in hours." }
+        "tsn": { "type": "number", "description": "Time Since New in hours." },
+        "tso": { "type": "number", "description": "Time Since Overhaul in hours." }
       },
       "required": ["id", "name", "partNumber"]
     },
