@@ -1,4 +1,3 @@
-
 export type Station = {
     id: number;
     name: string;
@@ -86,5 +85,3 @@ export type Aircraft = {
     cg: number;
   }[];
 };
-
-    

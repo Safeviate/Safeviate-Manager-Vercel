@@ -13,13 +13,15 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Eye, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Eye, Trash2, Pencil } from 'lucide-react';
 import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu"
 import type { Aircraft } from '@/types/aircraft';
@@ -28,14 +30,15 @@ import Link from 'next/link';
 interface AircraftActionsProps {
   tenantId: string;
   aircraft: Aircraft;
+  onEdit: () => void;
 }
 
-export function AircraftActions({ tenantId, aircraft }: AircraftActionsProps) {
+export function AircraftActions({ tenantId, aircraft, onEdit }: AircraftActionsProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const handleDeleteAircraft = () => {
+  const handleDelete = () => {
     if (!firestore || !tenantId) {
         toast({
             variant: 'destructive',
@@ -44,7 +47,6 @@ export function AircraftActions({ tenantId, aircraft }: AircraftActionsProps) {
           });
         return;
     }
-    
     const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraft.id);
     deleteDocumentNonBlocking(aircraftRef);
 
@@ -65,13 +67,16 @@ export function AircraftActions({ tenantId, aircraft }: AircraftActionsProps) {
               </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuItem asChild>
-                  <Link href={`/assets/${aircraft.id}`}>
-                      <Eye className='mr-2' /> View Details
-                  </Link>
+                  <Link href={`/assets/${aircraft.id}`}><Eye className='mr-2 h-4 w-4' />View Details</Link>
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={onEdit}>
+                  <Pencil className='mr-2 h-4 w-4' /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                  <Trash2 className='mr-2' /> Delete
+                  <Trash2 className='mr-2 h-4 w-4' /> Delete
               </DropdownMenuItem>
           </DropdownMenuContent>
       </DropdownMenu>
@@ -81,13 +86,13 @@ export function AircraftActions({ tenantId, aircraft }: AircraftActionsProps) {
             <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the aircraft 
+                    This action cannot be undone. This will permanently delete the aircraft
                     &quot;{aircraft.tailNumber}&quot;.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteAircraft} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                <AlertDialogAction onClick={handleDelete} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
                     Delete
                 </AlertDialogAction>
             </AlertDialogFooter>

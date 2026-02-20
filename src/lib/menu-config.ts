@@ -189,6 +189,7 @@ export const menuConfig: MenuItem[] = [
       {
         href: '/assets',
         label: 'Aircraft',
+        description: 'Manage the aircraft fleet.',
         permissionId: 'assets-view',
       },
     ],

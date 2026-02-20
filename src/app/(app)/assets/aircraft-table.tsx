@@ -10,38 +10,22 @@ import {
 } from '@/components/ui/table';
 import type { Aircraft } from '@/types/aircraft';
 import { AircraftActions } from './aircraft-actions';
-import { Skeleton } from '@/components/ui/skeleton';
 
 interface AircraftTableProps {
   data: Aircraft[];
   tenantId: string;
-  isLoading: boolean;
-  error: Error | null;
+  onEdit: (aircraft: Aircraft) => void;
 }
 
-export function AircraftTable({ data, tenantId, isLoading, error }: AircraftTableProps) {
-  if (isLoading) {
-      return (
-          <div className="space-y-2">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-          </div>
-      )
-  }
-
-  if (error) {
-      return <div className="text-center text-destructive">Error loading aircraft: {error.message}</div>
-  }
-
+export function AircraftTable({ data, tenantId, onEdit }: AircraftTableProps) {
   if (data.length === 0) {
     return (
-        <div className="text-center h-24 flex items-center justify-center text-muted-foreground">
-            No aircraft found. Add one to get started.
-        </div>
+      <div className="text-center h-24 flex items-center justify-center text-muted-foreground">
+        No aircraft found. Add one to get started.
+      </div>
     );
   }
-  
+
   return (
     <Table>
       <TableHeader>
@@ -49,7 +33,8 @@ export function AircraftTable({ data, tenantId, isLoading, error }: AircraftTabl
           <TableHead>Tail Number</TableHead>
           <TableHead>Model</TableHead>
           <TableHead>Type</TableHead>
-          <TableHead>Current Hobbs</TableHead>
+          <TableHead>Hobbs</TableHead>
+          <TableHead>Tacho</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
@@ -58,10 +43,11 @@ export function AircraftTable({ data, tenantId, isLoading, error }: AircraftTabl
           <TableRow key={aircraft.id}>
             <TableCell className="font-medium">{aircraft.tailNumber}</TableCell>
             <TableCell>{aircraft.model}</TableCell>
-            <TableCell>{aircraft.type || 'N/A'}</TableCell>
-            <TableCell>{aircraft.currentHobbs ? `${aircraft.currentHobbs.toFixed(1)} hrs` : 'N/A'}</TableCell>
+            <TableCell>{aircraft.type}</TableCell>
+            <TableCell>{aircraft.currentHobbs?.toFixed(1)}</TableCell>
+            <TableCell>{aircraft.currentTacho?.toFixed(1)}</TableCell>
             <TableCell className="text-right">
-              <AircraftActions aircraft={aircraft} tenantId={tenantId} />
+              <AircraftActions tenantId={tenantId} aircraft={aircraft} onEdit={() => onEdit(aircraft)} />
             </TableCell>
           </TableRow>
         ))}
