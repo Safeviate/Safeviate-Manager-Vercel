@@ -1,8 +1,11 @@
+
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import type { Aircraft } from '../page';
-import { Badge } from '@/components/ui/badge';
+import { Pencil } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ViewAircraftDetailsProps {
   aircraft: Aircraft;
@@ -17,26 +20,34 @@ const DetailItem = ({ label, value }: { label: string; value?: string | number |
 
 export function ViewAircraftDetails({ aircraft }: ViewAircraftDetailsProps) {
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-start">
-            <div>
-                <CardTitle>{aircraft.tailNumber}</CardTitle>
-                <CardDescription>{aircraft.model}</CardDescription>
-            </div>
-            <div className='flex items-center gap-2'>
-                {aircraft.type && <Badge>{aircraft.type}</Badge>}
-            </div>
-        </div>
-      </CardHeader>
-      <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <DetailItem label="Frame Hours" value={aircraft.frameHours} />
-        <DetailItem label="Engine Hours" value={aircraft.engineHours} />
-        <DetailItem label="Current Hobbs" value={aircraft.currentHobbs} />
-        <DetailItem label="Current Tacho" value={aircraft.currentTacho} />
-        <DetailItem label="Tacho at next 50hr" value={aircraft.tachoAtNext50Inspection} />
-        <DetailItem label="Tacho at next 100hr" value={aircraft.tachoAtNext100Inspection} />
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle>Aircraft Overview</CardTitle>
+            <CardDescription>
+              Basic details and specifications for {aircraft.tailNumber}.
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <DetailItem label="Tail Number" value={aircraft.tailNumber} />
+            <DetailItem label="Model" value={aircraft.model} />
+            <DetailItem label="Type" value={aircraft.type} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+            <CardTitle>Hours &amp; Inspections</CardTitle>
+            <CardDescription>Current Hobbs, Tacho, and upcoming inspection intervals.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <DetailItem label="Current Hobbs" value={`${aircraft.currentHobbs || 0} hrs`} />
+            <DetailItem label="Current Tacho" value={`${aircraft.currentTacho || 0} hrs`} />
+            <DetailItem label="Next 50hr Insp." value={`${aircraft.tachoAtNext50Inspection || 'N/A'} hrs`} />
+            <DetailItem label="Next 100hr Insp." value={`${aircraft.tachoAtNext100Inspection || 'N/A'} hrs`} />
+        </CardContent>
+      </Card>
+    </div>
   );
 }
