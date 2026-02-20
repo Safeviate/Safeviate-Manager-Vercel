@@ -1,3 +1,4 @@
+
 export type Station = {
     id: number;
     name: string;
@@ -37,13 +38,13 @@ export type AircraftComponent = {
   id: string;
   name: string;
   partNumber: string;
-  serialNumber?: string;
-  installDate?: string; // ISO String
-  installHours?: number;
-  maxHours?: number;
-  notes?: string;
-  tsn?: number;
-  tso?: number;
+  serialNumber?: string | null;
+  installDate?: string | null; // ISO String
+  installHours?: number | null;
+  maxHours?: number | null;
+  notes?: string | null;
+  tsn?: number | null;
+  tso?: number | null;
 };
 
 export type Aircraft = {
@@ -85,3 +86,4 @@ export type Aircraft = {
     cg: number;
   }[];
 };
+
