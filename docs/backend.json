@@ -989,7 +989,9 @@
         "installDate": { "type": "string", "format": "date" },
         "installHours": { "type": "number" },
         "maxHours": { "type": "number" },
-        "notes": { "type": "string" }
+        "notes": { "type": "string" },
+        "tso": { "type": "number", "description": "Time Since Overhaul in hours." },
+        "tsn": { "type": "number", "description": "Time Since New in hours." }
       },
       "required": ["id", "name", "partNumber"]
     },
