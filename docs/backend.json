@@ -983,6 +983,7 @@
       "description": "Represents a single trackable component on an aircraft.",
       "properties": {
         "id": { "type": "string" },
+        "manufacturer": { "type": "string" },
         "name": { "type": "string" },
         "partNumber": { "type": "string" },
         "serialNumber": { "type": "string" },
@@ -1761,3 +1762,4 @@
     ]
   }
 }
+    
