@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from './scroll-area';
-import { startOfToday } from 'date-fns';
+import { startOfToday, isAfter, endOfMonth, isSameYear } from 'date-fns';
 
 interface CustomCalendarProps {
     selectedDate?: Date;
@@ -21,6 +21,7 @@ interface CustomCalendarProps {
 
 export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarProps) {
   const [currentDate, setCurrentDate] = React.useState(selectedDate || new Date());
+  const today = startOfToday();
 
   React.useEffect(() => {
     // If the selectedDate prop changes, update the calendar's view
@@ -34,16 +35,24 @@ export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarPro
   const daysInMonth = lastDayOfMonth.getDate();
   const startingDayOfWeek = firstDayOfMonth.getDay(); // 0 (Sun) to 6 (Sat)
 
+  const isNextMonthDisabled = isAfter(firstDayOfMonth, endOfMonth(today));
+
   const handlePrevMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   };
 
   const handleNextMonth = () => {
+    if (isNextMonthDisabled) return;
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   };
 
   const handleYearSelect = (year: number) => {
-    setCurrentDate(new Date(year, currentDate.getMonth(), 1));
+    const newDate = new Date(year, currentDate.getMonth(), 1);
+    if (isAfter(newDate, today) && !isSameYear(newDate, today)) {
+        setCurrentDate(new Date(year, today.getMonth(), 1));
+    } else {
+        setCurrentDate(newDate);
+    }
   };
   
   const handleMonthSelect = (monthIndex: number) => {
@@ -63,9 +72,7 @@ export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarPro
 
   // Add days of the current month
   for (let day = 1; day <= daysInMonth; day++) {
-    const today = startOfToday();
     const dayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-
     const isToday = dayDate.getTime() === today.getTime();
     
     const isSelected = selectedDate &&
@@ -103,8 +110,8 @@ export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarPro
   const months = Array.from({ length: 12 }, (_, i) => 
     new Date(0, i).toLocaleString('default', { month: 'long' })
   );
-  const currentYear = currentDate.getFullYear();
-  const years = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
+  const currentDisplayYear = currentDate.getFullYear();
+  const years = Array.from({ length: 21 }, (_, i) => currentDisplayYear - 10 + i);
 
   return (
     <div className="w-full max-w-sm rounded-lg border bg-card p-3 text-card-foreground">
@@ -119,7 +126,11 @@ export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarPro
             </DropdownMenuTrigger>
             <DropdownMenuContent>
                  {months.map((month, index) => (
-                  <DropdownMenuItem key={month} onSelect={() => handleMonthSelect(index)}>
+                  <DropdownMenuItem 
+                    key={month} 
+                    onSelect={() => handleMonthSelect(index)}
+                    disabled={isSameYear(currentDate, today) && index > today.getMonth()}
+                  >
                     {month}
                   </DropdownMenuItem>
                 ))}
@@ -129,14 +140,18 @@ export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarPro
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-1 text-lg font-medium">
-                {currentYear}
+                {currentDisplayYear}
                 <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <ScrollArea className="h-60">
                 {years.map((year) => (
-                  <DropdownMenuItem key={year} onSelect={() => handleYearSelect(year)}>
+                  <DropdownMenuItem 
+                    key={year} 
+                    onSelect={() => handleYearSelect(year)}
+                    disabled={year > today.getFullYear()}
+                  >
                     {year}
                   </DropdownMenuItem>
                 ))}
@@ -149,7 +164,7 @@ export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarPro
           <Button variant="outline" size="icon" className="h-7 w-7" onClick={handlePrevMonth}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="icon" className="h-7 w-7" onClick={handleNextMonth}>
+          <Button variant="outline" size="icon" className="h-7 w-7" onClick={handleNextMonth} disabled={isNextMonthDisabled}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
