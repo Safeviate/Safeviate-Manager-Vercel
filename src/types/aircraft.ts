@@ -43,8 +43,8 @@ export type AircraftComponent = {
   installHours?: number;
   maxHours?: number;
   notes?: string;
-  tso?: number;
   tsn?: number;
+  tso?: number;
 };
 
 export type Aircraft = {
@@ -86,3 +86,5 @@ export type Aircraft = {
     cg: number;
   }[];
 };
+
+    

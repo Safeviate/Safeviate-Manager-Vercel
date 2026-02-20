@@ -200,44 +200,24 @@
     "Risk": {
       "title": "Risk",
       "type": "object",
-      "description": "Represents an identified organizational hazard and its associated risks.",
+      "description": "Represents an identified organizational risk.",
       "properties": {
         "id": { "type": "string" },
-        "hazardArea": { "type": "string" },
         "hazard": { "type": "string" },
+        "risk": { "type": "string" },
+        "hazardArea": { "type": "string" },
+        "likelihood": { "type": "number" },
+        "severity": { "type": "number" },
+        "riskScore": { "type": "number" },
+        "residualLikelihood": { "type": "number" },
+        "residualSeverity": { "type": "number" },
+        "residualRiskScore": { "type": "number" },
         "status": { "type": "string", "enum": ["Open", "Closed", "Archived"] },
-        "risks": {
-          "type": "array",
-          "items": { "$ref": "#/backend/entities/RiskItem" }
-        }
-      },
-      "required": ["id", "hazard", "hazardArea", "status"]
-    },
-    "RiskItem": {
-      "title": "Risk Item",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "description": { "type": "string" },
-        "initialRiskAssessment": { "$ref": "#/backend/entities/RiskAssessment" },
-        "mitigations": {
-          "type": "array",
-          "items": { "$ref": "#/backend/entities/MitigationItem" }
-        }
-      },
-      "required": ["id", "description"]
-    },
-    "MitigationItem": {
-      "title": "Mitigation Item",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "description": { "type": "string" },
+        "mitigation": { "type": "string" },
         "responsiblePersonId": { "type": "string" },
-        "reviewDate": { "type": "string", "format": "date" },
-        "residualRiskAssessment": { "$ref": "#/backend/entities/RiskAssessment" }
+        "reviewDate": { "type": "string", "format": "date" }
       },
-      "required": ["id", "description", "responsiblePersonId"]
+      "required": ["id", "hazard", "risk", "hazardArea", "likelihood", "severity", "riskScore", "status"]
     },
     "SafetyReport": {
       "title": "Safety Report",
@@ -932,6 +912,10 @@
         "documents": {
            "$ref": "#/backend/entities/Documents"
         },
+        "components": {
+           "type": "array",
+           "items": { "$ref": "#/backend/entities/AircraftComponent" }
+        },
         "emptyWeight": {
           "type": "number",
           "description": "The basic empty weight of the aircraft (in lbs)."
@@ -992,6 +976,24 @@
         "tailNumber",
         "model"
       ]
+    },
+    "AircraftComponent": {
+      "title": "Aircraft Component",
+      "type": "object",
+      "description": "Represents a single trackable component on an aircraft.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "partNumber": { "type": "string" },
+        "serialNumber": { "type": "string" },
+        "installDate": { "type": "string", "format": "date" },
+        "installHours": { "type": "number" },
+        "maxHours": { "type": "number" },
+        "notes": { "type": "string" },
+        "tso": { "type": "number", "description": "Time Since Overhaul in hours." },
+        "tsn": { "type": "number", "description": "Time Since New in hours." }
+      },
+      "required": ["id", "name", "partNumber"]
     },
     "MaintenanceLog": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1166,35 +1168,6 @@
         }
       }
     },
-    "Settings": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Settings",
-      "type": "object",
-      "description": "Represents the application settings for a tenant.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Settings."
-        },
-        "tenantId": {
-          "type": "string",
-          "description": "The tenant this setting belongs to."
-        },
-        "theme": {
-          "$ref": "#/backend/entities/Theme"
-        },
-        "documentExpiry": {
-            "$ref": "#/backend/entities/DocumentExpiry"
-        },
-        "findingLevels": {
-            "$ref": "#/backend/entities/FindingLevelsSettings"
-        },
-        "studentMilestoneSettings": {
-            "$ref": "#/backend/entities/StudentMilestoneSettings"
-        }
-      },
-      "required": ["id", "tenantId"]
-    },
     "FeatureSettings": {
       "title": "Feature Settings",
       "type": "object",
@@ -1285,15 +1258,15 @@
     "AuditScheduleItem": {
         "title": "Audit Schedule Item",
         "type": "object",
-        "description": "Represents the status of a single audit area for a specific month and year.",
+        "description": "Represents the status of a single audit area for a specific quarter and year.",
         "properties": {
             "id": { "type": "string" },
             "area": { "type": "string" },
-            "month": { "type": "string" },
+            "quarter": { "type": "string" },
             "year": { "type": "number" },
             "status": { "type": "string", "enum": ["Scheduled", "Completed", "Pending", "Not Scheduled"] }
         },
-        "required": ["id", "area", "month", "year", "status"]
+        "required": ["id", "area", "quarter", "year", "status"]
     },
     "QualityAuditChecklistTemplate": {
         "title": "Quality Audit Checklist Template",
@@ -1390,6 +1363,7 @@
             "auditId": { "type": "string" },
             "findingId": { "type": "string" },
             "rootCauseAnalysis": { "type": "string" },
+            "status": { "type": "string", "enum": ["Open", "In Progress", "Closed", "Cancelled"] },
             "actions": {
                 "type": "array",
                 "items": { "$ref": "#/backend/entities/CorrectiveAction" }
@@ -1471,22 +1445,7 @@
         "content": { "type": "string", "description": "The full content of the alert or notice." },
         "createdAt": { "type": "string", "format": "date-time" },
         "createdBy": { "type": "string", "description": "The user ID of the person who created the alert." },
-        "status": { "type": "string", "enum": ["Active", "Archived"] },
-        "signatureUrl": { "type": "string", "format": "uri", "description": "Data URL of the creator's signature image." },
-        "mustRead": { "type": "boolean", "description": "If true, users must acknowledge this alert before proceeding." },
-        "readBy": {
-            "type": "array",
-            "description": "A list of users who have read the alert.",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "userId": { "type": "string" },
-                    "userName": { "type": "string" },
-                    "readAt": { "type": "string", "format": "date-time" }
-                },
-                "required": ["userId", "userName", "readAt"]
-            }
-        }
+        "status": { "type": "string", "enum": ["Active", "Archived"] }
       },
       "required": ["id", "type", "title", "content", "createdAt", "createdBy", "status"]
     },
@@ -1573,7 +1532,7 @@
         "path": "tenants/{tenantId}/audit-schedule-items/{itemId}",
         "definition": {
           "schema": { "$ref": "#/backend/entities/AuditScheduleItem" },
-          "description": "Stores the status of audit areas for specific months."
+          "description": "Stores the status of audit areas for specific quarters."
         }
       },
       {
@@ -1697,6 +1656,13 @@
         }
       },
       {
+        "path": "tenants/{tenantId}/aircrafts/{aircraftId}/components/{componentId}",
+        "definition": {
+          "schema": { "$ref": "#/backend/entities/AircraftComponent" },
+          "description": "Stores trackable components for a specific aircraft."
+        }
+      },
+      {
         "path": "tenants/{tenantId}/aircrafts/{aircraftId}/maintenanceLogs/{maintenanceLogId}",
         "definition": {
           "schema": {
@@ -1724,13 +1690,39 @@
         }
       },
       {
-        "path": "tenants/{tenantId}/settings/{settingsId}",
+        "path": "tenants/{tenantId}/settings/document-expiry",
         "definition": {
-          "schema": {
-            "$ref": "#/backend/entities/Settings"
-          },
-          "description": "Stores application settings for a tenant. A single document can hold multiple settings, e.g., 'document-expiry', 'features', 'finding-levels'."
+            "schema": { "$ref": "#/backend/entities/DocumentExpiry" },
+            "description": "Stores document expiry warning settings."
         }
+      },
+      {
+          "path": "tenants/{tenantId}/settings/finding-levels",
+          "definition": {
+              "schema": { "$ref": "#/backend/entities/FindingLevelsSettings" },
+              "description": "Stores audit finding levels."
+          }
+      },
+      {
+          "path": "tenants/{tenantId}/settings/features",
+          "definition": {
+              "schema": { "$ref": "#/backend/entities/FeatureSettings" },
+              "description": "Stores feature flags."
+          }
+      },
+      {
+          "path": "tenants/{tenantId}/settings/student-milestones",
+          "definition": {
+              "schema": { "$ref": "#/backend/entities/StudentMilestoneSettings" },
+              "description": "Stores student milestone settings."
+          }
+      },
+      {
+          "path": "tenants/{tenantId}/settings/spi-configurations",
+          "definition": {
+            "schema": { "$ref": "#/backend/entities/SpiConfigurations" },
+            "description": "Stores the configuration for Safety Performance Indicators."
+          }
       },
        {
         "path": "tenants/{tenantId}/departments/{departmentId}",
@@ -1769,3 +1761,5 @@
     ]
   }
 }
+
+    
