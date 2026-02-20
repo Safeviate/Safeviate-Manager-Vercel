@@ -1,9 +1,8 @@
-
 'use client';
 
-import { use, useState } from 'react';
-import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, query } from 'firebase/firestore';
+import { use, useState, Suspense } from 'react';
+import { doc } from 'firebase/firestore';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
@@ -14,6 +13,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AircraftDocuments } from './aircraft-documents';
 import { AircraftComponents } from './aircraft-components';
+import { AircraftMaintenance } from './aircraft-maintenance';
 
 interface AircraftDetailPageProps {
     params: { id: string };
@@ -28,77 +28,72 @@ function AircraftDetailPageContent({ params }: AircraftDetailPageProps) {
     const { hasPermission } = usePermissions();
     const canEdit = hasPermission('assets-edit');
 
-    const aircraftRef = useMemoFirebase(
+    const aircraftDocRef = useMemoFirebase(
         () => (firestore ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId) : null),
         [firestore, tenantId, aircraftId]
     );
 
-    const { data: aircraft, isLoading, error } = useDoc<Aircraft>(aircraftRef);
+    const { data: aircraft, isLoading, error } = useDoc<Aircraft>(aircraftDocRef);
 
     if (isLoading) {
-        return (
-            <div className="space-y-8">
-                <Skeleton className="h-10 w-1/4" />
-                <div className="space-y-6">
-                    <Skeleton className="h-48 w-full" />
-                    <Skeleton className="h-48 w-full" />
-                </div>
-            </div>
-        );
+        return <Skeleton className="h-[500px] w-full" />;
     }
-    
+
     if (error) {
-        return <div className="text-destructive">Error: {error.message}</div>;
+        return <p className="text-destructive">Error loading aircraft: {error.message}</p>;
     }
-    
+
     if (!aircraft) {
-        return <div>Aircraft not found.</div>;
+        return <p>Aircraft not found.</p>;
     }
 
     return (
-        <div className='space-y-6'>
-            {isEditing ? (
-                 <EditAircraftForm
-                    aircraft={aircraft}
-                    tenantId={tenantId}
-                    onCancel={() => setIsEditing(false)}
-                />
-            ) : (
-                <>
-                    <div className="flex justify-between items-center">
-                        <div />
-                        {canEdit && (
-                            <Button onClick={() => setIsEditing(true)}>
-                                <Pencil className='mr-2' />
-                                Edit Aircraft
-                            </Button>
-                        )}
-                    </div>
+        <div className="space-y-6">
+            <div className="flex justify-end">
+                {canEdit && !isEditing && (
+                    <Button onClick={() => setIsEditing(true)}>
+                        <Pencil className='mr-2' />
+                        Edit Aircraft
+                    </Button>
+                )}
+            </div>
 
-                    <Tabs defaultValue="overview" className="w-full">
-                        <TabsList className="grid w-full grid-cols-3">
-                            <TabsTrigger value="overview">Overview</TabsTrigger>
-                            <TabsTrigger value="documents">Documents</TabsTrigger>
-                            <TabsTrigger value="components">Components</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="overview">
-                           <ViewAircraftDetails aircraft={aircraft} />
-                        </TabsContent>
-                        <TabsContent value="documents">
-                            <AircraftDocuments aircraftId={aircraftId} tenantId={tenantId} />
-                        </TabsContent>
-                         <TabsContent value="components">
-                            <AircraftComponents aircraftId={aircraftId} tenantId={tenantId} />
-                        </TabsContent>
-                    </Tabs>
-                </>
-            )}
+            <Tabs defaultValue="overview" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="documents">Documents</TabsTrigger>
+                    <TabsTrigger value="components">Components</TabsTrigger>
+                    <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+                </TabsList>
+                <TabsContent value="overview">
+                    {isEditing ? (
+                        <EditAircraftForm
+                            aircraft={aircraft}
+                            tenantId={tenantId}
+                            onCancel={() => setIsEditing(false)}
+                        />
+                    ) : (
+                        <ViewAircraftDetails aircraft={aircraft} />
+                    )}
+                </TabsContent>
+                <TabsContent value="documents">
+                    <AircraftDocuments aircraftId={aircraft.id} tenantId={tenantId} />
+                </TabsContent>
+                <TabsContent value="components">
+                    <AircraftComponents aircraftId={aircraft.id} tenantId={tenantId} />
+                </TabsContent>
+                <TabsContent value="maintenance">
+                    <AircraftMaintenance aircraftId={aircraft.id} tenantId={tenantId} />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
 
 export default function AircraftDetailPage(props: AircraftDetailPageProps) {
     return (
-        <AircraftDetailPageContent {...props} />
+        <Suspense fallback={<Skeleton className="h-[500px] w-full" />}>
+            <AircraftDetailPageContent {...props} />
+        </Suspense>
     )
 }
