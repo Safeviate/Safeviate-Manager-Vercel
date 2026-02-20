@@ -1,89 +1,89 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useState } from 'react';
+import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DialogFooter, DialogClose } from '@/components/ui/dialog';
-import type { Aircraft } from './page';
-
-const formSchema = z.object({
-  tailNumber: z.string().min(1, "Tail number is required."),
-  model: z.string().min(1, "Model is required."),
-  abbreviation: z.string().optional(),
-  type: z.enum(['Single-Engine', 'Multi-Engine']),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
+import type { Aircraft } from '../page';
 
 interface EditAircraftFormProps {
-  existingAircraft: Aircraft;
-  onSave: (data: FormValues) => void;
+  aircraft: Aircraft;
   onCancel: () => void;
 }
 
-export function EditAircraftForm({ existingAircraft, onSave, onCancel }: EditAircraftFormProps) {
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      tailNumber: existingAircraft.tailNumber || '',
-      model: existingAircraft.model || '',
-      abbreviation: existingAircraft.abbreviation || '',
-      type: existingAircraft.type || 'Single-Engine',
-    },
-  });
+export function EditAircraftForm({ aircraft, onCancel }: EditAircraftFormProps) {
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const [formData, setFormData] = useState(aircraft);
 
-  const handleSubmit = (values: FormValues) => {
-    onSave(values);
+  const handleInputChange = (field: keyof Aircraft, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveChanges = () => {
+    if (!firestore) return;
+    const aircraftRef = doc(firestore, 'tenants/safeviate/aircrafts', aircraft.id);
+    updateDocumentNonBlocking(aircraftRef, formData);
+    toast({
+      title: 'Aircraft Updated',
+      description: `Details for ${formData.tailNumber} have been updated.`,
+    });
+    onCancel();
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        <FormField control={form.control} name="tailNumber" render={({ field }) => (
-          <FormItem>
-            <FormLabel>Tail Number</FormLabel>
-            <FormControl><Input {...field} /></FormControl>
-            <FormMessage />
-          </FormItem>
-        )} />
-        <FormField control={form.control} name="model" render={({ field }) => (
-          <FormItem>
-            <FormLabel>Model</FormLabel>
-            <FormControl><Input {...field} /></FormControl>
-            <FormMessage />
-          </FormItem>
-        )} />
-        <FormField control={form.control} name="abbreviation" render={({ field }) => (
-            <FormItem>
-                <FormLabel>Abbreviation (5 characters)</FormLabel>
-                <FormControl><Input maxLength={5} {...field} /></FormControl>
-                <FormMessage />
-            </FormItem>
-        )} />
-        <FormField control={form.control} name="type" render={({ field }) => (
-          <FormItem>
-            <FormLabel>Type</FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-              <SelectContent>
-                <SelectItem value="Single-Engine">Single-Engine</SelectItem>
-                <SelectItem value="Multi-Engine">Multi-Engine</SelectItem>
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )} />
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-          </DialogClose>
-          <Button type="submit">Save Changes</Button>
-        </DialogFooter>
-      </form>
-    </Form>
+    <div className="space-y-4">
+      <ScrollArea className="h-[60vh] pr-4">
+        <div className="space-y-4 p-1">
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="tailNumber">Tail Number</Label>
+                    <Input id="tailNumber" value={formData.tailNumber || ''} onChange={(e) => handleInputChange('tailNumber', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="model">Model</Label>
+                    <Input id="model" value={formData.model || ''} onChange={(e) => handleInputChange('model', e.target.value)} />
+                </div>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="type">Aircraft Type</Label>
+                <Select onValueChange={(value) => handleInputChange('type', value)} value={formData.type}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="Single-Engine">Single-Engine</SelectItem>
+                        <SelectItem value="Multi-Engine">Multi-Engine</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                    <Label htmlFor="initialHobbs">Initial Hobbs</Label>
+                    <Input id="initialHobbs" type="number" value={formData.initialHobbs || ''} onChange={(e) => handleInputChange('initialHobbs', parseFloat(e.target.value))} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="currentHobbs">Current Hobbs</Label>
+                    <Input id="currentHobbs" type="number" value={formData.currentHobbs || ''} onChange={(e) => handleInputChange('currentHobbs', parseFloat(e.target.value))} />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="initialTacho">Initial Tacho</Label>
+                    <Input id="initialTacho" type="number" value={formData.initialTacho || ''} onChange={(e) => handleInputChange('initialTacho', parseFloat(e.target.value))} />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="currentTacho">Current Tacho</Label>
+                    <Input id="currentTacho" type="number" value={formData.currentTacho || ''} onChange={(e) => handleInputChange('currentTacho', parseFloat(e.target.value))} />
+                </div>
+            </div>
+        </div>
+      </ScrollArea>
+       <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={onCancel}>Cancel</Button>
+            <Button onClick={handleSaveChanges}>Save Changes</Button>
+      </div>
+    </div>
   );
 }
