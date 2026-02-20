@@ -4,6 +4,14 @@ import { useState, useEffect } from 'react';
 import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -13,244 +21,249 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarIcon } from 'lucide-react';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { v4 as uuidv4 } from 'uuid';
 import type { Aircraft, AircraftComponent } from '@/types/aircraft';
+import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { format } from 'date-fns';
 
-// --- Sub-component for the form ---
-interface ComponentFormProps {
-  component: Partial<AircraftComponent> | null;
-  onSubmit: (formData: Omit<AircraftComponent, 'id'>) => void;
-  onCancel: () => void;
-}
-
-function ComponentForm({ component, onSubmit, onCancel }: ComponentFormProps) {
-  const [formData, setFormData] = useState<Omit<AircraftComponent, 'id'>>({
-    name: component?.name || '',
-    partNumber: component?.partNumber || '',
-    serialNumber: component?.serialNumber || '',
-    installDate: component?.installDate || '',
-    installHours: component?.installHours || 0,
-    maxHours: component?.maxHours || 0,
-    tsn: component?.tsn || 0,
-    tso: component?.tso || 0,
-    notes: component?.notes || '',
-  });
-
-  const handleChange = (field: keyof Omit<AircraftComponent, 'id'>, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleDateChange = (date: Date | undefined) => {
-    if (date) {
-        setFormData(prev => ({ ...prev, installDate: date.toISOString() }));
-    }
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Component Name</Label>
-          <Input id="name" value={formData.name} onChange={e => handleChange('name', e.target.value)} required />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="partNumber">Part Number</Label>
-          <Input id="partNumber" value={formData.partNumber} onChange={e => handleChange('partNumber', e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="serialNumber">Serial Number</Label>
-          <Input id="serialNumber" value={formData.serialNumber || ''} onChange={e => handleChange('serialNumber', e.target.value)} />
-        </div>
-        <div className="space-y-2 flex flex-col">
-          <Label htmlFor="installDate">Install Date</Label>
-          <Popover>
-              <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("justify-start text-left font-normal", !formData.installDate && "text-muted-foreground")}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.installDate ? format(new Date(formData.installDate), 'PPP') : <span>Pick a date</span>}
-                  </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" onInteractOutside={(e) => e.preventDefault()}>
-                  <CustomCalendar
-                      selectedDate={formData.installDate ? new Date(formData.installDate) : undefined}
-                      onDateSelect={handleDateChange}
-                  />
-              </PopoverContent>
-          </Popover>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="installHours">Install Hours</Label>
-          <Input id="installHours" type="number" value={formData.installHours || ''} onChange={e => handleChange('installHours', Number(e.target.value))} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="maxHours">Max Hours</Label>
-          <Input id="maxHours" type="number" value={formData.maxHours || ''} onChange={e => handleChange('maxHours', Number(e.target.value))} />
-        </div>
-        <div className="space-y-2">
-            <Label htmlFor="tsn">TSN (Time Since New)</Label>
-            <Input id="tsn" type="number" value={formData.tsn || ''} onChange={e => handleChange('tsn', Number(e.target.value))} />
-        </div>
-        <div className="space-y-2">
-            <Label htmlFor="tso">TSO (Time Since Overhaul)</Label>
-            <Input id="tso" type="number" value={formData.tso || ''} onChange={e => handleChange('tso', Number(e.target.value))} />
-        </div>
-        <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" value={formData.notes || ''} onChange={e => handleChange('notes', e.target.value)} />
-        </div>
-      </div>
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button type="submit">Save Component</Button>
-      </DialogFooter>
-    </form>
-  );
-}
-
-// --- Main Component ---
 interface AircraftComponentsProps {
-  aircraft: Aircraft;
+  aircraft: Aircraft | null;
   tenantId: string;
+  aircraftId: string;
 }
 
-export function AircraftComponents({ aircraft, tenantId }: AircraftComponentsProps) {
-  const firestore = useFirestore();
-  const { toast } = useToast();
+export function AircraftComponents({ aircraft, tenantId, aircraftId }: AircraftComponentsProps) {
   const [components, setComponents] = useState<AircraftComponent[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingComponent, setEditingComponent] = useState<AircraftComponent | null>(null);
 
+  // Form state
+  const [name, setName] = useState('');
+  const [partNumber, setPartNumber] = useState('');
+  const [serialNumber, setSerialNumber] = useState('');
+  const [installDate, setInstallDate] = useState<Date | undefined>();
+  const [installHours, setInstallHours] = useState<number | ''>('');
+  const [maxHours, setMaxHours] = useState<number | ''>('');
+  const [tsn, setTsn] = useState<number | ''>('');
+  const [tso, setTso] = useState<number | ''>('');
+  const [notes, setNotes] = useState('');
+
+  const firestore = useFirestore();
+  const { toast } = useToast();
+
   useEffect(() => {
-    setComponents(aircraft.components || []);
+    if (aircraft) {
+      setComponents(aircraft.components || []);
+    }
   }, [aircraft]);
 
   const handleOpenDialog = (component: AircraftComponent | null = null) => {
     setEditingComponent(component);
+    if (component) {
+      setName(component.name);
+      setPartNumber(component.partNumber);
+      setSerialNumber(component.serialNumber || '');
+      setInstallDate(component.installDate ? new Date(component.installDate) : undefined);
+      setInstallHours(component.installHours || '');
+      setMaxHours(component.maxHours || '');
+      setTsn(component.tsn || '');
+      setTso(component.tso || '');
+      setNotes(component.notes || '');
+    } else {
+      // Reset form for new component
+      setName('');
+      setPartNumber('');
+      setSerialNumber('');
+      setInstallDate(undefined);
+      setInstallHours('');
+      setMaxHours('');
+      setTsn('');
+      setTso('');
+      setNotes('');
+    }
     setIsDialogOpen(true);
   };
 
-  const handleDeleteComponent = (componentId: string) => {
+  const handleRemoveComponent = (componentId: string) => {
     const updatedComponents = components.filter(c => c.id !== componentId);
     setComponents(updatedComponents);
 
-    const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraft.id);
+    if (!firestore) return;
+    const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId);
     updateDocumentNonBlocking(aircraftRef, { components: updatedComponents });
-    toast({ title: 'Component Deleted' });
+    toast({ title: 'Component Removed' });
   };
 
-  const onSubmit = (formData: Omit<AircraftComponent, 'id'>) => {
+  const onSubmit = () => {
+    if (!name || !partNumber) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Fields',
+        description: 'Component Name and Part Number are required.',
+      });
+      return;
+    }
+
+    const newOrUpdatedComponent: AircraftComponent = {
+      id: editingComponent?.id || uuidv4(),
+      name,
+      partNumber,
+      serialNumber,
+      installDate: installDate?.toISOString(),
+      installHours: Number(installHours) || undefined,
+      maxHours: Number(maxHours) || undefined,
+      tsn: Number(tsn) || undefined,
+      tso: Number(tso) || undefined,
+      notes,
+    };
+
     let updatedComponents;
     if (editingComponent) {
-      updatedComponents = components.map(c =>
-        c.id === editingComponent.id ? { ...editingComponent, ...formData } : c
-      );
+      updatedComponents = components.map(c => (c.id === editingComponent.id ? newOrUpdatedComponent : c));
     } else {
-      updatedComponents = [...components, { id: uuidv4(), ...formData }];
+      updatedComponents = [...components, newOrUpdatedComponent];
     }
     setComponents(updatedComponents);
 
-    const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraft.id);
+    if (!firestore) return;
+    
+    const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId);
     updateDocumentNonBlocking(aircraftRef, { components: updatedComponents });
+    
     toast({ title: editingComponent ? 'Component Updated' : 'Component Added' });
     setIsDialogOpen(false);
   };
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Components</CardTitle>
-              <CardDescription>Trackable components installed on this aircraft.</CardDescription>
-            </div>
-            <Button onClick={() => handleOpenDialog()}>
-              <PlusCircle className="mr-2" /> Add Component
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Part No.</TableHead>
-                <TableHead>Serial No.</TableHead>
-                <TableHead>Install Date</TableHead>
-                <TableHead>Install Hours</TableHead>
-                <TableHead>Max Hours</TableHead>
-                <TableHead>TSN</TableHead>
-                <TableHead>TSO</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+      <div className="flex justify-end mb-4">
+        <Button onClick={() => handleOpenDialog()}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add Component
+        </Button>
+      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Part No.</TableHead>
+            <TableHead>Serial No.</TableHead>
+            <TableHead>TSN</TableHead>
+            <TableHead>TSO</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+            {components.map(component => (
+              <TableRow key={component.id}>
+                <TableCell>{component.name}</TableCell>
+                <TableCell>{component.partNumber}</TableCell>
+                <TableCell>{component.serialNumber}</TableCell>
+                <TableCell>{component.tsn ?? 'N/A'}</TableCell>
+                <TableCell>{component.tso ?? 'N/A'}</TableCell>
+                <TableCell className="text-right">
+                  <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(component)}>Edit</Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleRemoveComponent(component.id)} className="text-destructive hover:text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {components.length > 0 ? (
-                components.map(component => (
-                  <TableRow key={component.id}>
-                    <TableCell>{component.name}</TableCell>
-                    <TableCell>{component.partNumber}</TableCell>
-                    <TableCell>{component.serialNumber}</TableCell>
-                    <TableCell>{component.installDate ? format(new Date(component.installDate), 'PPP') : 'N/A'}</TableCell>
-                    <TableCell>{component.installHours}</TableCell>
-                    <TableCell>{component.maxHours}</TableCell>
-                    <TableCell>{component.tsn}</TableCell>
-                    <TableCell>{component.tso}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(component)}>Edit</Button>
-                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteComponent(component.id)}>Delete</Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center">
-                    No components added yet.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-      
+            ))}
+          {components.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={6} className="h-24 text-center">
+                No components added yet.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
-              <DialogHeader>
-                  <DialogTitle>{editingComponent ? 'Edit' : 'Add'} Component</DialogTitle>
-                  <DialogDescription>
-                      {editingComponent ? `Editing component: ${editingComponent.name}` : 'Add a new trackable component to this aircraft.'}
-                  </DialogDescription>
-              </DialogHeader>
-              <ComponentForm 
-                  component={editingComponent}
-                  onSubmit={onSubmit}
-                  onCancel={() => setIsDialogOpen(false)}
-              />
-          </DialogContent>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingComponent ? 'Edit' : 'Add'} Component</DialogTitle>
+            <DialogDescription>
+              {editingComponent ? 'Update the details for this component.' : 'Add a new component to this aircraft.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="name">Name</Label>
+                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="partNumber">Part Number</Label>
+                    <Input id="partNumber" value={partNumber} onChange={(e) => setPartNumber(e.target.value)} />
+                </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="serialNumber">Serial Number</Label>
+              <Input id="serialNumber" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
+            </div>
+             <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="installDate">Install Date</Label>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant={"outline"}
+                            className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !installDate && "text-muted-foreground"
+                            )}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {installDate ? format(installDate, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent onInteractOutside={(e) => e.preventDefault()} className="w-auto p-0">
+                       <CustomCalendar 
+                          selectedDate={installDate} 
+                          onDateSelect={(date) => {
+                            if (date) {
+                              setInstallDate(date);
+                            }
+                          }}
+                       />
+                    </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="installHours">Install Hours</Label>
+                <Input id="installHours" type="number" value={installHours} onChange={e => setInstallHours(Number(e.target.value))} />
+              </div>
+            </div>
+             <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="maxHours">Max Hours</Label>
+                    <Input id="maxHours" type="number" value={maxHours} onChange={e => setMaxHours(Number(e.target.value))} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="tsn">Time Since New (TSN)</Label>
+                    <Input id="tsn" type="number" value={tsn} onChange={e => setTsn(Number(e.target.value))} />
+                </div>
+            </div>
+             <div className="space-y-2">
+                <Label htmlFor="tso">Time Since Overhaul (TSO)</Label>
+                <Input id="tso" type="number" value={tso} onChange={e => setTso(Number(e.target.value))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+            <Button onClick={onSubmit}>{editingComponent ? 'Save Changes' : 'Add Component'}</Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </>
   );
