@@ -3,14 +3,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Aircraft } from '../../assets/page';
 
-export function AircraftDocuments({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: string; }) {
+export function AircraftMaintenance({ aircraft }: { aircraft: Aircraft }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Documents</CardTitle>
+        <CardTitle>Maintenance</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-muted-foreground">Aircraft documents will be managed here.</p>
+        <p className="text-muted-foreground">Maintenance logs will be displayed here.</p>
       </CardContent>
     </Card>
   );
