@@ -73,19 +73,19 @@ export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarPro
       currentDate.getMonth() === selectedDate.getMonth() &&
       currentDate.getFullYear() === selectedDate.getFullYear();
 
-    const isPast = dayDate < today;
+    const isFuture = dayDate > today;
 
     calendarDays.push(
       <button
         key={`day-${day}`}
         onClick={() => handleDayClick(day)}
-        disabled={isPast}
+        disabled={isFuture}
         className={cn(
           'flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors',
-          !isPast && 'hover:bg-accent hover:text-accent-foreground',
+          !isFuture && 'hover:bg-accent hover:text-accent-foreground',
           isToday && !isSelected && 'bg-muted text-muted-foreground',
           isSelected && 'bg-primary text-primary-foreground hover:bg-primary/90',
-          isPast && 'text-muted-foreground opacity-50 cursor-not-allowed'
+          isFuture && 'text-muted-foreground opacity-50 cursor-not-allowed'
         )}
       >
         {day}
