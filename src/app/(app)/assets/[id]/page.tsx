@@ -1,109 +1,104 @@
-
 'use client';
 
-import { useState, useMemo, use, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { collection, doc, query, where } from 'firebase/firestore';
-import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { use, useState, Suspense } from 'react';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import type { Aircraft } from '../page';
+import { EditAircraftForm } from '../edit-asset-form';
+import { ViewAircraftDetails } from '../view-asset-details';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Pencil } from 'lucide-react';
+import { Pencil, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { usePermissions } from '@/hooks/use-permissions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { AircraftComponents } from './aircraft-components';
+import { AircraftDocuments } from './aircraft-documents';
 
 interface AircraftDetailPageProps {
-    params: { id: string };
-}
-
-function AircraftOverview({ aircraft }: { aircraft: Aircraft }) {
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Overview</CardTitle>
-                <CardDescription>Details for {aircraft.tailNumber}.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <p>Model: {aircraft.model}</p>
-                <p>Type: {aircraft.type}</p>
-            </CardContent>
-        </Card>
-    )
+  params: { id: string };
 }
 
 function AircraftDetailPageContent({ params }: AircraftDetailPageProps) {
   const resolvedParams = use(params);
   const firestore = useFirestore();
-
   const tenantId = 'safeviate';
   const aircraftId = resolvedParams.id;
+  const { hasPermission } = usePermissions();
 
-  const aircraftDocRef = useMemoFirebase(
+  const [isEditing, setIsEditing] = useState(false);
+  const canEdit = hasPermission('assets-edit');
+
+  const aircraftRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId) : null),
     [firestore, tenantId, aircraftId]
   );
-  
-  const { data: aircraft, isLoading, error } = useDoc<Aircraft>(aircraftDocRef);
+  const { data: aircraft, isLoading, error } = useDoc<Aircraft>(aircraftRef);
 
   if (isLoading) {
     return (
-        <div className="space-y-8">
-            <Skeleton className="h-10 w-1/4" />
-            <div className="space-y-6">
-                <Skeleton className="h-48 w-full" />
-                <Skeleton className="h-48 w-full" />
-            </div>
-        </div>
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-48" />
+        <Card>
+          <Skeleton className="h-64 w-full" />
+        </Card>
+      </div>
     );
   }
 
   if (error) {
-    return <div className="text-destructive">Error: {error.message}</div>;
+    return <p className="text-destructive">Error: {error.message}</p>;
   }
-  
+
   if (!aircraft) {
-    return (
-      <Card>
-        <CardHeader>
-            <CardTitle>Not Found</CardTitle>
-        </CardHeader>
-        <CardContent>
-            <p>The requested aircraft could not be found.</p>
-        </CardContent>
-      </Card>
-    );
+    return <p>Aircraft not found.</p>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-            <h1 className="text-3xl font-bold tracking-tight">{aircraft.tailNumber}</h1>
-            <p className="text-muted-foreground">{aircraft.model}</p>
-        </div>
+        <Button asChild variant="outline">
+            <Link href="/assets">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Fleet
+            </Link>
+        </Button>
+        {canEdit && !isEditing && (
+            <Button onClick={() => setIsEditing(true)}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit
+            </Button>
+        )}
       </div>
 
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="components">Components</TabsTrigger>
-        </TabsList>
-        <TabsContent value="overview">
-          <AircraftOverview aircraft={aircraft} />
-        </TabsContent>
-        <TabsContent value="components">
-          <AircraftComponents aircraft={aircraft} />
-        </TabsContent>
-      </Tabs>
+      {isEditing ? (
+        <EditAircraftForm aircraft={aircraft} onCancel={() => setIsEditing(false)} />
+      ) : (
+        <Tabs defaultValue="overview" className="w-full">
+            <TabsList>
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="components">Components</TabsTrigger>
+                <TabsTrigger value="documents">Documents</TabsTrigger>
+            </TabsList>
+            <TabsContent value="overview">
+                <ViewAircraftDetails aircraft={aircraft} />
+            </TabsContent>
+            <TabsContent value="components">
+                <AircraftComponents aircraft={aircraft} tenantId={tenantId} />
+            </TabsContent>
+            <TabsContent value="documents">
+                <AircraftDocuments aircraft={aircraft} tenantId={tenantId} />
+            </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }
 
 export default function AircraftDetailPage(props: AircraftDetailPageProps) {
-    return (
-        <Suspense fallback={<Skeleton className="h-[500px] w-full" />}>
-            <AircraftDetailPageContent {...props} />
-        </Suspense>
-    )
+  return (
+    <Suspense fallback={<Skeleton className="h-[500px] w-full" />}>
+      <AircraftDetailPageContent {...props} />
+    </Suspense>
+  )
 }
