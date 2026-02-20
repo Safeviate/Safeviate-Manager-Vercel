@@ -5,32 +5,29 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { doc } from 'firebase/firestore';
+import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
+import { v4 as uuidv4 } from 'uuid';
+
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
   Form,
@@ -40,144 +37,141 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { PlusCircle, Edit, Trash2, CalendarIcon } from 'lucide-react';
+import type { Aircraft, AircraftComponent } from '@/types/aircraft';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { CalendarIcon, PlusCircle, Edit, Trash2 } from 'lucide-react';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import type { Aircraft, AircraftComponent } from '@/types/aircraft';
-import { v4 as uuidv4 } from 'uuid';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 
 const formSchema = z.object({
+  id: z.string().optional(),
   name: z.string().min(1, 'Component name is required.'),
-  partNumber: z.string().min(1, 'Part number is required.'),
   manufacturer: z.string().optional(),
+  partNumber: z.string().min(1, 'Part number is required.'),
   serialNumber: z.string().optional(),
+  installDate: z.date().optional(),
   installHours: z.number({ coerce: true }).optional(),
   maxHours: z.number({ coerce: true }).optional(),
   tsn: z.number({ coerce: true }).optional(),
   tso: z.number({ coerce: true }).optional(),
-  installDate: z.date().optional(),
+  notes: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 interface AircraftComponentsProps {
   aircraft: Aircraft;
-  tenantId: string;
 }
 
-export default function AircraftComponents({ aircraft, tenantId }: AircraftComponentsProps) {
-  const [components, setComponents] = useState<AircraftComponent[]>([]);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [editingComponent, setEditingComponent] = useState<AircraftComponent | null>(null);
-  const [componentToDelete, setComponentToDelete] = useState<AircraftComponent | null>(null);
-
-  const firestore = useFirestore();
+export function AircraftComponents({ aircraft }: AircraftComponentsProps) {
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const tenantId = 'safeviate';
+  
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [componentToDelete, setComponentToDelete] = useState<AircraftComponent | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      partNumber: '',
       manufacturer: '',
+      partNumber: '',
       serialNumber: '',
+      installDate: undefined,
       installHours: undefined,
       maxHours: undefined,
       tsn: undefined,
       tso: undefined,
-      installDate: undefined,
+      notes: '',
     },
   });
 
-  useEffect(() => {
-    if (aircraft.components) {
-      setComponents(aircraft.components);
-    }
-  }, [aircraft.components]);
-
-  const handleOpenForm = (component: AircraftComponent | null) => {
-    setEditingComponent(component);
-    if (component) {
-      form.reset({
-        name: component.name,
-        partNumber: component.partNumber,
-        manufacturer: component.manufacturer || '',
-        serialNumber: component.serialNumber || '',
-        installHours: component.installHours || undefined,
-        maxHours: component.maxHours || undefined,
-        tsn: component.tsn || undefined,
-        tso: component.tso || undefined,
-        installDate: component.installDate ? new Date(component.installDate) : undefined,
-      });
-    } else {
-      form.reset();
-    }
-    setIsFormOpen(true);
-  };
-
-  const handleOpenDeleteDialog = (component: AircraftComponent) => {
-    setComponentToDelete(component);
-    setIsDeleteDialogOpen(true);
-  };
-
   const onSubmit = async (values: FormValues) => {
-    if (!firestore) return;
-
+    if (!firestore || !aircraft?.id) return;
     const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraft.id);
 
-    const newComponent: AircraftComponent = {
-      id: editingComponent ? editingComponent.id : uuidv4(),
+    const currentComponents = aircraft.components || [];
+    let updatedComponents: AircraftComponent[];
+
+    const componentData: Partial<AircraftComponent> = {
       name: values.name,
-      partNumber: values.partNumber,
       manufacturer: values.manufacturer || null,
+      partNumber: values.partNumber,
       serialNumber: values.serialNumber || null,
       installDate: values.installDate ? values.installDate.toISOString() : null,
       installHours: values.installHours || null,
       maxHours: values.maxHours || null,
       tsn: values.tsn || null,
       tso: values.tso || null,
+      notes: values.notes || null,
     };
 
-    let updatedComponents: AircraftComponent[];
-    if (editingComponent) {
-      updatedComponents = components.map(c => c.id === editingComponent.id ? newComponent : c);
-    } else {
-      updatedComponents = [...components, newComponent];
+    if (values.id) { // Editing existing
+      updatedComponents = currentComponents.map(c => 
+        c.id === values.id ? { ...c, ...componentData } : c
+      );
+    } else { // Adding new
+      updatedComponents = [...currentComponents, { ...componentData, id: uuidv4() } as AircraftComponent];
     }
-    
-    setComponents(updatedComponents);
+
     await updateDocumentNonBlocking(aircraftRef, { components: updatedComponents });
+    
+    toast({
+      title: values.id ? 'Component Updated' : 'Component Added',
+      description: `The component "${values.name}" has been saved.`,
+    });
+    
+    setIsDialogOpen(false);
+  };
+  
+  const handleAddNew = () => {
+    form.reset();
+    setIsDialogOpen(true);
+  };
+
+  const handleEdit = (component: AircraftComponent) => {
+    form.reset({
+      ...component,
+      installDate: component.installDate ? new Date(component.installDate) : undefined,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = () => {
+    if (!componentToDelete || !firestore || !aircraft?.id) return;
+    
+    const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraft.id);
+    const updatedComponents = (aircraft.components || []).filter(c => c.id !== componentToDelete.id);
+    
+    updateDocumentNonBlocking(aircraftRef, { components: updatedComponents });
 
     toast({
-      title: editingComponent ? 'Component Updated' : 'Component Added',
+      title: 'Component Deleted',
+      description: `The component "${componentToDelete.name}" has been removed.`,
     });
-    setIsFormOpen(false);
-  };
-
-  const handleDeleteComponent = async () => {
-    if (!firestore || !componentToDelete) return;
-    const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraft.id);
-    const updatedComponents = components.filter(c => c.id !== componentToDelete.id);
-    setComponents(updatedComponents);
-    await updateDocumentNonBlocking(aircraftRef, { components: updatedComponents });
-    toast({ title: 'Component Deleted' });
-    setIsDeleteDialogOpen(false);
+    
     setComponentToDelete(null);
   };
+
+  const components = aircraft.components || [];
 
   return (
     <>
       <div className="flex justify-end mb-4">
-        <Button onClick={() => handleOpenForm(null)}>
+        <Button onClick={handleAddNew}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Add New Component
         </Button>
@@ -193,40 +187,33 @@ export default function AircraftComponents({ aircraft, tenantId }: AircraftCompo
               <TableRow>
                 <TableHead>Component</TableHead>
                 <TableHead>Manufacturer</TableHead>
-                <TableHead>Part No.</TableHead>
-                <TableHead>Serial No.</TableHead>
-                <TableHead>Install Date</TableHead>
-                <TableHead>TSN</TableHead>
-                <TableHead>TSO</TableHead>
+                <TableHead>Part #</TableHead>
+                <TableHead>Serial #</TableHead>
+                <TableHead>Install Hours</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {components && components.length > 0 ? (
-                components.map((component) => (
-                  <TableRow key={component.id}>
-                    <TableCell>{component.name}</TableCell>
-                    <TableCell>{component.manufacturer || 'N/A'}</TableCell>
-                    <TableCell>{component.partNumber}</TableCell>
-                    <TableCell>{component.serialNumber || 'N/A'}</TableCell>
-                    <TableCell>{component.installDate ? format(new Date(component.installDate), 'PPP') : 'N/A'}</TableCell>
-                    <TableCell>{component.tsn || 'N/A'}</TableCell>
-                    <TableCell>{component.tso || 'N/A'}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenForm(component)}>
+              {components.map((component) => (
+                <TableRow key={component.id}>
+                  <TableCell>{component.name}</TableCell>
+                  <TableCell>{component.manufacturer || 'N/A'}</TableCell>
+                  <TableCell>{component.partNumber}</TableCell>
+                  <TableCell>{component.serialNumber || 'N/A'}</TableCell>
+                  <TableCell>{component.installHours?.toFixed(1) || 'N/A'}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(component)}>
                         <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenDeleteDialog(component)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center">
-                    No components tracked for this aircraft.
+                    </Button>
+                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setComponentToDelete(component)}>
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
                   </TableCell>
+                </TableRow>
+              ))}
+              {components.length === 0 && (
+                <TableRow>
+                    <TableCell colSpan={6} className="text-center h-24">No components added yet.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -234,10 +221,11 @@ export default function AircraftComponents({ aircraft, tenantId }: AircraftCompo
         </CardContent>
       </Card>
 
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingComponent ? 'Edit Component' : 'Add New Component'}</DialogTitle>
+            <DialogTitle>{form.getValues('id') ? 'Edit Component' : 'Add New Component'}</DialogTitle>
+            <DialogDescription>Fill in the details for the aircraft component.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -246,35 +234,49 @@ export default function AircraftComponents({ aircraft, tenantId }: AircraftCompo
                 <FormField control={form.control} name="manufacturer" render={({ field }) => ( <FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="partNumber" render={({ field }) => ( <FormItem><FormLabel>Part Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="serialNumber" render={({ field }) => ( <FormItem><FormLabel>Serial Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                <FormField control={form.control} name="installDate" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Install Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" modal={false}><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem> )} />
-                <FormField control={form.control} name="installHours" render={({ field }) => ( <FormItem><FormLabel>Install Hours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                <FormField control={form.control} name="maxHours" render={({ field }) => ( <FormItem><FormLabel>Max Hours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                <FormField control={form.control} name="tsn" render={({ field }) => ( <FormItem><FormLabel>TSN</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                <FormField control={form.control} name="tso" render={({ field }) => ( <FormItem><FormLabel>TSO</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="installDate" render={({ field }) => (
+                  <FormItem className="flex flex-col pt-2">
+                      <FormLabel>Install Date</FormLabel>
+                      <Popover>
+                          <PopoverTrigger asChild>
+                              <FormControl>
+                                  <Button variant="outline" className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}>
+                                      {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                              </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                  </FormItem>
+                )}/>
+                <FormField control={form.control} name="installHours" render={({ field }) => ( <FormItem><FormLabel>Install Hours</FormLabel><FormControl><Input type="number" {...field} onChange={event => field.onChange(+event.target.value)} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="maxHours" render={({ field }) => ( <FormItem><FormLabel>Max Hours</FormLabel><FormControl><Input type="number" {...field} onChange={event => field.onChange(+event.target.value)} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="tsn" render={({ field }) => ( <FormItem><FormLabel>TSN</FormLabel><FormControl><Input type="number" {...field} onChange={event => field.onChange(+event.target.value)} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="tso" render={({ field }) => ( <FormItem><FormLabel>TSO</FormLabel><FormControl><Input type="number" {...field} onChange={event => field.onChange(+event.target.value)} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="notes" render={({ field }) => ( <FormItem className="col-span-2"><FormLabel>Notes</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )} />
               </div>
               <DialogFooter>
-                <DialogClose asChild>
-                  <Button type="button" variant="outline">Cancel</Button>
-                </DialogClose>
-                <Button type="submit">{editingComponent ? 'Save Changes' : 'Add Component'}</Button>
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                <Button type="submit">Save Component</Button>
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
       
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+       <AlertDialog open={!!componentToDelete} onOpenChange={(open) => !open && setComponentToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the component
-              &quot;{componentToDelete?.name}&quot;.
+              This action cannot be undone. This will permanently delete the component &quot;{componentToDelete?.name}&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteComponent}>Delete</AlertDialogAction>
+            <AlertDialogCancel onClick={() => setComponentToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
