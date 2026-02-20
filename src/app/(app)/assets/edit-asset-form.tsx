@@ -1,101 +1,103 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
-import { doc } from 'firebase/firestore';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { doc } from 'firebase/firestore';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { Aircraft } from '../page';
+import type { Aircraft } from '@/types/aircraft';
+
+const formSchema = z.object({
+  tailNumber: z.string().min(1, 'Tail number is required.'),
+  model: z.string().min(1, 'Model is required.'),
+  abbreviation: z.string().optional(),
+  type: z.enum(['Single-Engine', 'Multi-Engine']),
+  currentHobbs: z.number({ coerce: true }).min(0).optional(),
+  currentTacho: z.number({ coerce: true }).min(0).optional(),
+  tachoAtNext50Inspection: z.number({ coerce: true }).min(0).optional(),
+  tachoAtNext100Inspection: z.number({ coerce: true }).min(0).optional(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface EditAircraftFormProps {
-  aircraft: Aircraft;
-  tenantId: string;
-  onCancel: () => void;
+  aircraft: Aircraft | null;
+  onFinished: () => void;
 }
 
-export function EditAircraftForm({ aircraft, tenantId, onCancel }: EditAircraftFormProps) {
-  const [formData, setFormData] = useState<Partial<Aircraft>>({});
+export function EditAircraftForm({ aircraft, onFinished }: EditAircraftFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+  });
+  
   useEffect(() => {
     if (aircraft) {
-      setFormData(aircraft);
+      form.reset({
+        tailNumber: aircraft.tailNumber || '',
+        model: aircraft.model || '',
+        abbreviation: aircraft.abbreviation || '',
+        type: aircraft.type || 'Single-Engine',
+        currentHobbs: aircraft.currentHobbs || 0,
+        currentTacho: aircraft.currentTacho || 0,
+        tachoAtNext50Inspection: aircraft.tachoAtNext50Inspection || 0,
+        tachoAtNext100Inspection: aircraft.tachoAtNext100Inspection || 0,
+      });
     }
-  }, [aircraft]);
+  }, [aircraft, form]);
 
-  const handleInputChange = (field: keyof Aircraft, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
 
-  const handleSave = () => {
-    if (!firestore || !formData) return;
+  const onSubmit = (values: FormValues) => {
+    if (!firestore || !aircraft) return;
+    const tenantId = 'safeviate'; // Hardcoded for now
     const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
-    updateDocumentNonBlocking(aircraftRef, formData);
-    toast({ title: 'Aircraft Updated' });
-    onCancel();
+
+    updateDocumentNonBlocking(aircraftRef, values);
+    toast({
+      title: 'Aircraft Updated',
+      description: `Details for ${values.tailNumber} have been saved.`,
+    });
+    onFinished();
   };
-  
-  if (!formData.tailNumber) {
-    return null; // Don't render form until data is loaded
+
+  if (!aircraft) {
+    return null; // Don't render the form if there's no aircraft data
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Edit Aircraft</CardTitle>
-        <CardDescription>Update details for {aircraft.tailNumber}.</CardDescription>
-      </CardHeader>
-      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label htmlFor="tailNumber">Tail Number</Label>
-          <Input id="tailNumber" value={formData.tailNumber || ''} onChange={(e) => handleInputChange('tailNumber', e.target.value)} />
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField control={form.control} name="tailNumber" render={({ field }) => ( <FormItem><FormLabel>Tail Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="model" render={({ field }) => ( <FormItem><FormLabel>Model</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="abbreviation" render={({ field }) => ( <FormItem><FormLabel>Abbreviation (5 chars)</FormLabel><FormControl><Input maxLength={5} {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Single-Engine">Single-Engine</SelectItem><SelectItem value="Multi-Engine">Multi-Engine</SelectItem></SelectContent></Select><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="currentHobbs" render={({ field }) => ( <FormItem><FormLabel>Current Hobbs</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="currentTacho" render={({ field }) => ( <FormItem><FormLabel>Current Tacho</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="tachoAtNext50Inspection" render={({ field }) => ( <FormItem><FormLabel>Tacho at Next 50hr</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="tachoAtNext100Inspection" render={({ field }) => ( <FormItem><FormLabel>Tacho at Next 100hr</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="model">Model</Label>
-          <Input id="model" value={formData.model || ''} onChange={(e) => handleInputChange('model', e.target.value)} />
+        <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={onFinished}>Cancel</Button>
+            <Button type="submit">Save Changes</Button>
         </div>
-        <div className="space-y-2">
-            <Label htmlFor="abbreviation">Abbreviation (5 chars)</Label>
-            <Input id="abbreviation" maxLength={5} value={formData.abbreviation || ''} onChange={(e) => handleInputChange('abbreviation', e.target.value)} />
-        </div>
-        <div className="space-y-2">
-            <Label htmlFor="type">Type</Label>
-            <Select onValueChange={(value) => handleInputChange('type', value)} value={formData.type}>
-                <SelectTrigger id="type">
-                    <SelectValue placeholder="Select a type" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="Single-Engine">Single-Engine</SelectItem>
-                    <SelectItem value="Multi-Engine">Multi-Engine</SelectItem>
-                </SelectContent>
-            </Select>
-        </div>
-        <div className="space-y-2">
-            <Label htmlFor="currentHobbs">Current Hobbs</Label>
-            <Input id="currentHobbs" type="number" value={formData.currentHobbs || ''} onChange={(e) => handleInputChange('currentHobbs', parseFloat(e.target.value) || 0)} />
-        </div>
-        <div className="space-y-2">
-            <Label htmlFor="currentTacho">Current Tacho</Label>
-            <Input id="currentTacho" type="number" value={formData.currentTacho || ''} onChange={(e) => handleInputChange('currentTacho', parseFloat(e.target.value) || 0)} />
-        </div>
-         <div className="space-y-2">
-            <Label htmlFor="tachoAtNext50Inspection">Tacho at Next 50hr</Label>
-            <Input id="tachoAtNext50Inspection" type="number" value={formData.tachoAtNext50Inspection || ''} onChange={(e) => handleInputChange('tachoAtNext50Inspection', parseFloat(e.target.value) || 0)} />
-        </div>
-         <div className="space-y-2">
-            <Label htmlFor="tachoAtNext100Inspection">Tacho at Next 100hr</Label>
-            <Input id="tachoAtNext100Inspection" type="number" value={formData.tachoAtNext100Inspection || ''} onChange={(e) => handleInputChange('tachoAtNext100Inspection', parseFloat(e.target.value) || 0)} />
-        </div>
-      </CardContent>
-      <CardFooter className="border-t pt-6 flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button onClick={handleSave}>Save Changes</Button>
-      </CardFooter>
-    </Card>
+      </form>
+    </Form>
   );
 }
