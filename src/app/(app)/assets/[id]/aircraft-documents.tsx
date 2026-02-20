@@ -1,25 +1,23 @@
 'use client';
 
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useState, useMemo } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { format, differenceInDays } from 'date-fns';
-import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
+import { Badge } from '@/components/ui/badge';
+import { Trash2, Upload, CalendarIcon, View, FileUp, Camera } from 'lucide-react';
+import type { Aircraft } from '../page';
+import { useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
-import type { Aircraft } from '../page';
+import { format, differenceInDays } from 'date-fns';
+import { DocumentUploader } from './document-uploader';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { CalendarIcon, Trash2, Upload, View, FileUp, Camera, PlusCircle } from 'lucide-react';
-import { DocumentUploader } from '@/app/(app)/users/personnel/[id]/document-uploader';
-import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/page';
-import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import Image from 'next/image';
+import { cn } from '@/lib/utils';
+import type { DocumentExpirySettings } from '../../admin/document-dates/page';
 
 type Document = NonNullable<Aircraft['documents']>[0];
 
@@ -29,29 +27,17 @@ interface AircraftDocumentsProps {
 }
 
 export function AircraftDocuments({ aircraft, tenantId }: AircraftDocumentsProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
-  const [isAddDocOpen, setIsAddDocOpen] = useState(false);
-  const [newDocName, setNewDocName] = useState('');
+  const firestore = useFirestore();
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
 
   const expirySettingsRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
     [firestore, tenantId]
   );
   const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
 
-  if (!aircraft) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Documents</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-32 w-full" />
-        </CardContent>
-      </Card>
-    );
-  }
 
   const getStatusColor = (expirationDate: string | null | undefined): string | null => {
     if (!expirationDate || !expirySettings) return null;
@@ -64,7 +50,7 @@ export function AircraftDocuments({ aircraft, tenantId }: AircraftDocumentsProps
       return expirySettings.expiredColor || '#ef4444'; // Expired
     }
 
-    const sortedPeriods = (expirySettings.warningPeriods || []).sort((a, b) => a.period - b.period);
+    const sortedPeriods = [...expirySettings.warningPeriods].sort((a, b) => a.period - b.period);
     for (const warning of sortedPeriods) {
       if (daysUntilExpiry <= warning.period) {
         return warning.color;
@@ -74,8 +60,20 @@ export function AircraftDocuments({ aircraft, tenantId }: AircraftDocumentsProps
     return expirySettings.defaultColor || null; // Safe color
   };
 
+  const handleViewImage = (url: string) => {
+    setViewingImageUrl(url);
+    setIsImageViewerOpen(true);
+  };
+  
   const handleDocumentUpdate = (updatedDocuments: Document[]) => {
-    if (!firestore) return;
+    if (!firestore || !tenantId) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not connect to the database.",
+        });
+        return;
+    }
     const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraft.id);
     updateDocumentNonBlocking(aircraftRef, { documents: updatedDocuments });
   };
@@ -93,10 +91,6 @@ export function AircraftDocuments({ aircraft, tenantId }: AircraftDocumentsProps
         updatedDocs = [...currentDocs, docDetails];
     }
     handleDocumentUpdate(updatedDocs);
-    toast({
-        title: 'Document Uploaded',
-        description: `"${docDetails.name}" has been prepared for saving.`,
-    });
   };
 
   const handleExpirationDateChange = (docName: string, date: Date | undefined) => {
@@ -120,45 +114,15 @@ export function AircraftDocuments({ aircraft, tenantId }: AircraftDocumentsProps
     });
   };
 
-  const handleAddDocumentType = () => {
-    if (!newDocName.trim()) {
-        toast({ variant: 'destructive', title: "Name required" });
-        return;
-    }
-    const currentDocs = aircraft.documents || [];
-    if (currentDocs.some(d => d.name.toLowerCase() === newDocName.trim().toLowerCase())) {
-        toast({ variant: 'destructive', title: "Duplicate name" });
-        return;
-    }
-
-    const newDoc: Document = {
-        name: newDocName.trim(),
-        url: '',
-        uploadDate: '',
-        expirationDate: null,
-    };
-
-    handleDocumentUpdate([...currentDocs, newDoc]);
-    setIsAddDocOpen(false);
-    setNewDocName('');
-  };
-
   return (
     <>
-      <Card>
-        <CardHeader>
-            <div className='flex justify-between items-center'>
-              <div>
-                  <CardTitle>Aircraft Documents</CardTitle>
-                  <CardDescription>Manage airworthiness documents and other files for this aircraft.</CardDescription>
-              </div>
-              <Button onClick={() => setIsAddDocOpen(true)}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Document
-              </Button>
-            </div>
-        </CardHeader>
-        <CardContent>
-            {(aircraft.documents || []).length > 0 ? (
+    <Card>
+      <CardHeader>
+        <CardTitle>Aircraft Documents</CardTitle>
+        <CardDescription>Manage airworthiness documents and other required paperwork.</CardDescription>
+      </CardHeader>
+      <CardContent>
+      {(aircraft.documents || []).length > 0 ? (
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -169,11 +133,11 @@ export function AircraftDocuments({ aircraft, tenantId }: AircraftDocumentsProps
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {aircraft.documents?.map((docItem) => {
-                            const statusColor = getStatusColor(docItem.expirationDate);
+                        {aircraft.documents.map((doc) => {
+                            const statusColor = getStatusColor(doc.expirationDate);
                             return (
-                                <TableRow key={docItem.name}>
-                                    <TableCell className="font-medium">{docItem.name}</TableCell>
+                                <TableRow key={doc.name}>
+                                    <TableCell className="font-medium">{doc.name}</TableCell>
                                     <TableCell className="min-w-[150px] whitespace-nowrap">
                                         <div className="flex items-center gap-2">
                                             {statusColor && (
@@ -182,7 +146,7 @@ export function AircraftDocuments({ aircraft, tenantId }: AircraftDocumentsProps
                                                     style={{ backgroundColor: statusColor }}
                                                 />
                                             )}
-                                            {docItem.expirationDate ? format(new Date(docItem.expirationDate), 'PPP') : 'N/A'}
+                                            {doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'N/A'}
                                         </div>
                                     </TableCell>
                                     <TableCell className='text-center'>
@@ -194,73 +158,75 @@ export function AircraftDocuments({ aircraft, tenantId }: AircraftDocumentsProps
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0">
                                                 <CustomCalendar
-                                                    selectedDate={docItem.expirationDate ? new Date(docItem.expirationDate) : undefined}
-                                                    onDateSelect={(date) => handleExpirationDateChange(docItem.name, date)}
+                                                    selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined}
+                                                    onDateSelect={(date) => handleExpirationDateChange(doc.name, date)}
                                                 />
                                             </PopoverContent>
                                         </Popover>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        {docItem.url ? (
-                                            <div className="flex gap-2 justify-end">
-                                                <Button variant="outline" size="sm" /* onClick={() => handleViewImage(doc.url!)} */>
-                                                    <View className="mr-2 h-4 w-4" /> View
-                                                </Button>
-                                                <Button variant="destructive" size="icon" onClick={() => handleDocumentDelete(docItem.name)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        ) : (
-                                            <DocumentUploader
-                                                defaultFileName={docItem.name}
-                                                onDocumentUploaded={onDocumentUploaded}
-                                                trigger={(openDialog) => (
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button size="sm">
-                                                                <Upload className="mr-2 h-4 w-4" /> Upload
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent>
-                                                            <DropdownMenuItem onSelect={() => openDialog('file')}>
-                                                                <FileUp className="mr-2 h-4 w-4" /> Upload File
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem onSelect={() => openDialog('camera')}>
-                                                                <Camera className="mr-2 h-4 w-4" /> Take Photo
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                )}
-                                            />
-                                        )}
+                                        <div className="flex gap-2 justify-end">
+                                            <Button variant="outline" size="sm" onClick={() => handleViewImage(doc.url!)}>
+                                                <View className="mr-2 h-4 w-4" /> View
+                                            </Button>
+                                            <Button variant="destructive" size="icon" onClick={() => handleDocumentDelete(doc.name)}>
+                                            <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             )
                         })}
                     </TableBody>
                 </Table>
-            ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No documents for this aircraft yet.</p>
-            )}
-        </CardContent>
-      </Card>
-      
-      <Dialog open={isAddDocOpen} onOpenChange={setIsAddDocOpen}>
-        <DialogContent>
+                ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">No documents uploaded for this aircraft.</p>
+                )}
+                 <div className="mt-4">
+                    <DocumentUploader
+                        onDocumentUploaded={onDocumentUploaded}
+                        trigger={(openDialog) => (
+                            <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button size="sm">
+                                <Upload className="mr-2 h-4 w-4" /> Upload Document
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem onSelect={() => openDialog('file')}>
+                                <FileUp className="mr-2 h-4 w-4" />
+                                Upload File
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => openDialog('camera')}>
+                                <Camera className="mr-2 h-4 w-4" />
+                                Take Photo
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+                        />
+                 </div>
+      </CardContent>
+    </Card>
+
+    <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
+        <DialogContent className="max-w-4xl">
             <DialogHeader>
-                <DialogTitle>Add New Document Type</DialogTitle>
-                <DialogDescription>Add a new document to be tracked for this aircraft.</DialogDescription>
+                <DialogTitle>Document Viewer</DialogTitle>
+                <DialogDescription>Viewing uploaded document.</DialogDescription>
             </DialogHeader>
-            <div className="py-4">
-              <Label htmlFor='doc-name'>Document Name</Label>
-              <Input id="doc-name" value={newDocName} onChange={(e) => setNewDocName(e.target.value)} />
-            </div>
-            <DialogFooter>
-                <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                <Button onClick={handleAddDocumentType}>Add Document</Button>
-            </DialogFooter>
+            {viewingImageUrl && (
+                <div className="relative h-[80vh]">
+                    <Image 
+                        src={viewingImageUrl}
+                        alt="Document" 
+                        fill
+                        style={{ objectFit: 'contain' }}
+                    />
+                </div>
+            )}
         </DialogContent>
-      </Dialog>
+    </Dialog>
     </>
   );
 }
