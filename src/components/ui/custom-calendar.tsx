@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -12,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from './scroll-area';
-import { startOfToday, isAfter, endOfMonth, isSameYear, isSameMonth } from 'date-fns';
+import { startOfToday } from 'date-fns';
 
 interface CustomCalendarProps {
     selectedDate?: Date;
@@ -34,16 +33,11 @@ export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarPro
   const daysInMonth = lastDayOfMonth.getDate();
   const startingDayOfWeek = firstDayOfMonth.getDay(); // 0 (Sun) to 6 (Sat)
 
-  const isViewingCurrentOrFutureMonth = 
-    currentDate.getFullYear() > today.getFullYear() || 
-    (currentDate.getFullYear() === today.getFullYear() && currentDate.getMonth() >= today.getMonth());
-
   const handlePrevMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   };
 
   const handleNextMonth = () => {
-    if (isViewingCurrentOrFutureMonth) return;
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   };
 
@@ -79,19 +73,15 @@ export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarPro
       currentDate.getMonth() === selectedDate.getMonth() &&
       currentDate.getFullYear() === selectedDate.getFullYear();
 
-    const isFuture = dayDate > today;
-
     calendarDays.push(
       <button
         key={`day-${day}`}
         onClick={() => handleDayClick(day)}
-        disabled={isFuture}
         className={cn(
           'flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors',
-          !isFuture && 'hover:bg-accent hover:text-accent-foreground',
+          'hover:bg-accent hover:text-accent-foreground',
           isToday && !isSelected && 'bg-muted text-muted-foreground',
-          isSelected && 'bg-primary text-primary-foreground hover:bg-primary/90',
-          isFuture && 'text-muted-foreground opacity-50 cursor-not-allowed'
+          isSelected && 'bg-primary text-primary-foreground hover:bg-primary/90'
         )}
       >
         {day}
@@ -110,7 +100,7 @@ export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarPro
     new Date(0, i).toLocaleString('default', { month: 'long' })
   );
   const currentDisplayYear = currentDate.getFullYear();
-  const years = Array.from({ length: 21 }, (_, i) => today.getFullYear() - 10 + i);
+  const years = Array.from({ length: 31 }, (_, i) => today.getFullYear() - 10 + i);
 
   return (
     <div className="w-full max-w-sm rounded-lg border bg-card p-3 text-card-foreground">
@@ -128,7 +118,6 @@ export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarPro
                   <DropdownMenuItem 
                     key={month} 
                     onSelect={() => handleMonthSelect(index)}
-                    disabled={currentDate.getFullYear() === today.getFullYear() && index > today.getMonth()}
                   >
                     {month}
                   </DropdownMenuItem>
@@ -149,7 +138,6 @@ export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarPro
                   <DropdownMenuItem 
                     key={year} 
                     onSelect={() => handleYearSelect(year)}
-                    disabled={year > today.getFullYear()}
                   >
                     {year}
                   </DropdownMenuItem>
@@ -163,7 +151,7 @@ export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarPro
           <Button variant="outline" size="icon" className="h-7 w-7" onClick={handlePrevMonth}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="icon" className="h-7 w-7" onClick={handleNextMonth} disabled={isViewingCurrentOrFutureMonth}>
+          <Button variant="outline" size="icon" className="h-7 w-7" onClick={handleNextMonth}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
