@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,6 +17,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -31,15 +31,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { PlusCircle } from 'lucide-react';
+import type { Aircraft } from '@/types/aircraft';
 
 const formSchema = z.object({
-  make: z.string().min(1, { message: 'Make is required.' }),
-  model: z.string().min(1, { message: 'Model is required.' }),
-  tailNumber: z.string().min(1, { message: 'Tail number is required.' }),
+  tailNumber: z.string().min(1, 'Tail number is required.'),
+  make: z.string().min(1, 'Make is required.'),
+  model: z.string().min(1, 'Model is required.'),
   type: z.enum(['Single-Engine', 'Multi-Engine']),
   initialHobbs: z.string().optional(),
   currentHobbs: z.string().optional(),
@@ -47,35 +48,54 @@ const formSchema = z.object({
   currentTacho: z.string().optional(),
 });
 
-export function AircraftForm() {
-  const [isOpen, setIsOpen] = useState(false);
+type FormValues = z.infer<typeof formSchema>;
+
+interface AircraftFormProps {
+    existingAircraft?: Aircraft;
+    isOpen?: boolean;
+    onOpenChange?: (open: boolean) => void;
+}
+
+export function AircraftForm({ existingAircraft, isOpen, onOpenChange }: AircraftFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const tenantId = 'safeviate';
+  const isEditing = !!existingAircraft;
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      make: '',
-      model: '',
-      tailNumber: '',
       type: 'Single-Engine',
-      initialHobbs: '',
-      currentHobbs: '',
-      initialTacho: '',
-      currentTacho: '',
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!firestore) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Firestore is not available.',
-      });
-      return;
+  useEffect(() => {
+    if (existingAircraft && isOpen) {
+        form.reset({
+            tailNumber: existingAircraft.tailNumber,
+            make: existingAircraft.make,
+            model: existingAircraft.model,
+            type: existingAircraft.type,
+            initialHobbs: existingAircraft.initialHobbs?.toString(),
+            currentHobbs: existingAircraft.currentHobbs?.toString(),
+            initialTacho: existingAircraft.initialTacho?.toString(),
+            currentTacho: existingAircraft.currentTacho?.toString(),
+        });
+    } else if (!existingAircraft && (isOpen === undefined || isOpen)) {
+        form.reset({
+            tailNumber: '',
+            make: '',
+            model: '',
+            type: 'Single-Engine',
+            initialHobbs: '',
+            currentHobbs: '',
+            initialTacho: '',
+            currentTacho: '',
+        });
     }
+  }, [existingAircraft, isOpen, form]);
+
+  const onSubmit = async (values: FormValues) => {
+    if (!firestore) return;
 
     const aircraftData = {
       ...values,
@@ -85,155 +105,118 @@ export function AircraftForm() {
       currentTacho: values.currentTacho ? parseFloat(values.currentTacho) : 0,
     };
 
-    const aircraftsCollection = collection(firestore, 'tenants', tenantId, 'aircrafts');
-    addDocumentNonBlocking(aircraftsCollection, aircraftData);
-    toast({
-      title: 'Aircraft Created',
-      description: `Aircraft ${aircraftData.tailNumber} has been added to the fleet.`,
-    });
+    if (isEditing) {
+        const aircraftRef = doc(firestore, `tenants/safeviate/aircrafts`, existingAircraft.id);
+        updateDocumentNonBlocking(aircraftRef, aircraftData);
+        toast({ title: 'Aircraft Updated', description: `Aircraft ${values.tailNumber} has been updated.` });
+    } else {
+        const aircraftsCollection = collection(firestore, `tenants/safeviate/aircrafts`);
+        addDocumentNonBlocking(aircraftsCollection, aircraftData);
+        toast({ title: 'Aircraft Created', description: `Aircraft ${values.tailNumber} has been added to the fleet.` });
+    }
+    
+    if(onOpenChange) {
+        onOpenChange(false);
+    }
+  };
 
-    setIsOpen(false);
-    form.reset();
+  const handleOpenChange = (open: boolean) => {
+    if (onOpenChange) {
+      onOpenChange(open);
+    }
   }
 
+  const trigger = (
+    <DialogTrigger asChild>
+      <Button>
+        <PlusCircle className="mr-2 h-4 w-4" /> Create Aircraft
+      </Button>
+    </DialogTrigger>
+  );
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" /> Create Aircraft
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      {!isEditing && trigger}
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create New Aircraft</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Aircraft' : 'Create New Aircraft'}</DialogTitle>
           <DialogDescription>
-            Add a new aircraft to your fleet.
+            {isEditing ? 'Update the details for this aircraft.' : 'Add a new aircraft to your fleet.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form id="aircraft-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <FormField
-                control={form.control}
-                name="make"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Make</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="e.g., Cessna" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="model"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Model</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="e.g., 172" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    control={form.control}
+                    name="tailNumber"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Tail Number</FormLabel>
+                            <FormControl>
+                                <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select aircraft type" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            <SelectItem value="Single-Engine">Single-Engine</SelectItem>
+                            <SelectItem value="Multi-Engine">Multi-Engine</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="make"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Make</FormLabel>
+                            <FormControl>
+                                <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="model"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Model</FormLabel>
+                            <FormControl>
+                                <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+              <FormField control={form.control} name="initialHobbs" render={({ field }) => (<FormItem><FormLabel>Initial Hobbs Hours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+              <FormField control={form.control} name="currentHobbs" render={({ field }) => (<FormItem><FormLabel>Current Hobbs Hours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="initialTacho" render={({ field }) => (<FormItem><FormLabel>Initial Tacho Hours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="currentTacho" render={({ field }) => (<FormItem><FormLabel>Current Tacho Hours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
             </div>
-             <FormField
-              control={form.control}
-              name="tailNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tail Number</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="e.g., N12345" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select aircraft type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Single-Engine">Single-Engine</SelectItem>
-                      <SelectItem value="Multi-Engine">Multi-Engine</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="initialHobbs"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Initial Hobbs Hours</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} placeholder="e.g., 1200" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="currentHobbs"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Current Hobbs Hours</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} placeholder="e.g., 1200" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="initialTacho"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Initial Tacho Hours</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} placeholder="e.g., 1200" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="currentTacho"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Current Tacho Hours</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} placeholder="e.g., 1200" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <DialogFooter>
+              <Button type="submit">{isEditing ? 'Save Changes' : 'Create Aircraft'}</Button>
+            </DialogFooter>
           </form>
         </Form>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-          <Button type="submit" form="aircraft-form">Create</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
