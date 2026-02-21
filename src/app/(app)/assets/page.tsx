@@ -1,53 +1,40 @@
+
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
-import { collection, doc, query } from 'firebase/firestore';
-import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent } from '@/components/ui/card';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { PlusCircle } from 'lucide-react';
 import { AircraftTable } from './aircraft-table';
 import { AircraftForm } from './aircraft-form';
-import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, query, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import PageHeader from '@/components/page-header';
+import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '@/types/aircraft';
 import type { AircraftInspectionWarningSettings } from '@/types/inspection';
-import { getInspectionBadgeStyle } from './utils';
 import { usePermissions } from '@/hooks/use-permissions';
 
 export default function AssetsPage() {
-  const firestore = useFirestore();
-  const tenantId = 'safeviate';
-  const { hasPermission } = usePermissions();
-
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAircraft, setEditingAircraft] = useState<Aircraft | null>(null);
-
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const { hasPermission } = usePermissions();
   const canCreate = hasPermission('assets-create');
+  const canEdit = hasPermission('assets-edit');
+  const canDelete = hasPermission('assets-delete');
 
-  const handleEdit = (aircraft: Aircraft | null) => {
-    setEditingAircraft(aircraft);
-    setIsFormOpen(true);
-  };
-  
-  const handleDelete = (aircraftId: string) => {
-      // onDelete function logic here
-      console.log('Deleting aircraft', aircraftId);
-  }
-
-  const handleCloseForm = () => {
-    setIsFormOpen(false);
-    setEditingAircraft(null);
-  };
+  const tenantId = 'safeviate';
 
   const aircraftsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
     [firestore, tenantId]
   );
-
+  
   const inspectionSettingsRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, `tenants/${tenantId}/settings/inspection-warnings`) : null),
-    [firestore, tenantId]
+      () => (firestore ? doc(firestore, `tenants/${tenantId}/settings`, 'inspection-warnings') : null),
+      [firestore, tenantId]
   );
 
   const { data: aircrafts, isLoading: isLoadingAircrafts, error: aircraftsError } = useCollection<Aircraft>(aircraftsQuery);
@@ -56,16 +43,38 @@ export default function AssetsPage() {
   const isLoading = isLoadingAircrafts || isLoadingSettings;
   const error = aircraftsError || settingsError;
 
+  const handleNew = () => {
+    setEditingAircraft(null);
+    setIsFormOpen(true);
+  };
+
+  const handleEdit = (aircraft: Aircraft) => {
+    setEditingAircraft(aircraft);
+    setIsFormOpen(true);
+  };
+
+  const handleDelete = (aircraftId: string) => {
+    if (!firestore || !canDelete) return;
+    const docRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId);
+    deleteDocumentNonBlocking(docRef);
+    toast({ title: 'Aircraft Deleted' });
+  };
+  
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setEditingAircraft(null);
+  }
+
   return (
     <div className="flex flex-col gap-6 h-full">
       <div className="flex justify-between items-center">
-        <PageHeader 
-          title="Aircraft Assets"
-          description="Manage all aircraft in your organization."
-        />
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Assets</h1>
+          <p className="text-muted-foreground">Manage all aircraft in your fleet.</p>
+        </div>
         {canCreate && (
-          <Button onClick={() => handleEdit(null)}>
-            <PlusCircle />
+          <Button onClick={handleNew}>
+            <PlusCircle className="mr-2 h-4 w-4" />
             Add Aircraft
           </Button>
         )}
@@ -73,27 +82,25 @@ export default function AssetsPage() {
 
       <Card>
         <CardContent className="p-0">
-          {isLoading && (
-            <div className="p-6">
-              <Skeleton className="h-40 w-full" />
-            </div>
-          )}
-          {error && <p className="text-destructive p-6">Error: {error.message}</p>}
+          {isLoading && <Skeleton className="h-48" />}
+          {error && <p className="text-destructive p-4">Error loading data: {error.message}</p>}
           {!isLoading && !error && (
-            <AircraftTable 
-              aircrafts={aircrafts || []} 
-              onEdit={handleEdit} 
-              onDelete={handleDelete}
+            <AircraftTable
+              aircrafts={aircrafts || []}
               inspectionSettings={inspectionSettings}
+              onEdit={canEdit ? handleEdit : undefined}
+              onDelete={canDelete ? handleDelete : undefined}
             />
           )}
         </CardContent>
       </Card>
+      
       {isFormOpen && (
-        <AircraftForm 
+        <AircraftForm
           isOpen={isFormOpen}
           onClose={handleCloseForm}
-          aircraft={editingAircraft}
+          existingAircraft={editingAircraft}
+          tenantId={tenantId}
         />
       )}
     </div>
