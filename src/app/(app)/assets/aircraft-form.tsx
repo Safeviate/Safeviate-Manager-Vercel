@@ -1,17 +1,30 @@
 'use client';
 
-import { useEffect } from 'react';
+import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
+import { useFirestore } from '@/firebase';
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from './page';
+
+interface AircraftFormProps {
+  tenantId: string;
+  onClose: () => void;
+  existingAircraft?: Aircraft | null;
+}
 
 const formSchema = z.object({
   tailNumber: z.string().min(1, 'Tail number is required.'),
@@ -22,51 +35,40 @@ const formSchema = z.object({
   tachoAtNext100Inspection: z.number({ coerce: true }).optional(),
 });
 
-type AircraftFormValues = z.infer<typeof formSchema>;
+type FormValues = z.infer<typeof formSchema>;
 
-interface AircraftFormProps {
-  aircraftData: Aircraft | null;
-  tenantId: string;
-  onClose: () => void;
-}
-
-export function AircraftForm({ aircraftData, tenantId, onClose }: AircraftFormProps) {
+export function AircraftForm({ tenantId, onClose, existingAircraft }: AircraftFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const form = useForm<AircraftFormValues>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: aircraftData || {
-      tailNumber: '',
-      model: '',
-      currentHobbs: 0,
-      currentTacho: 0,
-      tachoAtNext50Inspection: 0,
-      tachoAtNext100Inspection: 0,
-    },
   });
-  
-  useEffect(() => {
-    form.reset(aircraftData || {
-      tailNumber: '',
-      model: '',
-      currentHobbs: 0,
-      currentTacho: 0,
-      tachoAtNext50Inspection: 0,
-      tachoAtNext100Inspection: 0,
-    });
-  }, [aircraftData, form]);
 
-  const onSubmit = async (data: AircraftFormValues) => {
+  React.useEffect(() => {
+    form.reset({
+      tailNumber: existingAircraft?.tailNumber || '',
+      model: existingAircraft?.model || '',
+      currentHobbs: existingAircraft?.currentHobbs || 0,
+      currentTacho: existingAircraft?.currentTacho || 0,
+      tachoAtNext50Inspection: existingAircraft?.tachoAtNext50Inspection || 0,
+      tachoAtNext100Inspection: existingAircraft?.tachoAtNext100Inspection || 0,
+    });
+  }, [existingAircraft, form]);
+
+
+  const onSubmit = (data: FormValues) => {
     if (!firestore) return;
-    
-    if (aircraftData) { // Editing existing aircraft
-      const docRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftData.id);
-      await updateDocumentNonBlocking(docRef, data);
+
+    if (existingAircraft) {
+      // Update
+      const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, existingAircraft.id);
+      updateDocumentNonBlocking(aircraftRef, data);
       toast({ title: 'Aircraft Updated', description: 'The aircraft details have been saved.' });
-    } else { // Adding new aircraft
-      const collectionRef = collection(firestore, `tenants/${tenantId}/aircrafts`);
-      await addDocumentNonBlocking(collectionRef, data);
+    } else {
+      // Create
+      const aircraftsCollection = collection(firestore, `tenants/${tenantId}/aircrafts`);
+      addDocumentNonBlocking(aircraftsCollection, data);
       toast({ title: 'Aircraft Added', description: 'The new aircraft has been added to your fleet.' });
     }
     onClose();
@@ -103,14 +105,14 @@ export function AircraftForm({ aircraftData, tenantId, onClose }: AircraftFormPr
                 <FormMessage />
             </FormItem>
         )} />
-         <FormField control={form.control} name="tachoAtNext50Inspection" render={({ field }) => (
+        <FormField control={form.control} name="tachoAtNext50Inspection" render={({ field }) => (
             <FormItem>
                 <Label htmlFor="tachoAtNext50Inspection">Tacho at Next 50hr</Label>
                 <FormControl><Input id="tachoAtNext50Inspection" type="number" {...field} /></FormControl>
                 <FormMessage />
             </FormItem>
         )} />
-         <FormField control={form.control} name="tachoAtNext100Inspection" render={({ field }) => (
+        <FormField control={form.control} name="tachoAtNext100Inspection" render={({ field }) => (
             <FormItem>
                 <Label htmlFor="tachoAtNext100Inspection">Tacho at Next 100hr</Label>
                 <FormControl><Input id="tachoAtNext100Inspection" type="number" {...field} /></FormControl>
@@ -118,7 +120,9 @@ export function AircraftForm({ aircraftData, tenantId, onClose }: AircraftFormPr
             </FormItem>
         )} />
         <div className="flex justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
           <Button type="submit">Save Aircraft</Button>
         </div>
       </form>
