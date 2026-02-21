@@ -1,57 +1,97 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, doc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import type { Aircraft } from '@/types/aircraft';
+import { AircraftTable } from './aircraft-table';
+import { AircraftForm } from './aircraft-form';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AircraftTable } from './aircraft-table';
-import { AircraftForm } from './aircraft-form';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import type { AircraftInspectionWarningSettings } from '@/types/inspection';
-
-export type { Aircraft, AircraftComponent } from '@/types/aircraft';
-import type { Aircraft } from '@/types/aircraft';
-
+import { usePermissions } from '@/hooks/use-permissions';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AssetsPage() {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingAircraft, setEditingAircraft] = useState<Aircraft | null>(null);
   const firestore = useFirestore();
   const tenantId = 'safeviate';
+  const { toast } = useToast();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('assets-create');
+
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedAircraft, setSelectedAircraft] = useState<Aircraft | null>(null);
+  const [deletingAircraft, setDeletingAircraft] = useState<Aircraft | null>(null);
+
+  const aircraftsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
+    [firestore, tenantId]
+  );
+  const { data: aircrafts, isLoading: isLoadingAircrafts, error: aircraftsError } = useCollection<Aircraft>(aircraftsQuery);
+
+  const inspectionSettingsRef = useMemoFirebase(
+    () => (firestore ? doc(firestore, `tenants/${tenantId}/settings`, 'inspection-warnings') : null),
+    [firestore, tenantId]
+  );
+  
+  const { data: inspectionSettings, isLoading: isLoadingSettings } = useDoc<AircraftInspectionWarningSettings>(inspectionSettingsRef);
+  const isLoading = isLoadingAircrafts || isLoadingSettings;
+  const error = aircraftsError;
 
   const handleEdit = (aircraft: Aircraft) => {
-    setEditingAircraft(aircraft);
+    setSelectedAircraft(aircraft);
     setIsDialogOpen(true);
   };
-
+  
   const handleAdd = () => {
-    setEditingAircraft(null);
+    setSelectedAircraft(null);
     setIsDialogOpen(true);
   };
 
-  const onDialogClose = () => {
-      setIsDialogOpen(false);
-      setEditingAircraft(null);
-  }
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setSelectedAircraft(null); // This is crucial
+  };
 
-  const aircraftQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
-    [firestore, tenantId]
-  );
+  const handleDeleteRequest = (aircraft: Aircraft) => {
+    setDeletingAircraft(aircraft);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!firestore || !deletingAircraft) return;
+    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, deletingAircraft.id);
+    deleteDocumentNonBlocking(aircraftRef);
+    toast({ title: 'Aircraft Deleted', description: `${deletingAircraft.tailNumber} is being deleted.` });
+    setDeletingAircraft(null);
+  };
   
-  const inspectionSettingsRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, `tenants/${tenantId}/settings/inspection-warnings`) : null),
-    [firestore, tenantId]
-  );
-  const { data: inspectionSettings, isLoading: isLoadingSettings } = useDoc<AircraftInspectionWarningSettings>(inspectionSettingsRef);
+  const handleOpenChange = (open: boolean) => {
+      if (!open) {
+          handleCloseDialog();
+      } else {
+          setIsDialogOpen(true);
+      }
+  };
 
-  const { data: aircrafts, isLoading: isLoadingAircrafts, error } = useCollection<Aircraft>(aircraftQuery);
-
-  const isLoading = isLoadingAircrafts || isLoadingSettings;
-  
   return (
     <div className="flex flex-col gap-6 h-full">
       <div className="flex justify-between items-center">
@@ -59,57 +99,66 @@ export default function AssetsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Assets</h1>
           <p className="text-muted-foreground">Manage all aircraft in your fleet.</p>
         </div>
-        <Button onClick={handleAdd}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Aircraft
-        </Button>
+        {canCreate && (
+          <Button onClick={handleAdd}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Aircraft
+          </Button>
+        )}
       </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>{selectedAircraft ? 'Edit Aircraft' : 'Add Aircraft'}</DialogTitle>
+                  <DialogDescription>
+                      {selectedAircraft ? `Update details for ${selectedAircraft.tailNumber}.` : 'Enter the details for the new aircraft.'}
+                  </DialogDescription>
+              </DialogHeader>
+              {isDialogOpen && (
+                <AircraftForm
+                    onClose={handleCloseDialog}
+                    existingAircraft={selectedAircraft}
+                />
+              )}
+          </DialogContent>
+      </Dialog>
+      
+       <AlertDialog open={!!deletingAircraft} onOpenChange={(open) => !open && setDeletingAircraft(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the aircraft {deletingAircraft?.tailNumber}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Card>
         <CardContent className="p-0">
           {isLoading && (
-            <div className="p-6">
-              <Skeleton className="h-40 w-full" />
+            <div className="p-4 space-y-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
             </div>
           )}
-          {!isLoading && error && (
-            <div className="p-6 text-center text-destructive">
-              Error loading aircraft: {error.message}
-            </div>
-          )}
+          {error && <p className="p-4 text-center text-destructive">{error.message}</p>}
           {!isLoading && !error && (
-            <AircraftTable 
-              aircrafts={aircrafts || []} 
-              inspectionSettings={inspectionSettings}
-              tenantId={tenantId}
+            <AircraftTable
+              data={aircrafts || []}
               onEdit={handleEdit}
-              onRowClick={() => {}}
+              onDelete={handleDeleteRequest}
+              inspectionSettings={inspectionSettings || undefined}
             />
           )}
         </CardContent>
       </Card>
-      
-      <Dialog open={isDialogOpen} onOpenChange={onDialogClose}>
-          <DialogContent className="max-w-4xl">
-              {isDialogOpen && (
-                <>
-                    <DialogHeader>
-                        <DialogTitle>{editingAircraft ? 'Edit Aircraft' : 'Add New Aircraft'}</DialogTitle>
-                        <DialogDescription>
-                            {editingAircraft ? `Update details for ${editingAircraft.tailNumber}.` : 'Enter the details for the new aircraft.'}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
-                        <AircraftForm 
-                            existingAircraft={editingAircraft} 
-                            tenantId={tenantId} 
-                            onClose={onDialogClose}
-                        />
-                    </div>
-                </>
-              )}
-          </DialogContent>
-      </Dialog>
     </div>
   );
 }
