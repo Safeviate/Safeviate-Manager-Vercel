@@ -43,11 +43,13 @@ const defaultMilestones = [
 const defaultFiftyHourWarnings: HourWarning[] = [
     { hours: 10, color: '#facc15' },
     { hours: 5, color: '#f97316' },
+    { hours: 2, color: '#ef4444' },
 ];
 
 const defaultHundredHourWarnings: HourWarning[] = [
     { hours: 20, color: '#facc15' },
     { hours: 10, color: '#f97316' },
+    { hours: 5, color: '#ef4444' },
 ];
 
 export default function DocumentDatesPage() {
