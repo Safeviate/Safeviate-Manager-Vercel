@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -9,22 +8,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { Aircraft } from '@/types/aircraft';
+import type { Aircraft } from './page';
 import { AircraftActions } from './aircraft-actions';
 
 interface AircraftTableProps {
   data: Aircraft[];
+  tenantId: string;
 }
 
-export function AircraftTable({ data }: AircraftTableProps) {
-  if (data.length === 0) {
-    return (
-        <div className="text-center h-24 flex items-center justify-center text-muted-foreground">
-            No aircraft have been created yet.
-        </div>
-    );
-  }
-
+export function AircraftTable({ data, tenantId }: AircraftTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -33,7 +25,6 @@ export function AircraftTable({ data }: AircraftTableProps) {
           <TableHead>Make</TableHead>
           <TableHead>Model</TableHead>
           <TableHead>Current Hobbs</TableHead>
-          <TableHead>Current Tacho</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
@@ -44,9 +35,8 @@ export function AircraftTable({ data }: AircraftTableProps) {
             <TableCell>{aircraft.make}</TableCell>
             <TableCell>{aircraft.model}</TableCell>
             <TableCell>{aircraft.currentHobbs || 0}</TableCell>
-            <TableCell>{aircraft.currentTacho || 0}</TableCell>
             <TableCell className="text-right">
-              <AircraftActions aircraft={aircraft} />
+              <AircraftActions tenantId={tenantId} aircraft={aircraft} />
             </TableCell>
           </TableRow>
         ))}
