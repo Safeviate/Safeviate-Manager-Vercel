@@ -177,8 +177,10 @@ export const updateBooking = async ({
             const componentsSnapshot = await getDocs(componentsRef);
             componentsSnapshot.forEach(componentDoc => {
                 const componentData = componentDoc.data();
-                const newTsn = (componentData.tsn || 0) + hoursToAdd;
-                const newTso = (componentData.tso || 0) + hoursToAdd;
+                const currentTsn = typeof componentData.tsn === 'number' ? componentData.tsn : 0;
+                const currentTso = typeof componentData.tso === 'number' ? componentData.tso : 0;
+                const newTsn = currentTsn + hoursToAdd;
+                const newTso = currentTso + hoursToAdd;
                 batch.update(componentDoc.ref, { tsn: newTsn, tso: newTso });
             });
         }
