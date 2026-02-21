@@ -1,70 +1,48 @@
-
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { collection, query, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { AircraftForm } from './aircraft-form';
 import { Card, CardContent } from '@/components/ui/card';
-import type { Aircraft } from '@/types/aircraft';
-import type { Role } from '../../admin/roles/page';
-import type { Department } from '../../admin/department/page';
 import { AircraftTable } from './aircraft-table';
-import { usePermissions } from '@/hooks/use-permissions';
+import { AircraftForm } from './aircraft-form';
+import type { Aircraft } from '@/types/aircraft';
 import type { AircraftInspectionWarningSettings } from '@/types/inspection';
+
 
 export default function AircraftPage() {
   const firestore = useFirestore();
-  const { hasPermission } = usePermissions();
-  const tenantId = 'safeviate'; // Hardcoded for now
-  const canCreate = hasPermission('assets-create');
+  const tenantId = 'safeviate';
 
-  const aircraftQuery = useMemoFirebase(
-    () =>
-      firestore
-        ? query(collection(firestore, 'tenants', tenantId, 'aircrafts'))
-        : null,
-    [firestore, tenantId]
-  );
-
-  const rolesQuery = useMemoFirebase(
-    () =>
-      firestore
-        ? query(collection(firestore, 'tenants', tenantId, 'roles'))
-        : null,
-    [firestore, tenantId]
-  );
-
-  const departmentsQuery = useMemoFirebase(
-    () =>
-      firestore
-        ? query(collection(firestore, 'tenants', tenantId, 'departments'))
-        : null,
+  const aircraftsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
     [firestore, tenantId]
   );
   
   const inspectionSettingsRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'inspection-warnings') : null),
+    () => (firestore ? doc(firestore, `tenants/${tenantId}/settings`, 'inspection-warnings') : null),
     [firestore, tenantId]
   );
 
-  const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
-  const { data: roles, isLoading: isLoadingRoles, error: rolesError } = useCollection<Role>(rolesQuery);
-  const { data: departments, isLoading: isLoadingDepts, error: deptsError } = useCollection<Department>(departmentsQuery);
+  const { data: aircrafts, isLoading, error } = useCollection<Aircraft>(aircraftsQuery);
   const { data: inspectionSettings, isLoading: isLoadingSettings } = useDoc<AircraftInspectionWarningSettings>(inspectionSettingsRef);
 
-  const rolesMap = useMemo(() => {
-    if (!roles) return new Map<string, string>();
-    return new Map(roles.map(role => [role.id, role.name]));
-  }, [roles]);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedAircraft, setSelectedAircraft] = useState<Aircraft | null>(null);
 
-  const departmentsMap = useMemo(() => {
-    if (!departments) return new Map<string, string>();
-    return new Map(departments.map(dept => [dept.id, dept.name]));
-  }, [departments]);
+  const handleEdit = (aircraft: Aircraft) => {
+    setSelectedAircraft(aircraft);
+    setIsFormOpen(true);
+  };
 
-  const isLoading = isLoadingAircraft || isLoadingRoles || isLoadingDepts || isLoadingSettings;
-  const error = aircraftError || rolesError || deptsError;
+  const handleAddNew = () => {
+    setSelectedAircraft(null);
+    setIsFormOpen(true);
+  };
+
+  if (isFormOpen) {
+    return <AircraftForm existingAircraft={selectedAircraft} onCancel={() => setIsFormOpen(false)} />;
+  }
 
   return (
     <div className="flex flex-col gap-6 h-full">
@@ -73,25 +51,20 @@ export default function AircraftPage() {
           <h1 className="text-3xl font-bold tracking-tight">Aircraft Fleet</h1>
           <p className="text-muted-foreground">Manage all aircraft in your fleet.</p>
         </div>
-        {canCreate && (
-            <AircraftForm 
-                tenantId={tenantId}
-            />
-        )}
       </div>
-
       <Card>
         <CardContent className="p-0">
-          {isLoading && (
-            <div className="text-center p-8">Loading aircraft...</div>
-          )}
-          {!isLoading && !error && (
+          {isLoading || isLoadingSettings ? (
+            <div className="text-center p-4">Loading aircraft...</div>
+          ) : error ? (
+            <div className="text-center p-4 text-destructive">
+              Error: {error.message}
+            </div>
+          ) : (
             <AircraftTable 
-              data={aircraft || []} 
-              rolesMap={rolesMap} 
-              departmentsMap={departmentsMap} 
-              tenantId={tenantId}
-              inspectionWarningSettings={inspectionSettings}
+              data={aircrafts || []} 
+              onEdit={handleEdit} 
+              inspectionSettings={inspectionSettings}
             />
           )}
         </CardContent>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -9,40 +8,46 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import type { Aircraft } from '@/types/aircraft';
 import { AircraftActions } from './aircraft-actions';
+import { Badge } from '@/components/ui/badge';
 import type { AircraftInspectionWarningSettings, HourWarning } from '@/types/inspection';
+import { cn } from '@/lib/utils';
 
 interface AircraftTableProps {
   data: Aircraft[];
-  rolesMap: Map<string, string>;
-  departmentsMap: Map<string, string>;
-  tenantId: string;
-  inspectionWarningSettings: AircraftInspectionWarningSettings | null;
+  onEdit: (aircraft: Aircraft) => void;
+  inspectionSettings: AircraftInspectionWarningSettings | null;
 }
 
-const getInspectionColor = (currentTacho: number, nextTacho: number, warnings: HourWarning[]): string | undefined => {
-    if (!currentTacho || !nextTacho || !warnings) return undefined;
-    const hoursRemaining = nextTacho - currentTacho;
-    if (hoursRemaining < 0) return '#ef4444'; // default red for overdue
+const getTachoWarningStyle = (
+  currentTacho: number | undefined,
+  nextInspectionTacho: number | undefined,
+  warnings: HourWarning[] | undefined
+) => {
+  if (currentTacho === undefined || nextInspectionTacho === undefined || !warnings) {
+    return {};
+  }
 
-    const sortedWarnings = [...warnings].sort((a, b) => a.hours - b.hours);
-    
-    for (const warning of sortedWarnings) {
-        if (hoursRemaining <= warning.hours) {
-            return warning.color;
-        }
-    }
-    return undefined;
+  const hoursRemaining = nextInspectionTacho - currentTacho;
+
+  const applicableWarning = warnings
+    .filter(w => hoursRemaining <= w.hours)
+    .sort((a, b) => a.hours - b.hours)[0];
+
+  if (applicableWarning) {
+    return { color: applicableWarning.color };
+  }
+
+  return {};
 };
 
 
-export function AircraftTable({ data, rolesMap, departmentsMap, tenantId, inspectionWarningSettings }: AircraftTableProps) {
+export function AircraftTable({ data, onEdit, inspectionSettings }: AircraftTableProps) {
   if (data.length === 0) {
     return (
         <div className="text-center h-24 flex items-center justify-center text-muted-foreground">
-            No aircraft found. Add one to get started.
+            No aircraft found.
         </div>
     );
   }
@@ -52,8 +57,8 @@ export function AircraftTable({ data, rolesMap, departmentsMap, tenantId, inspec
       <TableHeader>
         <TableRow>
           <TableHead>Tail Number</TableHead>
+          <TableHead>Type</TableHead>
           <TableHead>Model</TableHead>
-          <TableHead>Current Hobbs</TableHead>
           <TableHead>Current Tacho</TableHead>
           <TableHead>Next 50hr Insp.</TableHead>
           <TableHead>Next 100hr Insp.</TableHead>
@@ -62,22 +67,22 @@ export function AircraftTable({ data, rolesMap, departmentsMap, tenantId, inspec
       </TableHeader>
       <TableBody>
         {data.map((aircraft) => {
-          const fiftyHourColor = getInspectionColor(aircraft.currentTacho || 0, aircraft.tachoAtNext50Inspection || 0, inspectionWarningSettings?.fiftyHourWarnings || []);
-          const hundredHourColor = getInspectionColor(aircraft.currentTacho || 0, aircraft.tachoAtNext100Inspection || 0, inspectionWarningSettings?.oneHundredHourWarnings || []);
+            const fiftyHourStyle = getTachoWarningStyle(aircraft.currentTacho, aircraft.tachoAtNext50Inspection, inspectionSettings?.fiftyHourWarnings);
+            const hundredHourStyle = getTachoWarningStyle(aircraft.currentTacho, aircraft.tachoAtNext100Inspection, inspectionSettings?.oneHundredHourWarnings);
 
-          return (
-            <TableRow key={aircraft.id}>
-              <TableCell className="font-medium">{aircraft.tailNumber}</TableCell>
-              <TableCell>{aircraft.model}</TableCell>
-              <TableCell>{aircraft.currentHobbs?.toFixed(1)}</TableCell>
-              <TableCell>{aircraft.currentTacho?.toFixed(1)}</TableCell>
-              <TableCell style={{ color: fiftyHourColor }}>{aircraft.tachoAtNext50Inspection?.toFixed(1)}</TableCell>
-              <TableCell style={{ color: hundredHourColor }}>{aircraft.tachoAtNext100Inspection?.toFixed(1)}</TableCell>
-              <TableCell className="text-right">
-                <AircraftActions tenantId={tenantId} aircraft={aircraft} />
-              </TableCell>
-            </TableRow>
-          )
+            return (
+              <TableRow key={aircraft.id}>
+                <TableCell className="font-medium">{aircraft.tailNumber}</TableCell>
+                <TableCell>{aircraft.type}</TableCell>
+                <TableCell>{aircraft.model}</TableCell>
+                <TableCell>{aircraft.currentTacho?.toFixed(1) || 'N/A'}</TableCell>
+                <TableCell style={fiftyHourStyle} className="font-medium">{aircraft.tachoAtNext50Inspection?.toFixed(1) || 'N/A'}</TableCell>
+                <TableCell style={hundredHourStyle} className="font-medium">{aircraft.tachoAtNext100Inspection?.toFixed(1) || 'N/A'}</TableCell>
+                <TableCell className="text-right">
+                  <AircraftActions aircraft={aircraft} onEdit={() => onEdit(aircraft)} />
+                </TableCell>
+              </TableRow>
+            )
         })}
       </TableBody>
     </Table>
