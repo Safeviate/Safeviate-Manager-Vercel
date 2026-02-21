@@ -1,24 +1,11 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, query, doc } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import type { Aircraft, AircraftComponent } from '@/types/aircraft';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   Dialog,
   DialogContent,
@@ -26,12 +13,28 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
 import { Label } from '@/components/ui/label';
+import { MoreHorizontal, Pencil, PlusCircle, Trash2 } from 'lucide-react';
+import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc } from '@/firebase';
+import { doc, collection, query } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+  } from "@/components/ui/dropdown-menu"
+import type { Aircraft, AircraftComponent } from '@/types/aircraft';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 
 const componentFormSchema = z.object({
@@ -50,89 +53,83 @@ const componentFormSchema = z.object({
 type ComponentFormValues = z.infer<typeof componentFormSchema>;
 
 interface ComponentFormProps {
-  aircraftId: string;
-  existingComponent?: AircraftComponent | null;
-  onFinished: () => void;
+    aircraftId: string;
+    existingComponent?: AircraftComponent | null;
+    onFinished: () => void;
 }
 
 function ComponentForm({ aircraftId, existingComponent, onFinished }: ComponentFormProps) {
-  const { toast } = useToast();
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const tenantId = 'safeviate';
 
   const form = useForm<ComponentFormValues>({
     resolver: zodResolver(componentFormSchema),
-    defaultValues: {
-      name: existingComponent?.name || '',
-      partNumber: existingComponent?.partNumber || '',
-      serialNumber: existingComponent?.serialNumber || '',
-      manufacturer: existingComponent?.manufacturer || '',
-      installDate: existingComponent?.installDate || '',
-      installHours: existingComponent?.installHours || 0,
-      maxHours: existingComponent?.maxHours || 0,
-      notes: existingComponent?.notes || '',
-      tsn: existingComponent?.tsn || 0,
-      tso: existingComponent?.tso || 0,
-    }
+    defaultValues: existingComponent || {
+      name: '',
+      partNumber: '',
+      serialNumber: '',
+      manufacturer: '',
+      installDate: '',
+      installHours: 0,
+      maxHours: 0,
+      notes: '',
+      tsn: 0,
+      tso: 0,
+    },
   });
 
   const onSubmit = async (values: ComponentFormValues) => {
     if (!firestore) return;
-
-    const componentsRef = collection(firestore, `tenants/safeviate/aircrafts/${aircraftId}/components`);
-    const dataToSave = {
-        ...values,
-        installHours: Number(values.installHours) || 0,
-        maxHours: Number(values.maxHours) || 0,
-        tsn: Number(values.tsn) || 0,
-        tso: Number(values.tso) || 0,
-    };
-
+    const componentsCollection = collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`);
+    
     if (existingComponent) {
-        const componentRef = doc(componentsRef, existingComponent.id);
-        updateDocumentNonBlocking(componentRef, dataToSave);
-        toast({ title: 'Component Updated' });
+        const componentRef = doc(componentsCollection, existingComponent.id);
+        await updateDocumentNonBlocking(componentRef, values);
+        toast({ title: "Component Updated", description: "The component has been updated." });
     } else {
-        addDocumentNonBlocking(componentsRef, dataToSave);
-        toast({ title: 'Component Added' });
+        await addDocumentNonBlocking(componentsCollection, values);
+        toast({ title: "Component Added", description: "The new component has been added to the aircraft." });
     }
-
     onFinished();
-  };
+  }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel>Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>} />
-          <FormField control={form.control} name="partNumber" render={({ field }) => <FormItem><FormLabel>Part Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>} />
-          <FormField control={form.control} name="serialNumber" render={({ field }) => <FormItem><FormLabel>Serial Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>} />
-          <FormField control={form.control} name="manufacturer" render={({ field }) => <FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>} />
-          <FormField control={form.control} name="installDate" render={({ field }) => <FormItem><FormLabel>Install Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} /></FormControl><FormMessage /></FormItem>} />
-          <FormField control={form.control} name="installHours" render={({ field }) => <FormItem><FormLabel>Install Hours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>} />
-          <FormField control={form.control} name="tsn" render={({ field }) => <FormItem><FormLabel>TSN</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>} />
-          <FormField control={form.control} name="tso" render={({ field }) => <FormItem><FormLabel>TSO</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>} />
-          <FormField control={form.control} name="maxHours" render={({ field }) => <FormItem><FormLabel>Max Hours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>} />
-        </div>
-         <FormField control={form.control} name="notes" render={({ field }) => <FormItem><FormLabel>Notes</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>} />
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onFinished}>Cancel</Button>
-          <Button type="submit">Save Component</Button>
-        </DialogFooter>
-      </form>
-    </Form>
-  );
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel>Component Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField control={form.control} name="partNumber" render={({ field }) => <FormItem><FormLabel>Part Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>} />
+            <FormField control={form.control} name="serialNumber" render={({ field }) => <FormItem><FormLabel>Serial Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>} />
+            <FormField control={form.control} name="manufacturer" render={({ field }) => <FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>} />
+            <FormField control={form.control} name="installDate" render={({ field }) => <FormItem><FormLabel>Install Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} /></FormControl><FormMessage /></FormItem>} />
+            <FormField control={form.control} name="installHours" render={({ field }) => <FormItem><FormLabel>Install Hours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>} />
+            <FormField control={form.control} name="tsn" render={({ field }) => <FormItem><FormLabel>Time Since New (TSN)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>} />
+            <FormField control={form.control} name="tso" render={({ field }) => <FormItem><FormLabel>Time Since Overhaul (TSO)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>} />
+            <FormField control={form.control} name="maxHours" render={({ field }) => <FormItem><FormLabel>Max Hours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>} />
+          </div>
+          <FormField control={form.control} name="notes" render={({ field }) => <FormItem><Label>Notes</Label><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>} />
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onFinished}>Cancel</Button>
+            <Button type="submit">Save Component</Button>
+          </DialogFooter>
+        </form>
+      </Form>
+  )
 }
 
 interface AircraftComponentsProps {
-  aircraftId: string;
+    aircraftId: string;
 }
 
 export function AircraftComponents({ aircraftId }: AircraftComponentsProps) {
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingComponent, setEditingComponent] = useState<AircraftComponent | null>(null);
   const firestore = useFirestore();
   const { toast } = useToast();
+  const tenantId = 'safeviate';
 
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingComponent, setEditingComponent] = useState<AircraftComponent | null>(null);
+  
   const aircraftRef = useMemoFirebase(() => (firestore ? doc(firestore, `tenants/safeviate/aircrafts`, aircraftId) : null), [firestore, aircraftId]);
   const { data: aircraft, isLoading: isLoadingAircraft } = useDoc<Aircraft>(aircraftRef);
 
@@ -140,54 +137,48 @@ export function AircraftComponents({ aircraftId }: AircraftComponentsProps) {
     firestore && aircraftId ? query(collection(firestore, `tenants/safeviate/aircrafts/${aircraftId}/components`)) : null
   ), [firestore, aircraftId]);
 
-  const { data: components, isLoading, error } = useCollection<AircraftComponent>(componentsQuery);
+  const { data: components, isLoading: isLoadingComponents, error } = useCollection<AircraftComponent>(componentsQuery);
 
   const handleEdit = (component: AircraftComponent) => {
     setEditingComponent(component);
     setIsFormOpen(true);
   };
-
+  
   const handleAddNew = () => {
     setEditingComponent(null);
     setIsFormOpen(true);
   };
 
   const handleDelete = (componentId: string) => {
-    if (!firestore || !aircraftId) return;
-    const componentRef = doc(firestore, `tenants/safeviate/aircrafts/${aircraftId}/components`, componentId);
+    if (!firestore) return;
+    const componentRef = doc(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`, componentId);
     deleteDocumentNonBlocking(componentRef);
     toast({ title: 'Component Deleted' });
   };
-
-  if (isLoading || isLoadingAircraft) {
-    return <Skeleton className="h-64 w-full" />;
-  }
-
-  if (error) {
-    return <p className="text-destructive">Error loading components: {error.message}</p>;
-  }
   
-  if (!aircraft) {
-    return <p className="text-muted-foreground">Aircraft details not found.</p>;
-  }
+  const isLoading = isLoadingComponents || isLoadingAircraft;
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
+    <Card>
+      <CardHeader>
+        <div className="flex justify-between items-center">
             <div>
-              <CardTitle>Tracked Components</CardTitle>
-              <CardDescription>A list of all time-lifed components for {aircraft?.tailNumber}.</CardDescription>
+                <CardTitle>Tracked Components</CardTitle>
+                <CardDescription>A list of all life-limited and time-controlled components for this aircraft.</CardDescription>
             </div>
-            <Button onClick={handleAddNew}><PlusCircle className="mr-2 h-4 w-4" /> Add Component</Button>
-          </div>
-        </CardHeader>
-        <CardContent>
+            <Button onClick={handleAddNew}><PlusCircle className="mr-2" />Add Component</Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <Skeleton className="h-48 w-full" />
+        ) : error ? (
+          <p className="text-destructive text-center">Error: {error.message}</p>
+        ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
+                <TableHead>Component</TableHead>
                 <TableHead>Part No.</TableHead>
                 <TableHead>Serial No.</TableHead>
                 <TableHead>TSN</TableHead>
@@ -199,60 +190,66 @@ export function AircraftComponents({ aircraftId }: AircraftComponentsProps) {
             </TableHeader>
             <TableBody>
               {components && components.length > 0 ? (
-                components.map((component) => {
-                  const maxHours = component.maxHours || 0;
-                  const tso = component.tso || 0;
-                  const hoursRemaining = maxHours > 0 ? maxHours - tso : Infinity;
-                  return (
-                    <TableRow key={component.id}>
-                      <TableCell>{component.name}</TableCell>
-                      <TableCell>{component.partNumber}</TableCell>
-                      <TableCell>{component.serialNumber}</TableCell>
-                      <TableCell>{component.tsn?.toFixed(1)}</TableCell>
-                      <TableCell>{component.tso?.toFixed(1)}</TableCell>
-                      <TableCell>{maxHours > 0 ? maxHours.toFixed(1) : 'On Condition'}</TableCell>
-                      <TableCell>{isFinite(hoursRemaining) ? hoursRemaining.toFixed(1) : 'N/A'}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(component)}>Edit</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDelete(component.id)} className="text-destructive">Delete</DropdownMenuItem>
-                          </DropdownMenuContent>
+                components.map((component) => (
+                  <TableRow key={component.id}>
+                    <TableCell className="font-medium">{component.name}</TableCell>
+                    <TableCell>{component.partNumber}</TableCell>
+                    <TableCell>{component.serialNumber}</TableCell>
+                    <TableCell>{component.tsn?.toFixed(1) || 'N/A'}</TableCell>
+                    <TableCell>{component.tso?.toFixed(1) || 'N/A'}</TableCell>
+                    <TableCell>{component.maxHours || 'N/A'}</TableCell>
+                    <TableCell>
+                      {component.maxHours && component.tsn
+                        ? (component.maxHours - component.tsn).toFixed(1)
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                       <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">Open menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onSelect={() => handleEdit(component)}>
+                                    <Pencil className="mr-2 h-4 w-4" /> Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => handleDelete(component.id)} className="text-destructive focus:text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
                         </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                    </TableCell>
+                  </TableRow>
+                ))
               ) : (
-                <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center">No components found.</TableCell>
-                </TableRow>
+                 <TableRow>
+                    <TableCell colSpan={8} className="text-center h-24">
+                        No components added yet.
+                    </TableCell>
+                 </TableRow>
               )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        )}
+      </CardContent>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{editingComponent ? 'Edit Component' : 'Add New Component'}</DialogTitle>
-            <DialogDescription>
-              Fill in the details for the aircraft component.
-            </DialogDescription>
-          </DialogHeader>
-          <ComponentForm
-            aircraftId={aircraftId}
-            existingComponent={editingComponent}
-            onFinished={() => setIsFormOpen(false)}
-          />
-        </DialogContent>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>{editingComponent ? 'Edit Component' : 'Add New Component'}</DialogTitle>
+                  <DialogDescription>
+                      {editingComponent ? `Editing ${editingComponent.name}` : `Adding a new component to ${aircraft?.tailNumber}`}
+                  </DialogDescription>
+              </DialogHeader>
+              <ComponentForm 
+                aircraftId={aircraftId}
+                existingComponent={editingComponent}
+                onFinished={() => setIsFormOpen(false)}
+              />
+          </DialogContent>
       </Dialog>
-    </>
+    </Card>
   );
 }
-
-    
