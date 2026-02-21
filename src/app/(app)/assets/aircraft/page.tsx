@@ -2,92 +2,80 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, query, doc } from 'firebase/firestore';
-import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { AircraftForm } from './aircraft-form';
-import { AircraftTable } from './aircraft-table';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Aircraft } from '@/types/aircraft';
-import type { AircraftInspectionWarningSettings } from '@/types/inspection';
+import { AircraftTable } from './aircraft-table';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-} from '@/components/ui/dialog';
+import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog';
+import { usePermissions } from '@/hooks/use-permissions';
+import type { AircraftInspectionWarningSettings } from '@/types/inspection';
+import { doc } from 'firebase/firestore';
+
 
 export default function AircraftPage() {
   const firestore = useFirestore();
-  const tenantId = 'safeviate'; // Hardcoded for now
+  const { hasPermission } = usePermissions();
+  const tenantId = 'safeviate';
+  const canCreate = hasPermission('assets-create');
+
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const aircraftsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
+    [firestore, tenantId]
+  );
   
-  // State to control the visibility of the new aircraft form dialog
-  const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
-  const [editingAircraft, setEditingAircraft] = useState<Aircraft | null>(null);
-
-
-  // Fetch inspection warning settings
   const inspectionSettingsRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'inspection-warnings') : null),
     [firestore, tenantId]
   );
-  const { data: inspectionSettings } = useDoc<AircraftInspectionWarningSettings>(inspectionSettingsRef);
 
-  // Fetch aircraft data
-  const aircraftQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircraft`)) : null),
-    [firestore, tenantId]
-  );
-  const { data: aircraft, isLoading, error } = useCollection<Aircraft>(aircraftQuery);
-  
-  const handleEdit = (aircraftToEdit: Aircraft) => {
-    setEditingAircraft(aircraftToEdit);
-  };
+  const { data: aircrafts, isLoading: isLoadingAircrafts, error: aircraftsError } = useCollection<Aircraft>(aircraftsQuery);
+  const { data: inspectionSettings, isLoading: isLoadingSettings, error: settingsError } = useDoc<AircraftInspectionWarningSettings>(inspectionSettingsRef);
 
-  const handleCancelEdit = () => {
-    setEditingAircraft(null);
-  };
-
+  const isLoading = isLoadingAircrafts || isLoadingSettings;
+  const error = aircraftsError || settingsError;
 
   return (
     <div className="flex flex-col gap-6 h-full">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Aircraft Fleet</h1>
-          <p className="text-muted-foreground">
-            A list of all aircraft in your organization.
-          </p>
+          <p className="text-muted-foreground">Manage all aircraft in your organization.</p>
         </div>
-        <Button onClick={() => setIsCreateFormOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Aircraft
-        </Button>
+        {canCreate && (
+          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Aircraft
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl">
+              <AircraftForm 
+                onFormSubmit={() => setIsFormOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
-
-      {/* Dialog for Creating a new aircraft */}
-      <Dialog open={isCreateFormOpen} onOpenChange={setIsCreateFormOpen}>
-        <DialogContent className="p-0 border-none sm:max-w-4xl">
-            <AircraftForm onCancel={() => setIsCreateFormOpen(false)} />
-        </DialogContent>
-      </Dialog>
-      
-      {/* Dialog for Editing an existing aircraft */}
-       <Dialog open={!!editingAircraft} onOpenChange={(open) => !open && setEditingAircraft(null)}>
-        <DialogContent className="p-0 border-none sm:max-w-4xl">
-            <AircraftForm onCancel={handleCancelEdit} existingAircraft={editingAircraft} />
-        </DialogContent>
-      </Dialog>
 
       <Card>
         <CardContent className="p-0">
           {isLoading && (
-            <div className="text-center p-4">Loading aircraft...</div>
+            <div className="text-center p-8">Loading aircraft...</div>
           )}
-          {!isLoading && !error && aircraft && (
-            <AircraftTable
-              data={aircraft}
-              tenantId={tenantId}
-              onEdit={handleEdit}
-              inspectionSettings={inspectionSettings}
+          {!isLoading && error && (
+            <div className="text-center p-4 text-destructive">Error: {error.message}</div>
+          )}
+          {!isLoading && !error && (
+            <AircraftTable 
+                data={aircrafts || []} 
+                tenantId={tenantId}
+                inspectionSettings={inspectionSettings}
             />
           )}
         </CardContent>
