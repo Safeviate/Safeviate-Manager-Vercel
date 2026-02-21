@@ -13,14 +13,16 @@ import { AircraftActions } from './aircraft-actions';
 
 interface AircraftTableProps {
   data: Aircraft[];
+  onEdit: (aircraft: Aircraft) => void;
+  tenantId: string;
 }
 
-export function AircraftTable({ data }: AircraftTableProps) {
+export function AircraftTable({ data, onEdit, tenantId }: AircraftTableProps) {
   if (data.length === 0) {
     return (
-        <div className="text-center h-24 flex items-center justify-center text-muted-foreground">
-            No aircraft have been added yet.
-        </div>
+      <div className="text-center p-8 text-muted-foreground">
+        No aircraft found. Click &quot;Create Aircraft&quot; to add one.
+      </div>
     );
   }
 
@@ -47,7 +49,7 @@ export function AircraftTable({ data }: AircraftTableProps) {
             <TableCell>{aircraft.currentHobbs?.toFixed(1) || 'N/A'}</TableCell>
             <TableCell>{aircraft.currentTacho?.toFixed(1) || 'N/A'}</TableCell>
             <TableCell className="text-right">
-              <AircraftActions aircraft={aircraft} />
+              <AircraftActions onEdit={() => onEdit(aircraft)} aircraftId={aircraft.id} tenantId={tenantId} />
             </TableCell>
           </TableRow>
         ))}
