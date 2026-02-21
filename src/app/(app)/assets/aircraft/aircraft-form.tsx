@@ -1,156 +1,140 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { doc, collection } from 'firebase/firestore';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { useToast } from '@/hooks/use-toast';
+import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '@/types/aircraft';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
-
-const formSchema = z.object({
-  make: z.string().min(1, 'Make is required'),
-  model: z.string().min(1, 'Model is required'),
-  tailNumber: z.string().min(1, 'Tail Number is required'),
-  initialHobbs: z.coerce.number().optional(),
-  currentHobbs: z.coerce.number().optional(),
-  initialTacho: z.coerce.number().optional(),
-  currentTacho: z.coerce.number().optional(),
-});
-
-type AircraftFormValues = z.infer<typeof formSchema>;
 
 interface AircraftFormProps {
-  aircraft?: Aircraft | null;
-  trigger: React.ReactNode;
   tenantId: string;
+  existingAircraft?: Aircraft | null;
+  onComplete: () => void;
 }
 
-export function AircraftForm({ aircraft, trigger, tenantId }: AircraftFormProps) {
+export function AircraftForm({ tenantId, existingAircraft, onComplete }: AircraftFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
+  
+  // Local state for all form fields
+  const [make, setMake] = useState('');
+  const [model, setModel] = useState('');
+  const [tailNumber, setTailNumber] = useState('');
+  const [initialHobbs, setInitialHobbs] = useState('');
+  const [currentHobbs, setCurrentHobbs] = useState('');
+  const [initialTacho, setInitialTacho] = useState('');
+  const [currentTacho, setCurrentTacho] = useState('');
 
-  const isEditMode = !!aircraft;
-
-  const form = useForm<AircraftFormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: isEditMode
-      ? {
-          make: aircraft.make,
-          model: aircraft.model,
-          tailNumber: aircraft.tailNumber,
-          initialHobbs: aircraft.initialHobbs,
-          currentHobbs: aircraft.currentHobbs,
-          initialTacho: aircraft.initialTacho,
-          currentTacho: aircraft.currentTacho,
-        }
-      : {
-          make: '',
-          model: '',
-          tailNumber: '',
-          initialHobbs: 0,
-          currentHobbs: 0,
-          initialTacho: 0,
-          currentTacho: 0,
-        },
-  });
-
-  // Reset form when dialog opens/closes or aircraft data changes
+  // Effect to populate form when editing
   useEffect(() => {
-    if (isOpen) {
-      form.reset(
-        isEditMode
-          ? {
-              make: aircraft.make,
-              model: aircraft.model,
-              tailNumber: aircraft.tailNumber,
-              initialHobbs: aircraft.initialHobbs || 0,
-              currentHobbs: aircraft.currentHobbs || 0,
-              initialTacho: aircraft.initialTacho || 0,
-              currentTacho: aircraft.currentTacho || 0,
-            }
-          : {
-              make: '',
-              model: '',
-              tailNumber: '',
-              initialHobbs: 0,
-              currentHobbs: 0,
-              initialTacho: 0,
-              currentTacho: 0,
-            }
-      );
+    if (existingAircraft) {
+      setMake(existingAircraft.make || '');
+      setModel(existingAircraft.model || '');
+      setTailNumber(existingAircraft.tailNumber || '');
+      setInitialHobbs(existingAircraft.initialHobbs?.toString() || '');
+      setCurrentHobbs(existingAircraft.currentHobbs?.toString() || '');
+      setInitialTacho(existingAircraft.initialTacho?.toString() || '');
+      setCurrentTacho(existingAircraft.currentTacho?.toString() || '');
     }
-  }, [isOpen, aircraft, isEditMode, form]);
+  }, [existingAircraft]);
 
-  const onSubmit = async (values: AircraftFormValues) => {
+  const handleSubmit = async () => {
     if (!firestore) {
       toast({ variant: 'destructive', title: 'Error', description: 'Database not available.' });
       return;
     }
+    
+    const aircraftData = {
+      make,
+      model,
+      tailNumber,
+      initialHobbs: parseFloat(initialHobbs) || 0,
+      currentHobbs: parseFloat(currentHobbs) || 0,
+      initialTacho: parseFloat(initialTacho) || 0,
+      currentTacho: parseFloat(currentTacho) || 0,
+    };
 
     try {
-      if (isEditMode) {
-        const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
-        await updateDocumentNonBlocking(aircraftRef, values);
-        toast({ title: 'Aircraft Updated', description: `Details for ${values.tailNumber} have been saved.` });
+      if (existingAircraft) {
+        // Update existing document
+        const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, existingAircraft.id);
+        updateDocumentNonBlocking(aircraftRef, aircraftData);
+        toast({ title: 'Aircraft Updated', description: `Details for ${tailNumber} have been updated.` });
       } else {
+        // Create new document
         const aircraftsCollection = collection(firestore, `tenants/${tenantId}/aircrafts`);
-        await addDocumentNonBlocking(aircraftsCollection, values);
-        toast({ title: 'Aircraft Created', description: `${values.tailNumber} has been added to the fleet.` });
+        await addDocumentNonBlocking(aircraftsCollection, aircraftData);
+        toast({ title: 'Aircraft Created', description: `${tailNumber} has been added to the fleet.` });
       }
-      setIsOpen(false);
+      onComplete(); // Close dialog on success
     } catch (error: any) {
-      console.error('Failed to save aircraft:', error);
-      toast({ variant: 'destructive', title: 'Save Failed', description: error.message });
+        console.error("Error saving aircraft:", error);
+        toast({ variant: 'destructive', title: 'Save Failed', description: error.message });
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit Aircraft' : 'Create New Aircraft'}</DialogTitle>
-          <DialogDescription>
-            {isEditMode ? `Editing details for ${aircraft.tailNumber}.` : 'Add a new aircraft to your fleet.'}
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField control={form.control} name="make" render={({ field }) => ( <FormItem><Label>Make</Label><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="model" render={({ field }) => ( <FormItem><Label>Model</Label><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+    <>
+      <DialogHeader>
+        <DialogTitle>{existingAircraft ? 'Edit Aircraft' : 'Create Aircraft'}</DialogTitle>
+        <DialogDescription>
+          {existingAircraft ? `Editing details for ${existingAircraft.tailNumber}.` : 'Add a new aircraft to your fleet.'}
+        </DialogDescription>
+      </DialogHeader>
+      <div className="grid gap-4 py-4">
+        <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <Label htmlFor="make">Make</Label>
+                <Input id="make" value={make} onChange={(e) => setMake(e.target.value)} />
             </div>
-            <FormField control={form.control} name="tailNumber" render={({ field }) => ( <FormItem><Label>Tail Number</Label><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField control={form.control} name="initialHobbs" render={({ field }) => ( <FormItem><Label>Initial Hobbs Hours</Label><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="currentHobbs" render={({ field }) => ( <FormItem><Label>Current Hobbs Hours</Label><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="initialTacho" render={({ field }) => ( <FormItem><Label>Initial Tacho Hours</Label><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="currentTacho" render={({ field }) => ( <FormItem><Label>Current Tacho Hours</Label><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <div className="space-y-2">
+                <Label htmlFor="model">Model</Label>
+                <Input id="model" value={model} onChange={(e) => setModel(e.target.value)} />
             </div>
-            <DialogFooter>
-              <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-              <Button type="submit">Save Aircraft</Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+        </div>
+        <div className="space-y-2">
+            <Label htmlFor="tailNumber">Tail Number</Label>
+            <Input id="tailNumber" value={tailNumber} onChange={(e) => setTailNumber(e.target.value)} />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <Label htmlFor="initialHobbs">Initial Hobbs Hours</Label>
+                <Input id="initialHobbs" type="number" value={initialHobbs} onChange={(e) => setInitialHobbs(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="currentHobbs">Current Hobbs Hours</Label>
+                <Input id="currentHobbs" type="number" value={currentHobbs} onChange={(e) => setCurrentHobbs(e.target.value)} />
+            </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <Label htmlFor="initialTacho">Initial Tacho Hours</Label>
+                <Input id="initialTacho" type="number" value={initialTacho} onChange={(e) => setInitialTacho(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="currentTacho">Current Tacho Hours</Label>
+                <Input id="currentTacho" type="number" value={currentTacho} onChange={(e) => setCurrentTacho(e.target.value)} />
+            </div>
+        </div>
+      </div>
+      <DialogFooter>
+        <DialogClose asChild>
+          <Button variant="outline">Cancel</Button>
+        </DialogClose>
+        <Button onClick={handleSubmit}>
+          {existingAircraft ? 'Save Changes' : 'Create Aircraft'}
+        </Button>
+      </DialogFooter>
+    </>
   );
 }
