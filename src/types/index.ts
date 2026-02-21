@@ -48,3 +48,4 @@ export type {
 } from './training';
 export type { Alert, AlertType, AlertStatus } from './alert';
 export type { SpiConfig, SpiConfigurations, SpiComparison, SpiUnit } from './spi';
+export type { Aircraft, AircraftComponent } from './aircraft';
