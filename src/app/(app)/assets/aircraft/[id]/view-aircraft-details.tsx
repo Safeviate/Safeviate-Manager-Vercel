@@ -1,106 +1,80 @@
 
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Aircraft } from '@/types/aircraft';
-import type { AircraftInspectionWarningSettings, HourWarning } from '@/types/inspection';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import type { Aircraft } from '@/types/aircraft';
 import { cn } from '@/lib/utils';
+import type { AircraftInspectionWarningSettings, HourWarning } from '@/types/inspection';
 
 interface ViewAircraftDetailsProps {
-    aircraft: Aircraft;
-    inspectionWarningSettings: AircraftInspectionWarningSettings | null;
+  user: Aircraft;
+  inspectionSettings: AircraftInspectionWarningSettings | null;
 }
 
-const DetailItem = ({ label, value }: { label: string; value?: string | number | null }) => (
-    <div>
+const DetailItem = ({ label, value, children }: { label: string; value?: string | null, children?: React.ReactNode }) => (
+    <div className="space-y-1">
       <p className="text-sm font-medium text-muted-foreground">{label}</p>
-      <p className="text-base">{value || 'N/A'}</p>
+      {children ? children : <p className="text-lg font-semibold">{value || 'N/A'}</p>}
     </div>
 );
 
-const getWarningBadgeStyle = (remainingHours: number, warnings: HourWarning[]): React.CSSProperties => {
-    if (!warnings || warnings.length === 0) return {};
-
-    const applicableWarning = warnings
-        .sort((a, b) => b.hours - a.hours) // Sort descending to find the highest threshold met
-        .find(w => remainingHours <= w.hours);
-
-    if (applicableWarning) {
-        return {
-            backgroundColor: applicableWarning.color,
-            color: applicableWarning.foregroundColor,
-        };
-    }
-
+const getWarningStyle = (remainingHours: number | undefined, warnings: HourWarning[] | undefined): React.CSSProperties => {
+  if (remainingHours === undefined || !warnings || warnings.length === 0) {
     return {};
+  }
+  const sortedWarnings = [...warnings].sort((a, b) => b.hours - a.hours);
+  for (const warning of sortedWarnings) {
+    if (remainingHours <= warning.hours) {
+      return { backgroundColor: warning.color, color: warning.foregroundColor };
+    }
+  }
+  return {};
 };
 
 
-export function ViewAircraftDetails({ aircraft, inspectionWarningSettings }: ViewAircraftDetailsProps) {
+export function ViewAircraftDetails({ user, inspectionSettings }: ViewAircraftDetailsProps) {
+    const tachoTill50 = user.tachoAtNext50Inspection ? user.tachoAtNext50Inspection - (user.currentTacho || 0) : undefined;
+    const tachoTill100 = user.tachoAtNext100Inspection ? user.tachoAtNext100Inspection - (user.currentTacho || 0) : undefined;
 
-  const hoursTo50hr = aircraft.tachoAtNext50Inspection ? aircraft.tachoAtNext50Inspection - (aircraft.currentTacho || 0) : null;
-  const hoursTo100hr = aircraft.tachoAtNext100Inspection ? aircraft.tachoAtNext100Inspection - (aircraft.currentTacho || 0) : null;
-  
-  const badgeStyle50hr = hoursTo50hr !== null ? getWarningBadgeStyle(hoursTo50hr, inspectionWarningSettings?.fiftyHourWarnings || []) : {};
-  const badgeStyle100hr = hoursTo100hr !== null ? getWarningBadgeStyle(hoursTo100hr, inspectionWarningSettings?.oneHundredHourWarnings || []) : {};
-
+    const fiftyHourStyle = getWarningStyle(tachoTill50, inspectionSettings?.fiftyHourWarnings);
+    const hundredHourStyle = getWarningStyle(tachoTill100, inspectionSettings?.oneHundredHourWarnings);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Aircraft Details</CardTitle>
-        <CardDescription>
-          Viewing details for {aircraft.make} {aircraft.model} - {aircraft.tailNumber}.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <DetailItem label="Make" value={aircraft.make} />
-            <DetailItem label="Model" value={aircraft.model} />
-            <DetailItem label="Tail Number" value={aircraft.tailNumber} />
-            <DetailItem label="Type" value={aircraft.type} />
-            <DetailItem label="Abbreviation" value={aircraft.abbreviation} />
-        </div>
-        <Separator />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DetailItem label="Frame Hours" value={aircraft.frameHours} />
-            <DetailItem label="Engine Hours" value={aircraft.engineHours} />
-            <DetailItem label="Initial Hobbs Hours" value={aircraft.initialHobbs} />
-            <DetailItem label="Current Hobbs Hours" value={aircraft.currentHobbs} />
-            <DetailItem label="Initial Tacho Hours" value={aircraft.initialTacho} />
-            <DetailItem label="Current Tacho Hours" value={aircraft.currentTacho} />
-        </div>
-        <Separator />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex justify-between items-start">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Tacho at Next 50hr Inspection</p>
-              <div className="flex items-center gap-2">
-                <p className="text-base">{aircraft.tachoAtNext50Inspection || 'N/A'}</p>
-                {hoursTo50hr !== null && hoursTo50hr > 0 && (
-                  <Badge style={badgeStyle50hr}>{hoursTo50hr.toFixed(1)} hrs remaining</Badge>
-                )}
-                {hoursTo50hr !== null && hoursTo50hr <= 0 && (
-                  <Badge variant="destructive">Overdue</Badge>
-                )}
-              </div>
+                <CardTitle>{user.make} {user.model}</CardTitle>
+                <CardDescription>Tail Number: {user.tailNumber}</CardDescription>
             </div>
-             <div>
-              <p className="text-sm font-medium text-muted-foreground">Tacho at Next 100hr Inspection</p>
-              <div className="flex items-center gap-2">
-                <p className="text-base">{aircraft.tachoAtNext100Inspection || 'N/A'}</p>
-                {hoursTo100hr !== null && hoursTo100hr > 0 && (
-                  <Badge style={badgeStyle100hr}>{hoursTo100hr.toFixed(1)} hrs remaining</Badge>
-                )}
-                 {hoursTo100hr !== null && hoursTo100hr <= 0 && (
-                  <Badge variant="destructive">Overdue</Badge>
-                )}
-              </div>
-            </div>
+            <Badge>{user.type}</Badge>
         </div>
+      </CardHeader>
+      <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-8">
+        <DetailItem label="Make" value={user.make} />
+        <DetailItem label="Model" value={user.model} />
+        <DetailItem label="Frame Hours" value={user.frameHours?.toString()} />
+        <DetailItem label="Engine Hours" value={user.engineHours?.toString()} />
+        <DetailItem label="Current Hobbs" value={user.currentHobbs?.toFixed(1)} />
+        <DetailItem label="Current Tacho" value={user.currentTacho?.toFixed(1)} />
+        
+        <DetailItem label="Next 50hr Insp. Due In">
+             {tachoTill50 !== undefined ? (
+                <Badge style={fiftyHourStyle} className="text-lg">{tachoTill50.toFixed(1)} hrs</Badge>
+              ) : (
+                <p className="text-lg font-semibold">N/A</p>
+              )}
+        </DetailItem>
+
+        <DetailItem label="Next 100hr Insp. Due In">
+            {tachoTill100 !== undefined ? (
+                <Badge style={hundredHourStyle} className="text-lg">{tachoTill100.toFixed(1)} hrs</Badge>
+              ) : (
+                <p className="text-lg font-semibold">N/A</p>
+              )}
+        </DetailItem>
       </CardContent>
     </Card>
   );
 }
-
