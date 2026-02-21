@@ -3,78 +3,120 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import type { Aircraft } from '@/types/aircraft';
-import { cn } from '@/lib/utils';
+import type { Aircraft, AircraftComponent } from '@/types/aircraft';
 import type { AircraftInspectionWarningSettings, HourWarning } from '@/types/inspection';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface ViewAircraftDetailsProps {
-  user: Aircraft;
+  aircraft: Aircraft | null;
   inspectionSettings: AircraftInspectionWarningSettings | null;
 }
 
-const DetailItem = ({ label, value, children }: { label: string; value?: string | null, children?: React.ReactNode }) => (
-    <div className="space-y-1">
-      <p className="text-sm font-medium text-muted-foreground">{label}</p>
-      {children ? children : <p className="text-lg font-semibold">{value || 'N/A'}</p>}
-    </div>
+function getWarningStyle(hours: number | undefined, warnings: HourWarning[] | undefined): React.CSSProperties {
+    if (hours === undefined || !warnings) {
+        return {};
+    }
+    // Sort warnings from most urgent (lowest hours) to least urgent
+    const sortedWarnings = [...warnings].sort((a, b) => a.hours - b.hours);
+
+    for (const warning of sortedWarnings) {
+        if (hours <= warning.hours) {
+            return { color: warning.color, fontWeight: 'bold' };
+        }
+    }
+    return {};
+}
+
+const DetailItem = ({ label, value, children }: { label: string; value?: string | number | null; children?: React.ReactNode }) => (
+  <div>
+    <p className="text-sm font-medium text-muted-foreground">{label}</p>
+    {children ? <div className="text-lg font-semibold">{children}</div> : <p className="text-lg font-semibold">{value ?? 'N/A'}</p>}
+  </div>
 );
 
-const getWarningStyle = (remainingHours: number | undefined, warnings: HourWarning[] | undefined): React.CSSProperties => {
-  if (remainingHours === undefined || !warnings || warnings.length === 0) {
-    return {};
-  }
-  const sortedWarnings = [...warnings].sort((a, b) => b.hours - a.hours);
-  for (const warning of sortedWarnings) {
-    if (remainingHours <= warning.hours) {
-      return { backgroundColor: warning.color, color: warning.foregroundColor };
+
+export function ViewAircraftDetails({ aircraft, inspectionSettings }: ViewAircraftDetailsProps) {
+    if (!aircraft) {
+        return null;
     }
-  }
-  return {};
-};
-
-
-export function ViewAircraftDetails({ user, inspectionSettings }: ViewAircraftDetailsProps) {
-    const tachoTill50 = user.tachoAtNext50Inspection ? user.tachoAtNext50Inspection - (user.currentTacho || 0) : undefined;
-    const tachoTill100 = user.tachoAtNext100Inspection ? user.tachoAtNext100Inspection - (user.currentTacho || 0) : undefined;
+    const tachoTill50 = aircraft.tachoAtNext50Inspection ? aircraft.tachoAtNext50Inspection - (aircraft.currentTacho || 0) : undefined;
+    const tachoTill100 = aircraft.tachoAtNext100Inspection ? aircraft.tachoAtNext100Inspection - (aircraft.currentTacho || 0) : undefined;
 
     const fiftyHourStyle = getWarningStyle(tachoTill50, inspectionSettings?.fiftyHourWarnings);
     const hundredHourStyle = getWarningStyle(tachoTill100, inspectionSettings?.oneHundredHourWarnings);
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-start">
-            <div>
-                <CardTitle>{user.make} {user.model}</CardTitle>
-                <CardDescription>Tail Number: {user.tailNumber}</CardDescription>
-            </div>
-            <Badge>{user.type}</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-8">
-        <DetailItem label="Make" value={user.make} />
-        <DetailItem label="Model" value={user.model} />
-        <DetailItem label="Frame Hours" value={user.frameHours?.toString()} />
-        <DetailItem label="Engine Hours" value={user.engineHours?.toString()} />
-        <DetailItem label="Current Hobbs" value={user.currentHobbs?.toFixed(1)} />
-        <DetailItem label="Current Tacho" value={user.currentTacho?.toFixed(1)} />
-        
-        <DetailItem label="Next 50hr Insp. Due In">
-             {tachoTill50 !== undefined ? (
-                <Badge style={fiftyHourStyle} className="text-lg">{tachoTill50.toFixed(1)} hrs</Badge>
-              ) : (
-                <p className="text-lg font-semibold">N/A</p>
-              )}
-        </DetailItem>
+    <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>{aircraft.make} {aircraft.model}</CardTitle>
+                    <CardDescription>Tail Number: {aircraft.tailNumber}</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-4">
+                    <DetailItem label="Type" value={aircraft.type} />
+                    <DetailItem label="Abbreviation" value={aircraft.abbreviation} />
+                    <DetailItem label="Frame Hours" value={aircraft.frameHours} />
+                    <DetailItem label="Engine Hours" value={aircraft.engineHours} />
+                </CardContent>
+            </Card>
 
-        <DetailItem label="Next 100hr Insp. Due In">
-            {tachoTill100 !== undefined ? (
-                <Badge style={hundredHourStyle} className="text-lg">{tachoTill100.toFixed(1)} hrs</Badge>
-              ) : (
-                <p className="text-lg font-semibold">N/A</p>
-              )}
-        </DetailItem>
-      </CardContent>
-    </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Tacho & Hobbs</CardTitle>
+                    <CardDescription>Current meter readings and inspection status.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-4">
+                    <DetailItem label="Current Hobbs" value={aircraft.currentHobbs} />
+                    <DetailItem label="Current Tacho" value={aircraft.currentTacho} />
+                    <DetailItem label="Next 50hr Insp. Due In">
+                        <span style={fiftyHourStyle}>{tachoTill50?.toFixed(2) ?? 'N/A'} hours</span>
+                    </DetailItem>
+                    <DetailItem label="Next 100hr Insp. Due In">
+                        <span style={hundredHourStyle}>{tachoTill100?.toFixed(2) ?? 'N/A'} hours</span>
+                    </DetailItem>
+                </CardContent>
+            </Card>
+        </div>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Components</CardTitle>
+                <CardDescription>Trackable components installed on the aircraft.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                 <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Component</TableHead>
+                            <TableHead>Part No.</TableHead>
+                            <TableHead>Serial No.</TableHead>
+                            <TableHead>TSN</TableHead>
+                            <TableHead>TSO</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {aircraft.components && aircraft.components.length > 0 ? (
+                            aircraft.components.map(comp => (
+                                <TableRow key={comp.id}>
+                                    <TableCell>{comp.name}</TableCell>
+                                    <TableCell>{comp.partNumber}</TableCell>
+                                    <TableCell>{comp.serialNumber}</TableCell>
+                                    <TableCell>{comp.tsn}</TableCell>
+                                    <TableCell>{comp.tso}</TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={5} className="text-center h-24">No components tracked.</TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    </div>
   );
 }
+
+    

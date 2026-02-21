@@ -1,40 +1,36 @@
+
 'use client';
 
-import { use, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { use, Suspense } from 'react';
 import { doc, collection } from 'firebase/firestore';
-import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Aircraft, AircraftInspectionWarningSettings, HourWarning } from '@/types/aircraft';
-import { AircraftForm } from '@/app/(app)/assets/aircraft/aircraft-form';
-import { ViewAircraftDetails } from './view-aircraft-details';
+import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Pencil, ArrowLeft } from 'lucide-react';
-import { usePermissions } from '@/hooks/use-permissions';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import type { Aircraft } from '@/types/aircraft';
+import type { AircraftInspectionWarningSettings } from '@/types/inspection';
+import { ViewAircraftDetails } from './view-aircraft-details';
+import { AircraftForm } from '../aircraft-form';
+import { useState } from 'react';
+import { Pencil } from 'lucide-react';
 
-interface AircraftDetailPageProps {
+interface AircraftPageProps {
     params: { id: string };
 }
 
-function AircraftPageContent({ params }: AircraftDetailPageProps) {
-    const resolvedParams = use(params);
+function AircraftPageContent({ params }: AircraftPageProps) {
     const firestore = useFirestore();
-    const searchParams = useSearchParams();
-    const { hasPermission } = usePermissions();
-
-    const tenantId = 'safeviate'; // Hardcoded for now
-    const aircraftId = resolvedParams.id;
+    const tenantId = 'safeviate';
+    const aircraftId = params.id;
     const [isEditing, setIsEditing] = useState(false);
-    const canEdit = hasPermission('assets-edit');
-    const collectionName = 'aircrafts'
 
     const aircraftDocRef = useMemoFirebase(
-        () => (firestore ? doc(firestore, 'tenants', tenantId, collectionName, aircraftId) : null),
-        [firestore, tenantId, collectionName, aircraftId]
+        () => (firestore && aircraftId ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId) : null),
+        [firestore, tenantId, aircraftId]
     );
 
-     const inspectionSettingsRef = useMemoFirebase(
+    const inspectionSettingsRef = useMemoFirebase(
         () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'inspection-warnings') : null),
         [firestore, tenantId]
     );
@@ -43,63 +39,59 @@ function AircraftPageContent({ params }: AircraftDetailPageProps) {
     const { data: inspectionSettings, isLoading: isLoadingSettings } = useDoc<AircraftInspectionWarningSettings>(inspectionSettingsRef);
 
     const isLoading = isLoadingAircraft || isLoadingSettings;
-    const error = aircraftError;
 
     if (isLoading) {
         return (
-            <div className="space-y-8">
-                <div className="space-y-6">
-                    <Skeleton className="h-48 w-full" />
-                </div>
+            <div className="space-y-6">
+                <Skeleton className="h-10 w-48" />
+                <Skeleton className="h-64 w-full" />
+                <Skeleton className="h-32 w-full" />
             </div>
         );
     }
-
-    if (error) {
-        return <div className="text-destructive">Error: {error.message}</div>;
+    
+    if (aircraftError) {
+        return <p className="text-destructive">Error loading aircraft: {aircraftError.message}</p>;
     }
 
-    if (!aircraft) {
-        return <div>Aircraft not found.</div>;
-    }
 
     return (
         <div className='space-y-6'>
+            <div className="flex justify-between items-center">
+                <Button asChild variant="outline">
+                    <Link href="/assets/aircraft">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back to Fleet
+                    </Link>
+                </Button>
+                <Button onClick={() => setIsEditing(!isEditing)}>
+                    <Pencil className='mr-2' />
+                    {isEditing ? 'Cancel' : 'Edit Aircraft'}
+                </Button>
+            </div>
+            
             {isEditing ? (
-                 <AircraftForm
-                    tenantId={tenantId}
+                <AircraftForm 
                     existingAircraft={aircraft}
                     onCancel={() => setIsEditing(false)}
                 />
             ) : (
-                <>
-                    <div className="flex justify-between items-center">
-                        <Button asChild variant="outline">
-                            <Link href="/assets/aircraft">
-                                <ArrowLeft className="mr-2 h-4 w-4" />
-                                Back to Aircraft
-                            </Link>
-                        </Button>
-                        {canEdit && (
-                            <Button onClick={() => setIsEditing(true)}>
-                                <Pencil className='mr-2' />
-                                Edit Aircraft
-                            </Button>
-                        )}
-                    </div>
-                    <ViewAircraftDetails 
-                        aircraft={aircraft}
-                        inspectionSettings={inspectionSettings}
-                    />
-                </>
+                 <ViewAircraftDetails 
+                    aircraft={aircraft} 
+                    inspectionSettings={inspectionSettings}
+                />
             )}
-           
         </div>
     );
 }
 
-export default function AircraftPage(props: AircraftDetailPageProps) {
-  return (
-    <AircraftPageContent {...props} />
-  )
+export default function AircraftPage(props: AircraftPageProps) {
+    const resolvedParams = use(props.params);
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <AircraftPageContent params={resolvedParams} />
+        </Suspense>
+    )
 }
+
+    
