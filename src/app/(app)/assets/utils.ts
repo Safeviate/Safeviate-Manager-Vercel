@@ -1,29 +1,39 @@
+import type { Aircraft } from './aircraft-type';
 import type { AircraftInspectionWarningSettings, HourWarning } from '@/types/inspection';
+import React from 'react';
 
-export const getInspectionBadgeStyle = (
-  currentTacho: number | undefined,
-  nextInspectionTacho: number | undefined,
-  settings: HourWarning[] | undefined
-): React.CSSProperties => {
-  if (currentTacho === undefined || nextInspectionTacho === undefined || !settings) {
-    return {};
+export function getInspectionBadgeStyle(
+  aircraft: Aircraft,
+  type: '50hr' | '100hr',
+  inspectionSettings: AircraftInspectionWarningSettings | null | undefined
+): React.CSSProperties | undefined {
+  if (!inspectionSettings || aircraft.currentTacho === undefined || aircraft.currentTacho === null) {
+    return undefined;
   }
 
-  const hoursRemaining = nextInspectionTacho - currentTacho;
-  if (hoursRemaining < 0) {
-    // Default to a noticeable 'overdue' color if not defined in settings
-    return { backgroundColor: '#dc2626', color: 'white' };
+  const tachoDue = type === '50hr' ? aircraft.tachoAtNext50Inspection : aircraft.tachoAtNext100Inspection;
+
+  if (tachoDue === undefined || tachoDue === null) {
+    return undefined;
   }
 
-  // Settings are assumed to be sorted high to low. Find the first threshold that is met.
-  for (const warning of settings) {
+  const hoursRemaining = tachoDue - aircraft.currentTacho;
+  
+  const warnings = type === '50hr' ? inspectionSettings.fiftyHourWarnings : inspectionSettings.oneHundredHourWarnings;
+
+  if (!warnings || !Array.isArray(warnings)) {
+    return undefined;
+  }
+
+  // Settings are assumed to be sorted high to low by hours. Find the first threshold that is met.
+  for (const warning of warnings) {
     if (hoursRemaining <= warning.hours) {
       return {
         backgroundColor: warning.color,
-        color: warning.foregroundColor,
+        color: warning.foregroundColor || 'white', // provide a fallback
       };
     }
   }
 
-  return {}; // No warning threshold met, use default badge style
-};
+  return undefined; // No specific warning color, use default styles
+}
