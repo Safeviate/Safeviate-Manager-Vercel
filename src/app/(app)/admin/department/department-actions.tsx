@@ -63,6 +63,14 @@ export function DepartmentActions({ tenantId, department }: DepartmentActionsPro
     return null;
   }
 
+  const handleEditOpenChange = (open: boolean) => {
+    if (open) {
+      setDepartmentName(department.name);
+    }
+    setIsEditOpen(open);
+  };
+
+
   const handleUpdateDepartment = () => {
     if (!departmentName.trim()) {
       toast({
@@ -115,7 +123,7 @@ export function DepartmentActions({ tenantId, department }: DepartmentActionsPro
 
   return (
     <>
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+      <Dialog open={isEditOpen} onOpenChange={handleEditOpenChange}>
         <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -127,7 +135,7 @@ export function DepartmentActions({ tenantId, department }: DepartmentActionsPro
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
+              <DropdownMenuItem onSelect={() => handleEditOpenChange(true)}>
                 <Pencil className='mr-2 h-4 w-4' /> Edit
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setIsDeleteOpen(true)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">

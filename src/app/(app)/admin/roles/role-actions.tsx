@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -83,15 +83,17 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
     allPermissionIds.length > 0 && selectedPermissions.length === allPermissionIds.length,
     [selectedPermissions, allPermissionIds]
   );
-
-  useEffect(() => {
-    if (isEditDialogOpen) {
-        setRoleName(role.name);
-        setSelectedPermissions(role.permissions || []);
-        setRequiredDocuments(role.requiredDocuments || []);
-    }
-  }, [role, isEditDialogOpen]);
   
+  const handleOpenChange = (open: boolean) => {
+    setIsEditDialogOpen(open);
+    if (open) {
+      setRoleName(role.name);
+      setSelectedPermissions(role.permissions || []);
+      setRequiredDocuments(role.requiredDocuments || []);
+      setCurrentDocument('');
+    }
+  };
+
   const handleUpdateRole = () => {
     if (!roleName.trim()) {
       toast({
@@ -180,7 +182,7 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
         <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => setIsEditDialogOpen(true)}>
+            <DropdownMenuItem onSelect={() => handleOpenChange(true)}>
                 <Pencil className='mr-2 h-4 w-4' /> Edit
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
@@ -189,7 +191,7 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-3xl">
             <DialogHeader>
                 <DialogTitle>Edit Role</DialogTitle>

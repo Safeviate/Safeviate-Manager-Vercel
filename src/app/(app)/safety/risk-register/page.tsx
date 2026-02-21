@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -16,7 +17,7 @@ import type { Risk, RiskItem, Mitigation } from '@/types/risk';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { RiskForm } from './risk-form';
+import { RiskForm } from '../risk-form';
 import { getRiskScoreStyle } from './utils';
 import { cn } from '@/lib/utils';
 
@@ -63,6 +64,13 @@ export default function RiskRegisterPage() {
     setIsDialogOpen(true);
   };
   
+  const handleDialogClose = (open: boolean) => {
+      setIsDialogOpen(open);
+      if (!open) {
+          setEditingRisk(null);
+      }
+  }
+
   return (
     <>
       <div className="flex flex-col gap-6 h-full">
@@ -139,7 +147,7 @@ export default function RiskRegisterPage() {
         </Card>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
           <DialogContent className="max-w-4xl">
               <DialogHeader>
                 <DialogTitle>Edit Hazard</DialogTitle>
@@ -153,7 +161,7 @@ export default function RiskRegisterPage() {
                       hideHeader
                       existingRisk={editingRisk}
                       personnel={personnel || []}
-                      onCancel={() => setIsDialogOpen(false)}
+                      onCancel={() => handleDialogClose(false)}
                     />
                 </div>
               </ScrollArea>

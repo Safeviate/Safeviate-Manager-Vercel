@@ -56,6 +56,20 @@ export function RoleForm({ tenantId }: RoleFormProps) {
     allPermissionIds.length > 0 && selectedPermissions.length === allPermissionIds.length,
     [selectedPermissions, allPermissionIds]
   );
+  
+  const resetForm = () => {
+    setRoleName('');
+    setSelectedPermissions([]);
+    setRequiredDocuments([]);
+    setCurrentDocument('');
+  }
+
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      resetForm();
+    }
+  }
 
   const handleAddRole = () => {
     if (!roleName.trim()) {
@@ -83,17 +97,9 @@ export function RoleForm({ tenantId }: RoleFormProps) {
       title: 'Role Added',
       description: `The "${roleName}" role is being created.`,
     });
-
-    resetForm();
-  };
-
-  const resetForm = () => {
-    setRoleName('');
-    setSelectedPermissions([]);
-    setRequiredDocuments([]);
-    setCurrentDocument('');
+    
     setIsOpen(false);
-  }
+  };
 
   const handlePermissionToggle = (permissionId: string, checked: boolean) => {
     setSelectedPermissions((prev) =>
@@ -122,12 +128,7 @@ export function RoleForm({ tenantId }: RoleFormProps) {
 
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!open) {
-            resetForm();
-        }
-        setIsOpen(open);
-    }}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
