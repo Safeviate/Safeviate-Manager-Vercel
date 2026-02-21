@@ -1,32 +1,32 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, doc } from 'firebase/firestore';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogClose
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
 } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { doc, collection } from 'firebase/firestore';
 import type { Aircraft } from '@/types/aircraft';
-import { Form, FormControl, FormField, FormMessage } from '@/components/ui/form';
 
 const formSchema = z.object({
   tailNumber: z.string().min(1, 'Tail number is required.'),
   model: z.string().min(1, 'Model is required.'),
-  initialHobbs: z.number({ coerce: true }).optional(),
-  initialTacho: z.number({ coerce: true }).optional(),
+  abbreviation: z.string().max(5, "Abbreviation must be 5 characters or less.").optional(),
+  currentHobbs: z.number({ coerce: true }).optional(),
+  currentTacho: z.number({ coerce: true }).optional(),
   tachoAtNext50Inspection: z.number({ coerce: true }).optional(),
   tachoAtNext100Inspection: z.number({ coerce: true }).optional(),
 });
@@ -34,139 +34,122 @@ const formSchema = z.object({
 type AircraftFormValues = z.infer<typeof formSchema>;
 
 interface AircraftFormProps {
-    isOpen: boolean;
-    setIsOpen: (isOpen: boolean) => void;
-    onClose: () => void;
-    tenantId: string;
-    existingAircraft?: Aircraft | null;
+  isOpen: boolean;
+  onClose: () => void;
+  tenantId: string;
+  existingAircraft?: Aircraft | null;
 }
 
-export function AircraftForm({ isOpen, setIsOpen, onClose, tenantId, existingAircraft }: AircraftFormProps) {
+export function AircraftForm({ isOpen, onClose, tenantId, existingAircraft }: AircraftFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
   const form = useForm<AircraftFormValues>({
-      resolver: zodResolver(formSchema),
-      defaultValues: {},
+    resolver: zodResolver(formSchema),
+    defaultValues: existingAircraft || {
+      tailNumber: '',
+      model: '',
+    },
   });
 
   useEffect(() => {
     if (isOpen) {
-        form.reset(existingAircraft ? {
-            ...existingAircraft,
-            initialHobbs: existingAircraft.initialHobbs || 0,
-            initialTacho: existingAircraft.initialTacho || 0,
-        } : {
-            tailNumber: '',
-            model: '',
-            initialHobbs: 0,
-            initialTacho: 0,
-            tachoAtNext50Inspection: 0,
-            tachoAtNext100Inspection: 0,
-        });
+      form.reset(existingAircraft || {
+        tailNumber: '',
+        model: '',
+        abbreviation: '',
+        currentHobbs: 0,
+        currentTacho: 0,
+        tachoAtNext50Inspection: 0,
+        tachoAtNext100Inspection: 0,
+      });
     }
   }, [isOpen, existingAircraft, form]);
 
   const onSubmit = (values: AircraftFormValues) => {
-    if (!firestore || !tenantId) {
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Could not connect to the database.',
-          });
-        return;
-    }
-    
+    if (!firestore) return;
+
     if (existingAircraft) {
-        const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', existingAircraft.id);
-        updateDocumentNonBlocking(aircraftRef, values);
-        toast({
-            title: 'Aircraft Updated',
-            description: `The aircraft "${values.tailNumber}" has been updated.`,
-        });
+      const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', existingAircraft.id);
+      updateDocumentNonBlocking(aircraftRef, values);
+      toast({ title: 'Aircraft Updated', description: 'The aircraft details have been saved.' });
     } else {
-        const aircraftsRef = collection(firestore, 'tenants', tenantId, 'aircrafts');
-        addDocumentNonBlocking(aircraftsRef, {
-            ...values,
-            currentHobbs: values.initialHobbs || 0,
-            currentTacho: values.initialTacho || 0,
-        });
-        toast({
-            title: 'Aircraft Added',
-            description: `The aircraft "${values.tailNumber}" is being added.`,
-        });
+      const aircraftsCollection = collection(firestore, 'tenants', tenantId, 'aircrafts');
+      addDocumentNonBlocking(aircraftsCollection, values);
+      toast({ title: 'Aircraft Added', description: 'The new aircraft has been added to your fleet.' });
     }
-    
     onClose();
   };
 
-  const onOpenChange = (open: boolean) => {
-    if (!open) {
-        onClose();
-    }
-    setIsOpen(open);
-  }
-
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>{existingAircraft ? 'Edit Aircraft' : 'Add Aircraft'}</DialogTitle>
+          <DialogTitle>{existingAircraft ? 'Edit Aircraft' : 'Add New Aircraft'}</DialogTitle>
           <DialogDescription>
-            {existingAircraft ? `Update details for ${existingAircraft.tailNumber}.` : 'Add a new aircraft to the fleet.'}
+            {existingAircraft ? 'Update the details for this aircraft.' : 'Add a new aircraft to your fleet.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                <FormField control={form.control} name="tailNumber" render={({ field }) => (
-                    <FormItem>
-                        <Label htmlFor="tailNumber">Tail Number</Label>
-                        <FormControl><Input id="tailNumber" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <FormField control={form.control} name="tailNumber" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tail Number</FormLabel>
+                <FormControl><Input {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="model" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Model</FormLabel>
+                <FormControl><Input {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+             <FormField control={form.control} name="abbreviation" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Abbreviation</FormLabel>
+                <FormControl><Input maxLength={5} {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="currentHobbs" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Current Hobbs</FormLabel>
+                    <FormControl><Input type="number" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )} />
-                <FormField control={form.control} name="model" render={({ field }) => (
-                    <FormItem>
-                        <Label htmlFor="model">Model</Label>
-                        <FormControl><Input id="model" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
+                <FormField control={form.control} name="currentTacho" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Current Tacho</FormLabel>
+                    <FormControl><Input type="number" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )} />
-                <FormField control={form.control} name="initialHobbs" render={({ field }) => (
-                    <FormItem>
-                        <Label htmlFor="initialHobbs">Initial Hobbs</Label>
-                        <FormControl><Input id="initialHobbs" type="number" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="initialTacho" render={({ field }) => (
-                    <FormItem>
-                        <Label htmlFor="initialTacho">Initial Tacho</Label>
-                        <FormControl><Input id="initialTacho" type="number" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="tachoAtNext50Inspection" render={({ field }) => (
-                    <FormItem>
-                        <Label htmlFor="tachoAtNext50Inspection">Next 50hr Tacho</Label>
-                        <FormControl><Input id="tachoAtNext50Inspection" type="number" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                 <FormField control={form.control} name="tachoAtNext100Inspection" render={({ field }) => (
-                    <FormItem>
-                        <Label htmlFor="tachoAtNext100Inspection">Next 100hr Tacho</Label>
-                        <FormControl><Input id="tachoAtNext100Inspection" type="number" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="outline" type="button">Cancel</Button>
-                  </DialogClose>
-                  <Button type="submit">Save</Button>
-                </DialogFooter>
-            </form>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField control={form.control} name="tachoAtNext50Inspection" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tacho at Next 50hr</FormLabel>
+                  <FormControl><Input type="number" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="tachoAtNext100Inspection" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tacho at Next 100hr</FormLabel>
+                  <FormControl><Input type="number" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+            <DialogFooter className="pt-4">
+              <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+              <Button type="submit">Save Aircraft</Button>
+            </DialogFooter>
+          </form>
         </Form>
       </DialogContent>
     </Dialog>

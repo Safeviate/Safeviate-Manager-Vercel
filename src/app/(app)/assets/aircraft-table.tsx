@@ -11,20 +11,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { Aircraft } from '@/types/aircraft';
 import { AircraftActions } from './aircraft-actions';
-import type { AircraftInspectionWarningSettings } from '../admin/document-dates/page';
-import { useRouter } from 'next/navigation';
 
 interface AircraftTableProps {
-  aircrafts: Aircraft[];
-  inspectionSettings?: AircraftInspectionWarningSettings;
+  aircrafts: Aircraft[] | null;
   tenantId: string;
   onEdit: (aircraft: Aircraft) => void;
-  onRowClick: (aircraft: Aircraft) => void;
 }
 
-export function AircraftTable({ aircrafts, inspectionSettings, tenantId, onEdit, onRowClick }: AircraftTableProps) {
-  const router = useRouter();
-  
+export function AircraftTable({ aircrafts, tenantId, onEdit }: AircraftTableProps) {
   if (!aircrafts || aircrafts.length === 0) {
     return (
       <div className="text-center p-8 text-muted-foreground">
@@ -48,17 +42,13 @@ export function AircraftTable({ aircrafts, inspectionSettings, tenantId, onEdit,
       </TableHeader>
       <TableBody>
         {aircrafts.map((aircraft) => (
-          <TableRow key={aircraft.id} onClick={() => onRowClick(aircraft)} className="cursor-pointer">
+          <TableRow key={aircraft.id}>
             <TableCell className="font-medium">{aircraft.tailNumber}</TableCell>
             <TableCell>{aircraft.model}</TableCell>
             <TableCell>{aircraft.currentHobbs?.toFixed(1)}</TableCell>
             <TableCell>{aircraft.currentTacho?.toFixed(1)}</TableCell>
-            <TableCell>
-              <Badge variant="outline">{aircraft.tachoAtNext50Inspection?.toFixed(1)}</Badge>
-            </TableCell>
-            <TableCell>
-              <Badge variant="outline">{aircraft.tachoAtNext100Inspection?.toFixed(1)}</Badge>
-            </TableCell>
+            <TableCell><Badge variant="outline">{aircraft.tachoAtNext50Inspection?.toFixed(1)}</Badge></TableCell>
+            <TableCell><Badge variant="outline">{aircraft.tachoAtNext100Inspection?.toFixed(1)}</Badge></TableCell>
             <TableCell className="text-right">
               <AircraftActions tenantId={tenantId} aircraft={aircraft} onEdit={() => onEdit(aircraft)} />
             </TableCell>
