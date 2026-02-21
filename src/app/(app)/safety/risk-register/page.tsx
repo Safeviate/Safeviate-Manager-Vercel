@@ -65,10 +65,10 @@ export default function RiskRegisterPage() {
   };
   
   const handleDialogClose = (open: boolean) => {
-      setIsDialogOpen(open);
       if (!open) {
           setEditingRisk(null);
       }
+      setIsDialogOpen(open);
   }
 
   return (
@@ -149,22 +149,26 @@ export default function RiskRegisterPage() {
 
       <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
           <DialogContent className="max-w-4xl">
-              <DialogHeader>
-                <DialogTitle>Edit Hazard</DialogTitle>
-                <DialogDescription>
-                  Update the details for the selected hazard and its associated risks.
-                </DialogDescription>
-              </DialogHeader>
-              <ScrollArea className="max-h-[80vh]">
-                <div className="p-1">
-                    <RiskForm
-                      hideHeader
-                      existingRisk={editingRisk}
-                      personnel={personnel || []}
-                      onCancel={() => handleDialogClose(false)}
-                    />
-                </div>
-              </ScrollArea>
+            {isDialogOpen && (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Edit Hazard</DialogTitle>
+                  <DialogDescription>
+                    Update the details for the selected hazard and its associated risks.
+                  </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="max-h-[80vh]">
+                  <div className="p-1">
+                      <RiskForm
+                        hideHeader
+                        existingRisk={editingRisk}
+                        personnel={personnel || []}
+                        onCancel={() => handleDialogClose(false)}
+                      />
+                  </div>
+                </ScrollArea>
+              </>
+            )}
           </DialogContent>
       </Dialog>
     </>

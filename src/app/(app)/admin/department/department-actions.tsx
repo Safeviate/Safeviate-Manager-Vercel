@@ -164,31 +164,35 @@ export function DepartmentActions({ tenantId, department }: DepartmentActionsPro
         
         {/* Edit Dialog Content */}
         <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-                <DialogTitle>Edit Department</DialogTitle>
-                <DialogDescription>
-                    Update the name for the &quot;{department.name}&quot; department.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                    Name
-                </Label>
-                <Input
-                    id="name"
-                    value={departmentName}
-                    onChange={(e) => setDepartmentName(e.target.value)}
-                    className="col-span-3"
-                />
-                </div>
-            </div>
-            <DialogFooter>
-                <DialogClose asChild>
-                    <Button variant="outline">Cancel</Button>
-                </DialogClose>
-                <Button onClick={handleUpdateDepartment}>Save Changes</Button>
-            </DialogFooter>
+          {isEditOpen && (
+            <>
+              <DialogHeader>
+                  <DialogTitle>Edit Department</DialogTitle>
+                  <DialogDescription>
+                      Update the name for the &quot;{department.name}&quot; department.
+                  </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">
+                      Name
+                  </Label>
+                  <Input
+                      id="name"
+                      value={departmentName}
+                      onChange={(e) => setDepartmentName(e.target.value)}
+                      className="col-span-3"
+                  />
+                  </div>
+              </div>
+              <DialogFooter>
+                  <DialogClose asChild>
+                      <Button variant="outline">Cancel</Button>
+                  </DialogClose>
+                  <Button onClick={handleUpdateDepartment}>Save Changes</Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </>
