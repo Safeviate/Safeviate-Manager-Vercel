@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -59,17 +59,16 @@ export function DepartmentActions({ tenantId, department }: DepartmentActionsPro
 
   const canManage = hasPermission('admin-departments-manage');
 
+  useEffect(() => {
+    // Reset form state when the dialog is opened for a new edit session
+    if (isEditOpen) {
+      setDepartmentName(department.name);
+    }
+  }, [isEditOpen, department.name]);
+
   if (!canManage) {
     return null;
   }
-
-  const handleEditOpenChange = (open: boolean) => {
-    if (open) {
-      setDepartmentName(department.name);
-    }
-    setIsEditOpen(open);
-  };
-
 
   const handleUpdateDepartment = () => {
     if (!departmentName.trim()) {
@@ -123,7 +122,7 @@ export function DepartmentActions({ tenantId, department }: DepartmentActionsPro
 
   return (
     <>
-      <Dialog open={isEditOpen} onOpenChange={handleEditOpenChange}>
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -135,7 +134,7 @@ export function DepartmentActions({ tenantId, department }: DepartmentActionsPro
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => handleEditOpenChange(true)}>
+              <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
                 <Pencil className='mr-2 h-4 w-4' /> Edit
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setIsDeleteOpen(true)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">

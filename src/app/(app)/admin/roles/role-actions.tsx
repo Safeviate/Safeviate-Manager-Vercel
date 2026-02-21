@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -73,6 +73,16 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
   const canManageRoles = hasPermission('admin-roles-manage');
   const canManagePermissions = hasPermission('admin-permissions-manage');
 
+  useEffect(() => {
+    // Reset form state when the dialog is opened for a new edit session
+    if (isEditDialogOpen) {
+        setRoleName(role.name);
+        setSelectedPermissions(role.permissions || []);
+        setRequiredDocuments(role.requiredDocuments || []);
+        setCurrentDocument('');
+    }
+  }, [isEditDialogOpen, role]);
+
   const allPermissionIds = useMemo(() => 
     permissionsConfig.flatMap(resource => 
       resource.actions.map(action => `${resource.id}-${action}`)
@@ -84,16 +94,6 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
     [selectedPermissions, allPermissionIds]
   );
   
-  const handleOpenChange = (open: boolean) => {
-    if (open) {
-      setRoleName(role.name);
-      setSelectedPermissions(role.permissions || []);
-      setRequiredDocuments(role.requiredDocuments || []);
-      setCurrentDocument('');
-    }
-    setIsEditDialogOpen(open);
-  };
-
   const handleUpdateRole = () => {
     if (!roleName.trim()) {
       toast({
@@ -182,7 +182,7 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
         <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => handleOpenChange(true)}>
+            <DropdownMenuItem onSelect={() => setIsEditDialogOpen(true)}>
                 <Pencil className='mr-2 h-4 w-4' /> Edit
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
@@ -191,7 +191,7 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={isEditDialogOpen} onOpenChange={handleOpenChange}>
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-3xl">
           {isEditDialogOpen && (
             <>

@@ -35,8 +35,14 @@ export default function RiskRegisterPage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate';
 
-  const [editingRisk, setEditingRisk] = React.useState<Risk | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [editingRisk, setEditingRisk] = React.useState<Risk | null>(null);
+
+  React.useEffect(() => {
+    if (!isDialogOpen) {
+      setEditingRisk(null);
+    }
+  }, [isDialogOpen]);
 
   const risksQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/risks`)) : null),
@@ -63,13 +69,6 @@ export default function RiskRegisterPage() {
     setEditingRisk(risk);
     setIsDialogOpen(true);
   };
-  
-  const handleDialogClose = (open: boolean) => {
-      if (!open) {
-          setEditingRisk(null);
-      }
-      setIsDialogOpen(open);
-  }
 
   return (
     <>
@@ -147,7 +146,7 @@ export default function RiskRegisterPage() {
         </Card>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-4xl">
             {isDialogOpen && (
               <>
@@ -163,7 +162,7 @@ export default function RiskRegisterPage() {
                         hideHeader
                         existingRisk={editingRisk}
                         personnel={personnel || []}
-                        onCancel={() => handleDialogClose(false)}
+                        onCancel={() => setIsDialogOpen(false)}
                       />
                   </div>
                 </ScrollArea>
