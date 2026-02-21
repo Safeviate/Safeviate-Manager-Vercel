@@ -162,10 +162,26 @@ export const updateBooking = async ({
     // If submitting a post-flight, update the aircraft's core metrics
     if (isSubmittingPostFlight && updateData.postFlight?.actualHobbs && updateData.postFlight?.actualTacho) {
         const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
+        const newTacho = updateData.postFlight.actualTacho;
+        const previousTacho = aircraft.currentTacho || 0;
+        
         batch.update(aircraftRef, {
             currentHobbs: updateData.postFlight.actualHobbs,
-            currentTacho: updateData.postFlight.actualTacho,
+            currentTacho: newTacho,
         });
+
+        // Update component TSN and TSO based on tacho difference
+        if (newTacho > previousTacho) {
+            const hoursToAdd = newTacho - previousTacho;
+            const componentsRef = collection(firestore, `tenants/${tenantId}/aircrafts/${aircraft.id}/components`);
+            const componentsSnapshot = await getDocs(componentsRef);
+            componentsSnapshot.forEach(componentDoc => {
+                const componentData = componentDoc.data();
+                const newTsn = (componentData.tsn || 0) + hoursToAdd;
+                const newTso = (componentData.tso || 0) + hoursToAdd;
+                batch.update(componentDoc.ref, { tsn: newTsn, tso: newTso });
+            });
+        }
 
         // If it's a training flight, create a draft progress report
         const bookingDoc = await getDoc(bookingRef);
