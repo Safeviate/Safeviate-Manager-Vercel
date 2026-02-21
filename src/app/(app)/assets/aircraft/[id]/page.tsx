@@ -1,59 +1,54 @@
-
 'use client';
 
-import { useState, useMemo, use, Suspense } from 'react';
+import { use, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { collection, doc, query } from 'firebase/firestore';
+import { doc, collection } from 'firebase/firestore';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Aircraft } from '@/types/aircraft';
-import type { Department } from '@/app/(app)/users/personnel/page';
-import type { AircraftInspectionWarningSettings } from '@/types/inspection';
-import { AircraftForm } from '../aircraft-form';
+import type { Aircraft, AircraftInspectionWarningSettings, HourWarning } from '@/types/aircraft';
+import { AircraftForm } from '@/app/(app)/assets/aircraft/aircraft-form';
 import { ViewAircraftDetails } from './view-aircraft-details';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Pencil } from 'lucide-react';
+import { Pencil, ArrowLeft } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
+import Link from 'next/link';
 
-interface AircraftProfilePageProps {
+interface AircraftDetailPageProps {
     params: { id: string };
 }
 
-
-function AircraftProfileContent({ params }: AircraftProfilePageProps) {
+function AircraftPageContent({ params }: AircraftDetailPageProps) {
     const resolvedParams = use(params);
     const firestore = useFirestore();
+    const searchParams = useSearchParams();
     const { hasPermission } = usePermissions();
 
     const tenantId = 'safeviate'; // Hardcoded for now
     const aircraftId = resolvedParams.id;
     const [isEditing, setIsEditing] = useState(false);
     const canEdit = hasPermission('assets-edit');
-
+    const collectionName = 'aircrafts'
 
     const aircraftDocRef = useMemoFirebase(
-        () => (firestore ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId) : null),
-        [firestore, tenantId, aircraftId]
+        () => (firestore ? doc(firestore, 'tenants', tenantId, collectionName, aircraftId) : null),
+        [firestore, tenantId, collectionName, aircraftId]
     );
 
-    const inspectionSettingsRef = useMemoFirebase(
-      () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'inspection-warnings') : null),
-      [firestore, tenantId]
+     const inspectionSettingsRef = useMemoFirebase(
+        () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'inspection-warnings') : null),
+        [firestore, tenantId]
     );
 
     const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useDoc<Aircraft>(aircraftDocRef);
-    const { data: inspectionSettings, isLoading: isLoadingSettings, error: settingsError } = useDoc<AircraftInspectionWarningSettings>(inspectionSettingsRef);
+    const { data: inspectionSettings, isLoading: isLoadingSettings } = useDoc<AircraftInspectionWarningSettings>(inspectionSettingsRef);
 
     const isLoading = isLoadingAircraft || isLoadingSettings;
-    const error = aircraftError || settingsError;
-
+    const error = aircraftError;
 
     if (isLoading) {
         return (
             <div className="space-y-8">
-                <Skeleton className="h-10 w-1/4" />
                 <div className="space-y-6">
-                    <Skeleton className="h-48 w-full" />
                     <Skeleton className="h-48 w-full" />
                 </div>
             </div>
@@ -78,7 +73,13 @@ function AircraftProfileContent({ params }: AircraftProfilePageProps) {
                 />
             ) : (
                 <>
-                    <div className="flex justify-end">
+                    <div className="flex justify-between items-center">
+                        <Button asChild variant="outline">
+                            <Link href="/assets/aircraft">
+                                <ArrowLeft className="mr-2 h-4 w-4" />
+                                Back to Aircraft
+                            </Link>
+                        </Button>
                         {canEdit && (
                             <Button onClick={() => setIsEditing(true)}>
                                 <Pencil className='mr-2' />
@@ -87,8 +88,8 @@ function AircraftProfileContent({ params }: AircraftProfilePageProps) {
                         )}
                     </div>
                     <ViewAircraftDetails 
-                        aircraft={aircraft} 
-                        inspectionWarningSettings={inspectionSettings}
+                        aircraft={aircraft}
+                        inspectionSettings={inspectionSettings}
                     />
                 </>
             )}
@@ -97,11 +98,8 @@ function AircraftProfileContent({ params }: AircraftProfilePageProps) {
     );
 }
 
-
-export default function AircraftProfilePageWrapper(props: AircraftProfilePageProps) {
+export default function AircraftPage(props: AircraftDetailPageProps) {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <AircraftProfileContent {...props} />
-    </Suspense>
+    <AircraftPageContent {...props} />
   )
 }
