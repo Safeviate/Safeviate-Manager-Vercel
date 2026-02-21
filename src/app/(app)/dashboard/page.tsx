@@ -5,17 +5,15 @@ import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { SafetyReport } from '@/types/safety-report';
 import type { CorrectiveActionPlan, QualityAudit } from '@/types/quality';
-import type { Booking } from '@/types/booking';
 import type { SpiConfig } from '../safety/safety-indicators/edit-spi-form';
 import { SPICard } from '../safety/safety-indicators/spi-card';
-import { AlertTriangle, BookCheck, CalendarClock, Plane, Clock } from 'lucide-react';
+import { AlertTriangle, BookCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import type { Aircraft } from '../assets/page';
 
 const kpiCardData = [
     {
@@ -31,13 +29,6 @@ const kpiCardData = [
         value: 0,
         color: "text-yellow-500",
         dataKey: "openCaps"
-    },
-    {
-        title: "Upcoming Bookings (7 days)",
-        icon: Plane,
-        value: 0,
-        color: "text-blue-500",
-        dataKey: "upcomingBookings"
     },
 ];
 
@@ -89,35 +80,16 @@ export default function DashboardPage() {
         () => firestore ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`)) : null,
         [firestore, tenantId]
     );
-    const bookingsQuery = useMemoFirebase(
-        () => firestore ? query(collection(firestore, `tenants/${tenantId}/bookings`)) : null,
-        [firestore, tenantId]
-    );
-    const aircraftsQuery = useMemoFirebase(
-        () => firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null,
-        [firestore, tenantId]
-    );
-
+    
     const { data: reports } = useCollection<SafetyReport>(reportsQuery);
     const { data: caps } = useCollection<CorrectiveActionPlan>(capsQuery);
-    const { data: bookings } = useCollection<Booking>(bookingsQuery);
-    const { data: aircrafts } = useCollection<Aircraft>(aircraftsQuery);
 
     const kpiData = useMemo(() => {
-        const today = new Date();
-        const nextWeek = new Date();
-        nextWeek.setDate(today.getDate() + 7);
-
         return {
             openReports: reports?.filter(r => r.status === 'Open').length || 0,
             openCaps: caps?.filter(cap => (cap as any).status === 'Open').length || 0,
-            upcomingBookings: bookings?.filter(b => {
-                if (!b.date) return false;
-                const bookingDate = new Date(b.date);
-                return bookingDate >= today && bookingDate <= nextWeek && b.status === 'Confirmed';
-            }).length || 0
         };
-    }, [reports, caps, bookings]);
+    }, [reports, caps]);
 
     const recentReports = useMemo(() => {
         return reports
@@ -141,41 +113,6 @@ export default function DashboardPage() {
                 ))}
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Aircraft Fleet Hours</CardTitle>
-                    <CardDescription>A summary of the current Hobbs and Tacho times for each aircraft.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Tail Number</TableHead>
-                                <TableHead>Model</TableHead>
-                                <TableHead>Hobbs</TableHead>
-                                <TableHead>Tacho</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {aircrafts && aircrafts.length > 0 ? (
-                                aircrafts.map(ac => (
-                                    <TableRow key={ac.id}>
-                                        <TableCell className="font-medium">{ac.tailNumber}</TableCell>
-                                        <TableCell>{ac.model}</TableCell>
-                                        <TableCell>{ac.currentHobbs?.toFixed(1) || 'N/A'} hrs</TableCell>
-                                        <TableCell>{ac.currentTacho?.toFixed(1) || 'N/A'} hrs</TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">No aircraft data available.</TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-
             <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
                  {initialSpiConfig.map(spi => (
                     <SPICard 
@@ -183,7 +120,7 @@ export default function DashboardPage() {
                         spi={spi} 
                         onEdit={() => {}} // No edit functionality from dashboard
                         reports={reports} 
-                        bookings={bookings} 
+                        bookings={null} 
                     />
                 ))}
             </div>

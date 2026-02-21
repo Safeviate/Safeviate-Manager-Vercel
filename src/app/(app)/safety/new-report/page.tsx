@@ -1,11 +1,9 @@
-
 'use client';
 
 import { useState } from 'react';
 import { NewSafetyReportForm, type NewSafetyReportValues } from './new-safety-report-form';
-import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { addDoc, collection, doc, getDocs, query, runTransaction, where } from 'firebase/firestore';
-import type { Aircraft } from '../../assets/page';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,14 +29,6 @@ export default function NewSafetyReportPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const tenantId = 'safeviate'; // Hardcoded for now
-
-  const aircraftsQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'tenants', tenantId, 'aircrafts') : null),
-    [firestore]
-  );
-  
-  const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
-
 
   const handleNewReport = async (values: NewSafetyReportValues) => {
     if (!firestore || !user) {
@@ -76,7 +66,6 @@ export default function NewSafetyReportPage() {
                 eventDate: format(values.eventDate, 'yyyy-MM-dd'),
                 eventTime: values.eventTime,
                 location: values.location,
-                aircraftId: values.aircraftId,
                 description: values.description,
                 phaseOfFlight: values.phaseOfFlight,
                 systemOrComponent: values.systemOrComponent,
@@ -100,22 +89,14 @@ export default function NewSafetyReportPage() {
         title: 'Submission Failed',
         description: error.message || 'An unknown error occurred while submitting the report.',
       });
-      setIsSubmitting(false);
+    } finally {
+        setIsSubmitting(false);
     }
   };
   
-  if (isLoadingAircrafts) {
-    return (
-        <div className="space-y-6">
-            <Skeleton className="h-48 w-full" />
-            <Skeleton className="h-64 w-full" />
-        </div>
-    )
-  }
 
   return (
     <NewSafetyReportForm 
-        aircrafts={aircrafts || []} 
         onSubmit={handleNewReport}
         isSubmitting={isSubmitting}
     />

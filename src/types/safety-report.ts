@@ -1,4 +1,3 @@
-
 export type ReportStatus = 'Open' | 'Under Review' | 'Awaiting Action' | 'Closed';
 export type ReportType = string;
 export type EventClassification = 'Hazard' | 'Incident' | 'Accident';
@@ -71,7 +70,6 @@ export interface SafetyReport {
     eventDate: string; // ISO String
     eventTime: string;
     location: string;
-    aircraftId?: string;
     description: string;
     // Conditional Fields
     phaseOfFlight?: string;

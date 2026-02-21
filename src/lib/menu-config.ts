@@ -65,24 +65,6 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'operations-view',
     subItems: [
       {
-        href: '/operations/bookings',
-        label: 'Schedule',
-        description: 'View the aircraft booking schedule.',
-        permissionId: 'bookings-view',
-      },
-      {
-        href: '/operations/flight-planner',
-        label: 'Flight Planner',
-        description: 'Create and manage flight plans.',
-        permissionId: 'flight-plans-manage',
-      },
-      {
-        href: '/operations/bookings-history',
-        label: 'Bookings History',
-        description: 'View and manage past bookings.',
-        permissionId: 'bookings-view',
-      },
-      {
         href: '/operations/alerts',
         label: 'Alerts',
         description: 'View and manage critical system alerts.',
@@ -179,12 +161,6 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'training-debriefs-view',
       },
     ],
-  },
-  {
-    href: '/assets',
-    label: 'Assets',
-    icon: Plane,
-    permissionId: 'assets-view',
   },
   {
     href: '/users',

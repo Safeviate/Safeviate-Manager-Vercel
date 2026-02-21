@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -11,7 +10,6 @@ import { FilePlus } from 'lucide-react';
 import { format, differenceInMinutes, parse } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import type { StudentProgressReport, StudentMilestoneSettings } from '@/types/training';
-import type { Booking } from '@/types/booking';
 import type { PilotProfile } from '../page';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
@@ -68,15 +66,6 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
         [firestore, tenantId, studentId, shouldFetch]
     );
 
-    const bookingsQuery = useMemoFirebase(
-        () => (shouldFetch ? query(
-            collection(firestore, `tenants/${tenantId}/bookings`),
-            where('studentId', '==', studentId),
-            where('status', '==', 'Completed')
-        ) : null),
-        [firestore, tenantId, studentId, shouldFetch]
-    );
-
     const instructorsQuery = useMemoFirebase(
         () => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null),
         [firestore, tenantId]
@@ -88,37 +77,17 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
     );
 
     const { data: reports, isLoading: isLoadingReports } = useCollection<StudentProgressReport>(progressReportsQuery);
-    const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
     const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
     const { data: milestoneSettings } = useDoc<StudentMilestoneSettings>(milestoneSettingsRef);
 
-    const isLoading = isLoadingReports || isLoadingBookings || isLoadingInstructors;
+    const isLoading = isLoadingReports || isLoadingInstructors;
 
     const instructorsMap = useMemo(() => {
         if (!instructors) return new Map();
         return new Map(instructors.map(i => [i.id, `${i.firstName} ${i.lastName}`]));
     }, [instructors]);
 
-    const bookingsWithoutReports = useMemo(() => {
-        if (!bookings || !reports) return [];
-        const reportBookingIds = new Set(reports.map(r => r.bookingId));
-        return bookings.filter(b => !reportBookingIds.has(b.id));
-    }, [bookings, reports]);
-    
-    const totalFlightHours = useMemo(() => {
-        if (!bookings) return 0;
-        return bookings.reduce((total, booking) => {
-            if (booking.startTime && booking.endTime) {
-                const start = parse(`${booking.date} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date());
-                const end = parse(`${booking.date} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date());
-                if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-                    const minutes = differenceInMinutes(end, start);
-                    return total + (minutes / 60);
-                }
-            }
-            return total;
-        }, 0);
-    }, [bookings]);
+    const totalFlightHours = 0; // This needs to be recalculated without bookings
     
     const defaultMilestones = [
         { milestone: 10, warningHours: 7 },
@@ -164,26 +133,7 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
                     <CardDescription>Completed training flights awaiting an instructor debrief.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {bookingsWithoutReports.length > 0 ? (
-                        <ul className="space-y-2">
-                           {bookingsWithoutReports.map(booking => (
-                               <li key={booking.id} className="flex justify-between items-center p-3 border rounded-lg">
-                                   <div>
-                                       <p className="font-medium">Booking #{booking.bookingNumber} - {format(new Date(booking.date), 'PPP')}</p>
-                                       <p className="text-sm text-muted-foreground">Instructor: {instructorsMap.get(booking.instructorId || '') || 'N/A'}</p>
-                                   </div>
-                                   <Button asChild size="sm">
-                                        <Link href={`/training/student-progress/new?bookingId=${booking.id}`}>
-                                            <FilePlus className="mr-2 h-4 w-4" />
-                                            Create Debrief
-                                        </Link>
-                                   </Button>
-                               </li>
-                           ))}
-                        </ul>
-                    ) : (
-                        <p className="text-center text-muted-foreground p-4">No pending debriefs.</p>
-                    )}
+                    <p className="text-center text-muted-foreground p-4">Booking system is disabled.</p>
                 </CardContent>
             </Card>
 
@@ -200,7 +150,7 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
                                     <AccordionTrigger>
                                         <div className="flex justify-between items-center w-full pr-4">
                                             <div className="text-left">
-                                                <p className="font-semibold">Debrief for Booking #{bookings?.find(b => b.id === report.bookingId)?.bookingNumber}</p>
+                                                <p className="font-semibold">Debrief</p>
                                                 <p className="text-sm text-muted-foreground">{format(new Date(report.date), 'PPP')} with {instructorsMap.get(report.instructorId) || 'Unknown'}</p>
                                             </div>
                                         </div>

@@ -1,4 +1,3 @@
-
 export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'manage-templates' | 'calculate-booking';
 
 export type PermissionResource = {
@@ -30,8 +29,6 @@ export const permissionsConfig: PermissionResource[] = [
   // --- Core Features ---
   { id: 'operations', name: 'Operations', actions: ['view'] },
   { id: 'operations-alerts', name: 'Operations Alerts', actions: ['view', 'create', 'edit', 'delete'] },
-  { id: 'bookings', name: 'Bookings', actions: ['view', 'create', 'edit', 'delete'] },
-  { id: 'flight-plans', name: 'Flight Plans', actions: ['manage'] },
 
   { id: 'safety', name: 'Safety', actions: ['view'] },
   { id: 'safety-reports', name: 'Safety Reports', actions: ['manage'] },
@@ -50,7 +47,6 @@ export const permissionsConfig: PermissionResource[] = [
   { id: 'training', name: 'Training', actions: ['view'] },
   { id: 'training-debriefs', name: 'Training: Student Debriefs', actions: ['view', 'edit'] },
 
-  { id: 'assets', name: 'Assets', actions: ['view', 'create', 'edit', 'delete'] },
   { id: 'users', name: 'Users', actions: ['view', 'create', 'edit', 'delete'] },
 
   // --- Admin Section ---

@@ -1,4 +1,3 @@
-
 export type PerformanceRating = 1 | 2 | 3 | 4;
 
 export interface StudentProgressEntry {
@@ -10,7 +9,6 @@ export interface StudentProgressEntry {
 
 export interface StudentProgressReport {
     id: string;
-    bookingId: string;
     studentId?: string;
     instructorId?: string;
     date: string; // ISO String

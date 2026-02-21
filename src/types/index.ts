@@ -1,6 +1,3 @@
-
-export type { Aircraft, AircraftComponent } from './aircraft';
-export type { Booking, Photo, MassAndBalance } from './booking';
 export type {
   ManagementOfChange,
   MocPhase,
@@ -39,7 +36,6 @@ export type {
   RiskAssessment,
   InvestigationTask,
   InvestigationTaskStatus,
-  ReportDiscussionItem,
   CorrectiveAction,
   ReportSignature,
   RiskLevel,
@@ -52,5 +48,3 @@ export type {
 } from './training';
 export type { Alert, AlertType, AlertStatus } from './alert';
 export type { SpiConfig, SpiConfigurations, SpiComparison, SpiUnit } from './spi';
-export type { MaintenanceLog } from './maintenance';
-export type { HourWarning, AircraftInspectionWarningSettings } from './inspection';
