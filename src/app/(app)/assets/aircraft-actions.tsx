@@ -5,24 +5,26 @@ import { useState } from 'react';
 import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Trash2, Edit } from 'lucide-react';
 import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+  } from "@/components/ui/dropdown-menu"
 import type { Aircraft } from '@/types/aircraft';
 
 interface AircraftActionsProps {
@@ -36,25 +38,16 @@ export function AircraftActions({ tenantId, aircraft, onEdit }: AircraftActionsP
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const handleDelete = () => {
+  const handleDeleteAircraft = () => {
     if (!firestore || !tenantId) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Could not connect to the database.',
-      });
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not connect to the database.' });
       return;
     }
-
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
+    const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraft.id);
     deleteDocumentNonBlocking(aircraftRef);
-
-    toast({
-      title: 'Aircraft Deleted',
-      description: `The aircraft "${aircraft.tailNumber}" is being deleted.`,
-    });
+    toast({ title: 'Aircraft Deleted', description: `The aircraft "${aircraft.tailNumber}" is being deleted.` });
     setIsDeleteDialogOpen(false);
-  };
+  }
 
   return (
     <>
@@ -66,36 +59,28 @@ export function AircraftActions({ tenantId, aircraft, onEdit }: AircraftActionsP
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => onEdit(aircraft)}>
-            <Pencil className="mr-2 h-4 w-4" /> Edit
+            <Edit className='mr-2 h-4 w-4' /> Edit
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={(e) => { e.preventDefault(); setIsDeleteDialogOpen(true); }}
-            className="text-destructive focus:text-destructive"
-          >
-            <Trash2 className="mr-2 h-4 w-4" /> Delete
+          <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+            <Trash2 className='mr-2 h-4 w-4' /> Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-      >
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              aircraft &quot;{aircraft.tailNumber}&quot;.
+              This action cannot be undone. This will permanently delete the aircraft "{aircraft.tailNumber}".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDeleteAircraft} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
