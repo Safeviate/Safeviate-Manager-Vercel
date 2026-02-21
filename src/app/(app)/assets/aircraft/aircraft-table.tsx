@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -13,25 +12,24 @@ import type { Aircraft } from '@/types/aircraft';
 import { AircraftActions } from './aircraft-actions';
 
 interface AircraftTableProps {
-  aircrafts: Aircraft[];
+  data: Aircraft[];
   tenantId: string;
 }
 
-export function AircraftTable({ aircrafts, tenantId }: AircraftTableProps) {
-  if (!aircrafts || aircrafts.length === 0) {
+export function AircraftTable({ data, tenantId }: AircraftTableProps) {
+  if (!data || data.length === 0) {
     return (
-      <div className="text-center p-8 text-muted-foreground">
-        No aircraft found. Add one to get started.
-      </div>
+        <div className="text-center h-24 flex items-center justify-center text-muted-foreground">
+            No aircraft found. Add one to get started.
+        </div>
     );
   }
-
+  
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Tail Number</TableHead>
-          <TableHead>Make</TableHead>
           <TableHead>Model</TableHead>
           <TableHead>Current Hobbs</TableHead>
           <TableHead>Current Tacho</TableHead>
@@ -41,15 +39,14 @@ export function AircraftTable({ aircrafts, tenantId }: AircraftTableProps) {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {aircrafts.map((aircraft) => (
+        {data.map((aircraft) => (
           <TableRow key={aircraft.id}>
             <TableCell className="font-medium">{aircraft.tailNumber}</TableCell>
-            <TableCell>{aircraft.make}</TableCell>
             <TableCell>{aircraft.model}</TableCell>
-            <TableCell>{aircraft.currentHobbs ?? 'N/A'}</TableCell>
-            <TableCell>{aircraft.currentTacho ?? 'N/A'}</TableCell>
-            <TableCell>{aircraft.tachoAtNext50Inspection ?? 'N/A'}</TableCell>
-            <TableCell>{aircraft.tachoAtNext100Inspection ?? 'N/A'}</TableCell>
+            <TableCell>{aircraft.currentHobbs != null ? Number(aircraft.currentHobbs).toFixed(1) : 'N/A'}</TableCell>
+            <TableCell>{aircraft.currentTacho != null ? Number(aircraft.currentTacho).toFixed(1) : 'N/A'}</TableCell>
+            <TableCell>{aircraft.tachoAtNext50Inspection != null ? Number(aircraft.tachoAtNext50Inspection).toFixed(1) : 'N/A'}</TableCell>
+            <TableCell>{aircraft.tachoAtNext100Inspection != null ? Number(aircraft.tachoAtNext100Inspection).toFixed(1) : 'N/A'}</TableCell>
             <TableCell className="text-right">
               <AircraftActions aircraft={aircraft} tenantId={tenantId} />
             </TableCell>
