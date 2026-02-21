@@ -1,29 +1,37 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { collection, doc, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, doc } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PlusCircle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 import { AircraftTable } from './aircraft-table';
 import { AircraftForm } from './aircraft-form';
-import type { Aircraft } from './aircraft-type';
+import type { Aircraft } from '@/types/aircraft';
 import type { AircraftInspectionWarningSettings } from '@/types/inspection';
-import { getAircraftStatusBadge } from './utils';
+import { getInspectionBadgeStyle } from './utils';
 import { usePermissions } from '@/hooks/use-permissions';
 
 export default function AssetsPage() {
   const firestore = useFirestore();
-  const { hasPermission } = usePermissions();
+  const { toast } = useToast();
   const tenantId = 'safeviate';
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('assets-create');
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAircraft, setEditingAircraft] = useState<Aircraft | null>(null);
 
-  const canCreate = hasPermission('assets-create');
+  const onOpenChange = (open: boolean) => {
+    if (!open) {
+      setEditingAircraft(null);
+    }
+    setIsFormOpen(open);
+  }
 
   const aircraftQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
@@ -31,7 +39,7 @@ export default function AssetsPage() {
   );
   
   const inspectionSettingsRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, `tenants/${tenantId}/settings/inspection-warnings`) : null),
+    () => (firestore ? doc(firestore, `tenants/${tenantId}/settings`, 'inspection-warnings') : null),
     [firestore, tenantId]
   );
 
@@ -41,74 +49,76 @@ export default function AssetsPage() {
   const isLoading = isLoadingAircrafts || isLoadingSettings;
   const error = aircraftsError || settingsError;
 
-  const handleAddNew = () => {
-    setEditingAircraft(null);
-    setIsDialogOpen(true);
-  };
-
   const handleEdit = (aircraft: Aircraft) => {
     setEditingAircraft(aircraft);
-    setIsDialogOpen(true);
+    setIsFormOpen(true);
+  };
+  
+  const handleAddNew = () => {
+    setEditingAircraft(null);
+    setIsFormOpen(true);
+  }
+
+  const getFiftyHourStyle = (aircraft: Aircraft) => {
+    if (!aircraft.currentTacho || !aircraft.tachoAtNext50Inspection || !inspectionSettings) return null;
+    return getInspectionBadgeStyle(aircraft.currentTacho, aircraft.tachoAtNext50Inspection, inspectionSettings.fiftyHourWarnings);
   };
 
-  const handleDialogClose = () => {
-    setIsDialogOpen(false);
-    setEditingAircraft(null);
+  const getHundredHourStyle = (aircraft: Aircraft) => {
+    if (!aircraft.currentTacho || !aircraft.tachoAtNext100Inspection || !inspectionSettings) return null;
+    return getInspectionBadgeStyle(aircraft.currentTacho, aircraft.tachoAtNext100Inspection, inspectionSettings.oneHundredHourWarnings);
   };
+
 
   return (
-    <div className="flex flex-col gap-6 h-full">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Aircraft Fleet</h1>
-          <p className="text-muted-foreground">Manage all aircraft in your organization.</p>
+    <>
+      <div className="flex flex-col gap-6 h-full">
+        <div className="flex justify-between items-center">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Aircraft Fleet</h1>
+                <p className="text-muted-foreground">Manage all aircraft in your organization.</p>
+            </div>
+            {canCreate && (
+                <Button onClick={handleAddNew}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Aircraft
+                </Button>
+            )}
         </div>
-        {canCreate && (
-          <Button onClick={handleAddNew}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Aircraft
-          </Button>
-        )}
+        <Card>
+          <CardContent className="p-0">
+            {isLoading && <Skeleton className="h-48" />}
+            {error && <div className="text-center p-4 text-destructive">Error: {error.message}</div>}
+            {!isLoading && !error && (
+              <AircraftTable
+                data={aircrafts || []}
+                onEdit={handleEdit}
+                getFiftyHourStyle={getFiftyHourStyle}
+                getHundredHourStyle={getHundredHourStyle}
+              />
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          {isLoading && (
-            <div className="p-4 space-y-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          )}
-          {error && <div className="p-4 text-destructive">Error: {error.message}</div>}
-          {!isLoading && !error && (
-            <AircraftTable 
-              data={aircrafts || []} 
-              onEdit={handleEdit}
-              getAircraftStatusBadge={(ac) => getAircraftStatusBadge(ac, inspectionSettings)}
-            />
-          )}
-        </CardContent>
-      </Card>
-      
-      <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
-        <DialogContent className="sm:max-w-2xl">
-            {isDialogOpen && (
+      <Dialog open={isFormOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl">
+            {isFormOpen && (
                 <>
-                <DialogHeader>
-                    <DialogTitle>{editingAircraft ? 'Edit Aircraft' : 'Add New Aircraft'}</DialogTitle>
-                    <DialogDescription>
-                    {editingAircraft ? `Editing ${editingAircraft.tailNumber}` : 'Enter the details for the new aircraft.'}
-                    </DialogDescription>
-                </DialogHeader>
-                <AircraftForm 
-                    existingAircraft={editingAircraft} 
-                    onClose={handleDialogClose} 
-                />
+                    <DialogHeader>
+                        <DialogTitle>{editingAircraft ? 'Edit Aircraft' : 'Add New Aircraft'}</DialogTitle>
+                        <DialogDescription>
+                            {editingAircraft ? `Editing details for ${editingAircraft.tailNumber}.` : 'Fill in the details for the new aircraft.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <AircraftForm
+                        existingAircraft={editingAircraft}
+                        onClose={() => onOpenChange(false)}
+                    />
                 </>
             )}
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
