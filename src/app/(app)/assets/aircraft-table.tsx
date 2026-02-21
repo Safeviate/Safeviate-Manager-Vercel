@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -9,27 +8,21 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { Aircraft } from '@/types/aircraft';
-import { AircraftActions } from './aircraft-actions';
 import { Badge } from '@/components/ui/badge';
+import { AircraftActions } from './aircraft-actions';
+import type { Aircraft } from './aircraft-type';
 import type { AircraftInspectionWarningSettings } from '@/types/inspection';
 import { getInspectionBadgeStyle } from './utils';
+import { cn } from '@/lib/utils';
 
 interface AircraftTableProps {
   aircrafts: Aircraft[];
-  inspectionSettings: AircraftInspectionWarningSettings | null;
-  onEditClick: (aircraft: Aircraft) => void;
+  inspectionSettings?: AircraftInspectionWarningSettings;
+  onEdit: (aircraft: Aircraft) => void;
+  onDelete: (id: string) => void;
 }
 
-export function AircraftTable({ aircrafts, inspectionSettings, onEditClick }: AircraftTableProps) {
-  if (aircrafts.length === 0) {
-    return (
-      <div className="text-center h-24 flex items-center justify-center text-muted-foreground">
-        No aircraft found.
-      </div>
-    );
-  }
-
+export function AircraftTable({ aircrafts, inspectionSettings, onEdit, onDelete }: AircraftTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -47,14 +40,14 @@ export function AircraftTable({ aircrafts, inspectionSettings, onEditClick }: Ai
         {aircrafts.map((aircraft) => {
           const fiftyHrStyle = getInspectionBadgeStyle(aircraft, '50hr', inspectionSettings);
           const hundredHrStyle = getInspectionBadgeStyle(aircraft, '100hr', inspectionSettings);
-          const next50 =
-            aircraft.tachoAtNext50Inspection !== undefined && aircraft.currentTacho !== undefined
-              ? (aircraft.tachoAtNext50Inspection - aircraft.currentTacho).toFixed(1)
-              : 'N/A';
-          const next100 =
-            aircraft.tachoAtNext100Inspection !== undefined && aircraft.currentTacho !== undefined
-              ? (aircraft.tachoAtNext100Inspection - aircraft.currentTacho).toFixed(1)
-              : 'N/A';
+
+          const next50 = aircraft.tachoAtNext50Inspection !== undefined && aircraft.currentTacho !== undefined
+            ? (aircraft.tachoAtNext50Inspection - aircraft.currentTacho).toFixed(1)
+            : 'N/A';
+
+          const next100 = aircraft.tachoAtNext100Inspection !== undefined && aircraft.currentTacho !== undefined
+            ? (aircraft.tachoAtNext100Inspection - aircraft.currentTacho).toFixed(1)
+            : 'N/A';
 
           return (
             <TableRow key={aircraft.id}>
@@ -63,13 +56,17 @@ export function AircraftTable({ aircrafts, inspectionSettings, onEditClick }: Ai
               <TableCell>{aircraft.currentHobbs?.toFixed(1) ?? 'N/A'}</TableCell>
               <TableCell>{aircraft.currentTacho?.toFixed(1) ?? 'N/A'}</TableCell>
               <TableCell>
-                <Badge style={fiftyHrStyle}>{next50} hrs</Badge>
+                <Badge style={fiftyHrStyle} className={cn(fiftyHrStyle?.color && 'text-white')}>{next50} hrs</Badge>
               </TableCell>
               <TableCell>
-                <Badge style={hundredHrStyle}>{next100} hrs</Badge>
+                 <Badge style={hundredHrStyle} className={cn(hundredHrStyle?.color && 'text-white')}>{next100} hrs</Badge>
               </TableCell>
               <TableCell className="text-right">
-                <AircraftActions aircraft={aircraft} onEditClick={onEditClick} />
+                <AircraftActions 
+                  aircraft={aircraft} 
+                  onEdit={() => onEdit(aircraft)}
+                  onDelete={() => onDelete(aircraft.id)}
+                />
               </TableCell>
             </TableRow>
           );

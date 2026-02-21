@@ -1,33 +1,29 @@
-
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState, useMemo } from 'react';
 import { collection, query, doc } from 'firebase/firestore';
-import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent } from '@/components/ui/card';
-import type { Aircraft } from '@/types/aircraft';
-import { AircraftTable } from './aircraft-table';
-import { AircraftForm } from './aircraft-form';
+import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { AircraftTable } from './aircraft-table';
+import { AircraftForm } from './aircraft-form';
+import type { Aircraft } from './aircraft-type';
 import type { AircraftInspectionWarningSettings } from '@/types/inspection';
 import { usePermissions } from '@/hooks/use-permissions';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 
 export default function AssetsPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const tenantId = 'safeviate';
   const { hasPermission } = usePermissions();
-  const tenantId = 'safeviate'; // Hardcoded for now
-  const canCreate = hasPermission('assets-create');
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAircraft, setEditingAircraft] = useState<Aircraft | null>(null);
+
+  const canCreate = hasPermission('assets-create');
 
   const aircraftsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
@@ -45,73 +41,80 @@ export default function AssetsPage() {
   const isLoading = isLoadingAircrafts || isLoadingSettings;
   const error = aircraftsError || settingsError;
 
-  const handleEditClick = (aircraft: Aircraft) => {
+  const handleEdit = (aircraft: Aircraft) => {
     setEditingAircraft(aircraft);
     setIsFormOpen(true);
   };
   
-  const onOpenChange = (open: boolean) => {
-      if (!open) {
-          setEditingAircraft(null);
-      }
-      setIsFormOpen(open);
+  const handleDelete = (aircraftId: string) => {
+    if (!firestore) return;
+    const docRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);
+    try {
+      deleteDocumentNonBlocking(docRef);
+      toast({
+        title: "Aircraft Deleted",
+        description: "The aircraft is being removed from the register.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Deletion failed",
+        description: error.message,
+      });
+    }
+  };
+
+  const handleOpenNewForm = () => {
+    setEditingAircraft(null);
+    setIsFormOpen(true);
+  }
+  
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setEditingAircraft(null);
   }
 
   return (
     <div className="flex flex-col gap-6 h-full">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Aircraft Fleet</h1>
-          <p className="text-muted-foreground">Manage all aircraft in your organization.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Assets</h1>
+          <p className="text-muted-foreground">Manage all aircraft in your fleet.</p>
         </div>
         {canCreate && (
-          <Button onClick={() => {
-            setEditingAircraft(null);
-            setIsFormOpen(true);
-          }}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Aircraft
-          </Button>
+            <Button onClick={handleOpenNewForm}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Aircraft
+            </Button>
         )}
       </div>
 
       <Card>
-        <CardContent className="p-0">
-          {isLoading && (
-            <div className="text-center p-8">Loading aircraft...</div>
-          )}
-          {!isLoading && error && (
-            <div className="text-center p-4 text-destructive">Error: {error.message}</div>
-          )}
+        <CardHeader>
+          <CardTitle>Aircraft Fleet</CardTitle>
+          <CardDescription>A list of all aircraft currently in your fleet.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading && <Skeleton className="h-48 w-full" />}
+          {error && <p className="text-destructive text-center p-4">Error loading data: {error.message}</p>}
           {!isLoading && !error && (
             <AircraftTable 
-              aircrafts={aircrafts || []} 
-              inspectionSettings={inspectionSettings}
-              onEditClick={handleEditClick}
+              aircrafts={aircrafts || []}
+              inspectionSettings={inspectionSettings || undefined}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
             />
           )}
         </CardContent>
       </Card>
       
-      <Dialog open={isFormOpen} onOpenChange={onOpenChange}>
-          <DialogContent className="max-w-4xl">
-            {isFormOpen && (
-              <>
-                <DialogHeader>
-                  <DialogTitle>{editingAircraft ? 'Edit Aircraft' : 'Add New Aircraft'}</DialogTitle>
-                  <DialogDescription>
-                    {editingAircraft ? `Update details for ${editingAircraft.tailNumber}.` : 'Fill in the details for the new aircraft.'}
-                  </DialogDescription>
-                </DialogHeader>
-                <AircraftForm 
-                  tenantId={tenantId} 
-                  existingAircraft={editingAircraft}
-                  onClose={() => onOpenChange(false)}
-                />
-              </>
-            )}
-          </DialogContent>
-      </Dialog>
+      {isFormOpen && (
+          <AircraftForm
+            isOpen={isFormOpen}
+            onClose={handleCloseForm}
+            aircraft={editingAircraft}
+            tenantId={tenantId}
+          />
+      )}
     </div>
   );
 }
