@@ -163,6 +163,13 @@ export const menuConfig: MenuItem[] = [
     ],
   },
   {
+    href: '/assets',
+    label: 'Assets',
+    icon: Plane,
+    permissionId: 'assets-view',
+    subItems: [],
+  },
+  {
     href: '/users',
     label: 'Users',
     icon: Users,

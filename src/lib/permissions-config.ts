@@ -47,6 +47,8 @@ export const permissionsConfig: PermissionResource[] = [
   { id: 'training', name: 'Training', actions: ['view'] },
   { id: 'training-debriefs', name: 'Training: Student Debriefs', actions: ['view', 'edit'] },
 
+  { id: 'assets', name: 'Assets', actions: ['view', 'create', 'edit', 'delete'] },
+
   { id: 'users', name: 'Users', actions: ['view', 'create', 'edit', 'delete'] },
 
   // --- Admin Section ---
