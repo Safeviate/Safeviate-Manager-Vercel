@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -10,21 +9,23 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import type { Aircraft } from './page';
+import type { Aircraft } from '@/types/aircraft';
 import { AircraftActions } from './aircraft-actions';
+import type { AircraftInspectionWarningSettings } from '../admin/document-dates/page';
+import { useRouter } from 'next/navigation';
 
 interface AircraftTableProps {
-  aircrafts: Aircraft[] | null;
+  aircrafts: Aircraft[];
+  inspectionSettings?: AircraftInspectionWarningSettings;
   tenantId: string;
+  onEdit: (aircraft: Aircraft) => void;
+  onRowClick: (aircraft: Aircraft) => void;
 }
 
-export function AircraftTable({ aircrafts, tenantId }: AircraftTableProps) {
-
-  if (!aircrafts) {
-    return <div className="p-8 text-center">Loading...</div>;
-  }
+export function AircraftTable({ aircrafts, inspectionSettings, tenantId, onEdit, onRowClick }: AircraftTableProps) {
+  const router = useRouter();
   
-  if (aircrafts.length === 0) {
+  if (!aircrafts || aircrafts.length === 0) {
     return (
       <div className="text-center p-8 text-muted-foreground">
         No aircraft found. Add one to get started.
@@ -42,28 +43,24 @@ export function AircraftTable({ aircrafts, tenantId }: AircraftTableProps) {
           <TableHead>Tacho</TableHead>
           <TableHead>Next 50hr</TableHead>
           <TableHead>Next 100hr</TableHead>
-          <TableHead className="text-right sr-only">Actions</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {aircrafts.map((aircraft) => (
-          <TableRow key={aircraft.id}>
+          <TableRow key={aircraft.id} onClick={() => onRowClick(aircraft)} className="cursor-pointer">
             <TableCell className="font-medium">{aircraft.tailNumber}</TableCell>
             <TableCell>{aircraft.model}</TableCell>
             <TableCell>{aircraft.currentHobbs?.toFixed(1)}</TableCell>
             <TableCell>{aircraft.currentTacho?.toFixed(1)}</TableCell>
             <TableCell>
-              {aircraft.tachoAtNext50Inspection != null ? (
-                <Badge variant="outline">{aircraft.tachoAtNext50Inspection.toFixed(1)}</Badge>
-              ) : 'N/A'}
+              <Badge variant="outline">{aircraft.tachoAtNext50Inspection?.toFixed(1)}</Badge>
             </TableCell>
             <TableCell>
-              {aircraft.tachoAtNext100Inspection != null ? (
-                <Badge variant="outline">{aircraft.tachoAtNext100Inspection.toFixed(1)}</Badge>
-              ) : 'N/A'}
+              <Badge variant="outline">{aircraft.tachoAtNext100Inspection?.toFixed(1)}</Badge>
             </TableCell>
             <TableCell className="text-right">
-              <AircraftActions tenantId={tenantId} aircraft={aircraft} />
+              <AircraftActions tenantId={tenantId} aircraft={aircraft} onEdit={() => onEdit(aircraft)} />
             </TableCell>
           </TableRow>
         ))}
