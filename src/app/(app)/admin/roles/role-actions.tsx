@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -73,15 +72,16 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
   const canManageRoles = hasPermission('admin-roles-manage');
   const canManagePermissions = hasPermission('admin-permissions-manage');
 
-  useEffect(() => {
-    // Reset form state when the dialog is opened for a new edit session
-    if (isEditDialogOpen) {
+  const onOpenChange = (open: boolean) => {
+    if (!open) {
+        // Reset form state when dialog closes
         setRoleName(role.name);
         setSelectedPermissions(role.permissions || []);
         setRequiredDocuments(role.requiredDocuments || []);
         setCurrentDocument('');
     }
-  }, [isEditDialogOpen, role]);
+    setIsEditDialogOpen(open);
+  }
 
   const allPermissionIds = useMemo(() => 
     permissionsConfig.flatMap(resource => 
@@ -182,16 +182,16 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
         <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => setIsEditDialogOpen(true)}>
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsEditDialogOpen(true); }}>
                 <Pencil className='mr-2 h-4 w-4' /> Edit
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsDeleteDialogOpen(true); }} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
                 <Trash2 className='mr-2 h-4 w-4' /> Delete
             </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-3xl">
           {isEditDialogOpen && (
             <>

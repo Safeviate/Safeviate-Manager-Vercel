@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -60,8 +59,7 @@ export function DepartmentActions({ tenantId, department }: DepartmentActionsPro
   const canManage = hasPermission('admin-departments-manage');
 
   useEffect(() => {
-    // Reset form state when the dialog is opened for a new edit session
-    if (isEditOpen) {
+    if (!isEditOpen) {
       setDepartmentName(department.name);
     }
   }, [isEditOpen, department.name]);
@@ -134,10 +132,10 @@ export function DepartmentActions({ tenantId, department }: DepartmentActionsPro
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
+              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsEditOpen(true); }}>
                 <Pencil className='mr-2 h-4 w-4' /> Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setIsDeleteOpen(true)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsDeleteOpen(true); }} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
                  <Trash2 className='mr-2 h-4 w-4' /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>

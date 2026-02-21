@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -109,7 +108,7 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
                       <Eye className='mr-2' /> View Profile
                   </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsDeleteDialogOpen(true); }} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
                   <Trash2 className='mr-2' /> Delete
               </DropdownMenuItem>
           </DropdownMenuContent>

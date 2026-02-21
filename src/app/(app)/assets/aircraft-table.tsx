@@ -1,35 +1,17 @@
 'use client';
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import type { Aircraft } from '@/types/aircraft';
-import type { AircraftInspectionWarningSettings } from '@/types/inspection';
+import type { Aircraft } from './aircraft-type';
 import { AircraftActions } from './aircraft-actions';
-import { getInspectionBadgeStyle } from './utils';
 
 interface AircraftTableProps {
   data: Aircraft[];
-  inspectionSettings?: AircraftInspectionWarningSettings;
   onEdit: (aircraft: Aircraft) => void;
-  onDelete: (aircraft: Aircraft) => void;
+  getAircraftStatusBadge: (aircraft: Aircraft) => React.ReactNode;
 }
 
-export function AircraftTable({ data, inspectionSettings, onEdit, onDelete }: AircraftTableProps) {
-  if (!data || data.length === 0) {
-    return (
-      <div className="text-center p-8 text-muted-foreground">
-        No aircraft found. Add one to get started.
-      </div>
-    );
-  }
-
+export function AircraftTable({ data, onEdit, getAircraftStatusBadge }: AircraftTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -44,35 +26,31 @@ export function AircraftTable({ data, inspectionSettings, onEdit, onDelete }: Ai
         </TableRow>
       </TableHeader>
       <TableBody>
-        {data.map((aircraft) => {
-            const fiftyHourStyle = getInspectionBadgeStyle(
-                aircraft.currentTacho, 
-                aircraft.tachoAtNext50Inspection, 
-                inspectionSettings?.fiftyHourWarnings
-            );
-            const hundredHourStyle = getInspectionBadgeStyle(
-                aircraft.currentTacho, 
-                aircraft.tachoAtNext100Inspection, 
-                inspectionSettings?.oneHundredHourWarnings
-            );
-          return (
+        {data.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={7} className="h-24 text-center">
+              No aircraft found. Add one to get started.
+            </TableCell>
+          </TableRow>
+        ) : (
+          data.map((aircraft) => (
             <TableRow key={aircraft.id}>
               <TableCell className="font-medium">{aircraft.tailNumber}</TableCell>
               <TableCell>{aircraft.model}</TableCell>
               <TableCell>{aircraft.currentHobbs?.toFixed(1) ?? 'N/A'}</TableCell>
               <TableCell>{aircraft.currentTacho?.toFixed(1) ?? 'N/A'}</TableCell>
+              <TableCell>{getAircraftStatusBadge(aircraft)}</TableCell>
               <TableCell>
-                <Badge style={fiftyHourStyle}>{aircraft.tachoAtNext50Inspection?.toFixed(1) ?? 'N/A'}</Badge>
-              </TableCell>
-              <TableCell>
-                <Badge style={hundredHourStyle}>{aircraft.tachoAtNext100Inspection?.toFixed(1) ?? 'N/A'}</Badge>
+                {aircraft.tachoAtNext100Inspection !== undefined && aircraft.currentTacho !== undefined
+                  ? (aircraft.tachoAtNext100Inspection - aircraft.currentTacho).toFixed(1)
+                  : 'N/A'}
               </TableCell>
               <TableCell className="text-right">
-                <AircraftActions aircraft={aircraft} onEdit={onEdit} onDelete={onDelete} />
+                <AircraftActions aircraft={aircraft} onEdit={() => onEdit(aircraft)} />
               </TableCell>
             </TableRow>
-          );
-        })}
+          ))
+        )}
       </TableBody>
     </Table>
   );

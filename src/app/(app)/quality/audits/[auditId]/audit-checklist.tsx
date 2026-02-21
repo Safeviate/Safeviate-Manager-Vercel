@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -337,8 +335,8 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent>
-                                                    <DropdownMenuItem onSelect={() => openDialog('file')}><FileUp className="mr-2 h-4 w-4" />Upload File</DropdownMenuItem>
-                                                    <DropdownMenuItem onSelect={() => openDialog('camera')}><Camera className="mr-2 h-4 w-4" />Take Photo</DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openDialog('file');}}><FileUp className="mr-2 h-4 w-4" />Upload File</DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openDialog('camera');}}><Camera className="mr-2 h-4 w-4" />Take Photo</DropdownMenuItem>
                                                 </DropdownMenuContent>
                                                 </DropdownMenu>
                                             )}
