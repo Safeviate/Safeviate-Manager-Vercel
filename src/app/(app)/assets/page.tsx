@@ -1,31 +1,32 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState, useMemo } from 'react';
 import { collection, query, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { PlusCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import type { Aircraft } from './page';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import PageHeader from '@/components/page-header';
 import { AircraftTable } from './aircraft-table';
 import { AircraftForm } from './aircraft-form';
+import type { Aircraft } from '@/types/aircraft';
 import type { AircraftInspectionWarningSettings } from '@/types/inspection';
 import { usePermissions } from '@/hooks/use-permissions';
 
-export type { Aircraft, AircraftComponent } from '@/types/aircraft';
-
 
 export default function AssetsPage() {
-  const firestore = useFirestore();
-  const { hasPermission } = usePermissions();
-  const tenantId = 'safeviate';
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAircraft, setEditingAircraft] = useState<Aircraft | null>(null);
+  const { hasPermission } = usePermissions();
+  const firestore = useFirestore();
+  const tenantId = 'safeviate'; // Hardcoded for now
 
-  const canCreate = hasPermission('assets-create');
-  const canEdit = hasPermission('assets-edit');
+  const canCreateAssets = hasPermission('assets-create');
 
-  const aircraftQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
+  const aircraftsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
     [firestore, tenantId]
   );
   
@@ -34,63 +35,57 @@ export default function AssetsPage() {
     [firestore, tenantId]
   );
 
-  const { data: aircrafts, isLoading: isLoadingAircrafts, error: aircraftsError } = useCollection<Aircraft>(aircraftQuery);
+  const { data: aircrafts, isLoading: isLoadingAircrafts, error: aircraftsError } = useCollection<Aircraft>(aircraftsQuery);
   const { data: inspectionSettings, isLoading: isLoadingSettings, error: settingsError } = useDoc<AircraftInspectionWarningSettings>(inspectionSettingsRef);
-
-  const handleAddClick = () => {
-    setEditingAircraft(null);
-    setIsFormOpen(true);
-  };
-
-  const handleEditClick = (aircraft: Aircraft) => {
-    setEditingAircraft(aircraft);
-    setIsFormOpen(true);
-  };
   
-  const handleRowClick = (aircraft: Aircraft) => {
-      if (canEdit) {
-        handleEditClick(aircraft);
-      }
-  }
-
   const isLoading = isLoadingAircrafts || isLoadingSettings;
   const error = aircraftsError || settingsError;
 
+  const handleEdit = (aircraft: Aircraft | null) => {
+    setEditingAircraft(aircraft);
+    setIsDialogOpen(true);
+  };
+  
   return (
     <div className="flex flex-col gap-6 h-full">
-      <AircraftForm
-        isOpen={isFormOpen}
-        setIsOpen={setIsFormOpen}
-        tenantId={tenantId}
-        existingAircraft={editingAircraft}
-        canCreate={canCreate}
-        canEdit={canEdit}
-      />
-       <div className="flex justify-between items-center">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Your Fleet</h1>
-                <p className="text-muted-foreground">A list of all aircraft registered in the system.</p>
-            </div>
-        </div>
+      <div className="flex justify-between items-center">
+        <PageHeader title="Assets" description="Manage your fleet of aircraft." />
+        {canCreateAssets && (
+          <Button onClick={() => handleEdit(null)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Aircraft
+          </Button>
+        )}
+      </div>
+
       <Card>
         <CardContent className="p-0">
-          {isLoading && (
-            <div className="text-center p-8 text-muted-foreground">Loading aircraft...</div>
-          )}
-          {!isLoading && error && (
-            <div className="text-center p-8 text-destructive">Error: {error.message}</div>
-          )}
+          {isLoading && <div className="text-center p-8">Loading aircraft...</div>}
+          {!isLoading && error && <div className="text-center p-8 text-destructive">Error: {error.message}</div>}
           {!isLoading && !error && (
             <AircraftTable
               aircrafts={aircrafts || []}
               inspectionSettings={inspectionSettings || undefined}
               tenantId={tenantId}
-              onEdit={handleEditClick}
-              onRowClick={handleRowClick}
+              onEdit={handleEdit}
+              onRowClick={() => {}} // Placeholder
             />
           )}
         </CardContent>
       </Card>
+      
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingAircraft ? 'Edit Aircraft' : 'Add New Aircraft'}</DialogTitle>
+          </DialogHeader>
+          <AircraftForm
+            tenantId={tenantId}
+            existingAircraft={editingAircraft}
+            onClose={() => setIsDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
