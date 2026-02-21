@@ -1,18 +1,11 @@
+
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { AircraftForm } from '../aircraft-form';
 
 export default function NewAircraftPage() {
-  const router = useRouter();
-  
-  const handleSave = () => {
-    router.push('/assets/aircraft');
-  };
-
-  const handleCancel = () => {
-    router.back();
-  };
-
-  return <AircraftForm onSave={handleSave} onCancel={handleCancel} />;
+    const tenantId = 'safeviate'; // Hardcoded for now
+    
+    // The form now handles its own submission logic, so we just render it.
+    return <AircraftForm tenantId={tenantId} />;
 }

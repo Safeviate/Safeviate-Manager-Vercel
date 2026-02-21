@@ -99,6 +99,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-size: var(--scale, 100%);
   }
   .border-b {
     border-bottom-color: hsl(var(--header-border));

@@ -1,99 +1,107 @@
 
 'use client';
 
-import { use, useMemo, useState, Suspense } from 'react';
+import { useState, useMemo, use, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { collection, doc, query } from 'firebase/firestore';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
-import type { Role } from '@/app/(app)/admin/roles/page';
+import type { Aircraft } from '@/types/aircraft';
 import type { Department } from '@/app/(app)/users/personnel/page';
-import type { AircraftInspectionWarningSettings, HourWarning } from '@/types/inspection';
+import type { AircraftInspectionWarningSettings } from '@/types/inspection';
 import { AircraftForm } from '../aircraft-form';
 import { ViewAircraftDetails } from './view-aircraft-details';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
-import type { Aircraft } from '@/types/aircraft';
+import { usePermissions } from '@/hooks/use-permissions';
 
-interface AircraftPageProps {
+interface AircraftProfilePageProps {
     params: { id: string };
 }
 
-function AircraftPageContent({ params }: AircraftPageProps) {
+
+function AircraftProfileContent({ params }: AircraftProfilePageProps) {
     const resolvedParams = use(params);
     const firestore = useFirestore();
-    const [isEditing, setIsEditing] = useState(false);
+    const { hasPermission } = usePermissions();
 
-    const tenantId = 'safeviate';
+    const tenantId = 'safeviate'; // Hardcoded for now
     const aircraftId = resolvedParams.id;
+    const [isEditing, setIsEditing] = useState(false);
+    const canEdit = hasPermission('assets-edit');
 
-    const aircraftRef = useMemoFirebase(
+
+    const aircraftDocRef = useMemoFirebase(
         () => (firestore ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId) : null),
         [firestore, tenantId, aircraftId]
     );
-    const rolesQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/roles`) : null), [firestore, tenantId]);
-    const departmentsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/departments`) : null), [firestore, tenantId]);
-    const inspectionSettingsRef = useMemoFirebase(() => (firestore ? doc(firestore, `tenants/${tenantId}/settings`, 'inspection-warnings') : null), [firestore, tenantId]);
 
+    const inspectionSettingsRef = useMemoFirebase(
+      () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'inspection-warnings') : null),
+      [firestore, tenantId]
+    );
 
-    const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useDoc<Aircraft>(aircraftRef);
-    const { data: roles, isLoading: isLoadingRoles, error: rolesError } = useCollection<Role>(rolesQuery);
-    const { data: departments, isLoading: isLoadingDepts, error: deptsError } = useCollection<Department>(departmentsQuery);
+    const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useDoc<Aircraft>(aircraftDocRef);
     const { data: inspectionSettings, isLoading: isLoadingSettings, error: settingsError } = useDoc<AircraftInspectionWarningSettings>(inspectionSettingsRef);
 
-    const isLoading = isLoadingAircraft || isLoadingRoles || isLoadingDepts || isLoadingSettings;
-    const error = aircraftError || rolesError || deptsError || settingsError;
+    const isLoading = isLoadingAircraft || isLoadingSettings;
+    const error = aircraftError || settingsError;
+
 
     if (isLoading) {
         return (
-            <div className="space-y-6">
-                <Skeleton className="h-10 w-48" />
-                <Skeleton className="h-64 w-full" />
+            <div className="space-y-8">
+                <Skeleton className="h-10 w-1/4" />
+                <div className="space-y-6">
+                    <Skeleton className="h-48 w-full" />
+                    <Skeleton className="h-48 w-full" />
+                </div>
             </div>
         );
     }
-    
+
     if (error) {
-        return <p className="text-destructive text-center p-8">Error: {error.message}</p>
+        return <div className="text-destructive">Error: {error.message}</div>;
     }
 
     if (!aircraft) {
-        return <p>Aircraft not found.</p>
+        return <div>Aircraft not found.</div>;
     }
 
     return (
         <div className='space-y-6'>
             {isEditing ? (
-                 <AircraftForm 
+                 <AircraftForm
                     tenantId={tenantId}
-                    aircraft={aircraft}
-                    roles={roles || []}
-                    departments={departments || []}
+                    existingAircraft={aircraft}
                     onCancel={() => setIsEditing(false)}
                 />
             ) : (
                 <>
                     <div className="flex justify-end">
-                        <Button onClick={() => setIsEditing(true)}>
-                            <Pencil className='mr-2' />
-                            Edit Aircraft
-                        </Button>
+                        {canEdit && (
+                            <Button onClick={() => setIsEditing(true)}>
+                                <Pencil className='mr-2' />
+                                Edit Aircraft
+                            </Button>
+                        )}
                     </div>
-                    <ViewAircraftDetails
-                        aircraft={aircraft}
-                        inspectionSettings={inspectionSettings}
+                    <ViewAircraftDetails 
+                        aircraft={aircraft} 
+                        inspectionWarningSettings={inspectionSettings}
                     />
                 </>
             )}
+           
         </div>
     );
 }
 
 
-export default function AircraftPage(props: AircraftPageProps) {
+export default function AircraftProfilePageWrapper(props: AircraftProfilePageProps) {
   return (
-    <Suspense fallback={<Skeleton className="h-screen w-full" />}>
-      <AircraftPageContent {...props} />
+    <Suspense fallback={<div>Loading...</div>}>
+      <AircraftProfileContent {...props} />
     </Suspense>
   )
 }

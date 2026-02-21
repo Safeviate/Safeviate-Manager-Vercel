@@ -19,7 +19,7 @@ export interface Aircraft {
     model: string;
     tailNumber: string;
     abbreviation?: string;
-    type: 'Single-Engine' | 'Multi-Engine';
+    type?: 'Single-Engine' | 'Multi-Engine';
     frameHours?: number;
     engineHours?: number;
     initialHobbs?: number;
