@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { useDebounce } from '@/hooks/use-debounce';
 import type { StudentMilestoneSettings } from '@/types/training';
+import type { AircraftInspectionWarningSettings, HourWarning } from '@/types/inspection';
 
 export type WarningPeriod = {
   period: number;
@@ -37,6 +38,16 @@ const defaultMilestones = [
     { milestone: 20, warningHours: 17 },
     { milestone: 30, warningHours: 27 },
     { milestone: 40, warningHours: 37 },
+];
+
+const defaultFiftyHourWarnings: HourWarning[] = [
+    { hours: 10, color: '#facc15' },
+    { hours: 5, color: '#f97316' },
+];
+
+const defaultHundredHourWarnings: HourWarning[] = [
+    { hours: 20, color: '#facc15' },
+    { hours: 10, color: '#f97316' },
 ];
 
 export default function DocumentDatesPage() {
@@ -63,6 +74,17 @@ export default function DocumentDatesPage() {
   const { data: milestoneSettings, isLoading: isLoadingMilestones, error: milestoneError } = useDoc<StudentMilestoneSettings>(milestoneSettingsRef);
   const [milestoneState, setMilestoneState] = useState(milestoneSettings?.milestones || defaultMilestones);
   const debouncedMilestoneState = useDebounce(milestoneState, 500);
+
+  // --- Inspection Warnings State & Logic ---
+  const inspectionSettingsId = 'inspection-warnings';
+  const inspectionSettingsRef = useMemoFirebase(() => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', inspectionSettingsId) : null), [firestore, tenantId]);
+  const { data: inspectionSettings, isLoading: isLoadingInspections, error: inspectionError } = useDoc<AircraftInspectionWarningSettings>(inspectionSettingsRef);
+  const [fiftyHourWarnings, setFiftyHourWarnings] = useState<HourWarning[]>([]);
+  const [hundredHourWarnings, setHundredHourWarnings] = useState<HourWarning[]>([]);
+  const [newFiftyHour, setNewFiftyHour] = useState('');
+  const [newFiftyHourColor, setNewFiftyHourColor] = useState('#facc15');
+  const [newHundredHour, setNewHundredHour] = useState('');
+  const [newHundredHourColor, setNewHundredHourColor] = useState('#f97316');
 
 
   useEffect(() => {
@@ -104,11 +126,23 @@ export default function DocumentDatesPage() {
 
   useEffect(() => {
     if (!milestoneSettingsRef || isLoadingMilestones) return;
-    // Simple deep equal check
     if (JSON.stringify(debouncedMilestoneState) !== JSON.stringify(milestoneSettings?.milestones)) {
         setDocumentNonBlocking(milestoneSettingsRef, { milestones: debouncedMilestoneState }, { merge: true });
     }
   }, [debouncedMilestoneState, milestoneSettingsRef, milestoneSettings, isLoadingMilestones]);
+
+  useEffect(() => {
+    if (inspectionSettings) {
+        setFiftyHourWarnings(inspectionSettings.fiftyHourWarnings || []);
+        setHundredHourWarnings(inspectionSettings.oneHundredHourWarnings || []);
+    } else if (!isLoadingInspections && inspectionSettingsRef) {
+        setDocumentNonBlocking(inspectionSettingsRef, { 
+            id: inspectionSettingsId,
+            fiftyHourWarnings: defaultFiftyHourWarnings,
+            oneHundredHourWarnings: defaultHundredHourWarnings,
+        }, { merge: false });
+    }
+  }, [inspectionSettings, isLoadingInspections, inspectionSettingsRef]);
 
 
   const handleAddPeriod = () => {
@@ -144,14 +178,56 @@ export default function DocumentDatesPage() {
     }
   }
 
-  const isLoading = isLoadingExpiry || isLoadingMilestones;
-  const error = expiryError || milestoneError;
+  const handleAddInspectionWarning = (type: '50hr' | '100hr') => {
+    if (!inspectionSettingsRef) return;
+    const hoursStr = type === '50hr' ? newFiftyHour : newHundredHour;
+    const newColor = type === '50hr' ? newFiftyHourColor : newHundredHourColor;
+    const hours = parseInt(hoursStr, 10);
+
+    if (isNaN(hours) || hours <= 0) {
+        toast({ variant: 'destructive', title: 'Invalid Number', description: 'Please enter a positive number of hours.' });
+        return;
+    }
+
+    const fieldKey = type === '50hr' ? 'fiftyHourWarnings' : 'oneHundredHourWarnings';
+    const currentWarnings = inspectionSettings?.[fieldKey] || [];
+    if (currentWarnings.some((w) => w.hours === hours)) {
+        toast({ variant: 'destructive', title: 'Duplicate Warning', description: `A warning for ${hours} hours already exists.` });
+        return;
+    }
+
+    const updatedWarnings = [...currentWarnings, { hours, color: newColor }].sort((a, b) => b.hours - a.hours);
+    setDocumentNonBlocking(inspectionSettingsRef, { [fieldKey]: updatedWarnings }, { merge: true });
+
+    toast({ title: 'Inspection Warning Added' });
+
+    if (type === '50hr') {
+        setNewFiftyHour('');
+        setNewFiftyHourColor('#facc15');
+    } else {
+        setNewHundredHour('');
+        setNewHundredHourColor('#f97316');
+    }
+  };
+
+  const handleRemoveInspectionWarning = (type: '50hr' | '100hr', hoursToRemove: number) => {
+    if (!inspectionSettingsRef) return;
+    const fieldKey = type === '50hr' ? 'fiftyHourWarnings' : 'oneHundredHourWarnings';
+    const newWarnings = (inspectionSettings?.[fieldKey] || []).filter((w) => w.hours !== hoursToRemove);
+    setDocumentNonBlocking(inspectionSettingsRef, { [fieldKey]: newWarnings }, { merge: true });
+    toast({ title: 'Inspection Warning Removed' });
+  };
+
+
+  const isLoading = isLoadingExpiry || isLoadingMilestones || isLoadingInspections;
+  const error = expiryError || milestoneError || inspectionError;
 
   if (isLoading) {
     return (
       <div className="w-full max-w-2xl mx-auto space-y-6">
         <Skeleton className="h-80 w-full" />
         <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-80 w-full" />
       </div>
     );
   }
@@ -250,6 +326,90 @@ export default function DocumentDatesPage() {
                     </div>
                 </div>
             ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+            <CardTitle>Aircraft Inspection Warnings</CardTitle>
+            <CardDescription>
+                Configure warnings for upcoming 50-hour and 100-hour inspections based on hours remaining.
+            </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+            {/* 50 Hour Section */}
+            <div className="space-y-4 rounded-lg border p-4">
+                <h4 className="font-semibold">50 Hour Inspection</h4>
+                <div className="space-y-2">
+                    <Label htmlFor="fifty-hour-warning">New Warning</Label>
+                    <div className="flex gap-2">
+                        <Input id="fifty-hour-warning" type="number" value={newFiftyHour} onChange={(e) => setNewFiftyHour(e.target.value)} placeholder="e.g., 10 (hours remaining)" className="w-48" onKeyDown={(e) => e.key === 'Enter' && handleAddInspectionWarning('50hr')} />
+                        <Input id="fifty-hour-color" type="color" value={newFiftyHourColor} onChange={(e) => setNewFiftyHourColor(e.target.value)} className="p-1 h-10 w-12" />
+                        <Button onClick={() => handleAddInspectionWarning('50hr')} className="flex-grow">Add Warning</Button>
+                    </div>
+                </div>
+                <div>
+                    <h5 className="text-sm font-medium text-muted-foreground mb-2">
+                        Current Warnings (Highest hours takes precedence)
+                    </h5>
+                    <div className="flex flex-col gap-2 min-h-16">
+                        {fiftyHourWarnings.map(({ hours, color }) => (
+                            <div key={hours} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
+                                <div className="flex items-center gap-3">
+                                    <div className="relative h-6 w-6 rounded-full border cursor-pointer" style={{ backgroundColor: color }}>
+                                        <Input type="color" value={color} onChange={(e) => {
+                                            const newWarnings = fiftyHourWarnings.map(w => w.hours === hours ? { ...w, color: e.target.value } : w);
+                                            setDocumentNonBlocking(inspectionSettingsRef!, { fiftyHourWarnings: newWarnings }, { merge: true });
+                                        }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0" />
+                                    </div>
+                                    <Badge variant="secondary" className="flex items-center gap-2 text-base py-1">{hours} hrs remaining</Badge>
+                                </div>
+                                <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-destructive/20" onClick={() => handleRemoveInspectionWarning('50hr', hours)}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                    <span className="sr-only">Remove {hours} hours</span>
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* 100 Hour Section */}
+            <div className="space-y-4 rounded-lg border p-4">
+                <h4 className="font-semibold">100 Hour Inspection</h4>
+                 <div className="space-y-2">
+                    <Label htmlFor="hundred-hour-warning">New Warning</Label>
+                    <div className="flex gap-2">
+                        <Input id="hundred-hour-warning" type="number" value={newHundredHour} onChange={(e) => setNewHundredHour(e.target.value)} placeholder="e.g., 20 (hours remaining)" className="w-48" onKeyDown={(e) => e.key === 'Enter' && handleAddInspectionWarning('100hr')} />
+                        <Input id="hundred-hour-color" type="color" value={newHundredHourColor} onChange={(e) => setNewHundredHourColor(e.target.value)} className="p-1 h-10 w-12" />
+                        <Button onClick={() => handleAddInspectionWarning('100hr')} className="flex-grow">Add Warning</Button>
+                    </div>
+                </div>
+                <div>
+                    <h5 className="text-sm font-medium text-muted-foreground mb-2">
+                        Current Warnings (Highest hours takes precedence)
+                    </h5>
+                    <div className="flex flex-col gap-2 min-h-16">
+                        {hundredHourWarnings.map(({ hours, color }) => (
+                            <div key={hours} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
+                                <div className="flex items-center gap-3">
+                                    <div className="relative h-6 w-6 rounded-full border cursor-pointer" style={{ backgroundColor: color }}>
+                                        <Input type="color" value={color} onChange={(e) => {
+                                             const newWarnings = hundredHourWarnings.map(w => w.hours === hours ? { ...w, color: e.target.value } : w);
+                                             setDocumentNonBlocking(inspectionSettingsRef!, { oneHundredHourWarnings: newWarnings }, { merge: true });
+                                        }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0" />
+                                    </div>
+                                    <Badge variant="secondary" className="flex items-center gap-2 text-base py-1">{hours} hrs remaining</Badge>
+                                </div>
+                                <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-destructive/20" onClick={() => handleRemoveInspectionWarning('100hr', hours)}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                    <span className="sr-only">Remove {hours} hours</span>
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
         </CardContent>
       </Card>
     </div>

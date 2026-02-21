@@ -1219,6 +1219,33 @@
         },
         "required": ["warningPeriods"]
     },
+     "HourWarning": {
+        "title": "Hour Warning",
+        "type": "object",
+        "description": "A single warning configuration based on hours remaining.",
+        "properties": {
+            "hours": { "type": "number", "description": "The hour threshold at which to show a warning." },
+            "color": { "type": "string", "description": "The hex color code for this warning." }
+        },
+        "required": ["hours", "color"]
+    },
+    "AircraftInspectionWarningSettings": {
+        "title": "Aircraft Inspection Warning Settings",
+        "type": "object",
+        "description": "Settings for aircraft inspection hour warnings.",
+        "properties": {
+            "id": { "type": "string" },
+            "fiftyHourWarnings": {
+                "type": "array",
+                "items": { "$ref": "#/backend/entities/HourWarning" }
+            },
+            "oneHundredHourWarnings": {
+                "type": "array",
+                "items": { "$ref": "#/backend/entities/HourWarning" }
+            }
+        },
+        "required": ["id"]
+    },
     "Department": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Department",
@@ -1719,6 +1746,13 @@
           }
       },
       {
+          "path": "tenants/{tenantId}/settings/inspection-warnings",
+          "definition": {
+              "schema": { "$ref": "#/backend/entities/AircraftInspectionWarningSettings" },
+              "description": "Stores aircraft inspection hour warning settings."
+          }
+      },
+      {
           "path": "tenants/{tenantId}/settings/spi-configurations",
           "definition": {
             "schema": { "$ref": "#/backend/entities/SpiConfigurations" },
@@ -1762,4 +1796,3 @@
     ]
   }
 }
-    

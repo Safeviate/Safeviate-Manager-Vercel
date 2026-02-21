@@ -53,3 +53,4 @@ export type {
 export type { Alert, AlertType, AlertStatus } from './alert';
 export type { SpiConfig, SpiConfigurations, SpiComparison, SpiUnit } from './spi';
 export type { MaintenanceLog } from './maintenance';
+export type { HourWarning, AircraftInspectionWarningSettings } from './inspection';
