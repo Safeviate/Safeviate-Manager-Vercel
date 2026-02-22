@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -6,8 +5,9 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
-
-const RISK_MATRIX_COLORS_KEY = 'safeviate-risk-matrix-colors';
+import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { useDebounce } from '@/hooks/use-debounce';
 
 const likelihoods = [
     { name: 'Frequent', value: 5 },
@@ -33,33 +33,44 @@ const defaultColors: Record<string, string> = {
     '1A': '#f0ad4e', '1B': '#5cb85c', '1C': '#5cb85c', '1D': '#5cb85c', '1E': '#5cb85c',
 };
 
+type RiskMatrixSettings = {
+    id: string;
+    colors: Record<string, string>;
+}
 
 export default function RiskMatrixPage() {
+  const firestore = useFirestore();
+  const tenantId = 'safeviate';
+  const settingsId = 'risk-matrix-config';
+
+  const settingsRef = useMemoFirebase(() => (
+    firestore ? doc(firestore, 'tenants', tenantId, 'settings', settingsId) : null
+  ), [firestore, tenantId]);
+
+  const { data: riskMatrixSettings, isLoading } = useDoc<RiskMatrixSettings>(settingsRef);
+
   const [colors, setColors] = useState<Record<string, string>>(defaultColors);
   const colorInputRef = React.useRef<HTMLInputElement>(null);
   const [activeCell, setActiveCell] = useState<string | null>(null);
 
-  // Load colors from localStorage on initial render
-  useEffect(() => {
-    try {
-        const savedColors = localStorage.getItem(RISK_MATRIX_COLORS_KEY);
-        if (savedColors) {
-            setColors(JSON.parse(savedColors));
-        }
-    } catch (error) {
-        console.error("Failed to load colors from localStorage", error);
-        setColors(defaultColors);
-    }
-  }, []);
+  const debouncedColors = useDebounce(colors, 1000); // Debounce for 1 second
 
-  // Save colors to localStorage whenever they change
+  // Load colors from Firestore on initial render
   useEffect(() => {
-    try {
-        localStorage.setItem(RISK_MATRIX_COLORS_KEY, JSON.stringify(colors));
-    } catch (error) {
-        console.error("Failed to save colors to localStorage", error);
+    if (riskMatrixSettings) {
+        setColors(riskMatrixSettings.colors || defaultColors);
+    } else if (!isLoading && settingsRef) {
+        // If doc doesn't exist, create it with defaults
+        setDocumentNonBlocking(settingsRef, { id: settingsId, colors: defaultColors }, { merge: false });
     }
-  }, [colors]);
+  }, [riskMatrixSettings, isLoading, settingsRef]);
+
+  // Save debounced colors to Firestore whenever they change
+  useEffect(() => {
+    if (settingsRef && riskMatrixSettings && JSON.stringify(debouncedColors) !== JSON.stringify(riskMatrixSettings.colors)) {
+        setDocumentNonBlocking(settingsRef, { colors: debouncedColors }, { merge: true });
+    }
+  }, [debouncedColors, settingsRef, riskMatrixSettings]);
 
 
   const handleColorChange = (cellId: string, newColor: string) => {
@@ -83,20 +94,20 @@ export default function RiskMatrixPage() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full table-fixed border-collapse">
+            <table className="w-full border-separate border-spacing-0">
                 <colgroup>
-                    <col className="w-1/6" />
-                    <col className="w-1/6" />
-                    <col className="w-1/6" />
-                    <col className="w-1/6" />
-                    <col className="w-1/6" />
-                    <col className="w-1/6" />
+                    <col className="w-[16.66%]" />
+                    <col className="w-[16.66%]" />
+                    <col className="w-[16.66%]" />
+                    <col className="w-[16.66%]" />
+                    <col className="w-[16.66%]" />
+                    <col className="w-[16.66%]" />
                 </colgroup>
                 <thead>
                     <tr>
-                        <th className="border p-2"></th>
+                        <th className="border-b border-r p-2"></th>
                         {severities.map(s => (
-                            <th key={s.value} className="h-24 border p-2 text-center align-middle font-semibold">
+                            <th key={s.value} className="h-24 border-b border-r p-2 text-center align-middle font-semibold">
                                 {s.name} ({s.value})
                             </th>
                         ))}
@@ -105,7 +116,7 @@ export default function RiskMatrixPage() {
                 <tbody>
                     {likelihoods.slice().reverse().map(l => (
                         <tr key={l.value}>
-                            <th className="h-24 border p-2 text-right align-middle font-semibold">
+                            <th className="h-24 border-b border-r p-2 text-right align-middle font-semibold">
                                 {l.name}
                                 <span className="block text-muted-foreground font-normal">({l.value})</span>
                             </th>
@@ -117,7 +128,7 @@ export default function RiskMatrixPage() {
                                     onContextMenu={(e) => handleRightClick(e, cellId)}
                                     style={{ backgroundColor: colors[cellId] }}
                                     className={cn(
-                                        "h-24 border p-2 text-center align-middle font-bold text-white transition-colors",
+                                        "h-24 border-b border-r p-2 text-center align-middle font-bold text-white transition-colors",
                                         "cursor-pointer"
                                     )}
                                 >

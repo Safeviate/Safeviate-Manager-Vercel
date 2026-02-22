@@ -1266,6 +1266,20 @@
             }
         },
         "required": ["id", "configurations"]
+    },
+    "RiskMatrixSettings": {
+        "title": "Risk Matrix Settings",
+        "type": "object",
+        "description": "Stores the color configuration for the risk assessment matrix.",
+        "properties": {
+            "id": { "type": "string" },
+            "colors": {
+                "type": "object",
+                "description": "A map of cell IDs (e.g., '5A') to hex color strings.",
+                "additionalProperties": { "type": "string" }
+            }
+        },
+        "required": ["id", "colors"]
     }
   },
   "auth": {
@@ -1480,6 +1494,13 @@
           "definition": {
             "schema": { "$ref": "#/backend/entities/SpiConfigurations" },
             "description": "Stores the configuration for Safety Performance Indicators."
+          }
+      },
+      {
+          "path": "tenants/{tenantId}/settings/risk-matrix-config",
+          "definition": {
+            "schema": { "$ref": "#/backend/entities/RiskMatrixSettings" },
+            "description": "Stores the configuration for the risk matrix colors."
           }
       },
        {
