@@ -92,8 +92,8 @@ const analyzeMocFlow = ai.defineFlow(
       return { phases: [] };
     }
     
-    // Ensure all generated items have UUIDs, as the model can sometimes forget.
-    const phasesWithIds = output.phases.map(phase => ({
+    // Ensure all generated items have UUIDs and the full expected structure for the form.
+    const phasesWithFullStructure = output.phases.map(phase => ({
       ...phase,
       id: phase.id || uuidv4(),
       steps: (phase.steps || []).map(step => ({
@@ -105,11 +105,13 @@ const analyzeMocFlow = ai.defineFlow(
           risks: (hazard.risks || []).map(risk => ({
             ...risk,
             id: risk.id || uuidv4(),
+            initialRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' },
+            mitigations: [],
           })),
         })),
       })),
     }));
 
-    return { phases: phasesWithIds };
+    return { phases: phasesWithFullStructure };
   }
 );
