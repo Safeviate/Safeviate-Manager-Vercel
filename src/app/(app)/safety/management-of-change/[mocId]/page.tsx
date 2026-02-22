@@ -1,3 +1,4 @@
+
 'use client';
 
 import { use, useMemo } from 'react';
@@ -15,10 +16,19 @@ import { ImplementationPlanForm } from './implementation-plan-form';
 import { HazardAnalysisForm } from './hazard-analysis-form';
 import { ApprovalForm } from './approval-form';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
+import type { Department } from '@/app/(app)/admin/department/page';
 
 interface MocDetailPageProps {
   params: { mocId: string };
 }
+
+const DetailItem = ({ label, value, children }: { label: string; value?: string | null; children?: React.ReactNode }) => (
+    <div>
+        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        {children ? children : <p className="text-base">{value || 'N/A'}</p>}
+    </div>
+);
+
 
 export default function MocDetailPage({ params }: MocDetailPageProps) {
   const resolvedParams = use(params);
@@ -36,10 +46,28 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
     [firestore, tenantId]
   );
 
+  const departmentsQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, `tenants/${tenantId}/departments`) : null),
+    [firestore, tenantId]
+  );
+
   const { data: moc, isLoading: isLoadingMoc, error } = useDoc<ManagementOfChange>(mocRef);
   const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
+  const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
 
-  const isLoading = isLoadingMoc || isLoadingPersonnel;
+
+  const isLoading = isLoadingMoc || isLoadingPersonnel || isLoadingDepts;
+
+  const personnelMap = useMemo(() => {
+    if (!personnel) return new Map();
+    return new Map(personnel.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
+  }, [personnel]);
+  
+  const departmentMap = useMemo(() => {
+    if (!departments) return new Map();
+    return new Map(departments.map(d => [d.id, d.name]));
+  }, [departments]);
+
 
   if (isLoading) {
     return (
@@ -95,8 +123,21 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
             Proposed on {format(new Date(moc.proposalDate), 'PPP')}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-            <p className="whitespace-pre-wrap">{moc.description}</p>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+            <div className="md:col-span-2">
+                <p className="text-sm font-medium text-muted-foreground">Detailed Description</p>
+                <p className="text-base whitespace-pre-wrap">{moc.description}</p>
+            </div>
+             <div className="md:col-span-2">
+                <p className="text-sm font-medium text-muted-foreground">Reason for Change</p>
+                <p className="text-base whitespace-pre-wrap">{moc.reason}</p>
+            </div>
+             <div className="md:col-span-2">
+                <p className="text-sm font-medium text-muted-foreground">Scope of Change</p>
+                <p className="text-base whitespace-pre-wrap">{moc.scope}</p>
+            </div>
+            <DetailItem label="Proposing Department" value={departmentMap.get(moc.proposingDepartmentId)} />
+            <DetailItem label="Responsible Person" value={personnelMap.get(moc.responsiblePersonId)} />
         </CardContent>
       </Card>
       
