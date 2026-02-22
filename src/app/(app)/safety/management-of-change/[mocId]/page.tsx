@@ -145,7 +145,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
           <TabsTrigger value="approval">Approval &amp; Sign-off</TabsTrigger>
         </TabsList>
         <TabsContent value="implementation">
-          <ImplementationForm moc={moc} tenantId={tenantId} personnel={personnel || []} />
+          <ImplementationForm key={moc.id} moc={moc} tenantId={tenantId} personnel={personnel || []} />
         </TabsContent>
         <TabsContent value="approval">
           <ApprovalForm moc={moc} tenantId={tenantId} personnel={personnel || []} />

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm, useFieldArray, Controller, useFormContext, FormProvider } from 'react-hook-form';
@@ -345,17 +344,10 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
   const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
-  const defaultFormValues = useMemo(() => mapDatesToObjects(moc.phases || []), [moc]);
-
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: defaultFormValues,
+    defaultValues: mapDatesToObjects(moc.phases || []),
   });
-
-  useEffect(() => {
-    form.reset(defaultFormValues);
-  }, [defaultFormValues, form]);
-
 
   const { fields: phaseFields, append: appendPhase, remove: removePhase } = useFieldArray({
     control: form.control,
