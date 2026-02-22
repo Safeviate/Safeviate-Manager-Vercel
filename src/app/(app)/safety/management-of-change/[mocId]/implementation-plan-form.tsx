@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -16,6 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { analyzeMoc, type AnalyzeMocInput } from '@/ai/flows/analyze-moc-flow';
 import { useState, useEffect } from 'react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // --- Zod Schemas (now complete to prevent data loss) ---
 const riskAssessmentSchema = z.object({
@@ -117,38 +117,38 @@ const StepsArray = ({ phaseIndex }: { phaseIndex: number }) => {
     });
   
     return (
-      <div className="space-y-3">
-        {fields.map((field, stepIndex) => (
-          <div key={field.id} className="flex items-center gap-2">
-            <GripVertical className="h-5 w-5 text-muted-foreground" />
-            <FormField
-              control={control}
-              name={`phases.${phaseIndex}.steps.${stepIndex}.description`}
-              render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormControl>
-                    <Input placeholder="Describe the step..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="button" variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => remove(stepIndex)}>
-              <Trash2 className="h-4 w-4" />
+        <div className="space-y-3">
+            {fields.map((field, stepIndex) => (
+            <div key={field.id} className="flex items-center gap-2">
+                <GripVertical className="h-5 w-5 text-muted-foreground" />
+                <FormField
+                control={control}
+                name={`phases.${phaseIndex}.steps.${stepIndex}.description`}
+                render={({ field }) => (
+                    <FormItem className="flex-1">
+                    <FormControl>
+                        <Input placeholder="Describe the step..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <Button type="button" variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => remove(stepIndex)}>
+                <Trash2 className="h-4 w-4" />
+                </Button>
+            </div>
+            ))}
+            <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => append({ id: uuidv4(), description: '', hazards: [] })}
+            >
+            <PlusCircle className="mr-2 h-4 w-4" /> Add Step
             </Button>
-          </div>
-        ))}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => append({ id: uuidv4(), description: '', hazards: [] })}
-        >
-          <PlusCircle className="mr-2 h-4 w-4" /> Add Step
-        </Button>
-      </div>
+        </div>
     );
-  };
+};
 
 export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanFormProps) {
   const firestore = useFirestore();
@@ -195,8 +195,6 @@ export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanForm
 
         const mocRef = doc(firestore, `tenants/${tenantId}/management-of-change`, moc.id);
         
-        // This is a temporary fix. Directly updating the document should trigger a re-render.
-        // However, we'll also update the form state manually to ensure immediate feedback.
         const phasesWithDateObjects = mapDatesToObjects(result.phases);
         form.setValue('phases', phasesWithDateObjects, { shouldValidate: true });
 
@@ -245,7 +243,9 @@ export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanForm
                   </Button>
                 </CardHeader>
                 <CardContent>
+                  <ScrollArea className="max-h-72 w-full pr-4">
                     <StepsArray phaseIndex={index} />
+                  </ScrollArea>
                 </CardContent>
               </Card>
             ))}
