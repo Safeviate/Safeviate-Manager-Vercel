@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -142,7 +143,7 @@ export default function RiskMatrixPage() {
                                     onContextMenu={(e) => handleRightClick(e, cellId)}
                                     style={{ backgroundColor: colors[cellId] }}
                                     className={cn(
-                                        "h-24 border-b border-r p-2 text-center align-middle font-bold text-white transition-colors",
+                                        "h-24 border-b border-r p-2 text-center align-middle font-bold text-black transition-colors",
                                         "cursor-pointer"
                                     )}
                                 >
