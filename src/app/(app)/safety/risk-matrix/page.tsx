@@ -84,7 +84,7 @@ export default function RiskMatrixPage() {
         <CardContent>
           <div className="overflow-x-auto">
             <div className="grid grid-cols-[1fr,repeat(5,1fr)]">
-              {/* Second Row Headers */}
+              {/* Headers */}
               <div></div> {/* Empty top-left corner */}
               {severities.map(s => (
                 <div key={s.value} className="p-2 text-center font-semibold">
@@ -92,16 +92,15 @@ export default function RiskMatrixPage() {
                 </div>
               ))}
               
-              {/* Matrix Body */}
-              {likelihoods.slice().reverse().map(l => (
-                <React.Fragment key={l.value}>
-                  <div className="p-2 flex items-center justify-end text-right font-semibold">
+              {/* Matrix Body - Flattened */}
+              {likelihoods.slice().reverse().flatMap(l => [
+                  <div key={`${l.value}-header`} className="p-2 flex items-center justify-end text-right font-semibold">
                     <div>
                       {l.name}
                       <span className="block text-muted-foreground font-normal">({l.value})</span>
                     </div>
-                  </div>
-                  {severities.map(s => {
+                  </div>,
+                  ...severities.map(s => {
                     const cellId = `${l.value}${s.value}`;
                     return (
                         <div
@@ -116,9 +115,8 @@ export default function RiskMatrixPage() {
                             {cellId}
                         </div>
                     )
-                  })}
-                </React.Fragment>
-              ))}
+                  })
+              ])}
             </div>
              <Input 
                 type="color" 
