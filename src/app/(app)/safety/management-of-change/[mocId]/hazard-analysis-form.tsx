@@ -322,19 +322,28 @@ export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisF
             {(phaseFields || []).map((phase, phaseIndex) => (
               <div key={phase.id} className="border-b last:border-0 pb-4">
                   <h3 className="text-lg font-semibold">{phase.title}</h3>
-                  {(phase.steps || []).map((step, stepIndex) => (
-                      <div key={step.id} className="py-2 pl-4">
-                          <p className="font-medium">{stepIndex + 1}. {step.description}</p>
-                          <HazardsArray phaseIndex={phaseIndex} stepIndex={stepIndex} personnel={personnel} />
-                      </div>
-                  ))}
+                  <div className="space-y-2 mt-2">
+                    {(phase.steps || []).map((step, stepIndex) => (
+                        <Collapsible key={step.id} defaultOpen className="ml-4 border-l-2 border-slate-200 pl-4 py-2">
+                            <CollapsibleTrigger className='flex items-center w-full cursor-pointer group'>
+                                <p className="font-medium flex-1 text-left">{stepIndex + 1}. {step.description}</p>
+                                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                                <div className="pt-4">
+                                <HazardsArray phaseIndex={phaseIndex} stepIndex={stepIndex} personnel={personnel} />
+                                </div>
+                            </CollapsibleContent>
+                        </Collapsible>
+                    ))}
+                  </div>
               </div>
             ))}
           </div>
           {phaseFields.length === 0 && (
               <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
                   <p>No implementation plan defined.</p>
-                  <p className="text-sm">Go to the &quot;Implementation Plan&quot; tab to define phases and steps, or use the AI analyzer.</p>
+                  <p className="text-sm">Go to the "Implementation Plan" tab to define phases and steps, or use the AI analyzer.</p>
               </div>
           )}
           <div className="flex justify-end pt-4">
