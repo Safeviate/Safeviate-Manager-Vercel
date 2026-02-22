@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 // --- Zod Schemas for AI Input and Output ---
 
-export const AnalyzeMocInputSchema = z.object({
+const AnalyzeMocInputSchema = z.object({
   title: z.string().describe("The title of the proposed change."),
   description: z.string().describe("A detailed description of what is changing."),
   reason: z.string().describe("The reason why the change is being made."),
@@ -40,7 +40,7 @@ const phaseSchema = z.object({
     steps: z.array(stepSchema).describe("A list of steps within this phase."),
 });
 
-export const AnalyzeMocOutputSchema = z.object({
+const AnalyzeMocOutputSchema = z.object({
   phases: z.array(phaseSchema).describe("An array of logical implementation phases for the proposed change."),
 });
 export type AnalyzeMocOutput = z.infer<typeof AnalyzeMocOutputSchema>;
