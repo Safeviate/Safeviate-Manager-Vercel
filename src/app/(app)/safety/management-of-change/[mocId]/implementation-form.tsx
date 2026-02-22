@@ -352,9 +352,11 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
     },
   });
 
+  const phasesJson = JSON.stringify(moc.phases);
   useEffect(() => {
     form.reset(mapDatesToObjects(moc.phases || []));
-  }, [moc.phases, form]);
+  }, [phasesJson, form.reset]);
+
 
   const { fields: phaseFields, append: appendPhase, remove: removePhase } = useFieldArray({
     control: form.control,
