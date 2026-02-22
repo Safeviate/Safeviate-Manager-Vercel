@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm, useFieldArray, useWatch, Controller, useFormContext, FormProvider } from 'react-hook-form';
@@ -12,7 +11,7 @@ import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { ManagementOfChange, MocPhase, MocStep, MocHazard, MocRisk, MocMitigation } from '@/types/moc';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { PlusCircle, Trash2, CalendarIcon, ChevronDown } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarIcon, ChevronDown, WandSparkles, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -24,7 +23,8 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
-import React from 'react';
+import React, { useState } from 'react';
+import { analyzeMoc, type AnalyzeMocInput } from '@/ai/flows/analyze-moc-flow';
 
 // --- Zod Schemas ---
 const riskAssessmentSchema = z.object({
@@ -288,6 +288,7 @@ interface HazardAnalysisFormProps {
 export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -309,11 +310,53 @@ export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisF
       title: 'Hazard Analysis Saved',
     });
   };
+  
+  const handleAnalyze = async () => {
+    setIsAnalyzing(true);
+    try {
+        const mocData: AnalyzeMocInput = {
+            title: moc.title,
+            description: moc.description,
+            reason: moc.reason,
+            scope: moc.scope,
+        };
+        const result = await analyzeMoc(mocData);
+
+        const newPhases = result.phases.map(phase => ({
+            ...phase,
+            steps: (phase.steps || []).map(step => ({
+                ...step,
+                hazards: (step.hazards || []).map(hazard => ({
+                    ...hazard,
+                    risks: (hazard.risks || []).map(risk => ({
+                        ...risk,
+                        initialRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' },
+                        mitigations: [],
+                    })),
+                })),
+            })),
+        }));
+
+        form.setValue('phases', mapDatesToObjects(newPhases), { shouldValidate: true });
+        toast({ title: 'AI Analysis Complete', description: 'A draft implementation plan and hazard analysis has been generated.' });
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'AI Analysis Failed', description: error.message });
+    } finally {
+        setIsAnalyzing(false);
+    }
+};
+
 
   return (
     <FormProvider {...form}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="flex justify-end">
+            <Button type="button" variant="outline" onClick={handleAnalyze} disabled={isAnalyzing}>
+              {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <WandSparkles className="mr-2 h-4 w-4" />}
+              Analyze with AI
+            </Button>
+          </div>
           <div className="space-y-4">
             {(phaseFields || []).map((phase, phaseIndex) => (
               <div key={phase.id} className="border-b last:border-0 pb-4">
@@ -330,7 +373,7 @@ export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisF
           {phaseFields.length === 0 && (
               <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
                   <p>No implementation plan defined.</p>
-                  <p className="text-sm">Please add phases and steps in the &quot;Implementation Plan&quot; tab first.</p>
+                  <p className="text-sm">Go to the &quot;Implementation Plan&quot; tab to define phases and steps, or use the AI analyzer.</p>
               </div>
           )}
           <div className="flex justify-end pt-4">

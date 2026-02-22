@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -10,16 +9,46 @@ import { Input } from '@/components/ui/input';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import type { ManagementOfChange, MocPhase } from '@/types/moc';
+import type { ManagementOfChange, MocPhase, MocRisk, MocMitigation, MocHazard, MocStep } from '@/types/moc';
 import { PlusCircle, Trash2, GripVertical } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
-const stepSchema = z.object({
-  id: z.string(),
-  description: z.string().min(1, 'Step description is required.'),
-  // hazards will be handled in another form
+// --- Zod Schemas (now complete to prevent data loss) ---
+const riskAssessmentSchema = z.object({
+    severity: z.number().min(1).max(5),
+    likelihood: z.number().min(1).max(5),
+    riskScore: z.number(),
+    riskLevel: z.enum(["Low", "Medium", "High", "Critical"]),
 });
+
+const mitigationSchema = z.object({
+    id: z.string(),
+    description: z.string().min(1, "Mitigation description is required."),
+    responsiblePersonId: z.string().min(1, "Assignee is required."),
+    completionDate: z.date(),
+    status: z.enum(['Open', 'In Progress', 'Closed', 'Cancelled']),
+    residualRiskAssessment: riskAssessmentSchema.optional(),
+});
+
+const riskSchema: z.ZodType<MocRisk> = z.lazy(() => z.object({
+    id: z.string(),
+    description: z.string().min(1, "Risk description is required"),
+    initialRiskAssessment: riskAssessmentSchema.optional(),
+    mitigations: z.array(mitigationSchema),
+}));
+
+const hazardSchema: z.ZodType<MocHazard> = z.lazy(() => z.object({
+    id: z.string(),
+    description: z.string().min(1, 'Hazard description is required.'),
+    risks: z.array(riskSchema),
+}));
+
+const stepSchema: z.ZodType<MocStep> = z.lazy(() => z.object({
+    id: z.string(),
+    description: z.string().min(1, 'Step description is required.'),
+    hazards: z.array(hazardSchema),
+}));
 
 const phaseSchema = z.object({
   id: z.string(),
@@ -38,6 +67,46 @@ interface ImplementationPlanFormProps {
   tenantId: string;
 }
 
+// Helper to handle date conversions for form state
+const mapDatesToObjects = (phases: MocPhase[]): FormValues['phases'] => {
+    return (phases || []).map(phase => ({
+        ...phase,
+        steps: (phase.steps || []).map(step => ({
+            ...step,
+            hazards: (step.hazards || []).map(hazard => ({
+                ...hazard,
+                risks: (hazard.risks || []).map(risk => ({
+                    ...risk,
+                    mitigations: (risk.mitigations || []).map(mitigation => ({
+                        ...mitigation,
+                        completionDate: mitigation.completionDate ? new Date(mitigation.completionDate) : new Date(),
+                    })),
+                })),
+            })),
+        })),
+    }));
+};
+
+const mapDatesToStrings = (phases: FormValues['phases']): MocPhase[] => {
+    return phases.map(phase => ({
+        ...phase,
+        steps: phase.steps.map(step => ({
+            ...step,
+            hazards: (step.hazards || []).map(hazard => ({
+                ...hazard,
+                risks: (hazard.risks || []).map(risk => ({
+                    ...risk,
+                    mitigations: (risk.mitigations || []).map(mitigation => ({
+                        ...mitigation,
+                        completionDate: mitigation.completionDate.toISOString(),
+                    })),
+                })),
+            })),
+        })),
+    }));
+};
+
+
 export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -45,7 +114,7 @@ export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanForm
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      phases: moc.phases || [],
+      phases: mapDatesToObjects(moc.phases || []),
     },
   });
 
@@ -57,7 +126,8 @@ export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanForm
   const onSubmit = (values: FormValues) => {
     if (!firestore) return;
     const mocRef = doc(firestore, `tenants/${tenantId}/management-of-change`, moc.id);
-    updateDocumentNonBlocking(mocRef, { phases: values.phases });
+    const dataToSave = { phases: mapDatesToStrings(values.phases) };
+    updateDocumentNonBlocking(mocRef, dataToSave);
     toast({
       title: 'Implementation Plan Saved',
     });

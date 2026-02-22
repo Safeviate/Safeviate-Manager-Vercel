@@ -76,6 +76,18 @@
             }
         }
     },
+    "AnalyzeMocOutput": {
+        "title": "Analyze MOC Output",
+        "type": "object",
+        "properties": {
+            "phases": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/backend/entities/MocPhase"
+                }
+            }
+        }
+    },
     "Regulation": {
         "title": "Regulation",
         "type": "object",
@@ -128,74 +140,6 @@
             "nextAuditDate": { "type": "string", "format": "date-time" }
         },
         "required": ["id", "regulationCode", "regulationStatement", "companyReference"]
-    },
-    "FlightPlan": {
-      "title": "Flight Plan",
-      "type": "object",
-      "description": "Represents a comprehensive flight plan including route, W&B, and performance calculations.",
-      "properties": {
-        "id": { "type": "string" },
-        "bookingId": { "type": "string", "description": "The booking this flight plan is associated with." },
-        "aircraftId": { "type": "string" },
-        "departure": { "type": "string" },
-        "destination": { "type": "string" },
-        "alternate": { "type": "string" },
-        "flightRules": { "type": "string", "enum": ["VFR", "IFR"] },
-        "cruisingAltitude": { "type": "number" },
-        "waypoints": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" },
-              "name": { "type": "string" },
-              "type": { "type": "string", "enum": ["Airport", "VOR", "NDB", "GPS"] },
-              "lat": { "type": "number" },
-              "lon": { "type": "number" }
-            }
-          }
-        },
-        "massAndBalance": { "$ref": "#/backend/entities/MassAndBalance" },
-        "performance": {
-          "type": "object",
-          "properties": {
-            "cruiseSpeed": { "type": "number" },
-            "fuelBurnRate": { "type": "number" },
-            "windDirection": { "type": "number" },
-            "windSpeed": { "type": "number" }
-          }
-        },
-        "navLog": {
-          "type": "array",
-          "description": "Calculated navigation log for each leg of the journey.",
-          "items": {
-            "type": "object",
-            "properties": {
-              "from": { "type": "string" },
-              "to": { "type": "string" },
-              "track": { "type": "number" },
-              "windCorrectionAngle": { "type": "number" },
-              "heading": { "type": "number" },
-              "distance": { "type": "number" },
-              "groundSpeed": { "type": "number" },
-              "ete": { "type": "number" },
-              "fuel": { "type": "number" }
-            }
-          }
-        },
-        "fuelPlan": {
-            "type": "object",
-            "properties": {
-                "tripFuel": { "type": "number" },
-                "contingencyFuel": { "type": "number" },
-                "alternateFuel": { "type": "number" },
-                "finalReserveFuel": { "type": "number" },
-                "extraFuel": { "type": "number" },
-                "totalFuelRequired": { "type": "number" }
-            }
-        }
-      },
-       "required": ["id", "aircraftId", "departure", "destination"]
     },
     "Risk": {
       "title": "Risk",
@@ -471,145 +415,6 @@
       },
       "required": ["userId", "userName", "role", "signatureUrl", "signedAt"]
     },
-    "Booking": {
-      "title": "Booking",
-      "type": "object",
-      "description": "Represents a booking for an aircraft.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the booking."
-        },
-        "createdById": {
-            "type": "string",
-            "description": "The user ID of the person who created the booking."
-        },
-        "flightPlanId": {
-          "type": "string",
-          "description": "The ID of the flight plan associated with this booking."
-        },
-        "bookingNumber": {
-            "type": "number",
-            "description": "A sequential, human-readable booking number."
-        },
-        "aircraftId": {
-          "type": "string",
-          "description": "The ID of the booked aircraft."
-        },
-        "studentId": {
-            "type": "string",
-            "description": "The ID of the student for a training flight."
-        },
-        "instructorId": {
-            "type": "string",
-            "description": "The ID of the instructor for a training flight."
-        },
-        "privatePilotId": {
-            "type": "string",
-            "description": "The ID of the private pilot for a flight."
-        },
-        "type": {
-          "type": "string",
-          "description": "The type of booking.",
-          "enum": ["Training Flight", "Private Flight", "Reposition Flight", "Maintenance Flight"]
-        },
-        "date": {
-          "type": "string",
-          "format": "date",
-          "description": "The date of the booking (YYYY-MM-DD)."
-        },
-        "startTime": {
-          "type": "string",
-          "description": "The start time of the booking (HH:mm)."
-        },
-        "endTime": {
-          "type": "string",
-          "description": "The end time of the booking (HH:mm)."
-        },
-        "status": {
-            "type": "string",
-            "description": "The status of the booking.",
-            "enum": ["Confirmed", "Completed", "Cancelled", "Cancelled with Reason"]
-        },
-        "cancellationReason": {
-            "type": "string",
-            "description": "The reason a booking was cancelled."
-        },
-        "isOvernight": {
-            "type": "boolean",
-            "description": "Flag to indicate if the booking spans across midnight."
-        },
-        "overnightBookingDate": {
-            "type": "string",
-            "format": "date",
-            "description": "The date for the second part of an overnight booking (YYYY-MM-DD)."
-        },
-        "overnightEndTime": {
-            "type": "string",
-            "description": "The end time for the second part of an overnight booking (HH:mm)."
-        },
-        "flightDetails": {
-          "type": "string",
-          "description": "Additional flight details, often from a logbook."
-        },
-        "preFlight": {
-            "type": "object",
-            "description": "Pre-flight checklist data.",
-            "properties": {
-                "actualHobbs": { "type": "number" },
-                "actualTacho": { "type": "number" },
-                "oil": { "type": "number" },
-                "fuel": { "type": "number" },
-                "documentsChecked": { "type": "array", "items": { "type": "string" } },
-                "photos": {
-                    "type": "array",
-                    "description": "Photos taken during pre-flight.",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "url": { "type": "string", "description": "Data URL of the photo." },
-                            "description": { "type": "string", "description": "A brief description of the photo." }
-                        }
-                    }
-                }
-            }
-        },
-        "postFlight": {
-            "type": "object",
-            "description": "Post-flight checklist data.",
-            "properties": {
-                "actualHobbs": { "type": "number" },
-                "actualTacho": { "type": "number" },
-                "oil": { "type": "number" },
-                "fuel": { "type": "number" },
-                "photos": {
-                    "type": "array",
-                    "description": "Photos taken during post-flight.",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "url": { "type": "string", "description": "Data URL of the photo." },
-                            "description": { "type": "string", "description": "A brief description of the photo." }
-                        }
-                    }
-                }
-            }
-        },
-        "massAndBalance": {
-            "type": "object",
-            "description": "A flat map of station names (camelCase) to their calculated weight and moment for the flight.",
-            "additionalProperties": {
-                "type": "object",
-                "properties": {
-                    "weight": { "type": "number" },
-                    "moment": { "type": "number" }
-                },
-                "required": ["weight", "moment"]
-            }
-        }
-      },
-      "required": ["id", "aircraftId", "type", "date", "startTime", "endTime"]
-    },
     "LogbookTemplate": {
       "title": "Logbook Template",
       "type": "object",
@@ -850,6 +655,10 @@
           "type": "string",
           "description": "Unique identifier for the Aircraft entity."
         },
+        "make": {
+          "type": "string",
+          "description": "The manufacturer of the aircraft (e.g., Cessna)."
+        },
         "tailNumber": {
           "type": "string",
           "description": "Aircraft's tail number."
@@ -973,6 +782,7 @@
       },
       "required": [
         "id",
+        "make",
         "tailNumber",
         "model"
       ]
@@ -1029,41 +839,6 @@
         "aircraftId",
         "date",
         "description"
-      ]
-    },
-    "ComplianceCheck": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ComplianceCheck",
-      "type": "object",
-      "description": "Represents a compliance check performed.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ComplianceCheck entity."
-        },
-        "safetyProtocolId": {
-          "type": "string",
-          "description": "Reference to SafetyProtocol. (Relationship: SafetyProtocol 1:N ComplianceCheck)"
-        },
-        "date": {
-          "type": "string",
-          "description": "Date when the compliance check was performed.",
-          "format": "date-time"
-        },
-        "result": {
-          "type": "boolean",
-          "description": "Result of the compliance check (true for pass, false for fail)."
-        },
-        "notes": {
-          "type": "string",
-          "description": "Additional notes or observations from the compliance check."
-        }
-      },
-      "required": [
-        "id",
-        "safetyProtocolId",
-        "date",
-        "result"
       ]
     },
     "Permission": {
@@ -1218,33 +993,6 @@
             }
         },
         "required": ["warningPeriods"]
-    },
-     "HourWarning": {
-        "title": "Hour Warning",
-        "type": "object",
-        "description": "A single warning configuration based on hours remaining.",
-        "properties": {
-            "hours": { "type": "number", "description": "The hour threshold at which to show a warning." },
-            "color": { "type": "string", "description": "The hex color code for this warning." }
-        },
-        "required": ["hours", "color"]
-    },
-    "AircraftInspectionWarningSettings": {
-        "title": "Aircraft Inspection Warning Settings",
-        "type": "object",
-        "description": "Settings for aircraft inspection hour warnings.",
-        "properties": {
-            "id": { "type": "string" },
-            "fiftyHourWarnings": {
-                "type": "array",
-                "items": { "$ref": "#/backend/entities/HourWarning" }
-            },
-            "oneHundredHourWarnings": {
-                "type": "array",
-                "items": { "$ref": "#/backend/entities/HourWarning" }
-            }
-        },
-        "required": ["id"]
     },
     "Department": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1584,15 +1332,6 @@
           "description": "Stores corrective action plans for audit findings."
         }
       },
-       {
-        "path": "tenants/{tenantId}/flight-plans/{flightPlanId}",
-        "definition": {
-          "schema": {
-            "$ref": "#/backend/entities/FlightPlan"
-          },
-          "description": "Stores flight plans for each tenant."
-        }
-      },
       {
         "path": "tenants/{tenantId}/risks/{riskId}",
         "definition": {
@@ -1618,15 +1357,6 @@
             "$ref": "#/backend/entities/ManagementOfChange"
           },
           "description": "Stores Management of Change records for each tenant."
-        }
-      },
-       {
-        "path": "tenants/{tenantId}/bookings/{bookingId}",
-        "definition": {
-          "schema": {
-            "$ref": "#/backend/entities/Booking"
-          },
-          "description": "Stores individual booking records for each tenant."
         }
       },
       {
@@ -1743,13 +1473,6 @@
           "definition": {
               "schema": { "$ref": "#/backend/entities/StudentMilestoneSettings" },
               "description": "Stores student milestone settings."
-          }
-      },
-      {
-          "path": "tenants/{tenantId}/settings/inspection-warnings",
-          "definition": {
-              "schema": { "$ref": "#/backend/entities/AircraftInspectionWarningSettings" },
-              "description": "Stores aircraft inspection hour warning settings."
           }
       },
       {
