@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useForm, useFieldArray, useWatch, Controller, useFormContext, FormProvider } from 'react-hook-form';
+import { useForm, useFieldArray, Controller, useFormContext, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -44,29 +44,29 @@ const mitigationSchema = z.object({
     residualRiskAssessment: riskAssessmentSchema.optional(),
 });
 
-const riskSchema: z.ZodType<MocRisk> = z.lazy(() => z.object({
+const riskSchema: z.ZodType<Omit<MocRisk, 'mitigations' | 'initialRiskAssessment'> & { mitigations?: z.infer<typeof mitigationSchema>[], initialRiskAssessment?: z.infer<typeof riskAssessmentSchema> }> = z.lazy(() => z.object({
     id: z.string(),
     description: z.string().optional(),
     initialRiskAssessment: riskAssessmentSchema.optional(),
-    mitigations: z.array(mitigationSchema),
+    mitigations: z.array(mitigationSchema).optional(),
 }));
 
-const hazardSchema: z.ZodType<MocHazard> = z.lazy(() => z.object({
+const hazardSchema: z.ZodType<Omit<MocHazard, 'risks'> & { risks?: z.infer<typeof riskSchema>[] }> = z.lazy(() => z.object({
     id: z.string(),
     description: z.string().optional(),
-    risks: z.array(riskSchema),
+    risks: z.array(riskSchema).optional(),
 }));
 
 const stepSchema = z.object({
     id: z.string(),
     description: z.string().optional(),
-    hazards: z.array(hazardSchema),
+    hazards: z.array(hazardSchema).optional(),
 });
 
 const phaseSchema = z.object({
   id: z.string(),
   title: z.string().optional(),
-  steps: z.array(stepSchema),
+  steps: z.array(stepSchema).optional(),
 });
 
 const formSchema = z.object({
@@ -99,7 +99,7 @@ const mapDatesToObjects = (phases: MocPhase[]): FormValues['phases'] => {
 const mapDatesToStrings = (phases: FormValues['phases']): MocPhase[] => {
     return phases.map(phase => ({
         ...phase,
-        steps: phase.steps.map(step => ({
+        steps: (phase.steps || []).map(step => ({
             ...step,
             hazards: (step.hazards || []).map(hazard => ({
                 ...hazard,
@@ -260,7 +260,7 @@ const HazardsArray = ({ phaseIndex, stepIndex, personnel }: { phaseIndex: number
 
     return (
         <div className="pl-6 mt-4 space-y-4">
-            {fields.map((field, hazardIndex) => (
+            {(fields || []).map((field, hazardIndex) => (
                 <Collapsible key={field.id} asChild defaultOpen>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between bg-muted/20">
@@ -288,8 +288,8 @@ const StepsArray = ({ phaseIndex, personnel }: { phaseIndex: number, personnel: 
     });
   
     return (
-        <div className="space-y-4">
-            {fields.map((step, stepIndex) => (
+        <div className="space-y-4 p-4">
+            {(fields || []).map((step, stepIndex) => (
                  <Collapsible key={step.id} defaultOpen className="ml-4 border-l-2 border-slate-200 pl-4 py-2">
                     <div className="flex items-center gap-2">
                         <CollapsibleTrigger asChild>
@@ -443,9 +443,7 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
                         </Button>
                     </CardHeader>
                     <CollapsibleContent>
-                        <div className="p-6 pt-0">
-                          <StepsArray phaseIndex={index} personnel={personnel} />
-                        </div>
+                        <StepsArray phaseIndex={index} personnel={personnel} />
                     </CollapsibleContent>
                 </Card>
               </Collapsible>
