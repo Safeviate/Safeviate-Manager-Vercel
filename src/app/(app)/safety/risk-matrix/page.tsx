@@ -84,11 +84,6 @@ export default function RiskMatrixPage() {
         <CardContent>
           <div className="overflow-x-auto">
             <div className="grid grid-cols-[1fr,repeat(5,1fr)]">
-              {/* Top Headers */}
-              <div className="col-start-2 col-span-5 p-2 text-center font-semibold">
-                Severity of Consequences
-              </div>
-
               {/* Second Row Headers */}
               <div></div> {/* Empty top-left corner */}
               {severities.map(s => (
