@@ -10,9 +10,11 @@ import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { ManagementOfChange, MocPhase, MocRisk, MocMitigation, MocHazard, MocStep } from '@/types/moc';
-import { PlusCircle, Trash2, GripVertical } from 'lucide-react';
+import { PlusCircle, Trash2, GripVertical, WandSparkles, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { analyzeMoc, type AnalyzeMocInput } from '@/ai/flows/analyze-moc-flow';
+import { useState, useEffect } from 'react';
 
 // --- Zod Schemas (now complete to prevent data loss) ---
 const riskAssessmentSchema = z.object({
@@ -110,6 +112,7 @@ const mapDatesToStrings = (phases: FormValues['phases']): MocPhase[] => {
 export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -117,6 +120,10 @@ export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanForm
       phases: mapDatesToObjects(moc.phases || []),
     },
   });
+
+  useEffect(() => {
+    form.reset(mapDatesToObjects(moc.phases || []));
+  }, [moc.phases, form]);
 
   const { fields: phaseFields, append: appendPhase, remove: removePhase } = useFieldArray({
     control: form.control,
@@ -131,6 +138,36 @@ export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanForm
     toast({
       title: 'Implementation Plan Saved',
     });
+  };
+  
+  const handleAnalyze = async () => {
+    if (!firestore) return;
+    setIsAnalyzing(true);
+    try {
+        const mocData: AnalyzeMocInput = {
+            title: moc.title,
+            description: moc.description,
+            reason: moc.reason,
+            scope: moc.scope,
+        };
+        const result = await analyzeMoc(mocData);
+
+        const mocRef = doc(firestore, `tenants/${tenantId}/management-of-change`, moc.id);
+        
+        // This is a temporary fix. Directly updating the document should trigger a re-render.
+        // However, we'll also update the form state manually to ensure immediate feedback.
+        const phasesWithDateObjects = mapDatesToObjects(result.phases);
+        form.setValue('phases', phasesWithDateObjects, { shouldValidate: true });
+
+        const dataToSave = { phases: mapDatesToStrings(result.phases) };
+        updateDocumentNonBlocking(mocRef, dataToSave);
+
+        toast({ title: 'AI Analysis Complete', description: 'The implementation plan has been populated with the AI suggestions.' });
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'AI Analysis Failed', description: error.message });
+    } finally {
+        setIsAnalyzing(false);
+    }
   };
 
   const StepsArray = ({ phaseIndex }: { phaseIndex: number }) => {
@@ -176,7 +213,11 @@ export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanForm
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={handleAnalyze} disabled={isAnalyzing}>
+              {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <WandSparkles className="mr-2 h-4 w-4" />}
+              Analyze with AI
+            </Button>
             <Button type="button" variant="outline" onClick={() => appendPhase({ id: uuidv4(), title: '', steps: [] })}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Phase
             </Button>
@@ -209,7 +250,7 @@ export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanForm
           {phaseFields.length === 0 && (
             <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
                 <p>No implementation phases defined.</p>
-                <p className="text-sm">Click "Add Phase" to get started.</p>
+                <p className="text-sm">Click "Add Phase" to get started or use the AI analyzer.</p>
             </div>
           )}
         </div>

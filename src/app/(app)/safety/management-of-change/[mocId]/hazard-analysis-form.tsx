@@ -23,8 +23,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
-import React, { useState } from 'react';
-import { analyzeMoc, type AnalyzeMocInput } from '@/ai/flows/analyze-moc-flow';
+import React, { useState, useEffect } from 'react';
 
 // --- Zod Schemas ---
 const riskAssessmentSchema = z.object({
@@ -288,13 +287,17 @@ interface HazardAnalysisFormProps {
 export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       phases: mapDatesToObjects(moc.phases || []),
     },
   });
+
+  useEffect(() => {
+    form.reset(mapDatesToObjects(moc.phases || []));
+  }, [moc.phases, form]);
 
   const { fields: phaseFields } = useFieldArray({
     control: form.control,
@@ -311,52 +314,10 @@ export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisF
     });
   };
   
-  const handleAnalyze = async () => {
-    setIsAnalyzing(true);
-    try {
-        const mocData: AnalyzeMocInput = {
-            title: moc.title,
-            description: moc.description,
-            reason: moc.reason,
-            scope: moc.scope,
-        };
-        const result = await analyzeMoc(mocData);
-
-        const newPhases = result.phases.map(phase => ({
-            ...phase,
-            steps: (phase.steps || []).map(step => ({
-                ...step,
-                hazards: (step.hazards || []).map(hazard => ({
-                    ...hazard,
-                    risks: (hazard.risks || []).map(risk => ({
-                        ...risk,
-                        initialRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' },
-                        mitigations: [],
-                    })),
-                })),
-            })),
-        }));
-
-        form.setValue('phases', mapDatesToObjects(newPhases), { shouldValidate: true });
-        toast({ title: 'AI Analysis Complete', description: 'A draft implementation plan and hazard analysis has been generated.' });
-    } catch (error: any) {
-        toast({ variant: 'destructive', title: 'AI Analysis Failed', description: error.message });
-    } finally {
-        setIsAnalyzing(false);
-    }
-};
-
-
   return (
     <FormProvider {...form}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="flex justify-end">
-            <Button type="button" variant="outline" onClick={handleAnalyze} disabled={isAnalyzing}>
-              {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <WandSparkles className="mr-2 h-4 w-4" />}
-              Analyze with AI
-            </Button>
-          </div>
           <div className="space-y-4">
             {(phaseFields || []).map((phase, phaseIndex) => (
               <div key={phase.id} className="border-b last:border-0 pb-4">
