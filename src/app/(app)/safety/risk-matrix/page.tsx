@@ -1,13 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { useDebounce } from '@/hooks/use-debounce';
 
 const likelihoods = [
     { name: 'Frequent', value: 5 },
@@ -42,6 +41,7 @@ export default function RiskMatrixPage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate';
   const settingsId = 'risk-matrix-config';
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const settingsRef = useMemoFirebase(() => (
     firestore ? doc(firestore, 'tenants', tenantId, 'settings', settingsId) : null
@@ -53,9 +53,7 @@ export default function RiskMatrixPage() {
   const colorInputRef = React.useRef<HTMLInputElement>(null);
   const [activeCell, setActiveCell] = useState<string | null>(null);
 
-  const debouncedColors = useDebounce(colors, 1000); // Debounce for 1 second
-
-  // Load colors from Firestore on initial render
+  // Load colors from Firestore on initial render or when they change on the server
   useEffect(() => {
     if (riskMatrixSettings) {
         setColors(riskMatrixSettings.colors || defaultColors);
@@ -65,22 +63,38 @@ export default function RiskMatrixPage() {
     }
   }, [riskMatrixSettings, isLoading, settingsRef]);
 
-  // Save debounced colors to Firestore whenever they change
-  useEffect(() => {
-    if (settingsRef && riskMatrixSettings && JSON.stringify(debouncedColors) !== JSON.stringify(riskMatrixSettings.colors)) {
-        setDocumentNonBlocking(settingsRef, { colors: debouncedColors }, { merge: true });
-    }
-  }, [debouncedColors, settingsRef, riskMatrixSettings]);
-
-
   const handleColorChange = (cellId: string, newColor: string) => {
-    setColors(prev => ({ ...prev, [cellId]: newColor }));
+    // Optimistically update the UI
+    const newColors = { ...colors, [cellId]: newColor };
+    setColors(newColors);
+
+    // Debounce the save operation
+    if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+        if (settingsRef) {
+            setDocumentNonBlocking(settingsRef, { colors: newColors }, { merge: true });
+        }
+    }, 1000); // 1-second debounce delay
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+      return () => {
+          if (saveTimeoutRef.current) {
+              clearTimeout(saveTimeoutRef.current);
+          }
+      };
+  }, []);
   
   const handleRightClick = (e: React.MouseEvent, cellId: string) => {
       e.preventDefault();
       setActiveCell(cellId);
-      colorInputRef.current?.click();
+      if (colorInputRef.current) {
+          colorInputRef.current.click();
+      }
   }
 
   return (
@@ -94,7 +108,7 @@ export default function RiskMatrixPage() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full border-separate border-spacing-0">
+            <table className="w-full border-collapse border-separate" style={{ borderSpacing: 0 }}>
                 <colgroup>
                     <col className="w-[16.66%]" />
                     <col className="w-[16.66%]" />
@@ -105,9 +119,9 @@ export default function RiskMatrixPage() {
                 </colgroup>
                 <thead>
                     <tr>
-                        <th className="border-b border-r p-2"></th>
+                        <th className="border p-2"></th>
                         {severities.map(s => (
-                            <th key={s.value} className="h-24 border-b border-r p-2 text-center align-middle font-semibold">
+                            <th key={s.value} className="h-24 border-t border-r border-b p-2 text-center align-middle font-semibold">
                                 {s.name} ({s.value})
                             </th>
                         ))}
@@ -116,7 +130,7 @@ export default function RiskMatrixPage() {
                 <tbody>
                     {likelihoods.slice().reverse().map(l => (
                         <tr key={l.value}>
-                            <th className="h-24 border-b border-r p-2 text-right align-middle font-semibold">
+                            <th className="h-24 border-l border-b border-r p-2 text-right align-middle font-semibold">
                                 {l.name}
                                 <span className="block text-muted-foreground font-normal">({l.value})</span>
                             </th>
