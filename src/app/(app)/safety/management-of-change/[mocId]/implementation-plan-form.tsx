@@ -243,9 +243,9 @@ export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanForm
                     Delete Phase
                   </Button>
                 </CardHeader>
-                <CardContent>
-                  <StepsArray phaseIndex={index} />
-                </CardContent>
+                <div className="p-6 pt-0">
+                    <StepsArray phaseIndex={index} />
+                </div>
               </Card>
             ))}
             {phaseFields.length === 0 && (
