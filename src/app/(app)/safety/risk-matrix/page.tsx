@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -83,42 +84,45 @@ export default function RiskMatrixPage() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <div className="grid grid-cols-[1fr,repeat(5,1fr)]">
-              {/* Headers */}
-              <div></div> {/* Empty top-left corner */}
-              {severities.map(s => (
-                <div key={s.value} className="p-2 text-center font-semibold">
-                  {s.name} ({s.value})
-                </div>
-              ))}
-              
-              {/* Matrix Body - Flattened */}
-              {likelihoods.slice().reverse().flatMap(l => [
-                  <div key={`${l.value}-header`} className="p-2 flex items-center justify-end text-right font-semibold">
-                    <div>
-                      {l.name}
-                      <span className="block text-muted-foreground font-normal">({l.value})</span>
-                    </div>
-                  </div>,
-                  ...severities.map(s => {
-                    const cellId = `${l.value}${s.value}`;
-                    return (
-                        <div
-                            key={cellId}
-                            onContextMenu={(e) => handleRightClick(e, cellId)}
-                            style={{ backgroundColor: colors[cellId] }}
-                            className={cn(
-                                "flex items-center justify-center p-4 border text-white font-bold h-20 w-full transition-colors",
-                                "cursor-pointer"
-                            )}
-                        >
-                            {cellId}
-                        </div>
-                    )
-                  })
-              ])}
-            </div>
-             <Input 
+            <table className="w-full border-separate border-spacing-0">
+                <thead>
+                    <tr>
+                        <th className="p-2 border-b border-r"></th>
+                        {severities.map(s => (
+                            <th key={s.value} className="p-2 text-center font-semibold border-b border-l">
+                                {s.name} ({s.value})
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {likelihoods.slice().reverse().map(l => (
+                        <tr key={l.value}>
+                            <th className="p-2 text-right font-semibold border-t border-r">
+                                {l.name}
+                                <span className="block text-muted-foreground font-normal">({l.value})</span>
+                            </th>
+                            {severities.map(s => {
+                                const cellId = `${l.value}${s.value}`;
+                                return (
+                                <td
+                                    key={cellId}
+                                    onContextMenu={(e) => handleRightClick(e, cellId)}
+                                    style={{ backgroundColor: colors[cellId] }}
+                                    className={cn(
+                                        "text-center p-4 border-t border-l text-white font-bold h-20 transition-colors",
+                                        "cursor-pointer"
+                                    )}
+                                >
+                                    {cellId}
+                                </td>
+                                )
+                            })}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+            <Input 
                 type="color" 
                 ref={colorInputRef} 
                 className="hidden" 
