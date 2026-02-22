@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -84,12 +83,20 @@ export default function RiskMatrixPage() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full border-separate border-spacing-0">
+            <table className="w-full table-fixed border-collapse">
+                <colgroup>
+                    <col className="w-1/6" />
+                    <col className="w-1/6" />
+                    <col className="w-1/6" />
+                    <col className="w-1/6" />
+                    <col className="w-1/6" />
+                    <col className="w-1/6" />
+                </colgroup>
                 <thead>
                     <tr>
-                        <th className="p-2 border-b border-r"></th>
+                        <th className="border p-2"></th>
                         {severities.map(s => (
-                            <th key={s.value} className="p-2 text-center font-semibold border-b border-l">
+                            <th key={s.value} className="h-24 border p-2 text-center align-middle font-semibold">
                                 {s.name} ({s.value})
                             </th>
                         ))}
@@ -98,7 +105,7 @@ export default function RiskMatrixPage() {
                 <tbody>
                     {likelihoods.slice().reverse().map(l => (
                         <tr key={l.value}>
-                            <th className="p-2 text-right font-semibold border-t border-r">
+                            <th className="h-24 border p-2 text-right align-middle font-semibold">
                                 {l.name}
                                 <span className="block text-muted-foreground font-normal">({l.value})</span>
                             </th>
@@ -110,7 +117,7 @@ export default function RiskMatrixPage() {
                                     onContextMenu={(e) => handleRightClick(e, cellId)}
                                     style={{ backgroundColor: colors[cellId] }}
                                     className={cn(
-                                        "text-center p-4 border-t border-l text-white font-bold h-20 transition-colors",
+                                        "h-24 border p-2 text-center align-middle font-bold text-white transition-colors",
                                         "cursor-pointer"
                                     )}
                                 >
