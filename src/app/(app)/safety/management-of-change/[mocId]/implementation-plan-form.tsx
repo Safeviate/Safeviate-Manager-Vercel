@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -108,6 +108,46 @@ const mapDatesToStrings = (phases: FormValues['phases']): MocPhase[] => {
     }));
 };
 
+const StepsArray = ({ phaseIndex }: { phaseIndex: number }) => {
+    const { control } = useFormContext<FormValues>();
+    const { fields, append, remove } = useFieldArray({
+      control,
+      name: `phases.${phaseIndex}.steps`,
+    });
+  
+    return (
+      <div className="pl-6 border-l ml-3 space-y-3 pt-4">
+        {fields.map((field, stepIndex) => (
+          <div key={field.id} className="flex items-center gap-2">
+            <GripVertical className="h-5 w-5 text-muted-foreground" />
+            <FormField
+              control={control}
+              name={`phases.${phaseIndex}.steps.${stepIndex}.description`}
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormControl>
+                    <Input placeholder="Describe the step..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="button" variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => remove(stepIndex)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => append({ id: uuidv4(), description: '', hazards: [] })}
+        >
+          <PlusCircle className="mr-2 h-4 w-4" /> Add Step
+        </Button>
+      </div>
+    );
+  };
 
 export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanFormProps) {
   const firestore = useFirestore();
@@ -170,94 +210,56 @@ export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanForm
     }
   };
 
-  const StepsArray = ({ phaseIndex }: { phaseIndex: number }) => {
-    const { fields, append, remove } = useFieldArray({
-      control: form.control,
-      name: `phases.${phaseIndex}.steps`,
-    });
-
-    return (
-      <div className="pl-6 border-l ml-3 space-y-3 pt-4">
-        {fields.map((field, stepIndex) => (
-          <div key={field.id} className="flex items-center gap-2">
-            <GripVertical className="h-5 w-5 text-muted-foreground" />
-            <FormField
-              control={form.control}
-              name={`phases.${phaseIndex}.steps.${stepIndex}.description`}
-              render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormControl>
-                    <Input placeholder="Describe the step..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="button" variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => remove(stepIndex)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => append({ id: uuidv4(), description: '', hazards: [] })}
-        >
-          <PlusCircle className="mr-2 h-4 w-4" /> Add Step
-        </Button>
-      </div>
-    );
-  };
-
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={handleAnalyze} disabled={isAnalyzing}>
-              {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <WandSparkles className="mr-2 h-4 w-4" />}
-              Analyze with AI
-            </Button>
-            <Button type="button" variant="outline" onClick={() => appendPhase({ id: uuidv4(), title: '', steps: [] })}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Phase
-            </Button>
-        </div>
-        <div className="space-y-6">
-          {phaseFields.map((field, index) => (
-            <Card key={field.id}>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <FormField
-                  control={form.control}
-                  name={`phases.${index}.title`}
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormControl>
-                        <Input className="text-lg font-semibold border-none shadow-none p-0 focus-visible:ring-0" placeholder="Phase Title" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="button" variant="destructive" size="sm" onClick={() => removePhase(index)}>
-                  Delete Phase
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <StepsArray phaseIndex={index} />
-              </CardContent>
-            </Card>
-          ))}
-          {phaseFields.length === 0 && (
-            <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
-                <p>No implementation phases defined.</p>
-                <p className="text-sm">Click "Add Phase" to get started or use the AI analyzer.</p>
-            </div>
-          )}
-        </div>
-        <div className="flex justify-end pt-4">
-          <Button type="submit">Save Implementation Plan</Button>
-        </div>
-      </form>
-    </Form>
+    <FormProvider {...form}>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={handleAnalyze} disabled={isAnalyzing}>
+                {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <WandSparkles className="mr-2 h-4 w-4" />}
+                Analyze with AI
+              </Button>
+              <Button type="button" variant="outline" onClick={() => appendPhase({ id: uuidv4(), title: '', steps: [] })}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add Phase
+              </Button>
+          </div>
+          <div className="space-y-6">
+            {phaseFields.map((field, index) => (
+              <Card key={field.id}>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <FormField
+                    control={form.control}
+                    name={`phases.${index}.title`}
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl>
+                          <Input className="text-lg font-semibold border-none shadow-none p-0 focus-visible:ring-0" placeholder="Phase Title" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="button" variant="destructive" size="sm" onClick={() => removePhase(index)}>
+                    Delete Phase
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <StepsArray phaseIndex={index} />
+                </CardContent>
+              </Card>
+            ))}
+            {phaseFields.length === 0 && (
+              <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
+                  <p>No implementation phases defined.</p>
+                  <p className="text-sm">Click "Add Phase" to get started or use the AI analyzer.</p>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end pt-4">
+            <Button type="submit">Save Implementation Plan</Button>
+          </div>
+        </form>
+      </Form>
+    </FormProvider>
   );
 }
