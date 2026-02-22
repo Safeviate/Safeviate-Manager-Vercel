@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { analyzeMoc, type AnalyzeMocInput } from '@/ai/flows/analyze-moc-flow';
 
 // --- Zod Schemas ---
@@ -288,7 +288,7 @@ const StepsArray = ({ phaseIndex, personnel }: { phaseIndex: number, personnel: 
     });
   
     return (
-        <div className="space-y-4 p-4">
+        <div className="space-y-4">
             {(fields || []).map((step, stepIndex) => (
                  <Collapsible key={step.id} defaultOpen className="ml-4 border-l-2 border-slate-200 pl-4 py-2">
                     <div className="flex items-center gap-2">
@@ -348,13 +348,20 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      phases: mapDatesToObjects(moc.phases || []),
+      phases: [],
     },
   });
 
+  const initializedForMocId = useRef<string | null>(null);
+
   useEffect(() => {
-    form.reset(mapDatesToObjects(moc.phases || []));
-  }, [moc.id, form.reset]);
+    // Only reset the form if the MOC has been loaded and it's a different MOC
+    // than the one we initialized the form with. This prevents resetting on re-renders.
+    if (moc && initializedForMocId.current !== moc.id) {
+      form.reset(mapDatesToObjects(moc.phases || []));
+      initializedForMocId.current = moc.id;
+    }
+  }, [moc, form]);
 
 
   const { fields: phaseFields, append: appendPhase, remove: removePhase } = useFieldArray({
@@ -443,7 +450,9 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
                         </Button>
                     </CardHeader>
                     <CollapsibleContent>
-                        <StepsArray phaseIndex={index} personnel={personnel} />
+                       <div className="p-4 pt-0">
+                          <StepsArray phaseIndex={index} personnel={personnel} />
+                       </div>
                     </CollapsibleContent>
                 </Card>
               </Collapsible>
