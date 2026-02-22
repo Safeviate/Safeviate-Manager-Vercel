@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -17,7 +16,7 @@ import type { Risk, RiskItem, Mitigation } from '@/types/risk';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { RiskForm } from '../risk-form';
+import { RiskForm } from './risk-form';
 import { getRiskScoreStyle } from './utils';
 import { cn } from '@/lib/utils';
 
