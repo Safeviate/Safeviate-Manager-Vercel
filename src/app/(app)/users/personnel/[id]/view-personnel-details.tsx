@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -9,7 +10,7 @@ import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, ChevronsUpDown, Trash2, Upload, View, FileUp, Camera } from 'lucide-react';
+import { CalendarIcon, ChevronsUpDown, Trash2, Upload, View } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import Image from 'next/image';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -20,7 +21,6 @@ import { DocumentUploader } from './document-uploader';
 import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import type { DocumentExpirySettings } from '../../../admin/document-dates/page';
 import { TrainingRecords } from './training-records';
@@ -276,23 +276,9 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                                                             defaultFileName={doc.name}
                                                             onDocumentUploaded={onDocumentUploaded}
                                                             trigger={(openDialog) => (
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                <Button size="sm">
+                                                                <Button size="sm" onClick={openDialog}>
                                                                     <Upload className="mr-2 h-4 w-4" /> Upload
                                                                 </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent>
-                                                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openDialog('file'); }}>
-                                                                    <FileUp className="mr-2 h-4 w-4" />
-                                                                    Upload File
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openDialog('camera'); }}>
-                                                                    <Camera className="mr-2 h-4 w-4" />
-                                                                    Take Photo
-                                                                </DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
                                                             )}
                                                         />
                                                     )}

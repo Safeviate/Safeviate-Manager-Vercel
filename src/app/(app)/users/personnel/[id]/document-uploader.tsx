@@ -16,11 +16,12 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Camera } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type UploadMode = 'file' | 'camera';
 
 interface DocumentUploaderProps {
-  trigger: (open: (mode: UploadMode) => void) => ReactNode;
+  trigger: (open: () => void) => ReactNode;
   defaultFileName?: string;
   onDocumentUploaded: (document: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => void;
 }
@@ -53,6 +54,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
     setFile(null);
     setCapturedImage(null);
     setHasCameraPermission(null);
+    setUploadMode('file');
   }, [defaultFileName]);
 
   const onOpenChange = (open: boolean) => {
@@ -65,8 +67,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
     }
   };
 
-  const openDialog = (mode: UploadMode) => {
-    setUploadMode(mode);
+  const openDialog = () => {
     setIsOpen(true);
   };
   
@@ -189,9 +190,9 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
       {trigger(openDialog)}
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{uploadMode === 'camera' ? 'Take Photo' : 'Upload Document'}</DialogTitle>
+          <DialogTitle>Upload Document</DialogTitle>
           <DialogDescription>
-            {uploadMode === 'camera' ? 'Capture a photo of the document.' : 'Select a file, give it a name, and optionally set an expiration date.'}
+            Upload a file or take a photo of the document. Give it a name and optionally set an expiration date later.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">
@@ -205,44 +206,51 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
                     readOnly={!!defaultFileName}
                 />
             </div>
-            {uploadMode === 'file' ? (
-                <div className="space-y-2">
-                    <Label htmlFor="file-upload">File</Label>
-                    <Input id="file-upload" type="file" onChange={handleFileChange} />
-                    {file && <p className="text-sm text-muted-foreground">Selected: {file.name}</p>}
-                </div>
-            ) : (
-                <div className="space-y-4">
-                    <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-muted">
-                       {capturedImage ? (
-                           <img src={capturedImage} alt="Captured document" className="h-full w-full object-contain" />
-                       ) : (
-                           <video ref={videoRef} className="h-full w-full object-cover" autoPlay playsInline muted />
-                       )}
-                       {hasCameraPermission === false && (
-                           <div className='absolute inset-0 flex items-center justify-center p-4'>
-                                <Alert variant="destructive">
-                                    <AlertTitle>Camera Access Required</AlertTitle>
-                                    <AlertDescription>
-                                        Please allow camera access to use this feature.
-                                    </AlertDescription>
-                                </Alert>
-                           </div>
-                       )}
+            <Tabs defaultValue="file" onValueChange={(value) => setUploadMode(value as UploadMode)} className='w-full'>
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="file">Upload File</TabsTrigger>
+                    <TabsTrigger value="camera">Take Photo</TabsTrigger>
+                </TabsList>
+                <TabsContent value="file">
+                    <div className="space-y-2 pt-4">
+                        <Label htmlFor="file-upload">File</Label>
+                        <Input id="file-upload" type="file" onChange={handleFileChange} />
+                        {file && <p className="text-sm text-muted-foreground">Selected: {file.name}</p>}
                     </div>
-                    <canvas ref={canvasRef} className="hidden" />
-                    <div className='flex gap-2'>
-                        {capturedImage ? (
-                            <Button variant="outline" onClick={handleRetake}>Retake Photo</Button>
-                        ) : (
-                            <Button onClick={handleCapture} disabled={hasCameraPermission === false}>
-                                <Camera className='mr-2' />
-                                Capture
-                            </Button>
-                        )}
+                </TabsContent>
+                <TabsContent value="camera">
+                     <div className="space-y-4 pt-4">
+                        <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-muted">
+                           {capturedImage ? (
+                               <img src={capturedImage} alt="Captured document" className="h-full w-full object-contain" />
+                           ) : (
+                               <video ref={videoRef} className="h-full w-full object-cover" autoPlay playsInline muted />
+                           )}
+                           {hasCameraPermission === false && (
+                               <div className='absolute inset-0 flex items-center justify-center p-4'>
+                                    <Alert variant="destructive">
+                                        <AlertTitle>Camera Access Required</AlertTitle>
+                                        <AlertDescription>
+                                            Please allow camera access to use this feature.
+                                        </AlertDescription>
+                                    </Alert>
+                               </div>
+                           )}
+                        </div>
+                        <canvas ref={canvasRef} className="hidden" />
+                        <div className='flex gap-2'>
+                            {capturedImage ? (
+                                <Button type="button" variant="outline" onClick={handleRetake}>Retake Photo</Button>
+                            ) : (
+                                <Button type="button" onClick={handleCapture} disabled={hasCameraPermission !== true}>
+                                    <Camera className='mr-2' />
+                                    Capture
+                                </Button>
+                            )}
+                        </div>
                     </div>
-                </div>
-            )}
+                </TabsContent>
+            </Tabs>
         </div>
         <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
