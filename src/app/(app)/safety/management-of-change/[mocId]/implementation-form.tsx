@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray, useWatch, Controller, useFormContext, FormProvider } from 'react-hook-form';
@@ -24,6 +25,7 @@ import { format } from 'date-fns';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import React, { useState, useEffect } from 'react';
+import { analyzeMoc, type AnalyzeMocInput } from '@/ai/flows/analyze-moc-flow';
 
 // --- Zod Schemas ---
 const riskAssessmentSchema = z.object({
@@ -57,14 +59,14 @@ const hazardSchema: z.ZodType<MocHazard> = z.lazy(() => z.object({
 
 const stepSchema = z.object({
     id: z.string(),
-    description: z.string(),
+    description: z.string().min(1, 'Step description is required.'),
     hazards: z.array(hazardSchema),
 });
 
 const phaseSchema = z.object({
-    id: z.string(),
-    title: z.string(),
-    steps: z.array(stepSchema),
+  id: z.string(),
+  title: z.string().min(1, 'Phase title is required.'),
+  steps: z.array(stepSchema),
 });
 
 const formSchema = z.object({
@@ -277,16 +279,71 @@ const HazardsArray = ({ phaseIndex, stepIndex, personnel }: { phaseIndex: number
     )
 }
 
+
+const StepsArray = ({ phaseIndex, personnel }: { phaseIndex: number, personnel: Personnel[] }) => {
+    const { control } = useFormContext<FormValues>();
+    const { fields, append, remove } = useFieldArray({
+      control,
+      name: `phases.${phaseIndex}.steps`,
+    });
+  
+    return (
+        <div className="space-y-4">
+            {fields.map((step, stepIndex) => (
+                 <Collapsible key={step.id} defaultOpen className="ml-4 border-l-2 border-slate-200 pl-4 py-2">
+                    <div className="flex items-center gap-2">
+                        <FormField
+                            control={control}
+                            name={`phases.${phaseIndex}.steps.${stepIndex}.description`}
+                            render={({ field }) => (
+                                <FormItem className="flex-1">
+                                    <FormControl>
+                                        <Input placeholder="Describe the step..." {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <ChevronDown className="h-4 w-4" />
+                            </Button>
+                        </CollapsibleTrigger>
+                         <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(stepIndex)}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                    <CollapsibleContent>
+                        <div className="pt-4">
+                            <HazardsArray phaseIndex={phaseIndex} stepIndex={stepIndex} personnel={personnel} />
+                        </div>
+                    </CollapsibleContent>
+                </Collapsible>
+            ))}
+            <div className="pl-4">
+                <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => append({ id: uuidv4(), description: '', hazards: [] })}
+                >
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Step
+                </Button>
+            </div>
+        </div>
+    );
+};
+
+
 // --- Main Component ---
-interface HazardAnalysisFormProps {
+interface ImplementationFormProps {
   moc: ManagementOfChange;
   tenantId: string;
   personnel: Personnel[];
 }
 
-export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisFormProps) {
+export function ImplementationForm({ moc, tenantId, personnel }: ImplementationFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -299,7 +356,7 @@ export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisF
     form.reset(mapDatesToObjects(moc.phases || []));
   }, [moc.phases, form]);
 
-  const { fields: phaseFields } = useFieldArray({
+  const { fields: phaseFields, append: appendPhase, remove: removePhase } = useFieldArray({
     control: form.control,
     name: 'phases',
   });
@@ -310,44 +367,86 @@ export function HazardAnalysisForm({ moc, tenantId, personnel }: HazardAnalysisF
     const dataToSave = { phases: mapDatesToStrings(values.phases) };
     updateDocumentNonBlocking(mocRef, dataToSave);
     toast({
-      title: 'Hazard Analysis Saved',
+      title: 'Implementation Plan Saved',
     });
+  };
+  
+  const handleAnalyze = async () => {
+    if (!firestore) return;
+    setIsAnalyzing(true);
+    try {
+        const mocData: AnalyzeMocInput = {
+            title: moc.title,
+            description: moc.description,
+            reason: moc.reason,
+            scope: moc.scope,
+        };
+        const result = await analyzeMoc(mocData);
+
+        const mocRef = doc(firestore, `tenants/${tenantId}/management-of-change`, moc.id);
+        
+        const phasesWithDateObjects = mapDatesToObjects(result.phases);
+        form.setValue('phases', phasesWithDateObjects, { shouldValidate: true });
+
+        // Also persist this change immediately
+        const dataToSave = { phases: mapDatesToStrings(result.phases) };
+        updateDocumentNonBlocking(mocRef, dataToSave);
+
+        toast({ title: 'AI Analysis Complete', description: 'The implementation plan has been populated with the AI suggestions.' });
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'AI Analysis Failed', description: error.message });
+    } finally {
+        setIsAnalyzing(false);
+    }
   };
   
   return (
     <FormProvider {...form}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="space-y-4">
-            {(phaseFields || []).map((phase, phaseIndex) => (
-              <div key={phase.id} className="border-b last:border-0 pb-4">
-                  <h3 className="text-lg font-semibold">{phase.title}</h3>
-                  <div className="space-y-2 mt-2">
-                    {(phase.steps || []).map((step, stepIndex) => (
-                        <Collapsible key={step.id} defaultOpen className="ml-4 border-l-2 border-slate-200 pl-4 py-2">
-                            <CollapsibleTrigger className='flex items-center w-full cursor-pointer group'>
-                                <p className="font-medium flex-1 text-left">{stepIndex + 1}. {step.description}</p>
-                                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                                <div className="pt-4">
-                                <HazardsArray phaseIndex={phaseIndex} stepIndex={stepIndex} personnel={personnel} />
-                                </div>
-                            </CollapsibleContent>
-                        </Collapsible>
-                    ))}
-                  </div>
-              </div>
-            ))}
+           <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={handleAnalyze} disabled={isAnalyzing}>
+                {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <WandSparkles className="mr-2 h-4 w-4" />}
+                Analyze with AI
+              </Button>
+              <Button type="button" variant="outline" onClick={() => appendPhase({ id: uuidv4(), title: '', steps: [] })}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add Phase
+              </Button>
           </div>
-          {phaseFields.length === 0 && (
+          <div className="space-y-6">
+            {phaseFields.map((field, index) => (
+              <Card key={field.id}>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <FormField
+                    control={form.control}
+                    name={`phases.${index}.title`}
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl>
+                          <Input className="text-lg font-semibold border-none shadow-none p-0 focus-visible:ring-0" placeholder="Phase Title" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="button" variant="destructive" size="sm" onClick={() => removePhase(index)}>
+                    Delete Phase
+                  </Button>
+                </CardHeader>
+                <div className="p-6 pt-0">
+                    <StepsArray phaseIndex={index} personnel={personnel} />
+                </div>
+              </Card>
+            ))}
+            {phaseFields.length === 0 && (
               <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
-                  <p>No implementation plan defined.</p>
-                  <p className="text-sm">Go to the "Implementation Plan" tab to define phases and steps, or use the AI analyzer.</p>
+                  <p>No implementation phases defined.</p>
+                  <p className="text-sm">Click "Add Phase" to get started or use the AI analyzer.</p>
               </div>
-          )}
+            )}
+          </div>
           <div className="flex justify-end pt-4">
-            <Button type="submit">Save Hazard Analysis</Button>
+            <Button type="submit">Save Plan &amp; Analysis</Button>
           </div>
         </form>
       </Form>

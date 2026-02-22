@@ -1,4 +1,3 @@
-
 'use client';
 
 import { use, useMemo } from 'react';
@@ -12,8 +11,7 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import type { ManagementOfChange } from '@/types/moc';
-import { ImplementationPlanForm } from './implementation-plan-form';
-import { HazardAnalysisForm } from './hazard-analysis-form';
+import { ImplementationForm } from './implementation-form';
 import { ApprovalForm } from './approval-form';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import type { Department } from '@/app/(app)/admin/department/page';
@@ -142,16 +140,12 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
       </Card>
       
       <Tabs defaultValue="implementation">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="implementation">Implementation Plan</TabsTrigger>
-          <TabsTrigger value="analysis">Hazard Analysis</TabsTrigger>
-          <TabsTrigger value="approval">Approval & Sign-off</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="implementation">Implementation &amp; Analysis</TabsTrigger>
+          <TabsTrigger value="approval">Approval &amp; Sign-off</TabsTrigger>
         </TabsList>
         <TabsContent value="implementation">
-          <ImplementationPlanForm moc={moc} tenantId={tenantId} />
-        </TabsContent>
-        <TabsContent value="analysis">
-          <HazardAnalysisForm moc={moc} tenantId={tenantId} personnel={personnel || []} />
+          <ImplementationForm moc={moc} tenantId={tenantId} personnel={personnel || []} />
         </TabsContent>
         <TabsContent value="approval">
           <ApprovalForm moc={moc} tenantId={tenantId} personnel={personnel || []} />
