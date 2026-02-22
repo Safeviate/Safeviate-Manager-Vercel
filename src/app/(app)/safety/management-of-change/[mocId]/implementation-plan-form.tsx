@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook-form';
@@ -116,7 +117,7 @@ const StepsArray = ({ phaseIndex }: { phaseIndex: number }) => {
     });
   
     return (
-      <div className="pl-6 border-l ml-3 space-y-3 pt-4">
+      <div className="space-y-3">
         {fields.map((field, stepIndex) => (
           <div key={field.id} className="flex items-center gap-2">
             <GripVertical className="h-5 w-5 text-muted-foreground" />
@@ -243,9 +244,9 @@ export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanForm
                     Delete Phase
                   </Button>
                 </CardHeader>
-                <div className="p-6 pt-0">
+                <CardContent>
                     <StepsArray phaseIndex={index} />
-                </div>
+                </CardContent>
               </Card>
             ))}
             {phaseFields.length === 0 && (
