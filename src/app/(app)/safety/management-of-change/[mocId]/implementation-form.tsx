@@ -183,7 +183,7 @@ const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, perso
                       <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.responsiblePersonId`} render={({ field }) => ( <FormItem><FormLabel>Assignee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Assign..." /></SelectTrigger></FormControl><SelectContent>{personnel.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                       <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.completionDate`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
                       <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.status`} render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{['Open', 'In Progress', 'Closed', 'Cancelled'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                      <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(mitigationIndex)}><Trash2 className="h-4 w-4" /></Button>
+                      <Button type="button" variant="destructive" size="icon" onClick={() => remove(mitigationIndex)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                    <div className="mt-4">
                       <RiskAssessmentEditor
@@ -214,7 +214,7 @@ const RisksArray = ({ phaseIndex, stepIndex, hazardIndex, personnel }: { phaseIn
                              <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.description`} render={({ field }) => ( <FormItem className="flex-1"><FormLabel>Risk Description</FormLabel><FormControl><Input placeholder='Describe the risk...' {...field} /></FormControl><FormMessage /></FormItem> )}/>
                             <div className="flex items-center gap-1">
                                 <CollapsibleTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="[&[data-state=open]>svg]:rotate-180">
+                                    <Button variant="ghost" size="icon" className="[&[data-state=open]>svg]:-rotate-180">
                                         <ChevronDown className="h-4 w-4 transition-transform duration-200" />
                                         <span className="sr-only">Toggle Risk Details</span>
                                     </Button>
@@ -306,7 +306,7 @@ const StepsArray = ({ phaseIndex, personnel }: { phaseIndex: number, personnel: 
                         />
                         <CollapsibleTrigger asChild>
                             <Button variant="ghost" size="icon">
-                                <ChevronDown className="h-4 w-4" />
+                                <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:-rotate-180" />
                             </Button>
                         </CollapsibleTrigger>
                          <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(stepIndex)}><Trash2 className="h-4 w-4" /></Button>
@@ -415,28 +415,39 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
           </div>
           <div className="space-y-6">
             {phaseFields.map((field, index) => (
-              <Card key={field.id}>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <FormField
-                    control={form.control}
-                    name={`phases.${index}.title`}
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormControl>
-                          <Input className="text-lg font-semibold border-none shadow-none p-0 focus-visible:ring-0" placeholder="Phase Title" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="button" variant="destructive" size="sm" onClick={() => removePhase(index)}>
-                    Delete Phase
-                  </Button>
-                </CardHeader>
-                <div className="p-6 pt-0">
-                    <StepsArray phaseIndex={index} personnel={personnel} />
-                </div>
-              </Card>
+              <Collapsible key={field.id} defaultOpen>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div className="flex items-center gap-2 flex-1">
+                            <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:-rotate-180" />
+                                </Button>
+                            </CollapsibleTrigger>
+                            <FormField
+                                control={form.control}
+                                name={`phases.${index}.title`}
+                                render={({ field }) => (
+                                <FormItem className="flex-1">
+                                    <FormControl>
+                                    <Input className="text-lg font-semibold border-none shadow-none p-0 focus-visible:ring-0" placeholder="Phase Title" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        </div>
+                        <Button type="button" variant="destructive" size="sm" onClick={() => removePhase(index)}>
+                            Delete Phase
+                        </Button>
+                    </CardHeader>
+                    <CollapsibleContent>
+                      <div className="p-6 pt-0">
+                          <StepsArray phaseIndex={index} personnel={personnel} />
+                      </div>
+                    </CollapsibleContent>
+                </Card>
+              </Collapsible>
             ))}
             {phaseFields.length === 0 && (
               <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
