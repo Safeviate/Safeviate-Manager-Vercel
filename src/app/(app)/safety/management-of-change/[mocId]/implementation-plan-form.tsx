@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook-form';
@@ -242,9 +243,9 @@ export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanForm
                     Delete Phase
                   </Button>
                 </CardHeader>
-                <CardContent>
+                <div className="p-6 pt-0">
                   <StepsArray phaseIndex={index} />
-                </CardContent>
+                </div>
               </Card>
             ))}
             {phaseFields.length === 0 && (
