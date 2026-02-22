@@ -243,9 +243,7 @@ export function ImplementationPlanForm({ moc, tenantId }: ImplementationPlanForm
                   </Button>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="max-h-72 w-full pr-4">
-                    <StepsArray phaseIndex={index} />
-                  </ScrollArea>
+                  <StepsArray phaseIndex={index} />
                 </CardContent>
               </Card>
             ))}
