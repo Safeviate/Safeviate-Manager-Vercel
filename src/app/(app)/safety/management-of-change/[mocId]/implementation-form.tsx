@@ -14,7 +14,7 @@ import type { ManagementOfChange, MocPhase, MocStep, MocHazard, MocRisk, MocMiti
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { PlusCircle, Trash2, CalendarIcon, ChevronDown, WandSparkles, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -37,8 +37,8 @@ const riskAssessmentSchema = z.object({
 
 const mitigationSchema = z.object({
     id: z.string(),
-    description: z.string().min(1, "Mitigation description is required."),
-    responsiblePersonId: z.string().min(1, "Assignee is required."),
+    description: z.string().optional(),
+    responsiblePersonId: z.string().optional(),
     completionDate: z.date(),
     status: z.enum(['Open', 'In Progress', 'Closed', 'Cancelled']),
     residualRiskAssessment: riskAssessmentSchema.optional(),
@@ -46,26 +46,26 @@ const mitigationSchema = z.object({
 
 const riskSchema: z.ZodType<MocRisk> = z.lazy(() => z.object({
     id: z.string(),
-    description: z.string().min(1, "Risk description is required"),
+    description: z.string().optional(),
     initialRiskAssessment: riskAssessmentSchema.optional(),
     mitigations: z.array(mitigationSchema),
 }));
 
 const hazardSchema: z.ZodType<MocHazard> = z.lazy(() => z.object({
     id: z.string(),
-    description: z.string().min(1, 'Hazard description is required.'),
+    description: z.string().optional(),
     risks: z.array(riskSchema),
 }));
 
 const stepSchema = z.object({
     id: z.string(),
-    description: z.string().min(1, 'Step description is required.'),
+    description: z.string().optional(),
     hazards: z.array(hazardSchema),
 });
 
 const phaseSchema = z.object({
   id: z.string(),
-  title: z.string().min(1, 'Phase title is required.'),
+  title: z.string().optional(),
   steps: z.array(stepSchema),
 });
 
@@ -292,6 +292,11 @@ const StepsArray = ({ phaseIndex, personnel }: { phaseIndex: number, personnel: 
             {fields.map((step, stepIndex) => (
                  <Collapsible key={step.id} defaultOpen className="ml-4 border-l-2 border-slate-200 pl-4 py-2">
                     <div className="flex items-center gap-2">
+                        <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:-rotate-180" />
+                            </Button>
+                        </CollapsibleTrigger>
                         <FormField
                             control={control}
                             name={`phases.${phaseIndex}.steps.${stepIndex}.description`}
@@ -304,11 +309,6 @@ const StepsArray = ({ phaseIndex, personnel }: { phaseIndex: number, personnel: 
                                 </FormItem>
                             )}
                         />
-                        <CollapsibleTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                                <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:-rotate-180" />
-                            </Button>
-                        </CollapsibleTrigger>
                          <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(stepIndex)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                     <CollapsibleContent>
@@ -352,10 +352,9 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
     },
   });
 
-  const phasesJson = JSON.stringify(moc.phases);
   useEffect(() => {
     form.reset(mapDatesToObjects(moc.phases || []));
-  }, [phasesJson, form.reset]);
+  }, [moc.id, form.reset]);
 
 
   const { fields: phaseFields, append: appendPhase, remove: removePhase } = useFieldArray({
@@ -444,9 +443,9 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
                         </Button>
                     </CardHeader>
                     <CollapsibleContent>
-                      <div className="p-6 pt-0">
+                        <div className="p-6 pt-0">
                           <StepsArray phaseIndex={index} personnel={personnel} />
-                      </div>
+                        </div>
                     </CollapsibleContent>
                 </Card>
               </Collapsible>
