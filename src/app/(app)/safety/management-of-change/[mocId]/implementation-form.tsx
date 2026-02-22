@@ -339,14 +339,15 @@ interface ImplementationFormProps {
   personnel: Personnel[];
 }
 
-function ImplementationFormInner({ moc, tenantId, personnel }: ImplementationFormProps) {
+export function ImplementationForm({ moc, tenantId, personnel }: ImplementationFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const formKey = useMemo(() => moc.id || uuidv4(), [moc.id]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: useMemo(() => ({ phases: mapDatesToObjects(moc.phases || []) }), [moc.phases]),
+    defaultValues: useMemo(() => ({ phases: mapDatesToObjects(moc.phases || []) }), [moc]),
   });
 
   const { fields: phaseFields, append: appendPhase, remove: removePhase } = useFieldArray({
@@ -391,7 +392,7 @@ function ImplementationFormInner({ moc, tenantId, personnel }: ImplementationFor
   return (
     <FormProvider {...form}>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" key={formKey}>
            <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={handleAnalyze} disabled={isAnalyzing}>
                 {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <WandSparkles className="mr-2 h-4 w-4" />}
@@ -451,9 +452,4 @@ function ImplementationFormInner({ moc, tenantId, personnel }: ImplementationFor
       </Form>
     </FormProvider>
   );
-}
-
-export function ImplementationForm(props: ImplementationFormProps) {
-    const formKey = useMemo(() => props.moc.id || uuidv4(), [props.moc.id]);
-    return <ImplementationFormInner key={formKey} {...props} />;
 }
