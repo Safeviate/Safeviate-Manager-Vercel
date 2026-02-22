@@ -4,7 +4,7 @@
 import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Eye } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import type { ManagementOfChange } from '@/types/moc';
 import { usePermissions } from '@/hooks/use-permissions';
-
+import { MocActions } from './moc-actions';
 
 export default function ManagementOfChangePage() {
     const firestore = useFirestore();
@@ -86,12 +86,7 @@ export default function ManagementOfChangePage() {
                                             <TableCell><Badge variant="secondary">{moc.status}</Badge></TableCell>
                                             <TableCell>{format(new Date(moc.proposalDate), 'PPP')}</TableCell>
                                             <TableCell className="text-right">
-                                                <Button asChild variant="outline" size="sm">
-                                                    <Link href={`/safety/management-of-change/${moc.id}`}>
-                                                        <Eye className="mr-2 h-4 w-4" />
-                                                        View
-                                                    </Link>
-                                                </Button>
+                                                <MocActions moc={moc} tenantId={tenantId} />
                                             </TableCell>
                                         </TableRow>
                                     ))
