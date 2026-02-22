@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm, useFieldArray, Controller, useFormContext, FormProvider } from 'react-hook-form';
+import { useForm, useFieldArray, Controller, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -287,7 +287,7 @@ const StepsArray = ({ phaseIndex, personnel }: { phaseIndex: number, personnel: 
     });
   
     return (
-        <div className="space-y-4 pl-4 pt-4">
+        <div className="space-y-4 pt-4">
             {(fields || []).map((step, stepIndex) => (
                  <Collapsible key={step.id} defaultOpen className="ml-4 border-l-2 border-slate-200 pl-4 py-2">
                     <div className="flex items-center gap-2">
@@ -339,14 +339,14 @@ interface ImplementationFormProps {
   personnel: Personnel[];
 }
 
-export function ImplementationForm({ moc, tenantId, personnel }: ImplementationFormProps) {
+function ImplementationFormInner({ moc, tenantId, personnel }: ImplementationFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: mapDatesToObjects(moc.phases || []),
+    defaultValues: useMemo(() => ({ phases: mapDatesToObjects(moc.phases || []) }), [moc.phases]),
   });
 
   const { fields: phaseFields, append: appendPhase, remove: removePhase } = useFieldArray({
@@ -356,11 +356,12 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
 
   const onSubmit = (values: FormValues) => {
     if (!firestore) return;
-    const mocRef = doc(firestore, `tenants/${tenantId}/management-of-change`, moc.id);
+    const mocRef = doc(firestore, 'tenants', tenantId, 'management-of-change', moc.id);
     const dataToSave = { phases: mapDatesToStrings(values.phases) };
     updateDocumentNonBlocking(mocRef, dataToSave);
     toast({
       title: 'Implementation Plan Saved',
+      description: 'Your changes are being saved in the background.',
     });
   };
   
@@ -376,16 +377,10 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
         };
         const result = await analyzeMoc(mocData);
 
-        const mocRef = doc(firestore, `tenants/${tenantId}/management-of-change`, moc.id);
-        
         const phasesWithDateObjects = mapDatesToObjects(result.phases);
-        form.setValue('phases', phasesWithDateObjects, { shouldValidate: true });
+        form.reset({ phases: phasesWithDateObjects });
 
-        // Also persist this change immediately
-        const dataToSave = { phases: mapDatesToStrings(result.phases) };
-        updateDocumentNonBlocking(mocRef, dataToSave);
-
-        toast({ title: 'AI Analysis Complete', description: 'The implementation plan has been populated with the AI suggestions.' });
+        toast({ title: 'AI Analysis Complete', description: 'The implementation plan has been populated. Review and save the changes.' });
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'AI Analysis Failed', description: error.message });
     } finally {
@@ -456,4 +451,9 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
       </Form>
     </FormProvider>
   );
+}
+
+export function ImplementationForm(props: ImplementationFormProps) {
+    const formKey = useMemo(() => props.moc.id || uuidv4(), [props.moc.id]);
+    return <ImplementationFormInner key={formKey} {...props} />;
 }
