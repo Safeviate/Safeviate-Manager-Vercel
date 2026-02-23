@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useForm, useFieldArray, Controller, FormProvider, useFormContext } from 'react-hook-form';
+import { useForm, useFieldArray, Controller, FormProvider, useFormContext, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -160,9 +159,11 @@ interface RiskAssessmentEditorProps {
 }
 
 const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label, riskMatrixColors }) => {
-    const { control, setValue, watch } = useFormContext();
-    const likelihood = watch(`${path}.likelihood`, 1);
-    const severity = watch(`${path}.severity`, 1);
+    const { control, setValue } = useFormContext();
+
+    const likelihood = useWatch({ control, name: `${path}.likelihood`, defaultValue: 1 });
+    const severity = useWatch({ control, name: `${path}.severity`, defaultValue: 1 });
+    
     const riskScore = (likelihood || 1) * (severity || 1);
     const riskLevel = getRiskLevel(riskScore);
     const { backgroundColor, color } = getRiskScoreColor(likelihood, severity, riskMatrixColors);
@@ -175,7 +176,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
         1: 'Extremely Improbable',
     };
     
-    const severityLabels: { [key: number]: { name: string, letter: string } } = {
+    const severityLabels: { [key: number]: { name: string; letter: string } } = {
         5: { name: 'Catastrophic', letter: 'A' },
         4: { name: 'Hazardous', letter: 'B' },
         3: { name: 'Major', letter: 'C' },
@@ -183,7 +184,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
         1: { name: 'Negligible', letter: 'E' },
     };
 
-    const displayValue = `${likelihood}${severityLabels[severity].letter}`;
+    const displayValue = `${likelihood || 1}${severityLabels[severity || 1]?.letter || 'E'}`;
 
     React.useEffect(() => {
         setValue(`${path}.riskScore`, riskScore, { shouldDirty: true });
@@ -197,8 +198,8 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-x-4 gap-y-2 items-center">
                 <div className="space-y-3">
-                    <Controller control={control} name={`${path}.likelihood`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel className="text-xs">Likelihood: {value} ({likelihoodLabels[value]})</FormLabel><FormControl><div className="no-print"><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></div></FormControl></FormItem> )} />
-                    <Controller control={control} name={`${path}.severity`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel className="text-xs">Severity: {severityLabels[value].letter} ({severityLabels[value].name})</FormLabel><FormControl><div className="no-print"><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></div></FormControl></FormItem> )}/>
+                    <Controller control={control} name={`${path}.likelihood`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel className="text-xs">Likelihood: {value} ({likelihoodLabels[value] || 'Unknown'})</FormLabel><FormControl><div className="no-print"><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></div></FormControl></FormItem> )} />
+                    <Controller control={control} name={`${path}.severity`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel className="text-xs">Severity: {severityLabels[value]?.letter || 'E'} ({severityLabels[value]?.name || 'Unknown'})</FormLabel><FormControl><div className="no-print"><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></div></FormControl></FormItem> )}/>
                 </div>
                 <div className="flex justify-center items-center">
                     <div
