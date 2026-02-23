@@ -115,3 +115,25 @@
     -moz-appearance: textfield;
   }
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @page {
+    size: auto;
+    margin: 0.5in;
+  }
+  /* Show all tab content when printing */
+  [data-state="inactive"][role="tabpanel"] {
+      display: block !important;
+  }
+  /* Hide sliders for printing */
+  [role="slider"] {
+    display: none !important;
+  }
+}

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -128,7 +129,7 @@ export function ApprovalForm({ moc, tenantId, personnel }: ApprovalFormProps) {
               </div>
 
               {!currentUserHasSigned && (
-                <div className="pt-6 border-t">
+                <div className="pt-6 border-t no-print">
                     <h3 className="text-lg font-medium mb-4">Add Your Signature</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                         <div className="space-y-2">

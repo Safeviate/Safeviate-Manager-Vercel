@@ -1,3 +1,4 @@
+
 'use client';
 
 import { use, useMemo } from 'react';
@@ -7,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import type { ManagementOfChange } from '@/types/moc';
@@ -66,6 +67,9 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
     return new Map(departments.map(d => [d.id, d.name]));
   }, [departments]);
 
+  const handlePrint = () => {
+    window.print();
+  };
 
   if (isLoading) {
     return (
@@ -108,12 +112,18 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
 
   return (
     <div className="space-y-6">
-       <Button asChild variant="outline" className="w-fit">
-          <Link href="/safety/management-of-change">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to All MOCs
-          </Link>
-        </Button>
+       <div className="flex justify-between items-center no-print">
+          <Button asChild variant="outline" className="w-fit">
+            <Link href="/safety/management-of-change">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to All MOCs
+            </Link>
+          </Button>
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="mr-2 h-4 w-4" />
+            Print MOC
+          </Button>
+       </div>
       <Card>
         <CardHeader>
           <CardTitle>MOC {moc.mocNumber}: {moc.title}</CardTitle>
@@ -140,7 +150,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
       </Card>
       
       <Tabs defaultValue="implementation">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-2 no-print">
           <TabsTrigger value="implementation">Implementation &amp; Analysis</TabsTrigger>
           <TabsTrigger value="approval">Approval &amp; Sign-off</TabsTrigger>
         </TabsList>

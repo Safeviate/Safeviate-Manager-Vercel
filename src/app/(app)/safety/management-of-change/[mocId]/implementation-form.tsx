@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray, Controller, FormProvider, useFormContext } from 'react-hook-form';
@@ -153,8 +154,8 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-x-4 gap-y-2 items-center">
                 <div className="space-y-3">
-                    <Controller control={control} name={`${path}.likelihood`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel className="text-xs">Likelihood: {value}</FormLabel><FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl></FormItem> )} />
-                    <Controller control={control} name={`${path}.severity`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel className="text-xs">Severity: {value}</FormLabel><FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl></FormItem> )}/>
+                    <Controller control={control} name={`${path}.likelihood`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel className="text-xs">Likelihood: {value}</FormLabel><FormControl><div className="no-print"><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></div></FormControl></FormItem> )} />
+                    <Controller control={control} name={`${path}.severity`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel className="text-xs">Severity: {value}</FormLabel><FormControl><div className="no-print"><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></div></FormControl></FormItem> )}/>
                 </div>
                 <div className="flex justify-center items-center">
                     <div className={cn("flex items-center justify-center h-10 w-10 rounded-full text-white text-base font-bold", colorClass)}>
@@ -182,7 +183,7 @@ const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, perso
                       <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.responsiblePersonId`} render={({ field }) => ( <FormItem><FormLabel>Assignee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Assign..." /></SelectTrigger></FormControl><SelectContent>{personnel.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                       <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.completionDate`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
                       <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.status`} render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{['Open', 'In Progress', 'Closed', 'Cancelled'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                      <Button type="button" variant="destructive" size="icon" onClick={() => remove(mitigationIndex)}><Trash2 className="h-4 w-4" /></Button>
+                      <Button type="button" variant="destructive" size="icon" onClick={() => remove(mitigationIndex)} className="no-print"><Trash2 className="h-4 w-4" /></Button>
                   </div>
                    <div className="mt-4">
                       <RiskAssessmentEditor
@@ -192,7 +193,7 @@ const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, perso
                   </div>
                 </div>
             ))}
-            <Button type="button" variant="outline" size="sm" onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', completionDate: new Date(), status: 'Open', residualRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' } })}><PlusCircle className="mr-2 h-4 w-4" />Add Mitigation</Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', completionDate: new Date(), status: 'Open', residualRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' } })} className="no-print"><PlusCircle className="mr-2 h-4 w-4" />Add Mitigation</Button>
         </div>
     )
 }
@@ -211,7 +212,7 @@ const RisksArray = ({ phaseIndex, stepIndex, hazardIndex, personnel }: { phaseIn
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between bg-muted/30">
                              <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.description`} render={({ field }) => ( <FormItem className="flex-1"><FormLabel>Risk Description</FormLabel><FormControl><Input placeholder='Describe the risk...' {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 no-print">
                                 <CollapsibleTrigger asChild>
                                     <Button variant="ghost" size="icon" className="[&[data-state=open]>svg]:-rotate-180">
                                         <ChevronDown className="h-4 w-4 transition-transform duration-200" />
@@ -239,6 +240,7 @@ const RisksArray = ({ phaseIndex, stepIndex, hazardIndex, personnel }: { phaseIn
                 variant="outline"
                 size="sm"
                 onClick={() => append({ id: uuidv4(), description: '', initialRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' }, mitigations: [] })}
+                className="no-print"
             >
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Risk
             </Button>
@@ -264,7 +266,7 @@ const HazardsArray = ({ phaseIndex, stepIndex, personnel }: { phaseIndex: number
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between bg-muted/20">
                             <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.description`} render={({ field }) => ( <FormItem className="flex-1"><FormLabel>Hazard Description</FormLabel><FormControl><Input placeholder='Describe the hazard...' {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                            <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(hazardIndex)}><Trash2 className="h-4 w-4" /></Button>
+                            <Button type="button" variant="ghost" size="icon" className="text-destructive no-print" onClick={() => remove(hazardIndex)}><Trash2 className="h-4 w-4" /></Button>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-4">
                            <h4 className="font-semibold text-sm">Identified Risks</h4>
@@ -273,7 +275,7 @@ const HazardsArray = ({ phaseIndex, stepIndex, personnel }: { phaseIndex: number
                     </Card>
                 </Collapsible>
             ))}
-             <Button type="button" variant="secondary" onClick={addHazard}><PlusCircle className="mr-2 h-4 w-4" /> Add Hazard</Button>
+             <Button type="button" variant="secondary" onClick={addHazard} className="no-print"><PlusCircle className="mr-2 h-4 w-4" /> Add Hazard</Button>
         </div>
     )
 }
@@ -291,7 +293,7 @@ const StepsArray = ({ phaseIndex, personnel }: { phaseIndex: number, personnel: 
             {(fields || []).map((step, stepIndex) => (
                  <Collapsible key={step.id} defaultOpen className="ml-4 border-l-2 border-slate-200 pl-4 py-2">
                     <div className="flex items-center gap-2">
-                        <CollapsibleTrigger asChild>
+                        <CollapsibleTrigger asChild className="no-print">
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                                 <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:-rotate-180" />
                             </Button>
@@ -308,7 +310,7 @@ const StepsArray = ({ phaseIndex, personnel }: { phaseIndex: number, personnel: 
                                 </FormItem>
                             )}
                         />
-                         <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(stepIndex)}><Trash2 className="h-4 w-4" /></Button>
+                         <Button type="button" variant="ghost" size="icon" className="text-destructive no-print" onClick={() => remove(stepIndex)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                     <CollapsibleContent>
                         <div className="pt-4">
@@ -323,6 +325,7 @@ const StepsArray = ({ phaseIndex, personnel }: { phaseIndex: number, personnel: 
                 variant="outline"
                 size="sm"
                 onClick={() => append({ id: uuidv4(), description: '', hazards: [] })}
+                className="no-print"
                 >
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Step
                 </Button>
@@ -393,7 +396,7 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
     <FormProvider {...form}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" key={formKey}>
-           <div className="flex justify-end gap-2">
+           <div className="flex justify-end gap-2 no-print">
               <Button type="button" variant="outline" onClick={handleAnalyze} disabled={isAnalyzing}>
                 {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <WandSparkles className="mr-2 h-4 w-4" />}
                 Analyze with AI
@@ -408,7 +411,7 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div className="flex items-center gap-2 flex-1">
-                            <CollapsibleTrigger asChild>
+                            <CollapsibleTrigger asChild className="no-print">
                                 <Button variant="ghost" size="icon" className="h-8 w-8">
                                     <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:-rotate-180" />
                                 </Button>
@@ -426,7 +429,7 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
                                 )}
                             />
                         </div>
-                        <Button type="button" variant="destructive" size="sm" onClick={() => removePhase(index)}>
+                        <Button type="button" variant="destructive" size="sm" onClick={() => removePhase(index)} className="no-print">
                             Delete Phase
                         </Button>
                     </CardHeader>
@@ -445,7 +448,7 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
               </div>
             )}
           </div>
-          <div className="flex justify-end pt-4">
+          <div className="flex justify-end pt-4 no-print">
             <Button type="submit">Save Plan &amp; Analysis</Button>
           </div>
         </form>
