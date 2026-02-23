@@ -51,3 +51,4 @@ export type { Alert, AlertType, AlertStatus } from './alert';
 export type { SpiConfig, SpiConfigurations, SpiComparison, SpiUnit } from './spi';
 export type { Aircraft, AircraftComponent } from './aircraft';
 export type { AircraftInspectionWarningSettings, HourWarning } from './inspection';
+export type { Booking, BookingStatus } from './booking';

@@ -28,6 +28,7 @@ import {
   FileJson,
   Table,
   AlertCircle,
+  Calendar,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -69,6 +70,12 @@ export const menuConfig: MenuItem[] = [
         label: 'Alerts',
         description: 'View and manage critical system alerts.',
         permissionId: 'operations-alerts-view',
+      },
+      {
+        href: '/operations/bookings',
+        label: 'Booking Schedule',
+        description: 'View and manage resource bookings.',
+        permissionId: 'operations-bookings-view',
       },
     ],
   },
