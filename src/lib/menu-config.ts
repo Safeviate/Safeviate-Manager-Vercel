@@ -29,6 +29,7 @@ import {
   Table,
   AlertCircle,
   Calendar,
+  History,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -73,9 +74,21 @@ export const menuConfig: MenuItem[] = [
       },
       {
         href: '/operations/bookings',
-        label: 'Booking Schedule',
+        label: 'Daily Schedule',
         description: 'View and manage resource bookings.',
         permissionId: 'operations-bookings-view',
+      },
+      {
+        href: '/operations/flight-planner',
+        label: 'Flight Planner',
+        description: 'Create and manage flight plans.',
+        permissionId: 'operations-view',
+      },
+      {
+        href: '/operations/booking-history',
+        label: 'Booking History',
+        description: 'View past bookings and logs.',
+        permissionId: 'operations-view',
       },
     ],
   },

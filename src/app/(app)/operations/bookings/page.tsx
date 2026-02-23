@@ -1,104 +1,167 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { format, isSameDay, startOfDay } from 'date-fns';
-import type { Booking } from '@/types/booking';
+import { addDays, subDays, format, startOfDay, getHours, getMinutes, differenceInMinutes } from 'date-fns';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { PlusCircle } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CustomCalendar } from '@/components/ui/custom-calendar';
+import { CalendarIcon, ChevronLeft, ChevronRight, PlusCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { usePermissions } from '@/hooks/use-permissions';
+import Link from 'next/link';
 
-export default function BookingsPage() {
-    const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
-    const firestore = useFirestore();
-    const tenantId = 'safeviate';
-    const { hasPermission } = usePermissions();
-    const canManageBookings = hasPermission('operations-bookings-manage');
+import type { Aircraft } from '@/types/aircraft';
+import type { Booking } from '@/types/booking';
 
-    const bookingsQuery = useMemoFirebase(
-        () => firestore ? query(collection(firestore, `tenants/${tenantId}/bookings`)) : null,
-        [firestore, tenantId]
-    );
+const HOUR_HEIGHT = 60; // pixels per hour
 
-    const { data: bookings, isLoading } = useCollection<Booking>(bookingsQuery);
+export default function DailySchedulePage() {
+  const [currentDate, setCurrentDate] = useState(startOfDay(new Date()));
+  const firestore = useFirestore();
+  const tenantId = 'safeviate';
 
-    const dayBookings = useMemo(() => {
-        if (!bookings) return [];
-        return bookings.filter(b => {
-            if (!b.start || isNaN(new Date(b.start).getTime())) {
-                return false;
-            }
-            return isSameDay(new Date(b.start), selectedDate);
-        });
-    }, [bookings, selectedDate]);
+  const aircraftQuery = useMemoFirebase(
+    () => firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null,
+    [firestore, tenantId]
+  );
+  const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftQuery);
 
+  const bookingsQuery = useMemoFirebase(
+    () => {
+      if (!firestore) return null;
+      const startOfDayTimestamp = currentDate.toISOString();
+      const endOfDayDate = new Date(currentDate);
+      endOfDayDate.setHours(23, 59, 59, 999);
+      const endOfDayTimestamp = endOfDayDate.toISOString();
+
+      return query(
+        collection(firestore, `tenants/${tenantId}/bookings`),
+        where('start', '>=', startOfDayTimestamp),
+        where('start', '<=', endOfDayTimestamp)
+      );
+    },
+    [firestore, tenantId, currentDate]
+  );
+  const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
+
+  const isLoading = isLoadingAircrafts || isLoadingBookings;
+
+  const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+
+  const renderBooking = (booking: Booking) => {
+    const start = new Date(booking.start);
+    const end = new Date(booking.end);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return null; // Don't render invalid bookings
+    }
+
+    const top = (getHours(start) * HOUR_HEIGHT) + (getMinutes(start) / 60 * HOUR_HEIGHT);
+    const durationMinutes = differenceInMinutes(end, start);
+    const height = (durationMinutes / 60) * HOUR_HEIGHT;
 
     return (
-        <div className="flex flex-col gap-6 h-full">
-             <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Booking Schedule</h1>
-                    <p className="text-muted-foreground">
-                        View and manage all aircraft bookings.
-                    </p>
-                </div>
-                {canManageBookings && (
-                    <Button asChild>
-                        <Link href="/operations/bookings/new">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            New Booking
-                        </Link>
-                    </Button>
-                )}
+        <Link href={`/operations/bookings/${booking.id}`} key={booking.id}>
+            <div
+                className="absolute w-full p-2 rounded-lg border bg-secondary text-secondary-foreground shadow-md hover:bg-secondary/80"
+                style={{ top: `${top}px`, height: `${height}px` }}
+            >
+                <p className="font-semibold text-xs truncate">{booking.title}</p>
+                <p className="text-xs opacity-80">{booking.status}</p>
             </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                <Card className="lg:col-span-1">
-                    <CardHeader>
-                        <CardTitle>Calendar</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex justify-center">
-                         <CustomCalendar selectedDate={selectedDate} onDateSelect={setSelectedDate} />
-                    </CardContent>
-                </Card>
-                <Card className="lg:col-span-2">
-                     <CardHeader>
-                        <CardTitle>Bookings for {format(selectedDate, 'PPP')}</CardTitle>
-                     </CardHeader>
-                     <CardContent>
-                        {isLoading ? (
-                            <div className="space-y-4">
-                                <Skeleton className="h-16 w-full" />
-                                <Skeleton className="h-16 w-full" />
-                            </div>
-                        ) : (
-                            dayBookings.length === 0 ? (
-                                <div className="text-center text-muted-foreground p-8">No bookings for this day.</div>
-                            ) : (
-                                <div className="space-y-2">
-                                    {dayBookings.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()).map(booking => (
-                                        <Link href={`/operations/bookings/${booking.id}`} key={booking.id}>
-                                            <Card className="hover:bg-muted/50 transition-colors">
-                                                <CardContent className="p-4">
-                                                    <p className="font-semibold">{booking.title}</p>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {format(new Date(booking.start), 'HH:mm')} - {booking.end && !isNaN(new Date(booking.end).getTime()) ? format(new Date(booking.end), 'HH:mm') : 'N/A'}
-                                                    </p>
-                                                </CardContent>
-                                            </Card>
-                                        </Link>
-                                    ))}
-                                </div>
-                            )
-                        )}
-                     </CardContent>
-                </Card>
+        </Link>
+    );
+  };
+  
+  return (
+    <div className="space-y-6">
+       <div className="flex justify-between items-center">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Daily Schedule</h1>
+                <p className="text-muted-foreground">
+                    A vertical timeline of all bookings for {format(currentDate, 'PPP')}.
+                </p>
+            </div>
+            <div className='flex items-center gap-2'>
+                <Button variant="outline" onClick={() => setCurrentDate(subDays(currentDate, 1))}>
+                    <ChevronLeft className="mr-2 h-4 w-4" />
+                    Previous Day
+                </Button>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="outline">
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {format(currentDate, 'PPP')}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <CustomCalendar selectedDate={currentDate} onDateSelect={(date) => date && setCurrentDate(startOfDay(date))} />
+                    </PopoverContent>
+                </Popover>
+                <Button variant="outline" onClick={() => setCurrentDate(addDays(currentDate, 1))}>
+                    Next Day
+                    <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+                 <Button asChild>
+                    <Link href="/operations/bookings/new">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        New Booking
+                    </Link>
+                </Button>
             </div>
         </div>
-    )
+        
+        <Card>
+            <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                    <div className="relative grid" style={{ gridTemplateColumns: `60px repeat(${aircrafts?.length || 4}, 1fr)` }}>
+                        {/* Header */}
+                        <div className="sticky top-0 z-10 bg-swimlane-header text-swimlane-header-foreground p-2 border-b border-r font-semibold text-sm">&nbsp;</div>
+                        {(aircrafts || []).map(ac => (
+                            <div key={ac.id} className="sticky top-0 z-10 bg-swimlane-header text-swimlane-header-foreground p-2 border-b border-r text-center font-semibold text-sm">
+                                {ac.tailNumber}
+                            </div>
+                        ))}
+                        {(!aircrafts || aircrafts.length === 0) && Array.from({length: 4}).map((_, i) => (
+                             <div key={`empty-lane-${i}`} className="sticky top-0 z-10 bg-swimlane-header text-swimlane-header-foreground p-2 border-b border-r text-center font-semibold text-sm">
+                                (Empty Lane)
+                            </div>
+                        ))}
+
+                        {/* Time Gutter */}
+                        <div className="row-start-2 border-r">
+                            {hours.map(hour => (
+                                <div key={hour} className="relative h-[60px] text-right pr-2 text-xs text-muted-foreground -top-2">
+                                    {hour}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Schedule Lanes */}
+                        {(aircrafts || []).map(ac => (
+                            <div key={ac.id} className="row-start-2 relative border-r">
+                                {hours.map((_, index) => (
+                                    <div key={index} className="h-[60px] border-b" />
+                                ))}
+                                {bookings?.filter(b => b.resourceId === ac.id).map(renderBooking)}
+                            </div>
+                        ))}
+                         {(!aircrafts || aircrafts.length === 0) && Array.from({length: 4}).map((_, laneIndex) => (
+                            <div key={`empty-schedule-${laneIndex}`} className="row-start-2 relative border-r">
+                                {hours.map((_, index) => (
+                                    <div key={index} className="h-[60px] border-b" />
+                                ))}
+                            </div>
+                        ))}
+                        
+                        {isLoading && <Skeleton className="absolute inset-0 bg-muted/50" />}
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    </div>
+  );
 }
