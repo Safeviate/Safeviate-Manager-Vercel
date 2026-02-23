@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm, useFieldArray, Controller, FormProvider, useFormContext } from 'react-hook-form';
@@ -164,6 +163,22 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
     const riskLevel = getRiskLevel(riskScore);
     const { backgroundColor, color } = getRiskScoreColor(likelihood, severity, riskMatrixColors);
 
+    const likelihoodLabels: { [key: number]: string } = {
+        5: 'Frequent',
+        4: 'Occasional',
+        3: 'Remote',
+        2: 'Improbable',
+        1: 'Extremely Improbable',
+    };
+    
+    const severityLabels: { [key: number]: { name: string, letter: string } } = {
+        5: { name: 'Catastrophic', letter: 'A' },
+        4: { name: 'Hazardous', letter: 'B' },
+        3: { name: 'Major', letter: 'C' },
+        2: { name: 'Minor', letter: 'D' },
+        1: { name: 'Negligible', letter: 'E' },
+    };
+
     React.useEffect(() => {
         setValue(`${path}.riskScore`, riskScore, { shouldDirty: true });
         setValue(`${path}.riskLevel`, riskLevel, { shouldDirty: true });
@@ -176,8 +191,8 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-x-4 gap-y-2 items-center">
                 <div className="space-y-3">
-                    <Controller control={control} name={`${path}.likelihood`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel className="text-xs">Likelihood: {value}</FormLabel><FormControl><div className="no-print"><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></div></FormControl></FormItem> )} />
-                    <Controller control={control} name={`${path}.severity`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel className="text-xs">Severity: {value}</FormLabel><FormControl><div className="no-print"><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></div></FormControl></FormItem> )}/>
+                    <Controller control={control} name={`${path}.likelihood`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel className="text-xs">Likelihood: {value} ({likelihoodLabels[value]})</FormLabel><FormControl><div className="no-print"><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></div></FormControl></FormItem> )} />
+                    <Controller control={control} name={`${path}.severity`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel className="text-xs">Severity: {severityLabels[value].letter} ({severityLabels[value].name})</FormLabel><FormControl><div className="no-print"><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></div></FormControl></FormItem> )}/>
                 </div>
                 <div className="flex justify-center items-center">
                     <div
