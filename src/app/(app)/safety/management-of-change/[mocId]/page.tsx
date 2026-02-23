@@ -16,6 +16,7 @@ import { ImplementationForm } from './implementation-form';
 import { ApprovalForm } from './approval-form';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import type { Department } from '@/app/(app)/admin/department/page';
+import type { RiskMatrixSettings } from '@/types/risk';
 
 interface MocDetailPageProps {
   params: { mocId: string };
@@ -49,13 +50,18 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
     () => (firestore ? collection(firestore, `tenants/${tenantId}/departments`) : null),
     [firestore, tenantId]
   );
+  
+  const riskMatrixSettingsRef = useMemoFirebase(() => (
+    firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-matrix-config') : null
+  ), [firestore, tenantId]);
 
   const { data: moc, isLoading: isLoadingMoc, error } = useDoc<ManagementOfChange>(mocRef);
   const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
   const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
+  const { data: riskMatrixSettings, isLoading: isLoadingRiskMatrix } = useDoc<RiskMatrixSettings>(riskMatrixSettingsRef);
 
 
-  const isLoading = isLoadingMoc || isLoadingPersonnel || isLoadingDepts;
+  const isLoading = isLoadingMoc || isLoadingPersonnel || isLoadingDepts || isLoadingRiskMatrix;
 
   const personnelMap = useMemo(() => {
     if (!personnel) return new Map();
@@ -155,7 +161,13 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
           <TabsTrigger value="approval">Approval &amp; Sign-off</TabsTrigger>
         </TabsList>
         <TabsContent value="implementation">
-          <ImplementationForm key={moc.id} moc={moc} tenantId={tenantId} personnel={personnel || []} />
+          <ImplementationForm
+            key={moc.id}
+            moc={moc}
+            tenantId={tenantId}
+            personnel={personnel || []}
+            riskMatrixColors={riskMatrixSettings?.colors}
+          />
         </TabsContent>
         <TabsContent value="approval">
           <ApprovalForm moc={moc} tenantId={tenantId} personnel={personnel || []} />

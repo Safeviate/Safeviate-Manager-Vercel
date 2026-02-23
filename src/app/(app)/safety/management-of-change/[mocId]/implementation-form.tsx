@@ -116,12 +116,6 @@ const mapDatesToStrings = (phases: FormValues['phases']): MocPhase[] => {
 };
 
 // --- Risk Assessment Component ---
-const getRiskScoreColorClass = (score: number) => {
-    if (score <= 4) return 'bg-green-500';
-    if (score <= 9) return 'bg-yellow-500 text-black';
-    if (score <= 16) return 'bg-orange-500';
-    return 'bg-red-500';
-};
 const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => {
     if (score <= 4) return 'Low';
     if (score <= 9) return 'Medium';
@@ -129,18 +123,46 @@ const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => 
     return 'Critical';
 }
 
+const getRiskScoreColor = (
+    likelihood: number,
+    severity: number,
+    colors?: Record<string, string>
+  ): { backgroundColor: string; color: string } => {
+    const severityToLetter: { [key: number]: string } = { 5: 'A', 4: 'B', 3: 'C', 2: 'D', 1: 'E' };
+    const severityLetter = severityToLetter[severity] || 'E';
+    const cellId = `${likelihood}${severityLetter}`;
+    
+    if (colors && colors[cellId]) {
+        // Simple contrast check for custom colors
+        const hex = colors[cellId].replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        const textColor = (yiq >= 128) ? 'black' : 'white';
+        return { backgroundColor: colors[cellId], color: textColor };
+    }
+    
+    // Fallback to old logic
+    const score = likelihood * severity;
+    if (score > 9) return { backgroundColor: '#d9534f', color: 'white' };
+    if (score > 4) return { backgroundColor: '#f0ad4e', color: 'black' };
+    return { backgroundColor: '#5cb85c', color: 'white' };
+  };
+
 interface RiskAssessmentEditorProps {
     path: string;
     label: string;
+    riskMatrixColors?: Record<string, string>;
 }
 
-const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label }) => {
+const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label, riskMatrixColors }) => {
     const { control, setValue, watch } = useFormContext();
     const likelihood = watch(`${path}.likelihood`, 1);
     const severity = watch(`${path}.severity`, 1);
     const riskScore = (likelihood || 1) * (severity || 1);
     const riskLevel = getRiskLevel(riskScore);
-    const colorClass = getRiskScoreColorClass(riskScore);
+    const { backgroundColor, color } = getRiskScoreColor(likelihood, severity, riskMatrixColors);
 
     React.useEffect(() => {
         setValue(`${path}.riskScore`, riskScore, { shouldDirty: true });
@@ -158,7 +180,10 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                     <Controller control={control} name={`${path}.severity`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel className="text-xs">Severity: {value}</FormLabel><FormControl><div className="no-print"><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></div></FormControl></FormItem> )}/>
                 </div>
                 <div className="flex justify-center items-center">
-                    <div className={cn("flex items-center justify-center h-10 w-10 rounded-full text-white text-base font-bold", colorClass)}>
+                    <div
+                        className="flex items-center justify-center h-10 w-10 rounded-full text-base font-bold"
+                        style={{ backgroundColor, color }}
+                    >
                         {riskScore}
                     </div>
                 </div>
@@ -167,7 +192,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
     );
 }
 
-const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, personnel }: { phaseIndex: number, stepIndex: number, hazardIndex: number, riskIndex: number, personnel: Personnel[] }) => {
+const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, personnel, riskMatrixColors }: { phaseIndex: number, stepIndex: number, hazardIndex: number, riskIndex: number, personnel: Personnel[], riskMatrixColors?: Record<string, string> }) => {
     const { control } = useFormContext();
     const { fields, append, remove } = useFieldArray({
         control,
@@ -189,6 +214,7 @@ const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, perso
                       <RiskAssessmentEditor
                           path={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.residualRiskAssessment`}
                           label="Residual Risk Assessment"
+                          riskMatrixColors={riskMatrixColors}
                       />
                   </div>
                 </div>
@@ -198,7 +224,7 @@ const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, perso
     )
 }
 
-const RisksArray = ({ phaseIndex, stepIndex, hazardIndex, personnel }: { phaseIndex: number, stepIndex: number, hazardIndex: number, personnel: Personnel[] }) => {
+const RisksArray = ({ phaseIndex, stepIndex, hazardIndex, personnel, riskMatrixColors }: { phaseIndex: number, stepIndex: number, hazardIndex: number, personnel: Personnel[], riskMatrixColors?: Record<string, string> }) => {
     const { control } = useFormContext();
     const { fields, append, remove } = useFieldArray({
         control,
@@ -227,9 +253,10 @@ const RisksArray = ({ phaseIndex, stepIndex, hazardIndex, personnel }: { phaseIn
                                 <RiskAssessmentEditor
                                     path={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.initialRiskAssessment`}
                                     label="Initial Risk Assessment"
+                                    riskMatrixColors={riskMatrixColors}
                                 />
                                 <h4 className="font-semibold text-sm pt-4 border-t">Mitigations</h4>
-                                <MitigationsArray phaseIndex={phaseIndex} stepIndex={stepIndex} hazardIndex={hazardIndex} riskIndex={riskIndex} personnel={personnel} />
+                                <MitigationsArray phaseIndex={phaseIndex} stepIndex={stepIndex} hazardIndex={hazardIndex} riskIndex={riskIndex} personnel={personnel} riskMatrixColors={riskMatrixColors} />
                             </CardContent>
                         </CollapsibleContent>
                     </Card>
@@ -248,7 +275,7 @@ const RisksArray = ({ phaseIndex, stepIndex, hazardIndex, personnel }: { phaseIn
     )
 }
   
-const HazardsArray = ({ phaseIndex, stepIndex, personnel }: { phaseIndex: number, stepIndex: number, personnel: Personnel[] }) => {
+const HazardsArray = ({ phaseIndex, stepIndex, personnel, riskMatrixColors }: { phaseIndex: number, stepIndex: number, personnel: Personnel[], riskMatrixColors?: Record<string, string> }) => {
     const { control } = useFormContext();
     const { fields, append, remove } = useFieldArray({
         control: control,
@@ -270,7 +297,7 @@ const HazardsArray = ({ phaseIndex, stepIndex, personnel }: { phaseIndex: number
                         </CardHeader>
                         <CardContent className="pt-4 space-y-4">
                            <h4 className="font-semibold text-sm">Identified Risks</h4>
-                           <RisksArray phaseIndex={phaseIndex} stepIndex={stepIndex} hazardIndex={hazardIndex} personnel={personnel} />
+                           <RisksArray phaseIndex={phaseIndex} stepIndex={stepIndex} hazardIndex={hazardIndex} personnel={personnel} riskMatrixColors={riskMatrixColors} />
                         </CardContent>
                     </Card>
                 </Collapsible>
@@ -281,7 +308,7 @@ const HazardsArray = ({ phaseIndex, stepIndex, personnel }: { phaseIndex: number
 }
 
 
-const StepsArray = ({ phaseIndex, personnel }: { phaseIndex: number, personnel: Personnel[] }) => {
+const StepsArray = ({ phaseIndex, personnel, riskMatrixColors }: { phaseIndex: number, personnel: Personnel[], riskMatrixColors?: Record<string, string> }) => {
     const { control } = useFormContext<FormValues>();
     const { fields, append, remove } = useFieldArray({
       control,
@@ -314,7 +341,7 @@ const StepsArray = ({ phaseIndex, personnel }: { phaseIndex: number, personnel: 
                     </div>
                     <CollapsibleContent>
                         <div className="pt-4">
-                            <HazardsArray phaseIndex={phaseIndex} stepIndex={stepIndex} personnel={personnel} />
+                            <HazardsArray phaseIndex={phaseIndex} stepIndex={stepIndex} personnel={personnel} riskMatrixColors={riskMatrixColors} />
                         </div>
                     </CollapsibleContent>
                 </Collapsible>
@@ -340,9 +367,10 @@ interface ImplementationFormProps {
   moc: ManagementOfChange;
   tenantId: string;
   personnel: Personnel[];
+  riskMatrixColors?: Record<string, string>;
 }
 
-export function ImplementationForm({ moc, tenantId, personnel }: ImplementationFormProps) {
+export function ImplementationForm({ moc, tenantId, personnel, riskMatrixColors }: ImplementationFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -435,7 +463,7 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
                     </CardHeader>
                     <CollapsibleContent>
                        <div className="p-4 pt-0">
-                          <StepsArray phaseIndex={index} personnel={personnel} />
+                          <StepsArray phaseIndex={index} personnel={personnel} riskMatrixColors={riskMatrixColors} />
                        </div>
                     </CollapsibleContent>
                 </Card>

@@ -23,3 +23,8 @@ export type Risk = { // This is the top-level document, which is a Hazard
     status: 'Open' | 'Closed' | 'Archived';
     risks: RiskItem[];
 };
+
+export interface RiskMatrixSettings {
+    id: string;
+    colors: Record<string, string>;
+}

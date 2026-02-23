@@ -25,7 +25,7 @@ export type {
   AuditScheduleItem,
   AuditScheduleStatus,
 } from './quality';
-export type { Risk, RiskItem, Mitigation } from './risk';
+export type { Risk, RiskItem, Mitigation, RiskMatrixSettings } from './risk';
 export type {
   SafetyReport,
   ReportStatus,

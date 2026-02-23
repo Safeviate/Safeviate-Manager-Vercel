@@ -14,11 +14,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlusCircle, Edit } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Risk, RiskItem, Mitigation } from '@/types/risk';
+import type { Risk, RiskItem, Mitigation, RiskMatrixSettings } from '@/types/risk';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { RiskForm } from '../risk-register/risk-form';
+import { RiskForm } from './risk-form';
 import { getRiskScoreStyle } from './utils';
 import { cn } from '@/lib/utils';
 
