@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -12,11 +11,12 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, AlertCircle } from 'lucide-react';
+import { CalendarIcon, AlertCircle, PlusCircle } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { useRouter } from 'next/navigation';
 import { BookingForm } from './booking-form';
 import type { Booking } from '@/types/booking';
+import Link from 'next/link';
 
 
 const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
@@ -284,32 +284,40 @@ export default function SchedulePage() {
   return (
     <>
       <div className="flex flex-col gap-6">
-        <div className="flex justify-end items-center gap-4">
-          <Button variant="outline" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>Previous Day</Button>
-          <Popover>
-              <PopoverTrigger asChild>
-                  <Button variant="outline">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(selectedDate, 'PPP')}
-                  </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                  <CustomCalendar 
-                      selectedDate={selectedDate}
-                      onDateSelect={(date) => date && setSelectedDate(startOfDay(date))}
-                  />
-              </PopoverContent>
-          </Popover>
-          <Button variant="outline" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>Next Day</Button>
+        <div className="flex justify-between items-center">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Daily Schedule</h1>
+                <p className="text-muted-foreground">
+                    A vertical timeline of all bookings for {format(selectedDate, 'PPP')}.
+                </p>
+            </div>
+            <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>Previous Day</Button>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="outline">
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {format(selectedDate, 'PPP')}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <CustomCalendar 
+                            selectedDate={selectedDate}
+                            onDateSelect={(date) => date && setSelectedDate(startOfDay(date))}
+                        />
+                    </PopoverContent>
+                </Popover>
+                <Button variant="outline" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>Next Day</Button>
+                <Button asChild>
+                    <Link href="/operations/bookings/new">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        New Booking
+                    </Link>
+                </Button>
+            </div>
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Daily Schedule</CardTitle>
-            <CardDescription>
-              A vertical timeline of all bookings for {format(selectedDate, 'PPP')}.
-            </CardDescription>
-          </CardHeader>
           <CardContent className="p-0">
             {isLoading && (
               <div className="p-6 space-y-4">

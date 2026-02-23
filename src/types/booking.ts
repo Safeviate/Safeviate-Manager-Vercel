@@ -1,4 +1,5 @@
 
+
 export type BookingStatus = 'Tentative' | 'Confirmed' | 'Completed' | 'Cancelled' | 'Cancelled with Reason';
 
 export interface Booking {

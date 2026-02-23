@@ -76,6 +76,18 @@
             }
         }
     },
+    "AnalyzeMocOutput": {
+        "title": "Analyze MOC Output",
+        "type": "object",
+        "properties": {
+            "phases": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/backend/entities/MocPhase"
+                }
+            }
+        }
+    },
     "Regulation": {
         "title": "Regulation",
         "type": "object",
@@ -1254,6 +1266,46 @@
             }
         },
         "required": ["id", "configurations"]
+    },
+    "RiskMatrixSettings": {
+        "title": "Risk Matrix Settings",
+        "type": "object",
+        "description": "Stores the color configuration for the risk assessment matrix.",
+        "properties": {
+            "id": { "type": "string" },
+            "colors": {
+                "type": "object",
+                "description": "A map of cell IDs (e.g., '5A') to hex color strings.",
+                "additionalProperties": { "type": "string" }
+            }
+        },
+        "required": ["id", "colors"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "type": "object",
+      "description": "Represents a single booking for a resource like an aircraft.",
+      "properties": {
+        "id": { "type": "string" },
+        "bookingNumber": { "type": "string" },
+        "type": { "type": "string" },
+        "start": { "type": "string", "format": "date-time" },
+        "end": { "type": "string", "format": "date-time" },
+        "date": { "type": "string", "format": "date" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "aircraftId": { "type": "string", "description": "ID of the booked aircraft." },
+        "instructorId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "status": { "type": "string", "enum": ["Tentative", "Confirmed", "Completed", "Cancelled", "Cancelled with Reason"] },
+        "notes": { "type": "string" },
+        "isOvernight": { "type": "boolean" },
+        "overnightBookingDate": { "type": "string", "format": "date" },
+        "overnightEndTime": { "type": "string" },
+        "preFlight": { "type": "boolean" },
+        "postFlight": { "type": "boolean" }
+      },
+      "required": ["id", "bookingNumber", "type", "start", "end", "aircraftId", "status"]
     }
   },
   "auth": {
@@ -1470,6 +1522,13 @@
             "description": "Stores the configuration for Safety Performance Indicators."
           }
       },
+      {
+          "path": "tenants/{tenantId}/settings/risk-matrix-config",
+          "definition": {
+            "schema": { "$ref": "#/backend/entities/RiskMatrixSettings" },
+            "description": "Stores the configuration for the risk matrix colors."
+          }
+      },
        {
         "path": "tenants/{tenantId}/departments/{departmentId}",
         "definition": {
@@ -1502,6 +1561,13 @@
         "definition": {
           "schema": { "$ref": "#/backend/entities/Alert" },
           "description": "Stores system-wide alerts and notices."
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/bookings/{bookingId}",
+        "definition": {
+          "schema": { "$ref": "#/backend/entities/Booking" },
+          "description": "Stores all aircraft and resource bookings."
         }
       }
     ]
