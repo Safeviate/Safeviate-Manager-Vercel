@@ -1,84 +1,17 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { addDays, format, isSameDay, startOfDay } from 'date-fns';
+import { format, isSameDay, startOfDay } from 'date-fns';
 import type { Booking } from '@/types/booking';
-import type { Aircraft } from '@/types/aircraft';
-import type { PilotProfile } from '@/app/(app)/users/personnel/page';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, PlusCircle } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePermissions } from '@/hooks/use-permissions';
-
-function BookingList({ bookings, aircrafts, users, selectedDate }: { bookings: Booking[], aircrafts: Map<string, Aircraft>, users: Map<string, PilotProfile>, selectedDate: Date }) {
-    
-    const dayBookings = bookings.filter(b => {
-        if (!b.start || isNaN(new Date(b.start).getTime())) {
-            return false;
-        }
-        return isSameDay(new Date(b.start), selectedDate);
-    });
-
-    if (dayBookings.length === 0) {
-        return <div className="text-center text-muted-foreground p-8">No bookings for this day.</div>
-    }
-
-    // Group by aircraft
-    const bookingsByAircraft = dayBookings.reduce((acc, booking) => {
-        const resourceId = booking.resourceId;
-        if (!acc[resourceId]) {
-            acc[resourceId] = [];
-        }
-        acc[resourceId].push(booking);
-        return acc;
-    }, {} as Record<string, Booking[]>);
-
-
-    return (
-        <div className="space-y-6">
-            {Object.entries(bookingsByAircraft).map(([aircraftId, aircraftBookings]) => {
-                const aircraft = aircrafts.get(aircraftId);
-                return (
-                    <div key={aircraftId}>
-                        <h3 className="font-semibold text-lg mb-2">{aircraft?.tailNumber || 'Unknown Aircraft'}</h3>
-                        <div className="space-y-2">
-                            {aircraftBookings.sort((a,b) => new Date(a.start).getTime() - new Date(b.start).getTime()).map(booking => {
-                                const instructor = users.get(booking.instructorId || '');
-                                const student = users.get(booking.studentId || '');
-                                return (
-                                    <Link href={`/operations/bookings/${booking.id}`} key={booking.id}>
-                                        <Card className="hover:bg-muted/50 transition-colors">
-                                            <CardContent className="p-4 flex justify-between items-center">
-                                                <div>
-                                                    <p className="font-semibold">{booking.title}</p>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {format(new Date(booking.start), 'HH:mm')} - {booking.end && !isNaN(new Date(booking.end).getTime()) ? format(new Date(booking.end), 'HH:mm') : ''}
-                                                    </p>
-                                                     <p className="text-sm text-muted-foreground">
-                                                        Instructor: {instructor ? `${instructor.firstName} ${instructor.lastName}`: 'N/A'}
-                                                     </p>
-                                                      <p className="text-sm text-muted-foreground">
-                                                        Student: {student ? `${student.firstName} ${student.lastName}`: 'N/A'}
-                                                     </p>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    </Link>
-                                )
-                            })}
-                        </div>
-                    </div>
-                )
-            })}
-        </div>
-    )
-
-}
 
 export default function BookingsPage() {
     const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
@@ -92,51 +25,17 @@ export default function BookingsPage() {
         [firestore, tenantId]
     );
 
-    const aircraftsQuery = useMemoFirebase(
-        () => firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null,
-        [firestore, tenantId]
-    );
-    const instructorsQuery = useMemoFirebase(
-        () => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null),
-        [firestore, tenantId]
-    );
-    const studentsQuery = useMemoFirebase(
-        () => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null),
-        [firestore, tenantId]
-    );
+    const { data: bookings, isLoading } = useCollection<Booking>(bookingsQuery);
 
-    const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
-    const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
-    const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
-    const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsQuery);
-
-    const aircraftsMap = useMemo(() => {
-        if (!aircrafts) return new Map();
-        return new Map(aircrafts.map(a => [a.id, a]));
-    }, [aircrafts]);
-
-    const usersMap = useMemo(() => {
-        if (!instructors || !students) return new Map();
-        const combined = [...instructors, ...students];
-        return new Map(combined.map(u => [u.id, u]));
-    }, [instructors, students]);
-    
-    const isLoading = isLoadingBookings || isLoadingAircrafts || isLoadingInstructors || isLoadingStudents;
-
-    const bookingsByDay = useMemo(() => {
-        if (!bookings) return {};
-        return bookings.reduce((acc, booking) => {
-            if (!booking.start || isNaN(new Date(booking.start).getTime())) {
-                return acc;
+    const dayBookings = useMemo(() => {
+        if (!bookings) return [];
+        return bookings.filter(b => {
+            if (!b.start || isNaN(new Date(b.start).getTime())) {
+                return false;
             }
-            const day = format(new Date(booking.start), 'yyyy-MM-dd');
-            if (!acc[day]) {
-                acc[day] = [];
-            }
-            acc[day].push(booking);
-            return acc;
-        }, {} as Record<string, Booking[]>);
-    }, [bookings]);
+            return isSameDay(new Date(b.start), selectedDate);
+        });
+    }, [bookings, selectedDate]);
 
 
     return (
@@ -178,12 +77,24 @@ export default function BookingsPage() {
                                 <Skeleton className="h-16 w-full" />
                             </div>
                         ) : (
-                            <BookingList
-                                bookings={bookings || []}
-                                aircrafts={aircraftsMap}
-                                users={usersMap}
-                                selectedDate={selectedDate}
-                            />
+                            dayBookings.length === 0 ? (
+                                <div className="text-center text-muted-foreground p-8">No bookings for this day.</div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {dayBookings.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()).map(booking => (
+                                        <Link href={`/operations/bookings/${booking.id}`} key={booking.id}>
+                                            <Card className="hover:bg-muted/50 transition-colors">
+                                                <CardContent className="p-4">
+                                                    <p className="font-semibold">{booking.title}</p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {format(new Date(booking.start), 'HH:mm')} - {booking.end && !isNaN(new Date(booking.end).getTime()) ? format(new Date(booking.end), 'HH:mm') : 'N/A'}
+                                                    </p>
+                                                </CardContent>
+                                            </Card>
+                                        </Link>
+                                    ))}
+                                </div>
+                            )
                         )}
                      </CardContent>
                 </Card>

@@ -1,11 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { doc, collection } from 'firebase/firestore';
-import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Booking } from '@/types/booking';
-import type { Aircraft } from '@/types/aircraft';
-import type { PilotProfile } from '@/app/(app)/users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -25,26 +23,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
         [firestore, tenantId, params.id]
     );
 
-    const { data: booking, isLoading: isLoadingBooking, error } = useDoc<Booking>(bookingRef);
-
-    const aircraftRef = useMemoFirebase(
-        () => (firestore && booking?.resourceId) ? doc(firestore, `tenants/${tenantId}/aircrafts`, booking.resourceId) : null,
-        [firestore, tenantId, booking?.resourceId]
-    );
-    const instructorRef = useMemoFirebase(
-        () => (firestore && booking?.instructorId) ? doc(firestore, `tenants/${tenantId}/instructors`, booking.instructorId) : null,
-        [firestore, tenantId, booking?.instructorId]
-    );
-    const studentRef = useMemoFirebase(
-        () => (firestore && booking?.studentId) ? doc(firestore, `tenants/${tenantId}/students`, booking.studentId) : null,
-        [firestore, tenantId, booking?.studentId]
-    );
-
-    const { data: aircraft, isLoading: isLoadingAircraft } = useDoc<Aircraft>(aircraftRef);
-    const { data: instructor, isLoading: isLoadingInstructor } = useDoc<PilotProfile>(instructorRef);
-    const { data: student, isLoading: isLoadingStudent } = useDoc<PilotProfile>(studentRef);
-
-    const isLoading = isLoadingBooking || isLoadingAircraft || isLoadingInstructor || isLoadingStudent;
+    const { data: booking, isLoading, error } = useDoc<Booking>(bookingRef);
 
     if (isLoading) {
         return (
@@ -81,9 +60,6 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
             </Button>
             <ViewBookingDetails
                 booking={booking}
-                aircraft={aircraft}
-                instructor={instructor}
-                student={student}
             />
         </div>
     );

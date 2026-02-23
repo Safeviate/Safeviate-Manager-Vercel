@@ -3,14 +3,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import type { Booking } from "@/types/booking";
-import type { Aircraft } from "@/types/aircraft";
-import type { PilotProfile } from "@/app/(app)/users/personnel/page";
 
 interface ViewBookingDetailsProps {
     booking: Booking;
-    aircraft: Aircraft | null;
-    instructor: PilotProfile | null;
-    student: PilotProfile | null;
 }
 
 const DetailItem = ({ label, value }: { label: string, value: string | undefined }) => (
@@ -20,7 +15,7 @@ const DetailItem = ({ label, value }: { label: string, value: string | undefined
     </div>
 );
 
-export function ViewBookingDetails({ booking, aircraft, instructor, student }: ViewBookingDetailsProps) {
+export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     return (
         <Card>
             <CardHeader>
@@ -31,12 +26,12 @@ export function ViewBookingDetails({ booking, aircraft, instructor, student }: V
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <DetailItem label="Status" value={booking.status} />
-                <DetailItem label="Aircraft" value={`${aircraft?.make || ''} ${aircraft?.model || ''} (${aircraft?.tailNumber || 'N/A'})`} />
+                <DetailItem label="Resource ID" value={booking.resourceId} />
                 <DetailItem label="Date" value={format(new Date(booking.start), 'PPP')} />
                 <DetailItem label="Start Time" value={format(new Date(booking.start), 'p')} />
                 <DetailItem label="End Time" value={format(new Date(booking.end), 'p')} />
-                <DetailItem label="Instructor" value={instructor ? `${instructor.firstName} ${instructor.lastName}` : 'N/A'} />
-                <DetailItem label="Student" value={student ? `${student.firstName} ${student.lastName}` : 'N/A'} />
+                <DetailItem label="Instructor ID" value={booking.instructorId} />
+                <DetailItem label="Student ID" value={booking.studentId} />
                 <div className="md:col-span-2 lg:col-span-3">
                     <p className="text-sm text-muted-foreground">Notes</p>
                     <p className="font-semibold whitespace-pre-wrap">{booking.notes || 'No notes provided.'}</p>
