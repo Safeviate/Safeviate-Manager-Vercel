@@ -25,11 +25,15 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
@@ -42,7 +46,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  MoreHorizontal,
   Pencil,
   PlusCircle,
   Trash2,
@@ -115,6 +118,7 @@ interface AreaActionsProps {
 
 function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
     const [isEditOpen, setIsEditOpen] = useState(false);
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [newName, setNewName] = useState(area);
 
     useEffect(() => {
@@ -129,26 +133,26 @@ function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
         }
         setIsEditOpen(false);
     }
+
+    const handleDeleteConfirm = () => {
+        onDelete(area);
+        setIsDeleteOpen(false);
+    }
     
     return (
         <>
+            <div className="flex items-center justify-end gap-2">
+                <Button variant="ghost" size="icon" onClick={() => setIsEditOpen(true)} className="h-8 w-8">
+                    <Pencil className="h-4 w-4" />
+                    <span className="sr-only">Edit</span>
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setIsDeleteOpen(true)} className="h-8 w-8 text-destructive hover:text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Delete</span>
+                </Button>
+            </div>
+            
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
-                            <Pencil className="mr-2 h-4 w-4" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => onDelete(area)} className="text-destructive focus:text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Edit Audit Area</DialogTitle>
@@ -164,6 +168,23 @@ function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+             <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the &quot;{area}&quot; audit area and all its scheduled items.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }
@@ -396,3 +417,5 @@ export default function AuditSchedulePage() {
     </>
   );
 }
+
+    
