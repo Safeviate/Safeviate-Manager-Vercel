@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray, Controller, FormProvider, useFormContext } from 'react-hook-form';
@@ -179,13 +180,15 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
         1: { name: 'Negligible', letter: 'E' },
     };
 
+    const displayValue = `${likelihood}${severityLabels[severity].letter}`;
+
     React.useEffect(() => {
         setValue(`${path}.riskScore`, riskScore, { shouldDirty: true });
         setValue(`${path}.riskLevel`, riskLevel, { shouldDirty: true });
     }, [riskScore, riskLevel, path, setValue]);
 
     return (
-        <Card className="bg-background">
+        <Card className="bg-background/50">
             <CardHeader className="pb-2 pt-4">
                 <CardTitle className="text-sm">{label}</CardTitle>
             </CardHeader>
@@ -199,7 +202,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                         className="flex items-center justify-center h-10 w-10 rounded-full text-base font-bold"
                         style={{ backgroundColor, color }}
                     >
-                        {riskScore}
+                        {displayValue}
                     </div>
                 </div>
             </CardContent>
