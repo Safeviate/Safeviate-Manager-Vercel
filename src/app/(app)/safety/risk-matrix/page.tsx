@@ -120,9 +120,9 @@ export default function RiskMatrixPage() {
                 </colgroup>
                 <thead>
                     <tr>
-                        <th className="border p-2"></th>
+                        <th className="border border-slate-200 dark:border-slate-700 p-2"></th>
                         {severities.map(s => (
-                            <th key={s.value} className="h-24 border-t border-r border-b p-2 text-center align-middle font-semibold">
+                            <th key={s.value} className="h-24 border-t border-r border-b border-slate-200 dark:border-slate-700 p-2 text-center align-middle font-semibold">
                                 {s.name} ({s.value})
                             </th>
                         ))}
@@ -131,7 +131,7 @@ export default function RiskMatrixPage() {
                 <tbody>
                     {likelihoods.slice().reverse().map(l => (
                         <tr key={l.value}>
-                            <th className="h-24 border-l border-b border-r p-2 text-right align-middle font-semibold">
+                            <th className="h-24 border-l border-b border-r border-slate-200 dark:border-slate-700 p-2 text-right align-middle font-semibold">
                                 {l.name}
                                 <span className="block text-muted-foreground font-normal">({l.value})</span>
                             </th>
@@ -143,7 +143,7 @@ export default function RiskMatrixPage() {
                                     onContextMenu={(e) => handleRightClick(e, cellId)}
                                     style={{ backgroundColor: colors[cellId] }}
                                     className={cn(
-                                        "h-24 border-b border-r p-2 text-center align-middle font-bold text-black transition-colors",
+                                        "h-24 border-b border-r border-slate-200 dark:border-slate-700 p-2 text-center align-middle font-bold text-black transition-colors",
                                         "cursor-pointer"
                                     )}
                                 >
