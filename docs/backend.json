@@ -1287,16 +1287,25 @@
       "description": "Represents a single booking for a resource like an aircraft.",
       "properties": {
         "id": { "type": "string" },
-        "title": { "type": "string" },
+        "bookingNumber": { "type": "string" },
+        "type": { "type": "string" },
         "start": { "type": "string", "format": "date-time" },
         "end": { "type": "string", "format": "date-time" },
-        "resourceId": { "type": "string", "description": "ID of the booked resource (e.g., aircraft tail number)." },
+        "date": { "type": "string", "format": "date" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "aircraftId": { "type": "string", "description": "ID of the booked aircraft." },
         "instructorId": { "type": "string" },
         "studentId": { "type": "string" },
-        "status": { "type": "string", "enum": ["Tentative", "Confirmed", "Completed", "Cancelled"] },
-        "notes": { "type": "string" }
+        "status": { "type": "string", "enum": ["Tentative", "Confirmed", "Completed", "Cancelled", "Cancelled with Reason"] },
+        "notes": { "type": "string" },
+        "isOvernight": { "type": "boolean" },
+        "overnightBookingDate": { "type": "string", "format": "date" },
+        "overnightEndTime": { "type": "string" },
+        "preFlight": { "type": "boolean" },
+        "postFlight": { "type": "boolean" }
       },
-      "required": ["id", "title", "start", "end", "resourceId", "status"]
+      "required": ["id", "bookingNumber", "type", "start", "end", "aircraftId", "status"]
     }
   },
   "auth": {
