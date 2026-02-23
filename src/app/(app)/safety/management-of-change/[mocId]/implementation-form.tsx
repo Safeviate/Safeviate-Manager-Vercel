@@ -78,6 +78,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 // --- Helper Functions to map dates for form and Firestore ---
 const mapDatesToObjects = (phases: MocPhase[]): FormValues['phases'] => {
+    const defaultRiskAssessment = { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' as const };
     return (phases || []).map(phase => ({
         ...phase,
         steps: (phase.steps || []).map(step => ({
@@ -86,9 +87,11 @@ const mapDatesToObjects = (phases: MocPhase[]): FormValues['phases'] => {
                 ...hazard,
                 risks: (hazard.risks || []).map(risk => ({
                     ...risk,
+                    initialRiskAssessment: risk.initialRiskAssessment || { ...defaultRiskAssessment },
                     mitigations: (risk.mitigations || []).map(mitigation => ({
                         ...mitigation,
                         completionDate: mitigation.completionDate ? new Date(mitigation.completionDate) : new Date(),
+                        residualRiskAssessment: mitigation.residualRiskAssessment || { ...defaultRiskAssessment },
                     })),
                 })),
             })),
