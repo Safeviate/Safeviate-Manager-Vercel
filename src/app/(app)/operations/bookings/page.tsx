@@ -17,7 +17,12 @@ import { usePermissions } from '@/hooks/use-permissions';
 
 function BookingList({ bookings, aircrafts, users, selectedDate }: { bookings: Booking[], aircrafts: Map<string, Aircraft>, users: Map<string, PilotProfile>, selectedDate: Date }) {
     
-    const dayBookings = bookings.filter(b => isSameDay(new Date(b.start), selectedDate));
+    const dayBookings = bookings.filter(b => {
+        if (!b.start || isNaN(new Date(b.start).getTime())) {
+            return false;
+        }
+        return isSameDay(new Date(b.start), selectedDate);
+    });
 
     if (dayBookings.length === 0) {
         return <div className="text-center text-muted-foreground p-8">No bookings for this day.</div>
@@ -52,7 +57,7 @@ function BookingList({ bookings, aircrafts, users, selectedDate }: { bookings: B
                                                 <div>
                                                     <p className="font-semibold">{booking.title}</p>
                                                     <p className="text-sm text-muted-foreground">
-                                                        {format(new Date(booking.start), 'HH:mm')} - {format(new Date(booking.end), 'HH:mm')}
+                                                        {format(new Date(booking.start), 'HH:mm')} - {booking.end && !isNaN(new Date(booking.end).getTime()) ? format(new Date(booking.end), 'HH:mm') : ''}
                                                     </p>
                                                      <p className="text-sm text-muted-foreground">
                                                         Instructor: {instructor ? `${instructor.firstName} ${instructor.lastName}`: 'N/A'}
@@ -121,6 +126,9 @@ export default function BookingsPage() {
     const bookingsByDay = useMemo(() => {
         if (!bookings) return {};
         return bookings.reduce((acc, booking) => {
+            if (!booking.start || isNaN(new Date(booking.start).getTime())) {
+                return acc;
+            }
             const day = format(new Date(booking.start), 'yyyy-MM-dd');
             if (!acc[day]) {
                 acc[day] = [];
