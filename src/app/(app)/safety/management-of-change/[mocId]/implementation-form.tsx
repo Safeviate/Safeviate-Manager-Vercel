@@ -137,7 +137,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
     const { control, setValue, watch } = useFormContext();
     const likelihood = watch(`${path}.likelihood`, 1);
     const severity = watch(`${path}.severity`, 1);
-    const riskScore = likelihood * severity;
+    const riskScore = (likelihood || 1) * (severity || 1);
     const riskLevel = getRiskLevel(riskScore);
     const colorClass = getRiskScoreColorClass(riskScore);
 
@@ -148,16 +148,16 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
 
     return (
         <Card className="bg-background">
-            <CardHeader className="pb-4">
-                <CardTitle className="text-base">{label}</CardTitle>
+            <CardHeader className="pb-2 pt-4">
+                <CardTitle className="text-sm">{label}</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                <div className="space-y-4">
-                    <Controller control={control} name={`${path}.likelihood`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel>Likelihood: {value}</FormLabel><FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl></FormItem> )} />
-                    <Controller control={control} name={`${path}.severity`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel>Severity: {value}</FormLabel><FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl></FormItem> )}/>
+            <CardContent className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-x-4 gap-y-2 items-center">
+                <div className="space-y-3">
+                    <Controller control={control} name={`${path}.likelihood`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel className="text-xs">Likelihood: {value}</FormLabel><FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl></FormItem> )} />
+                    <Controller control={control} name={`${path}.severity`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel className="text-xs">Severity: {value}</FormLabel><FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl></FormItem> )}/>
                 </div>
                 <div className="flex justify-center items-center">
-                    <div className={cn("flex items-center justify-center h-12 w-12 rounded-full text-white text-lg font-bold", colorClass)}>
+                    <div className={cn("flex items-center justify-center h-10 w-10 rounded-full text-white text-base font-bold", colorClass)}>
                         {riskScore}
                     </div>
                 </div>
