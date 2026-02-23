@@ -1280,6 +1280,23 @@
             }
         },
         "required": ["id", "colors"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "type": "object",
+      "description": "Represents a single booking for a resource like an aircraft.",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "start": { "type": "string", "format": "date-time" },
+        "end": { "type": "string", "format": "date-time" },
+        "resourceId": { "type": "string", "description": "ID of the booked resource (e.g., aircraft tail number)." },
+        "instructorId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "status": { "type": "string", "enum": ["Tentative", "Confirmed", "Completed", "Cancelled"] },
+        "notes": { "type": "string" }
+      },
+      "required": ["id", "title", "start", "end", "resourceId", "status"]
     }
   },
   "auth": {
@@ -1535,6 +1552,13 @@
         "definition": {
           "schema": { "$ref": "#/backend/entities/Alert" },
           "description": "Stores system-wide alerts and notices."
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/bookings/{bookingId}",
+        "definition": {
+          "schema": { "$ref": "#/backend/entities/Booking" },
+          "description": "Stores all aircraft and resource bookings."
         }
       }
     ]
