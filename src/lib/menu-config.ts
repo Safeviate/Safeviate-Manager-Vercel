@@ -74,7 +74,7 @@ export const menuConfig: MenuItem[] = [
       },
       {
         href: '/operations/bookings',
-        label: 'Booking Schedule',
+        label: 'Daily Schedule',
         description: 'View and manage resource bookings.',
         permissionId: 'operations-bookings-view',
       },

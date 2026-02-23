@@ -19,14 +19,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>{booking.title}</CardTitle>
+                <CardTitle>{booking.type}</CardTitle>
                 <CardDescription>
                     Booking ID: {booking.id}
                 </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <DetailItem label="Status" value={booking.status} />
-                <DetailItem label="Resource ID" value={booking.resourceId} />
+                <DetailItem label="Aircraft ID" value={booking.aircraftId} />
                 <DetailItem label="Date" value={format(new Date(booking.start), 'PPP')} />
                 <DetailItem label="Start Time" value={format(new Date(booking.start), 'p')} />
                 <DetailItem label="End Time" value={format(new Date(booking.end), 'p')} />
