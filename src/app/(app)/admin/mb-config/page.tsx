@@ -575,7 +575,7 @@ const WBCalculator = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* 1. BASIC EMPTY WEIGHT */}
-          <div className="bg-card p-5 rounded-xl border border-border shadow-xl">
+          <div className="bg-card p-5 rounded-xl border border-border">
              <h3 className="text-primary font-bold text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-primary"></span>
                 1. Basic Empty Weight
@@ -600,7 +600,7 @@ const WBCalculator = () => {
           </div>
 
           {/* 2. LOADING STATIONS */}
-          <div className="bg-card p-5 rounded-xl border border-border shadow-xl">
+          <div className="bg-card p-5 rounded-xl border border-border">
              <div className="flex justify-between items-center mb-4">
               <h3 className="text-primary font-bold text-xs uppercase tracking-widest flex items-center gap-2">
                  <span className="w-2 h-2 rounded-full bg-primary"></span>
@@ -681,7 +681,7 @@ const WBCalculator = () => {
           </div>
 
           {/* 3. CONFIG CARD */}
-          <div className="bg-card p-5 rounded-xl border border-border shadow-xl">
+          <div className="bg-card p-5 rounded-xl border border-border">
             <div className="flex justify-between items-center mb-4">
                <h3 className="text-primary font-bold text-xs uppercase tracking-widest flex items-center gap-2">
                  <span className="w-2 h-2 rounded-full bg-primary"></span>
