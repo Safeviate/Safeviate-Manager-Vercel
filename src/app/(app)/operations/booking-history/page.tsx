@@ -1,21 +1,33 @@
 'use client';
 
-import { useMemo } from 'react';
-import { collection, query, orderBy } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useMemo, useState } from 'react';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, parse } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+  } from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '../../users/personnel/page';
 import { useRouter } from 'next/navigation';
 import type { Booking } from '@/types/booking';
 import { Button } from '@/components/ui/button';
-import { Eye, Scale, FilePlus } from 'lucide-react';
+import { Eye, Scale, FilePlus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -50,6 +62,45 @@ const getStatusBadgeVariant = (status: Booking['status']): "default" | "secondar
     }
 }
 
+function DeleteBookingButton({ bookingId, bookingNumber }: { bookingId: string, bookingNumber: string }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const tenantId = 'safeviate';
+
+    const handleDelete = () => {
+        if (!firestore) return;
+        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, bookingId);
+        deleteDocumentNonBlocking(bookingRef);
+        toast({
+            title: 'Booking Deleted',
+            description: `Booking #${bookingNumber} is being deleted.`,
+        });
+    };
+
+    return (
+        <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="icon" className="h-8 w-8">
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Delete Booking</span>
+                </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete booking #{bookingNumber}. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
+
 const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
     if (bookings.length === 0) {
         return (
@@ -71,6 +122,7 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                   <TableHead className='text-center'>View</TableHead>
                   <TableHead className='text-center'>M&B</TableHead>
                   <TableHead className='text-center'>Debrief</TableHead>
+                  <TableHead className='text-center'>Delete</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -108,6 +160,9 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                                     </Link>
                                 </Button>
                             )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                            <DeleteBookingButton bookingId={b.id} bookingNumber={b.bookingNumber} />
                         </TableCell>
                     </TableRow>
                 ))}
