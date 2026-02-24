@@ -1297,15 +1297,49 @@
         "aircraftId": { "type": "string", "description": "ID of the booked aircraft." },
         "instructorId": { "type": "string" },
         "studentId": { "type": "string" },
-        "status": { "type": "string", "enum": ["Tentative", "Confirmed", "Completed", "Cancelled", "Cancelled with Reason"] },
+        "createdBy": { "type": "string" },
+        "cancellationReason": { "type": "string" },
+        "status": { "type": "string", "enum": ["Tentative", "Confirmed", "Completed", "Cancelled"] },
         "notes": { "type": "string" },
         "isOvernight": { "type": "boolean" },
         "overnightBookingDate": { "type": "string", "format": "date" },
         "overnightEndTime": { "type": "string" },
         "preFlight": { "type": "boolean" },
-        "postFlight": { "type": "boolean" }
+        "postFlight": { "type": "boolean" },
+        "preFlightData": { "$ref": "#/backend/entities/PreFlightData" },
+        "postFlightData": { "$ref": "#/backend/entities/PostFlightData" }
       },
       "required": ["id", "bookingNumber", "type", "start", "end", "aircraftId", "status"]
+    },
+    "ChecklistPhoto": {
+      "title": "Checklist Photo",
+      "type": "object",
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "description": { "type": "string" }
+      }
+    },
+    "PreFlightData": {
+      "title": "Pre-Flight Data",
+      "type": "object",
+      "properties": {
+        "hobbs": { "type": "number" },
+        "tacho": { "type": "number" },
+        "fuelOnBoard": { "type": "number" },
+        "oilUplift": { "type": "number" },
+        "documentsChecked": { "type": "boolean" }
+      }
+    },
+    "PostFlightData": {
+      "title": "Post-Flight Data",
+      "type": "object",
+      "properties": {
+        "hobbs": { "type": "number" },
+        "tacho": { "type": "number" },
+        "fuelRemaining": { "type": "number" },
+        "defects": { "type": "string" },
+        "photos": { "type": "array", "items": { "$ref": "#/backend/entities/ChecklistPhoto" } }
+      }
     }
   },
   "auth": {
@@ -1573,3 +1607,4 @@
     ]
   }
 }
+
