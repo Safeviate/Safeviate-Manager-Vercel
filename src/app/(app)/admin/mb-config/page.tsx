@@ -534,7 +534,7 @@ const WBCalculator = () => {
       <div className="flex flex-col gap-6">
 
         {/* TOP ROW: GRAPH */}
-        <div className="bg-card border border-border rounded-xl p-4 shadow-2xl relative min-h-[500px] flex flex-col justify-center items-center overflow-hidden">
+        <div className="bg-card border border-border rounded-xl p-4 relative min-h-[500px] flex flex-col justify-center items-center overflow-hidden">
             {offScreenStatus && (
             <OffScreenWarning direction={offScreenStatus.dir} value={offScreenStatus.val} label={offScreenStatus.axis === 'x' ? 'CG' : 'Weight'} />
             )}
@@ -717,4 +717,3 @@ const WBCalculator = () => {
 };
 
 export default WBCalculator;
-
