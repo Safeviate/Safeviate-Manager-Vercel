@@ -1,164 +1,214 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Eye, BookOpenCheck, BarChart, FilePlus } from 'lucide-react';
-import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/types/aircraft';
-import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
+import type { PilotProfile, Personnel } from '../../users/personnel/page';
+import { useRouter } from 'next/navigation';
+import type { Booking } from '@/types/booking';
+import { Button } from '@/components/ui/button';
+import { Eye, Scale, FilePlus } from 'lucide-react';
+import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
-type UserProfile = PilotProfile | Personnel;
-
+// A consolidated type for display
 type EnrichedBooking = Booking & {
-    aircraftTailNumber?: string;
-    instructorName?: string;
-    studentName?: string;
-    createdByName?: string;
+  aircraftTailNumber?: string;
+  creatorName?: string;
+  fullStartTime?: Date;
+  aircraft?: Aircraft;
 };
 
-const getStatusBadgeVariant = (status: Booking['status']) => {
-    switch (status) {
-        case 'Completed': return 'default';
-        case 'Confirmed': return 'secondary';
-        case 'Cancelled': return 'destructive';
-        default: return 'outline';
+const getBookingTypeAbbreviation = (type: Booking['type']): string => {
+    switch (type) {
+        case 'Training Flight': return 'T';
+        case 'Private Flight': return 'P';
+        case 'Maintenance Flight': return 'M';
+        case 'Reposition Flight': return 'R';
+        default: return '';
     }
-};
+}
+
+const getStatusBadgeVariant = (status: Booking['status']): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status) {
+        case 'Completed':
+            return 'default';
+        case 'Cancelled':
+        case 'Cancelled with Reason':
+            return 'destructive';
+        default:
+            return 'secondary';
+    }
+}
 
 const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
     if (bookings.length === 0) {
-        return <p className="text-center text-muted-foreground py-16">No bookings in this category.</p>;
+        return (
+            <div className="h-24 text-center flex items-center justify-center text-muted-foreground">
+              No bookings found for this category.
+            </div>
+        );
     }
+    
     return (
-        <Table>
+         <Table>
             <TableHeader>
-                <TableRow>
-                    <TableHead>Booking #</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Aircraft</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Instructor</TableHead>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
+              <TableRow>
+                  <TableHead>#</TableHead>
+                  <TableHead>Aircraft</TableHead>
+                  <TableHead>Creator</TableHead>
+                  <TableHead>Start Time</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className='text-center'>View</TableHead>
+                  <TableHead className='text-center'>M&B</TableHead>
+                  <TableHead className='text-center'>Debrief</TableHead>
+              </TableRow>
             </TableHeader>
             <TableBody>
-                {bookings.map(booking => (
-                    <TableRow key={booking.id}>
-                        <TableCell className="font-medium">{booking.bookingNumber}</TableCell>
-                        <TableCell>{format(new Date(booking.date), 'PPP')}</TableCell>
-                        <TableCell>{booking.aircraftTailNumber || booking.aircraftId}</TableCell>
-                        <TableCell>{booking.type}</TableCell>
-                        <TableCell>{booking.instructorName || 'N/A'}</TableCell>
-                        <TableCell>{booking.studentName || 'N/A'}</TableCell>
-                        <TableCell><Badge variant={getStatusBadgeVariant(booking.status)}>{booking.status}</Badge></TableCell>
-                        <TableCell className="text-right">
-                            <div className="flex justify-end items-center gap-2">
-                                <Button asChild variant="outline" size="sm">
-                                    <Link href={`/operations/bookings/${booking.id}`}><Eye className="mr-2 h-4 w-4" />View</Link>
+                {bookings.map(b => (
+                    <TableRow key={b.id} className={cn((b.status === 'Cancelled' || b.status === 'Cancelled with Reason') && 'text-muted-foreground')}>
+                        <TableCell className="font-medium">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
+                        <TableCell>{b.aircraftTailNumber}</TableCell>
+                        <TableCell>{b.creatorName}</TableCell>
+                        <TableCell>{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
+                        <TableCell>
+                            <Badge variant={getStatusBadgeVariant(b.status)}>{b.status}</Badge>
+                        </TableCell>
+                        <TableCell className='text-center'>
+                            <Button asChild variant="outline" size="icon" className="h-8 w-8">
+                                <Link href={`/operations/booking-history/${b.id}`}>
+                                    <Eye className="h-4 w-4" />
+                                    <span className="sr-only">View Details</span>
+                                </Link>
+                            </Button>
+                        </TableCell>
+                        <TableCell className='text-center'>
+                            <Button asChild variant={b.massAndBalance ? 'default' : 'outline'} size="icon" className="h-8 w-8" disabled={b.status === 'Cancelled' || b.status === 'Cancelled with Reason'}>
+                                <Link href={`/assets/mass-balance?bookingId=${b.id}&aircraftId=${b.aircraftId}`}>
+                                    <Scale className="h-4 w-4" />
+                                     <span className="sr-only">Mass & Balance</span>
+                                </Link>
+                            </Button>
+                        </TableCell>
+                        <TableCell className='text-center'>
+                            {b.type === 'Training Flight' && b.status === 'Completed' && (
+                                <Button asChild variant="secondary" size="icon" className="h-8 w-8">
+                                    <Link href={`/training/student-debriefs/new?bookingId=${b.id}`}>
+                                        <FilePlus className="h-4 w-4" />
+                                        <span className="sr-only">Create Debrief</span>
+                                    </Link>
                                 </Button>
-                                {booking.type === 'Training' && booking.status === 'Completed' && (
-                                    <Button asChild variant="secondary" size="sm">
-                                        <Link href={`/training/debrief/new?bookingId=${booking.id}`}><FilePlus className="mr-2 h-4 w-4" />File Debrief</Link>
-                                    </Button>
-                                )}
-                                <Button variant="ghost" size="sm" disabled>
-                                    <BarChart className="mr-2 h-4 w-4" />M&B
-                                </Button>
-                            </div>
+                            )}
                         </TableCell>
                     </TableRow>
                 ))}
             </TableBody>
         </Table>
-    );
-};
+    )
+}
 
-export default function BookingHistoryPage() {
-    const firestore = useFirestore();
-    const tenantId = 'safeviate';
+export default function BookingsHistoryPage() {
+  const firestore = useFirestore();
+  const tenantId = 'safeviate';
 
-    // --- Data Queries ---
-    const bookingsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/bookings`), orderBy('date', 'desc')) : null), [firestore]);
-    const aircraftQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null), [firestore]);
-    const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore]);
-    const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore]);
-    const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore]);
-    const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore]);
-    
-    // --- Data Hooks ---
-    const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
-    const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftQuery);
-    const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
-    const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
-    const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsQuery);
-    const { data: privatePilots, isLoading: isLoadingPrivatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
+  const bookingsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'bookings'), orderBy('bookingNumber', 'desc')) : null),
+    [firestore, tenantId]
+  );
+  const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'aircrafts') : null), [firestore, tenantId]);
+  const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'personnel')) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'instructors')) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'students')) : null), [firestore, tenantId]);
+  const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'private-pilots')) : null), [firestore, tenantId]);
 
-    const isLoading = isLoadingBookings || isLoadingAircrafts || isLoadingPersonnel || isLoadingInstructors || isLoadingStudents || isLoadingPrivatePilots;
-    
-    // --- Data Enrichment ---
-    const allUsers: UserProfile[] = useMemo(() => [
-        ...(personnel || []),
-        ...(instructors || []),
-        ...(students || []),
-        ...(privatePilots || []),
-    ], [personnel, instructors, students, privatePilots]);
-    
-    const userMap = useMemo(() => new Map(allUsers.map(u => [u.id, `${u.firstName} ${u.lastName}`])), [allUsers]);
-    const aircraftMap = useMemo(() => new Map((aircrafts || []).map(a => [a.id, a.tailNumber])), [aircrafts]);
+  const { data: bookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
+  const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
+  const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
+  const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
+  const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsQuery);
+  const { data: privatePilots, isLoading: isLoadingPrivatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
 
-    const enrichedBookings: EnrichedBooking[] = useMemo(() => {
-        if (!bookings) return [];
-        return bookings.map(b => ({
-            ...b,
-            aircraftTailNumber: aircraftMap.get(b.aircraftId),
-            instructorName: b.instructorId ? userMap.get(b.instructorId) : undefined,
-            studentName: b.studentId ? userMap.get(b.studentId) : undefined,
-        }));
-    }, [bookings, userMap, aircraftMap]);
-    
-    const trainingBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Training'), [enrichedBookings]);
-    const privateBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Private' || b.type === 'Rental'), [enrichedBookings]);
-    const maintenanceBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Maintenance'), [enrichedBookings]);
+  const isLoading = isLoadingBookings || isLoadingAircraft || isLoadingPersonnel || isLoadingInstructors || isLoadingStudents || isLoadingPrivatePilots;
+  const error = bookingsError || aircraftError || (personnel === null && !isLoadingPersonnel);
 
-    return (
-        <div className="space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight">Booking History</h1>
-            <Card>
-                <Tabs defaultValue="all">
-                    <CardHeader>
-                        <TabsList className="grid w-full grid-cols-4">
-                            <TabsTrigger value="all">All Bookings</TabsTrigger>
-                            <TabsTrigger value="training">Training</TabsTrigger>
-                            <TabsTrigger value="private">Private</TabsTrigger>
-                            <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
-                        </TabsList>
-                    </CardHeader>
-                    <CardContent>
-                        {isLoading ? (
-                            <Skeleton className="h-64 w-full" />
-                        ) : (
-                            <>
-                                <TabsContent value="all"><BookingsTable bookings={enrichedBookings} /></TabsContent>
-                                <TabsContent value="training"><BookingsTable bookings={trainingBookings} /></TabsContent>
-                                <TabsContent value="private"><BookingsTable bookings={privateBookings} /></TabsContent>
-                                <TabsContent value="maintenance"><BookingsTable bookings={maintenanceBookings} /></TabsContent>
-                            </>
-                        )}
-                    </CardContent>
-                </Tabs>
-            </Card>
+  const enrichedBookings = useMemo((): EnrichedBooking[] => {
+    if (!bookings || !aircraft || !personnel || !instructors || !students || !privatePilots) return [];
+
+    const aircraftMap = new Map(aircraft.map(a => [a.id, a]));
+    const allUsers = [...personnel, ...instructors, ...students, ...privatePilots];
+    const userMap = new Map(allUsers.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
+
+    return bookings.map(b => {
+      const bookingAircraft = aircraftMap.get(b.aircraftId);
+      const fullStartTime = b.date && b.startTime ? parse(`${b.date} ${b.startTime}`, 'yyyy-MM-dd HH:mm', new Date()) : undefined;
+      
+      return {
+        ...b,
+        aircraftTailNumber: bookingAircraft?.tailNumber || 'Unknown Aircraft',
+        creatorName: userMap.get(b.createdById || '') || 'Unknown Creator',
+        fullStartTime: fullStartTime,
+        aircraft: bookingAircraft,
+      };
+    });
+  }, [bookings, aircraft, personnel, instructors, students, privatePilots]);
+
+  const trainingBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Training Flight'), [enrichedBookings]);
+  const privateBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Private Flight'), [enrichedBookings]);
+  const maintenanceBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Maintenance Flight'), [enrichedBookings]);
+
+  if (isLoading) {
+    return <div className="p-8 text-center text-muted-foreground">Loading booking history...</div>
+  }
+
+  if (error) {
+    return <div className="p-8 text-center text-destructive">Error loading history.</div>
+  }
+
+  return (
+    <div className="flex flex-col gap-6 h-full">
+       <div className="flex justify-between items-center">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Bookings History</h1>
+                <p className="text-muted-foreground">A complete log of all past and present bookings.</p>
+            </div>
         </div>
-    );
+      <Card className="flex-grow flex flex-col">
+        <Tabs defaultValue="all">
+            <div className='px-6 pt-4'>
+                <TabsList>
+                    <TabsTrigger value="all">All Bookings</TabsTrigger>
+                    <TabsTrigger value="training">Training</TabsTrigger>
+                    <TabsTrigger value="private">Private</TabsTrigger>
+                    <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+                </TabsList>
+            </div>
+            <CardContent className='p-0'>
+                <ScrollArea className="h-[calc(100vh-21rem)]">
+                    <TabsContent value="all" className='m-0'>
+                        <BookingsTable bookings={enrichedBookings} />
+                    </TabsContent>
+                    <TabsContent value="training" className='m-0'>
+                        <BookingsTable bookings={trainingBookings} />
+                    </TabsContent>
+                    <TabsContent value="private" className='m-0'>
+                        <BookingsTable bookings={privateBookings} />
+                    </TabsContent>
+                    <TabsContent value="maintenance" className='m-0'>
+                        <BookingsTable bookings={maintenanceBookings} />
+                    </TabsContent>
+                </ScrollArea>
+            </CardContent>
+        </Tabs>
+      </Card>
+    </div>
+  );
 }

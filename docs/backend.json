@@ -1281,6 +1281,18 @@
         },
         "required": ["id", "colors"]
     },
+    "MassAndBalance": {
+        "title": "Mass and Balance",
+        "type": "object",
+        "description": "Holds a reference or a snapshot of the mass and balance calculation for a flight.",
+        "properties": {
+            "takeoffWeight": { "type": "number" },
+            "takeoffCg": { "type": "number" },
+            "landingWeight": { "type": "number" },
+            "landingCg": { "type": "number" },
+            "isWithinLimits": { "type": "boolean" }
+        }
+    },
     "Booking": {
       "title": "Booking",
       "type": "object",
@@ -1297,15 +1309,50 @@
         "aircraftId": { "type": "string", "description": "ID of the booked aircraft." },
         "instructorId": { "type": "string" },
         "studentId": { "type": "string" },
+        "createdById": { "type": "string" },
+        "cancellationReason": { "type": "string" },
         "status": { "type": "string", "enum": ["Tentative", "Confirmed", "Completed", "Cancelled", "Cancelled with Reason"] },
         "notes": { "type": "string" },
         "isOvernight": { "type": "boolean" },
         "overnightBookingDate": { "type": "string", "format": "date" },
         "overnightEndTime": { "type": "string" },
         "preFlight": { "type": "boolean" },
-        "postFlight": { "type": "boolean" }
+        "postFlight": { "type": "boolean" },
+        "preFlightData": { "$ref": "#/backend/entities/PreFlightData" },
+        "postFlightData": { "$ref": "#/backend/entities/PostFlightData" },
+        "massAndBalance": { "$ref": "#/backend/entities/MassAndBalance" }
       },
       "required": ["id", "bookingNumber", "type", "start", "end", "aircraftId", "status"]
+    },
+    "ChecklistPhoto": {
+      "title": "Checklist Photo",
+      "type": "object",
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "description": { "type": "string" }
+      }
+    },
+    "PreFlightData": {
+      "title": "Pre-Flight Data",
+      "type": "object",
+      "properties": {
+        "hobbs": { "type": "number" },
+        "tacho": { "type": "number" },
+        "fuelOnBoard": { "type": "number" },
+        "oilUplift": { "type": "number" },
+        "documentsChecked": { "type": "boolean" }
+      }
+    },
+    "PostFlightData": {
+      "title": "Post-Flight Data",
+      "type": "object",
+      "properties": {
+        "hobbs": { "type": "number" },
+        "tacho": { "type": "number" },
+        "fuelRemaining": { "type": "number" },
+        "defects": { "type": "string" },
+        "photos": { "type": "array", "items": { "$ref": "#/backend/entities/ChecklistPhoto" } }
+      }
     }
   },
   "auth": {

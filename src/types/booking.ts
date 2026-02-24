@@ -1,6 +1,14 @@
 
 
-export type BookingStatus = 'Tentative' | 'Confirmed' | 'Completed' | 'Cancelled';
+export type BookingStatus = 'Tentative' | 'Confirmed' | 'Completed' | 'Cancelled' | 'Cancelled with Reason';
+
+export interface MassAndBalance {
+    takeoffWeight?: number;
+    takeoffCg?: number;
+    landingWeight?: number;
+    landingCg?: number;
+    isWithinLimits?: boolean;
+}
 
 export interface ChecklistPhoto {
     url: string;
@@ -35,7 +43,7 @@ export interface Booking {
   aircraftId: string;
   instructorId?: string;
   studentId?: string;
-  createdBy?: string;
+  createdById?: string;
   cancellationReason?: string;
   status: BookingStatus;
   notes?: string;
@@ -46,4 +54,5 @@ export interface Booking {
   postFlight: boolean;
   preFlightData?: PreFlightData;
   postFlightData?: PostFlightData;
+  massAndBalance?: MassAndBalance;
 }
