@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, use } from 'react';
 import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Booking } from '@/types/booking';
@@ -15,12 +15,13 @@ interface BookingDetailPageProps {
 }
 
 export default function BookingHistoryDetailPage({ params }: BookingDetailPageProps) {
+    const resolvedParams = use(params);
     const firestore = useFirestore();
     const tenantId = 'safeviate';
 
     const bookingRef = useMemoFirebase(
-        () => firestore ? doc(firestore, `tenants/${tenantId}/bookings`, params.id) : null,
-        [firestore, tenantId, params.id]
+        () => firestore ? doc(firestore, `tenants/${tenantId}/bookings`, resolvedParams.id) : null,
+        [firestore, tenantId, resolvedParams.id]
     );
 
     const { data: booking, isLoading, error } = useDoc<Booking>(bookingRef);
