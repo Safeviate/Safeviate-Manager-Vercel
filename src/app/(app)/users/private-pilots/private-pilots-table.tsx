@@ -33,7 +33,7 @@ export function PrivatePilotsTable({ data, tenantId }: PrivatePilotsTableProps) 
           <TableHead>Email</TableHead>
           <TableHead>Contact Number</TableHead>
           <TableHead>License No.</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
+          <TableHead className="text-right w-[180px]">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
