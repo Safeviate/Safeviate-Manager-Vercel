@@ -31,7 +31,7 @@ export function AircraftActions({ aircraft, tenantId }: AircraftActionsProps) {
   const { hasPermission } = usePermissions();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const canManage = hasPermission('assets-delete');
+  const canDelete = hasPermission('assets-delete');
 
   const handleDelete = () => {
     if (!firestore) return;
@@ -39,22 +39,22 @@ export function AircraftActions({ aircraft, tenantId }: AircraftActionsProps) {
     deleteDocumentNonBlocking(aircraftRef);
     toast({
       title: 'Aircraft Deleted',
-      description: `Aircraft ${aircraft.tailNumber} is being removed from the fleet.`,
+      description: `${aircraft.tailNumber} has been removed from the fleet.`,
     });
     setIsDeleteDialogOpen(false);
   };
 
   return (
-    <>
-      <div className="flex items-center justify-end gap-2">
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/assets/aircraft/${aircraft.id}`}>
-            <Eye className="mr-2 h-4 w-4" />
-            View
-          </Link>
-        </Button>
+    <div className="flex items-center justify-end gap-2">
+      <Button asChild variant="outline" size="sm">
+        <Link href={`/assets/aircraft/${aircraft.id}`}>
+          <Eye className="mr-2 h-4 w-4" />
+          View
+        </Link>
+      </Button>
 
-        {canManage && (
+      {canDelete && (
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <Button
             variant="destructive"
             size="sm"
@@ -63,28 +63,26 @@ export function AircraftActions({ aircraft, tenantId }: AircraftActionsProps) {
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </Button>
-        )}
-      </div>
-
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete aircraft <strong>{aircraft.tailNumber}</strong> and all its associated logs. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete Aircraft
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete aircraft <strong>{aircraft.tailNumber}</strong> from the database.
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete Aircraft
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+    </div>
   );
 }
