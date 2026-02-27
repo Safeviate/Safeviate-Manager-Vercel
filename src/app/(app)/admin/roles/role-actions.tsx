@@ -24,17 +24,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ChevronsUpDown, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { ChevronsUpDown, Pencil, Trash2 } from 'lucide-react';
 import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-  } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
@@ -171,25 +163,26 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
 
 
   return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!canManageRoles}>
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-            </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsEditDialogOpen(true); }}>
-                <Pencil className='mr-2 h-4 w-4' /> Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsDeleteDialogOpen(true); }} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                <Trash2 className='mr-2 h-4 w-4' /> Delete
-            </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+    <div className="flex items-center justify-end gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setIsEditDialogOpen(true)}
+        disabled={!canManageRoles}
+      >
+        <Pencil className="mr-2 h-4 w-4" />
+        Edit
+      </Button>
+
+      <Button
+        variant="destructive"
+        size="sm"
+        onClick={() => setIsDeleteDialogOpen(true)}
+        disabled={!canManageRoles}
+      >
+        <Trash2 className="mr-2 h-4 w-4" />
+        Delete
+      </Button>
 
       <Dialog open={isEditDialogOpen} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-3xl">
@@ -324,6 +317,6 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }
