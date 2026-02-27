@@ -13,20 +13,13 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Eye, Trash2 } from 'lucide-react';
+import { Eye, Trash2 } from 'lucide-react';
 import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-  } from "@/components/ui/dropdown-menu"
 import type { Personnel, PilotProfile } from './page';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { usePermissions } from '@/hooks/use-permissions';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -41,7 +34,7 @@ const determineCollection = (userType: UserProfile['userType']): string => {
         case 'Instructor': return 'instructors';
         case 'Student': return 'students';
         case 'Private Pilot': return 'private-pilots';
-        default: return 'personnel'; // Fallback, should not happen
+        default: return 'personnel'; // Fallback
     }
 }
 
@@ -50,8 +43,10 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
+  const { hasPermission } = usePermissions();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+  const canDelete = hasPermission('users-delete');
 
   const handleDeleteUser = () => {
     if (!firestore || !tenantId) {
@@ -93,26 +88,25 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
 
   return (
     <>
-      <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Open menu</span>
-                  <MoreHorizontal className="h-4 w-4" />
-              </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                  <Link href={`/users/personnel/${user.id}?type=${user.userType}`}>
-                      <Eye className='mr-2' /> View Profile
-                  </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsDeleteDialogOpen(true); }} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                  <Trash2 className='mr-2' /> Delete
-              </DropdownMenuItem>
-          </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex items-center justify-end gap-2">
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/users/personnel/${user.id}?type=${user.userType}`}>
+            <Eye className="mr-2 h-4 w-4" />
+            View
+          </Link>
+        </Button>
+        
+        {canDelete && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </Button>
+        )}
+      </div>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>

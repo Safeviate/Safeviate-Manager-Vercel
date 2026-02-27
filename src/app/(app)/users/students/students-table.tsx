@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -11,9 +10,6 @@ import {
 } from '@/components/ui/table';
 import type { PilotProfile } from '../personnel/page';
 import { PersonnelActions } from '../personnel/personnel-actions';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { Eye } from 'lucide-react';
 
 interface StudentsTableProps {
   data: PilotProfile[];
@@ -37,7 +33,6 @@ export function StudentsTable({ data, tenantId }: StudentsTableProps) {
           <TableHead>Email</TableHead>
           <TableHead>Contact Number</TableHead>
           <TableHead>License No.</TableHead>
-          <TableHead>View Profile</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
@@ -48,14 +43,6 @@ export function StudentsTable({ data, tenantId }: StudentsTableProps) {
             <TableCell>{pilot.email}</TableCell>
             <TableCell>{pilot.contactNumber || 'N/A'}</TableCell>
             <TableCell>{pilot.pilotLicense?.licenseNumber || 'N/A'}</TableCell>
-            <TableCell>
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/users/personnel/${pilot.id}`}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  View Profile
-                </Link>
-              </Button>
-            </TableCell>
             <TableCell className="text-right">
               <PersonnelActions tenantId={tenantId} user={pilot} />
             </TableCell>
