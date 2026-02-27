@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ChevronsUpDown, Pencil, Trash2 } from 'lucide-react';
+import { ChevronsUpDown, Eye, Trash2 } from 'lucide-react';
 import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -170,8 +170,8 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
         onClick={() => setIsEditDialogOpen(true)}
         disabled={!canManageRoles}
       >
-        <Pencil className="mr-2 h-4 w-4" />
-        Edit
+        <Eye className="mr-2 h-4 w-4" />
+        View
       </Button>
 
       <Button
@@ -189,9 +189,9 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
           {isEditDialogOpen && (
             <>
               <DialogHeader>
-                  <DialogTitle>Edit Role</DialogTitle>
+                  <DialogTitle>Role Details</DialogTitle>
                   <DialogDescription>
-                      Update the details for the &quot;{role.name}&quot; role.
+                      View or update the details for the &quot;{role.name}&quot; role.
                   </DialogDescription>
               </DialogHeader>
               <ScrollArea className='max-h-[70vh] pr-6'>
