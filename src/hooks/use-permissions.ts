@@ -41,26 +41,33 @@ export const usePermissions = () => {
 
     let rawPermissions: string[] = [];
 
+    // 1. Get permissions from Role
     if (role && role.permissions) {
       rawPermissions.push(...role.permissions);
     }
 
-    if (userProfile.userType === 'Personnel' && 'permissions' in userProfile && userProfile.permissions) {
+    // 2. Get individual overrides (for Personnel)
+    if (userProfile.userType === 'Personnel' && 'permissions' in userProfile && Array.isArray(userProfile.permissions)) {
       rawPermissions.push(...userProfile.permissions);
     }
     
     const expanded = new Set<string>();
     rawPermissions.forEach(p => {
+      if (!p || typeof p !== 'string') return;
+      
       expanded.add(p);
       
       const parts = p.split('-');
       const action = parts.pop();
       const resourceId = parts.join('-');
       
+      // If you can manage/create/edit/delete, you can definitely view
       if (['create', 'edit', 'delete', 'manage'].includes(action || '')) {
         expanded.add(`${resourceId}-view`);
       }
 
+      // Escalation logic: ensure parent menus are unlocked
+      // e.g., 'operations-bookings-view' -> 'operations-view'
       parts.forEach((_, idx) => {
         const segmentPath = parts.slice(0, idx + 1).join('-');
         expanded.add(`${segmentPath}-view`);

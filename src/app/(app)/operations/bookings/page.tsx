@@ -16,6 +16,7 @@ import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { BookingForm } from './booking-form';
 import type { Booking } from '@/types/booking';
 import Link from 'next/link';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 const HOUR_HEIGHT_PX = 60;
 const TOTAL_HOURS = 24;
@@ -92,6 +93,7 @@ const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booki
 
 export default function SchedulePage() {
   const firestore = useFirestore();
+  const { tenantId } = useUserProfile();
   const [selectedDate, setSelectedDate] = useState(startOfToday());
 
   const [nowLinePosition, setNowLinePosition] = useState(0);
@@ -100,15 +102,14 @@ export default function SchedulePage() {
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
   const [bookingFormData, setBookingFormData] = useState<{ aircraft: Aircraft; startTime: Date; allBookingsForAircraft: Booking[]; booking?: Booking } | null>(null);
   const [dataVersion, setDataVersion] = useState(0);
-  const tenantId = 'safeviate';
 
   const aircraftQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
     [firestore, tenantId]
   );
   
   const bookingsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !tenantId) return null;
     const today = format(selectedDate, 'yyyy-MM-dd');
     const yesterday = format(subDays(selectedDate, 1), 'yyyy-MM-dd');
     return query(
@@ -118,7 +119,7 @@ export default function SchedulePage() {
   }, [firestore, tenantId, selectedDate, dataVersion]); 
 
   const allBookingsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/bookings`)) : null),
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/bookings`)) : null),
     [firestore, tenantId, dataVersion]
   );
 
@@ -126,10 +127,10 @@ export default function SchedulePage() {
   const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
   const { data: allBookings, isLoading: isLoadingAllBookings } = useCollection<Booking>(allBookingsQuery);
 
-  const personnelQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
-  const privatePilotsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/private-pilots`) : null), [firestore, tenantId]);
+  const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
+  const privatePilotsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
 
   const { data: personnel } = useCollection<Personnel>(personnelQuery);
   const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
@@ -322,7 +323,7 @@ export default function SchedulePage() {
         </Card>
       </div>
 
-      {bookingFormData && (
+      {bookingFormData && tenantId && (
           <BookingForm 
             isOpen={isBookingFormOpen}
             setIsOpen={setIsBookingFormOpen}
