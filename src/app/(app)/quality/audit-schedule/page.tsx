@@ -323,32 +323,32 @@ export default function AuditSchedulePage() {
             <CardContent className="p-0">
                 <div className="w-full overflow-x-auto">
                     {/* Swimlane Headers */}
-                    <div className="sticky top-0 z-30 flex bg-primary text-primary-foreground flex-shrink-0">
+                    <div className="sticky top-0 z-30 flex bg-primary text-primary-foreground min-w-full w-max">
                         {/* Time Column Placeholder */}
-                        <div className="w-24 border-r border-primary-foreground/20" />
+                        <div className="w-24 border-r border-primary-foreground/20 flex-shrink-0" />
                         
                         {auditAreas.map((area) => (
-                            <div key={area} className="flex-1 p-3 font-semibold text-center border-r border-primary-foreground/20 min-w-[200px] flex items-center justify-between gap-2 px-4">
+                            <div key={area} className="flex-1 p-3 font-semibold text-center border-r border-primary-foreground/20 min-w-[150px] flex items-center justify-between gap-2 px-4">
                                 <span className="truncate">{area}</span>
                                 <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
                             </div>
                         ))}
                         {extraLanes.map((_, index) => (
-                            <div key={`extra-${index}`} className="flex-1 p-3 font-semibold text-center border-r border-primary-foreground/20 min-w-[200px] text-primary-foreground/40 italic">
+                            <div key={`extra-${index}`} className="flex-1 p-3 font-semibold text-center border-r border-primary-foreground/20 min-w-[150px] text-primary-foreground/40 italic">
                                 Empty Lane
                             </div>
                         ))}
                     </div>
 
                     {/* Swimlane Grid */}
-                    <div className="flex min-w-max relative">
+                    <div className="flex min-w-full w-max relative">
                         {/* Vertical Month Sidebar */}
-                        <div className="w-24 flex-shrink-0 bg-muted/50 border-r sticky left-0 z-20">
+                        <div className="w-24 flex-shrink-0 bg-muted/50 border-r sticky left-0 z-20 shadow-r">
                             {MONTHS.map((month, idx) => (
                                 <div 
                                     key={month} 
                                     className={cn(
-                                        "flex flex-col items-center justify-center border-b text-xs font-bold uppercase tracking-wider h-[100px]",
+                                        "flex flex-col items-center justify-center border-b text-xs font-bold uppercase tracking-wider",
                                         idx === currentMonthIdx && "bg-primary/10 text-primary"
                                     )}
                                     style={{ height: `${MONTH_HEIGHT_PX}px` }}
@@ -361,7 +361,7 @@ export default function AuditSchedulePage() {
 
                         {/* Audit Area Lanes */}
                         {auditAreas.map((area) => (
-                            <div key={area} className="flex-1 min-w-[200px] border-r relative">
+                            <div key={area} className="flex-1 min-w-[150px] border-r relative">
                                 {MONTHS.map((month, idx) => {
                                     const status = getScheduleItem(area, month);
                                     const popoverId = `${area}-${month}`;
@@ -406,7 +406,7 @@ export default function AuditSchedulePage() {
 
                         {/* Extra Lanes for UI Consistency */}
                         {extraLanes.map((_, laneIdx) => (
-                            <div key={`extra-lane-${laneIdx}`} className="flex-1 min-w-[200px] border-r bg-muted/5 opacity-50">
+                            <div key={`extra-lane-${laneIdx}`} className="flex-1 min-w-[150px] border-r bg-muted/5 opacity-50">
                                 {MONTHS.map((month) => (
                                     <div 
                                         key={month} 
