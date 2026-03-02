@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -8,14 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -48,8 +41,11 @@ import {
   Pencil,
   PlusCircle,
   Trash2,
+  Calendar,
+  ChevronDown,
+  Settings2,
 } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, writeBatch, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -72,6 +68,13 @@ const STATUSES: AuditScheduleStatus[] = [
   'Pending',
   'Not Scheduled',
 ];
+
+const MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+];
+
+const MONTH_HEIGHT_PX = 100;
 
 const getStatusBadgeClass = (status: AuditScheduleStatus): string => {
     switch (status) {
@@ -98,7 +101,7 @@ function StatusSelector({ onSelect }: StatusSelectorProps) {
           key={status}
           variant="ghost"
           size="sm"
-          className="justify-start"
+          className="justify-start h-9"
           onClick={() => onSelect(status)}
         >
            <div className={cn('w-2 h-2 rounded-full mr-2', getStatusBadgeClass(status))}></div>
@@ -140,16 +143,21 @@ function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
     
     return (
         <>
-            <div className="flex items-center justify-end gap-2">
-                <Button variant="ghost" size="icon" onClick={() => setIsEditOpen(true)} className="h-8 w-8">
-                    <Pencil className="h-4 w-4" />
-                    <span className="sr-only">Edit</span>
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => setIsDeleteOpen(true)} className="h-8 w-8 text-destructive hover:text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Delete</span>
-                </Button>
-            </div>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/10">
+                        <Settings2 className="h-4 w-4" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-40 p-1">
+                    <Button variant="ghost" size="sm" onClick={() => setIsEditOpen(true)} className="w-full justify-start">
+                        <Pencil className="mr-2 h-4 w-4" /> Edit Name
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setIsDeleteOpen(true)} className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10">
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete Area
+                    </Button>
+                </PopoverContent>
+            </Popover>
             
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                 <DialogContent>
@@ -163,7 +171,7 @@ function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
                     </div>
                     <DialogFooter>
                         <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                        <Button onClick={handleSave}>Save</Button>
+                        <Button onClick={handleSave}>Save Changes</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -192,17 +200,12 @@ export default function AuditSchedulePage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate';
   const currentYear = new Date().getFullYear();
+  const currentMonthIdx = new Date().getMonth();
 
-  const [quarters, setQuarters] = useState(['Q1', 'Q2', 'Q3', 'Q4']);
-  const [months, setMonths] = useState([
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ]);
   const [auditAreas, setAuditAreas] = useState<string[]>(INITIAL_AUDIT_AREAS);
   const [isAddAreaOpen, setIsAddAreaOpen] = useState(false);
   const [newAreaName, setNewAreaName] = useState('');
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
-
 
   const scheduleQuery = useMemoFirebase(
     () =>
@@ -214,35 +217,22 @@ export default function AuditSchedulePage() {
   
   const { data: schedule, isLoading, error } = useCollection<AuditScheduleItem>(scheduleQuery);
 
-  const handleQuarterChange = (index: number, value: string) => {
-    const newQuarters = [...quarters];
-    newQuarters[index] = value;
-    setQuarters(newQuarters);
-  };
-
-  const handleMonthChange = (index: number, value: string) => {
-    const newMonths = [...months];
-    newMonths[index] = value;
-    setMonths(newMonths);
-  };
-
   const handleStatusChange = (area: string, month: string, status: AuditScheduleStatus) => {
     if (!firestore) return;
     setOpenPopoverId(null);
     const itemsCollection = collection(firestore, `tenants/${tenantId}/audit-schedule-items`);
     const existingItem = schedule?.find(item => item.area === area && item.month === month);
 
-    const newItemData = {
-        area,
-        month,
-        year: currentYear,
-        status,
-    };
     if (existingItem) {
       const itemRef = doc(itemsCollection, existingItem.id);
       updateDocumentNonBlocking(itemRef, { status });
     } else {
-      addDocumentNonBlocking(itemsCollection, newItemData);
+      addDocumentNonBlocking(itemsCollection, {
+        area,
+        month,
+        year: currentYear,
+        status,
+      });
     }
   };
 
@@ -284,30 +274,27 @@ export default function AuditSchedulePage() {
     await batch.commit();
   }
 
-
-  const getScheduleItem = (area: string, month: string): AuditScheduleItem => {
+  const getScheduleItem = (area: string, month: string): AuditScheduleStatus => {
     const found = schedule?.find(item => item.area === area && item.month === month);
-    if (found) return found;
-    return { 
-        id: `${area}-${month}`, 
-        area, 
-        month, 
-        year: currentYear, 
-        status: 'Not Scheduled' 
-    };
+    return found ? found.status : 'Not Scheduled';
   };
+
+  const extraLanes = ['', '', ''];
 
   if (isLoading) {
     return (
-        <Card>
-            <CardHeader>
-                <Skeleton className="h-8 w-1/2" />
-                <Skeleton className="h-4 w-3/4" />
-            </CardHeader>
-            <CardContent>
-                <Skeleton className="h-64 w-full" />
-            </CardContent>
-        </Card>
+        <div className="space-y-6">
+            <Skeleton className="h-10 w-48" />
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-8 w-1/2" />
+                    <Skeleton className="h-4 w-3/4" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-[600px] w-full" />
+                </CardContent>
+            </Card>
+        </div>
     );
   }
 
@@ -316,105 +303,141 @@ export default function AuditSchedulePage() {
   }
 
   return (
-    <>
-    <Card>
-      <CardHeader>
-        <CardTitle>Annual Audit Schedule - {currentYear}</CardTitle>
-        <CardDescription>
-          Status of internal and external audits for the year. Click a cell to
-          update its status.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead rowSpan={2} className="min-w-[300px] align-middle sticky left-0 bg-card z-10 border-r">Audit Area</TableHead>
-                {quarters.map((q, index) => (
-                  <TableHead key={index} colSpan={3} className="text-center p-1 border-l">
-                      <Input
-                          value={q}
-                          onChange={(e) => handleQuarterChange(index, e.target.value)}
-                          className="text-center font-semibold bg-transparent border-none focus-visible:ring-0"
-                      />
-                  </TableHead>
-                ))}
-                <TableHead rowSpan={2} className="text-right w-[100px] align-middle sticky right-0 bg-card z-10 border-l"></TableHead>
-              </TableRow>
-              <TableRow>
-                {months.map((m, index) => (
-                    <TableHead key={index} className="text-center p-1 border-l">
-                        <Input
-                            value={m}
-                            onChange={(e) => handleMonthChange(index, e.target.value)}
-                            className="text-center font-semibold bg-transparent border-none w-full focus-visible:ring-0"
-                        />
-                    </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {auditAreas.map((area) => (
-                <TableRow key={area}>
-                  <TableCell className="font-medium sticky left-0 bg-card z-10 border-r">{area}</TableCell>
-                  {months.map((month, index) => {
-                    const item = getScheduleItem(area, month);
-                    const popoverId = `${area}-${month}`;
-                    return (
-                      <TableCell key={`${area}-${month}-${index}`} className="text-center border-l p-2 min-w-[120px]">
-                        <Popover open={openPopoverId === popoverId} onOpenChange={(isOpen) => setOpenPopoverId(isOpen ? popoverId : null)}>
-                          <PopoverTrigger asChild>
-                            <Badge
-                              className={cn("cursor-pointer py-1 px-3 w-full justify-center text-[10px] uppercase font-bold", getStatusBadgeClass(item.status))}
-                            >
-                              {item.status}
-                            </Badge>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-48 p-0">
-                            <StatusSelector
-                              onSelect={(status) =>
-                                handleStatusChange(area, month, status)
-                              }
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </TableCell>
-                    );
-                  })}
-                  <TableCell className='text-right sticky right-0 bg-card z-10 border-l'>
-                      <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="mt-4 flex justify-start">
-            <Button variant="outline" onClick={() => setIsAddAreaOpen(true)}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Area
-            </Button>
-        </div>
-      </CardContent>
-    </Card>
-
-    <Dialog open={isAddAreaOpen} onOpenChange={setIsAddAreaOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Add New Audit Area</DialogTitle>
-                <DialogDescription>Enter the name for the new audit area row.</DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-                <Label htmlFor="new-area-name">Area Name</Label>
-                <Input id="new-area-name" value={newAreaName} onChange={(e) => setNewAreaName(e.target.value)} />
+    <div className="flex flex-col gap-6">
+        <div className="flex justify-between items-center">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Annual Audit Schedule</h1>
+                <p className="text-muted-foreground">
+                    Planning and tracking oversight activities for the {currentYear} calendar year.
+                </p>
             </div>
-            <DialogFooter>
-                <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                <Button onClick={handleAddArea}>Add</Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
-    </>
+            <div className="flex items-center gap-2">
+                <Button onClick={() => setIsAddAreaOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Audit Area
+                </Button>
+            </div>
+        </div>
+
+        <Card className="overflow-hidden">
+            <CardContent className="p-0">
+                <div className="w-full overflow-x-auto">
+                    {/* Swimlane Headers */}
+                    <div className="sticky top-0 z-30 flex bg-primary text-primary-foreground flex-shrink-0">
+                        {/* Time Column Placeholder */}
+                        <div className="w-24 border-r border-primary-foreground/20" />
+                        
+                        {auditAreas.map((area) => (
+                            <div key={area} className="flex-1 p-3 font-semibold text-center border-r border-primary-foreground/20 min-w-[200px] flex items-center justify-between gap-2 px-4">
+                                <span className="truncate">{area}</span>
+                                <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
+                            </div>
+                        ))}
+                        {extraLanes.map((_, index) => (
+                            <div key={`extra-${index}`} className="flex-1 p-3 font-semibold text-center border-r border-primary-foreground/20 min-w-[200px] text-primary-foreground/40 italic">
+                                Empty Lane
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Swimlane Grid */}
+                    <div className="flex min-w-max relative">
+                        {/* Vertical Month Sidebar */}
+                        <div className="w-24 flex-shrink-0 bg-muted/50 border-r sticky left-0 z-20">
+                            {MONTHS.map((month, idx) => (
+                                <div 
+                                    key={month} 
+                                    className={cn(
+                                        "flex flex-col items-center justify-center border-b text-xs font-bold uppercase tracking-wider h-[100px]",
+                                        idx === currentMonthIdx && "bg-primary/10 text-primary"
+                                    )}
+                                    style={{ height: `${MONTH_HEIGHT_PX}px` }}
+                                >
+                                    <span>{month}</span>
+                                    {idx === currentMonthIdx && <Badge variant="outline" className="mt-1 text-[9px] py-0 border-primary text-primary">Current</Badge>}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Audit Area Lanes */}
+                        {auditAreas.map((area) => (
+                            <div key={area} className="flex-1 min-w-[200px] border-r relative">
+                                {MONTHS.map((month, idx) => {
+                                    const status = getScheduleItem(area, month);
+                                    const popoverId = `${area}-${month}`;
+                                    const isCurrentMonth = idx === currentMonthIdx;
+
+                                    return (
+                                        <div 
+                                            key={month} 
+                                            className={cn(
+                                                "border-b relative flex items-center justify-center p-2 group transition-colors",
+                                                isCurrentMonth ? "bg-primary/5" : "hover:bg-muted/30"
+                                            )}
+                                            style={{ height: `${MONTH_HEIGHT_PX}px` }}
+                                        >
+                                            <Popover 
+                                                open={openPopoverId === popoverId} 
+                                                onOpenChange={(isOpen) => setOpenPopoverId(isOpen ? popoverId : null)}
+                                            >
+                                                <PopoverTrigger asChild>
+                                                    <div className="w-full h-full cursor-pointer flex items-center justify-center">
+                                                        <Badge
+                                                            className={cn(
+                                                                "py-2 px-4 w-full justify-center text-[10px] uppercase font-bold shadow-sm transition-transform group-hover:scale-[1.02]",
+                                                                getStatusBadgeClass(status)
+                                                            )}
+                                                        >
+                                                            {status}
+                                                        </Badge>
+                                                    </div>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-48 p-0" align="center">
+                                                    <StatusSelector
+                                                        onSelect={(newStatus) => handleStatusChange(area, month, newStatus)}
+                                                    />
+                                                </PopoverContent>
+                                            </Popover>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ))}
+
+                        {/* Extra Lanes for UI Consistency */}
+                        {extraLanes.map((_, laneIdx) => (
+                            <div key={`extra-lane-${laneIdx}`} className="flex-1 min-w-[200px] border-r bg-muted/5 opacity-50">
+                                {MONTHS.map((month) => (
+                                    <div 
+                                        key={month} 
+                                        className="border-b"
+                                        style={{ height: `${MONTH_HEIGHT_PX}px` }}
+                                    />
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+
+        {/* Add Area Dialog */}
+        <Dialog open={isAddAreaOpen} onOpenChange={setIsAddAreaOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add New Audit Area</DialogTitle>
+                    <DialogDescription>Create a new oversight lane in the annual schedule.</DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Label htmlFor="new-area-name">Area Name</Label>
+                    <Input id="new-area-name" placeholder="e.g., Quality Management" value={newAreaName} onChange={(e) => setNewAreaName(e.target.value)} />
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                    <Button onClick={handleAddArea} disabled={!newAreaName.trim()}>Add Area</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    </div>
   );
 }
