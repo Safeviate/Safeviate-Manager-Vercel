@@ -11,6 +11,7 @@ type UserLink = { profilePath: string };
 
 interface UserProfileContextType {
     userProfile: UserProfile | null;
+    tenantId: string | null;
     isLoading: boolean;
     error: Error | null;
 }
@@ -48,6 +49,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     const { data: userProfileData, isLoading: isProfileDocLoading, error: profileError } = useDoc<UserProfile>(userProfileRef);
 
     const [finalUserProfile, setFinalUserProfile] = useState<UserProfile | null>(null);
+    const [tenantId, setTenantId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
     
@@ -62,11 +64,13 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
 
         if (loading) {
             setFinalUserProfile(null);
+            setTenantId(null);
             return;
         };
 
         if (!authUser) {
             setFinalUserProfile(null);
+            setTenantId(null);
             return;
         }
 
@@ -81,23 +85,32 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
                 permissions: [],
             };
             setFinalUserProfile(devProfile);
+            setTenantId('safeviate');
             return;
         }
 
-        if (userProfileData) {
+        if (userProfileData && userLink?.profilePath) {
             setFinalUserProfile(userProfileData);
+            // Extract tenant ID from path: tenants/{tenantId}/...
+            const pathParts = userLink.profilePath.split('/');
+            if (pathParts[0] === 'tenants' && pathParts[1]) {
+                setTenantId(pathParts[1]);
+            } else {
+                setTenantId('safeviate');
+            }
         } else {
-            // This handles cases where the user is authenticated but the profile docs don't exist (yet or at all)
             setFinalUserProfile(null);
+            setTenantId(null);
         }
 
-    }, [isAuthLoading, isUserLinkLoading, isProfileDocLoading, userLinkError, profileError, authUser, userProfileData]);
+    }, [isAuthLoading, isUserLinkLoading, isProfileDocLoading, userLinkError, profileError, authUser, userProfileData, userLink]);
 
     const value = useMemo(() => ({
         userProfile: finalUserProfile,
+        tenantId,
         isLoading,
         error,
-    }), [finalUserProfile, isLoading, error]);
+    }), [finalUserProfile, tenantId, isLoading, error]);
 
     return (
         <UserProfileContext.Provider value={value}>

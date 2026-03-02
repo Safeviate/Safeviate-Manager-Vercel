@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -319,7 +320,7 @@ export default function AuditSchedulePage() {
                         
                         {/* 1. STICKY MONTH COLUMN */}
                         <div className="w-24 flex-shrink-0 bg-muted/50 border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
-                            <div className="sticky top-0 z-50 h-12 bg-[#003d1c] border-b border-white/10 flex items-center justify-center font-bold text-xs text-white uppercase tracking-wider">
+                            <div className="sticky top-0 z-50 h-12 bg-[#003d1c] border-b border-white/10 flex items-center justify-center font-bold text-sm text-white uppercase tracking-wider">
                                 MONTH
                             </div>
                             {MONTHS.map((month, idx) => {
