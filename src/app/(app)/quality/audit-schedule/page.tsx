@@ -328,7 +328,7 @@ export default function AuditSchedulePage() {
                                     <div 
                                         key={month} 
                                         className={cn(
-                                            "flex flex-col items-center justify-center border-b text-sm md:text-base font-mono font-semibold uppercase tracking-wider bg-muted/30",
+                                            "flex flex-col items-center justify-center border-b text-base md:text-lg font-mono font-bold uppercase tracking-wider bg-muted/30",
                                             isCurrentMonth && "bg-[#fefce8] text-[#854d0e]"
                                         )}
                                         style={{ height: `${MONTH_HEIGHT_PX}px` }}
@@ -433,7 +433,7 @@ export default function AuditSchedulePage() {
                     <Button onClick={handleAddArea} disabled={!newAreaName.trim()}>Add Area</Button>
                 </DialogFooter>
             </DialogContent>
-        </Dialog>
+        </div>
     </div>
   );
 }

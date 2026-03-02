@@ -261,7 +261,7 @@ export default function SchedulePage() {
                             {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
                                 <div 
                                     key={hour} 
-                                    className="flex items-center justify-center border-b text-sm md:text-base font-mono font-semibold text-muted-foreground bg-muted/30"
+                                    className="flex items-center justify-center border-b text-base md:text-lg font-mono font-bold text-muted-foreground bg-muted/30"
                                     style={{ height: `${HOUR_HEIGHT_PX}px` }}
                                 >
                                     {format(new Date(0, 0, 0, hour), 'HH:mm')}
