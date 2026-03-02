@@ -9,22 +9,11 @@ export type PermissionResource = {
 /**
  * Defines all the granular permissions available in the application.
  * This is the single source of truth for what actions can be performed.
- * The `id` is used to construct the permission string (e.g., 'dashboard-view').
- * The `name` is the user-friendly label for the UI.
- * The `actions` are the specific operations available for that resource.
  */
 export const permissionsConfig: PermissionResource[] = [
   // --- General Sections ---
-  {
-    id: 'dashboard',
-    name: 'Dashboard',
-    actions: ['view'],
-  },
-  {
-    id: 'my-dashboard',
-    name: 'My Dashboard',
-    actions: ['view'],
-  },
+  { id: 'dashboard', name: 'Dashboard', actions: ['view'] },
+  { id: 'my-dashboard', name: 'My Dashboard', actions: ['view'] },
   
   // --- Core Features ---
   { id: 'operations', name: 'Operations', actions: ['view'] },
@@ -61,16 +50,8 @@ export const permissionsConfig: PermissionResource[] = [
   { id: 'admin-database', name: 'Admin: Database Seeding', actions: ['manage'] },
 
   // --- Settings Section ---
-  {
-    id: 'settings',
-    name: 'Settings',
-    actions: ['manage'],
-  },
+  { id: 'settings', name: 'Settings', actions: ['manage'] },
 
-  // --- Development Section (for dev environment) ---
-  {
-    id: 'development',
-    name: 'Development Tools',
-    actions: ['view'],
-  },
+  // --- Development Section ---
+  { id: 'development', name: 'Development Tools', actions: ['view'] },
 ];

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, use } from 'react';
+import { use } from 'react';
 import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Booking } from '@/types/booking';
@@ -11,7 +11,7 @@ import { ArrowLeft } from 'lucide-react';
 import { ViewBookingDetails } from './view-booking-details';
 
 interface BookingDetailPageProps {
-    params: { id: string };
+    params: Promise<{ id: string }>;
 }
 
 export default function BookingDetailPage({ params }: BookingDetailPageProps) {

@@ -16,57 +16,39 @@ import {
 import { Eye, Trash2 } from 'lucide-react';
 import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { Personnel, PilotProfile } from './page';
+import type { Aircraft } from '@/types/aircraft';
 import Link from 'next/link';
 import { usePermissions } from '@/hooks/use-permissions';
 
-type UserProfile = Personnel | PilotProfile;
-
-interface PersonnelActionsProps {
+interface AircraftActionsProps {
   tenantId: string;
-  user: UserProfile;
+  aircraft: Aircraft;
 }
 
-const determineCollection = (userType: UserProfile['userType']): string => {
-    switch(userType) {
-        case 'Personnel': return 'personnel';
-        case 'Instructor': return 'instructors';
-        case 'Student': return 'students';
-        case 'Private Pilot': return 'private-pilots';
-        default: return 'personnel';
-    }
-}
-
-export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
+export function AircraftActions({ tenantId, aircraft }: AircraftActionsProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const canDelete = hasPermission('users-delete');
+  const canDelete = hasPermission('assets-delete');
 
-  const handleDeleteUser = () => {
-    if (!firestore || !tenantId) return;
-    
-    const collectionName = determineCollection(user.userType);
-    const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
-    deleteDocumentNonBlocking(userRef);
-
-    const userLinkRef = doc(firestore, 'users', user.id);
-    deleteDocumentNonBlocking(userLinkRef);
-
+  const handleDelete = () => {
+    if (!firestore) return;
+    const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraft.id);
+    deleteDocumentNonBlocking(aircraftRef);
     toast({
-        title: 'User Removed',
-        description: `The user profile for ${user.firstName} ${user.lastName} is being deleted.`,
+        title: 'Aircraft Removed',
+        description: `Aircraft ${aircraft.tailNumber} is being deleted.`,
     });
     setIsDeleteDialogOpen(false);
-  }
+  };
 
   return (
     <>
       <div className="flex items-center justify-end gap-2">
         <Button asChild variant="outline" size="sm">
-          <Link href={`/users/personnel/${user.id}?type=${user.userType}`}>
+          <Link href={`/assets/aircraft/${aircraft.id}`}>
             <Eye className="mr-2 h-4 w-4" />
             View
           </Link>
@@ -89,12 +71,12 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
             <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This will permanently delete the user account and profile for {user.firstName} {user.lastName}.
+                    This action will permanently delete {aircraft.tailNumber} and all its associated logs and records.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteUser} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                <AlertDialogAction onClick={handleDelete} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
                     Delete
                 </AlertDialogAction>
             </AlertDialogFooter>

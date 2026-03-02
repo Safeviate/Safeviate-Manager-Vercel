@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -41,8 +40,6 @@ import {
   Pencil,
   PlusCircle,
   Trash2,
-  Calendar,
-  ChevronDown,
   Settings2,
 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
@@ -75,6 +72,7 @@ const MONTHS = [
 ];
 
 const MONTH_HEIGHT_PX = 100;
+const LANE_MIN_WIDTH = 200;
 
 const getStatusBadgeClass = (status: AuditScheduleStatus): string => {
     switch (status) {
@@ -279,8 +277,7 @@ export default function AuditSchedulePage() {
     return found ? found.status : 'Not Scheduled';
   };
 
-  const extraLanesCount = 3;
-  const extraLanes = Array.from({ length: extraLanesCount });
+  const extraLanes = ['', '', ''];
 
   if (isLoading) {
     return (
@@ -320,28 +317,31 @@ export default function AuditSchedulePage() {
             </div>
         </div>
 
-        <Card className="overflow-hidden border-none shadow-none bg-transparent">
+        <Card className="overflow-hidden">
             <CardContent className="p-0">
-                <div className="w-full overflow-x-auto border rounded-lg bg-card">
-                    <div className="flex min-w-full w-max flex-col">
+                <div className="w-full overflow-x-auto bg-card">
+                    <div className="flex flex-col min-w-full w-fit">
                         {/* Swimlane Headers */}
-                        <div className="sticky top-0 z-30 flex bg-primary text-primary-foreground border-b">
-                            {/* Month Header Column Placeholder */}
-                            <div className="w-24 bg-primary border-r border-primary-foreground/20 flex-shrink-0 sticky left-0 z-40" />
+                        <div className="sticky top-0 z-30 flex bg-primary text-primary-foreground border-b w-full">
+                            <div className="w-24 bg-primary border-r border-primary-foreground/20 flex-shrink-0 sticky left-0 z-40 flex items-center justify-center font-bold text-xs">
+                                MONTH
+                            </div>
                             
-                            {auditAreas.map((area) => (
-                                <div key={area} className="flex-1 p-3 font-semibold text-center border-r border-primary-foreground/20 min-w-[180px] flex items-center justify-between gap-2 px-4 bg-primary">
-                                    <span className="truncate text-sm uppercase tracking-wide">{area}</span>
-                                    <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
-                                </div>
-                            ))}
-                            {extraLanes.map((_, index) => (
-                                <div key={`extra-${index}`} className="flex-1 p-3 min-w-[180px] border-r border-primary-foreground/20 bg-primary opacity-50" />
-                            ))}
+                            <div className="flex flex-1">
+                                {auditAreas.map((area) => (
+                                    <div key={area} className="flex-1 p-3 font-semibold text-center border-r border-primary-foreground/20 min-w-[200px] flex items-center justify-between gap-2 px-4 bg-primary">
+                                        <span className="truncate text-xs uppercase tracking-wide">{area}</span>
+                                        <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
+                                    </div>
+                                ))}
+                                {extraLanes.map((_, index) => (
+                                    <div key={`extra-${index}`} className="flex-1 p-3 min-w-[200px] border-r border-primary-foreground/20 bg-primary opacity-50" />
+                                ))}
+                            </div>
                         </div>
 
                         {/* Swimlane Grid Body */}
-                        <div className="flex min-w-full w-max relative">
+                        <div className="flex w-full relative">
                             {/* Vertical Month Sidebar */}
                             <div className="w-24 flex-shrink-0 bg-muted/50 border-r sticky left-0 z-20 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                                 {MONTHS.map((month, idx) => (
@@ -360,62 +360,64 @@ export default function AuditSchedulePage() {
                             </div>
 
                             {/* Audit Area Lanes */}
-                            {auditAreas.map((area) => (
-                                <div key={area} className="flex-1 min-w-[180px] border-r relative flex flex-col">
-                                    {MONTHS.map((month, idx) => {
-                                        const status = getScheduleItem(area, month);
-                                        const popoverId = `${area}-${month}`;
-                                        const isCurrentMonth = idx === currentMonthIdx;
+                            <div className="flex flex-1">
+                                {auditAreas.map((area) => (
+                                    <div key={area} className="flex-1 min-w-[200px] border-r relative flex flex-col">
+                                        {MONTHS.map((month, idx) => {
+                                            const status = getScheduleItem(area, month);
+                                            const popoverId = `${area}-${month}`;
+                                            const isCurrentMonth = idx === currentMonthIdx;
 
-                                        return (
+                                            return (
+                                                <div 
+                                                    key={month} 
+                                                    className={cn(
+                                                        "border-b relative flex items-center justify-center p-2 group transition-colors",
+                                                        isCurrentMonth ? "bg-primary/5" : "hover:bg-muted/10"
+                                                    )}
+                                                    style={{ height: `${MONTH_HEIGHT_PX}px` }}
+                                                >
+                                                    <Popover 
+                                                        open={openPopoverId === popoverId} 
+                                                        onOpenChange={(isOpen) => setOpenPopoverId(isOpen ? popoverId : null)}
+                                                    >
+                                                        <PopoverTrigger asChild>
+                                                            <div className="w-full h-full cursor-pointer flex items-center justify-center">
+                                                                <Badge
+                                                                    className={cn(
+                                                                        "py-2 px-4 w-full justify-center text-[10px] uppercase font-bold shadow-sm transition-transform group-hover:scale-[1.02] border",
+                                                                        getStatusBadgeClass(status)
+                                                                    )}
+                                                                >
+                                                                    {status}
+                                                                </Badge>
+                                                            </div>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-48 p-0" align="center">
+                                                            <StatusSelector
+                                                                onSelect={(newStatus) => handleStatusChange(area, month, newStatus)}
+                                                            />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ))}
+
+                                {/* Extra Lanes for UI Consistency */}
+                                {extraLanes.map((_, laneIdx) => (
+                                    <div key={`extra-lane-${laneIdx}`} className="flex-1 min-w-[200px] border-r bg-muted/5 opacity-50">
+                                        {MONTHS.map((month) => (
                                             <div 
                                                 key={month} 
-                                                className={cn(
-                                                    "border-b relative flex items-center justify-center p-2 group transition-colors",
-                                                    isCurrentMonth ? "bg-primary/5" : "hover:bg-muted/10"
-                                                )}
+                                                className="border-b"
                                                 style={{ height: `${MONTH_HEIGHT_PX}px` }}
-                                            >
-                                                <Popover 
-                                                    open={openPopoverId === popoverId} 
-                                                    onOpenChange={(isOpen) => setOpenPopoverId(isOpen ? popoverId : null)}
-                                                >
-                                                    <PopoverTrigger asChild>
-                                                        <div className="w-full h-full cursor-pointer flex items-center justify-center">
-                                                            <Badge
-                                                                className={cn(
-                                                                    "py-2 px-4 w-full justify-center text-[10px] uppercase font-bold shadow-sm transition-transform group-hover:scale-[1.02] border",
-                                                                    getStatusBadgeClass(status)
-                                                                )}
-                                                            >
-                                                                {status}
-                                                            </Badge>
-                                                        </div>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-48 p-0" align="center">
-                                                        <StatusSelector
-                                                            onSelect={(newStatus) => handleStatusChange(area, month, newStatus)}
-                                                        />
-                                                    </PopoverContent>
-                                                </Popover>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ))}
-
-                            {/* Extra Lanes for UI Consistency */}
-                            {extraLanes.map((_, laneIdx) => (
-                                <div key={`extra-lane-${laneIdx}`} className="flex-1 min-w-[180px] border-r bg-muted/5 opacity-50">
-                                    {MONTHS.map((month) => (
-                                        <div 
-                                            key={month} 
-                                            className="border-b"
-                                            style={{ height: `${MONTH_HEIGHT_PX}px` }}
-                                        />
-                                    ))}
-                                </div>
-                            ))}
+                                            />
+                                        ))}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>

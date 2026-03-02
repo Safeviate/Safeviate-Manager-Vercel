@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -80,7 +79,7 @@ const WBCalculator = () => {
     () => (firestore ? collection(firestore, `tenants/${tenantId}/massAndBalance`) : null),
     [firestore, tenantId]
   );
-  const { data: savedTemplates, isLoading: isLoadingTemplates, deleteDocument } = useCollection<AircraftModelProfile>(templatesQuery);
+  const { data: savedTemplates, isLoading: isLoadingTemplates } = useCollection<AircraftModelProfile>(templatesQuery);
 
   // 1. STATE: Graph Config
   const [graphConfig, setGraphConfig] = useState({
@@ -493,7 +492,7 @@ const WBCalculator = () => {
 
            <Dialog open={isSaveAircraftDialogOpen} onOpenChange={setIsSaveAircraftDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground transition shadow-lg"><Plane size={16} /> Save to Aircraft</Button>
+                <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground transition"><Plane size={16} /> Save to Aircraft</Button>
               </DialogTrigger>
               <DialogContent>
                   <DialogHeader>

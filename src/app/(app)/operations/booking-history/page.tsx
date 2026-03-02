@@ -1,11 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
 import { format, parse } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -24,7 +23,6 @@ import { useToast } from '@/hooks/use-toast';
 
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '../../users/personnel/page';
-import { useRouter } from 'next/navigation';
 import type { Booking } from '@/types/booking';
 import { Button } from '@/components/ui/button';
 import { Eye, Scale, FilePlus, Trash2 } from 'lucide-react';
@@ -52,13 +50,10 @@ const getBookingTypeAbbreviation = (type: Booking['type']): string => {
 
 const getStatusBadgeVariant = (status: Booking['status']): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
-        case 'Completed':
-            return 'default';
+        case 'Completed': return 'default';
         case 'Cancelled':
-        case 'Cancelled with Reason':
-            return 'destructive';
-        default:
-            return 'secondary';
+        case 'Cancelled with Reason': return 'destructive';
+        default: return 'secondary';
     }
 }
 
@@ -94,7 +89,7 @@ function DeleteBookingButton({ bookingId, bookingNumber }: { bookingId: string, 
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
@@ -119,10 +114,7 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                   <TableHead>Creator</TableHead>
                   <TableHead>Start Time</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className='text-center'>View</TableHead>
-                  <TableHead className='text-center'>M&B</TableHead>
-                  <TableHead className='text-center'>Debrief</TableHead>
-                  <TableHead className='text-center'>Delete</TableHead>
+                  <TableHead className='text-right'>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -135,34 +127,30 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                         <TableCell>
                             <Badge variant={getStatusBadgeVariant(b.status)}>{b.status}</Badge>
                         </TableCell>
-                        <TableCell className='text-center'>
-                            <Button asChild variant="outline" size="icon" className="h-8 w-8">
-                                <Link href={`/operations/booking-history/${b.id}`}>
-                                    <Eye className="h-4 w-4" />
-                                    <span className="sr-only">View Details</span>
-                                </Link>
-                            </Button>
-                        </TableCell>
-                        <TableCell className='text-center'>
-                            <Button asChild variant={b.massAndBalance ? 'default' : 'outline'} size="icon" className="h-8 w-8" disabled={b.status === 'Cancelled' || b.status === 'Cancelled with Reason'}>
-                                <Link href={`/assets/mass-balance?bookingId=${b.id}&aircraftId=${b.aircraftId}`}>
-                                    <Scale className="h-4 w-4" />
-                                     <span className="sr-only">Mass & Balance</span>
-                                </Link>
-                            </Button>
-                        </TableCell>
-                        <TableCell className='text-center'>
-                            {b.type === 'Training Flight' && b.status === 'Completed' && (
-                                <Button asChild variant="secondary" size="icon" className="h-8 w-8">
-                                    <Link href={`/training/student-debriefs/new?bookingId=${b.id}`}>
-                                        <FilePlus className="h-4 w-4" />
-                                        <span className="sr-only">Create Debrief</span>
+                        <TableCell className='text-right'>
+                            <div className="flex justify-end gap-2">
+                                <Button asChild variant="outline" size="icon" className="h-8 w-8">
+                                    <Link href={`/operations/booking-history/${b.id}`}>
+                                        <Eye className="h-4 w-4" />
+                                        <span className="sr-only">View</span>
                                     </Link>
                                 </Button>
-                            )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                            <DeleteBookingButton bookingId={b.id} bookingNumber={b.bookingNumber} />
+                                <Button asChild variant={b.massAndBalance ? 'default' : 'outline'} size="icon" className="h-8 w-8" disabled={b.status === 'Cancelled' || b.status === 'Cancelled with Reason'}>
+                                    <Link href={`/assets/mass-balance?bookingId=${b.id}&aircraftId=${b.aircraftId}`}>
+                                        <Scale className="h-4 w-4" />
+                                        <span className="sr-only">M&B</span>
+                                    </Link>
+                                </Button>
+                                {b.type === 'Training Flight' && b.status === 'Completed' && (
+                                    <Button asChild variant="secondary" size="icon" className="h-8 w-8">
+                                        <Link href={`/training/student-debriefs/new?bookingId=${b.id}`}>
+                                            <FilePlus className="h-4 w-4" />
+                                            <span className="sr-only">Debrief</span>
+                                        </Link>
+                                    </Button>
+                                )}
+                                <DeleteBookingButton bookingId={b.id} bookingNumber={b.bookingNumber} />
+                            </div>
                         </TableCell>
                     </TableRow>
                 ))}
@@ -185,15 +173,12 @@ export default function BookingsHistoryPage() {
   const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'students')) : null), [firestore, tenantId]);
   const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'private-pilots')) : null), [firestore, tenantId]);
 
-  const { data: bookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
-  const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
-  const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
-  const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
-  const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsQuery);
-  const { data: privatePilots, isLoading: isLoadingPrivatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
-
-  const isLoading = isLoadingBookings || isLoadingAircraft || isLoadingPersonnel || isLoadingInstructors || isLoadingStudents || isLoadingPrivatePilots;
-  const error = bookingsError || aircraftError || (personnel === null && !isLoadingPersonnel);
+  const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
+  const { data: aircraft } = useCollection<Aircraft>(aircraftQuery);
+  const { data: personnel } = useCollection<Personnel>(personnelQuery);
+  const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
+  const { data: students } = useCollection<PilotProfile>(studentsQuery);
+  const { data: privatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
 
   const enrichedBookings = useMemo((): EnrichedBooking[] => {
     if (!bookings || !aircraft || !personnel || !instructors || !students || !privatePilots) return [];
@@ -220,14 +205,6 @@ export default function BookingsHistoryPage() {
   const privateBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Private Flight'), [enrichedBookings]);
   const maintenanceBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Maintenance Flight'), [enrichedBookings]);
 
-  if (isLoading) {
-    return <div className="p-8 text-center text-muted-foreground">Loading booking history...</div>
-  }
-
-  if (error) {
-    return <div className="p-8 text-center text-destructive">Error loading history.</div>
-  }
-
   return (
     <div className="flex flex-col gap-6 h-full">
        <div className="flex justify-between items-center">
@@ -240,7 +217,7 @@ export default function BookingsHistoryPage() {
         <Tabs defaultValue="all">
             <div className='px-6 pt-4'>
                 <TabsList>
-                    <TabsTrigger value="all">All Bookings</TabsTrigger>
+                    <TabsTrigger value="all">All</TabsTrigger>
                     <TabsTrigger value="training">Training</TabsTrigger>
                     <TabsTrigger value="private">Private</TabsTrigger>
                     <TabsTrigger value="maintenance">Maintenance</TabsTrigger>

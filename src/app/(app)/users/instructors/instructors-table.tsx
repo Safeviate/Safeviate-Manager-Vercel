@@ -31,7 +31,6 @@ export function InstructorsTable({ data, tenantId }: InstructorsTableProps) {
         <TableRow>
           <TableHead>Name</TableHead>
           <TableHead>Email</TableHead>
-          <TableHead>Contact Number</TableHead>
           <TableHead>License No.</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
@@ -41,7 +40,6 @@ export function InstructorsTable({ data, tenantId }: InstructorsTableProps) {
           <TableRow key={pilot.id}>
             <TableCell className="font-medium">{pilot.firstName} {pilot.lastName}</TableCell>
             <TableCell>{pilot.email}</TableCell>
-            <TableCell>{pilot.contactNumber || 'N/A'}</TableCell>
             <TableCell>{pilot.pilotLicense?.licenseNumber || 'N/A'}</TableCell>
             <TableCell className="text-right">
               <PersonnelActions tenantId={tenantId} user={pilot} />

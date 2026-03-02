@@ -1,7 +1,5 @@
-
 'use client';
 
-import { useMemo } from 'react';
 import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { RoleForm } from './role-form';
@@ -28,22 +26,15 @@ export type Role = {
 export default function RolesPage() {
   const firestore = useFirestore();
   const { hasPermission } = usePermissions();
-  const tenantId = 'safeviate'; // Hardcoded for now
+  const tenantId = 'safeviate';
   const canManage = hasPermission('admin-roles-manage');
 
   const rolesQuery = useMemoFirebase(
-    () =>
-      firestore
-        ? query(collection(firestore, 'tenants', tenantId, 'roles'))
-        : null,
-    [firestore]
+    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'roles')) : null),
+    [firestore, tenantId]
   );
 
-  const {
-    data: roles,
-    isLoading,
-    error,
-  } = useCollection<Role>(rolesQuery);
+  const { data: roles, isLoading } = useCollection<Role>(rolesQuery);
 
   return (
     <div className="flex flex-col gap-6 h-full">
@@ -53,56 +44,40 @@ export default function RolesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Roles</CardTitle>
+          <CardTitle>System Roles</CardTitle>
           <CardDescription>
-            A list of all roles within your organization.
+            Define and manage administrative and operational roles.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
+                <TableHead>Role Name</TableHead>
                 <TableHead>Permissions</TableHead>
-                <TableHead>Required Docs</TableHead>
                 <TableHead className='text-right'>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && (
+              {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center">
-                    Loading roles...
+                  <TableCell colSpan={3} className="text-center p-8">Loading roles...</TableCell>
+                </TableRow>
+              ) : (roles || []).map((role) => (
+                <TableRow key={role.id}>
+                  <TableCell className="font-medium">{role.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{role.permissions?.length || 0} assigned</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                     <RoleActions tenantId={tenantId} role={role} />
                   </TableCell>
                 </TableRow>
-              )}
-              {!isLoading && error && (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-destructive">
-                    Error: {error.message}
-                  </TableCell>
-                </TableRow>
-              )}
-              {!isLoading && !error && roles && roles.length > 0 && (
-                roles.map((role) => (
-                  <TableRow key={role.id}>
-                    <TableCell className="font-medium">{role.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{role.permissions?.length || 0} assigned</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{role.requiredDocuments?.length || 0} required</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                       <RoleActions tenantId={tenantId} role={role} />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-              {!isLoading && !error && (!roles || roles.length === 0) && (
+              ))}
+              {!isLoading && (!roles || roles.length === 0) && (
                  <TableRow>
-                    <TableCell colSpan={4} className="text-center h-24">
-                        No roles found.
+                    <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
+                        No roles defined yet.
                     </TableCell>
                  </TableRow>
               )}
