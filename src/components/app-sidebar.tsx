@@ -51,11 +51,8 @@ const SidebarItems = () => {
   
     const renderMenuItem = (item: MenuItemType) => {
       const canAccessParent = !item.permissionId || hasPermission(item.permissionId);
-      
-      // Filter sub-items based on permissions first
       const visibleSubItems = item.subItems ? item.subItems.filter(sub => !sub.permissionId || hasPermission(sub.permissionId)) : [];
       
-      // If parent has no permission and no visible children, don't render anything
       if (!canAccessParent && visibleSubItems.length === 0) return null;
 
       const isParentActive = pathname.startsWith(item.href);

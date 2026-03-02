@@ -304,7 +304,6 @@ export default function AuditSchedulePage() {
                 <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 220px)' }}>
                     <div className="flex min-w-full w-fit relative">
                         
-                        {/* 1. STICKY MONTH COLUMN */}
                         <div className="w-24 flex-shrink-0 bg-muted/50 border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                             <div className="sticky top-0 z-50 h-12 bg-[#003d1c] border-b border-white/10 flex items-center justify-center font-bold text-sm text-white uppercase tracking-wider">
                                 MONTH
@@ -331,11 +330,9 @@ export default function AuditSchedulePage() {
                             })}
                         </div>
 
-                        {/* 2. AUDIT AREA LANES (Unified vertical architecture) */}
                         <div className="flex flex-1 relative">
                             {auditAreas.map((area) => (
                                 <div key={area} className="flex-1 min-w-[200px] border-r relative flex flex-col">
-                                    {/* Area header - Sticky top */}
                                     <div className="sticky top-0 z-30 h-12 bg-[#003d1c] text-white border-b border-white/10 flex items-center justify-between gap-2 px-4 text-center shrink-0">
                                         <span className="truncate text-[10px] font-bold uppercase tracking-wider">{area}</span>
                                         <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
@@ -384,7 +381,6 @@ export default function AuditSchedulePage() {
                                 </div>
                             ))}
 
-                            {/* EXTRA EMPTY LANES */}
                             {extraLanes.map((_, laneIdx) => (
                                 <div key={`extra-${laneIdx}`} className="flex-1 min-w-[200px] border-r bg-muted/5 opacity-50 flex flex-col">
                                     <div className="sticky top-0 z-30 h-12 bg-[#003d1c] text-white border-b border-white/10 flex items-center justify-center font-bold text-[10px] uppercase px-2 text-center shrink-0">

@@ -36,14 +36,14 @@ export type SubMenuItem = {
   href: string;
   label: string;
   description?: string;
-  permissionId?: string; // Add permissionId to sub-items
+  permissionId?: string;
 };
 
 export type MenuItem = {
   href: string;
   label: string;
   icon: LucideIcon;
-  permissionId?: string; // Add permissionId to top-level items
+  permissionId?: string;
   subItems?: SubMenuItem[];
 };
 

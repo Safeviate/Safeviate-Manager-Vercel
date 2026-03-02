@@ -18,7 +18,6 @@ export const usePermissions = () => {
   const { userProfile, tenantId, isLoading: isProfileLoading } = useUserProfile();
   const firestore = useFirestore();
 
-  // The role ID is present on both Personnel and PilotProfile types.
   const roleId = userProfile?.role;
 
   const roleRef = useMemoFirebase(
@@ -33,7 +32,6 @@ export const usePermissions = () => {
       return new Set<string>();
     }
 
-    // For anonymous dev user, grant all permissions
     if (userProfile.id === 'DEVELOPER_MODE') {
       const allPermissions = permissionsConfig.flatMap(resource =>
         resource.actions.map(action => `${resource.id}-${action}`)
@@ -43,17 +41,14 @@ export const usePermissions = () => {
 
     let rawPermissions: string[] = [];
 
-    // Add permissions from the user's assigned role.
     if (role && role.permissions) {
       rawPermissions.push(...role.permissions);
     }
 
-    // For Personnel users, add their individual custom permission overrides.
     if (userProfile.userType === 'Personnel' && 'permissions' in userProfile && userProfile.permissions) {
       rawPermissions.push(...userProfile.permissions);
     }
     
-    // Permission Hierarchy Expansion
     const expanded = new Set<string>();
     rawPermissions.forEach(p => {
       expanded.add(p);
@@ -62,13 +57,10 @@ export const usePermissions = () => {
       const action = parts.pop();
       const resourceId = parts.join('-');
       
-      // 1. Action Escalation: 'manage' or 'edit' implies 'view'
       if (['create', 'edit', 'delete', 'manage'].includes(action || '')) {
         expanded.add(`${resourceId}-view`);
       }
 
-      // 2. Hierarchy Escalation: 'operations-bookings-view' implies 'operations-view'
-      // We crawl up the segments to ensure parent menu items are unlocked for sub-items
       parts.forEach((_, idx) => {
         const segmentPath = parts.slice(0, idx + 1).join('-');
         expanded.add(`${segmentPath}-view`);
@@ -79,7 +71,7 @@ export const usePermissions = () => {
   }, [userProfile, role]);
   
   const hasPermission = (permissionId: string) => {
-    if (!permissionId) return true; // Items without permission constraints are public
+    if (!permissionId) return true;
     if (userProfile?.id === 'DEVELOPER_MODE') return true;
     return permissions.has(permissionId);
   };
