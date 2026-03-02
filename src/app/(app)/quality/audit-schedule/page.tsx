@@ -72,16 +72,15 @@ const MONTHS = [
 ];
 
 const MONTH_HEIGHT_PX = 100;
-const LANE_MIN_WIDTH = 200;
 
 const getStatusBadgeClass = (status: AuditScheduleStatus): string => {
     switch (status) {
       case 'Completed':
-        return 'bg-green-500 text-white hover:bg-green-600';
+        return 'bg-[#e0f2fe] text-[#0369a1] hover:bg-[#bae6fd] border-transparent';
       case 'Scheduled':
-        return 'bg-blue-500 text-white hover:bg-blue-600';
+        return 'bg-[#e0f2fe] text-[#0369a1] hover:bg-[#bae6fd] border-transparent';
       case 'Pending':
-        return 'bg-yellow-500 text-black hover:bg-yellow-600';
+        return 'bg-[#fef9c3] text-[#a16207] hover:bg-[#fef08a] border-transparent';
       default:
         return 'bg-muted text-muted-foreground border-transparent';
     }
@@ -102,7 +101,7 @@ function StatusSelector({ onSelect }: StatusSelectorProps) {
           className="justify-start h-9"
           onClick={() => onSelect(status)}
         >
-           <div className={cn('w-2 h-2 rounded-full mr-2', getStatusBadgeClass(status))}></div>
+           <div className={cn('w-2 h-2 rounded-full mr-2', status === 'Completed' ? 'bg-green-500' : status === 'Scheduled' ? 'bg-blue-500' : status === 'Pending' ? 'bg-yellow-500' : 'bg-gray-300')}></div>
           {status}
         </Button>
       ))}
@@ -296,12 +295,8 @@ export default function AuditSchedulePage() {
     );
   }
 
-  if (error) {
-    return <p className="text-destructive">Error loading schedule: {error.message}</p>;
-  }
-
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 h-full">
         <div className="flex justify-between items-center">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Annual Audit Schedule</h1>
@@ -317,52 +312,47 @@ export default function AuditSchedulePage() {
             </div>
         </div>
 
-        <Card className="overflow-hidden">
-            <CardContent className="p-0">
-                <div className="w-full overflow-x-auto bg-card">
-                    <div className="flex flex-col min-w-full w-fit">
-                        {/* Swimlane Headers */}
-                        <div className="sticky top-0 z-30 flex bg-primary text-primary-foreground border-b w-full">
-                            <div className="w-24 bg-primary border-r border-primary-foreground/20 flex-shrink-0 sticky left-0 z-40 flex items-center justify-center font-bold text-xs">
+        <Card className="overflow-hidden flex-grow flex flex-col">
+            <CardContent className="p-0 flex-grow flex flex-col overflow-hidden">
+                <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 220px)' }}>
+                    <div className="flex min-w-full w-fit relative">
+                        
+                        {/* 1. STICKY MONTH COLUMN */}
+                        <div className="w-24 flex-shrink-0 bg-muted/50 border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                            <div className="sticky top-0 z-50 h-12 bg-[#003d1c] border-b border-white/10 flex items-center justify-center font-bold text-xs text-white uppercase tracking-wider">
                                 MONTH
                             </div>
-                            
-                            <div className="flex flex-1">
-                                {auditAreas.map((area) => (
-                                    <div key={area} className="flex-1 p-3 font-semibold text-center border-r border-primary-foreground/20 min-w-[200px] flex items-center justify-between gap-2 px-4 bg-primary">
-                                        <span className="truncate text-xs uppercase tracking-wide">{area}</span>
-                                        <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
-                                    </div>
-                                ))}
-                                {extraLanes.map((_, index) => (
-                                    <div key={`extra-${index}`} className="flex-1 p-3 min-w-[200px] border-r border-primary-foreground/20 bg-primary opacity-50" />
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Swimlane Grid Body */}
-                        <div className="flex w-full relative">
-                            {/* Vertical Month Sidebar */}
-                            <div className="w-24 flex-shrink-0 bg-muted/50 border-r sticky left-0 z-20 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
-                                {MONTHS.map((month, idx) => (
+                            {MONTHS.map((month, idx) => {
+                                const isCurrentMonth = idx === currentMonthIdx;
+                                return (
                                     <div 
                                         key={month} 
                                         className={cn(
-                                            "flex flex-col items-center justify-center border-b text-xs font-bold uppercase tracking-wider bg-muted/30",
-                                            idx === currentMonthIdx && "bg-primary/10 text-primary"
+                                            "flex flex-col items-center justify-center border-b text-sm md:text-base font-mono font-semibold uppercase tracking-wider bg-muted/30",
+                                            isCurrentMonth && "bg-[#fefce8] text-[#854d0e]"
                                         )}
                                         style={{ height: `${MONTH_HEIGHT_PX}px` }}
                                     >
                                         <span>{month}</span>
-                                        {idx === currentMonthIdx && <Badge variant="outline" className="mt-1 text-[9px] py-0 border-primary text-primary">Current</Badge>}
+                                        {isCurrentMonth && (
+                                            <Badge variant="outline" className="mt-1 text-[9px] py-0 border-[#854d0e] text-[#854d0e] font-bold">
+                                                ACTIVE
+                                            </Badge>
+                                        )}
                                     </div>
-                                ))}
-                            </div>
+                                )
+                            })}
+                        </div>
 
-                            {/* Audit Area Lanes */}
-                            <div className="flex flex-1">
-                                {auditAreas.map((area) => (
-                                    <div key={area} className="flex-1 min-w-[200px] border-r relative flex flex-col">
+                        {/* 2. AUDIT AREA LANES */}
+                        <div className="flex flex-1 relative">
+                            {auditAreas.map((area) => (
+                                <div key={area} className="flex-1 min-w-[200px] border-r relative flex flex-col">
+                                    <div className="sticky top-0 z-30 h-12 bg-[#003d1c] text-white border-b border-white/10 flex items-center justify-between gap-2 px-4 text-center shrink-0">
+                                        <span className="truncate text-[10px] font-bold uppercase tracking-wider">{area}</span>
+                                        <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
+                                    </div>
+                                    <div className="relative">
                                         {MONTHS.map((month, idx) => {
                                             const status = getScheduleItem(area, month);
                                             const popoverId = `${area}-${month}`;
@@ -373,7 +363,7 @@ export default function AuditSchedulePage() {
                                                     key={month} 
                                                     className={cn(
                                                         "border-b relative flex items-center justify-center p-2 group transition-colors",
-                                                        isCurrentMonth ? "bg-primary/5" : "hover:bg-muted/10"
+                                                        isCurrentMonth ? "bg-[#fefce8]/20" : "hover:bg-muted/10"
                                                     )}
                                                     style={{ height: `${MONTH_HEIGHT_PX}px` }}
                                                 >
@@ -403,21 +393,24 @@ export default function AuditSchedulePage() {
                                             );
                                         })}
                                     </div>
-                                ))}
+                                </div>
+                            ))}
 
-                                {/* Extra Lanes for UI Consistency */}
-                                {extraLanes.map((_, laneIdx) => (
-                                    <div key={`extra-lane-${laneIdx}`} className="flex-1 min-w-[200px] border-r bg-muted/5 opacity-50">
-                                        {MONTHS.map((month) => (
-                                            <div 
-                                                key={month} 
-                                                className="border-b"
-                                                style={{ height: `${MONTH_HEIGHT_PX}px` }}
-                                            />
-                                        ))}
+                            {/* EXTRA EMPTY LANES */}
+                            {extraLanes.map((_, laneIdx) => (
+                                <div key={`extra-${laneIdx}`} className="flex-1 min-w-[200px] border-r bg-muted/5 opacity-50 flex flex-col">
+                                    <div className="sticky top-0 z-30 h-12 bg-[#003d1c] text-white border-b border-white/10 flex items-center justify-center font-bold text-[10px] uppercase px-2 text-center shrink-0">
+                                        (Empty)
                                     </div>
-                                ))}
-                            </div>
+                                    {MONTHS.map((month) => (
+                                        <div 
+                                            key={month} 
+                                            className="border-b"
+                                            style={{ height: `${MONTH_HEIGHT_PX}px` }}
+                                        />
+                                    ))}
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>

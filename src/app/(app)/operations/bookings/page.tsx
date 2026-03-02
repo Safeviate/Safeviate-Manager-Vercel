@@ -254,14 +254,14 @@ export default function SchedulePage() {
                     <div className="flex min-w-full w-fit relative">
                         
                         {/* 1. STICKY TIME COLUMN */}
-                        <div className="w-20 flex-shrink-0 bg-muted/50 border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                        <div className="w-24 flex-shrink-0 bg-muted/50 border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                             <div className="sticky top-0 z-50 h-12 bg-[#003d1c] border-b border-white/10 flex items-center justify-center font-bold text-xs text-white uppercase tracking-wider">
                                 TIME
                             </div>
                             {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
                                 <div 
                                     key={hour} 
-                                    className="flex items-center justify-center border-b text-[10px] font-mono text-muted-foreground bg-muted/30"
+                                    className="flex items-center justify-center border-b text-sm md:text-base font-mono font-semibold text-muted-foreground bg-muted/30"
                                     style={{ height: `${HOUR_HEIGHT_PX}px` }}
                                 >
                                     {format(new Date(0, 0, 0, hour), 'HH:mm')}
@@ -288,7 +288,7 @@ export default function SchedulePage() {
                                             {Array.from({ length: TOTAL_HOURS }).map((_, hour) => {
                                                 const slotTime = setMinutes(setHours(selectedDate, hour), 0);
                                                 const endOfSlot = endOfHour(slotTime);
-                                                const isPast = isBefore(selectedDate, startOfToday()) || (isSameDay(selectedDate, new Date()) && isBefore(endOfSlot, new Date()));
+                                                const isPast = isSameDay(selectedDate, startOfToday()) ? isBefore(endOfSlot, new Date()) : isBefore(selectedDate, startOfToday());
                                                 
                                                 return (
                                                     <div 
@@ -319,7 +319,7 @@ export default function SchedulePage() {
                             {extraLanes.map((_, laneIdx) => (
                                 <div key={`extra-${laneIdx}`} className="flex-1 min-w-[180px] border-r bg-muted/5 opacity-50 flex flex-col">
                                     <div className="sticky top-0 z-30 h-12 bg-[#003d1c] text-white border-b border-white/10 flex items-center justify-center font-bold text-xs uppercase px-2 text-center shrink-0">
-                                        (Empty Lane)
+                                        (Empty)
                                     </div>
                                     {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
                                         <div 
