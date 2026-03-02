@@ -52,27 +52,16 @@ const SidebarItems = () => {
   
     const renderMenuItem = (item: MenuItemType) => {
       const canAccess = !item.permissionId || hasPermission(item.permissionId);
+      if (!canAccess) return null;
+
       const isParentActive = pathname.startsWith(item.href);
       const Icon = item.icon;
   
       if (item.subItems) {
+        // Filter sub-items based on permissions
         const visibleSubItems = item.subItems.filter(sub => !sub.permissionId || hasPermission(sub.permissionId));
-        const allSubItemsDisabled = item.subItems.every(sub => sub.permissionId && !hasPermission(sub.permissionId));
-
-        if (item.subItems.length > 0 && visibleSubItems.length === 0) {
-             return (
-                <SidebarMenuButton
-                    disabled
-                    tooltip={item.label}
-                    className="justify-between"
-                >
-                    <div className="flex items-center gap-2">
-                        <Icon className="h-5 w-5" />
-                        <span>{item.label}</span>
-                    </div>
-                </SidebarMenuButton>
-            );
-        }
+        
+        if (visibleSubItems.length === 0) return null;
 
         return (
           <SidebarCollapsible defaultOpen={isParentActive}>
@@ -81,7 +70,6 @@ const SidebarItems = () => {
                 isActive={isParentActive && !visibleSubItems.some(sub => pathname.startsWith(sub.href))}
                 tooltip={item.label}
                 className="justify-between"
-                disabled={allSubItemsDisabled}
               >
                 <div className="flex items-center gap-2">
                   <Icon className="h-5 w-5" />
@@ -92,22 +80,18 @@ const SidebarItems = () => {
             </SidebarCollapsibleTrigger>
             <SidebarCollapsibleContent>
               <SidebarMenuSub>
-                {item.subItems.map((subItem) => {
-                    const canAccessSub = !subItem.permissionId || hasPermission(subItem.permissionId);
-                    return (
-                        <SidebarMenuSubItem key={subItem.href}>
-                            <SidebarMenuSubButton asChild isActive={pathname === subItem.href} disabled={!canAccessSub}>
-                                <Link 
-                                    href={canAccessSub ? subItem.href : '#'} 
-                                    onClick={() => canAccessSub && setOpenMobile(false)}
-                                    className={!canAccessSub ? 'pointer-events-none opacity-50' : ''}
-                                >
-                                    <span>{subItem.label}</span>
-                                </Link>
-                            </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                    )
-                })}
+                {visibleSubItems.map((subItem) => (
+                    <SidebarMenuSubItem key={subItem.href}>
+                        <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                            <Link 
+                                href={subItem.href} 
+                                onClick={() => setOpenMobile(false)}
+                            >
+                                <span>{subItem.label}</span>
+                            </Link>
+                        </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                ))}
               </SidebarMenuSub>
             </SidebarCollapsibleContent>
           </SidebarCollapsible>
@@ -119,9 +103,8 @@ const SidebarItems = () => {
             asChild
             isActive={pathname === item.href}
             tooltip={item.label}
-            disabled={!canAccess}
         >
-            <Link href={canAccess ? item.href : '#'} className={!canAccess ? 'pointer-events-none opacity-50' : ''} onClick={() => canAccess && setOpenMobile(false)}>
+            <Link href={item.href} onClick={() => setOpenMobile(false)}>
                 <Icon className="h-5 w-5" />
                 <span>{item.label}</span>
             </Link>
@@ -136,12 +119,16 @@ const SidebarItems = () => {
 
     return (
         <SidebarMenu>
-            {visibleMenuConfig.map((item, index) => (
-            <React.Fragment key={item.href}>
-                <SidebarMenuItem>{renderMenuItem(item)}</SidebarMenuItem>
-                {index > 0 && index < visibleMenuConfig.length - 1 && item.subItems && <SidebarSeparator />}
-            </React.Fragment>
-            ))}
+            {visibleMenuConfig.map((item, index) => {
+                const content = renderMenuItem(item);
+                if (!content) return null;
+                return (
+                    <React.Fragment key={item.href}>
+                        <SidebarMenuItem>{content}</SidebarMenuItem>
+                        {index > 0 && index < visibleMenuConfig.length - 1 && item.subItems && <SidebarSeparator />}
+                    </React.Fragment>
+                );
+            })}
         </SidebarMenu>
     )
 }
@@ -173,23 +160,24 @@ const SidebarFooterContent = () => {
     return (
         <SidebarGroup>
           <SidebarMenu>
-              <>
-              <SidebarSeparator className="my-1 mx-2" />
-              <SidebarMenuItem>
-                  <SidebarMenuButton
-                      asChild
-                      isActive={pathname.startsWith(settingsMenuItem.href)}
-                      tooltip={settingsMenuItem.label}
-                      disabled={!canAccessSettings}
-                  >
-                      <Link href={canAccessSettings ? settingsMenuItem.href : '#'} className={!canAccessSettings ? 'pointer-events-none opacity-50' : ''} onClick={() => canAccessSettings && setOpenMobile(false)}>
-                          <settingsMenuItem.icon className="h-5 w-5" />
-                          <span>{settingsMenuItem.label}</span>
-                      </Link>
-                  </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarSeparator className="my-1 mx-2" />
-              </>
+              {canAccessSettings && (
+                <>
+                <SidebarSeparator className="my-1 mx-2" />
+                <SidebarMenuItem>
+                    <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith(settingsMenuItem.href)}
+                        tooltip={settingsMenuItem.label}
+                    >
+                        <Link href={settingsMenuItem.href} onClick={() => setOpenMobile(false)}>
+                            <settingsMenuItem.icon className="h-5 w-5" />
+                            <span>{settingsMenuItem.label}</span>
+                        </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarSeparator className="my-1 mx-2" />
+                </>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton

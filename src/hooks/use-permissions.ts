@@ -59,19 +59,17 @@ export const usePermissions = () => {
     rawPermissions.forEach(p => {
       expanded.add(p);
       
-      // 1. Action Escalation: 'manage' implies 'view', etc.
       const parts = p.split('-');
       const action = parts.pop();
       const resourceId = parts.join('-');
       
+      // 1. Action Escalation: 'manage' or 'edit' implies 'view'
       if (['create', 'edit', 'delete', 'manage'].includes(action || '')) {
         expanded.add(`${resourceId}-view`);
       }
 
       // 2. Hierarchy Escalation: 'operations-bookings-view' implies 'operations-view'
-      // We crawl up the segments to ensure parent menu items are visible
-      // Special case: if parts has 3 segments (e.g. admin-database-manage)
-      // we need to add admin-database-view, admin-view
+      // We crawl up the segments to ensure parent menu items are unlocked for sub-items
       let currentPath = '';
       parts.forEach((segment, idx) => {
         currentPath = idx === 0 ? segment : `${currentPath}-${segment}`;
