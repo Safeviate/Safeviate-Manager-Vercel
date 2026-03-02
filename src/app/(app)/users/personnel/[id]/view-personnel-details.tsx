@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -73,7 +74,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     }
 
     // Find the tightest warning period that applies
-    const sortedPeriods = expirySettings.warningPeriods.sort((a, b) => a.period - b.period);
+    const sortedPeriods = (expirySettings.warningPeriods || []).sort((a, b) => a.period - b.period);
     for (const warning of sortedPeriods) {
       if (daysUntilExpiry <= warning.period) {
         return warning.color;

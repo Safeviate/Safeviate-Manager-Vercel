@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -328,7 +329,7 @@ export default function AuditSchedulePage() {
                                     <div 
                                         key={month} 
                                         className={cn(
-                                            "flex flex-col items-center justify-center border-b text-base md:text-lg font-mono font-bold uppercase tracking-wider bg-muted/30",
+                                            "flex flex-col items-center justify-center border-b text-sm md:text-base font-mono font-bold uppercase tracking-wider bg-muted/30",
                                             isCurrentMonth && "bg-[#fefce8] text-[#854d0e]"
                                         )}
                                         style={{ height: `${MONTH_HEIGHT_PX}px` }}
@@ -400,7 +401,7 @@ export default function AuditSchedulePage() {
                             {extraLanes.map((_, laneIdx) => (
                                 <div key={`extra-${laneIdx}`} className="flex-1 min-w-[200px] border-r bg-muted/5 opacity-50 flex flex-col">
                                     <div className="sticky top-0 z-30 h-12 bg-[#003d1c] text-white border-b border-white/10 flex items-center justify-center font-bold text-[10px] uppercase px-2 text-center shrink-0">
-                                        (Empty)
+                                        &nbsp;
                                     </div>
                                     {MONTHS.map((month) => (
                                         <div 
@@ -433,7 +434,7 @@ export default function AuditSchedulePage() {
                     <Button onClick={handleAddArea} disabled={!newAreaName.trim()}>Add Area</Button>
                 </DialogFooter>
             </DialogContent>
-        </div>
+        </Dialog>
     </div>
   );
 }
