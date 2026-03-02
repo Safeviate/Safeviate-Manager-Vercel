@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -179,7 +178,7 @@ function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the &quot;{area}&quot; audit area and all its scheduled items.
+                            This will permanently delete the "{area}" audit area and all its scheduled items.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -213,7 +212,7 @@ export default function AuditSchedulePage() {
     [firestore, tenantId, currentYear]
   );
   
-  const { data: schedule, isLoading, error } = useCollection<AuditScheduleItem>(scheduleQuery);
+  const { data: schedule, isLoading } = useCollection<AuditScheduleItem>(scheduleQuery);
 
   const handleStatusChange = (area: string, month: string, status: AuditScheduleStatus) => {
     if (!firestore) return;
@@ -280,20 +279,7 @@ export default function AuditSchedulePage() {
   const extraLanes = ['', '', ''];
 
   if (isLoading) {
-    return (
-        <div className="space-y-6">
-            <Skeleton className="h-10 w-48" />
-            <Card>
-                <CardHeader>
-                    <Skeleton className="h-8 w-1/2" />
-                    <Skeleton className="h-4 w-3/4" />
-                </CardHeader>
-                <CardContent>
-                    <Skeleton className="h-[600px] w-full" />
-                </CardContent>
-            </Card>
-        </div>
-    );
+    return <Skeleton className="h-[600px] w-full" />;
   }
 
   return (
@@ -302,7 +288,7 @@ export default function AuditSchedulePage() {
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Annual Audit Schedule</h1>
                 <p className="text-muted-foreground">
-                    Planning and tracking oversight activities for the {currentYear} calendar year.
+                    Planning and tracking oversight activities for {currentYear}.
                 </p>
             </div>
             <div className="flex items-center gap-2">

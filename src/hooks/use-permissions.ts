@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -42,40 +41,46 @@ export const usePermissions = () => {
       return new Set<string>(allPermissions);
     }
 
-    let combinedPermissions: string[] = [];
+    let rawPermissions: string[] = [];
 
-    // Add permissions from the user's assigned role. This works for ALL user types.
+    // Add permissions from the user's assigned role.
     if (role && role.permissions) {
-      combinedPermissions.push(...role.permissions);
+      rawPermissions.push(...role.permissions);
     }
 
     // For Personnel users, add their individual custom permission overrides.
     if (userProfile.userType === 'Personnel' && 'permissions' in userProfile && userProfile.permissions) {
-      combinedPermissions.push(...userProfile.permissions);
+      rawPermissions.push(...userProfile.permissions);
     }
     
-    // Expand permissions (e.g., if you have 'manage', you should have 'view')
-    const expandedPermissions = new Set<string>();
-    combinedPermissions.forEach(p => {
-      expandedPermissions.add(p);
+    // Permission Hierarchy Expansion
+    const expanded = new Set<string>();
+    rawPermissions.forEach(p => {
+      expanded.add(p);
       
-      // Split on the last hyphen to get resourceId and action
-      // e.g. "operations-bookings-view" -> "operations-bookings" and "view"
-      const lastHyphenIndex = p.lastIndexOf('-');
-      if (lastHyphenIndex !== -1) {
-        const resourceId = p.substring(0, lastHyphenIndex);
-        const action = p.substring(lastHyphenIndex + 1);
-        
-        if (['create', 'edit', 'delete', 'manage'].includes(action)) {
-          expandedPermissions.add(`${resourceId}-view`);
-        }
+      // 1. Action Escalation: 'manage' implies 'view', etc.
+      const parts = p.split('-');
+      const action = parts.pop();
+      const resourceId = parts.join('-');
+      
+      if (['create', 'edit', 'delete', 'manage'].includes(action || '')) {
+        expanded.add(`${resourceId}-view`);
       }
+
+      // 2. Hierarchy Escalation: 'operations-bookings-view' implies 'operations-view'
+      // We crawl up the segments to ensure parent menu items are visible
+      let currentPath = '';
+      parts.forEach((segment, idx) => {
+        currentPath = idx === 0 ? segment : `${currentPath}-${segment}`;
+        expanded.add(`${currentPath}-view`);
+      });
     });
     
-    return expandedPermissions;
+    return expanded;
   }, [userProfile, role]);
   
   const hasPermission = (permissionId: string) => {
+    if (!permissionId) return true; // Items without permission constraints are public
     if (userProfile?.id === 'DEVELOPER_MODE') return true;
     return permissions.has(permissionId);
   };

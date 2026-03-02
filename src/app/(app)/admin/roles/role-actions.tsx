@@ -81,7 +81,7 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
             <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This will permanently delete the &quot;{role.name}&quot; role. Users assigned to this role may lose access to critical features.
+                    This will permanently delete the "{role.name}" role. Users assigned to this role may lose access to critical features.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

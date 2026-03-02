@@ -11,6 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Button } from '@/components/ui/button';
 import { CalendarIcon, ChevronsUpDown, Trash2, Upload, View } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Image from 'next/image';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -23,7 +24,6 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DocumentExpirySettings } from '../../../admin/document-dates/page';
 import { TrainingRecords } from './training-records';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -52,7 +52,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
   const { toast } = useToast();
   const firestore = useFirestore();
-  const tenantId = 'safeviate'; // Hardcoded
+  const tenantId = 'safeviate';
 
   const expirySettingsRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
@@ -69,10 +69,9 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     const daysUntilExpiry = differenceInDays(expiry, today);
 
     if (daysUntilExpiry < 0) {
-      return expirySettings.expiredColor || '#ef4444'; // Expired
+      return expirySettings.expiredColor || '#ef4444'; 
     }
 
-    // Find the tightest warning period that applies
     const sortedPeriods = (expirySettings.warningPeriods || []).sort((a, b) => a.period - b.period);
     for (const warning of sortedPeriods) {
       if (daysUntilExpiry <= warning.period) {
@@ -80,7 +79,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
       }
     }
 
-    return expirySettings.defaultColor || null; // Safe color
+    return expirySettings.defaultColor || null; 
   };
 
   const handleViewImage = (url: string) => {
@@ -90,11 +89,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   
   const handleDocumentUpdate = (updatedDocuments: Document[]) => {
     if (!firestore || !tenantId) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not connect to the database.",
-        });
+        toast({ variant: "destructive", title: "Error", description: "Database not connected." });
         return;
     }
     const collectionName = isPilotProfile(user) ? 
@@ -111,12 +106,10 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
 
     let updatedDocs;
     if (existingDocIndex > -1) {
-        // Update existing document
         updatedDocs = [...currentDocs];
-        const expirationDate = updatedDocs[existingDocIndex].expirationDate; // Preserve existing expiry
+        const expirationDate = updatedDocs[existingDocIndex].expirationDate; 
         updatedDocs[existingDocIndex] = { ...docDetails, expirationDate };
     } else {
-        // Add new document
         updatedDocs = [...currentDocs, docDetails];
     }
     handleDocumentUpdate(updatedDocs);
@@ -164,7 +157,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
 
 
   return (
-    <Tabs defaultValue="overview">
+    <Tabs defaultValue="overview" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             {isPilotProfile(user) && user.userType === 'Student' && (
@@ -296,7 +289,6 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                 </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* --- Address --- */}
                     <Card>
                     <CardHeader>
                         <CardTitle>Address</CardTitle>
@@ -311,7 +303,6 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                     </CardContent>
                     </Card>
 
-                    {/* --- Emergency Contact --- */}
                     <Card>
                     <CardHeader>
                         <CardTitle>Emergency Contact</CardTitle>
@@ -325,7 +316,6 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                     </Card>
                 </div>
 
-                {/* --- Permissions --- */}
                 {!isPilotProfile(user) && (
                     <Card>
                         <Collapsible open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
@@ -375,12 +365,10 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                     </Card>
                 )}
 
-                {/* --- Image Viewer Dialog --- */}
                 <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
-                    <DialogContent className="max-w-4xl">
+                    <DialogContent className="max-w-4xl max-h-[90vh]">
                         <DialogHeader>
                             <DialogTitle>Document Viewer</DialogTitle>
-                            <DialogDescription>Viewing uploaded document.</DialogDescription>
                         </DialogHeader>
                         {viewingImageUrl && (
                             <div className="relative h-[80vh]">
@@ -397,7 +385,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
             </div>
         </TabsContent>
         {isPilotProfile(user) && user.userType === 'Student' && (
-            <TabsContent value="training">
+            <TabsContent value="training" className="mt-6">
                 <TrainingRecords studentId={user.id} tenantId={tenantId} />
             </TabsContent>
         )}

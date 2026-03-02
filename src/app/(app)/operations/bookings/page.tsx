@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -60,11 +59,11 @@ const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booki
             const startTime = combineDateAndTime(segment.date, segment.startTime);
             const endTime = combineDateAndTime(segment.date, segment.endTime);
 
-            if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) return null;
+            if (isNaN(startTime.getTime()) || iNaN(endTime.getTime())) return null;
 
             const top = (getHours(startTime) * 60 + getMinutes(startTime)) * (HOUR_HEIGHT_PX / 60);
             const durationMinutes = Math.max(0, differenceInMinutes(endTime, startTime));
-            const height = Math.max(durationMinutes, 40) * (HOUR_HEIGHT_PX / 60); // Min height for readability
+            const height = Math.max(durationMinutes, 40) * (HOUR_HEIGHT_PX / 60); 
             
             const isCancelled = booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason';
 
@@ -126,15 +125,14 @@ export default function SchedulePage() {
     [firestore, tenantId, dataVersion]
   );
 
-  const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
-  const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
-  
+  const { data: aircraft, isLoading: isLoadingAircraft } = useCollection<Aircraft>(aircraftQuery);
+  const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
+  const { data: allBookings, isLoading: isLoadingAllBookings } = useCollection<Booking>(allBookingsQuery);
 
-  const { data: aircraft, isLoading: isLoadingAircraft, error: aircraftError } = useCollection<Aircraft>(aircraftQuery);
-  const { data: bookings, isLoading: isLoadingBookings, error: bookingsError } = useCollection<Booking>(bookingsQuery);
-  const { data: allBookings, isLoading: isLoadingAllBookings, error: allBookingsError } = useCollection<Booking>(allBookingsQuery);
+  const personnelQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
+  const privatePilotsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/private-pilots`) : null), [firestore, tenantId]);
 
   const { data: personnel } = useCollection<Personnel>(personnelQuery);
   const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
@@ -146,7 +144,6 @@ export default function SchedulePage() {
   }, [personnel, students, instructors, privatePilots]);
 
   const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingAllBookings;
-  const error = aircraftError || bookingsError || allBookingsError;
 
   const refreshBookings = useCallback(() => {
     setDataVersion(v => v + 1);
@@ -194,23 +191,7 @@ export default function SchedulePage() {
   const extraLanes = ['', '', ''];
 
   if (isLoading) {
-    return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <Skeleton className="h-10 w-48" />
-                <div className="flex gap-2">
-                    <Skeleton className="h-10 w-24" />
-                    <Skeleton className="h-10 w-32" />
-                    <Skeleton className="h-10 w-24" />
-                </div>
-            </div>
-            <Card>
-                <CardContent className="p-6">
-                    <Skeleton className="h-[600px] w-full" />
-                </CardContent>
-            </Card>
-        </div>
-    );
+    return <Skeleton className="h-[600px] w-full" />;
   }
 
   return (
@@ -220,7 +201,7 @@ export default function SchedulePage() {
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Daily Schedule</h1>
                 <p className="text-muted-foreground">
-                    A vertical timeline of all bookings for {format(selectedDate, 'PPP')}.
+                    Fleet timeline for {format(selectedDate, 'PPP')}.
                 </p>
             </div>
             <div className="flex items-center gap-2">
@@ -332,7 +313,7 @@ export default function SchedulePage() {
                                 </div>
                             ))}
 
-                            {/* 3. NOW LINE (Overlaying all columns) */}
+                            {/* 3. NOW LINE */}
                             {showNowLine && (
                                 <div 
                                     className="absolute left-0 right-0 h-0.5 bg-red-500 z-20 pointer-events-none" 
