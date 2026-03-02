@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -418,7 +417,6 @@ export default function AuditSchedulePage() {
             </CardContent>
         </Card>
 
-        {/* Add Area Dialog */}
         <Dialog open={isAddAreaOpen} onOpenChange={setIsAddAreaOpen}>
             <DialogContent>
                 <DialogHeader>

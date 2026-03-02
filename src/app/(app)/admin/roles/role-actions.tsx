@@ -13,7 +13,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Eye, Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -23,6 +23,7 @@ interface Role {
     id: string;
     name: string;
     permissions: string[];
+    requiredDocuments?: string[];
 }
 
 interface RoleActionsProps {
@@ -57,8 +58,8 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
             existingRole={role} 
             trigger={
                 <Button variant="outline" size="sm">
-                    <Eye className="mr-2 h-4 w-4" />
-                    View
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
                 </Button>
             } 
         />

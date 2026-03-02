@@ -1,8 +1,7 @@
-
 'use client';
 
-import { useState, useMemo } from 'react';
-import { collection } from 'firebase/firestore';
+import { useState, useMemo, useEffect } from 'react';
+import { collection, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,7 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ChevronsUpDown, PlusCircle, Trash2 } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -29,22 +28,37 @@ import { usePermissions } from '@/hooks/use-permissions';
 
 interface RoleFormProps {
   tenantId: string;
+  existingRole?: {
+    id: string;
+    name: string;
+    permissions: string[];
+    requiredDocuments?: string[];
+  };
+  trigger?: React.ReactNode;
 }
 
-export function RoleForm({ tenantId }: RoleFormProps) {
+export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
-  const [roleName, setRoleName] = useState('');
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [roleName, setRoleName] = useState(existingRole?.name || '');
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(existingRole?.permissions || []);
   const [isOpen, setIsOpen] = useState(false);
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
 
   // Required Documents state
-  const [requiredDocuments, setRequiredDocuments] = useState<string[]>([]);
+  const [requiredDocuments, setRequiredDocuments] = useState<string[]>(existingRole?.requiredDocuments || []);
   const [currentDocument, setCurrentDocument] = useState('');
 
   const canManagePermissions = hasPermission('admin-permissions-manage');
+
+  useEffect(() => {
+    if (isOpen) {
+      setRoleName(existingRole?.name || '');
+      setSelectedPermissions(existingRole?.permissions || []);
+      setRequiredDocuments(existingRole?.requiredDocuments || []);
+    }
+  }, [isOpen, existingRole]);
 
   const allPermissionIds = useMemo(() => 
     permissionsConfig.flatMap(resource => 
@@ -58,9 +72,11 @@ export function RoleForm({ tenantId }: RoleFormProps) {
   );
   
   const resetForm = () => {
-    setRoleName('');
-    setSelectedPermissions([]);
-    setRequiredDocuments([]);
+    if (!existingRole) {
+      setRoleName('');
+      setSelectedPermissions([]);
+      setRequiredDocuments([]);
+    }
     setCurrentDocument('');
   }
 
@@ -71,7 +87,7 @@ export function RoleForm({ tenantId }: RoleFormProps) {
     }
   }
 
-  const handleAddRole = () => {
+  const handleSaveRole = () => {
     if (!roleName.trim()) {
       toast({
         variant: 'destructive',
@@ -90,13 +106,21 @@ export function RoleForm({ tenantId }: RoleFormProps) {
       return;
     }
 
-    const rolesRef = collection(firestore, 'tenants', tenantId, 'roles');
-    addDocumentNonBlocking(rolesRef, { name: roleName, permissions: selectedPermissions, requiredDocuments });
-
-    toast({
-      title: 'Role Added',
-      description: `The "${roleName}" role is being created.`,
-    });
+    if (existingRole) {
+      const roleRef = doc(firestore, 'tenants', tenantId, 'roles', existingRole.id);
+      updateDocumentNonBlocking(roleRef, { name: roleName, permissions: selectedPermissions, requiredDocuments });
+      toast({
+        title: 'Role Updated',
+        description: `The "${roleName}" role has been updated.`,
+      });
+    } else {
+      const rolesRef = collection(firestore, 'tenants', tenantId, 'roles');
+      addDocumentNonBlocking(rolesRef, { name: roleName, permissions: selectedPermissions, requiredDocuments });
+      toast({
+        title: 'Role Added',
+        description: `The "${roleName}" role is being created.`,
+      });
+    }
     
     setIsOpen(false);
   };
@@ -129,17 +153,23 @@ export function RoleForm({ tenantId }: RoleFormProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Role
-        </Button>
-      </DialogTrigger>
+      {trigger ? (
+        <DialogTrigger asChild>
+          {trigger}
+        </DialogTrigger>
+      ) : (
+        <DialogTrigger asChild>
+          <Button>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Role
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Add New Role</DialogTitle>
+          <DialogTitle>{existingRole ? 'Edit Role' : 'Add New Role'}</DialogTitle>
           <DialogDescription>
-            Define a new role, assign permissions, and specify required documents.
+            {existingRole ? 'Update the details and permissions for this role.' : 'Define a new role, assign permissions, and specify required documents.'}
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className='max-h-[70vh] pr-6'>
@@ -214,13 +244,13 @@ export function RoleForm({ tenantId }: RoleFormProps) {
                                                     className="flex items-center space-x-2"
                                                 >
                                                     <Checkbox
-                                                        id={`add-${permissionId}`}
+                                                        id={`role-${existingRole?.id || 'new'}-${permissionId}`}
                                                         checked={selectedPermissions.includes(permissionId)}
                                                         onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)}
                                                         disabled={!canManagePermissions}
                                                     />
                                                     <label
-                                                        htmlFor={`add-${permissionId}`}
+                                                        htmlFor={`role-${existingRole?.id || 'new'}-${permissionId}`}
                                                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer capitalize"
                                                     >
                                                         {action}
@@ -242,7 +272,7 @@ export function RoleForm({ tenantId }: RoleFormProps) {
           <DialogClose asChild>
             <Button variant="outline">Cancel</Button>
           </DialogClose>
-          <Button onClick={handleAddRole}>Save Role</Button>
+          <Button onClick={handleSaveRole}>{existingRole ? 'Save Changes' : 'Save Role'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
