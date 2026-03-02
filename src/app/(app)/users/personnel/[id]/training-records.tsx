@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -5,15 +6,13 @@ import { collection, query, where, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Button } from '@/components/ui/button';
-import { FilePlus } from 'lucide-react';
-import { format, differenceInMinutes, parse } from 'date-fns';
+import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import type { StudentProgressReport, StudentMilestoneSettings } from '@/types/training';
 import type { PilotProfile } from '../page';
+import type { Booking } from '@/types/booking';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface TrainingRecordsProps {
@@ -66,6 +65,15 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
         [firestore, tenantId, studentId, shouldFetch]
     );
 
+    const bookingsQuery = useMemoFirebase(
+        () => (shouldFetch ? query(
+            collection(firestore, `tenants/${tenantId}/bookings`),
+            where('studentId', '==', studentId),
+            where('status', '==', 'Completed')
+        ) : null),
+        [firestore, tenantId, studentId, shouldFetch]
+    );
+
     const instructorsQuery = useMemoFirebase(
         () => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null),
         [firestore, tenantId]
@@ -77,17 +85,26 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
     );
 
     const { data: reports, isLoading: isLoadingReports } = useCollection<StudentProgressReport>(progressReportsQuery);
+    const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
     const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
     const { data: milestoneSettings } = useDoc<StudentMilestoneSettings>(milestoneSettingsRef);
 
-    const isLoading = isLoadingReports || isLoadingInstructors;
+    const isLoading = isLoadingReports || isLoadingInstructors || isLoadingBookings;
 
     const instructorsMap = useMemo(() => {
         if (!instructors) return new Map();
         return new Map(instructors.map(i => [i.id, `${i.firstName} ${i.lastName}`]));
     }, [instructors]);
 
-    const totalFlightHours = 0; // This needs to be recalculated without bookings
+    const totalFlightHours = useMemo(() => {
+        if (!bookings) return 0;
+        return bookings.reduce((total, booking) => {
+            if (booking.postFlightData?.hobbs && booking.preFlightData?.hobbs) {
+                return total + (booking.postFlightData.hobbs - booking.preFlightData.hobbs);
+            }
+            return total;
+        }, 0);
+    }, [bookings]);
     
     const defaultMilestones = [
         { milestone: 10, warningHours: 7 },
@@ -113,7 +130,7 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
             <Card>
                 <CardHeader>
                     <CardTitle>Flight Hour Milestones</CardTitle>
-                    <CardDescription>Visual progress towards key flight hour goals.</CardDescription>
+                    <CardDescription>Visual progress towards key flight hour goals based on completed bookings.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                     {milestones.map(ms => (
@@ -124,16 +141,6 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
                             warningThreshold={ms.warningHours}
                         />
                     ))}
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Debriefs Needed</CardTitle>
-                    <CardDescription>Completed training flights awaiting an instructor debrief.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-center text-muted-foreground p-4">Booking system is disabled.</p>
                 </CardContent>
             </Card>
 
@@ -151,7 +158,7 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
                                         <div className="flex justify-between items-center w-full pr-4">
                                             <div className="text-left">
                                                 <p className="font-semibold">Debrief</p>
-                                                <p className="text-sm text-muted-foreground">{format(new Date(report.date), 'PPP')} with {instructorsMap.get(report.instructorId) || 'Unknown'}</p>
+                                                <p className="text-sm text-muted-foreground">{format(new Date(report.date), 'PPP')} with {instructorsMap.get(report.instructorId!) || 'Unknown'}</p>
                                             </div>
                                         </div>
                                     </AccordionTrigger>
@@ -175,13 +182,13 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
                                             {report.instructorSignatureUrl && (
                                                 <div>
                                                     <p className="text-sm font-semibold text-muted-foreground">Instructor Signature</p>
-                                                    <img src={report.instructorSignatureUrl} alt="Instructor Signature" className="mt-2 border rounded-md bg-white" />
+                                                    <img src={report.instructorSignatureUrl} alt="Instructor Signature" className="mt-2 border rounded-md bg-white max-h-32 object-contain" />
                                                 </div>
                                             )}
                                             {report.studentSignatureUrl && (
                                                 <div>
                                                     <p className="text-sm font-semibold text-muted-foreground">Student Signature</p>
-                                                    <img src={report.studentSignatureUrl} alt="Student Signature" className="mt-2 border rounded-md bg-white" />
+                                                    <img src={report.studentSignatureUrl} alt="Student Signature" className="mt-2 border rounded-md bg-white max-h-32 object-contain" />
                                                 </div>
                                             )}
                                         </div>

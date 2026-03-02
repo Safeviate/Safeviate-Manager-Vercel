@@ -1,5 +1,4 @@
 
-
 export type BookingStatus = 'Tentative' | 'Confirmed' | 'Completed' | 'Cancelled' | 'Cancelled with Reason';
 
 export interface MassAndBalance {
@@ -28,7 +27,7 @@ export interface PostFlightData {
     tacho: number;
     fuelRemaining: number;
     defects: string;
-    photos: ChecklistPhoto[];
+    photos?: ChecklistPhoto[];
 }
 
 export interface Booking {
