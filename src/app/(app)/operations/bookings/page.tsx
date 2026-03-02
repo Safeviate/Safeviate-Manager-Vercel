@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -29,7 +28,6 @@ const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
 };
 
 const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booking, onBookingClick: (booking: Booking) => void, selectedDate: Date }) => {
-    
     const segments = [];
 
     // First segment (always exists)
@@ -231,7 +229,7 @@ export default function SchedulePage() {
             </div>
         </div>
 
-        <Card className="overflow-hidden flex-grow flex flex-col">
+        <Card className="overflow-hidden flex-grow flex flex-col shadow-none border">
             <CardContent className="p-0 flex-grow flex flex-col overflow-hidden">
                 <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 220px)' }}>
                     <div className="flex min-w-full w-fit relative">
@@ -252,7 +250,7 @@ export default function SchedulePage() {
                             ))}
                         </div>
 
-                        {/* 2. AIRCRAFT LANES */}
+                        {/* 2. AIRCRAFT LANES (Unified vertical architecture) */}
                         <div className="flex flex-1 relative">
                             {(aircraft || []).map((ac) => {
                                 const relevantBookings = (bookings || []).filter(b => {
@@ -264,6 +262,7 @@ export default function SchedulePage() {
 
                                 return (
                                     <div key={ac.id} className="flex-1 min-w-[180px] border-r relative flex flex-col">
+                                        {/* Aircraft header - Sticky top */}
                                         <div className="sticky top-0 z-30 h-12 bg-[#003d1c] text-white border-b border-white/10 flex items-center justify-center font-bold text-sm px-2 text-center shrink-0">
                                             {ac.tailNumber}
                                         </div>
@@ -301,7 +300,7 @@ export default function SchedulePage() {
                             {/* EXTRA EMPTY LANES */}
                             {extraLanes.map((_, laneIdx) => (
                                 <div key={`extra-${laneIdx}`} className="flex-1 min-w-[180px] border-r bg-muted/5 opacity-50 flex flex-col">
-                                    <div className="sticky top-0 z-30 h-12 bg-[#003d1c] text-white border-b border-white/10 flex items-center justify-center font-bold text-xs uppercase px-2 text-center shrink-0">
+                                    <div className="sticky top-0 z-30 h-12 bg-[#003d1c] text-white border-b border-white/10 flex items-center justify-center font-bold text-[10px] uppercase px-2 text-center shrink-0">
                                         &nbsp;
                                     </div>
                                     {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (

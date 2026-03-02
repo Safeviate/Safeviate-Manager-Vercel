@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -300,7 +299,7 @@ export default function AuditSchedulePage() {
             </div>
         </div>
 
-        <Card className="overflow-hidden flex-grow flex flex-col">
+        <Card className="overflow-hidden flex-grow flex flex-col shadow-none border">
             <CardContent className="p-0 flex-grow flex flex-col overflow-hidden">
                 <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 220px)' }}>
                     <div className="flex min-w-full w-fit relative">
@@ -332,10 +331,11 @@ export default function AuditSchedulePage() {
                             })}
                         </div>
 
-                        {/* 2. AUDIT AREA LANES */}
+                        {/* 2. AUDIT AREA LANES (Unified vertical architecture) */}
                         <div className="flex flex-1 relative">
                             {auditAreas.map((area) => (
                                 <div key={area} className="flex-1 min-w-[200px] border-r relative flex flex-col">
+                                    {/* Area header - Sticky top */}
                                     <div className="sticky top-0 z-30 h-12 bg-[#003d1c] text-white border-b border-white/10 flex items-center justify-between gap-2 px-4 text-center shrink-0">
                                         <span className="truncate text-[10px] font-bold uppercase tracking-wider">{area}</span>
                                         <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />

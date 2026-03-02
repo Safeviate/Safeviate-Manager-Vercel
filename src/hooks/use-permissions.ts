@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -70,10 +69,9 @@ export const usePermissions = () => {
 
       // 2. Hierarchy Escalation: 'operations-bookings-view' implies 'operations-view'
       // We crawl up the segments to ensure parent menu items are unlocked for sub-items
-      let currentPath = '';
-      parts.forEach((segment, idx) => {
-        currentPath = idx === 0 ? segment : `${currentPath}-${segment}`;
-        expanded.add(`${currentPath}-view`);
+      parts.forEach((_, idx) => {
+        const segmentPath = parts.slice(0, idx + 1).join('-');
+        expanded.add(`${segmentPath}-view`);
       });
     });
     

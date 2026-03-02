@@ -1,4 +1,3 @@
-
 'use client';
 import {
   Sidebar,
@@ -51,23 +50,23 @@ const SidebarItems = () => {
     const { hasPermission } = usePermissions();
   
     const renderMenuItem = (item: MenuItemType) => {
-      const canAccess = !item.permissionId || hasPermission(item.permissionId);
-      if (!canAccess) return null;
+      const canAccessParent = !item.permissionId || hasPermission(item.permissionId);
+      
+      // Filter sub-items based on permissions first
+      const visibleSubItems = item.subItems ? item.subItems.filter(sub => !sub.permissionId || hasPermission(sub.permissionId)) : [];
+      
+      // If parent has no permission and no visible children, don't render anything
+      if (!canAccessParent && visibleSubItems.length === 0) return null;
 
       const isParentActive = pathname.startsWith(item.href);
       const Icon = item.icon;
   
       if (item.subItems) {
-        // Filter sub-items based on permissions
-        const visibleSubItems = item.subItems.filter(sub => !sub.permissionId || hasPermission(sub.permissionId));
-        
-        if (visibleSubItems.length === 0) return null;
-
         return (
           <SidebarCollapsible defaultOpen={isParentActive}>
             <SidebarCollapsibleTrigger asChild>
               <SidebarMenuButton
-                isActive={isParentActive && !visibleSubItems.some(sub => pathname.startsWith(sub.href))}
+                isActive={isParentActive && !visibleSubItems.some(sub => pathname === sub.href)}
                 tooltip={item.label}
                 className="justify-between"
               >
