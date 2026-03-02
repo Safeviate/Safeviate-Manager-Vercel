@@ -12,8 +12,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { Aircraft } from '../../assets/page';
-import type { AircraftModelProfile } from '@/types/aircraft';
+import type { Aircraft, AircraftModelProfile } from '@/types/aircraft';
 
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
@@ -533,7 +532,7 @@ const WBCalculator = () => {
       <div className="flex flex-col gap-6">
 
         {/* TOP ROW: GRAPH */}
-        <div className="bg-card border border-border rounded-xl p-4 relative min-h-[500px] flex flex-col justify-center items-center overflow-hidden">
+        <div className="bg-card border border-border rounded-xl p-4 relative min-h-[500px] flex flex-col justify-center items-center overflow-hidden shadow-none">
             {offScreenStatus && (
             <OffScreenWarning direction={offScreenStatus.dir} value={offScreenStatus.val} label={offScreenStatus.axis === 'x' ? 'CG' : 'Weight'} />
             )}
@@ -574,7 +573,7 @@ const WBCalculator = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* 1. BASIC EMPTY WEIGHT */}
-          <div className="bg-card p-5 rounded-xl border border-border">
+          <div className="bg-card p-5 rounded-xl border border-border shadow-none">
              <h3 className="text-primary font-bold text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-primary"></span>
                 1. Basic Empty Weight
@@ -599,7 +598,7 @@ const WBCalculator = () => {
           </div>
 
           {/* 2. LOADING STATIONS */}
-          <div className="bg-card p-5 rounded-xl border border-border">
+          <div className="bg-card p-5 rounded-xl border border-border shadow-none">
              <div className="flex justify-between items-center mb-4">
               <h3 className="text-primary font-bold text-xs uppercase tracking-widest flex items-center gap-2">
                  <span className="w-2 h-2 rounded-full bg-primary"></span>
@@ -680,7 +679,7 @@ const WBCalculator = () => {
           </div>
 
           {/* 3. CONFIG CARD */}
-          <div className="bg-card p-5 rounded-xl border border-border">
+          <div className="bg-card p-5 rounded-xl border border-border shadow-none">
             <div className="flex justify-between items-center mb-4">
                <h3 className="text-primary font-bold text-xs uppercase tracking-widest flex items-center gap-2">
                  <span className="w-2 h-2 rounded-full bg-primary"></span>

@@ -1,23 +1,24 @@
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
-import { collection, query, where, Timestamp } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import type { Aircraft } from '../../assets/page';
+import { Card, CardContent } from '@/components/ui/card';
+import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '../../users/personnel/page';
-import { format, startOfDay, endOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, endOfHour, parse, isAfter } from 'date-fns';
+import { format, startOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, endOfHour, parse, isAfter } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, AlertCircle, PlusCircle } from 'lucide-react';
+import { CalendarIcon, PlusCircle } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { useRouter } from 'next/navigation';
 import { BookingForm } from './booking-form';
 import type { Booking } from '@/types/booking';
 import Link from 'next/link';
 
+const HOUR_HEIGHT_PX = 60;
+const TOTAL_HOURS = 24;
 
 const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
     if (!dateStr || !timeStr) {
@@ -26,7 +27,7 @@ const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
     return parse(`${dateStr} ${timeStr}`, 'yyyy-MM-dd HH:mm', new Date());
 };
 
-const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booking, pilots: (PilotProfile | Personnel)[], onBookingClick: (booking: Booking) => void, selectedDate: Date }) => {
+const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booking, onBookingClick: (booking: Booking) => void, selectedDate: Date }) => {
     
     const segments = [];
 
@@ -61,8 +62,8 @@ const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booki
             if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) return null;
 
             const top = (getHours(startTime) * 60 + getMinutes(startTime)) * (HOUR_HEIGHT_PX / 60);
-            const durationMinutes = differenceInMinutes(endTime, startTime);
-            const height = Math.max(durationMinutes, 0) * (HOUR_HEIGHT_PX / 60);
+            const durationMinutes = Math.max(0, differenceInMinutes(endTime, startTime));
+            const height = Math.max(durationMinutes, 40) * (HOUR_HEIGHT_PX / 60); // Min height for readability
             
             const isCancelled = booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason';
 
@@ -70,18 +71,21 @@ const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booki
                 <div
                     key={`${booking.id}-${index}`}
                     className={cn(
-                        'absolute w-full p-2 text-xs leading-tight shadow-md flex flex-col justify-center z-10 min-h-[40px] border border-gray-400/50 cursor-pointer hover:opacity-90 transition-opacity',
+                        'absolute left-1 right-1 p-2 text-[10px] md:text-xs leading-tight shadow-md flex flex-col justify-center z-10 border border-gray-400/50 cursor-pointer hover:opacity-90 transition-opacity rounded',
                         isCancelled && 'bg-muted text-muted-foreground opacity-60',
                         booking.status === 'Completed' && 'bg-green-600 text-primary-foreground',
                         booking.status === 'Confirmed' && booking.preFlight && !booking.postFlight && 'bg-amber-500 text-primary-foreground',
                         booking.status === 'Confirmed' && !booking.preFlight && 'bg-primary text-primary-foreground'
                     )}
                     style={{ top: `${top}px`, height: `${height}px` }}
-                    onClick={() => onBookingClick(booking)}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onBookingClick(booking);
+                    }}
                 >
                     <p className="font-semibold truncate">#{booking.bookingNumber} - {booking.type}</p>
-                    {isCancelled && <p className="font-bold uppercase text-[9px] mt-0.5">Cancelled</p>}
-                    {booking.status === 'Completed' && <p className="font-bold uppercase text-[9px] mt-0.5">Completed</p>}
+                    {isCancelled && <p className="font-bold uppercase text-[8px] mt-0.5">Cancelled</p>}
+                    {booking.status === 'Completed' && <p className="font-bold uppercase text-[8px] mt-0.5">Completed</p>}
                 </div>
             )
         })}
@@ -89,99 +93,8 @@ const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booki
     )
 }
 
-const AircraftColumn = ({ 
-    aircraft,
-    bookings, 
-    pilots, 
-    showNowLine, 
-    nowLinePosition, 
-    selectedDate,
-    onSlotClick,
-    onBookingClick,
-}: { 
-    aircraft?: Aircraft; 
-    bookings: Booking[]; 
-    pilots: (PilotProfile | Personnel)[]; 
-    showNowLine: boolean; 
-    nowLinePosition: number; 
-    selectedDate: Date; 
-    onSlotClick: (aircraft: Aircraft, time: Date) => void;
-    onBookingClick: (booking: Booking) => void;
-}) => {
-    const today = startOfToday();
-    const isSelectedDateInPast = isBefore(selectedDate, today);
-
-    const relevantBookings = useMemo(() => {
-        return bookings.filter(b => {
-          if (b.isOvernight) {
-            // Include if selectedDate is the start date or the overnight end date
-            return b.date === format(selectedDate, 'yyyy-MM-dd') || b.overnightBookingDate === format(selectedDate, 'yyyy-MM-dd');
-          }
-          return b.date === format(selectedDate, 'yyyy-MM-dd');
-        });
-      }, [bookings, selectedDate]);
-
-  return (
-    <div 
-        className="flex-1 relative border-r min-w-[150px]"
-    >
-      {Array.from({ length: TOTAL_HOURS }).map((_, hour) => {
-        const slotTime = setMinutes(setHours(selectedDate, hour), 0);
-        const endOfSlot = endOfHour(slotTime);
-        const isPast = isSelectedDateInPast || (isSameDay(selectedDate, new Date()) && isBefore(endOfSlot, new Date()));
-        
-        const isDisabled = isPast;
-
-        return (
-            <div 
-                key={hour} 
-                className={cn(
-                    "relative border-t",
-                    isDisabled ? "bg-muted/30" : "cursor-pointer hover:bg-accent/50 transition-colors"
-                )} 
-                style={{ height: `${HOUR_HEIGHT_PX}px` }}
-                onClick={() => !isDisabled && aircraft && onSlotClick(aircraft, slotTime)}
-            >
-                <span className="absolute top-1 left-1 text-xs text-muted-foreground pointer-events-none">
-                    {format(new Date(0, 0, 0, hour), 'HH:mm')}
-                </span>
-            </div>
-        )
-      })}
-      
-      {showNowLine && (
-        <div 
-          className="absolute top-0 left-0 right-0 bg-destructive/20 z-0 pointer-events-none"
-          style={{ height: `${nowLinePosition}px` }}
-        />
-      )}
-
-      {showNowLine && (
-        <div className="absolute left-0 right-0 h-0.5 bg-red-500 z-20 pointer-events-none" style={{ top: `${nowLinePosition}px` }}>
-          <div className="absolute -left-1.5 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full" />
-        </div>
-      )}
-
-      {relevantBookings.map((booking) => (
-        <BookingItem 
-            key={booking.id} 
-            booking={booking}
-            pilots={pilots}
-            onBookingClick={onBookingClick}
-            selectedDate={selectedDate}
-        />
-      ))}
-    </div>
-  );
-};
-
-const HOUR_HEIGHT_PX = 60;
-const TOTAL_HOURS = 24;
-
-
 export default function SchedulePage() {
   const firestore = useFirestore();
-  const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(startOfToday());
 
   const [nowLinePosition, setNowLinePosition] = useState(0);
@@ -190,11 +103,10 @@ export default function SchedulePage() {
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
   const [bookingFormData, setBookingFormData] = useState<{ aircraft: Aircraft; startTime: Date; allBookingsForAircraft: Booking[]; booking?: Booking } | null>(null);
   const [dataVersion, setDataVersion] = useState(0);
-  const tenantId = 'safeviate'; // Hardcoded for now
-
+  const tenantId = 'safeviate';
 
   const aircraftQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts')) : null),
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
     [firestore, tenantId]
   );
   
@@ -202,16 +114,14 @@ export default function SchedulePage() {
     if (!firestore) return null;
     const today = format(selectedDate, 'yyyy-MM-dd');
     const yesterday = format(subDays(selectedDate, 1), 'yyyy-MM-dd');
-    
-    // We query for the selected day AND the previous day to catch overnight bookings that started the day before.
     return query(
-        collection(firestore, 'tenants', tenantId, 'bookings'),
+        collection(firestore, `tenants/${tenantId}/bookings`),
         where('date', 'in', [today, yesterday]),
     );
   }, [firestore, tenantId, selectedDate, dataVersion]); 
 
   const allBookingsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'bookings')) : null),
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/bookings`)) : null),
     [firestore, tenantId, dataVersion]
   );
 
@@ -255,17 +165,18 @@ export default function SchedulePage() {
     };
     
     calculateNowLine();
-    const interval = setInterval(calculateNowLine, 60000); // Update every minute
+    const interval = setInterval(calculateNowLine, 60000);
     return () => clearInterval(interval);
   }, [selectedDate]);
   
-  const handleSlotClick = (aircraft: Aircraft, time: Date) => {
+  const handleSlotClick = (ac: Aircraft, hour: number) => {
+    const time = setMinutes(setHours(selectedDate, hour), 0);
     const now = new Date();
     const isCurrentHourSlot = isSameDay(time, now) && getHours(time) === getHours(now);
     const startTime = isCurrentHourSlot && isAfter(now, time) ? now : time;
-    const allBookingsForAircraft = allBookings?.filter(b => b.aircraftId === aircraft.id) || [];
+    const allBookingsForAircraft = allBookings?.filter(b => b.aircraftId === ac.id) || [];
 
-    setBookingFormData({ aircraft, startTime, allBookingsForAircraft });
+    setBookingFormData({ aircraft: ac, startTime, allBookingsForAircraft });
     setIsBookingFormOpen(true);
   };
   
@@ -279,11 +190,31 @@ export default function SchedulePage() {
     }
   };
   
-  const extraLanes = ['', '', '', ''];
+  const extraLanes = ['', '', ''];
+
+  if (isLoading) {
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <Skeleton className="h-10 w-48" />
+                <div className="flex gap-2">
+                    <Skeleton className="h-10 w-24" />
+                    <Skeleton className="h-10 w-32" />
+                    <Skeleton className="h-10 w-24" />
+                </div>
+            </div>
+            <Card>
+                <CardContent className="p-6">
+                    <Skeleton className="h-[600px] w-full" />
+                </CardContent>
+            </Card>
+        </div>
+    );
+  }
 
   return (
     <>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 h-full">
         <div className="flex justify-between items-center">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Daily Schedule</h1>
@@ -292,10 +223,10 @@ export default function SchedulePage() {
                 </p>
             </div>
             <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>Previous Day</Button>
+                <Button variant="outline" size="sm" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>Previous Day</Button>
                 <Popover>
                     <PopoverTrigger asChild>
-                        <Button variant="outline">
+                        <Button variant="outline" size="sm">
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {format(selectedDate, 'PPP')}
                         </Button>
@@ -307,8 +238,8 @@ export default function SchedulePage() {
                         />
                     </PopoverContent>
                 </Popover>
-                <Button variant="outline" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>Next Day</Button>
-                <Button asChild>
+                <Button variant="outline" size="sm" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>Next Day</Button>
+                <Button asChild size="sm">
                     <Link href="/operations/bookings/new">
                         <PlusCircle className="mr-2 h-4 w-4" />
                         New Booking
@@ -317,68 +248,105 @@ export default function SchedulePage() {
             </div>
         </div>
 
-        <Card>
-          <CardContent className="p-0">
-            {isLoading && (
-              <div className="p-6 space-y-4">
-                <Skeleton className="h-8 w-1/2" />
-                <div className="flex gap-4 h-96">
-                  <Skeleton className="flex-1 h-full" />
-                  <Skeleton className="flex-1 h-full" />
-                  <Skeleton className="flex-1 h-full" />
-                </div>
-              </div>
-            )}
-            {error && <p className="p-6 text-destructive">Error loading data: {error.message}</p>}
-            {!isLoading && !error && (
-              <div className='w-full overflow-x-auto'>
-                  <div className="sticky top-0 z-30 flex bg-swimlane-header text-swimlane-header-foreground flex-shrink-0">
-                    {(aircraft || []).map((ac) => (
-                      <div key={ac.id} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px] flex items-center justify-center gap-2">
-                        {ac.tailNumber}
-                      </div>
-                    ))}
-                    {extraLanes.map((_, index) => (
-                      <div key={`extra-header-${index}`} className="flex-1 p-2 font-semibold text-center border-r min-w-[150px] text-muted-foreground">
-                        (Empty Lane)
-                      </div>
-                    ))}
-                    {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-2 text-center">No Aircraft Found</div>}
-                  </div>
+        <Card className="overflow-hidden flex-grow flex flex-col">
+            <CardContent className="p-0 flex-grow flex flex-col overflow-hidden">
+                <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 220px)' }}>
+                    <div className="flex min-w-full w-fit relative">
+                        
+                        {/* 1. STICKY TIME COLUMN */}
+                        <div className="w-20 flex-shrink-0 bg-muted/50 border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                            <div className="sticky top-0 z-50 h-12 bg-[#003d1c] border-b border-white/10 flex items-center justify-center font-bold text-xs text-white uppercase tracking-wider">
+                                TIME
+                            </div>
+                            {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
+                                <div 
+                                    key={hour} 
+                                    className="flex items-center justify-center border-b text-[10px] font-mono text-muted-foreground bg-muted/30"
+                                    style={{ height: `${HOUR_HEIGHT_PX}px` }}
+                                >
+                                    {format(new Date(0, 0, 0, hour), 'HH:mm')}
+                                </div>
+                            ))}
+                        </div>
 
-                  <div className="flex min-w-max" style={{height: `${TOTAL_HOURS * HOUR_HEIGHT_PX}px`}}>
-                    {(aircraft || []).map((ac) => (
-                      <AircraftColumn
-                        key={ac.id}
-                        aircraft={ac}
-                        bookings={(bookings || []).filter(b => b.aircraftId === ac.id)}
-                        pilots={allPilots}
-                        showNowLine={showNowLine}
-                        nowLinePosition={nowLinePosition}
-                        selectedDate={selectedDate}
-                        onSlotClick={handleSlotClick}
-                        onBookingClick={handleBookingClick}
-                      />
-                    ))}
-                    {extraLanes.map((_, index) => (
-                      <AircraftColumn
-                          key={`extra-lane-${index}`}
-                          bookings={[]}
-                          pilots={[]}
-                          showNowLine={showNowLine}
-                          nowLinePosition={nowLinePosition}
-                          selectedDate={selectedDate}
-                          onSlotClick={() => {}}
-                          onBookingClick={() => {}}
-                      />
-                    ))}
-                    {(aircraft || []).length === 0 && extraLanes.length === 0 && <div className="flex-1 p-4 text-center text-muted-foreground">Please add aircraft to see the schedule.</div>}
-                  </div>
-              </div>
-            )}
-          </CardContent>
+                        {/* 2. AIRCRAFT LANES */}
+                        <div className="flex flex-1 relative">
+                            {(aircraft || []).map((ac) => {
+                                const relevantBookings = (bookings || []).filter(b => {
+                                    if (b.isOvernight) {
+                                        return (b.aircraftId === ac.id) && (b.date === format(selectedDate, 'yyyy-MM-dd') || b.overnightBookingDate === format(selectedDate, 'yyyy-MM-dd'));
+                                    }
+                                    return (b.aircraftId === ac.id) && (b.date === format(selectedDate, 'yyyy-MM-dd'));
+                                });
+
+                                return (
+                                    <div key={ac.id} className="flex-1 min-w-[180px] border-r relative flex flex-col">
+                                        <div className="sticky top-0 z-30 h-12 bg-[#003d1c] text-white border-b border-white/10 flex items-center justify-center font-bold text-sm px-2 text-center shrink-0">
+                                            {ac.tailNumber}
+                                        </div>
+                                        <div className="relative">
+                                            {Array.from({ length: TOTAL_HOURS }).map((_, hour) => {
+                                                const slotTime = setMinutes(setHours(selectedDate, hour), 0);
+                                                const endOfSlot = endOfHour(slotTime);
+                                                const isPast = isBefore(selectedDate, startOfToday()) || (isSameDay(selectedDate, new Date()) && isBefore(endOfSlot, new Date()));
+                                                
+                                                return (
+                                                    <div 
+                                                        key={hour} 
+                                                        className={cn(
+                                                            "border-b relative transition-colors",
+                                                            isPast ? "bg-red-500/10" : "cursor-pointer hover:bg-accent/50"
+                                                        )} 
+                                                        style={{ height: `${HOUR_HEIGHT_PX}px` }}
+                                                        onClick={() => !isPast && handleSlotClick(ac, hour)}
+                                                    />
+                                                )
+                                            })}
+                                            {relevantBookings.map((booking) => (
+                                                <BookingItem 
+                                                    key={booking.id} 
+                                                    booking={booking}
+                                                    onBookingClick={handleBookingClick}
+                                                    selectedDate={selectedDate}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
+                            {/* EXTRA EMPTY LANES */}
+                            {extraLanes.map((_, laneIdx) => (
+                                <div key={`extra-${laneIdx}`} className="flex-1 min-w-[180px] border-r bg-muted/5 opacity-50 flex flex-col">
+                                    <div className="sticky top-0 z-30 h-12 bg-[#003d1c] text-white border-b border-white/10 flex items-center justify-center font-bold text-xs uppercase px-2 text-center shrink-0">
+                                        (Empty Lane)
+                                    </div>
+                                    {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
+                                        <div 
+                                            key={hour} 
+                                            className="border-b"
+                                            style={{ height: `${HOUR_HEIGHT_PX}px` }}
+                                        />
+                                    ))}
+                                </div>
+                            ))}
+
+                            {/* 3. NOW LINE (Overlaying all columns) */}
+                            {showNowLine && (
+                                <div 
+                                    className="absolute left-0 right-0 h-0.5 bg-red-500 z-20 pointer-events-none" 
+                                    style={{ top: `${nowLinePosition}px` }}
+                                >
+                                    <div className="absolute -left-1.5 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full" />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </CardContent>
         </Card>
       </div>
+
       {bookingFormData && (
           <BookingForm 
             isOpen={isBookingFormOpen}
