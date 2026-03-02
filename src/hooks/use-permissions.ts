@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -69,6 +70,8 @@ export const usePermissions = () => {
 
       // 2. Hierarchy Escalation: 'operations-bookings-view' implies 'operations-view'
       // We crawl up the segments to ensure parent menu items are visible
+      // Special case: if parts has 3 segments (e.g. admin-database-manage)
+      // we need to add admin-database-view, admin-view
       let currentPath = '';
       parts.forEach((segment, idx) => {
         currentPath = idx === 0 ? segment : `${currentPath}-${segment}`;

@@ -57,10 +57,9 @@ const SidebarItems = () => {
   
       if (item.subItems) {
         const visibleSubItems = item.subItems.filter(sub => !sub.permissionId || hasPermission(sub.permissionId));
-        const allSubItemsDisabled = item.subItems.every(sub => !hasPermission(sub.permissionId));
+        const allSubItemsDisabled = item.subItems.every(sub => sub.permissionId && !hasPermission(sub.permissionId));
 
         if (item.subItems.length > 0 && visibleSubItems.length === 0) {
-            // Render a disabled parent item if no sub-items are accessible
              return (
                 <SidebarMenuButton
                     disabled
@@ -96,12 +95,16 @@ const SidebarItems = () => {
                 {item.subItems.map((subItem) => {
                     const canAccessSub = !subItem.permissionId || hasPermission(subItem.permissionId);
                     return (
-                        <SidebarMenuSubItem key={subItem.href} onClick={() => canAccessSub && setOpenMobile(false)}>
-                            <Link href={canAccessSub ? subItem.href : '#'} aria-disabled={!canAccessSub} className={!canAccessSub ? 'pointer-events-none' : ''}>
-                                <SidebarMenuSubButton asChild isActive={pathname === subItem.href} disabled={!canAccessSub}>
+                        <SidebarMenuSubItem key={subItem.href}>
+                            <SidebarMenuSubButton asChild isActive={pathname === subItem.href} disabled={!canAccessSub}>
+                                <Link 
+                                    href={canAccessSub ? subItem.href : '#'} 
+                                    onClick={() => canAccessSub && setOpenMobile(false)}
+                                    className={!canAccessSub ? 'pointer-events-none opacity-50' : ''}
+                                >
                                     <span>{subItem.label}</span>
-                                </SidebarMenuSubButton>
-                            </Link>
+                                </Link>
+                            </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                     )
                 })}
@@ -112,16 +115,17 @@ const SidebarItems = () => {
       }
   
       return (
-        <Link href={canAccess ? item.href : '#'} className={!canAccess ? 'pointer-events-none' : ''} aria-disabled={!canAccess}>
-          <SidebarMenuButton
+        <SidebarMenuButton
+            asChild
             isActive={pathname === item.href}
             tooltip={item.label}
             disabled={!canAccess}
-          >
-            <Icon className="h-5 w-5" />
-            <span>{item.label}</span>
-          </SidebarMenuButton>
-        </Link>
+        >
+            <Link href={canAccess ? item.href : '#'} className={!canAccess ? 'pointer-events-none opacity-50' : ''} onClick={() => canAccess && setOpenMobile(false)}>
+                <Icon className="h-5 w-5" />
+                <span>{item.label}</span>
+            </Link>
+        </SidebarMenuButton>
       );
     };
   
@@ -145,7 +149,7 @@ const SidebarItems = () => {
 const SidebarFooterContent = () => {
     const auth = useAuth();
     const router = useRouter();
-    const pathname = usePathname(); // Moved hook to top level
+    const pathname = usePathname();
     const { setOpenMobile } = useSidebar();
     const { userProfile } = useUserProfile();
     const { hasPermission } = usePermissions();
@@ -172,16 +176,17 @@ const SidebarFooterContent = () => {
               <>
               <SidebarSeparator className="my-1 mx-2" />
               <SidebarMenuItem>
-                  <Link href={canAccessSettings ? settingsMenuItem.href : '#'} className={!canAccessSettings ? 'pointer-events-none' : ''} aria-disabled={!canAccessSettings}>
-                      <SidebarMenuButton
-                          isActive={pathname.startsWith(settingsMenuItem.href)}
-                          tooltip={settingsMenuItem.label}
-                          disabled={!canAccessSettings}
-                      >
+                  <SidebarMenuButton
+                      asChild
+                      isActive={pathname.startsWith(settingsMenuItem.href)}
+                      tooltip={settingsMenuItem.label}
+                      disabled={!canAccessSettings}
+                  >
+                      <Link href={canAccessSettings ? settingsMenuItem.href : '#'} className={!canAccessSettings ? 'pointer-events-none opacity-50' : ''} onClick={() => canAccessSettings && setOpenMobile(false)}>
                           <settingsMenuItem.icon className="h-5 w-5" />
                           <span>{settingsMenuItem.label}</span>
-                      </SidebarMenuButton>
-                  </Link>
+                      </Link>
+                  </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarSeparator className="my-1 mx-2" />
               </>

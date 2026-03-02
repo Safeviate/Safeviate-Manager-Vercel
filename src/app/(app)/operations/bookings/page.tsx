@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -59,7 +60,7 @@ const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booki
             const startTime = combineDateAndTime(segment.date, segment.startTime);
             const endTime = combineDateAndTime(segment.date, segment.endTime);
 
-            if (isNaN(startTime.getTime()) || iNaN(endTime.getTime())) return null;
+            if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) return null;
 
             const top = (getHours(startTime) * 60 + getMinutes(startTime)) * (HOUR_HEIGHT_PX / 60);
             const durationMinutes = Math.max(0, differenceInMinutes(endTime, startTime));
