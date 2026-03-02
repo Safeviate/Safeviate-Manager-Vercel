@@ -233,14 +233,15 @@ export default function SchedulePage() {
                 <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 220px)' }}>
                     <div className="flex min-w-full w-fit relative">
                         
-                        <div className="w-24 flex-shrink-0 bg-muted/50 border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                        {/* Solid Sticky Time Column */}
+                        <div className="w-24 flex-shrink-0 bg-muted border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                             <div className="sticky top-0 z-50 h-12 bg-[#003d1c] border-b border-white/10 flex items-center justify-center font-bold text-sm text-white uppercase tracking-wider">
                                 TIME
                             </div>
                             {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
                                 <div 
                                     key={hour} 
-                                    className="flex items-center justify-center border-b text-sm md:text-base font-mono font-bold text-muted-foreground bg-muted/30"
+                                    className="flex items-center justify-center border-b text-sm md:text-base font-mono font-bold text-muted-foreground bg-muted"
                                     style={{ height: `${HOUR_HEIGHT_PX}px` }}
                                 >
                                     {format(new Date(0, 0, 0, hour), 'HH:mm')}

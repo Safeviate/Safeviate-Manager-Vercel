@@ -304,7 +304,8 @@ export default function AuditSchedulePage() {
                 <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 220px)' }}>
                     <div className="flex min-w-full w-fit relative">
                         
-                        <div className="w-24 flex-shrink-0 bg-muted/50 border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                        {/* Solid Sticky Month Column */}
+                        <div className="w-24 flex-shrink-0 bg-muted border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                             <div className="sticky top-0 z-50 h-12 bg-[#003d1c] border-b border-white/10 flex items-center justify-center font-bold text-sm text-white uppercase tracking-wider">
                                 MONTH
                             </div>
@@ -314,7 +315,7 @@ export default function AuditSchedulePage() {
                                     <div 
                                         key={month} 
                                         className={cn(
-                                            "flex flex-col items-center justify-center border-b text-sm md:text-base font-mono font-bold uppercase tracking-wider bg-muted/30",
+                                            "flex flex-col items-center justify-center border-b text-sm md:text-base font-mono font-bold uppercase tracking-wider bg-muted",
                                             isCurrentMonth && "bg-[#fefce8] text-[#854d0e]"
                                         )}
                                         style={{ height: `${MONTH_HEIGHT_PX}px` }}

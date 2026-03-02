@@ -57,6 +57,7 @@ export const usePermissions = () => {
       
       expanded.add(p);
       
+      // Permission Escalation Logic
       const parts = p.split('-');
       const action = parts.pop();
       const resourceId = parts.join('-');
@@ -66,10 +67,11 @@ export const usePermissions = () => {
         expanded.add(`${resourceId}-view`);
       }
 
-      // Escalation logic: ensure parent menus are unlocked
+      // Parent menu escalation: ensure parent segments are unlocked
       // e.g., 'operations-bookings-view' -> 'operations-view'
-      parts.forEach((_, idx) => {
-        const segmentPath = parts.slice(0, idx + 1).join('-');
+      const segments = resourceId.split('-');
+      segments.forEach((_, idx) => {
+        const segmentPath = segments.slice(0, idx + 1).join('-');
         expanded.add(`${segmentPath}-view`);
       });
     });
