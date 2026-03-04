@@ -164,7 +164,7 @@ function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
                     </DialogHeader>
                     <div className="py-4">
                         <Label htmlFor="area-name">Area Name</Label>
-                        <Input id="area-name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+                        <Input id="area-name" value={newName} onChange={(e) => setNewAreaName(e.target.value)} />
                     </div>
                     <DialogFooter>
                         <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
