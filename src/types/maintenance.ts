@@ -5,6 +5,7 @@ export interface MaintenanceLog {
     maintenanceType: string;
     date: string; // ISO String
     details: string;
-    ameNo: string;
-    amoNo: string;
+    reference?: string;
+    ameNo?: string;
+    amoNo?: string;
 }

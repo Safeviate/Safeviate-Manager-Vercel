@@ -38,7 +38,7 @@ const TabsTrigger = React.forwardRef<
     {children}
   </TabsPrimitive.Trigger>
 ))
-TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
+TabsTrigger.displayName = AccordionPrimitive?.Trigger?.displayName || "TabsTrigger"
 
 const TabsContent = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Content>,
