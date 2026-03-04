@@ -1,28 +1,31 @@
+
 'use client';
 
 import { use, useMemo, useState } from 'react';
-import { doc, collection, query, where } from 'firebase/firestore';
-import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase, useCollection, updateDocumentNonBlocking } from '@/firebase';
+import { doc, collection, query, orderBy } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { FileUp, Eye, Calendar, Pencil, Trash2, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { format, differenceInDays } from 'date-fns';
+import { DocumentUploader } from '@/components/document-uploader';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { DocumentUploader } from '@/components/document-uploader';
 import { cn } from '@/lib/utils';
-import { format, differenceInDays } from 'date-fns';
-import { CalendarIcon, Eye, Pencil, PlusCircle, Trash2, Wrench } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import type { Aircraft, AircraftComponent } from '@/types/aircraft';
-import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/page';
 import { AircraftForm } from '../aircraft-form';
-import { ComponentForm } from '../component-form';
+import { ComponentForm } from './component-form';
+import { MaintenanceLogForm } from './maintenance-log-form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import Image from 'next/image';
+import type { Aircraft, AircraftComponent } from '@/types/aircraft';
+import type { MaintenanceLog } from '@/types/maintenance';
+import type { DocumentExpirySettings } from '../../../admin/document-dates/page';
+import { Separator } from '@/components/ui/separator';
 
 interface AircraftDetailPageProps {
   params: Promise<{ id: string }>;
@@ -39,70 +42,46 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
     () => (firestore ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId) : null),
     [firestore, tenantId, aircraftId]
   );
+  
+  const componentsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts', aircraftId, 'components')) : null),
+    [firestore, tenantId, aircraftId]
+  );
+
+  const logsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts', aircraftId, 'maintenanceLogs'), orderBy('date', 'desc')) : null),
+    [firestore, tenantId, aircraftId]
+  );
 
   const expirySettingsRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
     [firestore, tenantId]
   );
 
-  const componentsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`)) : null),
-    [firestore, tenantId, aircraftId]
-  );
-
   const { data: aircraft, isLoading: isLoadingAircraft } = useDoc<Aircraft>(aircraftRef);
-  const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
   const { data: components, isLoading: isLoadingComponents } = useCollection<AircraftComponent>(componentsQuery);
+  const { data: logs, isLoading: isLoadingLogs } = useCollection<MaintenanceLog>(logsQuery);
+  const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
 
-  const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
-  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [viewingDocUrl, setViewingDocUrl] = useState<string | null>(null);
 
   const getStatusColor = (expirationDate: string | null | undefined): string | null => {
     if (!expirationDate || !expirySettings) return null;
     const today = new Date();
     const expiry = new Date(expirationDate);
     const daysUntilExpiry = differenceInDays(expiry, today);
-
     if (daysUntilExpiry < 0) return expirySettings.expiredColor || '#ef4444';
     const sortedPeriods = (expirySettings.warningPeriods || []).sort((a, b) => a.period - b.period);
     for (const warning of sortedPeriods) {
       if (daysUntilExpiry <= warning.period) return warning.color;
     }
-    return expirySettings.defaultColor || '#22c55e';
+    return expirySettings.defaultColor || null;
   };
 
-  const handleDocumentUpdate = (updatedDocuments: any[]) => {
+  const handleDocumentUpdate = (updatedDocs: any[]) => {
     if (!aircraftRef) return;
-    updateDocumentNonBlocking(aircraftRef, { documents: updatedDocuments });
-  };
-
-  const onDocumentUploaded = (docDetails: any) => {
-    const currentDocs = aircraft?.documents || [];
-    const existingIndex = currentDocs.findIndex(d => d.name === docDetails.name);
-    let updatedDocs;
-    if (existingIndex > -1) {
-      updatedDocs = [...currentDocs];
-      updatedDocs[existingIndex] = { ...docDetails, expirationDate: currentDocs[existingIndex].expirationDate };
-    } else {
-      updatedDocs = [...currentDocs, docDetails];
-    }
-    handleDocumentUpdate(updatedDocs);
-  };
-
-  const handleExpirationDateChange = (docName: string, date: Date | undefined) => {
-    const currentDocs = aircraft?.documents || [];
-    const index = currentDocs.findIndex(d => d.name === docName);
-    if (index > -1) {
-      const updatedDocs = [...currentDocs];
-      updatedDocs[index].expirationDate = date ? date.toISOString() : null;
-      handleDocumentUpdate(updatedDocs);
-    }
-  };
-
-  const handleDocumentDelete = (docName: string) => {
-    const updatedDocs = (aircraft?.documents || []).filter(d => d.name !== docName);
-    handleDocumentUpdate(updatedDocs);
-    toast({ title: 'Document Deleted' });
+    updateDocumentNonBlocking(aircraftRef, { documents: updatedDocs });
   };
 
   if (isLoadingAircraft) return <Skeleton className="h-96 w-full" />;
@@ -114,11 +93,14 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{aircraft.tailNumber}</h1>
-          <p className="text-muted-foreground">{aircraft.make} {aircraft.model}</p>
-        </div>
-        <AircraftForm tenantId={tenantId} existingAircraft={aircraft} trigger={<Button variant="outline"><Pencil className="mr-2 h-4 w-4" /> Edit Aircraft</Button>} />
+        <Button asChild variant="ghost" size="sm">
+          <Link href="/assets/aircraft"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Fleet</Link>
+        </Button>
+        <AircraftForm 
+            tenantId={tenantId} 
+            existingAircraft={aircraft} 
+            trigger={<Button variant="outline"><Pencil className="mr-2 h-4 w-4" /> Edit Aircraft</Button>} 
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -136,94 +118,135 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
           <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6 pt-4">
+        <TabsContent value="overview" className="mt-6">
           <Card>
-            <CardHeader><CardTitle>Details</CardTitle></CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div><p className="text-sm font-medium text-muted-foreground">Type</p><p className="text-lg">{aircraft.type || 'N/A'}</p></div>
-              <div><p className="text-sm font-medium text-muted-foreground">Frame Hours</p><p className="text-lg">{(aircraft.frameHours || 0).toFixed(1)}</p></div>
-              <div><p className="text-sm font-medium text-muted-foreground">Engine Hours</p><p className="text-lg">{(aircraft.engineHours || 0).toFixed(1)}</p></div>
+            <CardHeader><CardTitle>{aircraft.tailNumber}</CardTitle><CardDescription>{aircraft.make} {aircraft.model} • {aircraft.type}</CardDescription></CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div><p className="text-sm font-medium text-muted-foreground">Empty Weight</p><p className="text-lg font-semibold">{aircraft.emptyWeight || 'N/A'} lbs</p></div>
+                <div><p className="text-sm font-medium text-muted-foreground">Max Takeoff Weight</p><p className="text-lg font-semibold">{aircraft.maxTakeoffWeight || 'N/A'} lbs</p></div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="documents" className="space-y-4 pt-4">
+        <TabsContent value="documents" className="mt-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <div><CardTitle>Aircraft Documents</CardTitle><CardDescription>Regulatory and maintenance documentation.</CardDescription></div>
-              <DocumentUploader onDocumentUploaded={onDocumentUploaded} trigger={(open) => <Button onClick={() => open()} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Document</Button>} />
+              <div><CardTitle>Aircraft Documents</CardTitle><CardDescription>Regulatory certificates and insurance.</CardDescription></div>
+              <DocumentUploader
+                onDocumentUploaded={(newDoc) => handleDocumentUpdate([...(aircraft.documents || []), newDoc])}
+                trigger={(open) => <Button onClick={() => open()}><FileUp className="mr-2 h-4 w-4" /> Add Document</Button>}
+              />
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
-                <table className="w-full text-sm">
-                  <thead><tr className="border-b bg-muted/50"><th className="h-10 px-4 text-left font-medium">Document</th><th className="h-10 px-4 text-left font-medium">Expiry</th><th className="h-10 px-4 text-center font-medium">Set Expiry</th><th className="h-10 px-4 text-right font-medium">Actions</th></tr></thead>
-                  <tbody>
-                    {(aircraft.documents || []).map((doc) => (
-                      <tr key={doc.name} className="border-b">
-                        <td className="p-4 font-medium">{doc.name}</td>
-                        <td className="p-4" style={{ color: getStatusColor(doc.expirationDate) || 'inherit' }}>{doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'N/A'}</td>
-                        <td className="p-4 text-center">
-                          <Popover><PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><CalendarIcon className="h-4 w-4" /></Button></PopoverTrigger><PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined} onDateSelect={(date) => handleExpirationDateChange(doc.name, date)} /></PopoverContent></Popover>
-                        </td>
-                        <td className="p-4 text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="outline" size="sm" onClick={() => { setViewingImageUrl(doc.url); setIsImageViewerOpen(true); }}><Eye className="mr-2 h-4 w-4" /> View</Button>
-                            <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDocumentDelete(doc.name)}><Trash2 className="h-4 w-4" /></Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table>
+                <TableHeader><TableRow><TableHead>Document</TableHead><TableHead>Expiry Date</TableHead><TableHead className="text-center">Set Expiry</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {(aircraft.documents || []).map((doc, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium">{doc.name}</TableCell>
+                      <TableCell style={{ color: getStatusColor(doc.expirationDate) || 'inherit' }} className="font-semibold">
+                        {doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'No Expiry'}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Popover>
+                          <PopoverTrigger asChild><Button variant="outline" size="icon" className="h-8 w-8"><Calendar className="h-4 w-4" /></Button></PopoverTrigger>
+                          <PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined} onDateSelect={(date) => {
+                            const newDocs = [...(aircraft.documents || [])];
+                            newDocs[idx].expirationDate = date.toISOString();
+                            handleDocumentUpdate(newDocs);
+                          }} /></PopoverContent>
+                        </Popover>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => { setViewingDocUrl(doc.url); setIsViewerOpen(true); }}><Eye className="mr-2 h-4 w-4" /> View</Button>
+                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDocumentUpdate((aircraft.documents || []).filter((_, i) => i !== idx))}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="components" className="space-y-4 pt-4">
+        <TabsContent value="components" className="mt-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div><CardTitle>Tracked Components</CardTitle><CardDescription>Life-limited parts and assemblies.</CardDescription></div>
-              <ComponentForm tenantId={tenantId} aircraftId={aircraftId} trigger={<Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Component</Button>} />
+              <ComponentForm tenantId={tenantId} aircraftId={aircraftId} />
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
-                <table className="w-full text-sm">
-                  <thead><tr className="border-b bg-muted/50"><th className="h-10 px-4 text-left font-medium">Component</th><th className="h-10 px-4 text-left font-medium">Manufacturer</th><th className="h-10 px-4 text-left font-medium">Serial No.</th><th className="h-10 px-4 text-left font-medium">Install Date</th><th className="h-10 px-4 text-right font-medium">TSN</th><th className="h-10 px-4 text-right font-medium">TSO</th><th className="h-10 px-4 text-right font-medium">Total Time</th></tr></thead>
-                  <tbody>
-                    {(components || []).map((comp) => (
-                      <tr key={comp.id} className="border-b">
-                        <td className="p-4 font-medium">{comp.name}</td>
-                        <td className="p-4">{comp.manufacturer}</td>
-                        <td className="p-4">{comp.serialNumber}</td>
-                        <td className="p-4">{comp.installDate ? format(new Date(comp.installDate), 'PP') : 'N/A'}</td>
-                        <td className="p-4 text-right">{comp.tsn?.toFixed(1)}</td>
-                        <td className="p-4 text-right">{comp.tso?.toFixed(1)}</td>
-                        <td className="p-4 text-right">{comp.totalTime?.toFixed(1)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Component</TableHead>
+                    <TableHead>Manufacturer</TableHead>
+                    <TableHead>Serial Number</TableHead>
+                    <TableHead>Install Date</TableHead>
+                    <TableHead className="text-right">TSN</TableHead>
+                    <TableHead className="text-right">TSO</TableHead>
+                    <TableHead className="text-right">Total Time</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {components?.map((comp) => (
+                    <TableRow key={comp.id}>
+                      <TableCell className="font-medium">{comp.name}</TableCell>
+                      <TableCell>{comp.manufacturer}</TableCell>
+                      <TableCell className="font-mono text-xs">{comp.serialNumber}</TableCell>
+                      <TableCell>{format(new Date(comp.installDate), 'PP')}</TableCell>
+                      <TableCell className="text-right font-mono">{(comp.tsn || 0).toFixed(1)}</TableCell>
+                      <TableCell className="text-right font-mono">{(comp.tso || 0).toFixed(1)}</TableCell>
+                      <TableCell className="text-right font-mono">{(comp.totalTime || 0).toFixed(1)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="maintenance" className="space-y-4 pt-4">
+        <TabsContent value="maintenance" className="mt-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <div><CardTitle>Maintenance Logs</CardTitle><CardDescription>Chronological record of maintenance activities.</CardDescription></div>
-              <Button size="sm"><Wrench className="mr-2 h-4 w-4" /> Log Activity</Button>
+              <div><CardTitle>Maintenance Logs</CardTitle><CardDescription>Work history and service records.</CardDescription></div>
+              <MaintenanceLogForm tenantId={tenantId} aircraftId={aircraftId} />
             </CardHeader>
-            <CardContent><p className="text-center text-muted-foreground py-8">Maintenance log implementation coming soon.</p></CardContent>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Details</TableHead>
+                    <TableHead>AME No.</TableHead>
+                    <TableHead>AMO No.</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {logs?.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell><Badge variant="secondary">{log.maintenanceType}</Badge></TableCell>
+                      <TableCell className="whitespace-nowrap">{format(new Date(log.date), 'PP')}</TableCell>
+                      <TableCell className="max-w-md truncate" title={log.details}>{log.details}</TableCell>
+                      <TableCell className="font-mono text-xs">{log.ameNo}</TableCell>
+                      <TableCell className="font-mono text-xs">{log.amoNo}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
-      <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
-          <DialogHeader><DialogTitle>Document Viewer</DialogTitle></DialogHeader>
-          {viewingImageUrl && <div className="relative h-[80vh]"><Image src={viewingImageUrl} alt="Document" fill style={{ objectFit: 'contain' }} /></div>}
+      <Dialog open={isViewerOpen} onOpenChange={setIsViewerOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh]"><DialogHeader><DialogTitle>Document Viewer</DialogTitle></DialogHeader>
+          <div className="relative aspect-auto min-h-[60vh] flex items-center justify-center">
+            {viewingDocUrl ? <img src={viewingDocUrl} alt="Document" className="max-h-[70vh] object-contain" /> : <Skeleton className="h-full w-full" />}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

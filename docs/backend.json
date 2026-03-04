@@ -818,27 +818,36 @@
         },
         "aircraftId": {
           "type": "string",
-          "description": "Reference to Aircraft. (Relationship: Aircraft 1:N MaintenanceLog)"
+          "description": "Reference to Aircraft."
+        },
+        "maintenanceType": {
+          "type": "string",
+          "description": "The category of maintenance (e.g., 50hr Inspection, Unscheduled Repair)."
         },
         "date": {
           "type": "string",
           "description": "Date of the maintenance.",
           "format": "date-time"
         },
-        "description": {
+        "details": {
           "type": "string",
-          "description": "Description of the maintenance performed."
+          "description": "Comprehensive details of the work performed."
         },
-        "procedure": {
+        "ameNo": {
           "type": "string",
-          "description": "Details of the maintenance procedure followed."
+          "description": "Aircraft Maintenance Engineer license number."
+        },
+        "amoNo": {
+          "type": "string",
+          "description": "Approved Maintenance Organization number."
         }
       },
       "required": [
         "id",
         "aircraftId",
+        "maintenanceType",
         "date",
-        "description"
+        "details"
       ]
     },
     "Permission": {
@@ -1281,18 +1290,6 @@
         },
         "required": ["id", "colors"]
     },
-    "MassAndBalance": {
-        "title": "Mass and Balance",
-        "type": "object",
-        "description": "Holds a reference or a snapshot of the mass and balance calculation for a flight.",
-        "properties": {
-            "takeoffWeight": { "type": "number" },
-            "takeoffCg": { "type": "number" },
-            "landingWeight": { "type": "number" },
-            "landingCg": { "type": "number" },
-            "isWithinLimits": { "type": "boolean" }
-        }
-    },
     "Booking": {
       "title": "Booking",
       "type": "object",
@@ -1309,9 +1306,9 @@
         "aircraftId": { "type": "string", "description": "ID of the booked aircraft." },
         "instructorId": { "type": "string" },
         "studentId": { "type": "string" },
-        "createdById": { "type": "string" },
+        "createdBy": { "type": "string" },
         "cancellationReason": { "type": "string" },
-        "status": { "type": "string", "enum": ["Tentative", "Confirmed", "Completed", "Cancelled", "Cancelled with Reason"] },
+        "status": { "type": "string", "enum": ["Tentative", "Confirmed", "Completed", "Cancelled"] },
         "notes": { "type": "string" },
         "isOvernight": { "type": "boolean" },
         "overnightBookingDate": { "type": "string", "format": "date" },
@@ -1319,8 +1316,7 @@
         "preFlight": { "type": "boolean" },
         "postFlight": { "type": "boolean" },
         "preFlightData": { "$ref": "#/backend/entities/PreFlightData" },
-        "postFlightData": { "$ref": "#/backend/entities/PostFlightData" },
-        "massAndBalance": { "$ref": "#/backend/entities/MassAndBalance" }
+        "postFlightData": { "$ref": "#/backend/entities/PostFlightData" }
       },
       "required": ["id", "bookingNumber", "type", "start", "end", "aircraftId", "status"]
     },
