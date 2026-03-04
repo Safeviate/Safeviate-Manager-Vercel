@@ -1,26 +1,26 @@
 'use client';
 
 import { use, useMemo, useState } from 'react';
-import { doc, collection, query, orderBy } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase, useCollection, updateDocumentNonBlocking } from '@/firebase';
-import type { Aircraft, AircraftComponent, MaintenanceLog } from '@/types/aircraft';
+import { doc, collection, query, orderBy } from 'firebase/firestore';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, PlusCircle, CalendarIcon, Eye, Trash2, FileUp, Camera } from 'lucide-react';
+import { ArrowLeft, Plus, Eye, Calendar as CalendarIcon, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { AircraftForm } from '../aircraft-form';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { format, differenceInDays } from 'date-fns';
+import type { Aircraft, AircraftComponent } from '@/types/aircraft';
+import type { MaintenanceLog } from '@/types/aircraft';
+import { AircraftForm } from '../aircraft-form';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DocumentUploader } from '@/components/document-uploader';
-import { useToast } from '@/hooks/use-toast';
-import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/page';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import Image from 'next/image';
+import { useToast } from '@/hooks/use-toast';
+import { DocumentUploader } from '@/components/document-uploader';
 
 interface AircraftDetailPageProps {
   params: Promise<{ id: string }>;
@@ -33,14 +33,15 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
   const tenantId = 'safeviate';
   const aircraftId = resolvedParams.id;
 
-  const [isEditDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
 
   const aircraftRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId) : null),
+    () => (firestore ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId) : null),
     [firestore, tenantId, aircraftId]
   );
-
+  
   const componentsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`)) : null),
     [firestore, tenantId, aircraftId]
@@ -59,81 +60,81 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
   const { data: aircraft, isLoading: isLoadingAircraft } = useDoc<Aircraft>(aircraftRef);
   const { data: components, isLoading: isLoadingComponents } = useCollection<AircraftComponent>(componentsQuery);
   const { data: logs, isLoading: isLoadingLogs } = useCollection<MaintenanceLog>(logsQuery);
-  const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
+  const { data: expirySettings } = useDoc<any>(expirySettingsRef);
 
   const getStatusColor = (expirationDate: string | null | undefined): string | null => {
     if (!expirationDate || !expirySettings) return null;
+
     const today = new Date();
     const expiry = new Date(expirationDate);
     const daysUntilExpiry = differenceInDays(expiry, today);
 
-    if (daysUntilExpiry < 0) return expirySettings.expiredColor || '#ef4444';
+    if (daysUntilExpiry < 0) {
+      return expirySettings.expiredColor || '#ef4444'; 
+    }
 
     const sortedPeriods = [...(expirySettings.warningPeriods || [])].sort((a, b) => a.period - b.period);
     for (const warning of sortedPeriods) {
-      if (daysUntilExpiry <= warning.period) return warning.color;
+      if (daysUntilExpiry <= warning.period) {
+        return warning.color;
+      }
     }
-    return expirySettings.defaultColor || null;
+
+    return expirySettings.defaultColor || null; 
   };
 
-  const handleDocumentUpdate = (updatedDocuments: any[]) => {
-    if (!aircraftRef) return;
-    updateDocumentNonBlocking(aircraftRef, { documents: updatedDocuments });
-  };
-
-  const onDocumentUploaded = (docDetails: any) => {
-    const currentDocs = aircraft?.documents || [];
-    handleDocumentUpdate([...currentDocs, docDetails]);
-  };
-
-  const handleExpirationDateChange = (docName: string, date: Date | undefined) => {
-    const currentDocs = aircraft?.documents || [];
+  const handleDocumentExpiryChange = (docName: string, date: Date | undefined) => {
+    if (!aircraft || !aircraftRef) return;
+    const currentDocs = aircraft.documents || [];
     const updatedDocs = currentDocs.map(d => 
       d.name === docName ? { ...d, expirationDate: date ? date.toISOString() : null } : d
     );
-    handleDocumentUpdate(updatedDocs);
+    updateDocumentNonBlocking(aircraftRef, { documents: updatedDocs });
+    toast({ title: 'Expiry Updated', description: `Expiration for ${docName} has been updated.` });
   };
 
-  if (isLoadingAircraft) return <Skeleton className="h-96 w-full" />;
+  const handleViewDocument = (url: string) => {
+    setViewingImageUrl(url);
+    setIsImageViewerOpen(true);
+  };
+
+  const handleAddDocument = (docDetails: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => {
+    if (!aircraft || !aircraftRef) return;
+    const currentDocs = aircraft.documents || [];
+    updateDocumentNonBlocking(aircraftRef, { documents: [...currentDocs, docDetails] });
+  };
+
+  const handleRemoveDocument = (docName: string) => {
+    if (!aircraft || !aircraftRef) return;
+    const updatedDocs = (aircraft.documents || []).filter(d => d.name !== docName);
+    updateDocumentNonBlocking(aircraftRef, { documents: updatedDocs });
+    toast({ title: 'Document Removed' });
+  };
+
+  const isLoading = isLoadingAircraft || isLoadingComponents || isLoadingLogs;
+
+  if (isLoading) return <div className="p-8 space-y-6"><Skeleton className="h-12 w-1/3" /><Skeleton className="h-64 w-full" /></div>;
   if (!aircraft) return <div className="p-8 text-center">Aircraft not found.</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start">
         <div className="space-y-1">
-          <Button asChild variant="ghost" size="sm" className="-ml-2 h-8 text-muted-foreground">
+          <Button asChild variant="ghost" size="sm" className="-ml-2 h-8">
             <Link href="/assets/aircraft"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Fleet</Link>
           </Button>
           <h1 className="text-3xl font-bold tracking-tight">{aircraft.tailNumber}</h1>
-          <p className="text-lg text-muted-foreground">{aircraft.make} {aircraft.model} • {aircraft.type}</p>
+          <p className="text-muted-foreground">{aircraft.make} {aircraft.model} • {aircraft.type}</p>
         </div>
-        <AircraftForm 
-          tenantId={tenantId}
-          existingAircraft={aircraft}
-          isOpen={isEditDialogOpen}
-          setIsOpen={setIsAddDialogOpen}
-          trigger={<Button variant="outline">Edit Aircraft</Button>}
-        />
+        <Button onClick={() => setIsEditDialogOpen(true)}>Edit Aircraft</Button>
       </div>
 
-      {/* Persistent Overview Dashboard */}
+      {/* Meter Dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2"><CardDescription>Current Hobbs</CardDescription></CardHeader>
-          <CardContent><p className="text-2xl font-bold font-mono">{aircraft.currentHobbs?.toFixed(1) || '0.0'}</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardDescription>Current Tacho</CardDescription></CardHeader>
-          <CardContent><p className="text-2xl font-bold font-mono">{aircraft.currentTacho?.toFixed(1) || '0.0'}</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardDescription>Next 50hr Due</CardDescription></CardHeader>
-          <CardContent><p className="text-2xl font-bold font-mono">{aircraft.tachoAtNext50Inspection?.toFixed(1) || 'N/A'}</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardDescription>Next 100hr Due</CardDescription></CardHeader>
-          <CardContent><p className="text-2xl font-bold font-mono">{aircraft.tachoAtNext100Inspection?.toFixed(1) || 'N/A'}</p></CardContent>
-        </Card>
+        <Card><CardHeader className="pb-2"><CardDescription>Current Hobbs</CardDescription><CardTitle className="text-2xl">{aircraft.currentHobbs?.toFixed(1) || '0.0'}</CardTitle></CardHeader></Card>
+        <Card><CardHeader className="pb-2"><CardDescription>Current Tacho</CardDescription><CardTitle className="text-2xl">{aircraft.currentTacho?.toFixed(1) || '0.0'}</CardTitle></CardHeader></Card>
+        <Card><CardHeader className="pb-2"><CardDescription>Next 50hr Due</CardDescription><CardTitle className="text-2xl">{aircraft.tachoAtNext50Inspection?.toFixed(1) || 'N/A'}</CardTitle></CardHeader></Card>
+        <Card><CardHeader className="pb-2"><CardDescription>Next 100hr Due</CardDescription><CardTitle className="text-2xl">{aircraft.tachoAtNext100Inspection?.toFixed(1) || 'N/A'}</CardTitle></CardHeader></Card>
       </div>
 
       <Tabs defaultValue="components" className="w-full">
@@ -143,14 +144,11 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
           <TabsTrigger value="logs">Maintenance Logs</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="components">
+        <TabsContent value="components" className="pt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Life-Limited Components</CardTitle>
-                <CardDescription>Monitor installation dates and time-since-overhaul for critical parts.</CardDescription>
-              </div>
-              <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Component</Button>
+              <CardTitle>Life-Limited Components</CardTitle>
+              <Button size="sm"><Plus className="mr-2 h-4 w-4" /> Add Component</Button>
             </CardHeader>
             <CardContent>
               <Table>
@@ -160,25 +158,25 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                     <TableHead>Manufacturer</TableHead>
                     <TableHead>Serial Number</TableHead>
                     <TableHead>Install Date</TableHead>
-                    <TableHead>TSN</TableHead>
-                    <TableHead>TSO</TableHead>
-                    <TableHead>Total Time</TableHead>
+                    <TableHead className="text-right">TSN</TableHead>
+                    <TableHead className="text-right">TSO</TableHead>
+                    <TableHead className="text-right">Total Time</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {components?.map(c => (
+                  {components?.map((c) => (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{c.name}</TableCell>
                       <TableCell>{c.manufacturer}</TableCell>
-                      <TableCell className="font-mono text-xs">{c.serialNumber}</TableCell>
-                      <TableCell>{c.installDate ? format(new Date(c.installDate), 'PPP') : 'N/A'}</TableCell>
-                      <TableCell>{c.tsn?.toFixed(1)}</TableCell>
-                      <TableCell>{c.tso?.toFixed(1)}</TableCell>
-                      <TableCell>{c.totalTime?.toFixed(1)}</TableCell>
+                      <TableCell>{c.serialNumber}</TableCell>
+                      <TableCell>{c.installDate ? format(new Date(c.installDate), 'PP') : 'N/A'}</TableCell>
+                      <TableCell className="text-right font-mono">{c.tsn?.toFixed(1) || '0.0'}</TableCell>
+                      <TableCell className="text-right font-mono">{c.tso?.toFixed(1) || '0.0'}</TableCell>
+                      <TableCell className="text-right font-mono">{c.totalTime?.toFixed(1) || '0.0'}</TableCell>
                     </TableRow>
                   ))}
-                  {(!components || components.length === 0) && (
-                    <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No components being tracked.</TableCell></TableRow>
+                  {components?.length === 0 && (
+                    <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No tracked components recorded.</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
@@ -186,37 +184,34 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
           </Card>
         </TabsContent>
 
-        <TabsContent value="documents">
+        <TabsContent value="documents" className="pt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Aircraft Vault</CardTitle>
-                <CardDescription>C of A, Insurance, and other regulatory certifications.</CardDescription>
-              </div>
+              <CardTitle>Aircraft Documents</CardTitle>
               <DocumentUploader 
-                onDocumentUploaded={onDocumentUploaded}
-                trigger={(open) => <Button size="sm" onClick={() => open()}><PlusCircle className="mr-2 h-4 w-4" /> Add Document</Button>}
+                onDocumentUploaded={handleAddDocument}
+                trigger={(open) => <Button size="sm" onClick={() => open()}><Plus className="mr-2 h-4 w-4" /> Add Document</Button>}
               />
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Document</TableHead>
+                    <TableHead>Document Name</TableHead>
                     <TableHead>Expiry Date</TableHead>
-                    <TableHead className="text-center">Set Expiry</TableHead>
+                    <TableHead className="text-center w-[100px]">Set Expiry</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {aircraft.documents?.map(doc => {
+                  {(aircraft.documents || []).map((doc) => {
                     const statusColor = getStatusColor(doc.expirationDate);
                     return (
                       <TableRow key={doc.name}>
                         <TableCell className="font-medium">{doc.name}</TableCell>
                         <TableCell>
                           <span style={{ color: statusColor || 'inherit' }} className="font-semibold">
-                            {doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'No Expiry'}
+                            {doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'No Expiry Set'}
                           </span>
                         </TableCell>
                         <TableCell className="text-center">
@@ -224,65 +219,67 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                             <PopoverTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8"><CalendarIcon className="h-4 w-4" /></Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
+                            <PopoverContent className="w-auto p-0" align="center">
                               <CustomCalendar 
                                 selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined}
-                                onDateSelect={(date) => handleExpirationDateChange(doc.name, date)}
+                                onDateSelect={(date) => handleDocumentExpiryChange(doc.name, date)}
                               />
                             </PopoverContent>
                           </Popover>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="outline" size="sm" onClick={() => setViewingImageUrl(doc.url)}><Eye className="mr-2 h-4 w-4" /> View</Button>
+                          <div className="flex justify-end gap-2">
+                            <Button variant="outline" size="sm" onClick={() => handleViewDocument(doc.url)}><Eye className="mr-2 h-4 w-4" /> View</Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleRemoveDocument(doc.name)}><Trash2 className="h-4 w-4" /></Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
                   })}
+                  {(aircraft.documents || []).length === 0 && (
+                    <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No documents uploaded.</TableCell></TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="logs">
+        <TabsContent value="logs" className="pt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Maintenance Journal</CardTitle>
-                <CardDescription>Historical record of inspections and repairs.</CardDescription>
-              </div>
-              <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Log Entry</Button>
+              <CardTitle>Maintenance Log History</CardTitle>
+              <Button size="sm"><Plus className="mr-2 h-4 w-4" /> Log Activity</Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Procedure</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {logs?.map(log => (
-                    <TableRow key={log.id}>
-                      <TableCell className="whitespace-nowrap font-medium">{format(new Date(log.date), 'PPP')}</TableCell>
-                      <TableCell>{log.description}</TableCell>
-                      <TableCell className="text-muted-foreground italic">{log.procedure}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              {logs?.map((log) => (
+                <div key={log.id} className="mb-4 last:mb-0 border-b last:border-0 pb-4">
+                  <div className="flex justify-between items-baseline mb-1">
+                    <p className="font-semibold">{format(new Date(log.date), 'PPP')}</p>
+                    <Badge variant="outline">Maintenance</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{log.description}</p>
+                </div>
+              ))}
+              {logs?.length === 0 && <p className="text-center py-8 text-muted-foreground">No logs found.</p>}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
-      <Dialog open={!!viewingImageUrl} onOpenChange={() => setViewingImageUrl(null)}>
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Edit Aircraft</DialogTitle></DialogHeader>
+          <AircraftForm existingAircraft={aircraft} tenantId={tenantId} onCancel={() => setIsEditDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader><DialogTitle>Document Viewer</DialogTitle></DialogHeader>
           {viewingImageUrl && (
             <div className="relative h-[70vh] w-full">
-              <Image src={viewingImageUrl} alt="Document" fill style={{ objectFit: 'contain' }} />
+              <Image src={viewingImageUrl} alt="Document" fill className="object-contain" />
             </div>
           )}
         </DialogContent>

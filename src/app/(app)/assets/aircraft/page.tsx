@@ -4,16 +4,15 @@ import { useState } from 'react';
 import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Eye, Plane } from 'lucide-react';
+import { PlusCircle, Plane, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AircraftForm } from './aircraft-form';
 import type { Aircraft } from '@/types/aircraft';
-import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AircraftForm } from './aircraft-form';
 
-export default function AircraftFleetPage() {
+export default function AircraftPage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate';
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -26,89 +25,58 @@ export default function AircraftFleetPage() {
   const { data: aircraft, isLoading, error } = useCollection<Aircraft>(aircraftQuery);
 
   return (
-    <div className="flex flex-col gap-6 h-full">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Aircraft Fleet</h1>
-          <p className="text-muted-foreground">Manage and monitor your organization's flight assets.</p>
+          <p className="text-muted-foreground">Manage and track your academy's aircraft resources.</p>
         </div>
-        <AircraftForm 
-          tenantId={tenantId}
-          isOpen={isAddDialogOpen}
-          setIsOpen={setIsAddDialogOpen}
-          trigger={
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Aircraft
-            </Button>
-          }
-        />
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Aircraft</Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader><DialogTitle>Register New Aircraft</DialogTitle></DialogHeader>
+            <AircraftForm tenantId={tenantId} onCancel={() => setIsAddDialogOpen(false)} />
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Fleet Overview</CardTitle>
-          <CardDescription>A complete list of registered aircraft and their current status.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : error ? (
-            <div className="text-center py-10 text-destructive">
-              <p>Error loading fleet: {error.message}</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Registration</TableHead>
-                  <TableHead>Model</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Current Hobbs</TableHead>
-                  <TableHead>Current Tacho</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {aircraft && aircraft.length > 0 ? (
-                  aircraft.map((ac) => (
-                    <TableRow key={ac.id}>
-                      <TableCell className="font-bold">{ac.tailNumber}</TableCell>
-                      <TableCell>{ac.make} {ac.model}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{ac.type}</Badge>
-                      </TableCell>
-                      <TableCell className="font-mono">{ac.currentHobbs?.toFixed(1) || '0.0'}</TableCell>
-                      <TableCell className="font-mono">{ac.currentTacho?.toFixed(1) || '0.0'}</TableCell>
-                      <TableCell className="text-right">
-                        <Button asChild variant="outline" size="sm">
-                          <Link href={`/assets/aircraft/${ac.id}`}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                        <Plane className="h-8 w-8 opacity-20" />
-                        <p>No aircraft registered in the fleet yet.</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {isLoading ? (
+          Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 w-full" />)
+        ) : aircraft?.map((ac) => (
+          <Link key={ac.id} href={`/assets/aircraft/${ac.id}`}>
+            <Card className="hover:bg-muted/50 transition-colors cursor-pointer group h-full">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="space-y-1">
+                  <CardTitle className="text-xl">{ac.tailNumber}</CardTitle>
+                  <CardDescription>{ac.make} {ac.model}</CardDescription>
+                </div>
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                  <Plane className="h-5 w-5" />
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><p className="text-muted-foreground">Hobbs</p><p className="font-mono font-bold">{ac.currentHobbs?.toFixed(1) || '0.0'}</p></div>
+                  <div><p className="text-muted-foreground">Tacho</p><p className="font-mono font-bold">{ac.currentTacho?.toFixed(1) || '0.0'}</p></div>
+                </div>
+                <div className="mt-4 flex items-center text-xs font-semibold text-primary">
+                  View Details <ChevronRight className="ml-1 h-3 w-3" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+        {!isLoading && aircraft?.length === 0 && (
+          <Card className="col-span-full py-12 flex flex-col items-center justify-center text-center border-dashed">
+            <Plane className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+            <CardTitle>No aircraft registered</CardTitle>
+            <CardDescription>Get started by adding your first aircraft to the fleet.</CardDescription>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
