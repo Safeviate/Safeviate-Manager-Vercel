@@ -1,127 +1,140 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { Textarea } from '@/components/ui/textarea';
+import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { doc, collection } from 'firebase/firestore';
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { AircraftComponent } from '@/types/aircraft';
 import { format } from 'date-fns';
 
-const formSchema = z.object({
-  name: z.string().min(1, 'Component name is required'),
-  manufacturer: z.string().min(1, 'Manufacturer is required'),
-  serialNumber: z.string().min(1, 'Serial number is required'),
-  installDate: z.string().min(1, 'Install date is required'),
+const componentFormSchema = z.object({
+  name: z.string().min(1, 'Component name is required.'),
+  manufacturer: z.string().min(1, 'Manufacturer is required.'),
+  partNumber: z.string().min(1, 'Part number is required.'),
+  serialNumber: z.string().min(1, 'Serial number is required.'),
+  installDate: z.string().min(1, 'Install date is required.'),
+  installHours: z.number({ coerce: true }).min(0),
   tsn: z.number({ coerce: true }).min(0),
   tso: z.number({ coerce: true }).min(0),
   totalTime: z.number({ coerce: true }).min(0),
+  maxHours: z.number({ coerce: true }).optional(),
   notes: z.string().optional(),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+type ComponentFormValues = z.infer<typeof componentFormSchema>;
 
 interface ComponentFormProps {
+  isOpen: boolean;
+  onClose: () => void;
   aircraftId: string;
   tenantId: string;
-  existingComponent?: AircraftComponent;
-  trigger?: React.ReactNode;
+  existingComponent?: AircraftComponent | null;
 }
 
-export function ComponentForm({ aircraftId, tenantId, existingComponent, trigger }: ComponentFormProps) {
+export function ComponentForm({ isOpen, onClose, aircraftId, tenantId, existingComponent }: ComponentFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: existingComponent ? {
-      name: existingComponent.name,
-      manufacturer: existingComponent.manufacturer,
-      serialNumber: existingComponent.serialNumber,
-      installDate: existingComponent.installDate ? format(new Date(existingComponent.installDate), 'yyyy-MM-dd') : '',
-      tsn: existingComponent.tsn || 0,
-      tso: existingComponent.tso || 0,
-      totalTime: existingComponent.totalTime || 0,
-      notes: existingComponent.notes || '',
-    } : {
+  const form = useForm<ComponentFormValues>({
+    resolver: zodResolver(componentFormSchema),
+    defaultValues: {
       name: '',
       manufacturer: '',
+      partNumber: '',
       serialNumber: '',
       installDate: format(new Date(), 'yyyy-MM-dd'),
+      installHours: 0,
       tsn: 0,
       tso: 0,
       totalTime: 0,
+      maxHours: 0,
       notes: '',
     },
   });
 
-  const onSubmit = (values: FormValues) => {
-    if (!firestore) return;
-
-    if (existingComponent) {
-      const compRef = doc(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`, existingComponent.id);
-      updateDocumentNonBlocking(compRef, values);
-      toast({ title: 'Component updated' });
-    } else {
-      const compCollection = collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`);
-      addDocumentNonBlocking(compCollection, values);
-      toast({ title: 'Component added' });
+  useEffect(() => {
+    if (isOpen && existingComponent) {
+      form.reset({
+        ...existingComponent,
+        installDate: existingComponent.installDate ? format(new Date(existingComponent.installDate), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+      });
+    } else if (isOpen) {
+      form.reset({
+        name: '',
+        manufacturer: '',
+        partNumber: '',
+        serialNumber: '',
+        installDate: format(new Date(), 'yyyy-MM-dd'),
+        installHours: 0,
+        tsn: 0,
+        tso: 0,
+        totalTime: 0,
+        maxHours: 0,
+        notes: '',
+      });
     }
-    setIsOpen(false);
+  }, [isOpen, existingComponent, form]);
+
+  const onSubmit = async (data: ComponentFormValues) => {
+    if (!firestore) return;
+    setIsSubmitting(true);
+
+    try {
+      const componentsCol = collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`);
+      
+      if (existingComponent) {
+        const compRef = doc(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`, existingComponent.id);
+        updateDocumentNonBlocking(compRef, data);
+        toast({ title: 'Component Updated' });
+      } else {
+        addDocumentNonBlocking(componentsCol, data);
+        toast({ title: 'Component Added' });
+      }
+      onClose();
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="max-w-xl">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{existingComponent ? 'Edit' : 'Add'} Component</DialogTitle>
-          <DialogDescription>
-            Enter the tracking and maintenance details for the aircraft component.
-          </DialogDescription>
+          <DialogTitle>{existingComponent ? 'Edit Component' : 'Add New Component'}</DialogTitle>
+          <DialogDescription>Track serial numbers and lifed hours for aircraft parts.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Component Name</FormLabel><FormControl><Input placeholder="Engine #1" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="manufacturer" render={({ field }) => ( <FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input placeholder="Lycoming" {...field} /></FormControl><FormMessage /></FormItem> )} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="serialNumber" render={({ field }) => ( <FormItem><FormLabel>Serial Number</FormLabel><FormControl><Input placeholder="SN-12345" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Component Name</FormLabel><FormControl><Input placeholder="e.g., Engine #1" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="manufacturer" render={({ field }) => ( <FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input placeholder="e.g., Lycoming" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="partNumber" render={({ field }) => ( <FormItem><FormLabel>Part Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="serialNumber" render={({ field }) => ( <FormItem><FormLabel>Serial Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
               <FormField control={form.control} name="installDate" render={({ field }) => ( <FormItem><FormLabel>Install Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="installHours" render={({ field }) => ( <FormItem><FormLabel>A/C Hours at Install</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem> )} />
             </div>
-            <div className="grid grid-cols-3 gap-4 p-4 border rounded-lg bg-muted/20">
-              <FormField control={form.control} name="tsn" render={({ field }) => ( <FormItem><FormLabel className="text-xs">TSN</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem> )} />
-              <FormField control={form.control} name="tso" render={({ field }) => ( <FormItem><FormLabel className="text-xs">TSO</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem> )} />
-              <FormField control={form.control} name="totalTime" render={({ field }) => ( <FormItem><FormLabel className="text-xs">Total Time</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem> )} />
+            <div className="grid grid-cols-3 gap-4 border-t pt-4">
+              <FormField control={form.control} name="tsn" render={({ field }) => ( <FormItem><FormLabel>TSN</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="tso" render={({ field }) => ( <FormItem><FormLabel>TSO</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="totalTime" render={({ field }) => ( <FormItem><FormLabel>Total Time</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem> )} />
             </div>
-            <DialogFooter>
+            <FormField control={form.control} name="notes" render={({ field }) => ( <FormItem><FormLabel>Notes</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem> )} />
+            <DialogFooter className="pt-4">
               <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-              <Button type="submit">Save Component</Button>
+              <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Component'}</Button>
             </DialogFooter>
           </form>
         </Form>
