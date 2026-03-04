@@ -250,8 +250,8 @@ export const menuConfig: MenuItem[] = [
       },
       {
         href: '/admin/document-dates',
-        label: 'Document Dates',
-        description: 'Manage document expiration dates.',
+        label: 'Warnings',
+        description: 'Manage document expiration and inspection warnings.',
         permissionId: 'admin-settings-manage',
       },
       {
