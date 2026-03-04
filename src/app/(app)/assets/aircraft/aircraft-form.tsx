@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,7 +13,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import {
@@ -23,42 +22,52 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc } from 'firebase/firestore';
 import type { Aircraft } from '@/types/aircraft';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 const aircraftFormSchema = z.object({
-  make: z.string().min(1, 'Make is required'),
-  model: z.string().min(1, 'Model is required'),
-  tailNumber: z.string().min(1, 'Tail number is required'),
+  make: z.string().min(1, 'Make is required.'),
+  model: z.string().min(1, 'Model is required.'),
+  tailNumber: z.string().min(1, 'Tail number is required.'),
   type: z.enum(['Single-Engine', 'Multi-Engine']),
-  initialHobbs: z.number({ coerce: true }).min(0),
-  currentHobbs: z.number({ coerce: true }).min(0),
-  initialTacho: z.number({ coerce: true }).min(0),
-  currentTacho: z.number({ coerce: true }).min(0),
-  tachoAtNext50Inspection: z.number({ coerce: true }).optional(),
-  tachoAtNext100Inspection: z.number({ coerce: true }).optional(),
+  initialHobbs: z.number({ coerce: true }).default(0),
+  currentHobbs: z.number({ coerce: true }).default(0),
+  initialTacho: z.number({ coerce: true }).default(0),
+  currentTacho: z.number({ coerce: true }).default(0),
+  tachoAtNext50Inspection: z.number({ coerce: true }).default(0),
+  tachoAtNext100Inspection: z.number({ coerce: true }).default(0),
 });
 
 type AircraftFormValues = z.infer<typeof aircraftFormSchema>;
 
 interface AircraftFormProps {
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
   tenantId: string;
   existingAircraft?: Aircraft | null;
+  onSuccess: () => void;
 }
 
-export function AircraftForm({ isOpen, setIsOpen, tenantId, existingAircraft }: AircraftFormProps) {
+export function AircraftForm({ tenantId, existingAircraft, onSuccess }: AircraftFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<AircraftFormValues>({
     resolver: zodResolver(aircraftFormSchema),
-    defaultValues: {
+    defaultValues: existingAircraft ? {
+      make: existingAircraft.make,
+      model: existingAircraft.model,
+      tailNumber: existingAircraft.tailNumber,
+      type: existingAircraft.type || 'Single-Engine',
+      initialHobbs: existingAircraft.initialHobbs || 0,
+      currentHobbs: existingAircraft.currentHobbs || 0,
+      initialTacho: existingAircraft.initialTacho || 0,
+      currentTacho: existingAircraft.currentTacho || 0,
+      tachoAtNext50Inspection: existingAircraft.tachoAtNext50Inspection || 0,
+      tachoAtNext100Inspection: existingAircraft.tachoAtNext100Inspection || 0,
+    } : {
       make: '',
       model: '',
       tailNumber: '',
@@ -67,36 +76,10 @@ export function AircraftForm({ isOpen, setIsOpen, tenantId, existingAircraft }: 
       currentHobbs: 0,
       initialTacho: 0,
       currentTacho: 0,
+      tachoAtNext50Inspection: 0,
+      tachoAtNext100Inspection: 0,
     },
   });
-
-  useEffect(() => {
-    if (existingAircraft && isOpen) {
-      form.reset({
-        make: existingAircraft.make,
-        model: existingAircraft.model,
-        tailNumber: existingAircraft.tailNumber,
-        type: existingAircraft.type || 'Single-Engine',
-        initialHobbs: existingAircraft.initialHobbs || 0,
-        currentHobbs: existingAircraft.currentHobbs || 0,
-        initialTacho: existingAircraft.initialTacho || 0,
-        currentTacho: existingAircraft.currentTacho || 0,
-        tachoAtNext50Inspection: existingAircraft.tachoAtNext50Inspection,
-        tachoAtNext100Inspection: existingAircraft.tachoAtNext100Inspection,
-      });
-    } else if (isOpen) {
-      form.reset({
-        make: '',
-        model: '',
-        tailNumber: '',
-        type: 'Single-Engine',
-        initialHobbs: 0,
-        currentHobbs: 0,
-        initialTacho: 0,
-        currentTacho: 0,
-      });
-    }
-  }, [existingAircraft, isOpen, form]);
 
   const onSubmit = async (values: AircraftFormValues) => {
     if (!firestore) return;
@@ -104,15 +87,15 @@ export function AircraftForm({ isOpen, setIsOpen, tenantId, existingAircraft }: 
 
     try {
       if (existingAircraft) {
-        const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', existingAircraft.id);
-        updateDocumentNonBlocking(aircraftRef, values);
+        const docRef = doc(firestore, `tenants/${tenantId}/aircrafts`, existingAircraft.id);
+        updateDocumentNonBlocking(docRef, values);
         toast({ title: 'Aircraft Updated' });
       } else {
-        const aircraftsCol = collection(firestore, 'tenants', tenantId, 'aircrafts');
-        addDocumentNonBlocking(aircraftsCol, values);
-        toast({ title: 'Aircraft Added' });
+        const colRef = collection(firestore, `tenants/${tenantId}/aircrafts`);
+        addDocumentNonBlocking(colRef, values);
+        toast({ title: 'Aircraft Created' });
       }
-      setIsOpen(false);
+      onSuccess();
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     } finally {
@@ -121,39 +104,36 @@ export function AircraftForm({ isOpen, setIsOpen, tenantId, existingAircraft }: 
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{existingAircraft ? 'Edit Aircraft' : 'Add New Aircraft'}</DialogTitle>
-          <DialogDescription>Enter registration and initial meter readings.</DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="make" render={({ field }) => (<FormItem><FormLabel>Make</FormLabel><FormControl><Input placeholder="Cessna" {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="model" render={({ field }) => (<FormItem><FormLabel>Model</FormLabel><FormControl><Input placeholder="172S" {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="tailNumber" render={({ field }) => (<FormItem><FormLabel>Tail Number</FormLabel><FormControl><Input placeholder="G-ABCD" {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="type" render={({ field }) => (<FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Single-Engine">Single-Engine</SelectItem><SelectItem value="Multi-Engine">Multi-Engine</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
-            </div>
-            <Separator />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="initialHobbs" render={({ field }) => (<FormItem><FormLabel>Initial Hobbs</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>)} />
-              <FormField control={form.control} name="currentHobbs" render={({ field }) => (<FormItem><FormLabel>Current Hobbs</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>)} />
-              <FormField control={form.control} name="initialTacho" render={({ field }) => (<FormItem><FormLabel>Initial Tacho</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>)} />
-              <FormField control={form.control} name="currentTacho" render={({ field }) => (<FormItem><FormLabel>Current Tacho</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>)} />
-            </div>
-            <Separator />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="tachoAtNext50Inspection" render={({ field }) => (<FormItem><FormLabel>Next 50hr Due (Tacho)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>)} />
-              <FormField control={form.control} name="tachoAtNext100Inspection" render={({ field }) => (<FormItem><FormLabel>Next 100hr Due (Tacho)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>)} />
-            </div>
-            <DialogFooter>
-              <DialogClose asChild><Button variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
-              <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Aircraft'}</Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <FormField control={form.control} name="make" render={({ field }) => (<FormItem><FormLabel>Make</FormLabel><FormControl><Input placeholder="e.g., Cessna" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={form.control} name="model" render={({ field }) => (<FormItem><FormLabel>Model</FormLabel><FormControl><Input placeholder="e.g., 172S" {...field} /></FormControl><FormMessage /></FormItem>)} />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <FormField control={form.control} name="tailNumber" render={({ field }) => (<FormItem><FormLabel>Tail Number</FormLabel><FormControl><Input placeholder="e.g., N123AB" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={form.control} name="type" render={({ field }) => (<FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Single-Engine">Single-Engine</SelectItem><SelectItem value="Multi-Engine">Multi-Engine</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+        </div>
+        
+        <Separator />
+        
+        <div className="grid grid-cols-2 gap-4">
+          <FormField control={form.control} name="initialHobbs" render={({ field }) => (<FormItem><FormLabel>Initial Hobbs</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>)} />
+          <FormField control={form.control} name="currentHobbs" render={({ field }) => (<FormItem><FormLabel>Current Hobbs</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>)} />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <FormField control={form.control} name="initialTacho" render={({ field }) => (<FormItem><FormLabel>Initial Tacho</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>)} />
+          <FormField control={form.control} name="currentTacho" render={({ field }) => (<FormItem><FormLabel>Current Tacho</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>)} />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <FormField control={form.control} name="tachoAtNext50Inspection" render={({ field }) => (<FormItem><FormLabel>Next 50hr Due (Tacho)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>)} />
+          <FormField control={form.control} name="tachoAtNext100Inspection" render={({ field }) => (<FormItem><FormLabel>Next 100hr Due (Tacho)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>)} />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-4">
+          <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Aircraft'}</Button>
+        </div>
+      </form>
+    </Form>
   );
 }
