@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -143,7 +142,7 @@ function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
         <>
             <Popover>
                 <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/10 shrink-0">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-swimlane-header-foreground hover:bg-white/10 shrink-0">
                         <Settings2 className="h-4 w-4" />
                     </Button>
                 </PopoverTrigger>
@@ -305,9 +304,9 @@ export default function AuditSchedulePage() {
                 <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 220px)' }}>
                     <div className="flex min-w-full w-fit relative">
                         
-                        {/* Solid Sticky Month Column */}
-                        <div className="w-24 flex-shrink-0 bg-header border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
-                            <div className="sticky top-0 z-50 h-16 bg-[#003d1c] border-b border-white/10 flex items-center justify-center font-bold text-sm text-white uppercase tracking-wider">
+                        {/* Sticky Month Column */}
+                        <div className="w-24 flex-shrink-0 border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                            <div className="sticky top-0 z-50 h-16 bg-swimlane-header border-b border-white/10 flex items-center justify-center font-bold text-sm text-swimlane-header-foreground uppercase tracking-wider">
                                 MONTH
                             </div>
                             {MONTHS.map((month, idx) => {
@@ -316,8 +315,8 @@ export default function AuditSchedulePage() {
                                     <div 
                                         key={month} 
                                         className={cn(
-                                            "flex flex-col items-center justify-center border-b text-sm md:text-base font-mono font-bold uppercase tracking-wider bg-header text-header-foreground",
-                                            isCurrentMonth && "bg-[#fefce8] text-[#854d0e]"
+                                            "flex flex-col items-center justify-center border-b text-sm md:text-base font-mono font-bold uppercase tracking-wider",
+                                            isCurrentMonth ? "bg-[#fefce8] text-[#854d0e]" : "bg-swimlane-header text-swimlane-header-foreground"
                                         )}
                                         style={{ height: `${MONTH_HEIGHT_PX}px` }}
                                     >
@@ -335,7 +334,7 @@ export default function AuditSchedulePage() {
                         <div className="flex flex-1 relative">
                             {auditAreas.map((area) => (
                                 <div key={area} className="flex-1 min-w-[200px] border-r relative flex flex-col">
-                                    <div className="sticky top-0 z-30 h-16 bg-[#003d1c] text-white border-b border-white/10 flex items-center justify-between gap-2 px-4 text-center shrink-0 whitespace-normal leading-tight">
+                                    <div className="sticky top-0 z-30 h-16 bg-swimlane-header text-swimlane-header-foreground border-b border-white/10 flex items-center justify-between gap-2 px-4 text-center shrink-0 whitespace-normal leading-tight">
                                         <span className="text-[10px] font-bold uppercase tracking-wider">{area}</span>
                                         <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
                                     </div>
@@ -385,7 +384,7 @@ export default function AuditSchedulePage() {
 
                             {extraLanes.map((_, laneIdx) => (
                                 <div key={`extra-${laneIdx}`} className="flex-1 min-w-[200px] border-r bg-muted/5 opacity-50 flex flex-col">
-                                    <div className="sticky top-0 z-30 h-16 bg-[#003d1c] text-white border-b border-white/10 flex items-center justify-center font-bold text-[10px] uppercase px-2 text-center shrink-0">
+                                    <div className="sticky top-0 z-30 h-16 bg-swimlane-header text-swimlane-header-foreground border-b border-white/10 flex items-center justify-center font-bold text-[10px] uppercase px-2 text-center shrink-0">
                                         &nbsp;
                                     </div>
                                     {MONTHS.map((month) => (
