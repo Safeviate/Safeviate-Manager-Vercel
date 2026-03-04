@@ -11,6 +11,7 @@ export interface AircraftComponent {
     notes: string;
     tsn: number;
     tso: number;
+    totalTime: number;
 }
 
 export interface Aircraft {

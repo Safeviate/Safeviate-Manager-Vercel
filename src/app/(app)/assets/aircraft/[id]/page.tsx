@@ -1,3 +1,4 @@
+
 'use client';
 
 import { use, useMemo, useState } from 'react';
@@ -7,22 +8,27 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, PlusCircle, Pencil, Wrench, FileText, LayoutDashboard } from 'lucide-react';
+import { ArrowLeft, Pencil, PlusCircle, FileText, Settings, History, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { usePermissions } from '@/hooks/use-permissions';
 import type { Aircraft, AircraftComponent } from '@/types/aircraft';
 import { AircraftForm } from '../aircraft-form';
-import { ComponentForm } from '../component-form';
+import { ComponentForm } from './component-form';
+import { ComponentsTable } from './components-table';
 import { DocumentUploader } from '@/components/document-uploader';
-import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
-import { usePermissions } from '@/hooks/use-permissions';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface AircraftDetailPageProps {
   params: Promise<{ id: string }>;
 }
+
+const DetailItem = ({ label, value }: { label: string; value: string | number | undefined }) => (
+  <div>
+    <p className="text-sm font-medium text-muted-foreground">{label}</p>
+    <p className="text-lg font-semibold">{value || 'N/A'}</p>
+  </div>
+);
 
 export default function AircraftDetailPage({ params }: AircraftDetailPageProps) {
   const resolvedParams = use(params);
@@ -32,66 +38,66 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
   const tenantId = 'safeviate';
   const aircraftId = resolvedParams.id;
 
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isComponentFormOpen, setIsComponentFormOpen] = useState(false);
-
   const canEdit = hasPermission('assets-edit');
 
   const aircraftRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId) : null),
+    () => (firestore ? doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId) : null),
     [firestore, tenantId, aircraftId]
   );
 
   const componentsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts', aircraftId, 'components')) : null),
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`, aircraftId, 'components'), orderBy('name')) : null),
     [firestore, tenantId, aircraftId]
   );
 
   const { data: aircraft, isLoading: isLoadingAircraft } = useDoc<Aircraft>(aircraftRef);
   const { data: components, isLoading: isLoadingComponents } = useCollection<AircraftComponent>(componentsQuery);
 
-  const handleAddDocument = (docDetails: any) => {
-    if (!aircraft) return;
+  const handleDocumentUploaded = (docDetails: any) => {
+    if (!firestore || !aircraft) return;
     const currentDocs = aircraft.documents || [];
     const updatedDocs = [...currentDocs, docDetails];
-    updateDocumentNonBlocking(aircraftRef!, { documents: updatedDocs });
-    toast({ title: 'Document Added', description: `"${docDetails.name}" has been attached to the aircraft.` });
+    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);
+    updateDocumentNonBlocking(aircraftRef, { documents: updatedDocs });
+    toast({ title: 'Document Added', description: `"${docDetails.name}" has been saved.` });
   };
 
-  const handleRemoveComponent = (componentId: string) => {
-    if (!firestore) return;
-    const compRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId, 'components', componentId);
-    deleteDocumentNonBlocking(compRef);
-    toast({ title: 'Component Removed' });
-  };
-
-  if (isLoadingAircraft || isLoadingComponents) {
-    return <div className="p-8"><Skeleton className="h-96 w-full" /></div>;
+  if (isLoadingAircraft) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-48" />
+        <Card><CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader><CardContent><Skeleton className="h-32 w-full" /></CardContent></Card>
+      </div>
+    );
   }
 
   if (!aircraft) {
-    return <div className="p-8 text-center"><p>Aircraft not found.</p></div>;
+    return <div className="p-8 text-center">Aircraft not found.</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <Button asChild variant="outline" size="sm">
+        <Button asChild variant="outline">
           <Link href="/assets/aircraft"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Fleet</Link>
         </Button>
         <div className="flex gap-2">
           {canEdit && (
             <>
-              <Button size="sm" variant="outline" onClick={() => setIsEditOpen(true)}>
-                <Pencil className="mr-2 h-4 w-4" /> Edit Aircraft
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setIsComponentFormOpen(true)}>
-                <Wrench className="mr-2 h-4 w-4" /> Add Component
-              </Button>
-              <DocumentUploader 
-                onDocumentUploaded={handleAddDocument}
+              <AircraftForm
+                tenantId={tenantId}
+                existingAircraft={aircraft}
+                trigger={<Button variant="outline"><Pencil className="mr-2 h-4 w-4" /> Edit Aircraft</Button>}
+              />
+              <ComponentForm
+                tenantId={tenantId}
+                aircraftId={aircraftId}
+                trigger={<Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Component</Button>}
+              />
+              <DocumentUploader
+                onDocumentUploaded={handleDocumentUploaded}
                 trigger={(open) => (
-                  <Button size="sm" variant="outline" onClick={() => open()}>
+                  <Button variant="outline" onClick={() => open()}>
                     <FileText className="mr-2 h-4 w-4" /> Add Document
                   </Button>
                 )}
@@ -102,123 +108,110 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-3xl font-bold">{aircraft.tailNumber}</CardTitle>
-            <CardDescription>{aircraft.make} {aircraft.model} • {aircraft.type}</CardDescription>
-          </div>
-          <div className="text-right">
-            <p className="text-sm font-medium text-muted-foreground uppercase">Current Hobbs</p>
-            <p className="text-2xl font-mono font-bold text-primary">{aircraft.currentHobbs?.toFixed(1) || '0.0'}</p>
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-3xl font-bold">{aircraft.tailNumber}</CardTitle>
+              <CardDescription>{aircraft.make} {aircraft.model} • {aircraft.type}</CardDescription>
+            </div>
           </div>
         </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <DetailItem label="Current Hobbs" value={aircraft.currentHobbs?.toFixed(1)} />
+            <DetailItem label="Current Tacho" value={aircraft.currentTacho?.toFixed(1)} />
+            <DetailItem label="Total Airframe Time" value={aircraft.frameHours?.toFixed(1)} />
+            <DetailItem label="Engine Time" value={aircraft.engineHours?.toFixed(1)} />
+          </div>
+        </CardContent>
       </Card>
 
       <Tabs defaultValue="overview">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview"><LayoutDashboard className="mr-2 h-4 w-4" /> Overview</TabsTrigger>
-          <TabsTrigger value="components"><Wrench className="mr-2 h-4 w-4" /> Components</TabsTrigger>
+          <TabsTrigger value="overview"><Settings className="mr-2 h-4 w-4" /> Overview</TabsTrigger>
+          <TabsTrigger value="components"><ClipboardList className="mr-2 h-4 w-4" /> Components</TabsTrigger>
           <TabsTrigger value="documents"><FileText className="mr-2 h-4 w-4" /> Documents</TabsTrigger>
-          <TabsTrigger value="maintenance">Maintenance Logs</TabsTrigger>
+          <TabsTrigger value="maintenance"><History className="mr-2 h-4 w-4" /> Maintenance</TabsTrigger>
         </TabsList>
-
+        
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-            <Card>
-              <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">ENGINE HOURS</CardTitle></CardHeader>
-              <CardContent><p className="text-2xl font-mono font-bold">{aircraft.engineHours?.toFixed(1) || '0.0'}</p></CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">NEXT 50H INSPECTION</CardTitle></CardHeader>
-              <CardContent><p className="text-2xl font-mono font-bold">{aircraft.tachoAtNext50Inspection?.toFixed(1) || 'N/A'}</p></CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">NEXT 100H INSPECTION</CardTitle></CardHeader>
-              <CardContent><p className="text-2xl font-mono font-bold">{aircraft.tachoAtNext100Inspection?.toFixed(1) || 'N/A'}</p></CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader><CardTitle>Meter History</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <h4 className="font-semibold border-b pb-2">Hobbs</h4>
+                  <div className="flex justify-between"><span>Initial:</span><span className="font-mono">{aircraft.initialHobbs?.toFixed(1)}</span></div>
+                  <div className="flex justify-between font-bold"><span>Current:</span><span className="font-mono">{aircraft.currentHobbs?.toFixed(1)}</span></div>
+                </div>
+                <div className="space-y-4">
+                  <h4 className="font-semibold border-b pb-2">Tachometer</h4>
+                  <div className="flex justify-between"><span>Initial:</span><span className="font-mono">{aircraft.initialTacho?.toFixed(1)}</span></div>
+                  <div className="flex justify-between font-bold"><span>Current:</span><span className="font-mono">{aircraft.currentTacho?.toFixed(1)}</span></div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="components">
           <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Component</TableHead>
-                    <TableHead>Serial Number</TableHead>
-                    <TableHead>Install Date</TableHead>
-                    <TableHead>TSN (Hours)</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {components?.map((comp) => (
-                    <TableRow key={comp.id}>
-                      <TableCell className="font-medium">{comp.name}<br/><span className="text-xs text-muted-foreground">{comp.manufacturer}</span></TableCell>
-                      <TableCell className="font-mono">{comp.serialNumber}</TableCell>
-                      <TableCell>{format(new Date(comp.installDate), 'PPP')}</TableCell>
-                      <TableCell className="font-mono">{comp.tsn.toFixed(1)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button size="icon" variant="ghost" className="text-destructive" onClick={() => handleRemoveComponent(comp.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {(!components || components.length === 0) && (
-                    <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No components tracked.</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
+            <CardHeader>
+              <CardTitle>Tracked Components</CardTitle>
+              <CardDescription>Major components and life-limited parts.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingComponents ? (
+                <Skeleton className="h-32 w-full" />
+              ) : (
+                <ComponentsTable 
+                  data={components || []} 
+                  tenantId={tenantId} 
+                  aircraftId={aircraftId} 
+                  canManage={canEdit} 
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="documents">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
-            {aircraft.documents?.map((doc, idx) => (
-              <Card key={idx} className="flex flex-col">
-                <CardHeader>
-                  <CardTitle className="text-base">{doc.name}</CardTitle>
-                  <CardDescription>Uploaded on {format(new Date(doc.uploadDate), 'PPP')}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-1">
-                  <Badge variant="outline">{doc.expirationDate ? `Expires: ${format(new Date(doc.expirationDate), 'PPP')}` : 'No Expiry'}</Badge>
-                </CardContent>
-                <CardContent className="pt-0 flex justify-end gap-2">
-                  <Button asChild variant="outline" size="sm">
-                    <a href={doc.url} target="_blank" rel="noopener noreferrer">View</a>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-            {(!aircraft.documents || aircraft.documents.length === 0) && (
-              <div className="col-span-full py-12 border-2 border-dashed rounded-lg text-center text-muted-foreground">
-                No documents uploaded.
-              </div>
-            )}
-          </div>
+          <Card>
+            <CardHeader><CardTitle>Aircraft Documentation</CardTitle></CardHeader>
+            <CardContent>
+              {aircraft.documents && aircraft.documents.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {aircraft.documents.map((doc, idx) => (
+                    <Card key={idx} className="p-4 flex flex-row items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-8 w-8 text-primary" />
+                        <div>
+                          <p className="font-medium">{doc.name}</p>
+                          <p className="text-xs text-muted-foreground">Uploaded {new Date(doc.uploadDate).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="sm" asChild>
+                        <a href={doc.url} target="_blank" rel="noopener noreferrer">View</a>
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center py-12 text-muted-foreground">No documents uploaded for this aircraft.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="maintenance">
+          <Card>
+            <CardHeader><CardTitle>Maintenance Logs</CardTitle></CardHeader>
+            <CardContent>
+              <p className="text-center py-12 text-muted-foreground">Maintenance logging is under development.</p>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
-
-      {isEditOpen && (
-        <AircraftForm 
-          isOpen={isEditOpen} 
-          onOpenChange={setIsEditOpen} 
-          tenantId={tenantId} 
-          existingAircraft={aircraft} 
-        />
-      )}
-
-      {isComponentFormOpen && (
-        <ComponentForm 
-          isOpen={isComponentFormOpen} 
-          onOpenChange={setIsComponentFormOpen} 
-          tenantId={tenantId} 
-          aircraftId={aircraftId} 
-        />
-      )}
     </div>
   );
 }
