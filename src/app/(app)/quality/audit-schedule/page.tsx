@@ -306,7 +306,7 @@ export default function AuditSchedulePage() {
                     <div className="flex min-w-full w-fit relative">
                         
                         {/* Solid Sticky Month Column */}
-                        <div className="w-24 flex-shrink-0 bg-muted border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                        <div className="w-24 flex-shrink-0 bg-white border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                             <div className="sticky top-0 z-50 h-16 bg-[#003d1c] border-b border-white/10 flex items-center justify-center font-bold text-sm text-white uppercase tracking-wider">
                                 MONTH
                             </div>
@@ -316,7 +316,7 @@ export default function AuditSchedulePage() {
                                     <div 
                                         key={month} 
                                         className={cn(
-                                            "flex flex-col items-center justify-center border-b text-sm md:text-base font-mono font-bold uppercase tracking-wider bg-muted",
+                                            "flex flex-col items-center justify-center border-b text-sm md:text-base font-mono font-bold uppercase tracking-wider bg-white",
                                             isCurrentMonth && "bg-[#fefce8] text-[#854d0e]"
                                         )}
                                         style={{ height: `${MONTH_HEIGHT_PX}px` }}
