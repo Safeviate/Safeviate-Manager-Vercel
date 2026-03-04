@@ -22,16 +22,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { collection, doc } from 'firebase/firestore';
+import { Separator } from '@/components/ui/separator';
 import type { Aircraft } from '@/types/aircraft';
 
-const aircraftFormSchema = z.object({
+const aircraftSchema = z.object({
   make: z.string().min(1, 'Make is required.'),
   model: z.string().min(1, 'Model is required.'),
-  tailNumber: z.string().min(1, 'Tail number is required.'),
+  tailNumber: z.string().min(1, 'Tail Number is required.'),
   type: z.enum(['Single-Engine', 'Multi-Engine']),
   initialHobbs: z.number({ coerce: true }).default(0),
   currentHobbs: z.number({ coerce: true }).default(0),
@@ -41,11 +41,11 @@ const aircraftFormSchema = z.object({
   tachoAtNext100Inspection: z.number({ coerce: true }).default(0),
 });
 
-type AircraftFormValues = z.infer<typeof aircraftFormSchema>;
+type FormValues = z.infer<typeof aircraftSchema>;
 
 interface AircraftFormProps {
   tenantId: string;
-  existingAircraft?: Aircraft | null;
+  existingAircraft?: Aircraft;
   onSuccess: () => void;
 }
 
@@ -54,8 +54,8 @@ export function AircraftForm({ tenantId, existingAircraft, onSuccess }: Aircraft
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<AircraftFormValues>({
-    resolver: zodResolver(aircraftFormSchema),
+  const form = useForm<FormValues>({
+    resolver: zodResolver(aircraftSchema),
     defaultValues: existingAircraft ? {
       make: existingAircraft.make,
       model: existingAircraft.model,
@@ -81,19 +81,19 @@ export function AircraftForm({ tenantId, existingAircraft, onSuccess }: Aircraft
     },
   });
 
-  const onSubmit = async (values: AircraftFormValues) => {
+  const onSubmit = async (values: FormValues) => {
     if (!firestore) return;
     setIsSubmitting(true);
 
     try {
       if (existingAircraft) {
-        const docRef = doc(firestore, `tenants/${tenantId}/aircrafts`, existingAircraft.id);
-        updateDocumentNonBlocking(docRef, values);
+        const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, existingAircraft.id);
+        updateDocumentNonBlocking(aircraftRef, values);
         toast({ title: 'Aircraft Updated' });
       } else {
-        const colRef = collection(firestore, `tenants/${tenantId}/aircrafts`);
-        addDocumentNonBlocking(colRef, values);
-        toast({ title: 'Aircraft Created' });
+        const aircraftsRef = collection(firestore, `tenants/${tenantId}/aircrafts`);
+        addDocumentNonBlocking(aircraftsRef, values);
+        toast({ title: 'Aircraft Added' });
       }
       onSuccess();
     } catch (error: any) {
@@ -111,7 +111,7 @@ export function AircraftForm({ tenantId, existingAircraft, onSuccess }: Aircraft
           <FormField control={form.control} name="model" render={({ field }) => (<FormItem><FormLabel>Model</FormLabel><FormControl><Input placeholder="e.g., 172S" {...field} /></FormControl><FormMessage /></FormItem>)} />
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <FormField control={form.control} name="tailNumber" render={({ field }) => (<FormItem><FormLabel>Tail Number</FormLabel><FormControl><Input placeholder="e.g., N123AB" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={form.control} name="tailNumber" render={({ field }) => (<FormItem><FormLabel>Tail Number</FormLabel><FormControl><Input placeholder="e.g., ZS-ABC" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={form.control} name="type" render={({ field }) => (<FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Single-Engine">Single-Engine</SelectItem><SelectItem value="Multi-Engine">Multi-Engine</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
         </div>
         
