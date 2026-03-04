@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, use, Suspense } from 'react';
@@ -19,7 +18,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { Card } from '@/components/ui/card';
 
 interface UserProfilePageProps {
-    params: { id: string };
+    params: Promise<{ id: string }>;
 }
 
 type UserProfile = Personnel | PilotProfile;
@@ -35,7 +34,7 @@ function UserProfileContent({ params }: UserProfilePageProps) {
     const userType = searchParams.get('type') || 'Personnel';
     const { hasPermission } = usePermissions();
 
-    const tenantId = 'safeviate'; // Hardcoded for now
+    const tenantId = 'safeviate';
     const userId = resolvedParams.id;
     const [isEditing, setIsEditing] = useState(false);
     const canEditUsers = hasPermission('users-edit');
@@ -71,12 +70,11 @@ function UserProfileContent({ params }: UserProfilePageProps) {
     );
 
     const { data: user, isLoading: isLoadingUser, error: userError } = useDoc<UserProfile>(userDocRef);
-    const { data: roles, isLoading: isLoadingRoles, error: rolesError } = useCollection<Role>(rolesQuery);
-    const { data: departments, isLoading: isLoadingDepts, error: deptsError } = useCollection<Department>(departmentsQuery);
+    const { data: roles, isLoading: isLoadingRoles } = useCollection<Role>(rolesQuery);
+    const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
     const { data: logbookTemplates, isLoading: isLoadingTemplates } = useCollection<LogbookTemplate>(logbookTemplatesQuery);
 
     const isLoading = isLoadingUser || isLoadingRoles || isLoadingDepts || isLoadingTemplates;
-    const error = userError || rolesError || deptsError;
 
     const currentRole = useMemo(() => {
         if (user && 'role' in user) {
@@ -94,23 +92,11 @@ function UserProfileContent({ params }: UserProfilePageProps) {
 
 
     if (isLoading) {
-        return (
-            <div className="space-y-8">
-                <Skeleton className="h-10 w-1/4" />
-                <div className="space-y-6">
-                    <Skeleton className="h-48 w-full" />
-                    <Skeleton className="h-48 w-full" />
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return <div className="text-destructive">Error: {error.message}</div>;
+        return <div className="p-8"><Skeleton className="h-96 w-full" /></div>;
     }
 
     if (!user) {
-        return <div>User not found.</div>;
+        return <div className="p-8 text-center">User not found.</div>;
     }
 
     return (
@@ -129,8 +115,7 @@ function UserProfileContent({ params }: UserProfilePageProps) {
                     <div className="flex justify-end">
                         {canEditUsers && (
                             <Button onClick={() => setIsEditing(true)}>
-                                <Pencil className='mr-2' />
-                                Edit Profile
+                                <Pencil className='mr-2 h-4 w-4' /> Edit Profile
                             </Button>
                         )}
                     </div>
@@ -141,11 +126,9 @@ function UserProfileContent({ params }: UserProfilePageProps) {
                     />
                 </>
             )}
-           
         </div>
     );
 }
-
 
 export default function UserProfilePageWrapper(props: UserProfilePageProps) {
   return (

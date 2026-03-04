@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { format, differenceInDays } from 'date-fns';
-import { DocumentUploader } from './document-uploader';
+import { DocumentUploader } from '@/components/document-uploader';
 import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -269,7 +269,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                                                             defaultFileName={doc.name}
                                                             onDocumentUploaded={onDocumentUploaded}
                                                             trigger={(openDialog) => (
-                                                                <Button size="sm" onClick={openDialog}>
+                                                                <Button size="sm" onClick={() => openDialog()}>
                                                                     <Upload className="mr-2 h-4 w-4" /> Upload
                                                                 </Button>
                                                             )}
