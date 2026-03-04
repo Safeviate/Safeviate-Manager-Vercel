@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -38,7 +37,7 @@ const TabsTrigger = React.forwardRef<
     {children}
   </TabsPrimitive.Trigger>
 ))
-TabsTrigger.displayName = AccordionPrimitive?.Trigger?.displayName || "TabsTrigger"
+TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
 
 const TabsContent = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Content>,
