@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -22,7 +21,8 @@ import {
   YAxis, 
   Cell,
   Pie,
-  PieChart
+  PieChart,
+  ResponsiveContainer,
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 
@@ -30,7 +30,6 @@ export default function DashboardPage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate';
 
-  // --- Data Fetching ---
   const bookingsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/bookings`)) : null),
     [firestore, tenantId]
@@ -45,7 +44,6 @@ export default function DashboardPage() {
 
   const isLoading = isLoadingBookings || isLoadingAircrafts;
 
-  // --- Statistics Calculation ---
   const stats = useMemo(() => {
     if (!bookings || !aircrafts) return null;
 
@@ -56,7 +54,6 @@ export default function DashboardPage() {
     let totalHours = 0;
     const hoursByAircraft: Record<string, number> = {};
 
-    // Initialize aircraft map for easy lookup
     const aircraftMap = new Map(aircrafts.map(a => [a.id, a.tailNumber]));
     aircrafts.forEach(a => { hoursByAircraft[a.tailNumber] = 0; });
 
@@ -112,7 +109,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* KPI Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -156,7 +152,6 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Charts Section */}
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="flex flex-col">
           <CardHeader>
@@ -165,24 +160,26 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="flex-1 pb-0 h-[300px]">
             <ChartContainer config={{ hours: { label: 'Hours', color: 'hsl(var(--primary))' } }}>
-              <BarChart data={stats.aircraftChartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                <XAxis 
-                  dataKey="name" 
-                  stroke="hsl(var(--muted-foreground))" 
-                  fontSize={12} 
-                  tickLine={false} 
-                  axisLine={false} 
-                />
-                <YAxis 
-                  stroke="hsl(var(--muted-foreground))" 
-                  fontSize={12} 
-                  tickLine={false} 
-                  axisLine={false} 
-                  tickFormatter={(value) => `${value}h`} 
-                />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="hours" fill="var(--color-hours)" radius={[4, 4, 0, 0]} />
-              </BarChart>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.aircraftChartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="hsl(var(--muted-foreground))" 
+                    fontSize={12} 
+                    tickLine={false} 
+                    axisLine={false} 
+                  />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))" 
+                    fontSize={12} 
+                    tickLine={false} 
+                    axisLine={false} 
+                    tickFormatter={(value) => `${value}h`} 
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="hours" fill="var(--color-hours)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </ChartContainer>
           </CardContent>
         </Card>
@@ -198,20 +195,22 @@ export default function DashboardPage() {
               Cancelled: { label: 'Cancelled', color: 'hsl(var(--chart-1))' },
               Other: { label: 'Other', color: 'hsl(var(--chart-3))' }
             }}>
-              <PieChart>
-                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                <Pie
-                  data={stats.statusChartData}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={60}
-                  strokeWidth={5}
-                >
-                  {stats.statusChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-              </PieChart>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                  <Pie
+                    data={stats.statusChartData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={60}
+                    strokeWidth={5}
+                  >
+                    {stats.statusChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
             </ChartContainer>
             <div className="flex flex-wrap justify-center gap-4 py-4 text-xs">
               {stats.statusChartData.map((item) => (

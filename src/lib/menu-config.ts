@@ -12,8 +12,6 @@ import {
   Plane,
   CheckSquare,
   CalendarDays,
-  Calendar,
-  History,
 } from 'lucide-react';
 
 export type SubMenuItem = {
