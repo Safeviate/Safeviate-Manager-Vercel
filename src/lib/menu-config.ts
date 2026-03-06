@@ -43,26 +43,6 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'my-dashboard-view',
   },
   {
-    href: '/operations',
-    label: 'Operations',
-    icon: PlaneTakeoff,
-    permissionId: 'operations-view',
-    subItems: [
-      {
-        href: '/operations/alerts',
-        label: 'Alerts',
-        description: 'View and manage critical system alerts.',
-        permissionId: 'operations-alerts-view',
-      },
-      {
-        href: '/operations/flight-planner',
-        label: 'Flight Planner',
-        description: 'Create and manage flight plans.',
-        permissionId: 'operations-view',
-      },
-    ],
-  },
-  {
     href: '/bookings',
     label: 'Bookings',
     icon: CalendarDays,
@@ -79,6 +59,26 @@ export const menuConfig: MenuItem[] = [
         label: 'Booking History',
         description: 'View past bookings and logs.',
         permissionId: 'bookings-history-view',
+      },
+    ],
+  },
+  {
+    href: '/operations',
+    label: 'Operations',
+    icon: PlaneTakeoff,
+    permissionId: 'operations-view',
+    subItems: [
+      {
+        href: '/operations/alerts',
+        label: 'Alerts',
+        description: 'View and manage critical system alerts.',
+        permissionId: 'operations-alerts-view',
+      },
+      {
+        href: '/operations/flight-planner',
+        label: 'Flight Planner',
+        description: 'Create and manage flight plans.',
+        permissionId: 'operations-view',
       },
     ],
   },
