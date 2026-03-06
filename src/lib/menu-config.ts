@@ -73,22 +73,30 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'operations-alerts-view',
       },
       {
-        href: '/operations/bookings',
-        label: 'Daily Schedule',
-        description: 'View and manage resource bookings.',
-        permissionId: 'operations-bookings-view',
-      },
-      {
         href: '/operations/flight-planner',
         label: 'Flight Planner',
         description: 'Create and manage flight plans.',
         permissionId: 'operations-view',
       },
+    ],
+  },
+  {
+    href: '/bookings',
+    label: 'Bookings',
+    icon: CalendarDays,
+    permissionId: 'bookings-view',
+    subItems: [
       {
-        href: '/operations/booking-history',
+        href: '/bookings/schedule',
+        label: 'Daily Schedule',
+        description: 'View and manage resource bookings.',
+        permissionId: 'bookings-schedule-view',
+      },
+      {
+        href: '/bookings/history',
         label: 'Booking History',
         description: 'View past bookings and logs.',
-        permissionId: 'operations-view',
+        permissionId: 'bookings-history-view',
       },
     ],
   },
