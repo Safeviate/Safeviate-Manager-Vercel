@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -203,7 +202,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
                         <div className="space-y-6">
-                            <div className="relative border rounded-xl p-4 bg-background overflow-hidden aspect-video">
+                            <div className="relative border rounded-xl p-4 bg-background overflow-hidden h-[600px]">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
                                         <CartesianGrid strokeDasharray="3 3" />
