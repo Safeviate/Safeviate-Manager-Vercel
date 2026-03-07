@@ -10,16 +10,16 @@ import type { Booking } from "@/types/booking";
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot, Cell } from 'recharts';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
 import { Save, Fuel, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Label as UILabel } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 
-const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 const FUEL_WEIGHT_PER_GALLON = 6;
 
 interface ViewBookingDetailsProps {
@@ -122,7 +122,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 takeoffWeight: results.weight,
                 takeoffCg: results.cg,
                 isWithinLimits: results.isSafe,
-                stations: stations // Save the specific loading state
+                stations: stations
             }
         });
 
@@ -156,137 +156,139 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
     return (
         <Card>
-            <Tabs defaultValue="details">
-                <CardHeader className="border-b bg-muted/20">
-                    <div className="flex justify-between items-center">
-                        <div className="space-y-1">
-                            <CardTitle>{booking.type}</CardTitle>
-                            <CardDescription>
-                                Booking Number: {booking.bookingNumber} • {aircraftLabel}
-                            </CardDescription>
-                        </div>
-                        <TabsList>
-                            <TabsTrigger value="details">Details</TabsTrigger>
-                            <TabsTrigger value="mass-balance">Mass & Balance</TabsTrigger>
-                        </TabsList>
+            <CardHeader className="border-b bg-muted/20">
+                <div className="space-y-1">
+                    <CardTitle>{booking.type}</CardTitle>
+                    <CardDescription>
+                        Booking Number: {booking.bookingNumber} • {aircraftLabel}
+                    </CardDescription>
+                </div>
+            </CardHeader>
+            
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
+                <DetailItem label="Status" value={booking.status} />
+                <DetailItem label="Aircraft" value={aircraftLabel} />
+                <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
+                <DetailItem label="Start Time" value={formatDateSafe(booking.start, 'p')} />
+                <DetailItem label="End Time" value={formatDateSafe(booking.end, 'p')} />
+                <DetailItem label="Instructor" value={instructorLabel} />
+                <DetailItem label="Student" value={studentLabel} />
+                <div className="md:col-span-2 lg:col-span-3">
+                    <p className="text-sm text-muted-foreground">Notes</p>
+                    <p className="font-semibold whitespace-pre-wrap">{booking.notes || 'No notes provided.'}</p>
+                </div>
+            </CardContent>
+
+            <Separator className="my-2" />
+
+            <CardHeader className="pb-2">
+                <div className="flex justify-between items-center">
+                    <CardTitle className="text-xl flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-primary" />
+                        Mass & Balance Calculator
+                    </CardTitle>
+                    {aircraft?.cgEnvelope && (
+                        <Button size="sm" onClick={handleSaveToBooking} className="gap-2">
+                            <Save className="h-4 w-4" /> Save to Booking
+                        </Button>
+                    )}
+                </div>
+            </CardHeader>
+
+            <CardContent className="pt-4">
+                {!aircraft?.cgEnvelope ? (
+                    <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                        This aircraft does not have a Mass & Balance profile configured.
                     </div>
-                </CardHeader>
-                
-                <TabsContent value="details" className="m-0">
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
-                        <DetailItem label="Status" value={booking.status} />
-                        <DetailItem label="Aircraft" value={aircraftLabel} />
-                        <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
-                        <DetailItem label="Start Time" value={formatDateSafe(booking.start, 'p')} />
-                        <DetailItem label="End Time" value={formatDateSafe(booking.end, 'p')} />
-                        <DetailItem label="Instructor" value={instructorLabel} />
-                        <DetailItem label="Student" value={studentLabel} />
-                        <div className="md:col-span-2 lg:col-span-3">
-                            <p className="text-sm text-muted-foreground">Notes</p>
-                            <p className="font-semibold whitespace-pre-wrap">{booking.notes || 'No notes provided.'}</p>
+                ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
+                        <div className="space-y-6">
+                            <div className="relative border rounded-xl p-4 bg-background overflow-hidden aspect-video">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={['auto', 'auto']} allowDataOverflow>
+                                            <Label value="CG (inches)" position="insideBottom" offset={-10} />
+                                        </XAxis>
+                                        <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={['auto', 'auto']} allowDataOverflow>
+                                            <Label value="Weight (lbs)" angle={-90} position="insideLeft" />
+                                        </YAxis>
+                                        <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                                        <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} />
+                                        <Scatter data={[{ x: results.cg, y: results.weight }]}>
+                                            <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={2} />
+                                        </Scatter>
+                                    </ScatterChart>
+                                </ResponsiveContainer>
+                                
+                                <div className={cn(
+                                    "absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 text-white",
+                                    results.isSafe ? 'bg-green-600' : 'bg-red-600'
+                                )}>
+                                    {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
+                                </div>
+                            </div>
                         </div>
-                    </CardContent>
-                </TabsContent>
 
-                <TabsContent value="mass-balance" className="m-0">
-                    <CardContent className="pt-6">
-                        {!aircraft?.cgEnvelope ? (
-                            <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                                This aircraft does not have a Mass & Balance profile configured.
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
-                                <div className="space-y-6">
-                                    <div className="flex justify-between items-center">
-                                        <h3 className="font-bold flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-primary" /> CG Envelope</h3>
-                                        <Button size="sm" onClick={handleSaveToBooking} className="gap-2">
-                                            <Save className="h-4 w-4" /> Save to Booking
-                                        </Button>
+                        <div className="space-y-6">
+                            <Card className="bg-muted/30 shadow-none border-none">
+                                <CardContent className="p-4 grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Weight</p>
+                                        <p className="text-xl font-bold">{results.weight} <span className="text-xs font-normal">lbs</span></p>
                                     </div>
-                                    
-                                    <div className="relative border rounded-xl p-4 bg-background overflow-hidden aspect-video">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
-                                                <CartesianGrid strokeDasharray="3 3" />
-                                                <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={['auto', 'auto']} allowDataOverflow>
-                                                    <Label value="CG (inches)" position="insideBottom" offset={-10} />
-                                                </XAxis>
-                                                <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={['auto', 'auto']} allowDataOverflow>
-                                                    <Label value="Weight (lbs)" angle={-90} position="insideLeft" />
-                                                </YAxis>
-                                                <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                                <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} />
-                                                <Scatter data={[{ x: results.cg, y: results.weight }]}>
-                                                    <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={2} />
-                                                </Scatter>
-                                            </ScatterChart>
-                                        </ResponsiveContainer>
-                                        
-                                        <div className={cn(
-                                            "absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 text-white",
-                                            results.isSafe ? 'bg-green-600' : 'bg-red-600'
-                                        )}>
-                                            {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
-                                        </div>
+                                    <div>
+                                        <p className="text-[10px] uppercase font-bold text-muted-foreground">Center Gravity</p>
+                                        <p className="text-xl font-bold">{results.cg} <span className="text-xs font-normal">in</span></p>
                                     </div>
-                                </div>
+                                </CardContent>
+                            </Card>
 
-                                <div className="space-y-6">
-                                    <Card className="bg-muted/30">
-                                        <CardContent className="pt-6 grid grid-cols-2 gap-4">
-                                            <div>
-                                                <p className="text-xs uppercase font-bold text-muted-foreground">Total Weight</p>
-                                                <p className="text-2xl font-bold">{results.weight} <span className="text-sm font-normal">lbs</span></p>
+                            <div className="space-y-4">
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Loading Stations</h4>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center text-sm border-b pb-2">
+                                        <span className="text-muted-foreground">Basic Empty Weight</span>
+                                        <span className="font-bold">{aircraft.emptyWeight} lbs</span>
+                                    </div>
+                                    {stations.map((s) => (
+                                        <div key={s.id} className="space-y-1.5">
+                                            <div className="flex justify-between items-center">
+                                                <UILabel className="text-xs font-semibold">{s.name}</UILabel>
+                                                <span className="text-[10px] text-muted-foreground">Arm: {s.arm}</span>
                                             </div>
-                                            <div>
-                                                <p className="text-xs uppercase font-bold text-muted-foreground">Center Gravity</p>
-                                                <p className="text-2xl font-bold">{results.cg} <span className="text-sm font-normal">in</span></p>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-
-                                    <div className="space-y-4">
-                                        <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Loading Stations</h4>
-                                        <div className="space-y-3">
-                                            <div className="flex justify-between items-center text-sm border-b pb-2">
-                                                <span>Basic Empty Weight</span>
-                                                <span className="font-bold">{aircraft.emptyWeight} lbs</span>
-                                            </div>
-                                            {stations.map((s) => (
-                                                <div key={s.id} className="space-y-1.5">
-                                                    <div className="flex justify-between items-center">
-                                                        <Label className="text-xs">{s.name}</Label>
-                                                        <span className="text-[10px] text-muted-foreground">Arm: {s.arm}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <Input 
-                                                            type="number" 
-                                                            value={s.weight} 
-                                                            onChange={(e) => handleStationWeightChange(s.id, e.target.value)}
-                                                            className="h-8 text-right"
-                                                        />
-                                                        {s.type === 'fuel' && (
-                                                            <div className="flex items-center gap-1 min-w-[80px]">
-                                                                <Input 
-                                                                    type="number" 
-                                                                    value={s.gallons} 
-                                                                    onChange={(e) => handleFuelGallonsChange(s.id, e.target.value)}
-                                                                    className="h-8 w-12 p-1 text-right text-xs"
-                                                                />
-                                                                <span className="text-[10px] font-bold">GAL</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="relative flex-1">
+                                                    <Input 
+                                                        type="number" 
+                                                        value={s.weight} 
+                                                        onChange={(e) => handleStationWeightChange(s.id, e.target.value)}
+                                                        className="h-8 text-right pr-8"
+                                                    />
+                                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-muted-foreground">LBS</span>
                                                 </div>
-                                            ))}
+                                                {s.type === 'fuel' && (
+                                                    <div className="flex items-center gap-1 w-24">
+                                                        <div className="relative">
+                                                            <Input 
+                                                                type="number" 
+                                                                value={s.gallons} 
+                                                                onChange={(e) => handleFuelGallonsChange(s.id, e.target.value)}
+                                                                className="h-8 w-full p-1 text-right text-xs pr-8"
+                                                            />
+                                                            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] font-bold text-muted-foreground">GAL</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
-                        )}
-                    </CardContent>
-                </TabsContent>
-            </Tabs>
+                        </div>
+                    </div>
+                )}
+            </CardContent>
         </Card>
     );
 }
