@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -64,11 +65,17 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const [stations, setStations] = useState<any[]>([]);
     const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
 
+    // Initialize stations from Booking (persisted data) or Aircraft (defaults)
     useEffect(() => {
-        if (aircraft && aircraft.stations) {
-            setStations(aircraft.stations);
+        if (aircraft) {
+            // Prioritize saved data from the booking, otherwise use aircraft profile defaults
+            if (booking.massAndBalance?.stations && booking.massAndBalance.stations.length > 0) {
+                setStations(booking.massAndBalance.stations);
+            } else if (aircraft.stations) {
+                setStations(aircraft.stations);
+            }
         }
-    }, [aircraft]);
+    }, [aircraft, booking.massAndBalance?.stations]);
 
     useEffect(() => {
         if (!aircraft || !aircraft.emptyWeight || !aircraft.emptyWeightMoment) return;
@@ -127,7 +134,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
         toast({
             title: 'Mass & Balance Saved',
-            description: 'Calculations have been attached to this booking.'
+            description: 'Calculations and loading configurations have been saved to this booking.'
         });
     };
 

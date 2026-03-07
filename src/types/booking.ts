@@ -7,6 +7,15 @@ export interface MassAndBalance {
     landingWeight?: number;
     landingCg?: number;
     isWithinLimits?: boolean;
+    stations?: {
+        id: number;
+        name: string;
+        weight: number;
+        arm: number;
+        type: string;
+        gallons?: number;
+        maxGallons?: number;
+    }[];
 }
 
 export interface ChecklistPhoto {
