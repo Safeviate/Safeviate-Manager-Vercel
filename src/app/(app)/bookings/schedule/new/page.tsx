@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -42,7 +43,8 @@ export default function NewBookingPage() {
     const startDateTime = new Date(`${format(date, 'yyyy-MM-dd')}T${startTime}`);
     const endDateTime = new Date(`${format(date, 'yyyy-MM-dd')}T${endTime}`);
 
-    const bookingData = {
+    // Clean data to avoid undefined values in Firestore
+    const bookingData: any = {
         ...rest,
         start: startDateTime.toISOString(),
         end: endDateTime.toISOString(),
@@ -50,11 +52,29 @@ export default function NewBookingPage() {
         startTime,
         endTime,
         status: 'Confirmed' as const,
+        preFlight: false,
+        postFlight: false,
+        instructorId: rest.instructorId || null,
+        studentId: rest.studentId || null,
+        notes: rest.notes || null,
     };
 
     try {
+        const counterRef = doc(firestore, `tenants/${tenantId}/counters`, 'bookings');
         const bookingsCollection = collection(firestore, `tenants/${tenantId}/bookings`);
-        await addDocumentNonBlocking(bookingsCollection, bookingData);
+        
+        await runTransaction(firestore, async (transaction) => {
+            const counterDoc = await transaction.get(counterRef);
+            const newCount = (counterDoc.data()?.currentNumber || 0) + 1;
+            transaction.set(counterRef, { currentNumber: newCount });
+            
+            const newBookingRef = doc(bookingsCollection);
+            transaction.set(newBookingRef, {
+                ...bookingData,
+                id: newBookingRef.id,
+                bookingNumber: String(newCount).padStart(5, '0'),
+            });
+        });
         
         toast({
             title: 'Booking Created',
@@ -64,6 +84,7 @@ export default function NewBookingPage() {
         router.push('/bookings/schedule');
 
     } catch (error: any) {
+        console.error("Create Booking Error:", error);
         toast({
             variant: 'destructive',
             title: 'Submission Failed',

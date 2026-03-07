@@ -142,7 +142,8 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
         if (!firestore) return;
         setIsSubmitting(true);
         
-        const bookingData: Partial<Booking> = {
+        // Construct clean booking data to avoid 'undefined' values in Firestore
+        const bookingData: any = {
             aircraftId: aircraft.id,
             type: data.type,
             date: format(data.date, 'yyyy-MM-dd'),
@@ -150,18 +151,45 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             endTime: data.endTime,
             start: new Date(`${format(data.date, 'yyyy-MM-dd')}T${data.startTime}`).toISOString(),
             end: new Date(`${format(data.date, 'yyyy-MM-dd')}T${data.endTime}`).toISOString(),
-            instructorId: data.instructorId,
-            studentId: data.studentId,
+            instructorId: data.instructorId || null,
+            studentId: data.studentId || null,
             status: data.status,
-            notes: data.notes,
+            notes: data.notes || null,
             preFlight: data.preFlight,
             postFlight: data.postFlight,
             isOvernight: data.isOvernight,
-            overnightBookingDate: data.isOvernight && data.overnightBookingDate ? format(data.overnightBookingDate, 'yyyy-MM-dd') : undefined,
-            overnightEndTime: data.isOvernight ? data.overnightEndTime : undefined,
-            preFlightData: data.preFlight ? data.preFlightData : undefined,
-            postFlightData: data.postFlight ? data.postFlightData : undefined,
         };
+
+        if (data.isOvernight && data.overnightBookingDate) {
+            bookingData.overnightBookingDate = format(data.overnightBookingDate, 'yyyy-MM-dd');
+            bookingData.overnightEndTime = data.overnightEndTime || null;
+        } else {
+            bookingData.overnightBookingDate = null;
+            bookingData.overnightEndTime = null;
+        }
+
+        if (data.preFlight && data.preFlightData) {
+            bookingData.preFlightData = {
+                hobbs: data.preFlightData.hobbs ?? 0,
+                tacho: data.preFlightData.tacho ?? 0,
+                fuelOnBoard: data.preFlightData.fuelOnBoard ?? 0,
+                oilUplift: data.preFlightData.oilUplift ?? 0,
+                documentsChecked: data.preFlightData.documentsChecked ?? true,
+            };
+        } else {
+            bookingData.preFlightData = null;
+        }
+
+        if (data.postFlight && data.postFlightData) {
+            bookingData.postFlightData = {
+                hobbs: data.postFlightData.hobbs ?? 0,
+                tacho: data.postFlightData.tacho ?? 0,
+                fuelRemaining: data.postFlightData.fuelRemaining ?? 0,
+                defects: data.postFlightData.defects || null,
+            };
+        } else {
+            bookingData.postFlightData = null;
+        }
 
         if (data.status === 'Cancelled with Reason') {
             bookingData.notes = `Cancelled: ${data.cancellationReason}\n\n${data.notes || ''}`;
@@ -204,6 +232,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             refreshBookings();
             setIsOpen(false);
         } catch (error: any) {
+            console.error("Save Error:", error);
             toast({ variant: 'destructive', title: 'Save Failed', description: error.message });
         } finally {
             setIsSubmitting(false);
