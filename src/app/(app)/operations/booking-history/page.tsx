@@ -26,7 +26,7 @@ import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '../../users/personnel/page';
 import type { Booking } from '@/types/booking';
 import { Button } from '@/components/ui/button';
-import { Eye, Scale, FilePlus, Trash2 } from 'lucide-react';
+import { Eye, Trash2, FilePlus } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -134,12 +134,6 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                                     <Link href={`/operations/booking-history/${b.id}`}>
                                         <Eye className="h-4 w-4" />
                                         <span className="sr-only">View</span>
-                                    </Link>
-                                </Button>
-                                <Button asChild variant={b.massAndBalance ? 'default' : 'outline'} size="icon" className="h-8 w-8" disabled={b.status === 'Cancelled' || b.status === 'Cancelled with Reason'}>
-                                    <Link href={`/assets/mass-balance?bookingId=${b.id}&aircraftId=${b.aircraftId}`}>
-                                        <Scale className="h-4 w-4" />
-                                        <span className="sr-only">M&B</span>
                                     </Link>
                                 </Button>
                                 {b.type === 'Training Flight' && b.status === 'Completed' && (
