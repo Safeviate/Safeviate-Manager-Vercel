@@ -3,88 +3,54 @@
 
 import { use, useState, useMemo } from 'react';
 import { doc, collection, query, orderBy } from 'firebase/firestore';
-import { useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Pencil, Plus, Trash2, Settings2, History, Wrench, CalendarIcon, FileText } from 'lucide-react';
-import Link from 'next/link';
-import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { PlusCircle, Pencil, Trash2, Clock, Settings2, ArrowLeft, History, Wrench } from 'lucide-react';
+import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 import type { Aircraft, AircraftComponent } from '@/types/aircraft';
 import type { MaintenanceLog } from '@/types/maintenance';
 
-// --- Form Schemas ---
+interface AircraftDetailPageProps {
+  params: Promise<{ id: string }>;
+}
 
-const hoursFormSchema = z.object({
-  currentHobbs: z.coerce.number().min(0),
-  currentTacho: z.coerce.number().min(0),
-});
-
-const serviceTargetsSchema = z.object({
-  tachoAtNext50Inspection: z.coerce.number().min(0),
-  tachoAtNext100Inspection: z.coerce.number().min(0),
-});
-
-const componentFormSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  serialNumber: z.string().min(1, 'S/N is required'),
-  partNumber: z.string().min(1, 'P/N is required'),
-  tsn: z.coerce.number().min(0),
-  maxHours: z.coerce.number().min(0),
-});
-
-const maintenanceFormSchema = z.object({
-  maintenanceType: z.string().min(1, 'Type is required'),
-  details: z.string().min(1, 'Details are required'),
-  ameNo: z.string().min(1, 'AME License No is required'),
-  amoNo: z.string().min(1, 'AMO No is required'),
-  reference: z.string().min(1, 'Reference is required'),
-  date: z.string(),
-});
-
-// --- UI Components ---
-
-function StatCard({ title, value, unit, status = 'ok' }: { title: string; value: string; unit: string; status?: 'ok' | 'warning' }) {
+function StatCard({ title, value, unit, status = 'ok' }: { title: string; value: string; unit: string; status?: 'ok' | 'warning' | 'danger' }) {
   return (
-    <Card className={cn(status === 'warning' && 'border-orange-200 bg-orange-50')}>
+    <Card className={cn(
+      status === 'warning' && 'border-orange-200 bg-orange-50',
+      status === 'danger' && 'border-red-200 bg-red-50'
+    )}>
       <CardHeader className="p-4 pb-0">
         <CardDescription className="text-[10px] font-bold uppercase tracking-wider">{title}</CardDescription>
       </CardHeader>
       <CardContent className="p-4 pt-1">
-        <div className="flex items-baseline gap-1">
-          <span className="text-2xl font-bold">{value}</span>
-          <span className="text-xs text-muted-foreground">{unit}</span>
+        <div className="text-2xl font-bold flex items-baseline gap-1">
+          {value}
+          <span className="text-xs font-normal text-muted-foreground">{unit}</span>
         </div>
       </CardContent>
     </Card>
   );
 }
 
-// --- Main Page ---
-
-export default function AircraftDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function AircraftDetailPage({ params }: AircraftDetailPageProps) {
   const resolvedParams = use(params);
   const firestore = useFirestore();
   const { toast } = useToast();
   const tenantId = 'safeviate';
   const aircraftId = resolvedParams.id;
-
-  const [isHoursDialogOpen, setIsHoursDialogOpen] = useState(false);
-  const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
-  const [isComponentDialogOpen, setIsComponentDialogOpen] = useState(false);
-  const [isMaintenanceDialogOpen, setIsMaintenanceDialogOpen] = useState(false);
-  const [editingComponent, setEditingComponent] = useState<AircraftComponent | null>(null);
 
   const aircraftRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId) : null),
@@ -96,104 +62,84 @@ export default function AircraftDetailPage({ params }: { params: Promise<{ id: s
     [firestore, tenantId, aircraftId]
   );
 
-  const logsQuery = useMemoFirebase(
+  const maintenanceQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts', aircraftId, 'maintenanceLogs'), orderBy('date', 'desc')) : null),
     [firestore, tenantId, aircraftId]
   );
 
-  const { data: aircraft, isLoading: loadingAc } = useDoc<Aircraft>(aircraftRef);
-  const { data: components, isLoading: loadingComp } = useCollection<AircraftComponent>(componentsQuery);
-  const { data: logs, isLoading: loadingLogs } = useCollection<MaintenanceLog>(logsQuery);
+  const { data: aircraft, isLoading: isLoadingAircraft } = useDoc<Aircraft>(aircraftRef);
+  const { data: components, isLoading: isLoadingComponents } = useCollection<AircraftComponent>(componentsQuery);
+  const { data: maintenanceLogs, isLoading: isLoadingLogs } = useCollection<MaintenanceLog>(maintenanceQuery);
 
-  const hoursForm = useForm<z.infer<typeof hoursFormSchema>>({
-    resolver: zodResolver(hoursFormSchema),
-    defaultValues: { currentHobbs: aircraft?.currentHobbs || 0, currentTacho: aircraft?.currentTacho || 0 },
-  });
+  const [isHourDialogOpen, setIsHourDialogOpen] = useState(false);
+  const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
+  const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
+  const [isCompDialogOpen, setIsCompDialogOpen] = useState(false);
 
-  const serviceForm = useForm<z.infer<typeof serviceTargetsSchema>>({
-    resolver: zodResolver(serviceTargetsSchema),
-    defaultValues: { 
-      tachoAtNext50Inspection: aircraft?.tachoAtNext50Inspection || 0, 
-      tachoAtNext100Inspection: aircraft?.tachoAtNext100Inspection || 0 
-    },
-  });
+  const [hoursForm, setHoursHoursForm] = useState({ hobbs: 0, tacho: 0 });
+  const [serviceForm, setServiceForm] = useState({ tacho50: 0, tacho100: 0 });
+  const [logForm, setLogForm] = useState({ type: '', details: '', ame: '', amo: '', reference: '' });
+  const [compForm, setCompForm] = useState({ name: '', serial: '', partNumber: '', maxHours: 0, tsn: 0 });
 
-  const componentForm = useForm<z.infer<typeof componentFormSchema>>({
-    resolver: zodResolver(componentFormSchema),
-    defaultValues: { name: '', serialNumber: '', partNumber: '', tsn: 0, maxHours: 0 },
-  });
+  const remaining50 = (aircraft?.tachoAtNext50Inspection || 0) - (aircraft?.currentTacho || 0);
+  const remaining100 = (aircraft?.tachoAtNext100Inspection || 0) - (aircraft?.currentTacho || 0);
 
-  const maintenanceForm = useForm<z.infer<typeof maintenanceFormSchema>>({
-    resolver: zodResolver(maintenanceFormSchema),
-    defaultValues: { 
-      maintenanceType: '', 
-      details: '', 
-      ameNo: '', 
-      amoNo: '', 
-      reference: '', 
-      date: new Date().toISOString() 
-    },
-  });
-
-  const onUpdateHours = (values: z.infer<typeof hoursFormSchema>) => {
+  const handleUpdateHours = () => {
     if (!aircraftRef) return;
-    updateDocumentNonBlocking(aircraftRef, values);
-    toast({ title: 'Hours Updated', description: 'Aircraft flight hours have been overridden.' });
-    setIsHoursDialogOpen(false);
+    updateDocumentNonBlocking(aircraftRef, {
+      currentHobbs: Number(hoursForm.hobbs),
+      currentTacho: Number(hoursForm.tacho)
+    });
+    toast({ title: "Flight Hours Updated" });
+    setIsHourDialogOpen(false);
   };
 
-  const onUpdateService = (values: z.infer<typeof serviceTargetsSchema>) => {
+  const handleUpdateService = () => {
     if (!aircraftRef) return;
-    updateDocumentNonBlocking(aircraftRef, values);
-    toast({ title: 'Service Targets Updated', description: 'Inspection targets have been updated.' });
+    updateDocumentNonBlocking(aircraftRef, {
+      tachoAtNext50Inspection: Number(serviceForm.tacho50),
+      tachoAtNext100Inspection: Number(serviceForm.tacho100)
+    });
+    toast({ title: "Service Targets Updated" });
     setIsServiceDialogOpen(false);
   };
 
-  const onSaveComponent = (values: z.infer<typeof componentFormSchema>) => {
+  const handleAddLog = () => {
     if (!firestore) return;
-    const colRef = collection(firestore, 'tenants', tenantId, 'aircrafts', aircraftId, 'components');
-    if (editingComponent) {
-      const docRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId, 'components', editingComponent.id);
-      updateDocumentNonBlocking(docRef, values);
-      toast({ title: 'Component Updated' });
-    } else {
-      addDocumentNonBlocking(colRef, { ...values, installDate: new Date().toISOString() });
-      toast({ title: 'Component Added' });
-    }
-    setIsComponentDialogOpen(false);
-    setEditingComponent(null);
-    componentForm.reset();
+    const logsRef = collection(firestore, 'tenants', tenantId, 'aircrafts', aircraftId, 'maintenanceLogs');
+    addDocumentNonBlocking(logsRef, {
+      ...logForm,
+      date: new Date().toISOString(),
+      maintenanceType: logForm.type,
+      ameNo: logForm.ame,
+      amoNo: logForm.amo
+    });
+    toast({ title: "Maintenance Certified" });
+    setIsLogDialogOpen(false);
+    setLogForm({ type: '', details: '', ame: '', amo: '', reference: '' });
   };
 
-  const onAddLog = (values: z.infer<typeof maintenanceFormSchema>) => {
+  const handleAddComponent = () => {
     if (!firestore) return;
-    const colRef = collection(firestore, 'tenants', tenantId, 'aircrafts', aircraftId, 'maintenanceLogs');
-    addDocumentNonBlocking(colRef, values);
-    toast({ title: 'Maintenance Log Recorded', description: 'Certification successfully saved to history.' });
-    setIsMaintenanceDialogOpen(false);
-    maintenanceForm.reset();
+    const compRef = collection(firestore, 'tenants', tenantId, 'aircrafts', aircraftId, 'components');
+    addDocumentNonBlocking(compRef, {
+      ...compForm,
+      installDate: new Date().toISOString(),
+      installHours: aircraft?.currentTacho || 0,
+      tso: 0
+    });
+    toast({ title: "Component Added" });
+    setIsCompDialogOpen(false);
+    setCompForm({ name: '', serial: '', partNumber: '', maxHours: 0, tsn: 0 });
   };
 
-  const handleDeleteComp = (id: string) => {
-    if (!firestore) return;
-    const docRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId, 'components', id);
-    deleteDocumentNonBlocking(docRef);
-    toast({ title: 'Component Removed' });
-  };
-
-  if (loadingAc) return <div className="p-8 text-center"><Skeleton className="h-96 w-full" /></div>;
+  if (isLoadingAircraft) return <Skeleton className="h-screen w-full" />;
   if (!aircraft) return <div className="p-8 text-center">Aircraft not found.</div>;
 
-  const rem50 = (aircraft.tachoAtNext50Inspection || 0) - (aircraft.currentTacho || 0);
-  const rem100 = (aircraft.tachoAtNext100Inspection || 0) - (aircraft.currentTacho || 0);
-
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
-          <Button asChild variant="ghost" size="sm" className="-ml-2 h-8">
-            <Link href="/assets/aircraft"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Fleet</Link>
-          </Button>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold tracking-tight">{aircraft.tailNumber}</h1>
             <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-none font-bold">HEALTHY</Badge>
@@ -201,260 +147,200 @@ export default function AircraftDetailPage({ params }: { params: Promise<{ id: s
           <p className="text-muted-foreground">{aircraft.make} {aircraft.model} • {aircraft.type}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setIsServiceDialogOpen(true)}>
-            <Settings2 className="mr-2 h-4 w-4" /> Edit Service
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setIsHoursDialogOpen(true)}>
-            <Pencil className="mr-2 h-4 w-4" /> Edit Flight Hours
-          </Button>
+          <Dialog open={isHourDialogOpen} onOpenChange={(open) => {
+            if (open) setHoursHoursForm({ hobbs: aircraft.currentHobbs || 0, tacho: aircraft.currentTacho || 0 });
+            setIsHourDialogOpen(open);
+          }}>
+            <DialogTrigger asChild>
+              <Button variant="outline"><Clock className="mr-2 h-4 w-4" /> Edit Flight Hours</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Manual Hour Override</DialogTitle><DialogDescription>Update current aircraft meter readings.</DialogDescription></DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="hobbs" className="text-right">Current Hobbs</Label>
+                  <Input id="hobbs" type="number" step="0.1" value={hoursForm.hobbs} onChange={e => setHoursHoursForm({ ...hoursForm, hobbs: Number(e.target.value) })} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="tacho" className="text-right">Current Tacho</Label>
+                  <Input id="tacho" type="number" step="0.1" value={hoursForm.tacho} onChange={e => setHoursHoursForm({ ...hoursForm, tacho: Number(e.target.value) })} className="col-span-3" />
+                </div>
+              </div>
+              <DialogFooter><Button onClick={handleUpdateHours}>Save Readings</Button></DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isServiceDialogOpen} onOpenChange={(open) => {
+            if (open) setServiceForm({ tacho50: aircraft.tachoAtNext50Inspection || 0, tacho100: aircraft.tachoAtNext100Inspection || 0 });
+            setIsServiceDialogOpen(open);
+          }}>
+            <DialogTrigger asChild>
+              <Button variant="outline"><Settings2 className="mr-2 h-4 w-4" /> Edit Service</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Service Interval Targets</DialogTitle><DialogDescription>Set the next Tachometer targets for major inspections.</DialogDescription></DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="tacho50" className="text-right">Next 50hr</Label>
+                  <Input id="tacho50" type="number" step="0.1" value={serviceForm.tacho50} onChange={e => setServiceForm({ ...serviceForm, tacho50: Number(e.target.value) })} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="tacho100" className="text-right">Next 100hr</Label>
+                  <Input id="tacho100" type="number" step="0.1" value={serviceForm.tacho100} onChange={e => setServiceForm({ ...serviceForm, tacho100: Number(e.target.value) })} className="col-span-3" />
+                </div>
+              </div>
+              <DialogFooter><Button onClick={handleUpdateService}>Update Targets</Button></DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title="Current Hobbs" value={aircraft.currentHobbs?.toFixed(1) || '0.0'} unit="hours" />
-        <StatCard title="Current Tacho" value={aircraft.currentTacho?.toFixed(1) || '0.0'} unit="hours" />
-        <StatCard title="Next 50h Due" value={rem50.toFixed(1)} unit="remaining" status={rem50 < 10 ? 'warning' : 'ok'} />
-        <StatCard title="Next 100h Due" value={rem100.toFixed(1)} unit="remaining" status={rem100 < 10 ? 'warning' : 'ok'} />
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <StatCard title="Current Hobbs" value={(aircraft.currentHobbs || 0).toFixed(1)} unit="h" />
+        <StatCard title="Current Tacho" value={(aircraft.currentTacho || 0).toFixed(1)} unit="h" />
+        <StatCard title="Next 50hr (Tacho)" value={(aircraft.tachoAtNext50Inspection || 0).toFixed(1)} unit="h" />
+        <StatCard title="Next 100hr (Tacho)" value={(aircraft.tachoAtNext100Inspection || 0).toFixed(1)} unit="h" />
+        <StatCard title="Remaining to 50hr" value={remaining50.toFixed(1)} unit="h" status={remaining50 < 10 ? 'warning' : 'ok'} />
+        <StatCard title="Remaining to 100hr" value={remaining100.toFixed(1)} unit="h" status={remaining100 < 10 ? 'warning' : 'ok'} />
       </div>
 
-      <Card className="rounded-xl overflow-hidden border">
+      <div className="border rounded-xl bg-card overflow-hidden">
         <Tabs defaultValue="components" className="w-full">
-          <div className="bg-muted/30 border-b px-4">
-            <TabsList className="bg-transparent h-12 p-0 gap-4">
+          <div className="px-4 pt-4 border-b bg-muted/30">
+            <TabsList className="bg-transparent h-auto p-0 gap-4">
               <TabsTrigger 
                 value="components" 
-                className="rounded-t-lg rounded-b-none data-[state=active]:bg-background data-[state=active]:shadow-none border-x border-t border-transparent data-[state=active]:border-border h-full px-6 font-semibold"
+                className="rounded-t-lg rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-background px-6 py-3 font-semibold"
               >
                 Tracked Components
               </TabsTrigger>
               <TabsTrigger 
-                value="history" 
-                className="rounded-t-lg rounded-b-none data-[state=active]:bg-background data-[state=active]:shadow-none border-x border-t border-transparent data-[state=active]:border-border h-full px-6 font-semibold"
+                value="maintenance" 
+                className="rounded-t-lg rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-background px-6 py-3 font-semibold"
               >
                 Maintenance History
               </TabsTrigger>
             </TabsList>
           </div>
 
-          <TabsContent value="components" className="m-0 border-none">
-            <CardContent className="p-0">
-              <div className="p-4 border-b bg-background flex justify-between items-center">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Life-Limited Components</h3>
-                <Button size="sm" onClick={() => { setEditingComponent(null); componentForm.reset(); setIsComponentDialogOpen(true); }}>
-                  <Plus className="mr-2 h-4 w-4" /> Add Component
-                </Button>
+          <TabsContent value="components" className="m-0 p-0">
+            <div className="p-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-bold">Life-Limited Parts</h3>
+                <Dialog open={isCompDialogOpen} onOpenChange={setIsCompDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Component</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader><DialogTitle>New Tracked Component</DialogTitle></DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4"><Label className="text-right">Name</Label><Input value={compForm.name} onChange={e => setCompForm({...compForm, name: e.target.value})} className="col-span-3" /></div>
+                      <div className="grid grid-cols-4 items-center gap-4"><Label className="text-right">Part No.</Label><Input value={compForm.partNumber} onChange={e => setCompForm({...compForm, partNumber: e.target.value})} className="col-span-3" /></div>
+                      <div className="grid grid-cols-4 items-center gap-4"><Label className="text-right">Serial No.</Label><Input value={compForm.serial} onChange={e => setCompForm({...compForm, serial: e.target.value})} className="col-span-3" /></div>
+                      <div className="grid grid-cols-4 items-center gap-4"><Label className="text-right">Max Hours</Label><Input type="number" value={compForm.maxHours} onChange={e => setCompForm({...compForm, maxHours: Number(e.target.value)})} className="col-span-3" /></div>
+                      <div className="grid grid-cols-4 items-center gap-4"><Label className="text-right">Current TSN</Label><Input type="number" value={compForm.tsn} onChange={e => setCompForm({...compForm, tsn: Number(e.target.value)})} className="col-span-3" /></div>
+                    </div>
+                    <DialogFooter><Button onClick={handleAddComponent}>Add Part</Button></DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/20 hover:bg-muted/20">
                     <TableHead>Component Name</TableHead>
-                    <TableHead>Serial Number</TableHead>
+                    <TableHead>Part / Serial</TableHead>
                     <TableHead className="text-right">TSN</TableHead>
-                    <TableHead className="text-right">Limit</TableHead>
+                    <TableHead className="text-right">Life Limit</TableHead>
                     <TableHead className="text-right">Remaining</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="w-[100px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {components?.map((comp) => {
+                  {(components || []).map((comp) => {
                     const remaining = (comp.maxHours || 0) - (comp.tsn || 0);
                     return (
                       <TableRow key={comp.id}>
-                        <TableCell className="font-semibold">{comp.name}</TableCell>
-                        <TableCell className="font-mono text-xs">{comp.serialNumber}</TableCell>
-                        <TableCell className="text-right font-mono">{comp.tsn?.toFixed(1) || '0.0'}h</TableCell>
-                        <TableCell className="text-right text-muted-foreground font-mono">{comp.maxHours?.toFixed(1) || '0.0'}h</TableCell>
+                        <TableCell className="font-bold">{comp.name}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{comp.partNumber} / {comp.serialNumber}</TableCell>
+                        <TableCell className="text-right font-mono">{(comp.tsn || 0).toFixed(1)}h</TableCell>
+                        <TableCell className="text-right font-mono text-muted-foreground">{(comp.maxHours || 0).toFixed(1)}h</TableCell>
                         <TableCell className="text-right">
                           <Badge variant={remaining < 50 ? 'destructive' : 'secondary'} className="font-bold">
                             {remaining.toFixed(1)}h
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingComponent(comp); componentForm.reset(comp); setIsComponentDialogOpen(true); }}>
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteComp(comp.id)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteDocumentNonBlocking(doc(firestore!, 'tenants', tenantId, 'aircrafts', aircraftId, 'components', comp.id))}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
                   })}
                   {(!components || components.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                        No life-limited components tracked.
-                      </TableCell>
-                    </TableRow>
+                    <TableRow><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">No life-limited parts tracked.</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
-            </CardContent>
+            </div>
           </TabsContent>
 
-          <TabsContent value="history" className="m-0 border-none">
-            <CardContent className="p-0">
-              <div className="p-4 border-b bg-background flex justify-between items-center">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Maintenance Logbook</h3>
-                <Button size="sm" onClick={() => setIsMaintenanceDialogOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" /> Add Maintenance Log
-                </Button>
+          <TabsContent value="maintenance" className="m-0 p-0">
+            <div className="p-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-bold">Certification Log</h3>
+                <Dialog open={isLogDialogOpen} onOpenChange={setIsLogDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Maintenance Entry</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader><DialogTitle>New Maintenance Entry</DialogTitle><DialogDescription>Certify work performed on this aircraft.</DialogDescription></DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4"><Label className="text-right">Type</Label><Input value={logForm.type} onChange={e => setLogForm({...logForm, type: e.target.value})} placeholder="e.g., 50hr Inspection" className="col-span-3" /></div>
+                      <div className="grid grid-cols-4 items-start gap-4"><Label className="text-right pt-2">Details</Label><Textarea value={logForm.details} onChange={e => setLogForm({...logForm, details: e.target.value})} placeholder="Work performed..." className="col-span-3 min-h-[100px]" /></div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 items-center gap-4"><Label className="text-right">AME No.</Label><Input value={logForm.ame} onChange={e => setLogForm({...logForm, ame: e.target.value})} className="" /></div>
+                        <div className="grid grid-cols-2 items-center gap-4"><Label className="text-right">AMO No.</Label><Input value={logForm.amo} onChange={e => setLogForm({...logForm, amo: e.target.value})} className="" /></div>
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4"><Label className="text-right">Reference</Label><Input value={logForm.reference} onChange={e => setLogForm({...logForm, reference: e.target.value})} className="col-span-3" /></div>
+                    </div>
+                    <DialogFooter><Button onClick={handleAddLog}>Certify & Save</Button></DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/20 hover:bg-muted/20">
-                    <TableHead>Date</TableHead>
-                    <TableHead>Maintenance Type</TableHead>
-                    <TableHead>Details</TableHead>
-                    <TableHead>AME / AMO</TableHead>
+                    <TableHead className="w-[150px]">Date</TableHead>
+                    <TableHead>Work Performed</TableHead>
+                    <TableHead>Certifier</TableHead>
                     <TableHead className="text-right">Reference</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {logs?.map((log) => (
+                  {(maintenanceLogs || []).map((log) => (
                     <TableRow key={log.id}>
-                      <TableCell className="whitespace-nowrap font-medium">{format(new Date(log.date), 'dd MMM yyyy')}</TableCell>
-                      <TableCell><Badge variant="outline">{log.maintenanceType}</Badge></TableCell>
-                      <TableCell className="max-w-md truncate text-muted-foreground text-xs">{log.details}</TableCell>
-                      <TableCell className="text-xs">
-                        <div className="font-semibold">{log.ameNo}</div>
-                        <div className="text-[10px] text-muted-foreground">AMO: {log.amoNo}</div>
+                      <TableCell className="font-medium">{new Date(log.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</TableCell>
+                      <TableCell>
+                        <div className="font-bold text-primary">{log.maintenanceType}</div>
+                        <div className="text-xs text-muted-foreground line-clamp-2">{log.details}</div>
                       </TableCell>
-                      <TableCell className="text-right font-mono text-xs">{log.reference}</TableCell>
+                      <TableCell>
+                        <div className="text-xs font-bold">{log.ameNo}</div>
+                        <div className="text-[10px] text-muted-foreground uppercase">{log.amoNo}</div>
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs">{log.reference || 'N/A'}</TableCell>
                     </TableRow>
                   ))}
-                  {(!logs || logs.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
-                        No maintenance history records found.
-                      </TableCell>
-                    </TableRow>
+                  {(!maintenanceLogs || maintenanceLogs.length === 0) && (
+                    <TableRow><TableCell colSpan={4} className="h-24 text-center text-muted-foreground">No maintenance history recorded.</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
-            </CardContent>
+            </div>
           </TabsContent>
         </Tabs>
-      </Card>
-
-      {/* --- Dialogs --- */}
-
-      <Dialog open={isHoursDialogOpen} onOpenChange={setIsHoursDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Flight Hours</DialogTitle>
-            <DialogDescription>Manually override the current aircraft meter readings.</DialogDescription>
-          </DialogHeader>
-          <Form {...hoursForm}>
-            <form onSubmit={hoursForm.handleSubmit(onUpdateHours)} className="space-y-4">
-              <FormField control={hoursForm.control} name="currentHobbs" render={({ field }) => (
-                <FormItem><FormLabel>Current Hobbs</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>
-              )} />
-              <FormField control={hoursForm.control} name="currentTacho" render={({ field }) => (
-                <FormItem><FormLabel>Current Tachometer</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>
-              )} />
-              <DialogFooter><Button type="submit">Save Changes</Button></DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isServiceDialogOpen} onOpenChange={setIsServiceDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Service Targets</DialogTitle>
-            <DialogDescription>Set the tachometer targets for the next scheduled inspections.</DialogDescription>
-          </DialogHeader>
-          <Form {...serviceForm}>
-            <form onSubmit={serviceForm.handleSubmit(onUpdateService)} className="space-y-4">
-              <FormField control={serviceForm.control} name="tachoAtNext50Inspection" render={({ field }) => (
-                <FormItem><FormLabel>Next 50 Hour Due (Tacho)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>
-              )} />
-              <FormField control={serviceForm.control} name="tachoAtNext100Inspection" render={({ field }) => (
-                <FormItem><FormLabel>Next 100 Hour Due (Tacho)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>
-              )} />
-              <DialogFooter><Button type="submit">Save Targets</Button></DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isComponentDialogOpen} onOpenChange={setIsComponentDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingComponent ? 'Edit Component' : 'Add New Component'}</DialogTitle>
-          </DialogHeader>
-          <Form {...componentForm}>
-            <form onSubmit={componentForm.handleSubmit(onSaveComponent)} className="space-y-4">
-              <FormField control={componentForm.control} name="name" render={({ field }) => (
-                <FormItem><FormLabel>Component Name</FormLabel><FormControl><Input placeholder="e.g., Magneto (Left)" {...field} /></FormControl></FormItem>
-              )} />
-              <div className="grid grid-cols-2 gap-4">
-                <FormField control={componentForm.control} name="serialNumber" render={({ field }) => (
-                  <FormItem><FormLabel>Serial Number</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                )} />
-                <FormField control={componentForm.control} name="partNumber" render={({ field }) => (
-                  <FormItem><FormLabel>Part Number</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                )} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField control={componentForm.control} name="tsn" render={({ field }) => (
-                  <FormItem><FormLabel>Time Since New (h)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>
-                )} />
-                <FormField control={componentForm.control} name="maxHours" render={({ field }) => (
-                  <FormItem><FormLabel>Service Life Limit (h)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>
-                )} />
-              </div>
-              <DialogFooter><Button type="submit">Save Component</Button></DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isMaintenanceDialogOpen} onOpenChange={setIsMaintenanceDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>New Maintenance Entry</DialogTitle>
-            <DialogDescription>Record and certify maintenance work performed on this aircraft.</DialogDescription>
-          </DialogHeader>
-          <Form {...maintenanceForm}>
-            <form onSubmit={maintenanceForm.handleSubmit(onAddLog)} className="space-y-4">
-              <FormField control={maintenanceForm.control} name="maintenanceType" render={({ field }) => (
-                <FormItem><FormLabel>Maintenance Type</FormLabel><FormControl><Input placeholder="e.g., 50hr Inspection, Battery Replacement" {...field} /></FormControl></FormItem>
-              )} />
-              <FormField control={maintenanceForm.control} name="details" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Work Details</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Comprehensive description of work performed..." 
-                      className="min-h-[120px]" 
-                      {...field} 
-                    />
-                  </FormControl>
-                </FormItem>
-              )} />
-              <div className="grid grid-cols-2 gap-4">
-                <FormField control={maintenanceForm.control} name="ameNo" render={({ field }) => (
-                  <FormItem><FormLabel>Engineer License No (AME)</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                )} />
-                <FormField control={maintenanceForm.control} name="amoNo" render={({ field }) => (
-                  <FormItem><FormLabel>AMO Number</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                )} />
-              </div>
-              <FormField control={maintenanceForm.control} name="reference" render={({ field }) => (
-                <FormItem><FormLabel>Release Reference (CRS)</FormLabel><FormControl><Input placeholder="e.g., JOB-2024-001" {...field} /></FormControl></FormItem>
-              )} />
-              <DialogFooter>
-                <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white border-none font-bold">Certify & Save</Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      </div>
     </div>
   );
 }
