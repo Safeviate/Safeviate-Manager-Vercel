@@ -1,87 +1,77 @@
+
 'use client';
 
 import { use, useState, useMemo } from 'react';
 import { doc, collection, query, orderBy } from 'firebase/firestore';
-import { useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Pencil, Plus, History, Settings2, Clock, Gauge, ArrowLeft } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ArrowLeft, PlusCircle, Pencil, Trash2, Settings2, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 import type { Aircraft, AircraftComponent } from '@/types/aircraft';
 import type { MaintenanceLog } from '@/types/maintenance';
 
-function StatCard({ title, value, unit, status = 'ok' }: { title: string; value: string; unit: string; status?: 'ok' | 'warning' | 'danger' }) {
-  return (
-    <Card className={cn(
-      status === 'warning' && 'border-orange-200 bg-orange-50',
-      status === 'danger' && 'border-red-200 bg-red-50'
-    )}>
-      <CardHeader className="p-4 pb-0">
-        <CardDescription className="text-[10px] font-bold uppercase tracking-wider">{title}</CardDescription>
-      </CardHeader>
-      <CardContent className="p-4 pt-1">
-        <div className="flex items-baseline gap-1">
-          <span className="text-2xl font-bold tracking-tight">{value}</span>
-          <span className="text-xs text-muted-foreground font-medium">{unit}</span>
-        </div>
-      </CardContent>
-    </Card>
-  );
+interface AircraftDetailPageProps {
+  params: Promise<{ id: string }>;
 }
 
-export default function AircraftDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function AircraftDetailPage({ params }: AircraftDetailPageProps) {
   const resolvedParams = use(params);
-  const firestore = useFirestore();
-  const tenantId = 'safeviate';
   const aircraftId = resolvedParams.id;
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const tenantId = 'safeviate';
 
-  const aircraftRef = useMemoFirebase(() => doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId), [firestore, tenantId, aircraftId]);
-  const componentsQuery = useMemoFirebase(() => query(collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`), orderBy('name')), [firestore, tenantId, aircraftId]);
-  const maintenanceQuery = useMemoFirebase(() => query(collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`), orderBy('date', 'desc')), [firestore, tenantId, aircraftId]);
+  const aircraftRef = useMemoFirebase(() => (firestore ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId) : null), [firestore, aircraftId]);
+  const componentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts', aircraftId, 'components')) : null), [firestore, aircraftId]);
+  const maintenanceQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'aircrafts', aircraftId, 'maintenanceLogs'), orderBy('date', 'desc')) : null), [firestore, aircraftId]);
 
-  const { data: aircraft, isLoading: loadingAc } = useDoc<Aircraft>(aircraftRef);
-  const { data: components, isLoading: loadingComp } = useCollection<AircraftComponent>(componentsQuery);
-  const { data: logs, isLoading: loadingLogs } = useCollection<MaintenanceLog>(maintenanceQuery);
+  const { data: aircraft, isLoading: loadingAircraft } = useDoc<Aircraft>(aircraftRef);
+  const { data: components, isLoading: loadingComponents } = useCollection<AircraftComponent>(componentsQuery);
+  const { data: maintenanceLogs, isLoading: loadingLogs } = useCollection<MaintenanceLog>(maintenanceQuery);
 
   const [isHourDialogOpen, setIsHourDialogOpen] = useState(false);
   const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
   const [isCompDialogOpen, setIsCompDialogOpen] = useState(false);
-  const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
-  const [editingComponent, setEditingComponent] = useState<AircraftComponent | null>(null);
+  const [isMaintDialogOpen, setIsMaintenanceDialogOpen] = useState(false);
+  const [editingComp, setEditingComp] = useState<AircraftComponent | null>(null);
 
-  if (loadingAc) return <div className="p-8"><Skeleton className="h-96 w-full" /></div>;
+  if (loadingAircraft) return <div className="p-8"><Skeleton className="h-96 w-full" /></div>;
   if (!aircraft) return <div className="p-8 text-center">Aircraft not found.</div>;
-
-  const hoursRemaining50 = (aircraft.tachoAtNext50Inspection || 0) - (aircraft.currentTacho || 0);
-  const hoursRemaining100 = (aircraft.tachoAtNext100Inspection || 0) - (aircraft.currentTacho || 0);
 
   const handleUpdateHours = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    updateDocumentNonBlocking(aircraftRef, {
+    const updates = {
       currentHobbs: parseFloat(formData.get('hobbs') as string),
       currentTacho: parseFloat(formData.get('tacho') as string),
-    });
+    };
+    updateDocumentNonBlocking(aircraftRef!, updates);
     setIsHourDialogOpen(false);
+    toast({ title: "Flight Hours Updated" });
   };
 
   const handleUpdateService = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    updateDocumentNonBlocking(aircraftRef, {
+    const updates = {
       tachoAtNext50Inspection: parseFloat(formData.get('next50') as string),
       tachoAtNext100Inspection: parseFloat(formData.get('next100') as string),
-    });
+    };
+    updateDocumentNonBlocking(aircraftRef!, updates);
     setIsServiceDialogOpen(false);
+    toast({ title: "Service Targets Updated" });
   };
 
   const handleSaveComponent = (e: React.FormEvent<HTMLFormElement>) => {
@@ -91,249 +81,234 @@ export default function AircraftDetailPage({ params }: { params: Promise<{ id: s
       name: formData.get('name') as string,
       partNumber: formData.get('partNumber') as string,
       serialNumber: formData.get('serialNumber') as string,
+      manufacturer: formData.get('manufacturer') as string,
       tsn: parseFloat(formData.get('tsn') as string),
       maxHours: parseFloat(formData.get('maxHours') as string),
     };
 
-    if (editingComponent) {
-      updateDocumentNonBlocking(doc(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`, editingComponent.id), data);
+    if (editingComp) {
+      updateDocumentNonBlocking(doc(firestore!, aircraftRef!.path, 'components', editingComp.id), data);
     } else {
-      addDocumentNonBlocking(collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`), data);
+      addDocumentNonBlocking(collection(firestore!, aircraftRef!.path, 'components'), data);
     }
     setIsCompDialogOpen(false);
-    setEditingComponent(null);
+    setEditingComp(null);
+    toast({ title: editingComp ? "Component Updated" : "Component Added" });
   };
 
-  const handleAddLog = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveMaintenance = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    addDocumentNonBlocking(collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`), {
+    const data = {
       maintenanceType: formData.get('type') as string,
-      date: new Date().toISOString(),
       details: formData.get('details') as string,
       ameNo: formData.get('ameNo') as string,
-    });
-    setIsLogDialogOpen(false);
+      amoNo: formData.get('amoNo') as string,
+      reference: formData.get('reference') as string,
+      date: new Date().toISOString(),
+      aircraftId: aircraftId,
+    };
+    addDocumentNonBlocking(collection(firestore!, aircraftRef!.path, 'maintenanceLogs'), data);
+    setIsMaintenanceDialogOpen(false);
+    toast({ title: "Maintenance Entry Certified" });
   };
+
+  const remaining50 = (aircraft.tachoAtNext50Inspection || 0) - (aircraft.currentTacho || 0);
+  const remaining100 = (aircraft.tachoAtNext100Inspection || 0) - (aircraft.currentTacho || 0);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <Button asChild variant="ghost" size="sm" className="-ml-2 mb-2">
-            <Link href="/assets/aircraft"><ArrowLeft className="mr-2 h-4 w-4" /> Fleet List</Link>
+      <div className="flex justify-between items-center">
+        <Button asChild variant="outline" size="sm">
+          <Link href="/assets/aircraft"><ArrowLeft className="mr-2 h-4 w-4" /> Fleet</Link>
+        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsHourDialogOpen(true)} variant="outline">
+            <Clock className="mr-2 h-4 w-4" /> Edit Flight Hours
           </Button>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">{aircraft.tailNumber}</h1>
-            <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-none font-bold">HEALTHY</Badge>
-          </div>
-          <p className="text-muted-foreground">{aircraft.make} {aircraft.model} • {aircraft.type}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Dialog open={isHourDialogOpen} onOpenChange={setIsHourDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline"><Clock className="mr-2 h-4 w-4" /> Edit Flight Hours</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Update Current Hours</DialogTitle>
-                <DialogDescription>Manually override the current Hobbs and Tacho readings.</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleUpdateHours} className="space-y-4 pt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="hobbs">Current Hobbs</Label>
-                    <Input id="hobbs" name="hobbs" type="number" step="0.1" defaultValue={aircraft.currentHobbs} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tacho">Current Tacho</Label>
-                    <Input id="tacho" name="tacho" type="number" step="0.1" defaultValue={aircraft.currentTacho} required />
-                  </div>
-                </div>
-                <DialogFooter><Button type="submit">Update Readings</Button></DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={isServiceDialogOpen} onOpenChange={setIsServiceDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline"><Settings2 className="mr-2 h-4 w-4" /> Edit Service</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Set Service Targets</DialogTitle>
-                <DialogDescription>Manually set the Tachometer readings for the next inspections.</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleUpdateService} className="space-y-4 pt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="next50">Next 50h Inspection (Tacho)</Label>
-                    <Input id="next50" name="next50" type="number" step="0.1" defaultValue={aircraft.tachoAtNext50Inspection} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="next100">Next 100h Inspection (Tacho)</Label>
-                    <Input id="next100" name="next100" type="number" step="0.1" defaultValue={aircraft.tachoAtNext100Inspection} required />
-                  </div>
-                </div>
-                <DialogFooter><Button type="submit">Save Targets</Button></DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button onClick={() => setIsServiceDialogOpen(true)} variant="outline">
+            <Settings2 className="mr-2 h-4 w-4" /> Edit Service
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title="Current Hobbs" value={aircraft.currentHobbs?.toFixed(1) || '0.0'} unit="h" />
-        <StatCard title="Current Tacho" value={aircraft.currentTacho?.toFixed(1) || '0.0'} unit="h" />
-        <StatCard 
-          title="50h Inspection" 
-          value={hoursRemaining50.toFixed(1)} 
-          unit="h remaining" 
-          status={hoursRemaining50 < 10 ? 'danger' : hoursRemaining50 < 20 ? 'warning' : 'ok'} 
-        />
-        <StatCard 
-          title="100h Inspection" 
-          value={hoursRemaining100.toFixed(1)} 
-          unit="h remaining" 
-          status={hoursRemaining100 < 15 ? 'danger' : hoursRemaining100 < 30 ? 'warning' : 'ok'} 
-        />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-primary/5 border-primary/20">
+          <CardHeader className="p-4 pb-2"><CardDescription className="text-[10px] font-bold uppercase">Current Hobbs</CardDescription></CardHeader>
+          <CardContent className="p-4 pt-0"><p className="text-2xl font-bold">{aircraft.currentHobbs?.toFixed(1)}h</p></CardContent>
+        </Card>
+        <Card className="bg-primary/5 border-primary/20">
+          <CardHeader className="p-4 pb-2"><CardDescription className="text-[10px] font-bold uppercase">Current Tacho</CardDescription></CardHeader>
+          <CardContent className="p-4 pt-0"><p className="text-2xl font-bold">{aircraft.currentTacho?.toFixed(1)}h</p></CardContent>
+        </Card>
+        <Card className={cn(remaining50 < 10 ? "bg-destructive/10 border-destructive/20" : "bg-muted")}>
+          <CardHeader className="p-4 pb-2"><CardDescription className="text-[10px] font-bold uppercase">Next 50hr Inspection</CardDescription></CardHeader>
+          <CardContent className="p-4 pt-0">
+            <p className="text-2xl font-bold">{aircraft.tachoAtNext50Inspection?.toFixed(1)}h</p>
+            <p className="text-[10px] text-muted-foreground">({remaining50.toFixed(1)}h remaining)</p>
+          </CardContent>
+        </Card>
+        <Card className={cn(remaining100 < 10 ? "bg-destructive/10 border-destructive/20" : "bg-muted")}>
+          <CardHeader className="p-4 pb-2"><CardDescription className="text-[10px] font-bold uppercase">Next 100hr Inspection</CardDescription></CardHeader>
+          <CardContent className="p-4 pt-0">
+            <p className="text-2xl font-bold">{aircraft.tachoAtNext100Inspection?.toFixed(1)}h</p>
+            <p className="text-[10px] text-muted-foreground">({remaining100.toFixed(1)}h remaining)</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <Card className="rounded-xl overflow-hidden border-2">
-        <Tabs defaultValue="components" className="w-full">
-          <div className="bg-muted/30 border-b px-4 py-2">
-            <TabsList className="bg-transparent gap-2 h-auto p-0">
-              <TabsTrigger 
-                value="components" 
-                className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-6 py-2"
-              >
-                Tracked Components
-              </TabsTrigger>
-              <TabsTrigger 
-                value="history" 
-                className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-6 py-2"
-              >
-                Maintenance History
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent value="components" className="m-0 p-6 space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Life-Limited Components</h3>
-              <Button size="sm" onClick={() => { setEditingComponent(null); setIsCompDialogOpen(true); }}>
-                <Plus className="mr-2 h-4 w-4" /> Add Component
+      <Tabs defaultValue="components" className="w-full">
+        <div className="border rounded-xl overflow-hidden bg-card">
+          <TabsList className="w-full justify-start rounded-none h-12 bg-muted/30 border-b p-0">
+            <TabsTrigger value="components" className="rounded-none h-full px-6 data-[state=active]:bg-background border-r">Tracked Components</TabsTrigger>
+            <TabsTrigger value="maintenance" className="rounded-none h-full px-6 data-[state=active]:bg-background">Maintenance History</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="components" className="m-0 p-6">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-lg font-semibold">Tracked Components</h3>
+                <p className="text-sm text-muted-foreground">Monitoring service life limits for critical parts.</p>
+              </div>
+              <Button onClick={() => { setEditingComp(null); setIsCompDialogOpen(true); }}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Component
               </Button>
             </div>
-            <div className="rounded-md border overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 border-b">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium">Component</th>
-                    <th className="px-4 py-3 text-left font-medium">Serial No.</th>
-                    <th className="px-4 py-3 text-right font-medium">TSN</th>
-                    <th className="px-4 py-3 text-right font-medium">Limit</th>
-                    <th className="px-4 py-3 text-right font-medium">Remaining</th>
-                    <th className="px-4 py-3 text-right font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {components?.map((comp) => {
-                    const remaining = (comp.maxHours || 0) - (comp.tsn || 0);
-                    return (
-                      <tr key={comp.id} className="hover:bg-muted/20 transition-colors">
-                        <td className="px-4 py-3 font-medium">{comp.name}</td>
-                        <td className="px-4 py-3 font-mono text-xs">{comp.serialNumber}</td>
-                        <td className="px-4 py-3 text-right">{comp.tsn?.toFixed(1) || '0.0'}h</td>
-                        <td className="px-4 py-3 text-right text-muted-foreground">{comp.maxHours?.toFixed(1) || 'N/A'}h</td>
-                        <td className="px-4 py-3 text-right">
-                          <Badge variant={remaining < 50 ? 'destructive' : 'secondary'} className="font-bold">
-                            {remaining.toFixed(1)}h
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingComponent(comp); setIsCompDialogOpen(true); }}>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Component</TableHead>
+                  <TableHead>Serial No.</TableHead>
+                  <TableHead className="text-right">TSN</TableHead>
+                  <TableHead className="text-right">Max Hours</TableHead>
+                  <TableHead className="text-right">Remaining</TableHead>
+                  <TableHead className="w-[100px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {components?.map(comp => {
+                  const remaining = (comp.maxHours || 0) - (comp.tsn || 0);
+                  return (
+                    <TableRow key={comp.id}>
+                      <TableCell>
+                        <p className="font-medium">{comp.name}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase">{comp.manufacturer} • {comp.partNumber}</p>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{comp.serialNumber}</TableCell>
+                      <TableCell className="text-right font-mono">{comp.tsn?.toFixed(1)}h</TableCell>
+                      <TableCell className="text-right font-mono text-muted-foreground">{comp.maxHours?.toFixed(1)}h</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant={remaining < 25 ? "destructive" : "secondary"} className="font-bold font-mono">
+                          {remaining.toFixed(1)}h
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                          <Button variant="ghost" size="icon" onClick={() => { setEditingComp(comp); setIsCompDialogOpen(true); }}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteDocumentNonBlocking(doc(firestore!, aircraftRef!.path, 'components', comp.id))}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </TabsContent>
 
-          <TabsContent value="history" className="m-0 p-6 space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Service Log</h3>
-              <Button size="sm" onClick={() => setIsLogDialogOpen(true)}>
-                <History className="mr-2 h-4 w-4" /> Add Maintenance Log
+          <TabsContent value="maintenance" className="m-0 p-6">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-lg font-semibold">Maintenance History</h3>
+                <p className="text-sm text-muted-foreground">Certified record of all work performed on this aircraft.</p>
+              </div>
+              <Button onClick={() => setIsMaintenanceDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Maintenance Log
               </Button>
             </div>
             <div className="space-y-4">
-              {logs?.map((log) => (
-                <div key={log.id} className="p-4 rounded-lg border bg-background flex flex-col md:flex-row gap-4 justify-between">
+              {maintenanceLogs?.map(log => (
+                <div key={log.id} className="p-4 border rounded-lg bg-background flex justify-between items-start gap-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold">{log.maintenanceType}</span>
-                      <span className="text-xs text-muted-foreground">• {format(new Date(log.date), 'dd MMM yyyy')}</span>
+                      <p className="font-bold">{log.maintenanceType}</p>
+                      <Badge variant="outline" className="text-[10px]">{format(new Date(log.date), 'dd MMM yyyy')}</Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{log.details}</p>
-                  </div>
-                  <div className="flex flex-col items-end shrink-0">
-                    <span className="text-[10px] font-bold uppercase text-muted-foreground">Certified By</span>
-                    <span className="text-sm font-mono">{log.ameNo}</span>
+                    <p className="text-sm whitespace-pre-wrap">{log.details}</p>
+                    <div className="flex gap-4 text-[10px] text-muted-foreground uppercase font-bold pt-2">
+                      <span>Ref: {log.reference || 'N/A'}</span>
+                      <span>AME: {log.ameNo}</span>
+                      <span>AMO: {log.amoNo}</span>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           </TabsContent>
-        </Tabs>
-      </Card>
+        </div>
+      </Tabs>
 
       {/* Dialogs */}
-      <Dialog open={isCompDialogOpen} onOpenChange={setIsCompDialogOpen}>
+      <Dialog open={isHourDialogOpen} onOpenChange={setIsHourDialogOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingComponent ? 'Edit Component' : 'Add Component'}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSaveComponent} className="space-y-4 pt-4">
+          <DialogHeader><DialogTitle>Edit Flight Hours</DialogTitle></DialogHeader>
+          <form onSubmit={handleUpdateHours} className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Current Hobbs</Label>
+                <Input name="hobbs" type="number" step="0.1" defaultValue={aircraft.currentHobbs} />
+              </div>
+              <div className="space-y-2">
+                <Label>Current Tacho</Label>
+                <Input name="tacho" type="number" step="0.1" defaultValue={aircraft.currentTacho} />
+              </div>
+            </div>
+            <DialogFooter><Button type="submit">Save Hours</Button></DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isServiceDialogOpen} onOpenChange={setIsServiceDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Service Targets</DialogTitle></DialogHeader>
+          <form onSubmit={handleUpdateService} className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Component Name</Label>
-              <Input name="name" defaultValue={editingComponent?.name} required />
+              <Label>Tacho at Next 50hr Inspection</Label>
+              <Input name="next50" type="number" step="0.1" defaultValue={aircraft.tachoAtNext50Inspection} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Part Number</Label>
-                <Input name="partNumber" defaultValue={editingComponent?.partNumber} />
-              </div>
-              <div className="space-y-2">
-                <Label>Serial Number</Label>
-                <Input name="serialNumber" defaultValue={editingComponent?.serialNumber} />
-              </div>
+            <div className="space-y-2">
+              <Label>Tacho at Next 100hr Inspection</Label>
+              <Input name="next100" type="number" step="0.1" defaultValue={aircraft.tachoAtNext100Inspection} />
             </div>
+            <DialogFooter><Button type="submit">Save Targets</Button></DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCompDialogOpen} onOpenChange={setIsCompDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>{editingComp ? 'Edit' : 'Add'} Tracked Component</DialogTitle></DialogHeader>
+          <form onSubmit={handleSaveComponent} className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>TSN (Time Since New)</Label>
-                <Input name="tsn" type="number" step="0.1" defaultValue={editingComponent?.tsn} required />
-              </div>
-              <div className="space-y-2">
-                <Label>Limit (Hours)</Label>
-                <Input name="maxHours" type="number" step="0.1" defaultValue={editingComponent?.maxHours} required />
-              </div>
+              <div className="space-y-2"><Label>Component Name</Label><Input name="name" defaultValue={editingComp?.name} required /></div>
+              <div className="space-y-2"><Label>Manufacturer</Label><Input name="manufacturer" defaultValue={editingComp?.manufacturer} /></div>
+              <div className="space-y-2"><Label>Part Number</Label><Input name="partNumber" defaultValue={editingComp?.partNumber} /></div>
+              <div className="space-y-2"><Label>Serial Number</Label><Input name="serialNumber" defaultValue={editingComp?.serialNumber} /></div>
+              <div className="space-y-2"><Label>Current TSN</Label><Input name="tsn" type="number" step="0.1" defaultValue={editingComp?.tsn} required /></div>
+              <div className="space-y-2"><Label>Max Hours (Life Limit)</Label><Input name="maxHours" type="number" step="0.1" defaultValue={editingComp?.maxHours} required /></div>
             </div>
             <DialogFooter><Button type="submit">Save Component</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isLogDialogOpen} onOpenChange={setIsLogDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>New Maintenance Entry</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleAddLog} className="space-y-4 pt-4">
+      <Dialog open={isMaintDialogOpen} onOpenChange={setIsMaintenanceDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>New Maintenance Entry</DialogTitle></DialogHeader>
+          <form onSubmit={handleSaveMaintenance} className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Maintenance Type</Label>
               <Input name="type" placeholder="e.g., 50hr Inspection, Engine Oil Change" required />
@@ -342,11 +317,23 @@ export default function AircraftDetailPage({ params }: { params: Promise<{ id: s
               <Label>Details</Label>
               <Textarea name="details" placeholder="Describe work performed..." required />
             </div>
-            <div className="space-y-2">
-              <Label>Engineer License No.</Label>
-              <Input name="ameNo" required />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Engineer License No.</Label>
+                <Input name="ameNo" required />
+              </div>
+              <div className="space-y-2">
+                <Label>AMO Number</Label>
+                <Input name="amoNo" required />
+              </div>
             </div>
-            <DialogFooter><Button type="submit">Certify & Save</Button></DialogFooter>
+            <div className="space-y-2">
+              <Label>Reference</Label>
+              <Input name="reference" placeholder="Job card or certificate reference" />
+            </div>
+            <DialogFooter>
+              <Button type="submit" className="w-full">Certify & Save</Button>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

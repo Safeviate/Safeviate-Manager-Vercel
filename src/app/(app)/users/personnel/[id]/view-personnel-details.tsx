@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -158,10 +159,8 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
 
   const isStudent = isPilotProfile(user) && user.userType === 'Student';
   const isInstructor = isPilotProfile(user) && user.userType === 'Instructor';
-  const isPrivatePilot = isPilotProfile(user) && user.userType === 'Private Pilot';
   const isAnyPilot = isPilotProfile(user);
 
-  // Determine the number of tabs based on user type
   const tabCount = isStudent ? 3 : isAnyPilot ? 2 : 1;
 
   return (
