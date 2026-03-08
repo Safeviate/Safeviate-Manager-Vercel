@@ -303,7 +303,13 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                         <FormLabel>Post-Flight Complete</FormLabel>
                                         <FormDescription>End Hobbs/Tacho and Defects</FormDescription>
                                     </div>
-                                    <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                    <FormControl>
+                                        <Switch 
+                                            checked={field.value} 
+                                            onCheckedChange={field.onChange} 
+                                            disabled={!existingBooking || !existingBooking.preFlight}
+                                        />
+                                    </FormControl>
                                 </FormItem>
                             )}/>
                         </div>
