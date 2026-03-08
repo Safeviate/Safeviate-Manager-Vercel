@@ -21,6 +21,7 @@ import Link from 'next/link';
 import type { Booking } from '@/types/booking';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { SignaturePad } from '@/components/ui/signature-pad';
+import { Separator } from '@/components/ui/separator';
 
 const debriefSchema = z.object({
     overallComment: z.string().min(1, "Please provide an overall comment."),
