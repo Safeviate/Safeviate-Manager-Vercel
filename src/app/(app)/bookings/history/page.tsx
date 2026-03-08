@@ -25,12 +25,11 @@ import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import type { Booking } from '@/types/booking';
 import { Button } from '@/components/ui/button';
-import { Eye, Trash2, FilePlus } from 'lucide-react';
+import { Eye, Trash2, FilePlus, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-// A consolidated type for display
 type EnrichedBooking = Booking & {
   aircraftTailNumber?: string;
   creatorName?: string;
@@ -113,41 +112,56 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                   <TableHead>Aircraft</TableHead>
                   <TableHead>Creator</TableHead>
                   <TableHead>Start Time</TableHead>
+                  <TableHead className="text-right">Flight Time</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className='text-right'>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-                {bookings.map(b => (
-                    <TableRow key={b.id} className={cn((b.status === 'Cancelled' || b.status === 'Cancelled with Reason' || b.status === 'Completed') && 'text-muted-foreground')}>
-                        <TableCell className="font-medium">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
-                        <TableCell>{b.aircraftTailNumber}</TableCell>
-                        <TableCell>{b.creatorName}</TableCell>
-                        <TableCell>{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
-                        <TableCell>
-                            <Badge variant={getStatusBadgeVariant(b.status)}>{b.status}</Badge>
-                        </TableCell>
-                        <TableCell className='text-right'>
-                            <div className="flex justify-end gap-2">
-                                <Button asChild variant="outline" size="icon" className="h-8 w-8">
-                                    <Link href={`/bookings/history/${b.id}`}>
-                                        <Eye className="h-4 w-4" />
-                                        <span className="sr-only">View</span>
-                                    </Link>
-                                </Button>
-                                {b.type === 'Training Flight' && b.status === 'Completed' && (
-                                    <Button asChild variant="secondary" size="icon" className="h-8 w-8">
-                                        <Link href={`/training/student-debriefs/new?bookingId=${b.id}`}>
-                                            <FilePlus className="h-4 w-4" />
-                                            <span className="sr-only">Debrief</span>
+                {bookings.map(b => {
+                    const flightHours = (b.status === 'Completed' && b.postFlightData?.hobbs && b.preFlightData?.hobbs)
+                        ? (b.postFlightData.hobbs - b.preFlightData.hobbs).toFixed(1)
+                        : null;
+
+                    return (
+                        <TableRow key={b.id} className={cn((b.status === 'Cancelled' || b.status === 'Cancelled with Reason' || b.status === 'Completed') && 'text-muted-foreground')}>
+                            <TableCell className="font-medium">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
+                            <TableCell>{b.aircraftTailNumber}</TableCell>
+                            <TableCell>{b.creatorName}</TableCell>
+                            <TableCell>{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
+                            <TableCell className="text-right font-mono font-bold">
+                                {flightHours ? (
+                                    <div className="flex items-center justify-end gap-1 text-primary">
+                                        <Clock className="h-3 w-3" />
+                                        {flightHours}h
+                                    </div>
+                                ) : '-'}
+                            </TableCell>
+                            <TableCell>
+                                <Badge variant={getStatusBadgeVariant(b.status)}>{b.status}</Badge>
+                            </TableCell>
+                            <TableCell className='text-right'>
+                                <div className="flex justify-end gap-2">
+                                    <Button asChild variant="outline" size="icon" className="h-8 w-8">
+                                        <Link href={`/bookings/history/${b.id}`}>
+                                            <Eye className="h-4 w-4" />
+                                            <span className="sr-only">View</span>
                                         </Link>
                                     </Button>
-                                )}
-                                <DeleteBookingButton bookingId={b.id} bookingNumber={b.bookingNumber} />
-                            </div>
-                        </TableCell>
-                    </TableRow>
-                ))}
+                                    {b.type === 'Training Flight' && b.status === 'Completed' && (
+                                        <Button asChild variant="secondary" size="icon" className="h-8 w-8">
+                                            <Link href={`/training/student-debriefs/new?bookingId=${b.id}`}>
+                                                <FilePlus className="h-4 w-4" />
+                                                <span className="sr-only">Debrief</span>
+                                            </Link>
+                                        </Button>
+                                    )}
+                                    <DeleteBookingButton bookingId={b.id} bookingNumber={b.bookingNumber} />
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    );
+                })}
             </TableBody>
         </Table>
     )
@@ -207,14 +221,14 @@ export default function BookingsHistoryPage() {
                 <p className="text-muted-foreground">A complete log of all past and present bookings.</p>
             </div>
         </div>
-      <Card className="flex-grow flex flex-col">
+      <Card className="flex-grow flex flex-col shadow-none border">
         <Tabs defaultValue="all">
             <div className='px-6 pt-4'>
-                <TabsList>
-                    <TabsTrigger value="all">All</TabsTrigger>
-                    <TabsTrigger value="training">Training</TabsTrigger>
-                    <TabsTrigger value="private">Private</TabsTrigger>
-                    <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-0 border-b-0">
+                    <TabsTrigger value="all" className="rounded-full px-6 py-2 border data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">All</TabsTrigger>
+                    <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Training</TabsTrigger>
+                    <TabsTrigger value="private" className="rounded-full px-6 py-2 border data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Private</TabsTrigger>
+                    <TabsTrigger value="maintenance" className="rounded-full px-6 py-2 border data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Maintenance</TabsTrigger>
                 </TabsList>
             </div>
             <CardContent className='p-0'>

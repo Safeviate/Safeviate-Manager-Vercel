@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -12,7 +11,7 @@ import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle } from 'lucide-react';
+import { Save, AlertTriangle, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -26,10 +25,10 @@ interface ViewBookingDetailsProps {
     booking: Booking;
 }
 
-const DetailItem = ({ label, value }: { label: string, value: string | undefined | null }) => (
+const DetailItem = ({ label, value, children }: { label: string, value?: string | undefined | null, children?: React.ReactNode }) => (
     <div>
         <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="font-semibold">{value || 'N/A'}</p>
+        {children ? children : <p className="font-semibold">{value || 'N/A'}</p>}
     </div>
 );
 
@@ -68,7 +67,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     // Initialize stations from Booking (persisted data) or Aircraft (defaults)
     useEffect(() => {
         if (aircraft) {
-            // Prioritize saved data from the booking, otherwise use aircraft profile defaults
             if (booking.massAndBalance?.stations && booking.massAndBalance.stations.length > 0) {
                 setStations(booking.massAndBalance.stations);
             } else if (aircraft.stations) {
@@ -100,6 +98,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             isSafe: safe
         });
     }, [stations, aircraft]);
+
+    const flightHours = useMemo(() => {
+        if (booking.status === 'Completed' && booking.postFlightData?.hobbs && booking.preFlightData?.hobbs) {
+            return (booking.postFlightData.hobbs - booking.preFlightData.hobbs).toFixed(1);
+        }
+        return null;
+    }, [booking]);
 
     const handleStationWeightChange = (id: number, weight: string) => {
         const val = parseFloat(weight) || 0;
@@ -161,24 +166,43 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const envelope = aircraft?.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
 
     return (
-        <Card>
+        <Card className="shadow-none border">
             <CardHeader className="border-b bg-muted/20">
-                <div className="space-y-1">
-                    <CardTitle>{booking.type}</CardTitle>
-                    <CardDescription>
-                        Booking Number: {booking.bookingNumber} • {aircraftLabel}
-                    </CardDescription>
+                <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                        <CardTitle>{booking.type}</CardTitle>
+                        <CardDescription>
+                            Booking Number: {booking.bookingNumber} • {aircraftLabel}
+                        </CardDescription>
+                    </div>
+                    {flightHours && (
+                        <div className="text-right">
+                            <p className="text-[10px] uppercase font-bold text-muted-foreground">Flight Time</p>
+                            <p className="text-3xl font-bold text-primary flex items-center justify-end gap-2">
+                                <Clock className="h-6 w-6" />
+                                {flightHours}h
+                            </p>
+                        </div>
+                    )}
                 </div>
             </CardHeader>
             
             <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
-                <DetailItem label="Status" value={booking.status} />
+                <DetailItem label="Status">
+                    <Badge variant={getStatusBadgeVariant(booking.status)}>{booking.status}</Badge>
+                </DetailItem>
                 <DetailItem label="Aircraft" value={aircraftLabel} />
                 <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
                 <DetailItem label="Start Time" value={formatDateSafe(booking.start, 'p')} />
                 <DetailItem label="End Time" value={formatDateSafe(booking.end, 'p')} />
                 <DetailItem label="Instructor" value={instructorLabel} />
                 <DetailItem label="Student" value={studentLabel} />
+                {booking.status === 'Completed' && (
+                    <>
+                        <DetailItem label="Pre-Flight Hobbs" value={booking.preFlightData?.hobbs?.toFixed(1) || '0.0'} />
+                        <DetailItem label="Post-Flight Hobbs" value={booking.postFlightData?.hobbs?.toFixed(1) || '0.0'} />
+                    </>
+                )}
                 <div className="md:col-span-2 lg:col-span-3">
                     <p className="text-sm text-muted-foreground">Notes</p>
                     <p className="font-semibold whitespace-pre-wrap">{booking.notes || 'No notes provided.'}</p>
@@ -297,4 +321,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             </CardContent>
         </Card>
     );
+}
+
+function getStatusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+    switch (status) {
+        case 'Completed': return 'secondary';
+        case 'Cancelled':
+        case 'Cancelled with Reason': return 'destructive';
+        case 'Confirmed': return 'default';
+        default: return 'outline';
+    }
 }
