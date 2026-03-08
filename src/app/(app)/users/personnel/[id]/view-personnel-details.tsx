@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -167,12 +168,12 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   return (
     <Tabs defaultValue="overview" className="w-full">
         <TabsList className={cn(
-            "grid w-full", 
+            "grid w-full h-12 items-center justify-start rounded-lg bg-header p-1 text-header-foreground border", 
             tabCount === 3 ? "grid-cols-3" : tabCount === 2 ? "grid-cols-2" : "grid-cols-1"
         )}>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            {isStudent && <TabsTrigger value="training">Training Records</TabsTrigger>}
-            {isAnyPilot && <TabsTrigger value="logbook">Logbook</TabsTrigger>}
+            <TabsTrigger value="overview" className="rounded-md">Overview</TabsTrigger>
+            {isStudent && <TabsTrigger value="training" className="rounded-md">Training Records</TabsTrigger>}
+            {isAnyPilot && <TabsTrigger value="logbook" className="rounded-md">Logbook</TabsTrigger>}
         </TabsList>
         <TabsContent value="overview" className="mt-6">
             <div className="space-y-6">
