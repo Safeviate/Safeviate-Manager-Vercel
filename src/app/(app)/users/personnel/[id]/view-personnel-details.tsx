@@ -24,7 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DocumentExpirySettings } from '../../../admin/document-dates/page';
 import { TrainingRecords } from './training-records';
-import { StudentLogbook } from './student-logbook';
+import { PilotLogbook } from './pilot-logbook';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -157,17 +157,22 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   }, [role, user.documents]);
 
   const isStudent = isPilotProfile(user) && user.userType === 'Student';
+  const isInstructor = isPilotProfile(user) && user.userType === 'Instructor';
+  const isPrivatePilot = isPilotProfile(user) && user.userType === 'Private Pilot';
+  const isAnyPilot = isPilotProfile(user);
+
+  // Determine the number of tabs based on user type
+  const tabCount = isStudent ? 3 : isAnyPilot ? 2 : 1;
 
   return (
     <Tabs defaultValue="overview" className="w-full">
-        <TabsList className={cn("grid w-full", isStudent ? "grid-cols-3" : "grid-cols-1")}>
+        <TabsList className={cn(
+            "grid w-full", 
+            tabCount === 3 ? "grid-cols-3" : tabCount === 2 ? "grid-cols-2" : "grid-cols-1"
+        )}>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            {isStudent && (
-                <>
-                    <TabsTrigger value="training">Training Records</TabsTrigger>
-                    <TabsTrigger value="logbook">Student Logbook</TabsTrigger>
-                </>
-            )}
+            {isStudent && <TabsTrigger value="training">Training Records</TabsTrigger>}
+            {isAnyPilot && <TabsTrigger value="logbook">Logbook</TabsTrigger>}
         </TabsList>
         <TabsContent value="overview" className="mt-6">
             <div className="space-y-6">
@@ -390,14 +395,18 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
             </div>
         </TabsContent>
         {isStudent && (
-            <>
-                <TabsContent value="training" className="mt-6">
-                    <TrainingRecords studentId={user.id} tenantId={tenantId} />
-                </TabsContent>
-                <TabsContent value="logbook" className="mt-6">
-                    <StudentLogbook studentId={user.id} tenantId={tenantId} />
-                </TabsContent>
-            </>
+            <TabsContent value="training" className="mt-6">
+                <TrainingRecords studentId={user.id} tenantId={tenantId} />
+            </TabsContent>
+        )}
+        {isAnyPilot && (
+            <TabsContent value="logbook" className="mt-6">
+                <PilotLogbook 
+                    userId={user.id} 
+                    tenantId={tenantId} 
+                    role={isInstructor ? 'instructor' : isStudent ? 'student' : 'private'} 
+                />
+            </TabsContent>
         )}
     </Tabs>
   );
