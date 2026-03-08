@@ -16,9 +16,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Trash2, ArrowLeft, Save } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowLeft, Save, User } from 'lucide-react';
 import Link from 'next/link';
 import type { Booking } from '@/types/booking';
+import type { PilotProfile } from '@/app/(app)/users/personnel/page';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Separator } from '@/components/ui/separator';
@@ -51,6 +52,20 @@ function NewDebriefContent() {
     );
 
     const { data: booking, isLoading: isLoadingBooking } = useDoc<Booking>(bookingRef);
+
+    // Fetch Student Details
+    const studentRef = useMemoFirebase(
+        () => (firestore && booking?.studentId ? doc(firestore, `tenants/${tenantId}/students`, booking.studentId) : null),
+        [firestore, booking?.studentId, tenantId]
+    );
+    const { data: student, isLoading: isLoadingStudent } = useDoc<PilotProfile>(studentRef);
+
+    // Fetch Instructor Details
+    const instructorRef = useMemoFirebase(
+        () => (firestore && booking?.instructorId ? doc(firestore, `tenants/${tenantId}/instructors`, booking.instructorId) : null),
+        [firestore, booking?.instructorId, tenantId]
+    );
+    const { data: instructor, isLoading: isLoadingInstructor } = useDoc<PilotProfile>(instructorRef);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(debriefSchema),
@@ -98,8 +113,13 @@ function NewDebriefContent() {
         }
     };
 
-    if (isLoadingBooking) {
-        return <Skeleton className="h-96 w-full" />;
+    if (isLoadingBooking || isLoadingStudent || isLoadingInstructor) {
+        return (
+            <div className="space-y-6 max-w-4xl mx-auto">
+                <Skeleton className="h-10 w-48" />
+                <Skeleton className="h-96 w-full" />
+            </div>
+        );
     }
 
     if (!booking) {
@@ -113,6 +133,9 @@ function NewDebriefContent() {
         );
     }
 
+    const studentName = student ? `${student.firstName} ${student.lastName}` : 'Unknown Student';
+    const instructorName = instructor ? `${instructor.firstName} ${instructor.lastName}` : 'Unknown Instructor';
+
     return (
         <div className="space-y-6 max-w-4xl mx-auto">
             <Button asChild variant="ghost" className="mb-4">
@@ -123,10 +146,25 @@ function NewDebriefContent() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Post-Flight Instructor Debrief</CardTitle>
-                    <CardDescription>
-                        Recording progress for Booking #{booking.bookingNumber} • {booking.type}
-                    </CardDescription>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <CardTitle>Post-Flight Instructor Debrief</CardTitle>
+                            <CardDescription>
+                                Booking #{booking.bookingNumber} • {booking.type}
+                            </CardDescription>
+                        </div>
+                        <div className="flex items-center gap-3 bg-muted/50 p-3 rounded-lg border">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground">Student</span>
+                                <span className="text-sm font-semibold">{studentName}</span>
+                            </div>
+                            <Separator orientation="vertical" className="h-8" />
+                            <div className="flex flex-col">
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground">Instructor</span>
+                                <span className="text-sm font-semibold">{instructorName}</span>
+                            </div>
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <Form {...form}>
