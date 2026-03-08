@@ -24,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DocumentExpirySettings } from '../../../admin/document-dates/page';
 import { TrainingRecords } from './training-records';
+import { StudentLogbook } from './student-logbook';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -155,13 +156,17 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     });
   }, [role, user.documents]);
 
+  const isStudent = isPilotProfile(user) && user.userType === 'Student';
 
   return (
     <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className={cn("grid w-full", isStudent ? "grid-cols-3" : "grid-cols-1")}>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            {isPilotProfile(user) && user.userType === 'Student' && (
-                <TabsTrigger value="training">Training Records</TabsTrigger>
+            {isStudent && (
+                <>
+                    <TabsTrigger value="training">Training Records</TabsTrigger>
+                    <TabsTrigger value="logbook">Student Logbook</TabsTrigger>
+                </>
             )}
         </TabsList>
         <TabsContent value="overview" className="mt-6">
@@ -384,10 +389,15 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                 </Dialog>
             </div>
         </TabsContent>
-        {isPilotProfile(user) && user.userType === 'Student' && (
-            <TabsContent value="training" className="mt-6">
-                <TrainingRecords studentId={user.id} tenantId={tenantId} />
-            </TabsContent>
+        {isStudent && (
+            <>
+                <TabsContent value="training" className="mt-6">
+                    <TrainingRecords studentId={user.id} tenantId={tenantId} />
+                </TabsContent>
+                <TabsContent value="logbook" className="mt-6">
+                    <StudentLogbook studentId={user.id} tenantId={tenantId} />
+                </TabsContent>
+            </>
         )}
     </Tabs>
   );
