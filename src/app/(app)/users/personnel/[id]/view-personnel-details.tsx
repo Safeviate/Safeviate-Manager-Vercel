@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -164,15 +165,12 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
 
   return (
     <Tabs defaultValue="overview" className="w-full">
-        <TabsList className={cn(
-            "grid w-full h-auto items-center justify-start rounded-xl bg-muted/30 p-1 border", 
-            tabCount === 3 ? "grid-cols-3" : tabCount === 2 ? "grid-cols-2" : "grid-cols-1"
-        )}>
-            <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm py-2 px-6 font-semibold transition-all">Overview</TabsTrigger>
-            {isStudent && <TabsTrigger value="training" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm py-2 px-6 font-semibold transition-all">Training Records</TabsTrigger>}
-            {isAnyPilot && <TabsTrigger value="logbook" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm py-2 px-6 font-semibold transition-all">Logbook</TabsTrigger>}
+        <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0">
+            <TabsTrigger value="overview" className="rounded-full px-6 py-2 border data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Overview</TabsTrigger>
+            {isStudent && <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Training Records</TabsTrigger>}
+            {isAnyPilot && <TabsTrigger value="logbook" className="rounded-full px-6 py-2 border data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Logbook</TabsTrigger>}
         </TabsList>
-        <TabsContent value="overview" className="mt-6">
+        <TabsContent value="overview" className="mt-0">
             <div className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <Card>
@@ -393,12 +391,12 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
             </div>
         </TabsContent>
         {isStudent && (
-            <TabsContent value="training" className="mt-6">
+            <TabsContent value="training" className="mt-0">
                 <TrainingRecords studentId={user.id} tenantId={tenantId} />
             </TabsContent>
         )}
         {isAnyPilot && (
-            <TabsContent value="logbook" className="mt-6">
+            <TabsContent value="logbook" className="mt-0">
                 <PilotLogbook 
                     userId={user.id} 
                     tenantId={tenantId} 
