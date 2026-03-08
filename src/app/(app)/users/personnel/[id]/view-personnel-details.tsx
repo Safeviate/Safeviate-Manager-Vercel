@@ -161,8 +161,6 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   const isInstructor = isPilotProfile(user) && user.userType === 'Instructor';
   const isAnyPilot = isPilotProfile(user);
 
-  const tabCount = isStudent ? 3 : isAnyPilot ? 2 : 1;
-
   return (
     <Tabs defaultValue="overview" className="w-full">
         <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0">
