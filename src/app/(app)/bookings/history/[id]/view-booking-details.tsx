@@ -14,6 +14,7 @@ import { isPointInPolygon } from '@/lib/utils';
 import { Save, AlertTriangle, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Label as UILabel } from '@/components/ui/label';
