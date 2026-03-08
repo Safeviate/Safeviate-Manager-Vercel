@@ -9,6 +9,8 @@ export interface StudentProgressEntry {
 
 export interface StudentProgressReport {
     id: string;
+    bookingId?: string;
+    bookingNumber?: string;
     studentId?: string;
     instructorId?: string;
     date: string; // ISO String

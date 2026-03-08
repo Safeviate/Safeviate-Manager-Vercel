@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -115,6 +114,11 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
     
     const milestones = milestoneSettings?.milestones.length ? milestoneSettings.milestones : defaultMilestones;
 
+    const sortedReports = useMemo(() => {
+        if (!reports) return [];
+        return [...reports].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [reports]);
+
     if (isLoading) {
         return (
             <div className="space-y-6">
@@ -150,14 +154,14 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
                     <CardDescription>A log of all completed instructor debriefs.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {reports && reports.length > 0 ? (
+                    {sortedReports && sortedReports.length > 0 ? (
                          <Accordion type="multiple" className="w-full">
-                            {reports.filter(r => r.entries.length > 0).map(report => (
+                            {sortedReports.filter(r => r.entries.length > 0).map(report => (
                                 <AccordionItem key={report.id} value={report.id}>
                                     <AccordionTrigger>
                                         <div className="flex justify-between items-center w-full pr-4">
                                             <div className="text-left">
-                                                <p className="font-semibold">Debrief</p>
+                                                <p className="font-semibold">Debrief {report.bookingNumber ? `#${report.bookingNumber}` : ''}</p>
                                                 <p className="text-sm text-muted-foreground">{format(new Date(report.date), 'PPP')} with {instructorsMap.get(report.instructorId!) || 'Unknown'}</p>
                                             </div>
                                         </div>
