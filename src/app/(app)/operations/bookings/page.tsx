@@ -11,11 +11,10 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, PlusCircle } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { BookingForm } from './booking-form';
 import type { Booking } from '@/types/booking';
-import Link from 'next/link';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 const HOUR_HEIGHT_PX = 60;
@@ -219,12 +218,6 @@ export default function SchedulePage() {
                     </PopoverContent>
                 </Popover>
                 <Button variant="outline" size="sm" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>Next Day</Button>
-                <Button asChild size="sm">
-                    <Link href="/operations/bookings/new">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        New Booking
-                    </Link>
-                </Button>
             </div>
         </div>
 
