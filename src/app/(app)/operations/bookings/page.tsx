@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -6,7 +5,7 @@ import { collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Aircraft } from '@/types/aircraft';
-import type { PilotProfile, Personnel } from '../../users/personnel/page';
+import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { format, startOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, endOfHour, parse, isAfter } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -72,7 +71,7 @@ const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booki
                     className={cn(
                         'absolute left-1 right-1 p-2 text-[10px] md:text-xs leading-tight shadow-md flex flex-col justify-center z-10 border border-gray-400/50 cursor-pointer hover:opacity-90 transition-opacity rounded',
                         isCancelled && 'bg-muted text-muted-foreground opacity-60',
-                        booking.status === 'Completed' && 'bg-green-600 text-primary-foreground',
+                        booking.status === 'Completed' && 'bg-muted text-muted-foreground border-slate-300',
                         booking.status === 'Confirmed' && booking.preFlight && !booking.postFlight && 'bg-amber-500 text-primary-foreground',
                         booking.status === 'Confirmed' && !booking.preFlight && 'bg-primary text-primary-foreground'
                     )}
@@ -129,9 +128,9 @@ export default function SchedulePage() {
   const { data: allBookings, isLoading: isLoadingAllBookings } = useCollection<Booking>(allBookingsQuery);
 
   const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
-  const privatePilotsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/instructors`) || '') : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/students`) || '') : null), [firestore, tenantId]);
+  const privatePilotsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/private-pilots`) || '') : null), [firestore, tenantId]);
 
   const { data: personnel } = useCollection<Personnel>(personnelQuery);
   const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);

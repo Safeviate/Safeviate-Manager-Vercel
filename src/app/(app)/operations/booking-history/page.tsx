@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -51,7 +50,7 @@ const getBookingTypeAbbreviation = (type: Booking['type']): string => {
 
 const getStatusBadgeVariant = (status: Booking['status']): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
-        case 'Completed': return 'default';
+        case 'Completed': return 'secondary';
         case 'Cancelled':
         case 'Cancelled with Reason': return 'destructive';
         default: return 'secondary';
@@ -120,7 +119,7 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
             </TableHeader>
             <TableBody>
                 {bookings.map(b => (
-                    <TableRow key={b.id} className={cn((b.status === 'Cancelled' || b.status === 'Cancelled with Reason') && 'text-muted-foreground')}>
+                    <TableRow key={b.id} className={cn((b.status === 'Cancelled' || b.status === 'Cancelled with Reason' || b.status === 'Completed') && 'text-muted-foreground')}>
                         <TableCell className="font-medium">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
                         <TableCell>{b.aircraftTailNumber}</TableCell>
                         <TableCell>{b.creatorName}</TableCell>

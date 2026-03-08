@@ -57,7 +57,7 @@ const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booki
             const startTime = combineDateAndTime(segment.date, segment.startTime);
             const endTime = combineDateAndTime(segment.date, segment.endTime);
 
-            if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) return null;
+            if (isNaN(startTime.getTime()) || iisNaN(endTime.getTime())) return null;
 
             const top = (getHours(startTime) * 60 + getMinutes(startTime)) * (HOUR_HEIGHT_PX / 60);
             const durationMinutes = Math.max(0, differenceInMinutes(endTime, startTime));
@@ -71,7 +71,7 @@ const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booki
                     className={cn(
                         'absolute left-1 right-1 p-2 text-[10px] md:text-xs leading-tight shadow-md flex flex-col justify-center z-10 border border-gray-400/50 cursor-pointer hover:opacity-90 transition-opacity rounded',
                         isCancelled && 'bg-muted text-muted-foreground opacity-60',
-                        booking.status === 'Completed' && 'bg-green-600 text-primary-foreground',
+                        booking.status === 'Completed' && 'bg-muted text-muted-foreground border-slate-300',
                         booking.status === 'Confirmed' && booking.preFlight && !booking.postFlight && 'bg-amber-500 text-primary-foreground',
                         booking.status === 'Confirmed' && !booking.preFlight && 'bg-primary text-primary-foreground'
                     )}
