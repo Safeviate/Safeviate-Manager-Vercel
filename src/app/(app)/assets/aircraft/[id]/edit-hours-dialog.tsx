@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -31,11 +32,9 @@ import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '@/types/aircraft';
 
 const formSchema = z.object({
-  currentHobbs: z.coerce.number().min(0, 'Hobbs must be positive'),
-  currentTacho: z.coerce.number().min(0, 'Tacho must be positive'),
+  currentHobbs: z.coerce.number().min(0, 'Hours cannot be negative.'),
+  currentTacho: z.coerce.number().min(0, 'Hours cannot be negative.'),
 });
-
-type FormValues = z.infer<typeof formSchema>;
 
 interface EditHoursDialogProps {
   aircraft: Aircraft;
@@ -47,7 +46,7 @@ export function EditHoursDialog({ aircraft, tenantId }: EditHoursDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const form = useForm<FormValues>({
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       currentHobbs: aircraft.currentHobbs || 0,
@@ -55,7 +54,7 @@ export function EditHoursDialog({ aircraft, tenantId }: EditHoursDialogProps) {
     },
   });
 
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!firestore) return;
 
     const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
@@ -63,7 +62,7 @@ export function EditHoursDialog({ aircraft, tenantId }: EditHoursDialogProps) {
 
     toast({
       title: 'Flight Hours Updated',
-      description: 'The aircraft meters have been manually adjusted.',
+      description: `Hobbs and Tacho readings for ${aircraft.tailNumber} have been adjusted.`,
     });
     setIsOpen(false);
   };
@@ -72,15 +71,14 @@ export function EditHoursDialog({ aircraft, tenantId }: EditHoursDialogProps) {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          <Pencil className="mr-2 h-4 w-4" />
-          Edit Flight Hours
+          <Pencil className="mr-2 h-4 w-4" /> Edit Flight Hours
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Adjust Flight Hours</DialogTitle>
+          <DialogTitle>Edit Flight Hours</DialogTitle>
           <DialogDescription>
-            Manually override the meter readings for {aircraft.tailNumber}.
+            Manually adjust the current Hobbs and Tacho readings for {aircraft.tailNumber}.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
