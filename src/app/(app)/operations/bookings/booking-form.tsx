@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -114,7 +113,10 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             oilUplift: 0,
             documentsChecked: true,
         },
-        postFlightData: existingBooking?.postFlightData || {
+        postFlightData: existingBooking?.postFlightData ? {
+            ...existingBooking.postFlightData,
+            defects: existingBooking.postFlightData.defects || '',
+        } : {
             hobbs: (aircraft.currentHobbs || 0) + 1,
             tacho: (aircraft.currentTacho || 0) + 0.8,
             fuelRemaining: 0,
