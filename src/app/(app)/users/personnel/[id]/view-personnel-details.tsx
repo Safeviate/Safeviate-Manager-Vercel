@@ -9,7 +9,7 @@ import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, ChevronsUpDown, Trash2, Upload, View } from 'lucide-react';
+import { CalendarIcon, ChevronsUpDown, Trash2, Upload, View, PlusCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Image from 'next/image';
@@ -211,9 +211,19 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                     </Card>
                     
                     <Card>
-                    <CardHeader>
-                        <CardTitle>Documents</CardTitle>
-                        <CardDescription>Required and uploaded user documents.</CardDescription>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                        <div>
+                            <CardTitle>Documents</CardTitle>
+                            <CardDescription>Required and uploaded user documents.</CardDescription>
+                        </div>
+                        <DocumentUploader
+                            onDocumentUploaded={onDocumentUploaded}
+                            trigger={(openDialog) => (
+                                <Button size="sm" variant="outline" onClick={() => openDialog()}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Document
+                                </Button>
+                            )}
+                        />
                     </CardHeader>
                     <CardContent>
                         {combinedDocuments.length > 0 ? (
@@ -341,7 +351,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
                                         {permissionsConfig.map((resource) => {
                                             const assignedActions = resource.actions.filter(action => 
-                                                user.permissions.includes(`${resource.id}-${action}`)
+                                                user.permissions?.includes(`${resource.id}-${action}`)
                                             );
 
                                             if (assignedActions.length === 0) return null;
