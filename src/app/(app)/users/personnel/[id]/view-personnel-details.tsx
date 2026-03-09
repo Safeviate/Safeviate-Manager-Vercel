@@ -1,10 +1,8 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { permissionsConfig } from '@/lib/permissions-config';
 import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
@@ -164,9 +162,9 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   return (
     <Tabs defaultValue="overview" className="w-full">
         <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0">
-            <TabsTrigger value="overview" className="rounded-full px-6 py-2 border data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Overview</TabsTrigger>
-            {isStudent && <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Training Records</TabsTrigger>}
-            {isAnyPilot && <TabsTrigger value="logbook" className="rounded-full px-6 py-2 border data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Logbook</TabsTrigger>}
+            <TabsTrigger value="overview" className="rounded-full px-6 py-2 border data-[state=active]:bg-header data-[state=active]:text-header-foreground">Overview</TabsTrigger>
+            {isStudent && <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-header data-[state=active]:text-header-foreground">Training Records</TabsTrigger>}
+            {isAnyPilot && <TabsTrigger value="logbook" className="rounded-full px-6 py-2 border data-[state=active]:bg-header data-[state=active]:text-header-foreground">Logbook</TabsTrigger>}
         </TabsList>
         <TabsContent value="overview" className="mt-0">
             <div className="space-y-6">
