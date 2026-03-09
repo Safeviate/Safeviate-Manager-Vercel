@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -16,7 +17,6 @@ export default function FleetOverviewPage() {
   const firestore = useFirestore();
   const { hasPermission } = usePermissions();
   const tenantId = 'safeviate';
-  const canManage = hasPermission('assets-create');
 
   const aircraftQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
@@ -25,18 +25,20 @@ export default function FleetOverviewPage() {
 
   const { data: aircraft, isLoading, error } = useCollection<Aircraft>(aircraftQuery);
 
+  const canManage = hasPermission('assets-create');
+
   return (
     <div className="flex flex-col gap-6 h-full">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Fleet Overview</h1>
-          <p className="text-muted-foreground">Manage and monitor your aircraft fleet and technical status.</p>
+          <p className="text-muted-foreground">Manage and monitor the technical status of your fleet.</p>
         </div>
         {canManage && (
           <Button asChild>
-            <Link href="/admin/mb-config">
+            <Link href="/assets/aircraft/new">
               <PlusCircle className="mr-2 h-4 w-4" />
-              Configure Fleet
+              Add Aircraft
             </Link>
           </Button>
         )}
@@ -44,20 +46,17 @@ export default function FleetOverviewPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Active Fleet</CardTitle>
-          <CardDescription>A registry of all aircraft currently in operation.</CardDescription>
+          <CardTitle>Aircraft Registry</CardTitle>
+          <CardDescription>All active aircraft in the training fleet.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {isLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-full" />
+            <div className="p-8 space-y-4">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
           ) : error ? (
-            <div className="text-center py-10 text-destructive">
-              <p>Error loading fleet: {error.message}</p>
-            </div>
+            <div className="p-8 text-center text-destructive">Error loading aircraft: {error.message}</div>
           ) : (
             <Table>
               <TableHeader>
@@ -65,32 +64,33 @@ export default function FleetOverviewPage() {
                   <TableHead>Tail Number</TableHead>
                   <TableHead>Make & Model</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Hours (Tacho)</TableHead>
+                  <TableHead className="text-right">Current Hobbs</TableHead>
+                  <TableHead className="text-right">Current Tacho</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {aircraft && aircraft.length > 0 ? (
-                  aircraft.map((ac) => (
-                    <TableRow key={ac.id}>
-                      <TableCell className="font-bold text-primary">{ac.tailNumber}</TableCell>
-                      <TableCell>{ac.make} {ac.model}</TableCell>
-                      <TableCell>{ac.type}</TableCell>
-                      <TableCell className="text-right font-mono">{ac.currentTacho?.toFixed(1) || '0.0'}</TableCell>
-                      <TableCell className="text-right">
-                        <Button asChild variant="default" size="sm">
-                          <Link href={`/assets/aircraft/${ac.id}`}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View
-                          </Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
+                {aircraft?.map((ac) => (
+                  <TableRow key={ac.id}>
+                    <TableCell className="font-bold font-mono">{ac.tailNumber}</TableCell>
+                    <TableCell>{ac.make} {ac.model}</TableCell>
+                    <TableCell>{ac.type}</TableCell>
+                    <TableCell className="text-right font-mono">{ac.currentHobbs?.toFixed(1) || '0.0'}</TableCell>
+                    <TableCell className="text-right font-mono">{ac.currentTacho?.toFixed(1) || '0.0'}</TableCell>
+                    <TableCell className="text-right">
+                      <Button asChild variant="default" size="sm">
+                        <Link href={`/assets/aircraft/${ac.id}`}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View
+                        </Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {(!aircraft || aircraft.length === 0) && (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                      No aircraft found in the fleet.
+                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                      No aircraft found in registry.
                     </TableCell>
                   </TableRow>
                 )}
