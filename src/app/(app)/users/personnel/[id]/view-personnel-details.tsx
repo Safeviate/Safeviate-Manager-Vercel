@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -24,6 +25,7 @@ import { cn } from '@/lib/utils';
 import type { DocumentExpirySettings } from '../../../admin/document-dates/page';
 import { TrainingRecords } from './training-records';
 import { PilotLogbook } from './pilot-logbook';
+import { permissionsConfig } from '@/lib/permissions-config';
 
 type UserProfile = Personnel | PilotProfile;
 
