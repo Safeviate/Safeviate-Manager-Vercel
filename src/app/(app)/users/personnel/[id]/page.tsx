@@ -2,7 +2,7 @@
 
 import { useState, useMemo, use, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { collection, doc, query } from 'firebase/firestore';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
@@ -12,20 +12,14 @@ import { ViewPersonnelDetails } from './view-personnel-details';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
 import { usePermissions } from '@/hooks/use-permissions';
-import { Card } from '@/components/ui/card';
 
 interface UserProfilePageProps {
     params: Promise<{ id: string }>;
 }
 
 type UserProfile = Personnel | PilotProfile;
-
-const isPilotProfile = (user: UserProfile): user is PilotProfile => {
-    return user.userType === 'Student' || user.userType === 'Private Pilot' || user.userType === 'Instructor';
-}
 
 function UserProfileContent({ params }: UserProfilePageProps) {
     const resolvedParams = use(params);
@@ -69,12 +63,10 @@ function UserProfileContent({ params }: UserProfilePageProps) {
         [firestore, tenantId]
     );
 
-    const { data: user, isLoading: isLoadingUser, error: userError } = useDoc<UserProfile>(userDocRef);
-    const { data: roles, isLoading: isLoadingRoles } = useCollection<Role>(rolesQuery);
-    const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
-    const { data: logbookTemplates, isLoading: isLoadingTemplates } = useCollection<LogbookTemplate>(logbookTemplatesQuery);
-
-    const isLoading = isLoadingUser || isLoadingRoles || isLoadingDepts || isLoadingTemplates;
+    const { data: user, isLoading: isLoadingUser } = useDoc<UserProfile>(userDocRef);
+    const { data: roles } = useCollection<Role>(rolesQuery);
+    const { data: departments } = useCollection<Department>(departmentsQuery);
+    const { data: logbookTemplates } = useCollection<LogbookTemplate>(logbookTemplatesQuery);
 
     const currentRole = useMemo(() => {
         if (user && 'role' in user) {
@@ -90,8 +82,7 @@ function UserProfileContent({ params }: UserProfilePageProps) {
         return null;
     }, [departments, user]);
 
-
-    if (isLoading) {
+    if (isLoadingUser) {
         return <div className="p-8"><Skeleton className="h-96 w-full" /></div>;
     }
 
@@ -132,7 +123,7 @@ function UserProfileContent({ params }: UserProfilePageProps) {
 
 export default function UserProfilePageWrapper(props: UserProfilePageProps) {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="p-8"><Skeleton className="h-96 w-full" /></div>}>
       <UserProfileContent {...props} />
     </Suspense>
   )
