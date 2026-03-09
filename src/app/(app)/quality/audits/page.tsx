@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -9,8 +8,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, Archive, ArchiveRestore, Trash2 } from 'lucide-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Eye, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,48 +52,48 @@ interface AuditActionsProps {
 function AuditActions({ audit, tenantId, isArchived }: AuditActionsProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
-
-    const handleUpdateStatus = (newStatus: QualityAudit['status']) => {
-        if (!firestore) return;
-        const auditRef = doc(firestore, `tenants/${tenantId}/quality-audits`, audit.id);
-        updateDocumentNonBlocking(auditRef, { status: newStatus });
-        toast({ title: "Audit Status Updated", description: `Audit #${audit.auditNumber} has been ${newStatus.toLowerCase()}.`});
-    }
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     const handleDelete = () => {
         if (!firestore) return;
         const auditRef = doc(firestore, `tenants/${tenantId}/quality-audits`, audit.id);
         deleteDocumentNonBlocking(auditRef);
         toast({ title: "Audit Deleted", description: `Audit #${audit.auditNumber} is being permanently deleted.`});
+        setIsDeleteDialogOpen(false);
     }
     
     return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreHorizontal className="h-4 w-4" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                     <Link href={`/quality/audits/${audit.id}`}><Eye className="mr-2 h-4 w-4" /> View Details</Link>
-                </DropdownMenuItem>
-                {!isArchived ? (
-                     <DropdownMenuItem onSelect={() => handleUpdateStatus('Archived')}>
-                        <Archive className="mr-2 h-4 w-4" /> Archive
-                    </DropdownMenuItem>
-                ) : (
-                    <>
-                    <DropdownMenuItem onSelect={() => handleUpdateStatus('Closed')}>
-                        <ArchiveRestore className="mr-2 h-4 w-4" /> Restore
-                    </DropdownMenuItem>
-                     <DropdownMenuItem onSelect={handleDelete} className="text-destructive focus:text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete Permanently
-                    </DropdownMenuItem>
-                    </>
-                )}
-            </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center justify-end gap-2">
+            <Button asChild variant="default" size="sm" className="h-8 px-3 text-xs">
+                <Link href={`/quality/audits/${audit.id}`}>
+                    <Eye className="mr-1.5 h-3.5 w-3.5" />
+                    View
+                </Link>
+            </Button>
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm" className="h-8 px-3 text-xs">
+                        <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                        Delete
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete audit #{audit.auditNumber}. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
     )
 }
 
@@ -119,7 +128,7 @@ function AuditsTable({ audits, tenantId, isArchivedTab }: AuditsTableProps) {
                         <TableCell className="font-medium">
                             <Link href={`/quality/audits/${audit.id}`} className="hover:underline">{audit.auditNumber}</Link>
                         </TableCell>
-                        <TableCell>{format(new Date(audit.auditDate), 'PPP')}</TableCell>
+                        <TableCell className="whitespace-nowrap">{format(new Date(audit.auditDate), 'PPP')}</TableCell>
                         <TableCell>{audit.title}</TableCell>
                         <TableCell>{audit.auditeeName || audit.auditeeId}</TableCell>
                         <TableCell>{audit.complianceScore ? `${audit.complianceScore}%` : 'N/A'}</TableCell>
@@ -190,18 +199,17 @@ export default function AuditsPage() {
     }
 
     return (
-        <Card>
-            <Tabs defaultValue="active">
+        <Card className="min-h-[calc(100vh-10rem)] flex flex-col">
+            <Tabs defaultValue="active" className="flex-1 flex flex-col">
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <TabsList>
                             <TabsTrigger value="active">Active Audits ({activeAudits.length})</TabsTrigger>
                             <TabsTrigger value="archived">Archived ({archivedAudits.length})</TabsTrigger>
                         </TabsList>
-                        {/* Placeholder for Search Bar */}
                     </div>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent className="p-0 flex-1">
                     <TabsContent value="active" className="m-0">
                         <AuditsTable audits={activeAudits} tenantId={tenantId} isArchivedTab={false} />
                     </TabsContent>

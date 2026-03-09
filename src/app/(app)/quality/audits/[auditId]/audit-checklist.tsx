@@ -229,12 +229,12 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
         const openActionsCount = cap?.actions?.filter(a => a.status === 'Open' || a.status === 'In Progress').length || 0;
 
         return (
-            <Card key={item.id} className="mb-4">
-                <CardHeader>
-                    <CardTitle className="text-base">{item.text}</CardTitle>
+            <Card key={item.id} className="mb-3 md:mb-4">
+                <CardHeader className="py-3 md:py-4">
+                    <CardTitle className="text-sm md:text-base">{item.text}</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                     <div className='flex justify-between items-start'>
+                <CardContent className="space-y-4 md:space-y-6 pb-4">
+                     <div className='flex flex-wrap justify-between items-start gap-4'>
                         <FormField
                             control={form.control}
                             name={`findings.${itemIndex}.finding`}
@@ -247,13 +247,13 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                                             form.setValue(`findings.${itemIndex}.level`, '');
                                         }}
                                         defaultValue={field.value}
-                                        className="flex flex-wrap gap-4"
+                                        className="flex flex-wrap gap-x-4 gap-y-2"
                                         disabled={isReadOnly}
                                         >
                                             {(['Compliant', 'Non Compliant', 'Not Applicable'] as const).map(value => (
                                                 <FormItem key={value} className="flex items-center space-x-2 space-y-0">
                                                     <FormControl><RadioGroupItem value={value} /></FormControl>
-                                                    <FormLabel className="font-normal">{value}</FormLabel>
+                                                    <FormLabel className="font-normal text-xs md:text-sm">{value}</FormLabel>
                                                 </FormItem>
                                             ))}
                                         </RadioGroup>
@@ -265,14 +265,14 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                         {findingType === 'Non Compliant' && audit.status !== 'Scheduled' && audit.status !== 'In Progress' && (
                             <div className='flex items-center gap-2'>
                                 {cap ? (
-                                    <Badge variant={openActionsCount > 0 ? 'destructive' : 'default'}>
+                                    <Badge variant={openActionsCount > 0 ? 'destructive' : 'default'} className="text-[10px]">
                                         {openActionsCount} Open Action(s)
                                     </Badge>
                                 ) : (
-                                    <Badge variant="outline">CAP Pending</Badge>
+                                    <Badge variant="outline" className="text-[10px]">CAP Pending</Badge>
                                 )}
-                                 <Button variant="secondary" size="sm" onClick={() => handleOpenCapDialog(item.id, item.text)}>
-                                    <Edit className="mr-2 h-4 w-4" />
+                                 <Button variant="secondary" size="sm" onClick={() => handleOpenCapDialog(item.id, item.text)} className="h-7 text-[10px]">
+                                    <Edit className="mr-1.5 h-3 w-3" />
                                     Manage CAP
                                 </Button>
                             </div>
@@ -281,18 +281,18 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                     
                     <Separator />
 
-                    <div className="space-y-4">
-                         <FormField control={form.control} name={`findings.${itemIndex}.comment`} render={({ field }) => (<FormItem><FormLabel>Comment / Details</FormLabel><FormControl><Textarea placeholder="Provide details about the finding..." {...field} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)} />
-                         <FormField control={form.control} name={`findings.${itemIndex}.suggestedImprovements`} render={({ field }) => (<FormItem><FormLabel>Suggested Improvements</FormLabel><FormControl><Textarea placeholder="Suggest any improvements..." {...field} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)} />
+                    <div className="space-y-3 md:space-y-4">
+                         <FormField control={form.control} name={`findings.${itemIndex}.comment`} render={({ field }) => (<FormItem><FormLabel className="text-xs">Comment / Details</FormLabel><FormControl><Textarea placeholder="Provide details..." {...field} disabled={isReadOnly} className="min-h-[60px] text-xs" /></FormControl><FormMessage /></FormItem>)} />
+                         <FormField control={form.control} name={`findings.${itemIndex}.suggestedImprovements`} render={({ field }) => (<FormItem><FormLabel className="text-xs">Suggested Improvements</FormLabel><FormControl><Textarea placeholder="Improvements..." {...field} disabled={isReadOnly} className="min-h-[60px] text-xs" /></FormControl><FormMessage /></FormItem>)} />
 
                         {(findingType === 'Compliant' || findingType === 'Non Compliant') && (
-                            <div className="mt-4 space-y-4">
+                            <div className="mt-3 space-y-3">
                                 <FormField
                                     control={form.control}
                                     name={`findings.${itemIndex}.level`}
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Finding Level</FormLabel>
+                                            <FormLabel className="text-xs">Finding Level</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
                                                 <FormControl>
                                                     <SelectTrigger
@@ -300,9 +300,9 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                                                             backgroundColor: field.value ? selectedLevel?.color : undefined,
                                                             color: field.value ? selectedLevel?.foregroundColor : undefined,
                                                         }}
-                                                        className={cn(!field.value && 'text-muted-foreground')}
+                                                        className={cn("h-8 text-xs", !field.value && 'text-muted-foreground')}
                                                     >
-                                                        <SelectValue placeholder="Select a level" />
+                                                        <SelectValue placeholder="Select level" />
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
@@ -323,14 +323,14 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                                 
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center">
-                                        <FormLabel>Evidence</FormLabel>
+                                        <FormLabel className="text-xs">Evidence</FormLabel>
                                         {!isReadOnly && (
                                             <DocumentUploader
                                             onDocumentUploaded={(docDetails) => handleEvidenceUploaded(item.id, docDetails)}
                                             trigger={(openDialog) => (
                                                 <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button type="button" variant="outline" size="sm">
+                                                    <Button type="button" variant="outline" size="sm" className="h-7 text-[10px]">
                                                     Add Evidence
                                                     </Button>
                                                 </DropdownMenuTrigger>
@@ -343,23 +343,23 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                                             />
                                         )}
                                     </div>
-                                    <div className="space-y-4 pt-2">
+                                    <div className="space-y-2 pt-1">
                                         {evidenceFields.map((evidence, evidenceIndex) => (
-                                            <div key={evidence.id} className="flex items-start gap-4 p-4 border rounded-lg">
+                                            <div key={evidence.id} className="flex items-center gap-3 p-2 border rounded-lg bg-background/50">
                                                 <div className="relative group flex-shrink-0">
-                                                    <Image src={evidence.url} alt={`Evidence ${evidenceIndex + 1}`} width={80} height={80} className="rounded-md aspect-square object-cover" />
+                                                    <Image src={evidence.url} alt="Evidence" width={40} height={40} className="rounded-md aspect-square object-cover" />
                                                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded-md" onClick={() => handleViewImage(evidence.url)}>
-                                                        <ZoomIn className="h-6 w-6 text-white" />
+                                                        <ZoomIn className="h-4 w-4 text-white" />
                                                     </div>
                                                 </div>
-                                                <div className="flex-1 space-y-2">
-                                                    <FormField control={form.control} name={`findings.${itemIndex}.evidence.${evidenceIndex}.description`} render={({ field }) => ( <FormItem><FormLabel className="text-xs">Description</FormLabel><FormControl><Input placeholder="Briefly describe the evidence" {...field} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem> )}/>
+                                                <div className="flex-1">
+                                                    <FormField control={form.control} name={`findings.${itemIndex}.evidence.${evidenceIndex}.description`} render={({ field }) => ( <FormItem className="space-y-0"><FormControl><Input placeholder="Description" {...field} disabled={isReadOnly} className="h-7 text-xs border-none shadow-none p-0 focus-visible:ring-0" /></FormControl></FormItem> )}/>
                                                 </div>
-                                                {!isReadOnly && <Button type="button" variant="ghost" size="icon" className="h-8 w-8 mt-4 text-destructive hover:text-destructive" onClick={() => removeEvidence(evidenceIndex)}><Trash2 className="h-4 w-4" /></Button>}
+                                                {!isReadOnly && <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => removeEvidence(evidenceIndex)}><Trash2 className="h-3.5 w-3.5" /></Button>}
                                             </div>
                                         ))}
                                     </div>
-                                    {evidenceFields.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No evidence attached.</p>}
+                                    {evidenceFields.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-2 italic">No evidence attached.</p>}
                                 </div>
                             </div>
                         )}
@@ -372,19 +372,19 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
     return (
         <>
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 md:space-y-6">
                     {audit.template.sections.map((section) => (
                         <div key={section.id}>
-                            <h2 className="text-xl font-semibold mt-8 mb-4 border-b pb-2">{section.title}</h2>
+                            <h2 className="text-lg md:text-xl font-semibold mt-4 md:mt-8 mb-2 md:mb-4 border-b pb-2">{section.title}</h2>
                             {section.items.map(item => renderChecklistItem(item))}
                         </div>
                     ))}
                     {!isReadOnly && (
-                        <div className="flex justify-end sticky bottom-0 py-4 bg-background z-10 gap-2">
-                            <Button type="submit">Save Findings</Button>
+                        <div className="flex justify-end sticky bottom-0 py-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10 gap-2 border-t mt-8">
+                            <Button type="submit" variant="outline" size="sm" className="h-9 px-4">Save Progress</Button>
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="default">Finalize Audit</Button>
+                                    <Button variant="default" size="sm" className="h-9 px-4">Finalize Audit</Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
@@ -408,7 +408,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
             <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
                 <DialogContent className="max-w-4xl max-h-[90vh]">
                     <DialogHeader><DialogTitle>Evidence Viewer</DialogTitle></DialogHeader>
-                    {viewingImageUrl && <div className="relative h-[80vh]"><Image src={viewingImageUrl} alt="Evidence" fill style={{ objectFit: 'contain' }}/></div>}
+                    {viewingImageUrl && <div className="relative h-[80vh]"><Image src={viewingImageUrl} alt="Evidence" fill className="object-contain"/></div>}
                 </DialogContent>
             </Dialog>
             {selectedCap && (

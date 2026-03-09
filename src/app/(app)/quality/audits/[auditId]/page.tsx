@@ -1,4 +1,3 @@
-
 'use client';
 
 import { use, useMemo } from 'react';
@@ -120,7 +119,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
 
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-4 md:gap-6 min-h-full pb-8">
        <Button asChild variant="outline" className="w-fit">
           <Link href="/quality/audits">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -128,18 +127,18 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
           </Link>
         </Button>
       <Card>
-        <CardHeader>
-          <CardTitle>Audit {audit.auditNumber}: {audit.title}</CardTitle>
+        <CardHeader className="py-4 md:py-6">
+          <CardTitle className="text-xl md:text-2xl">Audit {audit.auditNumber}: {audit.title}</CardTitle>
           <CardDescription>
             Performed on {format(new Date(audit.auditDate), 'PPP')}
           </CardDescription>
         </CardHeader>
         {typeof audit.complianceScore === 'number' && (
-            <CardContent>
+            <CardContent className="pb-4">
                 <DetailItem label="Compliance Score">
                     <div className="flex items-center gap-4 mt-1">
-                        <Progress value={audit.complianceScore} className="w-1/3" indicatorClassName={scoreColor} />
-                        <span className="text-2xl font-bold">{audit.complianceScore}%</span>
+                        <Progress value={audit.complianceScore} className="w-1/3 h-2" indicatorClassName={scoreColor} />
+                        <span className="text-xl font-bold">{audit.complianceScore}%</span>
                     </div>
                 </DetailItem>
             </CardContent>
