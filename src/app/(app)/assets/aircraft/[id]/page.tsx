@@ -2,62 +2,68 @@
 'use client';
 
 import { use, useState, useMemo } from 'react';
-import { doc, collection } from 'firebase/firestore';
-import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { doc, collection, query, orderBy } from 'firebase/firestore';
+import { useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, 
   Settings2, 
   Clock, 
-  Wrench, 
-  FileText, 
-  History, 
-  PlusCircle,
-  FileUp,
-  Camera,
-  Trash2,
+  PlusCircle, 
+  Trash2, 
+  FileUp, 
+  Camera, 
   CalendarIcon,
-  View
+  AlertTriangle
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import type { Aircraft, AircraftComponent } from '@/types/aircraft';
-import type { MaintenanceLog } from '@/types/maintenance';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger,
+import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
   DialogClose,
-  DialogDescription
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import { DocumentUploader } from '@/components/document-uploader';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
+import { cn } from '@/lib/utils';
+import type { Aircraft, AircraftComponent } from '@/types/aircraft';
+import type { MaintenanceLog } from '@/types/maintenance';
 
 interface AircraftDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-const CompactStat = ({ label, value, subValue, colorClass }: { label: string, value: string, subValue?: string, colorClass?: string }) => (
-  <Card className={cn("shadow-none border p-3 flex flex-col justify-center", colorClass)}>
-    <p className="text-[10px] uppercase font-bold text-muted-foreground leading-none mb-1.5">{label}</p>
-    <div className="flex items-baseline gap-2">
-      <span className="text-lg font-bold font-mono tracking-tight">{value}</span>
-      {subValue && <span className="text-[10px] font-semibold opacity-80">{subValue}</span>}
-    </div>
+const StatCard = ({ label, value, remaining, color }: { label: string; value?: number; remaining?: number | null; color?: 'blue' | 'orange' }) => (
+  <Card className={cn(
+    "shadow-sm",
+    color === 'blue' && "bg-blue-50/50 border-blue-100",
+    color === 'orange' && "bg-orange-50/50 border-orange-100"
+  )}>
+    <CardContent className="p-3">
+      <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">{label}</p>
+      <div className="flex items-baseline gap-2">
+        <span className="text-lg font-bold">{value?.toFixed(1) || '0.0'}</span>
+        {remaining !== undefined && remaining !== null && (
+          <span className="text-[10px] font-medium text-muted-foreground">
+            {remaining.toFixed(1)} left
+          </span>
+        )}
+      </div>
+    </CardContent>
   </Card>
 );
 
@@ -65,208 +71,322 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
   const resolvedParams = use(params);
   const firestore = useFirestore();
   const { toast } = useToast();
-  const aircraftId = resolvedParams.id;
   const tenantId = 'safeviate';
+  const aircraftId = resolvedParams.id;
+
+  const [isEditHoursOpen, setIsEditHoursOpen] = useState(false);
+  const [isEditServiceOpen, setIsEditServiceOpen] = useState(false);
+  const [isAddComponentOpen, setIsAddComponentOpen] = useState(false);
+  const [isAddLogOpen, setIsAddLogOpen] = useState(false);
 
   const aircraftRef = useMemoFirebase(
     () => (firestore ? doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId) : null),
     [firestore, tenantId, aircraftId]
   );
 
-  const maintenanceQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`) : null),
-    [firestore, tenantId, aircraftId]
-  );
-
   const componentsQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`) : null),
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`), orderBy('name')) : null),
     [firestore, tenantId, aircraftId]
   );
 
-  const { data: aircraft, isLoading: loadingAircraft } = useDoc<Aircraft>(aircraftRef);
-  const { data: logs, isLoading: loadingLogs } = useCollection<MaintenanceLog>(maintenanceQuery);
-  const { data: components, isLoading: loadingComponents } = useCollection<AircraftComponent>(componentsQuery);
+  const logsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`), orderBy('date', 'desc')) : null),
+    [firestore, tenantId, aircraftId]
+  );
 
-  // Form States
-  const [newHours, setNewHours] = useState({ hobbs: 0, tacho: 0 });
-  const [newTargets, setNewTargets] = useState({ tacho50: 0, tacho100: 0 });
+  const { data: aircraft, isLoading: isLoadingAircraft } = useDoc<Aircraft>(aircraftRef);
+  const { data: components, isLoading: isLoadingComponents } = useCollection<AircraftComponent>(componentsQuery);
+  const { data: logs, isLoading: isLoadingLogs } = useCollection<MaintenanceLog>(logsQuery);
 
-  const handleUpdateHours = () => {
-    if (!aircraftRef) return;
-    updateDocumentNonBlocking(aircraftRef, {
-      currentHobbs: newHours.hobbs,
-      currentTacho: newHours.tacho,
+  const handleUpdateHours = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const updates = {
+      currentHobbs: parseFloat(formData.get('currentHobbs') as string),
+      currentTacho: parseFloat(formData.get('currentTacho') as string),
+    };
+    if (aircraftRef) {
+      updateDocumentNonBlocking(aircraftRef, updates);
+      toast({ title: "Flight Hours Updated" });
+      setIsEditHoursOpen(false);
+    }
+  };
+
+  const handleUpdateService = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const updates = {
+      tachoAtNext50Inspection: parseFloat(formData.get('next50') as string),
+      tachoAtNext100Inspection: parseFloat(formData.get('next100') as string),
+    };
+    if (aircraftRef) {
+      updateDocumentNonBlocking(aircraftRef, updates);
+      toast({ title: "Service Targets Updated" });
+      setIsEditServiceOpen(false);
+    }
+  };
+
+  const handleAddComponent = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!firestore) return;
+    const formData = new FormData(e.currentTarget);
+    const componentsRef = collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`);
+    addDocumentNonBlocking(componentsRef, {
+      name: formData.get('name'),
+      partNumber: formData.get('partNumber'),
+      serialNumber: formData.get('serialNumber'),
+      installDate: new Date().toISOString(),
+      tsn: parseFloat(formData.get('tsn') as string) || 0,
+      maxHours: parseFloat(formData.get('maxHours') as string) || 0,
     });
-    toast({ title: "Flight Hours Updated" });
+    toast({ title: "Component Added" });
+    setIsAddComponentOpen(false);
   };
 
-  const handleUpdateTargets = () => {
-    if (!aircraftRef) return;
-    updateDocumentNonBlocking(aircraftRef, {
-      tachoAtNext50Inspection: newTargets.tacho50,
-      tachoAtNext100Inspection: newTargets.tacho100,
+  const handleAddLog = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!firestore) return;
+    const formData = new FormData(e.currentTarget);
+    const logsRef = collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`);
+    addDocumentNonBlocking(logsRef, {
+      date: new Date().toISOString(),
+      maintenanceType: formData.get('type'),
+      details: formData.get('details'),
+      ameNo: formData.get('ameNo'),
+      amoNo: formData.get('amoNo'),
+      reference: formData.get('reference'),
     });
-    toast({ title: "Service Targets Updated" });
+    toast({ title: "Maintenance Entry Recorded" });
+    setIsAddLogOpen(false);
   };
 
-  const handleDeleteComponent = (id: string) => {
-    const compRef = doc(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`, id);
-    deleteDocumentNonBlocking(compRef);
-    toast({ title: "Component Deleted" });
+  const onDocumentUploaded = (docDetails: any) => {
+    if (!aircraftRef) return;
+    const currentDocs = aircraft?.documents || [];
+    updateDocumentNonBlocking(aircraftRef, {
+      documents: [...currentDocs, docDetails]
+    });
   };
 
-  if (loadingAircraft) return <div className="p-8"><Skeleton className="h-96 w-full" /></div>;
+  if (isLoadingAircraft) return <div className="p-8"><Skeleton className="h-96 w-full" /></div>;
   if (!aircraft) return <div className="p-8 text-center">Aircraft not found.</div>;
 
-  const tacho = aircraft.currentTacho || 0;
-  const rem50 = (aircraft.tachoAtNext50Inspection || 0) - tacho;
-  const rem100 = (aircraft.tachoAtNext100Inspection || 0) - tacho;
-
   return (
-    <div className="flex flex-col gap-6">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <Button asChild variant="outline" size="icon" className="rounded-full">
-            <Link href="/assets/aircraft"><ArrowLeft className="h-4 w-4" /></Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight font-headline">{aircraft.tailNumber}</h1>
-            <p className="text-muted-foreground">{aircraft.make} {aircraft.model} • {aircraft.type}</p>
-          </div>
-        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/assets/aircraft"><ArrowLeft className="mr-2 h-4 w-4" /> Fleet</Link>
+        </Button>
         <div className="flex gap-2">
-          <Dialog onOpenChange={(open) => open && setNewHours({ hobbs: aircraft.currentHobbs || 0, tacho: aircraft.currentTacho || 0 })}>
+          <Dialog open={isEditHoursOpen} onOpenChange={setIsEditHoursOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline"><Clock className="mr-2 h-4 w-4" /> Edit Flight Hours</Button>
+              <Button size="sm" variant="outline"><Clock className="mr-2 h-4 w-4" /> Edit Flight Hours</Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Update Meter Readings</DialogTitle>
-                <DialogDescription>Manually adjust the current Hobbs and Tachometer values.</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label>Current Hobbs</Label>
-                  <Input type="number" value={newHours.hobbs} onChange={e => setNewHours({ ...newHours, hobbs: parseFloat(e.target.value) })} />
+              <form onSubmit={handleUpdateHours}>
+                <DialogHeader>
+                  <DialogTitle>Update Flight Hours</DialogTitle>
+                  <DialogDescription>Manually override current meter readings.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="currentHobbs">Current Hobbs</Label>
+                    <Input id="currentHobbs" name="currentHobbs" type="number" step="0.1" defaultValue={aircraft.currentHobbs} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="currentTacho">Current Tachometer</Label>
+                    <Input id="currentTacho" name="currentTacho" type="number" step="0.1" defaultValue={aircraft.currentTacho} />
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label>Current Tacho</Label>
-                  <Input type="number" value={newHours.tacho} onChange={e => setNewHours({ ...newHours, tacho: parseFloat(e.target.value) })} />
-                </div>
-              </div>
-              <DialogFooter>
-                <DialogClose asChild><Button onClick={handleUpdateHours}>Save Changes</Button></DialogClose>
-              </DialogFooter>
+                <DialogFooter>
+                  <Button type="submit">Save Updates</Button>
+                </DialogFooter>
+              </form>
             </DialogContent>
           </Dialog>
 
-          <Dialog onOpenChange={(open) => open && setNewTargets({ tacho50: aircraft.tachoAtNext50Inspection || 0, tacho100: aircraft.tachoAtNext100Inspection || 0 })}>
+          <Dialog open={isEditServiceOpen} onOpenChange={setIsEditServiceOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline"><Settings2 className="mr-2 h-4 w-4" /> Edit Service</Button>
+              <Button size="sm" variant="outline"><Settings2 className="mr-2 h-4 w-4" /> Edit Service</Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Service Targets</DialogTitle>
-                <DialogDescription>Set next Tachometer readings for inspection intervals.</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label>Next 50hr Tacho</Label>
-                  <Input type="number" value={newTargets.tacho50} onChange={e => setNewTargets({ ...newTargets, tacho50: parseFloat(e.target.value) })} />
+              <form onSubmit={handleUpdateService}>
+                <DialogHeader>
+                  <DialogTitle>Service Targets</DialogTitle>
+                  <DialogDescription>Set next Tachometer readings for inspection intervals.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="next50">Next 50-Hour Inspection</Label>
+                    <Input id="next50" name="next50" type="number" step="0.1" defaultValue={aircraft.tachoAtNext50Inspection} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="next100">Next 100-Hour Inspection</Label>
+                    <Input id="next100" name="next100" type="number" step="0.1" defaultValue={aircraft.tachoAtNext100Inspection} />
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label>Next 100hr Tacho</Label>
-                  <Input type="number" value={newTargets.tacho100} onChange={e => setNewTargets({ ...newTargets, tacho100: parseFloat(e.target.value) })} />
-                </div>
-              </div>
-              <DialogFooter>
-                <DialogClose asChild><Button onClick={handleUpdateTargets}>Save Changes</Button></DialogClose>
-              </DialogFooter>
+                <DialogFooter>
+                  <Button type="submit">Save Targets</Button>
+                </DialogFooter>
+              </form>
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
-      {/* Compact Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <CompactStat label="Current Tacho" value={tacho.toFixed(1)} />
-        <CompactStat 
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-2">
+        <StatCard label="Initial Hobbs" value={aircraft.initialHobbs} />
+        <StatCard label="Initial Tacho" value={aircraft.initialTacho} />
+        <StatCard label="Current Hobbs" value={aircraft.currentHobbs} />
+        <StatCard label="Current Tacho" value={aircraft.currentTacho} />
+        <StatCard 
           label="Next 50hr" 
-          value={aircraft.tachoAtNext50Inspection?.toFixed(1) || '0.0'} 
-          subValue={`${rem50.toFixed(1)} left`}
-          colorClass="bg-blue-50/50 border-blue-100"
+          value={aircraft.tachoAtNext50Inspection} 
+          remaining={aircraft.tachoAtNext50Inspection ? aircraft.tachoAtNext50Inspection - (aircraft.currentTacho || 0) : null} 
+          color="blue" 
         />
-        <CompactStat 
+        <StatCard 
           label="Next 100hr" 
-          value={aircraft.tachoAtNext100Inspection?.toFixed(1) || '0.0'} 
-          subValue={`${rem100.toFixed(1)} left`}
-          colorClass="bg-orange-50/50 border-orange-100"
+          value={aircraft.tachoAtNext100Inspection} 
+          remaining={aircraft.tachoAtNext100Inspection ? aircraft.tachoAtNext100Inspection - (aircraft.currentTacho || 0) : null} 
+          color="orange" 
         />
-        <CompactStat label="Current Hobbs" value={(aircraft.currentHobbs || 0).toFixed(1)} />
-        <CompactStat label="Initial Tacho" value={(aircraft.initialTacho || 0).toFixed(1)} />
-        <CompactStat label="Initial Hobbs" value={(aircraft.initialHobbs || 0).toFixed(1)} />
       </div>
 
       <Tabs defaultValue="components" className="w-full">
         <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0">
           <TabsTrigger value="components" className="rounded-full px-6 py-2 border data-[state=active]:bg-header data-[state=active]:text-header-foreground">Tracked Components</TabsTrigger>
-          <TabsTrigger value="history" className="rounded-full px-6 py-2 border data-[state=active]:bg-header data-[state=active]:text-header-foreground">Maintenance History</TabsTrigger>
+          <TabsTrigger value="maintenance" className="rounded-full px-6 py-2 border data-[state=active]:bg-header data-[state=active]:text-header-foreground">Maintenance History</TabsTrigger>
           <TabsTrigger value="documents" className="rounded-full px-6 py-2 border data-[state=active]:bg-header data-[state=active]:text-header-foreground">Documents</TabsTrigger>
         </TabsList>
 
-        <Card className="shadow-none border rounded-xl overflow-hidden">
+        <div className="border rounded-xl bg-card overflow-hidden">
           <TabsContent value="components" className="m-0">
-            <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/10">
-              <div>
-                <CardTitle className="text-lg">Life-Limited Components</CardTitle>
-                <CardDescription>Track time-since-new (TSN) and overhaul (TSO) for major components.</CardDescription>
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold">Tracked Components</h3>
+                  <p className="text-sm text-muted-foreground">Monitoring life-limited parts and assemblies.</p>
+                </div>
+                <Dialog open={isAddComponentOpen} onOpenChange={setIsAddComponentOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Component</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <form onSubmit={handleAddComponent}>
+                      <DialogHeader>
+                        <DialogTitle>Track New Component</DialogTitle>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                          <Label>Component Name</Label>
+                          <Input name="name" placeholder="e.g., Propeller" required />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="grid gap-2">
+                            <Label>Part Number</Label>
+                            <Input name="partNumber" required />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label>Serial Number</Label>
+                            <Input name="serialNumber" required />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="grid gap-2">
+                            <Label>Current TSN</Label>
+                            <Input name="tsn" type="number" step="0.1" required />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label>Max Life (Hours)</Label>
+                            <Input name="maxHours" type="number" step="0.1" required />
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button type="submit">Add Component</Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </div>
-              <AddComponentDialog aircraftId={aircraftId} tenantId={tenantId} />
-            </CardHeader>
-            <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Component Name</TableHead>
-                    <TableHead>Part/Serial No.</TableHead>
+                    <TableHead>Component</TableHead>
+                    <TableHead>Serial No.</TableHead>
                     <TableHead className="text-right">TSN</TableHead>
-                    <TableHead className="text-right">TSO</TableHead>
-                    <TableHead className="text-right">Limit</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-right">Remaining</TableHead>
+                    <TableHead className="text-right">Max Life</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {components?.map(comp => (
-                    <TableRow key={comp.id}>
-                      <TableCell className="font-semibold">{comp.name}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{comp.partNumber} / {comp.serialNumber}</TableCell>
-                      <TableCell className="text-right font-mono">{comp.tsn?.toFixed(1) || '0.0'}</TableCell>
-                      <TableCell className="text-right font-mono">{comp.tso?.toFixed(1) || '0.0'}</TableCell>
-                      <TableCell className="text-right font-mono">{comp.maxHours?.toFixed(1) || '0.0'}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteComponent(comp.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+                  {components?.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-medium">{c.name}</TableCell>
+                      <TableCell className="text-xs font-mono">{c.serialNumber}</TableCell>
+                      <TableCell className="text-right font-mono">{c.tsn?.toFixed(1) || '0.0'}</TableCell>
+                      <TableCell className="text-right font-mono">{(c.maxHours - c.tsn)?.toFixed(1) || '0.0'}</TableCell>
+                      <TableCell className="text-right font-mono text-muted-foreground">{c.maxHours?.toFixed(1) || '0.0'}</TableCell>
                     </TableRow>
                   ))}
-                  {(!components || components.length === 0) && (
-                    <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">No components tracked for this aircraft.</TableCell></TableRow>
+                  {components?.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">No tracked components.</TableCell>
+                    </TableRow>
                   )}
                 </TableBody>
               </Table>
-            </CardContent>
+            </div>
           </TabsContent>
 
-          <TabsContent value="history" className="m-0">
-            <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/10">
-              <div>
-                <CardTitle className="text-lg">Technical Log</CardTitle>
-                <CardDescription>Chronological record of maintenance activities and inspections.</CardDescription>
+          <TabsContent value="maintenance" className="m-0">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold">Maintenance Records</h3>
+                  <p className="text-sm text-muted-foreground">Technical history and certification log.</p>
+                </div>
+                <Dialog open={isAddLogOpen} onOpenChange={setIsAddLogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Entry</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <form onSubmit={handleAddLog}>
+                      <DialogHeader>
+                        <DialogTitle>Maintenance Entry</DialogTitle>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                          <Label>Maintenance Type</Label>
+                          <Input name="type" placeholder="e.g., 50hr Inspection" required />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label>Details of Work</Label>
+                          <Textarea name="details" placeholder="Full technical description..." required className="min-h-32" />
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="grid gap-2">
+                            <Label>AME No.</Label>
+                            <Input name="ameNo" required />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label>AMO No.</Label>
+                            <Input name="amoNo" required />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label>Reference</Label>
+                            <Input name="reference" placeholder="Job Card #" required />
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button type="submit">Certify Entry</Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </div>
-              <AddMaintenanceDialog aircraftId={aircraftId} tenantId={tenantId} />
-            </CardHeader>
-            <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -279,184 +399,67 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {logs?.map(log => (
-                    <TableRow key={log.id}>
-                      <TableCell className="whitespace-nowrap">{format(new Date(log.date), 'dd MMM yyyy')}</TableCell>
-                      <TableCell className="font-semibold">{log.maintenanceType}</TableCell>
-                      <TableCell className="max-w-md truncate">{log.details}</TableCell>
-                      <TableCell className="font-mono text-xs">{log.ameNo || '-'}</TableCell>
-                      <TableCell className="font-mono text-xs">{log.amoNo || '-'}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{log.reference || '-'}</TableCell>
+                  {logs?.map((l) => (
+                    <TableRow key={l.id}>
+                      <TableCell className="whitespace-nowrap">{format(new Date(l.date), 'dd MMM yy')}</TableCell>
+                      <TableCell className="font-semibold">{l.maintenanceType}</TableCell>
+                      <TableCell className="max-w-md truncate">{l.details}</TableCell>
+                      <TableCell>{l.ameNo}</TableCell>
+                      <TableCell>{l.amoNo}</TableCell>
+                      <TableCell>{l.reference}</TableCell>
                     </TableRow>
                   ))}
-                  {(!logs || logs.length === 0) && (
-                    <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">No technical records found.</TableCell></TableRow>
+                  {logs?.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">No maintenance history recorded.</TableCell>
+                    </TableRow>
                   )}
                 </TableBody>
               </Table>
-            </CardContent>
+            </div>
           </TabsContent>
 
           <TabsContent value="documents" className="m-0">
-            <AircraftDocumentsTab aircraft={aircraft} tenantId={tenantId} />
-          </TabsContent>
-        </Card>
-      </Tabs>
-    </div>
-  );
-}
-
-function AddComponentDialog({ aircraftId, tenantId }: { aircraftId: string, tenantId: string }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [data, setData] = useState({ name: '', partNumber: '', serialNumber: '', tsn: 0, tso: 0, maxHours: 0 });
-
-  const handleSave = () => {
-    const colRef = collection(useFirestore(), `tenants/${tenantId}/aircrafts/${aircraftId}/components`);
-    addDocumentNonBlocking(colRef, { ...data, id: uuidv4() });
-    setIsOpen(false);
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Component</Button></DialogTrigger>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Add Tracked Component</DialogTitle></DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2"><Label>Component Name</Label><Input value={data.name} onChange={e => setData({...data, name: e.target.value})} /></div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2"><Label>Part Number</Label><Input value={data.partNumber} onChange={e => setData({...data, partNumber: e.target.value})} /></div>
-            <div className="grid gap-2"><Label>Serial Number</Label><Input value={data.serialNumber} onChange={e => setData({...data, serialNumber: e.target.value})} /></div>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="grid gap-2"><Label>TSN</Label><Input type="number" value={data.tsn} onChange={e => setData({...data, tsn: parseFloat(e.target.value)})} /></div>
-            <div className="grid gap-2"><Label>TSO</Label><Input type="number" value={data.tso} onChange={e => setData({...data, tso: parseFloat(e.target.value)})} /></div>
-            <div className="grid gap-2"><Label>Life Limit</Label><Input type="number" value={data.maxHours} onChange={e => setData({...data, maxHours: parseFloat(e.target.value)})} /></div>
-          </div>
-        </div>
-        <DialogFooter><Button onClick={handleSave}>Save Component</Button></DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function AddMaintenanceDialog({ aircraftId, tenantId }: { aircraftId: string, tenantId: string }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [data, setData] = useState({ type: '', details: '', ame: '', amo: '', ref: '', date: new Date().toISOString() });
-
-  const handleSave = () => {
-    const colRef = collection(useFirestore(), `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`);
-    addDocumentNonBlocking(colRef, { 
-      maintenanceType: data.type, 
-      details: data.details, 
-      ameNo: data.ame, 
-      amoNo: data.amo, 
-      reference: data.ref, 
-      date: data.date,
-      id: uuidv4() 
-    });
-    setIsOpen(false);
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Maintenance Log</Button></DialogTrigger>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader><DialogTitle>New Maintenance Entry</DialogTitle></DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2"><Label>Maintenance Type</Label><Input placeholder="e.g., 50hr Inspection, Unscheduled" value={data.type} onChange={e => setData({...data, type: e.target.value})} /></div>
-          <div className="grid gap-2"><Label>Work Performed Details</Label><Textarea value={data.details} onChange={e => setData({...data, details: e.target.value})} className="min-h-32" /></div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2"><Label>AME License No.</Label><Input value={data.ame} onChange={e => setData({...data, ame: e.target.value})} /></div>
-            <div className="grid gap-2"><Label>AMO Number</Label><Input value={data.amo} onChange={e => setData({...data, amo: e.target.value})} /></div>
-          </div>
-          <div className="grid gap-2"><Label>Internal Reference</Label><Input value={data.ref} onChange={e => setData({...data, ref: e.target.value})} /></div>
-        </div>
-        <DialogFooter><Button onClick={handleSave}>Certify Entry</Button></DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function AircraftDocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft, tenantId: string }) {
-  const firestore = useFirestore();
-  const { toast } = useToast();
-
-  const onDocumentUploaded = (docDetails: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => {
-    const currentDocs = aircraft.documents || [];
-    const updatedDocs = [...currentDocs, docDetails];
-    const acRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
-    updateDocumentNonBlocking(acRef, { documents: updatedDocs });
-    toast({ title: "Document Uploaded" });
-  };
-
-  const handleDocumentDelete = (name: string) => {
-    const currentDocs = aircraft.documents || [];
-    const updatedDocs = currentDocs.filter(d => d.name !== name);
-    const acRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
-    updateDocumentNonBlocking(acRef, { documents: updatedDocs });
-    toast({ title: "Document Removed" });
-  };
-
-  const handleExpirationDateChange = (name: string, date: Date | undefined) => {
-    const currentDocs = aircraft.documents || [];
-    const updatedDocs = currentDocs.map(d => d.name === name ? { ...d, expirationDate: date?.toISOString() || null } : d);
-    const acRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
-    updateDocumentNonBlocking(acRef, { documents: updatedDocs });
-  };
-
-  return (
-    <div className="space-y-6">
-      <CardHeader className="flex flex-row items-center justify-between bg-muted/10 border-b">
-        <div>
-          <CardTitle className="text-lg">Aircraft Certification & Records</CardTitle>
-          <CardDescription>C of A, Insurance, and other technical certificates.</CardDescription>
-        </div>
-        <DocumentUploader
-          onDocumentUploaded={onDocumentUploaded}
-          trigger={(openDialog) => (
-            <Button size="sm" variant="outline" onClick={() => openDialog()}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Document
-            </Button>
-          )}
-        />
-      </CardHeader>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Document Name</TableHead>
-              <TableHead>Expiry</TableHead>
-              <TableHead className="text-center">Set Expiry</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {aircraft.documents?.map((doc) => (
-              <TableRow key={doc.name}>
-                <TableCell className="font-medium">{doc.name}</TableCell>
-                <TableCell>{doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'N/A'}</TableCell>
-                <TableCell className="text-center">
-                  <Popover>
-                    <PopoverTrigger asChild><Button variant="outline" size="icon" className="h-8 w-8"><CalendarIcon className="h-4 w-4" /></Button></PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <CustomCalendar selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined} onDateSelect={(date) => handleExpirationDateChange(doc.name, date)} />
-                    </PopoverContent>
-                  </Popover>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex gap-2 justify-end">
-                    <Button variant="outline" size="sm" onClick={() => window.open(doc.url, '_blank')}><View className="mr-2 h-4 w-4" /> View</Button>
-                    <Button variant="destructive" size="icon" onClick={() => handleDocumentDelete(doc.name)}><Trash2 className="h-4 w-4" /></Button>
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold">Aircraft Documentation</h3>
+                  <p className="text-sm text-muted-foreground">C of A, Insurance, and other technical certificates.</p>
+                </div>
+                <DocumentUploader
+                  onDocumentUploaded={onDocumentUploaded}
+                  trigger={(open) => (
+                    <Button size="sm" variant="outline" onClick={() => open()}><PlusCircle className="mr-2 h-4 w-4" /> Add Document</Button>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {aircraft.documents?.map((doc, i) => (
+                  <Card key={i} className="bg-muted/20">
+                    <CardHeader className="p-4 pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <FileUp className="h-4 w-4" />
+                        {doc.name}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <p className="text-[10px] text-muted-foreground mb-3">Uploaded: {format(new Date(doc.uploadDate), 'PPP')}</p>
+                      <Button asChild size="sm" variant="secondary" className="w-full">
+                        <a href={doc.url} target="_blank" rel="noopener noreferrer">View Document</a>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+                {(!aircraft.documents || aircraft.documents.length === 0) && (
+                  <div className="col-span-full py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg">
+                    No documents uploaded.
                   </div>
-                </TableCell>
-              </TableRow>
-            ))}
-            {(!aircraft.documents || aircraft.documents.length === 0) && (
-              <TableRow><TableCell colSpan={4} className="text-center py-12 text-muted-foreground">No documents uploaded.</TableCell></TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
+                )}
+              </div>
+            </div>
+          </TabsContent>
+        </div>
+      </Tabs>
     </div>
   );
 }
