@@ -225,10 +225,10 @@ export default function BookingsHistoryPage() {
         <Tabs defaultValue="all">
             <div className='px-6 pt-4'>
                 <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0">
-                    <TabsTrigger value="all" className="rounded-full px-6 py-2 border data-[state=active]:bg-header data-[state=active]:text-header-foreground">All</TabsTrigger>
-                    <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-header data-[state=active]:text-header-foreground">Training</TabsTrigger>
-                    <TabsTrigger value="private" className="rounded-full px-6 py-2 border data-[state=active]:bg-header data-[state=active]:text-header-foreground">Private</TabsTrigger>
-                    <TabsTrigger value="maintenance" className="rounded-full px-6 py-2 border data-[state=active]:bg-header data-[state=active]:text-header-foreground">Maintenance</TabsTrigger>
+                    <TabsTrigger value="all" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">All</TabsTrigger>
+                    <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Training</TabsTrigger>
+                    <TabsTrigger value="private" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Private</TabsTrigger>
+                    <TabsTrigger value="maintenance" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Maintenance</TabsTrigger>
                 </TabsList>
             </div>
             <CardContent className='p-0'>
