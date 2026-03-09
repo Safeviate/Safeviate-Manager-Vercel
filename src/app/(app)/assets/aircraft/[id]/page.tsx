@@ -2,48 +2,68 @@
 'use client';
 
 import { use, useState, useMemo } from 'react';
-import { doc, collection, query, where, orderBy } from 'firebase/firestore';
-import { useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { doc, collection, query, where } from 'firebase/firestore';
+import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle, 
+  CardFooter 
+} from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Clock, Calendar, ShieldCheck, FileText, Settings2, Eye } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Pencil, 
+  Settings2, 
+  FileText, 
+  Wrench, 
+  Eye, 
+  Clock, 
+  Trash2, 
+  PlusCircle, 
+  FileUp, 
+  Camera, 
+  ZoomIn 
+} from 'lucide-react';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { Aircraft, AircraftComponent } from '@/types/aircraft';
 import type { MaintenanceLog } from '@/types/maintenance';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription 
+} from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import { DocumentUploader } from '@/components/document-uploader';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useToast } from '@/hooks/use-toast';
+import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
 interface AircraftDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-const StatusCard = ({ label, value, subValue, colorClass }: { label: string, value: string | number, subValue?: string, colorClass?: string }) => (
-    <div className="bg-card border rounded-lg p-3 flex flex-col justify-center min-w-[140px]">
-        <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">{label}</p>
-        <div className="flex items-baseline gap-1">
-            <span className={cn("text-lg font-bold tabular-nums", colorClass)}>{value}</span>
-            {subValue && <span className="text-[10px] text-muted-foreground font-medium">{subValue}</span>}
-        </div>
-    </div>
-);
-
 export default function AircraftDetailPage({ params }: AircraftDetailPageProps) {
   const resolvedParams = use(params);
-  const firestore = useFirestore();
-  const tenantId = 'safeviate';
   const aircraftId = resolvedParams.id;
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const tenantId = 'safeviate';
+
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
 
   const aircraftRef = useMemoFirebase(
     () => (firestore ? doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId) : null),
-    [firestore, tenantId, aircraftId]
-  );
-
-  const maintenanceQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`), orderBy('date', 'desc')) : null),
     [firestore, tenantId, aircraftId]
   );
 
@@ -52,17 +72,32 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
     [firestore, tenantId, aircraftId]
   );
 
+  const maintenanceQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`) : null),
+    [firestore, tenantId, aircraftId]
+  );
+
   const { data: aircraft, isLoading: isLoadingAircraft } = useDoc<Aircraft>(aircraftRef);
-  const { data: maintenance, isLoading: isLoadingMaintenance } = useCollection<MaintenanceLog>(maintenanceQuery);
   const { data: components, isLoading: isLoadingComponents } = useCollection<AircraftComponent>(componentsQuery);
+  const { data: maintenanceLogs, isLoading: isLoadingLogs } = useCollection<MaintenanceLog>(maintenanceQuery);
 
-  if (isLoadingAircraft) {
-    return <div className="space-y-6"><Skeleton className="h-10 w-48" /><Skeleton className="h-24 w-full" /><Skeleton className="h-96 w-full" /></div>;
-  }
+  const isLoading = isLoadingAircraft || isLoadingComponents || isLoadingLogs;
 
-  if (!aircraft) {
-    return <div className="text-center py-12">Aircraft not found.</div>;
-  }
+  const handleViewImage = (url: string) => {
+    setViewingImageUrl(url);
+    setIsImageViewerOpen(true);
+  };
+
+  const onDocumentUploaded = (docDetails: any) => {
+    if (!aircraft) return;
+    const currentDocs = aircraft.documents || [];
+    const updatedDocs = [...currentDocs, docDetails];
+    updateDocumentNonBlocking(aircraftRef!, { documents: updatedDocs });
+    toast({ title: 'Document Saved', description: `"${docDetails.name}" has been added to technical records.` });
+  };
+
+  if (isLoading) return <Skeleton className="h-96 w-full" />;
+  if (!aircraft) return <div className="p-8 text-center">Aircraft not found.</div>;
 
   const tacho = aircraft.currentTacho || 0;
   const next50 = aircraft.tachoAtNext50Inspection || 0;
@@ -80,35 +115,32 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
           </Link>
         </Button>
         <div className="flex gap-2">
-            <Button variant="outline" size="sm"><Settings2 className="mr-2 h-4 w-4" /> Edit Service</Button>
-            <Button variant="outline" size="sm"><Clock className="mr-2 h-4 w-4" /> Edit Flight Hours</Button>
+          <Button variant="outline" size="sm">
+            <Settings2 className="mr-2 h-4 w-4" /> Edit Service
+          </Button>
+          <Button variant="outline" size="sm">
+            <Pencil className="mr-2 h-4 w-4" /> Edit Flight Hours
+          </Button>
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-3xl font-bold">{aircraft.tailNumber}</CardTitle>
-          <CardDescription>{aircraft.make} {aircraft.model}</CardDescription>
-        </CardHeader>
-      </Card>
-
-      {/* Reordered Status Row: Initial -> Current -> Inspections */}
-      <div className="flex flex-wrap gap-4">
-        <StatusCard label="Initial Hobbs" value={aircraft.initialHobbs?.toFixed(1) || '0.0'} subValue="h" />
-        <StatusCard label="Initial Tacho" value={aircraft.initialTacho?.toFixed(1) || '0.0'} subValue="h" />
-        <StatusCard label="Current Hobbs" value={aircraft.currentHobbs?.toFixed(1) || '0.0'} subValue="h" />
-        <StatusCard label="Current Tacho" value={aircraft.currentTacho?.toFixed(1) || '0.0'} subValue="h" />
+      {/* Reordered Compact Status Row */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <StatusCard label="Initial Hobbs" value={aircraft.initialHobbs?.toFixed(1) || '0.0'} />
+        <StatusCard label="Initial Tacho" value={aircraft.initialTacho?.toFixed(1) || '0.0'} />
+        <StatusCard label="Current Hobbs" value={aircraft.currentHobbs?.toFixed(1) || '0.0'} />
+        <StatusCard label="Current Tacho" value={tacho.toFixed(1)} highlight />
         <StatusCard 
-            label="Next 50hr" 
-            value={next50.toFixed(1)} 
-            subValue={`(${remaining50.toFixed(1)} left)`} 
-            colorClass="text-blue-600"
+          label="Next 50hr" 
+          value={next50.toFixed(1)} 
+          subValue={`${remaining50.toFixed(1)} left`}
+          variant="blue"
         />
         <StatusCard 
-            label="Next 100hr" 
-            value={next100.toFixed(1)} 
-            subValue={`(${remaining100.toFixed(1)} left)`} 
-            colorClass="text-orange-600"
+          label="Next 100hr" 
+          value={next100.toFixed(1)} 
+          subValue={`${remaining100.toFixed(1)} left`}
+          variant="orange"
         />
       </div>
 
@@ -123,7 +155,7 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
           <Card>
             <CardHeader>
               <CardTitle>Tracked Components</CardTitle>
-              <CardDescription>Life-limited parts and time-since-overhaul (TSO) tracking.</CardDescription>
+              <CardDescription>Life-limited parts and component times.</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -134,31 +166,18 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                     <TableHead className="text-right">TSN</TableHead>
                     <TableHead className="text-right">TSO</TableHead>
                     <TableHead className="text-right">Max Hours</TableHead>
-                    <TableHead className="text-right">Remaining</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoadingComponents ? (
-                    <TableRow><TableCell colSpan={6} className="text-center">Loading...</TableCell></TableRow>
-                  ) : components && components.length > 0 ? (
-                    components.map(c => {
-                        const remaining = (c.maxHours || 0) - (c.tsn || 0);
-                        return (
-                            <TableRow key={c.id}>
-                                <TableCell className="font-medium">{c.name}</TableCell>
-                                <TableCell className="font-mono text-xs">{c.serialNumber}</TableCell>
-                                <TableCell className="text-right font-mono">{c.tsn?.toFixed(1) || '0.0'}</TableCell>
-                                <TableCell className="text-right font-mono">{c.tso?.toFixed(1) || '0.0'}</TableCell>
-                                <TableCell className="text-right font-mono">{c.maxHours?.toFixed(1) || 'N/A'}</TableCell>
-                                <TableCell className={cn("text-right font-bold font-mono", remaining < 50 ? "text-red-600" : "")}>
-                                    {remaining.toFixed(1)}
-                                </TableCell>
-                            </TableRow>
-                        )
-                    })
-                  ) : (
-                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No tracked components found.</TableCell></TableRow>
-                  )}
+                  {components?.map(comp => (
+                    <TableRow key={comp.id}>
+                      <TableCell className="font-medium">{comp.name}</TableCell>
+                      <TableCell>{comp.serialNumber}</TableCell>
+                      <TableCell className="text-right font-mono">{comp.tsn?.toFixed(1) || '0.0'}</TableCell>
+                      <TableCell className="text-right font-mono">{comp.tso?.toFixed(1) || '0.0'}</TableCell>
+                      <TableCell className="text-right font-mono">{comp.maxHours?.toFixed(1) || '-'}</TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </CardContent>
@@ -169,7 +188,7 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
           <Card>
             <CardHeader>
               <CardTitle>Maintenance History</CardTitle>
-              <CardDescription>Chronological log of inspections and repairs.</CardDescription>
+              <CardDescription>Technical log entries and certifications.</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -184,22 +203,16 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoadingMaintenance ? (
-                    <TableRow><TableCell colSpan={6} className="text-center">Loading...</TableCell></TableRow>
-                  ) : maintenance && maintenance.length > 0 ? (
-                    maintenance.map(log => (
-                      <TableRow key={log.id}>
-                        <TableCell className="whitespace-nowrap">{log.date ? format(new Date(log.date), 'dd MMM yyyy') : 'N/A'}</TableCell>
-                        <TableCell>{log.maintenanceType}</TableCell>
-                        <TableCell className="max-w-md truncate">{log.details}</TableCell>
-                        <TableCell className="font-mono text-xs">{log.ameNo}</TableCell>
-                        <TableCell className="font-mono text-xs">{log.amoNo}</TableCell>
-                        <TableCell>{log.reference}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No maintenance records found.</TableCell></TableRow>
-                  )}
+                  {maintenanceLogs?.sort((a, b) => b.date.localeCompare(a.date)).map(log => (
+                    <TableRow key={log.id}>
+                      <TableCell>{log.date ? format(new Date(log.date), 'dd MMM yyyy') : 'N/A'}</TableCell>
+                      <TableCell>{log.maintenanceType}</TableCell>
+                      <TableCell className="max-w-md truncate">{log.details}</TableCell>
+                      <TableCell>{log.ameNo}</TableCell>
+                      <TableCell>{log.amoNo}</TableCell>
+                      <TableCell>{log.reference}</TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </CardContent>
@@ -208,36 +221,80 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
 
         <TabsContent value="documents" className="mt-0">
           <Card>
-            <CardHeader>
-              <CardTitle>Aircraft Documents</CardTitle>
-              <CardDescription>Technical certificates and registrations.</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Technical Documents</CardTitle>
+                <CardDescription>C of A, C of R, Insurance, and other certifications.</CardDescription>
+              </div>
+              <DocumentUploader
+                onDocumentUploaded={onDocumentUploaded}
+                trigger={(open) => (
+                  <Button size="sm" onClick={() => open()}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Document
+                  </Button>
+                )}
+              />
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(aircraft.documents || []).map((doc, idx) => (
-                  <Card key={idx} className="flex flex-col">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {aircraft.documents?.map((doc, idx) => (
+                  <Card key={idx} className="flex flex-col h-full border rounded-lg shadow-sm">
                     <CardHeader className="pb-2">
-                      <div className="flex justify-between items-start">
-                        <FileText className="h-8 w-8 text-primary" />
-                        <Badge variant="outline" className="font-mono">{doc.abbreviation || 'DOC'}</Badge>
+                      <div className="flex justify-center p-4 bg-muted rounded-md mb-2">
+                        <FileText className="h-12 w-12 text-muted-foreground" />
                       </div>
-                      <CardTitle className="text-sm mt-2">{doc.name}</CardTitle>
+                      <CardTitle className="text-sm mt-2 truncate">{doc.name}</CardTitle>
                     </CardHeader>
                     <CardFooter className="mt-auto pt-2">
-                      <Button variant="default" size="sm" className="w-full">
+                      <Button variant="default" size="sm" className="w-full" onClick={() => handleViewImage(doc.url)}>
                         <Eye className="mr-2 h-4 w-4" /> View
                       </Button>
                     </CardFooter>
                   </Card>
                 ))}
-                {(!aircraft.documents || aircraft.documents.length === 0) && (
-                  <p className="col-span-full text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">No documents uploaded.</p>
-                )}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Document Viewer</DialogTitle>
+            <DialogDescription>Viewing aircraft technical record.</DialogDescription>
+          </DialogHeader>
+          {viewingImageUrl && (
+            <div className="relative h-[70vh] w-full">
+              <Image src={viewingImageUrl} alt="Document" fill className="object-contain" />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+function StatusCard({ label, value, subValue, highlight, variant }: { 
+  label: string; 
+  value: string; 
+  subValue?: string;
+  highlight?: boolean;
+  variant?: 'blue' | 'orange';
+}) {
+  const variantClasses = {
+    blue: 'bg-blue-50 border-blue-200 text-blue-700',
+    orange: 'bg-orange-50 border-orange-200 text-orange-700',
+    default: 'bg-card border-border text-card-foreground'
+  };
+
+  return (
+    <Card className={cn("p-3 shadow-none border", variant ? variantClasses[variant] : variantClasses.default, highlight && "border-primary ring-1 ring-primary")}>
+      <p className="text-[10px] uppercase font-bold text-muted-foreground opacity-70">{label}</p>
+      <div className="flex items-baseline justify-between mt-1">
+        <p className="text-lg font-bold font-mono">{value}</p>
+        {subValue && <p className="text-[10px] font-semibold">{subValue}</p>}
+      </div>
+    </Card>
   );
 }
