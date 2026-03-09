@@ -385,12 +385,12 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                             <DialogTitle>Document Viewer</DialogTitle>
                         </DialogHeader>
                         {viewingImageUrl && (
-                            <div className="relative h-[80vh]">
+                            <div className="relative h-[80vh] w-full">
                                 <Image 
                                     src={viewingImageUrl}
                                     alt="Document" 
                                     fill
-                                    style={{ objectFit: 'contain' }}
+                                    className="object-contain"
                                 />
                             </div>
                         )}
