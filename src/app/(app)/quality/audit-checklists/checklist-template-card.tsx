@@ -1,21 +1,14 @@
 
 'use client';
 
-import { useState } from 'react';
 import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, MoreVertical, Pencil, PlayCircle, Trash2 } from 'lucide-react';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { FileText, Pencil, PlayCircle, Trash2 } from 'lucide-react';
 import { NewChecklistDialog } from './new-checklist-dialog';
 import { StartAuditDialog } from './start-audit-dialog';
 import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
@@ -41,66 +34,60 @@ export function ChecklistTemplateCard({ departmentName, templates, tenantId, dep
         if (!firestore) return;
         const templateRef = doc(firestore, `tenants/${tenantId}/quality-audit-templates`, templateId);
         deleteDocumentNonBlocking(templateRef);
-        toast({ title: "Template Deleted", description: `"${templateTitle}" is being deleted.`});
+        toast({ title: "Template Deleted", description: `"${templateTitle}" has been removed.`});
     }
 
   return (
-    <>
-      <AccordionItem value={departmentName}>
-        <AccordionTrigger className="text-xl font-semibold">{departmentName}</AccordionTrigger>
-        <AccordionContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {templates.map((template) => (
-            <Card key={template.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start gap-4">
-                  <div className="space-y-1.5">
-                    <CardTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
-                        {template.title}
-                    </CardTitle>
-                    <CardDescription>{template.sections.reduce((acc, section) => acc + section.items.length, 0)} items in {template.sections.length} sections</CardDescription>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                       <StartAuditDialog
-                          template={template}
-                          tenantId={tenantId}
-                          personnel={personnel}
-                          departments={departments}
-                          trigger={
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                <PlayCircle className="mr-2 h-4 w-4" /> Start Audit
-                            </DropdownMenuItem>
-                          }
-                        />
-                        
-                        <NewChecklistDialog
-                          existingTemplate={template}
-                          tenantId={tenantId}
-                          departments={departments}
-                          trigger={
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                <Pencil className="mr-2 h-4 w-4" /> Edit
-                            </DropdownMenuItem>
-                          }
-                        />
-
-                        <DropdownMenuItem onSelect={() => handleDelete(template.id, template.title)} className="text-destructive focus:text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
-        </AccordionContent>
-      </AccordionItem>
-    </>
+    <AccordionItem value={departmentName}>
+      <AccordionTrigger className="text-xl font-semibold">{departmentName}</AccordionTrigger>
+      <AccordionContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {templates.map((template) => (
+          <Card key={template.id} className="flex flex-col">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                  <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="truncate">{template.title}</span>
+              </CardTitle>
+              <CardDescription className="text-xs">
+                {template.sections.reduce((acc, section) => acc + section.items.length, 0)} items • {template.sections.length} sections
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="mt-auto pt-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <StartAuditDialog
+                  template={template}
+                  tenantId={tenantId}
+                  personnel={personnel}
+                  departments={departments}
+                  trigger={
+                    <Button size="sm" className="h-8 text-xs gap-1.5 flex-1">
+                      <PlayCircle className="h-3.5 w-3.5" /> Start
+                    </Button>
+                  }
+                />
+                <NewChecklistDialog
+                  existingTemplate={template}
+                  tenantId={tenantId}
+                  departments={departments}
+                  trigger={
+                    <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+                      <Pencil className="h-3.5 w-3.5" /> Edit
+                    </Button>
+                  }
+                />
+                <Button 
+                  variant="destructive" 
+                  size="icon" 
+                  className="h-8 w-8 shrink-0" 
+                  onClick={() => handleDelete(template.id, template.title)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </AccordionContent>
+    </AccordionItem>
   );
 }

@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, query, where, orderBy, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -31,7 +32,6 @@ import type { Personnel } from '../../users/personnel/page';
 
 type EnrichedAudit = QualityAudit & {
     auditeeName?: string;
-    departmentName?: string;
 };
 
 const getStatusBadgeVariant = (status: QualityAudit['status']): "default" | "secondary" | "destructive" | "outline" => {
@@ -46,10 +46,9 @@ const getStatusBadgeVariant = (status: QualityAudit['status']): "default" | "sec
 interface AuditActionsProps {
     audit: EnrichedAudit;
     tenantId: string;
-    isArchived: boolean;
 }
 
-function AuditActions({ audit, tenantId, isArchived }: AuditActionsProps) {
+function AuditActions({ audit, tenantId }: AuditActionsProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -58,7 +57,7 @@ function AuditActions({ audit, tenantId, isArchived }: AuditActionsProps) {
         if (!firestore) return;
         const auditRef = doc(firestore, `tenants/${tenantId}/quality-audits`, audit.id);
         deleteDocumentNonBlocking(auditRef);
-        toast({ title: "Audit Deleted", description: `Audit #${audit.auditNumber} is being permanently deleted.`});
+        toast({ title: "Audit Deleted", description: `Audit #${audit.auditNumber} has been removed.`});
         setIsDeleteDialogOpen(false);
     }
     
@@ -82,7 +81,7 @@ function AuditActions({ audit, tenantId, isArchived }: AuditActionsProps) {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently delete audit #{audit.auditNumber}. This action cannot be undone.
+                            This will permanently delete audit #{audit.auditNumber}.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -101,40 +100,50 @@ function AuditActions({ audit, tenantId, isArchived }: AuditActionsProps) {
 interface AuditsTableProps {
     audits: EnrichedAudit[];
     tenantId: string;
-    isArchivedTab: boolean;
 }
 
-function AuditsTable({ audits, tenantId, isArchivedTab }: AuditsTableProps) {
+function AuditsTable({ audits, tenantId }: AuditsTableProps) {
     if (audits.length === 0) {
-        return <div className="text-center p-8 text-muted-foreground">No audits in this category.</div>
+        return <div className="text-center p-8 text-muted-foreground text-sm italic">No audits found.</div>
     }
 
     return (
         <Table>
             <TableHeader>
                 <TableRow>
-                    <TableHead>Audit ID</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Auditee</TableHead>
-                    <TableHead>Compliance</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-xs uppercase font-bold">Audit ID</TableHead>
+                    <TableHead className="text-xs uppercase font-bold">Date</TableHead>
+                    <TableHead className="text-xs uppercase font-bold">Title</TableHead>
+                    <TableHead className="text-xs uppercase font-bold">Auditee</TableHead>
+                    <TableHead className="text-xs uppercase font-bold text-center">Score</TableHead>
+                    <TableHead className="text-xs uppercase font-bold">Status</TableHead>
+                    <TableHead className="text-right text-xs uppercase font-bold">Actions</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
                 {audits.map(audit => (
                     <TableRow key={audit.id}>
-                        <TableCell className="font-medium">
+                        <TableCell className="font-medium text-xs">
                             <Link href={`/quality/audits/${audit.id}`} className="hover:underline">{audit.auditNumber}</Link>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">{format(new Date(audit.auditDate), 'PPP')}</TableCell>
-                        <TableCell>{audit.title}</TableCell>
-                        <TableCell>{audit.auditeeName || audit.auditeeId}</TableCell>
-                        <TableCell>{audit.complianceScore ? `${audit.complianceScore}%` : 'N/A'}</TableCell>
-                        <TableCell><Badge variant={getStatusBadgeVariant(audit.status)}>{audit.status}</Badge></TableCell>
+                        <TableCell className="whitespace-nowrap text-xs">{format(new Date(audit.auditDate), 'dd MMM yy')}</TableCell>
+                        <TableCell className="text-xs max-w-[200px] truncate">{audit.title}</TableCell>
+                        <TableCell className="text-xs">{audit.auditeeName || audit.auditeeId}</TableCell>
+                        <TableCell className="text-center">
+                            {audit.complianceScore ? (
+                                <Badge variant="outline" className={cn(
+                                    "font-mono text-[10px]",
+                                    audit.complianceScore >= 80 ? "text-green-600 border-green-600 bg-green-50" : 
+                                    audit.complianceScore >= 60 ? "text-yellow-600 border-yellow-600 bg-yellow-50" : 
+                                    "text-red-600 border-red-600 bg-red-50"
+                                )}>
+                                    {audit.complianceScore}%
+                                </Badge>
+                            ) : '-'}
+                        </TableCell>
+                        <TableCell><Badge variant={getStatusBadgeVariant(audit.status)} className="text-[10px] py-0">{audit.status}</Badge></TableCell>
                         <TableCell className="text-right">
-                           <AuditActions audit={audit} tenantId={tenantId} isArchived={isArchivedTab} />
+                           <AuditActions audit={audit} tenantId={tenantId} />
                         </TableCell>
                     </TableRow>
                 ))}
@@ -195,26 +204,24 @@ export default function AuditsPage() {
     }
     
     if (auditsError) {
-        return <p className="text-destructive text-center">Error loading audits: {auditsError.message}</p>
+        return <p className="text-destructive text-center p-8">Error: {auditsError.message}</p>
     }
 
     return (
-        <Card className="min-h-[calc(100vh-10rem)] flex flex-col">
+        <Card className="min-h-[calc(100vh-10rem)] flex flex-col shadow-none border">
             <Tabs defaultValue="active" className="flex-1 flex flex-col">
-                <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <TabsList>
-                            <TabsTrigger value="active">Active Audits ({activeAudits.length})</TabsTrigger>
-                            <TabsTrigger value="archived">Archived ({archivedAudits.length})</TabsTrigger>
-                        </TabsList>
-                    </div>
-                </CardHeader>
+                <div className='px-6 pt-4 border-b bg-muted/10'>
+                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-2 border-b-0">
+                        <TabsTrigger value="active" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs">Active ({activeAudits.length})</TabsTrigger>
+                        <TabsTrigger value="archived" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs">Archived ({archivedAudits.length})</TabsTrigger>
+                    </TabsList>
+                </div>
                 <CardContent className="p-0 flex-1">
                     <TabsContent value="active" className="m-0">
-                        <AuditsTable audits={activeAudits} tenantId={tenantId} isArchivedTab={false} />
+                        <AuditsTable audits={activeAudits} tenantId={tenantId} />
                     </TabsContent>
                     <TabsContent value="archived" className="m-0">
-                        <AuditsTable audits={archivedAudits} tenantId={tenantId} isArchivedTab={true} />
+                        <AuditsTable audits={archivedAudits} tenantId={tenantId} />
                     </TabsContent>
                 </CardContent>
             </Tabs>

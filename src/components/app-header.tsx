@@ -18,13 +18,11 @@ const findCurrentItem = (
         const subItem = findCurrentItem(item.subItems, pathname);
         if (subItem) return subItem;
       }
-      // Check if it's a more specific match than just the root
       if (item.href !== '/' && pathname.includes(item.href)) {
          return item;
       }
     }
   }
-   // Fallback for root-level items if no specific sub-item is matched
   for (const item of items) {
     if (pathname === item.href) {
       return item;
@@ -49,7 +47,6 @@ const getTitle = (pathname: string): string => {
      }
   }
 
-  // Check top-level items again for a direct match if sub-item logic fails
   const topLevelItem = allMenuItems.find(item => item.href === pathname);
   if (topLevelItem) {
     return topLevelItem.label;
@@ -65,7 +62,7 @@ export function AppHeader() {
   const title = getTitle(pathname);
 
   return (
-    <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-header px-4 text-header-foreground sm:px-6">
+    <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-header px-4 text-header-foreground sm:px-6 landscape:max-md:hidden">
       <SidebarTrigger className={cn('md:hidden', !isMobile && 'hidden')} />
       {title && (
         <h1 className="text-lg font-semibold tracking-tight">{title}</h1>

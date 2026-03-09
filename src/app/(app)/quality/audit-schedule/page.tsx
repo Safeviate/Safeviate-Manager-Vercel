@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -71,7 +72,7 @@ const MONTHS = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 ];
 
-const MONTH_HEIGHT_PX = 100;
+const MONTH_HEIGHT_PX = 60;
 
 const getStatusBadgeClass = (status: AuditScheduleStatus): string => {
     switch (status) {
@@ -142,16 +143,16 @@ function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
         <>
             <Popover>
                 <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-swimlane-header-foreground hover:bg-white/10 shrink-0">
-                        <Settings2 className="h-4 w-4" />
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-swimlane-header-foreground hover:bg-white/10 shrink-0">
+                        <Settings2 className="h-3 w-3" />
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-40 p-1">
-                    <Button variant="ghost" size="sm" onClick={() => setIsEditOpen(true)} className="w-full justify-start">
-                        <Pencil className="mr-2 h-4 w-4" /> Edit Name
+                    <Button variant="ghost" size="sm" onClick={() => setIsEditOpen(true)} className="w-full justify-start text-xs">
+                        <Pencil className="mr-2 h-3 w-3" /> Edit Name
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setIsDeleteOpen(true)} className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10">
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete Area
+                    <Button variant="ghost" size="sm" onClick={() => setIsDeleteOpen(true)} className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 text-xs">
+                        <Trash2 className="mr-2 h-3 w-3" /> Delete Area
                     </Button>
                 </PopoverContent>
             </Popover>
@@ -160,11 +161,11 @@ function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Edit Audit Area</DialogTitle>
-                        <DialogDescription>Rename the audit area. This will update all related schedule items.</DialogDescription>
+                        <DialogDescription>Rename the audit area.</DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
                         <Label htmlFor="area-name">Area Name</Label>
-                        <Input id="area-name" value={newName} onChange={(e) => setNewAreaName(e.target.value)} />
+                        <Input id="area-name" value={newName} onChange={(e) => setNewName(e.target.value)} />
                     </div>
                     <DialogFooter>
                         <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
@@ -178,7 +179,7 @@ function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently delete the "{area}" audit area and all its scheduled items.
+                            This will permanently delete the "{area}" audit area.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -276,37 +277,37 @@ export default function AuditSchedulePage() {
     return found ? found.status : 'Not Scheduled';
   };
 
-  const extraLanes = ['', '', ''];
+  const extraLanes = ['', ''];
 
   if (isLoading) {
     return <Skeleton className="h-[600px] w-full" />;
   }
 
   return (
-    <div className="flex flex-col gap-6 h-full">
-        <div className="flex justify-between items-center">
+    <div className="flex flex-col gap-4 h-full">
+        <div className="flex justify-between items-center px-1">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Annual Audit Schedule</h1>
-                <p className="text-muted-foreground">
+                <h1 className="text-2xl font-bold tracking-tight">Annual Audit Schedule</h1>
+                <p className="text-xs text-muted-foreground">
                     Planning and tracking oversight activities for {currentYear}.
                 </p>
             </div>
             <div className="flex items-center gap-2">
-                <Button onClick={() => setIsAddAreaOpen(true)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Audit Area
+                <Button size="sm" onClick={() => setIsAddAreaOpen(true)}>
+                    <PlusCircle className="mr-2 h-3 w-3" />
+                    Add Area
                 </Button>
             </div>
         </div>
 
         <Card className="overflow-hidden flex-grow flex flex-col shadow-none border">
             <CardContent className="p-0 flex-grow flex flex-col overflow-hidden">
-                <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 220px)' }}>
+                <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 180px)' }}>
                     <div className="flex min-w-full w-fit relative">
                         
                         {/* Sticky Month Column */}
-                        <div className="w-24 flex-shrink-0 border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
-                            <div className="sticky top-0 z-50 h-16 bg-swimlane-header border-b border-white/10 flex items-center justify-center font-bold text-sm text-swimlane-header-foreground uppercase tracking-wider">
+                        <div className="w-20 flex-shrink-0 border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                            <div className="sticky top-0 z-50 h-12 bg-swimlane-header border-b border-white/10 flex items-center justify-center font-bold text-xs text-swimlane-header-foreground uppercase tracking-wider">
                                 MONTH
                             </div>
                             {MONTHS.map((month, idx) => {
@@ -315,15 +316,15 @@ export default function AuditSchedulePage() {
                                     <div 
                                         key={month} 
                                         className={cn(
-                                            "flex flex-col items-center justify-center border-b text-sm md:text-base font-mono font-bold uppercase tracking-wider",
+                                            "flex flex-col items-center justify-center border-b text-xs font-mono font-bold uppercase tracking-wider",
                                             isCurrentMonth ? "bg-[#fefce8] text-[#854d0e]" : "bg-swimlane-header text-swimlane-header-foreground"
                                         )}
                                         style={{ height: `${MONTH_HEIGHT_PX}px` }}
                                     >
                                         <span>{month}</span>
                                         {isCurrentMonth && (
-                                            <Badge variant="outline" className="mt-1 text-[9px] py-0 border-[#854d0e] text-[#854d0e] font-bold">
-                                                ACTIVE
+                                            <Badge variant="outline" className="mt-0.5 text-[8px] py-0 border-[#854d0e] text-[#854d0e] font-bold h-3">
+                                                ACT
                                             </Badge>
                                         )}
                                     </div>
@@ -333,9 +334,9 @@ export default function AuditSchedulePage() {
 
                         <div className="flex flex-1 relative">
                             {auditAreas.map((area) => (
-                                <div key={area} className="flex-1 min-w-[200px] border-r relative flex flex-col">
-                                    <div className="sticky top-0 z-30 h-16 bg-swimlane-header text-swimlane-header-foreground border-b border-white/10 flex items-center justify-between gap-2 px-4 text-center shrink-0 whitespace-normal leading-tight">
-                                        <span className="text-[10px] font-bold uppercase tracking-wider">{area}</span>
+                                <div key={area} className="flex-1 min-w-[160px] border-r relative flex flex-col">
+                                    <div className="sticky top-0 z-30 h-12 bg-swimlane-header text-swimlane-header-foreground border-b border-white/10 flex items-center justify-between gap-1 px-3 text-center shrink-0 whitespace-normal leading-tight">
+                                        <span className="text-[9px] font-bold uppercase tracking-wider truncate">{area}</span>
                                         <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
                                     </div>
                                     <div className="relative">
@@ -348,7 +349,7 @@ export default function AuditSchedulePage() {
                                                 <div 
                                                     key={month} 
                                                     className={cn(
-                                                        "border-b relative flex items-center justify-center p-2 group transition-colors",
+                                                        "border-b relative flex items-center justify-center p-1 group transition-colors",
                                                         isCurrentMonth ? "bg-[#fefce8]/20" : "hover:bg-muted/10"
                                                     )}
                                                     style={{ height: `${MONTH_HEIGHT_PX}px` }}
@@ -361,7 +362,7 @@ export default function AuditSchedulePage() {
                                                             <div className="w-full h-full cursor-pointer flex items-center justify-center">
                                                                 <Badge
                                                                     className={cn(
-                                                                        "py-2 px-4 w-full justify-center text-[10px] uppercase font-bold shadow-sm transition-transform group-hover:scale-[1.02] border",
+                                                                        "py-1 px-2 w-full justify-center text-[8px] uppercase font-bold shadow-sm transition-transform group-hover:scale-[1.02] border leading-tight h-8 text-center",
                                                                         getStatusBadgeClass(status)
                                                                     )}
                                                                 >
@@ -383,8 +384,8 @@ export default function AuditSchedulePage() {
                             ))}
 
                             {extraLanes.map((_, laneIdx) => (
-                                <div key={`extra-${laneIdx}`} className="flex-1 min-w-[200px] border-r bg-muted/5 opacity-50 flex flex-col">
-                                    <div className="sticky top-0 z-30 h-16 bg-swimlane-header text-swimlane-header-foreground border-b border-white/10 flex items-center justify-center font-bold text-[10px] uppercase px-2 text-center shrink-0">
+                                <div key={`extra-${laneIdx}`} className="flex-1 min-w-[160px] border-r bg-muted/5 opacity-50 flex flex-col">
+                                    <div className="sticky top-0 z-30 h-12 bg-swimlane-header text-swimlane-header-foreground border-b border-white/10 flex items-center justify-center font-bold text-[10px] uppercase px-2 text-center shrink-0">
                                         &nbsp;
                                     </div>
                                     {MONTHS.map((month) => (
@@ -410,7 +411,7 @@ export default function AuditSchedulePage() {
                 </DialogHeader>
                 <div className="py-4">
                     <Label htmlFor="new-area-name">Area Name</Label>
-                    <Input id="new-area-name" placeholder="e.g., Quality Management" value={newAreaName} onChange={(e) => setNewAreaName(e.target.value)} />
+                    <Input id="new-area-name" placeholder="e.g., Maintenance" value={newAreaName} onChange={(e) => setNewAreaName(e.target.value)} />
                 </div>
                 <DialogFooter>
                     <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -165,7 +166,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                 status: 'Finalized' as const,
                 complianceScore: complianceScore,
             };
-            batch.update(auditRef, auditUpdateData);
+            batch.update(auditUpdateData);
 
             // 2. Create CAPs for non-compliant findings
             const capsCollectionRef = collection(firestore, `tenants/${tenantId}/corrective-action-plans`);
@@ -229,17 +230,17 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
         const openActionsCount = cap?.actions?.filter(a => a.status === 'Open' || a.status === 'In Progress').length || 0;
 
         return (
-            <Card key={item.id} className="mb-3 md:mb-4">
-                <CardHeader className="py-3 md:py-4">
-                    <CardTitle className="text-sm md:text-base">{item.text}</CardTitle>
+            <Card key={item.id} className="mb-2">
+                <CardHeader className="py-2 px-4">
+                    <CardTitle className="text-sm">{item.text}</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4 md:space-y-6 pb-4">
-                     <div className='flex flex-wrap justify-between items-start gap-4'>
+                <CardContent className="space-y-3 px-4 pb-3">
+                     <div className='flex flex-wrap justify-between items-center gap-2'>
                         <FormField
                             control={form.control}
                             name={`findings.${itemIndex}.finding`}
                             render={({ field }) => (
-                                <FormItem className="space-y-3">
+                                <FormItem className="space-y-0">
                                     <FormControl>
                                         <RadioGroup
                                         onValueChange={(value) => {
@@ -247,13 +248,13 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                                             form.setValue(`findings.${itemIndex}.level`, '');
                                         }}
                                         defaultValue={field.value}
-                                        className="flex flex-wrap gap-x-4 gap-y-2"
+                                        className="flex flex-wrap gap-3"
                                         disabled={isReadOnly}
                                         >
                                             {(['Compliant', 'Non Compliant', 'Not Applicable'] as const).map(value => (
-                                                <FormItem key={value} className="flex items-center space-x-2 space-y-0">
-                                                    <FormControl><RadioGroupItem value={value} /></FormControl>
-                                                    <FormLabel className="font-normal text-xs md:text-sm">{value}</FormLabel>
+                                                <FormItem key={value} className="flex items-center space-x-1.5 space-y-0">
+                                                    <FormControl><RadioGroupItem value={value} className="h-3.5 w-3.5" /></FormControl>
+                                                    <FormLabel className="font-normal text-xs">{value}</FormLabel>
                                                 </FormItem>
                                             ))}
                                         </RadioGroup>
@@ -265,15 +266,15 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                         {findingType === 'Non Compliant' && audit.status !== 'Scheduled' && audit.status !== 'In Progress' && (
                             <div className='flex items-center gap-2'>
                                 {cap ? (
-                                    <Badge variant={openActionsCount > 0 ? 'destructive' : 'default'} className="text-[10px]">
-                                        {openActionsCount} Open Action(s)
+                                    <Badge variant={openActionsCount > 0 ? 'destructive' : 'default'} className="text-[9px] h-5">
+                                        {openActionsCount} Open CAP
                                     </Badge>
                                 ) : (
-                                    <Badge variant="outline" className="text-[10px]">CAP Pending</Badge>
+                                    <Badge variant="outline" className="text-[9px] h-5">CAP Pending</Badge>
                                 )}
-                                 <Button variant="secondary" size="sm" onClick={() => handleOpenCapDialog(item.id, item.text)} className="h-7 text-[10px]">
-                                    <Edit className="mr-1.5 h-3 w-3" />
-                                    Manage CAP
+                                 <Button variant="secondary" size="sm" onClick={() => handleOpenCapDialog(item.id, item.text)} className="h-6 text-[9px] px-2">
+                                    <Edit className="mr-1 h-2.5 w-2.5" />
+                                    CAP
                                 </Button>
                             </div>
                         )}
@@ -281,18 +282,61 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                     
                     <Separator />
 
-                    <div className="space-y-3 md:space-y-4">
-                         <FormField control={form.control} name={`findings.${itemIndex}.comment`} render={({ field }) => (<FormItem><FormLabel className="text-xs">Comment / Details</FormLabel><FormControl><Textarea placeholder="Provide details..." {...field} disabled={isReadOnly} className="min-h-[60px] text-xs" /></FormControl><FormMessage /></FormItem>)} />
-                         <FormField control={form.control} name={`findings.${itemIndex}.suggestedImprovements`} render={({ field }) => (<FormItem><FormLabel className="text-xs">Suggested Improvements</FormLabel><FormControl><Textarea placeholder="Improvements..." {...field} disabled={isReadOnly} className="min-h-[60px] text-xs" /></FormControl><FormMessage /></FormItem>)} />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                         <FormField control={form.control} name={`findings.${itemIndex}.comment`} render={({ field }) => (<FormItem className="space-y-1"><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Comment</FormLabel><FormControl><Textarea placeholder="..." {...field} disabled={isReadOnly} className="min-h-[40px] text-xs py-1" /></FormControl></FormItem>)} />
+                         <FormField control={form.control} name={`findings.${itemIndex}.suggestedImprovements`} render={({ field }) => (<FormItem className="space-y-1"><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Improvements</FormLabel><FormControl><Textarea placeholder="..." {...field} disabled={isReadOnly} className="min-h-[40px] text-xs py-1" /></FormControl></FormItem>)} />
+                    </div>
 
-                        {(findingType === 'Compliant' || findingType === 'Non Compliant') && (
-                            <div className="mt-3 space-y-3">
+                    {(findingType === 'Compliant' || findingType === 'Non Compliant') && (
+                        <div className="pt-2 border-t space-y-3">
+                            <div className="grid grid-cols-1 md:grid-cols-[1fr_200px] gap-4 items-start">
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Evidence</FormLabel>
+                                        {!isReadOnly && (
+                                            <DocumentUploader
+                                            onDocumentUploaded={(docDetails) => handleEvidenceUploaded(item.id, docDetails)}
+                                            trigger={(openDialog) => (
+                                                <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button type="button" variant="outline" size="sm" className="h-6 text-[9px]">
+                                                    <Camera className="mr-1 h-3 w-3" /> Add Evidence
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openDialog('file');}}><FileUp className="mr-2 h-4 w-4" />Upload File</DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openDialog('camera');}}><Camera className="mr-2 h-4 w-4" />Take Photo</DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            )}
+                                            />
+                                        )}
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 pt-1">
+                                        {evidenceFields.map((evidence, evidenceIndex) => (
+                                            <div key={evidence.id} className="flex items-center gap-2 p-1.5 border rounded bg-background/50">
+                                                <div className="relative group flex-shrink-0">
+                                                    <Image src={evidence.url} alt="Evidence" width={32} height={32} className="rounded aspect-square object-cover" />
+                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded" onClick={() => handleViewImage(evidence.url)}>
+                                                        <ZoomIn className="h-3 w-3 text-white" />
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1 min-w-[80px]">
+                                                    <FormField control={form.control} name={`findings.${itemIndex}.evidence.${evidenceIndex}.description`} render={({ field }) => ( <FormItem className="space-y-0"><FormControl><Input placeholder="Desc..." {...field} disabled={isReadOnly} className="h-6 text-[10px] border-none shadow-none p-0 focus-visible:ring-0" /></FormControl></FormItem> )}/>
+                                                </div>
+                                                {!isReadOnly && <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeEvidence(evidenceIndex)}><Trash2 className="h-3 w-3" /></Button>}
+                                            </div>
+                                        ))}
+                                        {evidenceFields.length === 0 && <p className="text-[10px] text-muted-foreground italic">No evidence attached.</p>}
+                                    </div>
+                                </div>
+
                                 <FormField
                                     control={form.control}
                                     name={`findings.${itemIndex}.level`}
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs">Finding Level</FormLabel>
+                                        <FormItem className="space-y-1">
+                                            <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Finding Level</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
                                                 <FormControl>
                                                     <SelectTrigger
@@ -300,17 +344,17 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                                                             backgroundColor: field.value ? selectedLevel?.color : undefined,
                                                             color: field.value ? selectedLevel?.foregroundColor : undefined,
                                                         }}
-                                                        className={cn("h-8 text-xs", !field.value && 'text-muted-foreground')}
+                                                        className={cn("h-7 text-[10px]", !field.value && 'text-muted-foreground')}
                                                     >
                                                         <SelectValue placeholder="Select level" />
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
                                                     {findingType === 'Compliant' && observationLevel && (
-                                                        <SelectItem value={observationLevel.name}>{observationLevel.name}</SelectItem>
+                                                        <SelectItem value={observationLevel.name} className="text-xs">{observationLevel.name}</SelectItem>
                                                     )}
                                                     {findingType === 'Non Compliant' && otherLevels.map(level => (
-                                                        <SelectItem key={level.id} value={level.name}>
+                                                        <SelectItem key={level.id} value={level.name} className="text-xs">
                                                             {level.name}
                                                         </SelectItem>
                                                     ))}
@@ -320,50 +364,9 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                                         </FormItem>
                                     )}
                                 />
-                                
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <FormLabel className="text-xs">Evidence</FormLabel>
-                                        {!isReadOnly && (
-                                            <DocumentUploader
-                                            onDocumentUploaded={(docDetails) => handleEvidenceUploaded(item.id, docDetails)}
-                                            trigger={(openDialog) => (
-                                                <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button type="button" variant="outline" size="sm" className="h-7 text-[10px]">
-                                                    Add Evidence
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent>
-                                                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openDialog('file');}}><FileUp className="mr-2 h-4 w-4" />Upload File</DropdownMenuItem>
-                                                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openDialog('camera');}}><Camera className="mr-2 h-4 w-4" />Take Photo</DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            )}
-                                            />
-                                        )}
-                                    </div>
-                                    <div className="space-y-2 pt-1">
-                                        {evidenceFields.map((evidence, evidenceIndex) => (
-                                            <div key={evidence.id} className="flex items-center gap-3 p-2 border rounded-lg bg-background/50">
-                                                <div className="relative group flex-shrink-0">
-                                                    <Image src={evidence.url} alt="Evidence" width={40} height={40} className="rounded-md aspect-square object-cover" />
-                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded-md" onClick={() => handleViewImage(evidence.url)}>
-                                                        <ZoomIn className="h-4 w-4 text-white" />
-                                                    </div>
-                                                </div>
-                                                <div className="flex-1">
-                                                    <FormField control={form.control} name={`findings.${itemIndex}.evidence.${evidenceIndex}.description`} render={({ field }) => ( <FormItem className="space-y-0"><FormControl><Input placeholder="Description" {...field} disabled={isReadOnly} className="h-7 text-xs border-none shadow-none p-0 focus-visible:ring-0" /></FormControl></FormItem> )}/>
-                                                </div>
-                                                {!isReadOnly && <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => removeEvidence(evidenceIndex)}><Trash2 className="h-3.5 w-3.5" /></Button>}
-                                            </div>
-                                        ))}
-                                    </div>
-                                    {evidenceFields.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-2 italic">No evidence attached.</p>}
-                                </div>
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         )
@@ -372,31 +375,31 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
     return (
         <>
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 md:space-y-6">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2 pb-20">
                     {audit.template.sections.map((section) => (
                         <div key={section.id}>
-                            <h2 className="text-lg md:text-xl font-semibold mt-4 md:mt-8 mb-2 md:mb-4 border-b pb-2">{section.title}</h2>
+                            <h2 className="text-base font-bold mt-4 mb-2 bg-muted/50 px-3 py-1 rounded border-l-4 border-primary">{section.title}</h2>
                             {section.items.map(item => renderChecklistItem(item))}
                         </div>
                     ))}
                     {!isReadOnly && (
-                        <div className="flex justify-end sticky bottom-0 py-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10 gap-2 border-t mt-8">
-                            <Button type="submit" variant="outline" size="sm" className="h-9 px-4">Save Progress</Button>
+                        <div className="flex justify-end sticky bottom-0 py-3 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10 gap-2 border-t mt-4 px-4 shadow-up">
+                            <Button type="submit" variant="outline" size="sm" className="h-8 px-4 text-xs">Save Progress</Button>
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="default" size="sm" className="h-9 px-4">Finalize Audit</Button>
+                                    <Button variant="default" size="sm" className="h-8 px-4 text-xs">Finalize Audit</Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Are you sure you want to finalize?</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            This will calculate the compliance score, create Corrective Action Plans for any non-compliant findings, and lock the audit from further edits. This action cannot be undone.
+                                            This will calculate the compliance score and lock the audit from further edits.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                                         <AlertDialogAction onClick={handleFinalizeAudit}>
-                                            Yes, Finalize Audit
+                                            Finalize Audit
                                         </AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
