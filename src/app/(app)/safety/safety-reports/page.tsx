@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -90,7 +89,7 @@ export default function SafetyReportsPage() {
                         <TableCell>{format(new Date(report.eventDate), 'PPP')}</TableCell>
                         <TableCell>{report.submittedByName}</TableCell>
                         <TableCell className="text-right">
-                           <Button asChild variant="outline" size="sm">
+                           <Button asChild variant="default" size="sm">
                                 <Link href={`/safety/safety-reports/${report.id}`}>
                                     <Eye className="mr-2 h-4 w-4" />
                                     View

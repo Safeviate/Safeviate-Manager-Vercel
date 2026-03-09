@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -181,7 +180,7 @@ export default function TaskTrackerPage() {
                       <Badge variant={getStatusBadgeVariant(task.status)}>{task.status}</Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                        <Button asChild variant="ghost" size="icon" className="h-8 w-8">
+                        <Button asChild variant="default" size="icon" className="h-8 w-8">
                             <Link href={task.link}><Eye className="h-4 w-4" /></Link>
                         </Button>
                     </TableCell>
