@@ -36,8 +36,6 @@
     --radius: 0.5rem;
     --sidebar-background: 205 50% 90%;
     --sidebar-foreground: 215 28% 17%;
-    --sidebar-primary: 205 85% 73%;
-    --sidebar-primary-foreground: 215 28% 17%;
     --sidebar-accent: 205 67% 95%;
     --sidebar-accent-foreground: 215 28% 17%;
     --sidebar-border: 205 30% 85%;
@@ -80,8 +78,6 @@
     --chart-5: 340 75% 55%;
     --sidebar-background: 215 28% 17%;
     --sidebar-foreground: 205 67% 95%;
-    --sidebar-primary: 205 85% 73%;
-    --sidebar-primary-foreground: 215 28% 17%;
     --sidebar-accent: 215 20% 25%;
     --sidebar-accent-foreground: 205 67% 95%;
     --sidebar-border: 215 20% 25%;

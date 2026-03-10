@@ -81,7 +81,7 @@ export function ColorThemeForm() {
         name: tenant.name,
         colors: {
             primary: tenant.theme.primaryColour || theme.primary,
-            'primary-foreground': theme['primary-foreground'], // Keep current
+            'primary-foreground': theme['primary-foreground'],
             background: tenant.theme.backgroundColour || theme.background,
             accent: tenant.theme.accentColour || theme.accent,
         },
@@ -340,7 +340,7 @@ export function ColorThemeForm() {
 
             <div>
               <h3 className="text-lg font-medium mb-4">Sidebar Theme</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {Object.entries(sidebarTheme).map(([name, value]) => (
                   <div key={name} className="space-y-2">
                     <Label htmlFor={name} className="capitalize">{name.replace('sidebar-', '')}</Label>

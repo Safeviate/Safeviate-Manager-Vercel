@@ -32,8 +32,6 @@ type PopoverThemeColors = {
 type SidebarThemeColors = {
   'sidebar-background': string;
   'sidebar-foreground': string;
-  'sidebar-primary': string;
-  'sidebar-primary-foreground': string;
   'sidebar-accent': string;
   'sidebar-accent-foreground': string;
   'sidebar-border': string;
@@ -123,8 +121,6 @@ const defaultPopoverColors: PopoverThemeColors = {
 const defaultSidebarColors: SidebarThemeColors = {
   'sidebar-background': '#dbeafb',
   'sidebar-foreground': '#1e293b',
-  'sidebar-primary': '#bfdbfe',
-  'sidebar-primary-foreground': '#1e293b',
   'sidebar-accent': '#f1f5f9',
   'sidebar-accent-foreground': '#1e293b',
   'sidebar-border': '#94a3b8',
