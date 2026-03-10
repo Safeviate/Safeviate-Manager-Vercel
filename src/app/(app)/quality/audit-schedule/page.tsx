@@ -72,18 +72,16 @@ const MONTHS = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 ];
 
-const MONTH_HEIGHT_PX = 48; // Reduced from 60
-
 const getStatusBadgeClass = (status: AuditScheduleStatus): string => {
     switch (status) {
       case 'Completed':
-        return 'bg-[#e0f2fe] text-[#0369a1] hover:bg-[#bae6fd] border-transparent';
+        return 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-transparent dark:bg-emerald-900/30 dark:text-emerald-400';
       case 'Scheduled':
-        return 'bg-[#e0f2fe] text-[#0369a1] hover:bg-[#bae6fd] border-transparent';
+        return 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-transparent dark:bg-blue-900/30 dark:text-blue-400';
       case 'Pending':
-        return 'bg-[#fef9c3] text-[#a16207] hover:bg-[#fef08a] border-transparent';
+        return 'bg-amber-100 text-amber-700 hover:bg-amber-200 border-transparent dark:bg-amber-900/30 dark:text-amber-400';
       default:
-        return 'bg-muted text-muted-foreground border-transparent';
+        return 'bg-muted text-muted-foreground border-transparent opacity-40';
     }
 }
 
@@ -143,7 +141,7 @@ function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
         <>
             <Popover>
                 <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-swimlane-header-foreground hover:bg-white/10 shrink-0">
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-white/10 shrink-0">
                         <Settings2 className="h-3 w-3" />
                     </Button>
                 </PopoverTrigger>
@@ -284,8 +282,8 @@ export default function AuditSchedulePage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 h-full">
-        <div className="flex justify-between items-center px-1">
+    <div className="flex flex-col gap-4 h-[calc(100vh-100px)]">
+        <div className="flex justify-between items-center px-1 shrink-0">
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Annual Audit Schedule</h1>
                 <p className="text-xs text-muted-foreground">
@@ -300,14 +298,14 @@ export default function AuditSchedulePage() {
             </div>
         </div>
 
-        <Card className="overflow-hidden flex-grow flex flex-col shadow-none border">
-            <CardContent className="p-0 flex-grow flex flex-col overflow-hidden">
-                <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 140px)' }}>
-                    <div className="flex min-w-full w-fit relative">
+        <Card className="flex-1 min-h-0 overflow-hidden flex flex-col shadow-none border">
+            <CardContent className="p-0 flex-1 overflow-hidden">
+                <div className="w-full h-full overflow-auto bg-card custom-scrollbar">
+                    <div className="flex min-w-full w-fit h-full relative">
                         
                         {/* Sticky Month Column */}
-                        <div className="w-20 flex-shrink-0 border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
-                            <div className="sticky top-0 z-50 h-10 bg-swimlane-header border-b border-white/10 flex items-center justify-center font-bold text-xs text-swimlane-header-foreground uppercase tracking-wider">
+                        <div className="w-20 flex-shrink-0 border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)] bg-swimlane-header grid grid-rows-[40px_repeat(12,1fr)]">
+                            <div className="bg-swimlane-header border-b border-white/10 flex items-center justify-center font-bold text-xs text-white uppercase tracking-wider h-10">
                                 MONTH
                             </div>
                             {MONTHS.map((month, idx) => {
@@ -317,9 +315,8 @@ export default function AuditSchedulePage() {
                                         key={month} 
                                         className={cn(
                                             "flex flex-col items-center justify-center border-b text-[10px] font-mono font-bold uppercase tracking-wider",
-                                            isCurrentMonth ? "bg-[#fefce8] text-[#854d0e]" : "bg-swimlane-header text-swimlane-header-foreground"
+                                            isCurrentMonth ? "bg-[#fefce8] text-[#854d0e]" : "text-white/80"
                                         )}
-                                        style={{ height: `${MONTH_HEIGHT_PX}px` }}
                                     >
                                         <span>{month}</span>
                                         {isCurrentMonth && (
@@ -332,68 +329,59 @@ export default function AuditSchedulePage() {
                             })}
                         </div>
 
-                        <div className="flex flex-1 relative">
+                        <div className="flex flex-1 relative h-full">
                             {auditAreas.map((area) => (
-                                <div key={area} className="flex-1 min-w-[160px] border-r relative flex flex-col">
-                                    <div className="sticky top-0 z-30 h-10 bg-swimlane-header text-swimlane-header-foreground border-b border-white/10 flex items-center justify-between gap-1 px-3 text-center shrink-0 whitespace-normal leading-tight">
+                                <div key={area} className="flex-1 min-w-[160px] border-r relative flex flex-col h-full grid grid-rows-[40px_repeat(12,1fr)]">
+                                    <div className="sticky top-0 z-30 bg-swimlane-header text-white border-b border-white/10 flex items-center justify-between gap-1 px-3 text-center shrink-0 h-10">
                                         <span className="text-[9px] font-bold uppercase tracking-wider truncate">{area}</span>
                                         <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
                                     </div>
-                                    <div className="relative">
-                                        {MONTHS.map((month, idx) => {
-                                            const status = getScheduleItem(area, month);
-                                            const popoverId = `${area}-${month}`;
-                                            const isCurrentMonth = idx === currentMonthIdx;
+                                    {MONTHS.map((month, idx) => {
+                                        const status = getScheduleItem(area, month);
+                                        const popoverId = `${area}-${month}`;
+                                        const isCurrentMonth = idx === currentMonthIdx;
 
-                                            return (
-                                                <div 
-                                                    key={month} 
-                                                    className={cn(
-                                                        "border-b relative flex items-center justify-center p-1 group transition-colors",
-                                                        isCurrentMonth ? "bg-[#fefce8]/20" : "hover:bg-muted/10"
-                                                    )}
-                                                    style={{ height: `${MONTH_HEIGHT_PX}px` }}
+                                        return (
+                                            <div 
+                                                key={month} 
+                                                className={cn(
+                                                    "border-b relative flex items-center justify-center p-1 group transition-colors",
+                                                    isCurrentMonth ? "bg-[#fefce8]/20" : "hover:bg-muted/10"
+                                                )}
+                                            >
+                                                <Popover 
+                                                    open={openPopoverId === popoverId} 
+                                                    onOpenChange={(isOpen) => setOpenPopoverId(isOpen ? popoverId : null)}
                                                 >
-                                                    <Popover 
-                                                        open={openPopoverId === popoverId} 
-                                                        onOpenChange={(isOpen) => setOpenPopoverId(isOpen ? popoverId : null)}
-                                                    >
-                                                        <PopoverTrigger asChild>
-                                                            <div className="w-full h-full cursor-pointer flex items-center justify-center">
-                                                                <Badge
-                                                                    className={cn(
-                                                                        "py-0.5 px-1 w-full justify-center text-[7px] uppercase font-bold shadow-sm transition-transform group-hover:scale-[1.02] border leading-tight h-6 text-center",
-                                                                        getStatusBadgeClass(status)
-                                                                    )}
-                                                                >
-                                                                    {status}
-                                                                </Badge>
-                                                            </div>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-48 p-0" align="center">
-                                                            <StatusSelector
-                                                                onSelect={(newStatus) => handleStatusChange(area, month, newStatus)}
-                                                            />
-                                                        </PopoverContent>
-                                                    </Popover>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                                    <PopoverTrigger asChild>
+                                                        <div className="w-full h-full cursor-pointer flex items-center justify-center">
+                                                            <Badge
+                                                                className={cn(
+                                                                    "py-0.5 px-1 w-full justify-center text-[7px] uppercase font-bold shadow-sm transition-transform group-hover:scale-[1.02] border leading-tight h-6 text-center",
+                                                                    getStatusBadgeClass(status)
+                                                                )}
+                                                            >
+                                                                {status === 'Not Scheduled' ? '' : status}
+                                                            </Badge>
+                                                        </div>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-48 p-0" align="center">
+                                                        <StatusSelector
+                                                            onSelect={(newStatus) => handleStatusChange(area, month, newStatus)}
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             ))}
 
                             {extraLanes.map((_, laneIdx) => (
-                                <div key={`extra-${laneIdx}`} className="flex-1 min-w-[160px] border-r bg-muted/5 opacity-50 flex flex-col">
-                                    <div className="sticky top-0 z-30 h-10 bg-swimlane-header text-swimlane-header-foreground border-b border-white/10 flex items-center justify-center font-bold text-[10px] uppercase px-2 text-center shrink-0">
-                                        &nbsp;
-                                    </div>
+                                <div key={`extra-${laneIdx}`} className="flex-1 min-w-[160px] border-r bg-muted/5 opacity-50 h-full grid grid-rows-[40px_repeat(12,1fr)]">
+                                    <div className="sticky top-0 z-30 bg-swimlane-header border-b border-white/10 h-10" />
                                     {MONTHS.map((month) => (
-                                        <div 
-                                            key={month} 
-                                            className="border-b"
-                                            style={{ height: `${MONTH_HEIGHT_PX}px` }}
-                                        />
+                                        <div key={month} className="border-b" />
                                     ))}
                                 </div>
                             ))}
