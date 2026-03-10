@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -22,8 +21,7 @@ import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import type { Booking } from '@/types/booking';
 import { Trash2, FileClock, ClipboardCheck, Info } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
+import { usePermissions } from '@/hooks/use-permissions';
 
 type FormView = 'details' | 'pre-flight' | 'post-flight';
 
@@ -65,8 +63,13 @@ interface BookingFormProps {
 export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, pilots, allBookingsForAircraft, existingBooking, refreshBookings }: BookingFormProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
+    const { hasPermission } = usePermissions();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [view, setView] = useState<FormView>('details');
+
+    const canPreflight = hasPermission('bookings-preflight-manage');
+    const canPostflight = hasPermission('bookings-postflight-manage');
+    const canDelete = hasPermission('bookings-delete');
 
     const instructors = useMemo(() => pilots.filter(p => p.userType === 'Instructor'), [pilots]);
     const students = useMemo(() => pilots.filter(p => p.userType === 'Student'), [pilots]);
@@ -205,6 +208,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                 size="sm" 
                                 onClick={() => setView('pre-flight')}
                                 className="flex-1 gap-2"
+                                disabled={!canPreflight}
                             >
                                 <ClipboardCheck className="h-4 w-4" /> Pre-Flight
                             </Button>
@@ -213,7 +217,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                 size="sm" 
                                 onClick={() => setView('post-flight')}
                                 className="flex-1 gap-2"
-                                disabled={!existingBooking.preFlight}
+                                disabled={!existingBooking.preFlight || !canPostflight}
                             >
                                 <FileClock className="h-4 w-4" /> Post-Flight
                             </Button>
@@ -257,7 +261,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                             )}
 
                             <DialogFooter>
-                                {existingBooking && (
+                                {existingBooking && canDelete && (
                                      <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                             <Button type="button" variant="destructive" className="mr-auto"><Trash2 className="h-4 w-4" /></Button>

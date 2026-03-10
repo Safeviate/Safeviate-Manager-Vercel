@@ -29,6 +29,7 @@ import { Eye, Trash2, FilePlus, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { usePermissions } from '@/hooks/use-permissions';
 
 type EnrichedBooking = Booking & {
   aircraftTailNumber?: string;
@@ -59,7 +60,12 @@ const getStatusBadgeVariant = (status: Booking['status']): "default" | "secondar
 function DeleteBookingButton({ bookingId, bookingNumber }: { bookingId: string, bookingNumber: string }) {
     const firestore = useFirestore();
     const { toast } = useToast();
+    const { hasPermission } = usePermissions();
     const tenantId = 'safeviate';
+
+    const canDelete = hasPermission('bookings-delete');
+
+    if (!canDelete) return null;
 
     const handleDelete = () => {
         if (!firestore) return;
