@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -185,12 +186,12 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
             {isAnyPilot && <TabsTrigger value="logbook" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Logbook</TabsTrigger>}
         </TabsList>
         
-        <TabsContent value="overview" className="mt-0 flex-1 min-h-0">
+        <TabsContent value="overview" className="mt-0 flex-1 min-h-0 overflow-hidden">
             <Card className="flex flex-col h-full overflow-hidden shadow-none border">
                 <CardHeader className="shrink-0 border-b bg-muted/5">
                     <div className="flex justify-between items-center">
                         <div>
-                            <CardTitle className="text-xl">User Profile Profile</CardTitle>
+                            <CardTitle className="text-xl">User Profile Details</CardTitle>
                             <CardDescription>Comprehensive details for {user.firstName} {user.lastName}</CardDescription>
                         </div>
                         <Badge variant="outline" className="px-4 py-1 uppercase font-bold tracking-tighter bg-primary/10 text-primary border-primary/20">

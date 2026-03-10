@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, use, Suspense } from 'react';
@@ -83,7 +84,7 @@ function UserProfileContent({ params }: UserProfilePageProps) {
     }, [departments, user]);
 
     if (isLoadingUser) {
-        return <div className="p-8"><Skeleton className="h-96 w-full" /></div>;
+        return <div className="p-8 h-full"><Skeleton className="h-full w-full" /></div>;
     }
 
     if (!user) {
@@ -91,7 +92,7 @@ function UserProfileContent({ params }: UserProfilePageProps) {
     }
 
     return (
-        <div className='space-y-6'>
+        <div className='flex flex-col h-full overflow-hidden gap-4'>
             {isEditing ? (
                  <EditPersonnelForm
                     tenantId={tenantId}
@@ -103,18 +104,20 @@ function UserProfileContent({ params }: UserProfilePageProps) {
                 />
             ) : (
                 <>
-                    <div className="flex justify-end">
+                    <div className="flex justify-end shrink-0">
                         {canEditUsers && (
                             <Button onClick={() => setIsEditing(true)}>
                                 <Pencil className='mr-2 h-4 w-4' /> Edit Profile
                             </Button>
                         )}
                     </div>
-                    <ViewPersonnelDetails 
-                        user={user} 
-                        role={currentRole} 
-                        department={currentDepartment}
-                    />
+                    <div className="flex-1 min-h-0 overflow-hidden">
+                        <ViewPersonnelDetails 
+                            user={user} 
+                            role={currentRole} 
+                            department={currentDepartment}
+                        />
+                    </div>
                 </>
             )}
         </div>
@@ -123,7 +126,7 @@ function UserProfileContent({ params }: UserProfilePageProps) {
 
 export default function UserProfilePageWrapper(props: UserProfilePageProps) {
   return (
-    <Suspense fallback={<div className="p-8"><Skeleton className="h-96 w-full" /></div>}>
+    <Suspense fallback={<div className="p-8 h-full"><Skeleton className="h-full w-full" /></div>}>
       <UserProfileContent {...props} />
     </Suspense>
   )

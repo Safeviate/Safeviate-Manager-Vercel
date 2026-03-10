@@ -191,16 +191,16 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="flex flex-col h-full overflow-hidden shadow-none border">
+      <CardHeader className="shrink-0 border-b bg-muted/5">
         <CardTitle>Edit Profile</CardTitle>
         <CardDescription>
             Update details for {user.firstName} {user.lastName}.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[calc(100vh-25rem)] pr-6">
-            <div className="flex flex-col gap-6 py-4">
+      <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
+        <ScrollArea className="h-full">
+            <div className="p-6 flex flex-col gap-6">
 
               {/* --- Contact & Role --- */}
               <Collapsible open={isContactOpen} onOpenChange={setIsContactOpen}>
@@ -438,7 +438,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
             </div>
         </ScrollArea>
       </CardContent>
-      <CardFooter className="border-t pt-6 flex justify-end gap-2">
+      <CardFooter className="shrink-0 border-t pt-6 flex justify-end gap-2">
           <Button variant="outline" onClick={onCancel}>Cancel</Button>
           <Button onClick={handleUpdateUser}>Save Changes</Button>
       </CardFooter>
