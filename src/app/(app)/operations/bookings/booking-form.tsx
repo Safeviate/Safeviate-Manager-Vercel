@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -9,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -19,9 +19,10 @@ import { format, addMinutes, isBefore } from 'date-fns';
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import type { Booking } from '@/types/booking';
-import { Trash2, FileClock, ClipboardCheck, Info } from 'lucide-react';
+import { Trash2, FileClock, ClipboardCheck, Info, AlertTriangle } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Separator } from '@/components/ui/separator';
+import { usePermissions } from '@/hooks/use-permissions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 type FormView = 'details' | 'pre-flight' | 'post-flight';
 
@@ -63,11 +64,31 @@ interface BookingFormProps {
 export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, pilots, allBookingsForAircraft, existingBooking, refreshBookings }: BookingFormProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
+    const { hasPermission } = usePermissions();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [view, setView] = useState<FormView>('details');
 
+    const canPreflight = hasPermission('bookings-preflight-manage');
+    const canPostflight = hasPermission('bookings-postflight-manage');
+    const canDelete = hasPermission('bookings-delete');
+
     const instructors = useMemo(() => pilots.filter(p => p.userType === 'Instructor'), [pilots]);
     const students = useMemo(() => pilots.filter(p => p.userType === 'Student'), [pilots]);
+
+    // --- Sequential Logic ---
+    const precedingBooking = useMemo(() => {
+        if (!existingBooking || !allBookingsForAircraft) return null;
+        
+        const sorted = allBookingsForAircraft
+            .filter(b => b.status !== 'Cancelled' && b.status !== 'Cancelled with Reason')
+            .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+        
+        const currentIndex = sorted.findIndex(b => b.id === existingBooking.id);
+        if (currentIndex <= 0) return null;
+        return sorted[currentIndex - 1];
+    }, [existingBooking, allBookingsForAircraft]);
+
+    const isPreFlightBlocked = precedingBooking ? !precedingBooking.postFlight : false;
 
     const defaultValues = useMemo(() => ({
         type: existingBooking?.type || 'Training Flight',
@@ -203,6 +224,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                 size="sm" 
                                 onClick={() => setView('pre-flight')}
                                 className="flex-1 gap-2"
+                                disabled={!canPreflight || isPreFlightBlocked}
                             >
                                 <ClipboardCheck className="h-4 w-4" /> Pre-Flight
                             </Button>
@@ -211,7 +233,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                 size="sm" 
                                 onClick={() => setView('post-flight')}
                                 className="flex-1 gap-2"
-                                disabled={!existingBooking.preFlight}
+                                disabled={!existingBooking.preFlight || !canPostflight || isPreFlightBlocked}
                             >
                                 <FileClock className="h-4 w-4" /> Post-Flight
                             </Button>
@@ -220,57 +242,69 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                 </DialogHeader>
 
                 {view === 'details' && (
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel>Booking Type</FormLabel><FormControl><Input placeholder='e.g., Training, Rental' {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                                 <FormField control={form.control} name="status" render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{['Tentative', 'Confirmed', 'Completed', 'Cancelled', 'Cancelled with Reason'].map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )} />
-                            </div>
+                    <div className="space-y-6">
+                        {isPreFlightBlocked && (
+                            <Alert variant="destructive">
+                                <AlertTriangle className="h-4 w-4" />
+                                <AlertTitle>Sequential Log Constraint</AlertTitle>
+                                <AlertDescription>
+                                    Technical flight logs are restricted because the preceding flight (Booking #{precedingBooking?.bookingNumber}) has not been finalized. 
+                                    Please ensure the previous pilot has completed their post-flight checklist.
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                        <Form {...form}>
+                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel>Booking Type</FormLabel><FormControl><Input placeholder='e.g., Training, Rental' {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                                    <FormField control={form.control} name="status" render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{['Tentative', 'Confirmed', 'Completed', 'Cancelled', 'Cancelled with Reason'].map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )} />
+                                </div>
 
-                            {watchStatus === 'Cancelled with Reason' && (
-                                 <FormField control={form.control} name="cancellationReason" render={({ field }) => ( <FormItem><FormLabel>Reason for Cancellation</FormLabel><FormControl><Input placeholder='e.g., Weather, Maintenance' {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                            )}
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField control={form.control} name="startTime" render={({ field }) => ( <FormItem><FormLabel>Start Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                                <FormField control={form.control} name="endTime" render={({ field }) => ( <FormItem><FormLabel>End Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                            </div>
-
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField control={form.control} name="instructorId" render={({ field }) => ( <FormItem><FormLabel>Instructor</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Instructor..." /></SelectTrigger></FormControl><SelectContent>{instructors.map(p => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                                <FormField control={form.control} name="studentId" render={({ field }) => ( <FormItem><FormLabel>Student</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Student..." /></SelectTrigger></FormControl><SelectContent>{students.map(p => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                            </div>
-
-                            <FormField control={form.control} name="notes" render={({ field }) => ( <FormItem><FormLabel>Admin Notes</FormLabel><FormControl><Textarea placeholder="Add any relevant notes for the booking..." {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                            
-                            <div className="flex items-center space-x-2">
-                                 <FormField control={form.control} name="isOvernight" render={({ field }) => ( <FormItem className="flex flex-row items-center space-x-2"><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} id="isOvernight" /></FormControl><FormLabel htmlFor="isOvernight">Overnight Booking</FormLabel></FormItem> )}/>
-                            </div>
-
-                            {isOvernight && (
-                                 <div className="grid grid-cols-2 gap-4 p-4 border rounded-md">
-                                     <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem><FormLabel>Return Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(new Date(e.target.value))} /></FormControl><FormMessage /></FormItem> )} />
-                                     <FormField control={form.control} name="overnightEndTime" render={({ field }) => ( <FormItem><FormLabel>Return Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                                 </div>
-                            )}
-
-                            <DialogFooter>
-                                {existingBooking && (
-                                     <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button type="button" variant="destructive" className="mr-auto"><Trash2 className="h-4 w-4" /></Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete booking #{existingBooking.bookingNumber}.</AlertDialogDescription></AlertDialogHeader>
-                                            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
+                                {watchStatus === 'Cancelled with Reason' && (
+                                    <FormField control={form.control} name="cancellationReason" render={({ field }) => ( <FormItem><FormLabel>Reason for Cancellation</FormLabel><FormControl><Input placeholder='e.g., Weather, Maintenance' {...field} /></FormControl><FormMessage /></FormItem> )}/>
                                 )}
-                                <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Booking'}</Button>
-                            </DialogFooter>
-                        </form>
-                    </Form>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField control={form.control} name="startTime" render={({ field }) => ( <FormItem><FormLabel>Start Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                    <FormField control={form.control} name="endTime" render={({ field }) => ( <FormItem><FormLabel>End Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField control={form.control} name="instructorId" render={({ field }) => ( <FormItem><FormLabel>Instructor</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Instructor..." /></SelectTrigger></FormControl><SelectContent>{instructors.map(p => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                                    <FormField control={form.control} name="studentId" render={({ field }) => ( <FormItem><FormLabel>Student</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Student..." /></SelectTrigger></FormControl><SelectContent>{students.map(p => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                                </div>
+
+                                <FormField control={form.control} name="notes" render={({ field }) => ( <FormItem><FormLabel>Admin Notes</FormLabel><FormControl><Textarea placeholder="Add any relevant notes for the booking..." {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                                
+                                <div className="flex items-center space-x-2">
+                                    <FormField control={form.control} name="isOvernight" render={({ field }) => ( <FormItem className="flex flex-row items-center space-x-2"><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} id="isOvernight" /></FormControl><FormLabel htmlFor="isOvernight">Overnight Booking</FormLabel></FormItem> )}/>
+                                </div>
+
+                                {isOvernight && (
+                                    <div className="grid grid-cols-2 gap-4 p-4 border rounded-md">
+                                        <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem><FormLabel>Return Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(new Date(e.target.value))} /></FormControl><FormMessage /></FormItem> )} />
+                                        <FormField control={form.control} name="overnightEndTime" render={({ field }) => ( <FormItem><FormLabel>Return Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                    </div>
+                                )}
+
+                                <DialogFooter>
+                                    {existingBooking && canDelete && (
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button type="button" variant="destructive" className="mr-auto"><Trash2 className="h-4 w-4" /></Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete booking #{existingBooking.bookingNumber}.</AlertDialogDescription></AlertDialogHeader>
+                                                <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    )}
+                                    <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                                    <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Booking'}</Button>
+                                </DialogFooter>
+                            </form>
+                        </Form>
+                    </div>
                 )}
 
                 {view === 'pre-flight' && existingBooking && (
