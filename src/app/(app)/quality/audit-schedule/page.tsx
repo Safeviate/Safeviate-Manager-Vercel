@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -282,7 +281,7 @@ export default function AuditSchedulePage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 h-[calc(100vh-100px)]">
+    <div className="flex flex-col gap-4 h-[calc(100vh-7.5rem)] overflow-hidden">
         <div className="flex justify-between items-center px-1 shrink-0">
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Annual Audit Schedule</h1>
