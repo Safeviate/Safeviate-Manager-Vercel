@@ -14,11 +14,11 @@ export default function AppLayout({
   const isMobile = useIsMobile();
   return (
     <AuthGuard>
-        <SidebarProvider>
+        <SidebarProvider className="h-svh overflow-hidden">
         {isMobile ? <AppSidebarMobile /> : <AppSidebar />}
-        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
             <AppHeader />
-            <SidebarInset className="p-4 lg:p-6 flex-1 overflow-hidden md:pb-4">
+            <SidebarInset className="p-4 lg:p-6 flex-1 overflow-hidden md:pb-4 min-h-0">
             <div className="w-full max-w-[1400px] mx-auto h-full flex flex-col overflow-hidden">
                 {children}
             </div>

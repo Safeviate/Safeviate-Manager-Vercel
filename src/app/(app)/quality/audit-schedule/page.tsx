@@ -281,7 +281,7 @@ export default function AuditSchedulePage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 h-[calc(100vh-140px)] w-full overflow-hidden">
+    <div className="flex flex-col gap-4 h-full w-full overflow-hidden">
         <div className="flex justify-between items-center px-1 shrink-0">
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Annual Audit Schedule</h1>
