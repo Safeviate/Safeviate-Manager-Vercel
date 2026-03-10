@@ -277,7 +277,7 @@ export default function AuditSchedulePage() {
   const extraLanes = ['', ''];
 
   if (isLoading) {
-    return <Skeleton className="h-[600px] w-full" />;
+    return <Skeleton className="h-full w-full" />;
   }
 
   return (

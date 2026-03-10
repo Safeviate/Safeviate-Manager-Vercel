@@ -16,10 +16,10 @@ export default function AppLayout({
     <AuthGuard>
         <SidebarProvider>
         {isMobile ? <AppSidebarMobile /> : <AppSidebar />}
-        <div className="flex flex-col flex-1">
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
             <AppHeader />
-            <SidebarInset className="p-4 lg:p-6 flex-1 overflow-auto md:pb-4">
-            <div className="w-full max-w-[1400px] mx-auto">
+            <SidebarInset className="p-4 lg:p-6 flex-1 overflow-y-auto overflow-x-hidden md:pb-4">
+            <div className="w-full max-w-[1400px] mx-auto h-full">
                 {children}
             </div>
             </SidebarInset>
