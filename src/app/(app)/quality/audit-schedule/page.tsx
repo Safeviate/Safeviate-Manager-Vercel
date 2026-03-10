@@ -72,7 +72,7 @@ const MONTHS = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 ];
 
-const MONTH_HEIGHT_PX = 60;
+const MONTH_HEIGHT_PX = 48; // Reduced from 60
 
 const getStatusBadgeClass = (status: AuditScheduleStatus): string => {
     switch (status) {
@@ -302,12 +302,12 @@ export default function AuditSchedulePage() {
 
         <Card className="overflow-hidden flex-grow flex flex-col shadow-none border">
             <CardContent className="p-0 flex-grow flex flex-col overflow-hidden">
-                <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 180px)' }}>
+                <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 140px)' }}>
                     <div className="flex min-w-full w-fit relative">
                         
                         {/* Sticky Month Column */}
                         <div className="w-20 flex-shrink-0 border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
-                            <div className="sticky top-0 z-50 h-12 bg-swimlane-header border-b border-white/10 flex items-center justify-center font-bold text-xs text-swimlane-header-foreground uppercase tracking-wider">
+                            <div className="sticky top-0 z-50 h-10 bg-swimlane-header border-b border-white/10 flex items-center justify-center font-bold text-xs text-swimlane-header-foreground uppercase tracking-wider">
                                 MONTH
                             </div>
                             {MONTHS.map((month, idx) => {
@@ -316,14 +316,14 @@ export default function AuditSchedulePage() {
                                     <div 
                                         key={month} 
                                         className={cn(
-                                            "flex flex-col items-center justify-center border-b text-xs font-mono font-bold uppercase tracking-wider",
+                                            "flex flex-col items-center justify-center border-b text-[10px] font-mono font-bold uppercase tracking-wider",
                                             isCurrentMonth ? "bg-[#fefce8] text-[#854d0e]" : "bg-swimlane-header text-swimlane-header-foreground"
                                         )}
                                         style={{ height: `${MONTH_HEIGHT_PX}px` }}
                                     >
                                         <span>{month}</span>
                                         {isCurrentMonth && (
-                                            <Badge variant="outline" className="mt-0.5 text-[8px] py-0 border-[#854d0e] text-[#854d0e] font-bold h-3">
+                                            <Badge variant="outline" className="mt-0.5 text-[7px] py-0 border-[#854d0e] text-[#854d0e] font-bold h-2.5">
                                                 ACT
                                             </Badge>
                                         )}
@@ -335,7 +335,7 @@ export default function AuditSchedulePage() {
                         <div className="flex flex-1 relative">
                             {auditAreas.map((area) => (
                                 <div key={area} className="flex-1 min-w-[160px] border-r relative flex flex-col">
-                                    <div className="sticky top-0 z-30 h-12 bg-swimlane-header text-swimlane-header-foreground border-b border-white/10 flex items-center justify-between gap-1 px-3 text-center shrink-0 whitespace-normal leading-tight">
+                                    <div className="sticky top-0 z-30 h-10 bg-swimlane-header text-swimlane-header-foreground border-b border-white/10 flex items-center justify-between gap-1 px-3 text-center shrink-0 whitespace-normal leading-tight">
                                         <span className="text-[9px] font-bold uppercase tracking-wider truncate">{area}</span>
                                         <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
                                     </div>
@@ -362,7 +362,7 @@ export default function AuditSchedulePage() {
                                                             <div className="w-full h-full cursor-pointer flex items-center justify-center">
                                                                 <Badge
                                                                     className={cn(
-                                                                        "py-1 px-2 w-full justify-center text-[8px] uppercase font-bold shadow-sm transition-transform group-hover:scale-[1.02] border leading-tight h-8 text-center",
+                                                                        "py-0.5 px-1 w-full justify-center text-[7px] uppercase font-bold shadow-sm transition-transform group-hover:scale-[1.02] border leading-tight h-6 text-center",
                                                                         getStatusBadgeClass(status)
                                                                     )}
                                                                 >
@@ -385,7 +385,7 @@ export default function AuditSchedulePage() {
 
                             {extraLanes.map((_, laneIdx) => (
                                 <div key={`extra-${laneIdx}`} className="flex-1 min-w-[160px] border-r bg-muted/5 opacity-50 flex flex-col">
-                                    <div className="sticky top-0 z-30 h-12 bg-swimlane-header text-swimlane-header-foreground border-b border-white/10 flex items-center justify-center font-bold text-[10px] uppercase px-2 text-center shrink-0">
+                                    <div className="sticky top-0 z-30 h-10 bg-swimlane-header text-swimlane-header-foreground border-b border-white/10 flex items-center justify-center font-bold text-[10px] uppercase px-2 text-center shrink-0">
                                         &nbsp;
                                     </div>
                                     {MONTHS.map((month) => (
