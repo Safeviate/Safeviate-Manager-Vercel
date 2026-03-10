@@ -281,7 +281,7 @@ export default function AuditSchedulePage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 h-[calc(100vh-7.5rem)] overflow-hidden">
+    <div className="flex flex-col gap-4 h-[calc(100vh-140px)] w-full overflow-hidden">
         <div className="flex justify-between items-center px-1 shrink-0">
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Annual Audit Schedule</h1>
@@ -304,7 +304,7 @@ export default function AuditSchedulePage() {
                         
                         {/* Sticky Month Column */}
                         <div className="w-20 flex-shrink-0 border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)] bg-swimlane-header grid grid-rows-[40px_repeat(12,1fr)]">
-                            <div className="bg-swimlane-header border-b border-white/10 flex items-center justify-center font-bold text-xs text-white uppercase tracking-wider h-10">
+                            <div className="bg-swimlane-header border-b border-white/10 flex items-center justify-center font-bold text-[10px] text-white uppercase tracking-wider h-10">
                                 MONTH
                             </div>
                             {MONTHS.map((month, idx) => {
@@ -314,12 +314,12 @@ export default function AuditSchedulePage() {
                                         key={month} 
                                         className={cn(
                                             "flex flex-col items-center justify-center border-b text-[10px] font-mono font-bold uppercase tracking-wider",
-                                            isCurrentMonth ? "bg-[#fefce8] text-[#854d0e]" : "text-white/80"
+                                            isCurrentMonth ? "bg-white/10 text-white" : "text-white/60"
                                         )}
                                     >
                                         <span>{month}</span>
                                         {isCurrentMonth && (
-                                            <Badge variant="outline" className="mt-0.5 text-[7px] py-0 border-[#854d0e] text-[#854d0e] font-bold h-2.5">
+                                            <Badge variant="outline" className="mt-0.5 text-[7px] py-0 border-white/40 text-white font-bold h-2.5">
                                                 ACT
                                             </Badge>
                                         )}
@@ -345,7 +345,7 @@ export default function AuditSchedulePage() {
                                                 key={month} 
                                                 className={cn(
                                                     "border-b relative flex items-center justify-center p-1 group transition-colors",
-                                                    isCurrentMonth ? "bg-[#fefce8]/20" : "hover:bg-muted/10"
+                                                    isCurrentMonth ? "bg-muted/30" : "hover:bg-muted/10"
                                                 )}
                                             >
                                                 <Popover 
