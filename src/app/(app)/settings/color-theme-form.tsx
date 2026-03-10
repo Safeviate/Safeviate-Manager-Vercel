@@ -97,7 +97,13 @@ export function ColorThemeForm() {
             'card-border': cardTheme['card-border']
         },
         popoverColors: { popover: tenant.theme.backgroundColour || popoverTheme.popover, 'popover-foreground': popoverTheme['popover-foreground'] },
-        sidebarColors: sidebarTheme,
+        sidebarColors: {
+            'sidebar-background': tenant.theme.backgroundColour || sidebarTheme['sidebar-background'],
+            'sidebar-foreground': sidebarTheme['sidebar-foreground'],
+            'sidebar-accent': tenant.theme.accentColour || sidebarTheme['sidebar-accent'],
+            'sidebar-accent-foreground': sidebarTheme['sidebar-accent-foreground'],
+            'sidebar-border': sidebarTheme['sidebar-border'],
+        },
         headerColors: { 'header-background': tenant.theme.backgroundColour || headerTheme['header-background'], 'header-foreground': headerTheme['header-foreground'], 'header-border': headerTheme['header-border'] },
         swimlaneColors: swimlaneTheme,
         scale: scale,
@@ -152,6 +158,9 @@ export function ColorThemeForm() {
     });
   }
 
+  // Filter sidebar theme entries to only show valid keys
+  const validSidebarKeys = ['sidebar-background', 'sidebar-foreground', 'sidebar-accent', 'sidebar-accent-foreground', 'sidebar-border'];
+  const filteredSidebarTheme = Object.entries(sidebarTheme).filter(([key]) => validSidebarKeys.includes(key));
 
   return (
     <Card className="flex flex-col h-full overflow-hidden shadow-none border">
@@ -341,7 +350,7 @@ export function ColorThemeForm() {
             <div>
               <h3 className="text-lg font-medium mb-4">Sidebar Theme</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(sidebarTheme).map(([name, value]) => (
+                {filteredSidebarTheme.map(([name, value]) => (
                   <div key={name} className="space-y-2">
                     <Label htmlFor={name} className="capitalize">{name.replace('sidebar-', '')}</Label>
                     <div className='relative'>
