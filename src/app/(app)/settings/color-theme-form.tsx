@@ -91,7 +91,11 @@ export function ColorThemeForm() {
             'button-primary-accent': tenant.theme.accentColour || buttonTheme['button-primary-accent'],
             'button-primary-accent-foreground': buttonTheme['button-primary-accent-foreground'],
         },
-        cardColors: { card: tenant.theme.backgroundColour || cardTheme.card, 'card-foreground': cardTheme['card-foreground'] },
+        cardColors: { 
+            card: tenant.theme.backgroundColour || cardTheme.card, 
+            'card-foreground': cardTheme['card-foreground'],
+            'card-border': cardTheme['card-border']
+        },
         popoverColors: { popover: tenant.theme.backgroundColour || popoverTheme.popover, 'popover-foreground': popoverTheme['popover-foreground'] },
         sidebarColors: sidebarTheme,
         headerColors: { 'header-background': tenant.theme.backgroundColour || headerTheme['header-background'], 'header-foreground': headerTheme['header-foreground'], 'header-border': headerTheme['header-border'] },
@@ -195,7 +199,7 @@ export function ColorThemeForm() {
             <Separator />
           
             <div>
-                <h3 className="text-lg font-medium mb-4">Main Theme</h3>
+                <h3 className="text-lg font-medium mb-2">Main Theme</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4 p-4 border rounded-lg">
                         <h4 className="font-semibold">Primary Colors</h4>
@@ -292,7 +296,7 @@ export function ColorThemeForm() {
 
             <div>
               <h3 className="text-lg font-medium mb-4">Card Theme</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {Object.entries(cardTheme).map(([name, value]) => (
                   <div key={name} className="space-y-2">
                     <Label htmlFor={name} className="capitalize">{name.replace('card-', '')}</Label>

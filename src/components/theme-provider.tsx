@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -22,6 +21,7 @@ type ButtonThemeColors = {
 type CardThemeColors = {
   card: string;
   'card-foreground': string;
+  'card-border': string;
 };
 
 type PopoverThemeColors = {
@@ -114,6 +114,7 @@ const defaultButtonColors: ButtonThemeColors = {
 const defaultCardColors: CardThemeColors = {
   card: '#ebf5fb',
   'card-foreground': '#1e293b',
+  'card-border': '#d1d5db',
 };
 const defaultPopoverColors: PopoverThemeColors = {
     popover: '#ebf5fb',
