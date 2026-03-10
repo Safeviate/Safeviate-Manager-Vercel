@@ -227,14 +227,14 @@ export default function SchedulePage() {
                     <div className="flex min-w-full w-fit relative">
                         
                         {/* Solid Sticky Time Column */}
-                        <div className="w-24 flex-shrink-0 bg-muted border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
-                            <div className="sticky top-0 z-50 h-16 bg-[#003d1c] border-b border-white/10 flex items-center justify-center font-bold text-sm text-white uppercase tracking-wider">
+                        <div className="w-24 flex-shrink-0 bg-swimlane-header border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                            <div className="sticky top-0 z-50 h-16 bg-swimlane-header border-b border-white/10 flex items-center justify-center font-bold text-sm text-swimlane-header-foreground uppercase tracking-wider">
                                 TIME
                             </div>
                             {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
                                 <div 
                                     key={hour} 
-                                    className="flex items-center justify-center border-b text-sm md:text-base font-mono font-bold text-muted-foreground bg-muted"
+                                    className="flex items-center justify-center border-b text-sm md:text-base font-mono font-bold text-swimlane-header-foreground/80 bg-swimlane-header"
                                     style={{ height: `${HOUR_HEIGHT_PX}px` }}
                                 >
                                     {format(new Date(0, 0, 0, hour), 'HH:mm')}
@@ -253,7 +253,7 @@ export default function SchedulePage() {
 
                                 return (
                                     <div key={ac.id} className="flex-1 min-w-[180px] border-r relative flex flex-col">
-                                        <div className="sticky top-0 z-30 h-16 bg-[#003d1c] text-white border-b border-white/10 flex items-center justify-center font-bold text-sm px-2 text-center shrink-0 whitespace-normal leading-tight">
+                                        <div className="sticky top-0 z-30 h-16 bg-swimlane-header text-swimlane-header-foreground border-b border-white/10 flex items-center justify-center font-bold text-sm px-2 text-center shrink-0 whitespace-normal leading-tight">
                                             {ac.tailNumber}
                                         </div>
                                         <div className="relative">
@@ -289,7 +289,7 @@ export default function SchedulePage() {
 
                             {extraLanes.map((_, laneIdx) => (
                                 <div key={`extra-${laneIdx}`} className="flex-1 min-w-[180px] border-r bg-muted/5 opacity-50 flex flex-col">
-                                    <div className="sticky top-0 z-30 h-16 bg-[#003d1c] text-white border-b border-white/10 flex items-center justify-center font-bold text-[10px] uppercase px-2 text-center shrink-0">
+                                    <div className="sticky top-0 z-30 h-16 bg-swimlane-header text-swimlane-header-foreground border-b border-white/10 flex items-center justify-center font-bold text-[10px] uppercase px-2 text-center shrink-0">
                                         &nbsp;
                                     </div>
                                     {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
