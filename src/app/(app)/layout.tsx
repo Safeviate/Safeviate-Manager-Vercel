@@ -18,8 +18,8 @@ export default function AppLayout({
         {isMobile ? <AppSidebarMobile /> : <AppSidebar />}
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
             <AppHeader />
-            <SidebarInset className="p-4 lg:p-6 flex-1 overflow-y-auto overflow-x-hidden md:pb-4">
-            <div className="w-full max-w-[1400px] mx-auto h-full">
+            <SidebarInset className="p-4 lg:p-6 flex-1 overflow-hidden md:pb-4">
+            <div className="w-full max-w-[1400px] mx-auto h-full flex flex-col overflow-hidden">
                 {children}
             </div>
             </SidebarInset>
