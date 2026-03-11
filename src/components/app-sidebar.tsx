@@ -61,7 +61,6 @@ const SidebarItems = () => {
       
       const visibleSubItems = item.subItems ? item.subItems.filter(sub => {
         const hasPerm = !sub.permissionId || hasPermission(sub.permissionId);
-        // Also check sub-item tenant visibility
         const isTenantEnabled = !tenant?.enabledMenus || tenant.enabledMenus.includes(sub.href);
         return hasPerm && isTenantEnabled;
       }) : [];

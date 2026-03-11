@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -170,7 +169,6 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     const userPerms = user.permissions || [];
     const combined = new Set([...rolePerms, ...userPerms]);
     
-    // Permission Escalation Logic
     const expanded = new Set<string>();
     combined.forEach(p => {
       expanded.add(p);
