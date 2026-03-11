@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, type ReactNode, useEffect, useCallback, useRef } from 'react';
@@ -21,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 type UploadMode = 'file' | 'camera';
 
 interface DocumentUploaderProps {
-  trigger: (open: () => void) => ReactNode;
+  trigger: (open: (mode?: UploadMode) => void) => ReactNode;
   defaultFileName?: string;
   onDocumentUploaded: (document: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => void;
 }
@@ -67,7 +66,8 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
     }
   };
 
-  const openDialog = () => {
+  const openDialog = (mode: UploadMode = 'file') => {
+    setUploadMode(mode);
     setIsOpen(true);
   };
   
@@ -206,7 +206,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
                     readOnly={!!defaultFileName}
                 />
             </div>
-            <Tabs defaultValue="file" onValueChange={(value) => setUploadMode(value as UploadMode)} className='w-full'>
+            <Tabs value={uploadMode} onValueChange={(value) => setUploadMode(value as UploadMode)} className='w-full'>
                 <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="file">Upload File</TabsTrigger>
                     <TabsTrigger value="camera">Take Photo</TabsTrigger>

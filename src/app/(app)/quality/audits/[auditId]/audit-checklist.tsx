@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -17,7 +16,6 @@ import type { QualityAudit, QualityAuditChecklistTemplate, QualityFinding, Audit
 import { DocumentUploader } from '../../../users/personnel/[id]/document-uploader';
 import { FileUp, Camera, Trash2, ZoomIn, Edit } from 'lucide-react';
 import Image from 'next/image';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
@@ -298,17 +296,14 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                                             <DocumentUploader
                                             onDocumentUploaded={(docDetails) => handleEvidenceUploaded(item.id, docDetails)}
                                             trigger={(openDialog) => (
-                                                <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button type="button" variant="outline" size="sm" className="h-6 text-[9px]">
-                                                    <Camera className="mr-1 h-3 w-3" /> Add Evidence
+                                                <div className="flex gap-2">
+                                                    <Button type="button" variant="outline" size="sm" className="h-6 text-[9px]" onClick={() => openDialog('file')}>
+                                                        <FileUp className="mr-1 h-3 w-3" /> Add Document
                                                     </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openDialog('file');}}><FileUp className="mr-2 h-4 w-4" />Upload File</DropdownMenuItem>
-                                                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openDialog('camera');}}><Camera className="mr-2 h-4 w-4" />Take Photo</DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                                </DropdownMenu>
+                                                    <Button type="button" variant="outline" size="sm" className="h-6 text-[9px]" onClick={() => openDialog('camera')}>
+                                                        <Camera className="mr-1 h-3 w-3" /> Add Photo
+                                                    </Button>
+                                                </div>
                                             )}
                                             />
                                         )}
