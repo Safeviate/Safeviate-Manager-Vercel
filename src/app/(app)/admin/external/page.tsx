@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -78,12 +77,12 @@ export default function ExternalOrganizationsPage() {
     <div className="flex flex-col gap-6 h-full">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">External Organizations</h1>
+          <h1 className="text-3xl font-bold tracking-tight">External Companies</h1>
           <p className="text-muted-foreground">Manage external companies involved in quality audits and safety reporting.</p>
         </div>
         {canManage && (
           <Button onClick={() => handleOpenForm()}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Organization
+            <PlusCircle className="mr-2 h-4 w-4" /> Add Company
           </Button>
         )}
       </div>
@@ -93,7 +92,7 @@ export default function ExternalOrganizationsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Organization Name</TableHead>
+                <TableHead>Company Name</TableHead>
                 <TableHead>Contact Email</TableHead>
                 <TableHead>Address</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -116,7 +115,7 @@ export default function ExternalOrganizationsPage() {
                 </TableRow>
               ))}
               {(!organizations || organizations.length === 0) && !isLoading && (
-                <TableRow><TableCell colSpan={4} className="text-center h-24 text-muted-foreground">No external organizations found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="text-center h-24 text-muted-foreground">No external companies found.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -126,12 +125,12 @@ export default function ExternalOrganizationsPage() {
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingOrg ? 'Edit' : 'Add'} Organization</DialogTitle>
+            <DialogTitle>{editingOrg ? 'Edit' : 'Add'} Company</DialogTitle>
             <DialogDescription>Define the details for the external company.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Organization Name</Label>
+              <Label htmlFor="name">Company Name</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
             <div className="space-y-2">
@@ -145,7 +144,7 @@ export default function ExternalOrganizationsPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={handleSave}>Save Organization</Button>
+            <Button onClick={handleSave}>Save Company</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

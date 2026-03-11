@@ -1,4 +1,3 @@
-
 import {
   LayoutDashboard,
   Users,
@@ -241,8 +240,8 @@ export const menuConfig: MenuItem[] = [
       },
       {
         href: '/admin/external',
-        label: 'External',
-        description: 'Manage external companies for auditing.',
+        label: 'External Companies',
+        description: 'Manage external companies for auditing and scoping.',
         permissionId: 'admin-external-orgs-manage',
       },
       {
