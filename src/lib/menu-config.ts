@@ -12,6 +12,7 @@ import {
   Plane,
   CheckSquare,
   CalendarDays,
+  Palette,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -251,6 +252,12 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'admin-settings-manage',
       },
       {
+        href: '/admin/appearance',
+        label: 'Appearance',
+        description: 'Customize application branding and theme colors.',
+        permissionId: 'admin-settings-manage',
+      },
+      {
         href: '/admin/mb-config',
         label: 'M&B Configuration',
         description: 'Configure mass and balance profiles.',
@@ -297,12 +304,5 @@ export const settingsMenuItem: MenuItem = {
   label: 'Settings',
   icon: Settings,
   permissionId: 'settings-manage',
-  subItems: [
-    {
-      href: '/settings/appearance',
-      label: 'Appearance',
-      description: '',
-      permissionId: 'settings-manage',
-    },
-  ],
+  subItems: [],
 };
