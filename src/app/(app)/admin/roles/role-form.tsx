@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -25,23 +26,29 @@ import { permissionsConfig } from '@/lib/permissions-config';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { usePermissions } from '@/hooks/use-permissions';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { RoleCategory } from './page';
 
 interface RoleFormProps {
   tenantId: string;
   existingRole?: {
     id: string;
     name: string;
+    category: RoleCategory;
     permissions: string[];
     requiredDocuments?: string[];
   };
   trigger?: React.ReactNode;
 }
 
+const roleCategories: RoleCategory[] = ["Personnel", "Instructor", "Student", "Private Pilot"];
+
 export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const [roleName, setRoleName] = useState(existingRole?.name || '');
+  const [roleCategory, setRoleCategory] = useState<RoleCategory>(existingRole?.category || 'Personnel');
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(existingRole?.permissions || []);
   const [isOpen, setIsOpen] = useState(false);
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
@@ -55,6 +62,7 @@ export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
   useEffect(() => {
     if (isOpen) {
       setRoleName(existingRole?.name || '');
+      setRoleCategory(existingRole?.category || 'Personnel');
       setSelectedPermissions(existingRole?.permissions || []);
       setRequiredDocuments(existingRole?.requiredDocuments || []);
     }
@@ -74,6 +82,7 @@ export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
   const resetForm = () => {
     if (!existingRole) {
       setRoleName('');
+      setRoleCategory('Personnel');
       setSelectedPermissions([]);
       setRequiredDocuments([]);
     }
@@ -106,16 +115,23 @@ export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
       return;
     }
 
+    const roleData = {
+        name: roleName,
+        category: roleCategory,
+        permissions: selectedPermissions,
+        requiredDocuments,
+    };
+
     if (existingRole) {
       const roleRef = doc(firestore, 'tenants', tenantId, 'roles', existingRole.id);
-      updateDocumentNonBlocking(roleRef, { name: roleName, permissions: selectedPermissions, requiredDocuments });
+      updateDocumentNonBlocking(roleRef, roleData);
       toast({
         title: 'Role Updated',
         description: `The "${roleName}" role has been updated.`,
       });
     } else {
       const rolesRef = collection(firestore, 'tenants', tenantId, 'roles');
-      addDocumentNonBlocking(rolesRef, { name: roleName, permissions: selectedPermissions, requiredDocuments });
+      addDocumentNonBlocking(rolesRef, roleData);
       toast({
         title: 'Role Added',
         description: `The "${roleName}" role is being created.`,
@@ -174,14 +190,25 @@ export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
         </DialogHeader>
         <ScrollArea className='max-h-[70vh] pr-6'>
             <div className="flex flex-col gap-6 py-4">
-                <div className="space-y-2">
-                    <Label htmlFor="name">Role Name</Label>
-                    <Input
-                        id="name"
-                        value={roleName}
-                        onChange={(e) => setRoleName(e.target.value)}
-                        placeholder="e.g., Chief Pilot"
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="name">Role Name</Label>
+                        <Input
+                            id="name"
+                            value={roleName}
+                            onChange={(e) => setRoleName(e.target.value)}
+                            placeholder="e.g., Chief Pilot"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="category">Role Category</Label>
+                        <Select onValueChange={(val) => setRoleCategory(val as RoleCategory)} value={roleCategory}>
+                            <SelectTrigger id="category"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {roleCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
                 <Separator />

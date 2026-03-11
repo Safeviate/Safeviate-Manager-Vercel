@@ -257,9 +257,10 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
+        "category": { "type": "string", "enum": ["Personnel", "Instructor", "Student", "Private Pilot"] },
         "permissions": { "type": "array", "items": { "type": "string" } }
       },
-      "required": ["id", "name"]
+      "required": ["id", "name", "category"]
     },
     "Tenant": {
       "$schema": "http://json-schema.org/draft-07/schema#",

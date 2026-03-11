@@ -29,8 +29,6 @@ import type { ExternalOrganization } from '@/types/quality';
 type UserProfile = Personnel | PilotProfile;
 type UserType = UserProfile['userType'];
 
-const userTypes: UserType[] = ["Personnel", "Instructor", "Student", "Private Pilot"];
-
 const determineCollectionName = (userType: UserType | ''): string => {
     switch(userType) {
         case 'Personnel': return 'personnel';
@@ -70,12 +68,21 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
   const [selectedOrganization, setSelectedOrganization] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   
+  const handleRoleChange = (roleId: string) => {
+    const role = roles.find(r => r.id === roleId);
+    if (role) {
+        setSelectedRole(role);
+        // Automatically set userType based on role category
+        setUserType(role.category as UserType);
+    }
+  };
+
   const handleAddUser = async () => {
     if (!userType || !firstName.trim() || !lastName.trim() || !email.trim() || !password.trim() || !selectedRole) {
       toast({
         variant: 'destructive',
         title: 'Missing Fields',
-        description: 'User Type, Name, Email, Password, and Role are all required.',
+        description: 'Name, Email, Password, and Role are all required.',
       });
       return;
     }
@@ -154,21 +161,14 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
         </DialogHeader>
         <div className="flex flex-col gap-6 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div className="space-y-2 col-span-2">
-                    <Label htmlFor="userType">User Type</Label>
-                    <Select onValueChange={(value) => setUserType(value as UserType)} value={userType}>
-                        <SelectTrigger id="userType"><SelectValue placeholder="Select a user type" /></SelectTrigger>
-                        <SelectContent>{userTypes.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent>
-                    </Select>
-                </div>
                 <div className="space-y-2"><Label htmlFor="firstName">First Name</Label><Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
                 <div className="space-y-2"><Label htmlFor="lastName">Last Name</Label><Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
                 <div className="space-y-2 col-span-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
                 <div className="space-y-2 col-span-2"><Label htmlFor="password">Password</Label><Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
                 
                 <div className="space-y-2">
-                    <Label htmlFor="role">Base Role</Label>
-                    <Select onValueChange={(roleId) => setSelectedRole(roles.find(r => r.id === roleId) || null)} value={selectedRole?.id}>
+                    <Label htmlFor="role">Role</Label>
+                    <Select onValueChange={handleRoleChange} value={selectedRole?.id}>
                         <SelectTrigger id="role"><SelectValue placeholder="Select a role" /></SelectTrigger>
                         <SelectContent>{roles.map(role => (<SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>))}</SelectContent>
                     </Select>

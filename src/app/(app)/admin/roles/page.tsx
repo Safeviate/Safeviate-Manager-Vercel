@@ -1,3 +1,4 @@
+
 'use client';
 
 import { collection, query } from 'firebase/firestore';
@@ -16,9 +17,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { usePermissions } from '@/hooks/use-permissions';
 
+export type RoleCategory = 'Personnel' | 'Instructor' | 'Student' | 'Private Pilot';
+
 export type Role = {
   id: string;
   name: string;
+  category: RoleCategory;
   permissions: string[];
   requiredDocuments?: string[];
 };
@@ -54,6 +58,7 @@ export default function RolesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Role Name</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>Permissions</TableHead>
                 <TableHead className='text-right'>Actions</TableHead>
               </TableRow>
@@ -61,11 +66,14 @@ export default function RolesPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center p-8">Loading roles...</TableCell>
+                  <TableCell colSpan={4} className="text-center p-8">Loading roles...</TableCell>
                 </TableRow>
               ) : (roles || []).map((role) => (
                 <TableRow key={role.id}>
                   <TableCell className="font-medium">{role.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{role.category || 'N/A'}</Badge>
+                  </TableCell>
                   <TableCell>
                     <Badge variant="secondary">{role.permissions?.length || 0} assigned</Badge>
                   </TableCell>
@@ -76,7 +84,7 @@ export default function RolesPage() {
               ))}
               {!isLoading && (!roles || roles.length === 0) && (
                  <TableRow>
-                    <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
+                    <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
                         No roles defined yet.
                     </TableCell>
                  </TableRow>
