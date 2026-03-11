@@ -1,8 +1,7 @@
-
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { menuConfig, settingsMenuItem } from '@/lib/menu-config';
+import { menuConfig } from '@/lib/menu-config';
 import type { MenuItem, SubMenuItem } from '@/lib/menu-config';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -33,7 +32,7 @@ const findCurrentItem = (
 
 
 const getTitle = (pathname: string): string => {
-  const allMenuItems = [...menuConfig, settingsMenuItem];
+  const allMenuItems = menuConfig;
   const currentItem = findCurrentItem(allMenuItems, pathname);
 
   if (currentItem && !('subItems' in currentItem && currentItem.subItems)) {

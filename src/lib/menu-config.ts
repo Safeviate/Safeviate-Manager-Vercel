@@ -252,7 +252,7 @@ export const menuConfig: MenuItem[] = [
       {
         href: '/admin/appearance',
         label: 'Appearance',
-        description: customization application branding and theme colors.',
+        description: 'Customization application branding and theme colors.',
         permissionId: 'admin-settings-manage',
       },
       {
