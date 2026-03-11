@@ -183,10 +183,28 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
         return;
     }
 
-    const currentOverrides = user.permissions || [];
-    const newOverrides = checked 
-        ? [...currentOverrides, permissionId]
-        : currentOverrides.filter(p => p !== permissionId);
+    const currentPermissions = user.permissions || [];
+    const isInherited = role?.permissions?.includes(permissionId);
+    
+    let newPermissions: string[];
+    
+    if (isInherited) {
+        if (checked) {
+            // Permission was explicitly denied via override, now removing that deny
+            newPermissions = currentPermissions.filter(p => p !== `!${permissionId}`);
+        } else {
+            // Permission is inherited, but we want to explicitly deny it
+            newPermissions = [...currentPermissions.filter(p => p !== permissionId), `!${permissionId}`];
+        }
+    } else {
+        if (checked) {
+            // Permission is NOT inherited, we are granting it
+            newPermissions = [...currentPermissions.filter(p => p !== `!${permissionId}`), permissionId];
+        } else {
+            // Permission was explicitly granted via override, now removing that grant
+            newPermissions = currentPermissions.filter(p => p !== permissionId);
+        }
+    }
 
     const collectionName = isPilotProfile(user) ? 
         user.userType === 'Student' ? 'students' : 
@@ -194,11 +212,11 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
         : 'personnel';
     
     const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
-    updateDocumentNonBlocking(userRef, { permissions: newOverrides });
+    updateDocumentNonBlocking(userRef, { permissions: newPermissions });
 
     toast({
-        title: checked ? "Permission Added" : "Permission Removed",
-        description: `Custom access override for "${user.firstName} ${user.lastName}" has been updated.`,
+        title: "Access Level Updated",
+        description: `Permissions for "${user.firstName} ${user.lastName}" have been modified.`,
     });
   };
 
@@ -328,7 +346,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                                                                 <PopoverContent className="w-auto p-0">
                                                                     <CustomCalendar
                                                                         selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined}
-                                                                        onDateSelect={(date) => handleExpirationDateChange(doc.name, date)}
+                                                                        onDateSelect={(date) => date && handleExpirationDateChange(doc.name, date)}
                                                                     />
                                                                 </PopoverContent>
                                                             </Popover>
@@ -412,27 +430,32 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                                         <div className="flex flex-col gap-2.5">
                                             {resource.actions.map(action => {
                                                 const permissionId = `${resource.id}-${action}`;
+                                                
                                                 const isInherited = role?.permissions?.includes(permissionId);
                                                 const isOverridden = user.permissions?.includes(permissionId);
-                                                const isEffective = isInherited || isOverridden;
+                                                const isDenied = user.permissions?.includes(`!${permissionId}`);
+                                                
+                                                const isEffective = (isInherited && !isDenied) || isOverridden;
 
                                                 return (
                                                     <div key={action} className="flex items-center space-x-3">
                                                         <Checkbox 
                                                             id={`perm-${permissionId}`}
-                                                            checked={isEffective}
-                                                            disabled={isInherited || !canEdit}
+                                                            checked={!!isEffective}
+                                                            disabled={!canEdit}
                                                             onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)}
                                                         />
                                                         <label 
                                                             htmlFor={`perm-${permissionId}`} 
                                                             className={cn(
                                                                 "text-sm font-medium leading-none cursor-pointer capitalize",
-                                                                isInherited && "text-muted-foreground cursor-not-allowed italic"
+                                                                isInherited && !isDenied && !isOverridden && "text-muted-foreground italic"
                                                             )}
                                                         >
                                                             {action}
-                                                            {isInherited && <span className="ml-2 text-[10px] opacity-70">(Role)</span>}
+                                                            {isInherited && !isDenied && !isOverridden && <span className="ml-2 text-[10px] opacity-70">(Role)</span>}
+                                                            {isOverridden && <span className="ml-2 text-[10px] text-primary opacity-70">(Override)</span>}
+                                                            {isDenied && <span className="ml-2 text-[10px] text-destructive opacity-70">(Denied)</span>}
                                                         </label>
                                                     </div>
                                                 );

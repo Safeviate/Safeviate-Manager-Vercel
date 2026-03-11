@@ -47,9 +47,9 @@ export const usePermissions = () => {
       rawPermissions.push(...role.permissions);
     }
 
-    // 2. Get individual overrides (for any user profile that has them)
+    // 2. Get individual grant overrides
     if (userProfile.permissions && Array.isArray(userProfile.permissions)) {
-      rawPermissions.push(...userProfile.permissions);
+      rawPermissions.push(...userProfile.permissions.filter(p => !p.startsWith('!')));
     }
     
     const expanded = new Set<string>();
@@ -63,8 +63,16 @@ export const usePermissions = () => {
       const action = parts.pop();
       const resourceId = parts.join('-');
       
-      // If you can manage/create/edit/delete, you can definitely view
-      if (['create', 'edit', 'delete', 'manage'].includes(action || '')) {
+      // If you can manage, you can do everything else for that resource
+      if (action === 'manage') {
+        expanded.add(`${resourceId}-view`);
+        expanded.add(`${resourceId}-create`);
+        expanded.add(`${resourceId}-edit`);
+        expanded.add(`${resourceId}-delete`);
+      }
+      
+      // If you can create/edit/delete, you can definitely view
+      if (['create', 'edit', 'delete'].includes(action || '')) {
         expanded.add(`${resourceId}-view`);
       }
 
@@ -76,6 +84,16 @@ export const usePermissions = () => {
         expanded.add(`${segmentPath}-view`);
       });
     });
+
+    // 3. Process individual deny overrides (prefixed with '!')
+    if (userProfile.permissions && Array.isArray(userProfile.permissions)) {
+        userProfile.permissions.forEach(p => {
+            if (p.startsWith('!')) {
+                const permissionId = p.substring(1);
+                expanded.delete(permissionId);
+            }
+        });
+    }
     
     return expanded;
   }, [userProfile, role]);
