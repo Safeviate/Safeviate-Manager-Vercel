@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { doc } from 'firebase/firestore';
+import { useState, useMemo, useEffect } from 'react';
+import { doc, collection } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -12,18 +12,31 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, setDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { menuConfig } from '@/lib/menu-config';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RefreshCw, PlusCircle, Save } from 'lucide-react';
+import type { Tenant } from '@/types/quality';
 
 export function DatabaseForm() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  
+  // Existing tenants for loading
+  const tenantsQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'tenants') : null),
+    [firestore]
+  );
+  const { data: tenants, isLoading: isLoadingTenants } = useCollection<Tenant>(tenantsQuery);
+
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [tenantName, setTenantName] = useState('');
   const [logo, setLogo] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [primaryColour, setPrimaryColour] = useState('#7cc4f7');
   const [backgroundColour, setBackgroundColour] = useState('#ebf5fb');
   const [accentColour, setAccentColour] = useState('#63b2a7');
@@ -31,9 +44,43 @@ export function DatabaseForm() {
   // Menu visibility state
   const [enabledHrefs, setEnabledHrefs] = useState<Set<string>>(new Set());
 
+  const handleLoadTenant = (tenantId: string) => {
+    const t = tenants?.find(tenant => tenant.id === tenantId);
+    if (!t) return;
+
+    setSelectedTenantId(t.id);
+    setTenantName(t.name);
+    setLogoPreview(t.logoUrl || null);
+    setPrimaryColour(t.theme?.primaryColour || '#7cc4f7');
+    setBackgroundColour(t.theme?.backgroundColour || '#ebf5fb');
+    setAccentColour(t.theme?.accentColour || '#63b2a7');
+    setEnabledHrefs(new Set(t.enabledMenus || []));
+
+    toast({
+        title: 'Tenant Loaded',
+        description: `Configuration for "${t.name}" is ready for editing.`,
+    });
+  };
+
+  const handleClearForm = () => {
+    setSelectedTenantId(null);
+    setTenantName('');
+    setLogo(null);
+    setLogoPreview(null);
+    setPrimaryColour('#7cc4f7');
+    setBackgroundColour('#ebf5fb');
+    setAccentColour('#63b2a7');
+    setEnabledHrefs(new Set());
+    
+    const fileInput = document.getElementById('logo-upload') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
+  };
+
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setLogo(e.target.files[0]);
+      const file = e.target.files[0];
+      setLogo(file);
+      setLogoPreview(URL.createObjectURL(file));
     }
   };
 
@@ -60,7 +107,7 @@ export function DatabaseForm() {
     setEnabledHrefs(newEnabled);
   };
 
-  const handleAddTenant = () => {
+  const handleSaveTenant = () => {
     if (!tenantName) {
       toast({
         variant: 'destructive',
@@ -70,20 +117,22 @@ export function DatabaseForm() {
       return;
     }
     
-    const tenantId = tenantName.toLowerCase().replace(/\s+/g, '-');
+    const tenantId = selectedTenantId || tenantName.toLowerCase().replace(/\s+/g, '-');
 
     try {
       const tenantRef = doc(firestore, 'tenants', tenantId);
       const settingsRef = doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry');
 
-      const logoUrl = logo ? URL.createObjectURL(logo) : '';
+      // Note: In a real app, you would upload the file to Firebase Storage first.
+      // Here we use the preview URL or existing URL.
+      const finalLogoUrl = logoPreview || '';
 
       setDocumentNonBlocking(
         tenantRef,
         {
           id: tenantId,
           name: tenantName,
-          logoUrl: logoUrl,
+          logoUrl: finalLogoUrl,
           theme: {
             primaryColour,
             backgroundColour,
@@ -98,29 +147,32 @@ export function DatabaseForm() {
         settingsRef,
         {
           id: 'document-expiry',
-          warningPeriods: [30, 60, 90],
+          warningPeriods: [
+            { period: 30, color: '#facc15' },
+            { period: 60, color: '#f97316' },
+            { period: 90, color: '#3b82f6' }
+          ],
+          defaultColor: '#22c55e',
+          expiredColor: '#ef4444'
         },
         { merge: true }
       );
 
       toast({
-        title: 'Tenant Created',
-        description: `The "${tenantName}" tenant has been created with custom menu visibility.`,
+        title: selectedTenantId ? 'Tenant Updated' : 'Tenant Created',
+        description: `"${tenantName}" has been ${selectedTenantId ? 'updated' : 'created'} with current menu visibility.`,
       });
 
-      // Reset form
-      setTenantName('');
-      setLogo(null);
-      setEnabledHrefs(new Set());
-      const fileInput = document.getElementById('logo-upload') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
+      if (!selectedTenantId) {
+          handleClearForm();
+      }
 
     } catch (e: any) {
       console.error(e);
       toast({
         variant: 'destructive',
         title: 'Uh oh! Something went wrong.',
-        description: e.message || 'There was a problem creating the tenant.',
+        description: e.message || 'There was a problem saving the tenant.',
       });
     }
   };
@@ -128,33 +180,61 @@ export function DatabaseForm() {
   return (
     <Card className="flex flex-col h-full overflow-hidden shadow-none border">
       <CardHeader className="shrink-0 border-b bg-muted/5">
-        <CardTitle>Tenant Management</CardTitle>
-        <CardDescription>
-          Add new tenants with custom branding and granular control over which menus are visible.
-        </CardDescription>
+        <div className="flex items-center justify-between">
+            <div className="space-y-1">
+                <CardTitle>Tenant Manager</CardTitle>
+                <CardDescription>
+                Create new tenants or modify existing ones with custom branding and granular menu visibility.
+                </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleClearForm}>
+                <PlusCircle className="mr-2 h-4 w-4" /> New Tenant
+            </Button>
+        </div>
       </CardHeader>
+      
+      <div className="p-6 pb-0 border-b bg-muted/10">
+          <div className="flex flex-col md:flex-row gap-4 items-end mb-6">
+              <div className="space-y-2 flex-1">
+                  <Label>Load Existing Tenant</Label>
+                  <Select onValueChange={handleLoadTenant} value={selectedTenantId || undefined}>
+                      <SelectTrigger>
+                          <SelectValue placeholder={isLoadingTenants ? "Loading..." : "Choose a tenant to edit..."} />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {(tenants || []).map(t => (
+                              <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+              </div>
+              <div className="space-y-2 flex-[2]">
+                  <Label htmlFor="tenant-name">Tenant Name</Label>
+                  <Input
+                    id="tenant-name"
+                    placeholder="e.g., Safeviate Inc."
+                    value={tenantName}
+                    onChange={(e) => setTenantName(e.target.value)}
+                  />
+              </div>
+          </div>
+      </div>
+
       <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
         <ScrollArea className="h-full">
           <div className="p-6 space-y-8">
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="tenant-name">Tenant Name</Label>
-                <Input
-                  id="tenant-name"
-                  placeholder="e.g., Safeviate Inc."
-                  value={tenantName}
-                  onChange={(e) => setTenantName(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <Separator />
-            
-            <div className="space-y-4">
                 <h3 className="text-lg font-medium">Branding</h3>
                 <div className="space-y-2">
                     <Label htmlFor="logo-upload">Company Logo</Label>
-                    <Input id="logo-upload" type="file" onChange={handleLogoChange} accept="image/*" />
+                    <div className="flex items-center gap-4">
+                        <Input id="logo-upload" type="file" onChange={handleLogoChange} accept="image/*" className="max-w-xs" />
+                        {logoPreview && (
+                            <div className="h-10 w-32 border rounded overflow-hidden bg-white flex items-center justify-center p-1">
+                                <img src={logoPreview} alt="Logo preview" className="max-h-full max-w-full object-contain" />
+                            </div>
+                        )}
+                    </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
@@ -176,7 +256,7 @@ export function DatabaseForm() {
 
             <div className="space-y-4">
                 <h3 className="text-lg font-medium">Menu Configuration</h3>
-                <p className="text-sm text-muted-foreground">Select the menus and submenus that should be visible for this tenant.</p>
+                <p className="text-sm text-muted-foreground">Toggle the visibility of main menus and submenus for this tenant. Submenus will only be visible if their parent menu is enabled.</p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {menuConfig.map((menu) => {
@@ -225,7 +305,9 @@ export function DatabaseForm() {
       </CardContent>
       <Separator />
       <div className="shrink-0 p-6 flex justify-end">
-          <Button onClick={handleAddTenant} size="lg">Create Tenant</Button>
+          <Button onClick={handleSaveTenant} size="lg">
+              {selectedTenantId ? <><Save className="mr-2 h-4 w-4" /> Update Tenant</> : <><PlusCircle className="mr-2 h-4 w-4" /> Create Tenant</>}
+          </Button>
       </div>
     </Card>
   );
