@@ -1,4 +1,3 @@
-
 'use client';
 import {
   Sidebar,
@@ -24,7 +23,7 @@ import { Plane, LogOut, ChevronDown } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   menuConfig,
   settingsMenuItem,
