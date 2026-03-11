@@ -240,8 +240,8 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'admin-departments-manage',
       },
       {
-        href: '/admin/external-organizations',
-        label: 'External Orgs',
+        href: '/admin/external',
+        label: 'External',
         description: 'Manage external companies for auditing.',
         permissionId: 'admin-external-orgs-manage',
       },
