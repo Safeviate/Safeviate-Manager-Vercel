@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -26,6 +27,8 @@ import { TrainingRecords } from './training-records';
 import { PilotLogbook } from './pilot-logbook';
 import { permissionsConfig } from '@/lib/permissions-config';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
+import { usePermissions } from '@/hooks/use-permissions';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -62,7 +65,10 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { hasPermission } = usePermissions();
   const tenantId = 'safeviate';
+
+  const canEdit = hasPermission('users-edit');
 
   const expirySettingsRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
@@ -164,28 +170,27 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     });
   }, [role, user.documents]);
 
-  const effectivePermissions = useMemo(() => {
-    const rolePerms = role?.permissions || [];
-    const userPerms = user.permissions || [];
-    const combined = new Set([...rolePerms, ...userPerms]);
+  const handlePermissionToggle = (permissionId: string, checked: boolean) => {
+    if (!firestore || !tenantId || !canEdit) return;
+
+    const currentOverrides = user.permissions || [];
+    const newOverrides = checked 
+        ? [...currentOverrides, permissionId]
+        : currentOverrides.filter(p => p !== permissionId);
+
+    const collectionName = isPilotProfile(user) ? 
+        user.userType === 'Student' ? 'students' : 
+        user.userType === 'Instructor' ? 'instructors' : 'private-pilots' 
+        : 'personnel';
     
-    const expanded = new Set<string>();
-    combined.forEach(p => {
-      expanded.add(p);
-      const parts = p.split('-');
-      const action = parts.pop();
-      const resourceId = parts.join('-');
-      if (['create', 'edit', 'delete', 'manage'].includes(action || '')) {
-        expanded.add(`${resourceId}-view`);
-      }
-      const segments = resourceId.split('-');
-      segments.forEach((_, idx) => {
-        const segmentPath = segments.slice(0, idx + 1).join('-');
-        expanded.add(`${segmentPath}-view`);
-      });
+    const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
+    updateDocumentNonBlocking(userRef, { permissions: newOverrides });
+
+    toast({
+        title: checked ? "Permission Added" : "Permission Removed",
+        description: `Custom access for this user has been updated.`,
     });
-    return expanded;
-  }, [role, user.permissions]);
+  };
 
   const isStudent = isPilotProfile(user) && user.userType === 'Student';
   const isInstructor = isPilotProfile(user) && user.userType === 'Instructor';
@@ -381,39 +386,51 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
         <TabsContent value="permissions" className="mt-0 flex-1 min-h-0 overflow-hidden">
             <Card className="flex flex-col h-full overflow-hidden shadow-none border">
                 <CardHeader className="shrink-0 border-b bg-muted/5">
-                    <CardTitle>Assigned Permissions</CardTitle>
-                    <CardDescription>Capabilities and access levels granted to this user.</CardDescription>
+                    <CardTitle>Individual Permission Control</CardTitle>
+                    <CardDescription>
+                        Manage custom overrides for this user. Permissions inherited from their role are locked.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="flex-1 p-0 overflow-hidden">
                     <ScrollArea className="h-full">
                         <div className="p-6">
-                            <SectionHeader title="Effective Access Levels" icon={ShieldCheck} />
-                            {effectivePermissions.size > 0 ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                                {permissionsConfig.map((resource) => {
-                                    const assignedActions = resource.actions.filter(action => 
-                                        effectivePermissions.has(`${resource.id}-${action}`)
-                                    );
+                            <SectionHeader title="Effective Access Control" icon={ShieldCheck} />
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {permissionsConfig.map((resource) => (
+                                    <div key={resource.id} className='space-y-3 bg-background/50 p-4 rounded-xl border border-card-border/50'>
+                                        <h4 className='text-xs font-bold uppercase text-primary border-b border-primary/20 pb-2 mb-3'>{resource.name}</h4>
+                                        <div className="flex flex-col gap-2.5">
+                                            {resource.actions.map(action => {
+                                                const permissionId = `${resource.id}-${action}`;
+                                                const isInherited = role?.permissions?.includes(permissionId);
+                                                const isOverridden = user.permissions?.includes(permissionId);
+                                                const isEffective = isInherited || isOverridden;
 
-                                    if (assignedActions.length === 0) return null;
-
-                                    return (
-                                        <div key={resource.id} className='space-y-2 break-inside-avoid bg-background/50 p-3 rounded-lg border'>
-                                            <h4 className='text-xs font-bold uppercase text-primary border-b pb-1 mb-2'>{resource.name}</h4>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {assignedActions.map(action => (
-                                                    <Badge key={action} variant="outline" className="capitalize text-[9px] py-0 px-1.5 font-medium">
-                                                        {action}
-                                                    </Badge>
-                                                ))}
-                                            </div>
+                                                return (
+                                                    <div key={action} className="flex items-center space-x-3">
+                                                        <Checkbox 
+                                                            id={`perm-${permissionId}`}
+                                                            checked={isEffective}
+                                                            disabled={isInherited || !canEdit}
+                                                            onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)}
+                                                        />
+                                                        <label 
+                                                            htmlFor={`perm-${permissionId}`} 
+                                                            className={cn(
+                                                                "text-sm font-medium leading-none cursor-pointer capitalize",
+                                                                isInherited && "text-muted-foreground cursor-not-allowed italic"
+                                                            )}
+                                                        >
+                                                            {action}
+                                                            {isInherited && <span className="ml-2 text-[10px] opacity-70">(Role)</span>}
+                                                        </label>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
-                                    );
-                                })}
-                                </div>
-                            ) : (
-                                <p className="text-sm text-muted-foreground text-center py-4 italic">No permissions assigned.</p>
-                            )}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </ScrollArea>
                 </CardContent>
