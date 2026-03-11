@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,18 +6,22 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Globe, Save } from 'lucide-react';
 import { useTheme, type SavedTheme } from '@/components/theme-provider';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Tenant } from '@/types/quality';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { usePermissions } from '@/hooks/use-permissions';
 
 export function ColorThemeForm() {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { tenantId } = useUserProfile();
+  const { hasPermission } = usePermissions();
   const { 
     theme, 
     setThemeValue, 
@@ -45,6 +48,8 @@ export function ColorThemeForm() {
 
   const [themeName, setThemeName] = useState('');
   const [isMounted, setIsMounted] = useState(false);
+
+  const canManageOrganization = hasPermission('admin-settings-manage');
 
   // Fetch tenants to use as themes
   const tenantsQuery = useMemoFirebase(
@@ -109,6 +114,34 @@ export function ColorThemeForm() {
     toast({ title: "Tenant Theme Applied", description: `The theme for "${tenant.name}" has been applied.` });
   };
 
+  const handleSaveToOrganization = () => {
+    if (!firestore || !tenantId) return;
+    
+    const tenantRef = doc(firestore, 'tenants', tenantId);
+    
+    const dataToSave = {
+      theme: {
+        primaryColour: theme.primary,
+        backgroundColour: theme.background,
+        accentColour: theme.accent,
+        main: theme,
+        button: buttonTheme,
+        card: cardTheme,
+        popover: popoverTheme,
+        sidebar: sidebarTheme,
+        header: headerTheme,
+        swimlane: swimlaneTheme,
+      }
+    };
+
+    updateDocumentNonBlocking(tenantRef, dataToSave);
+    
+    toast({
+      title: "Organization Default Updated",
+      description: "These branding settings have been saved as the default for all members of your organization."
+    });
+  };
+
   const handleSaveTheme = () => {
     if (!themeName.trim()) {
         toast({ variant: "destructive", title: "Error", description: "Please enter a name for the theme." });
@@ -145,7 +178,7 @@ export function ColorThemeForm() {
       </CardHeader>
       <CardContent className="flex-1 min-h-0 p-0">
         <ScrollArea className="h-full">
-          <div className="p-6 space-y-8">
+          <div className="p-6 space-y-8 pb-24">
             <div>
                 <h3 className="text-lg font-medium mb-2">UI Scaling</h3>
                 <p className='text-sm text-muted-foreground mb-4'>Adjust the overall size of the application interface.</p>
@@ -156,6 +189,24 @@ export function ColorThemeForm() {
             </div>
             
             <Separator />
+
+            {canManageOrganization && (
+                <>
+                    <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
+                        <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
+                            <Globe className="h-5 w-5 text-primary" />
+                            Organization Branding
+                        </h3>
+                        <p className='text-sm text-muted-foreground mb-4'>
+                            As an administrator, you can set the default branding for all members of your organization.
+                        </p>
+                        <Button onClick={handleSaveToOrganization} className="w-full sm:w-auto">
+                            <Save className="mr-2 h-4 w-4" /> Save as Organization Default
+                        </Button>
+                    </div>
+                    <Separator />
+                </>
+            )}
 
             <div>
                 <h3 className="text-lg font-medium mb-2">Set Theme from Tenant</h3>
@@ -303,10 +354,10 @@ export function ColorThemeForm() {
             <Separator />
             
             <div>
-                <h3 className="text-lg font-medium mb-4">Save Current Theme</h3>
+                <h3 className="text-lg font-medium mb-4">Save Current Theme (Personal)</h3>
                 <div className="flex items-center gap-2">
                     <Input placeholder="Enter theme name" value={themeName} onChange={(e) => setThemeName(e.target.value)} />
-                    <Button onClick={handleSaveTheme}>Save Theme</Button>
+                    <Button onClick={handleSaveTheme}>Save Personal Theme</Button>
                 </div>
             </div>
 
@@ -314,7 +365,7 @@ export function ColorThemeForm() {
 
             {isMounted && savedThemes.length > 0 && (
                 <div>
-                    <h3 className="text-lg font-medium mb-4">Saved Themes (Local)</h3>
+                    <h3 className="text-lg font-medium mb-4">Saved Personal Themes</h3>
                     <div className="space-y-2">
                         {savedThemes.map((theme) => (
                             <div key={theme.name} className="flex items-center justify-between p-2 border rounded-lg">

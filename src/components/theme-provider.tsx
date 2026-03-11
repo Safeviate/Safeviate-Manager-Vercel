@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { hexToHsl } from '@/lib/utils';
+import { useTenantConfig } from '@/hooks/use-tenant-config';
 
 // --- Types ---
 type ThemeColors = {
@@ -192,6 +193,23 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [swimlaneTheme, setSwimlaneTheme] = useState<SwimlaneThemeColors>(() => getInitialState(SWIMLANE_THEME_KEY, defaultSwimlaneColors));
   const [scale, setScaleState] = useState<number>(() => getInitialState(SCALE_KEY, defaultScale));
   const [savedThemes, setSavedThemes] = useState<SavedTheme[]>(() => getInitialState(SAVED_THEMES_KEY, []));
+
+  const { tenant } = useTenantConfig();
+
+  // --- Auto-sync with Tenant configuration ---
+  useEffect(() => {
+    if (tenant?.theme) {
+      const t = tenant.theme;
+      // Overwrite local state with tenant defaults if available
+      if (t.main) setTheme(prev => ({ ...prev, ...t.main }));
+      if (t.button) setButtonTheme(prev => ({ ...prev, ...t.button }));
+      if (t.card) setCardTheme(prev => ({ ...prev, ...t.card }));
+      if (t.popover) setPopoverTheme(prev => ({ ...prev, ...t.popover }));
+      if (t.sidebar) setSidebarTheme(prev => ({ ...prev, ...t.sidebar }));
+      if (t.header) setHeaderTheme(prev => ({ ...prev, ...t.header }));
+      if (t.swimlane) setSwimlaneTheme(prev => ({ ...prev, ...t.swimlane }));
+    }
+  }, [tenant?.theme]);
 
   useEffect(() => {
     applyColorsToDOM(theme);
