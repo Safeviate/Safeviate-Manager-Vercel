@@ -20,6 +20,7 @@ export type PilotProfile = {
   lastName: string;
   email: string;
   role: string; // role ID
+  permissions?: string[]; // Consolidating permissions across all user types
   contactNumber?: string;
   dateOfBirth?: string;
   logbookTemplateId?: string;

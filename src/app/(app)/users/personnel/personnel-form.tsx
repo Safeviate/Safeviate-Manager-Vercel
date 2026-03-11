@@ -97,11 +97,11 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
             lastName,
             email,
             role: selectedRole.id,
+            permissions: selectedRole.permissions || [], // Default permissions from role
         };
 
         if (userType === 'Personnel') {
             (profileData as Personnel).department = selectedDepartment?.id;
-            (profileData as Personnel).permissions = selectedRole.permissions || [];
         }
         
         const userLinkRef = doc(firestore, 'users', authUser.uid);

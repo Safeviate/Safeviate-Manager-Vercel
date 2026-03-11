@@ -7,9 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, ChevronsUpDown, Trash2, Upload, View, PlusCircle, FileText, Eye, Contact, MapPin, PhoneCall, ShieldCheck, User } from 'lucide-react';
+import { CalendarIcon, Trash2, Upload, View, PlusCircle, Contact, MapPin, PhoneCall, ShieldCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -71,7 +70,6 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     [firestore, tenantId]
   );
   const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
-
 
   const getStatusColor = (expirationDate: string | null | undefined): string | null => {
     if (!expirationDate || !expirySettings) return null;
@@ -167,10 +165,33 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     });
   }, [role, user.documents]);
 
+  const effectivePermissions = useMemo(() => {
+    const rolePerms = role?.permissions || [];
+    const userPerms = user.permissions || [];
+    const combined = new Set([...rolePerms, ...userPerms]);
+    
+    // Permission Escalation Logic
+    const expanded = new Set<string>();
+    combined.forEach(p => {
+      expanded.add(p);
+      const parts = p.split('-');
+      const action = parts.pop();
+      const resourceId = parts.join('-');
+      if (['create', 'edit', 'delete', 'manage'].includes(action || '')) {
+        expanded.add(`${resourceId}-view`);
+      }
+      const segments = resourceId.split('-');
+      segments.forEach((_, idx) => {
+        const segmentPath = segments.slice(0, idx + 1).join('-');
+        expanded.add(`${segmentPath}-view`);
+      });
+    });
+    return expanded;
+  }, [role, user.permissions]);
+
   const isStudent = isPilotProfile(user) && user.userType === 'Student';
   const isInstructor = isPilotProfile(user) && user.userType === 'Instructor';
   const isAnyPilot = isPilotProfile(user);
-  const isPersonnel = user.userType === 'Personnel';
 
   return (
     <Tabs defaultValue="overview" className="w-full flex flex-col h-full overflow-hidden">
@@ -178,7 +199,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
             <TabsTrigger value="overview" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Overview</TabsTrigger>
             <TabsTrigger value="documents" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Documents</TabsTrigger>
             <TabsTrigger value="address" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Address</TabsTrigger>
-            {isPersonnel && <TabsTrigger value="permissions" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Permissions</TabsTrigger>}
+            <TabsTrigger value="permissions" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Permissions</TabsTrigger>
             {isStudent && <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Training Records</TabsTrigger>}
             {isAnyPilot && <TabsTrigger value="logbook" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Logbook</TabsTrigger>}
         </TabsList>
@@ -200,7 +221,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                                     <DetailItem label="Email" value={user.email} />
                                     <DetailItem label="Contact Number" value={user.contactNumber} />
                                     <DetailItem label="Role" value={role?.name} />
-                                    {isPersonnel && <DetailItem label="Department" value={department?.name} />}
+                                    {!isPilotProfile(user) && <DetailItem label="Department" value={department?.name} />}
                                     {isPilotProfile(user) && (
                                         <>
                                             <DetailItem label="License Number" value={user.pilotLicense?.licenseNumber} />
@@ -359,49 +380,47 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
             </Card>
         </TabsContent>
 
-        {isPersonnel && (
-            <TabsContent value="permissions" className="mt-0 flex-1 min-h-0 overflow-hidden">
-                <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-                    <CardHeader className="shrink-0 border-b bg-muted/5">
-                        <CardTitle>Assigned Permissions</CardTitle>
-                        <CardDescription>Capabilities and access levels granted to this user.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-1 p-0 overflow-hidden">
-                        <ScrollArea className="h-full">
-                            <div className="p-6">
-                                <SectionHeader title="Access Levels" icon={ShieldCheck} />
-                                {(user as Personnel).permissions && (user as Personnel).permissions.length > 0 ? (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                                    {permissionsConfig.map((resource) => {
-                                        const assignedActions = resource.actions.filter(action => 
-                                            (user as Personnel).permissions?.includes(`${resource.id}-${action}`)
-                                        );
+        <TabsContent value="permissions" className="mt-0 flex-1 min-h-0 overflow-hidden">
+            <Card className="flex flex-col h-full overflow-hidden shadow-none border">
+                <CardHeader className="shrink-0 border-b bg-muted/5">
+                    <CardTitle>Assigned Permissions</CardTitle>
+                    <CardDescription>Capabilities and access levels granted to this user.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 p-0 overflow-hidden">
+                    <ScrollArea className="h-full">
+                        <div className="p-6">
+                            <SectionHeader title="Effective Access Levels" icon={ShieldCheck} />
+                            {effectivePermissions.size > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                                {permissionsConfig.map((resource) => {
+                                    const assignedActions = resource.actions.filter(action => 
+                                        effectivePermissions.has(`${resource.id}-${action}`)
+                                    );
 
-                                        if (assignedActions.length === 0) return null;
+                                    if (assignedActions.length === 0) return null;
 
-                                        return (
-                                            <div key={resource.id} className='space-y-2 break-inside-avoid bg-background/50 p-3 rounded-lg border'>
-                                                <h4 className='text-xs font-bold uppercase text-primary border-b pb-1 mb-2'>{resource.name}</h4>
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {assignedActions.map(action => (
-                                                        <Badge key={action} variant="outline" className="capitalize text-[9px] py-0 px-1.5 font-medium">
-                                                            {action}
-                                                        </Badge>
-                                                    ))}
-                                                </div>
+                                    return (
+                                        <div key={resource.id} className='space-y-2 break-inside-avoid bg-background/50 p-3 rounded-lg border'>
+                                            <h4 className='text-xs font-bold uppercase text-primary border-b pb-1 mb-2'>{resource.name}</h4>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {assignedActions.map(action => (
+                                                    <Badge key={action} variant="outline" className="capitalize text-[9px] py-0 px-1.5 font-medium">
+                                                        {action}
+                                                    </Badge>
+                                                ))}
                                             </div>
-                                        );
-                                    })}
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground text-center py-4 italic">No custom permissions assigned. Inherits all permissions from the role.</p>
-                                )}
-                            </div>
-                        </ScrollArea>
-                    </CardContent>
-                </Card>
-            </TabsContent>
-        )}
+                                        </div>
+                                    );
+                                })}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground text-center py-4 italic">No permissions assigned.</p>
+                            )}
+                        </div>
+                    </ScrollArea>
+                </CardContent>
+            </Card>
+        </TabsContent>
         
         {isStudent && (
             <TabsContent value="training" className="mt-0 flex-1 overflow-hidden">

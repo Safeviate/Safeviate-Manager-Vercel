@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -46,8 +47,8 @@ export const usePermissions = () => {
       rawPermissions.push(...role.permissions);
     }
 
-    // 2. Get individual overrides (for Personnel)
-    if (userProfile.userType === 'Personnel' && 'permissions' in userProfile && Array.isArray(userProfile.permissions)) {
+    // 2. Get individual overrides (for any user profile that has them)
+    if (userProfile.permissions && Array.isArray(userProfile.permissions)) {
       rawPermissions.push(...userProfile.permissions);
     }
     

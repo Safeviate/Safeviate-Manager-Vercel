@@ -2,12 +2,12 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { doc, collection, query } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ChevronsUpDown, PlusCircle, Trash2 } from 'lucide-react';
-import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { ChevronsUpDown } from 'lucide-react';
+import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -19,12 +19,8 @@ import type { Department } from '../../../admin/department/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { Textarea } from '@/components/ui/textarea';
-import { TagInput } from '@/components/ui/tag-input';
 import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
+import { TagInput } from '@/components/ui/tag-input';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -95,7 +91,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
         return;
     }
 
-    if (!isPilotProfile(formData) && !(formData as Personnel).role) {
+    if (!formData.role) {
       toast({
           variant: 'destructive',
           title: 'Missing Fields',
@@ -103,7 +99,6 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
       });
       return;
     }
-
 
     if (!firestore || !tenantId) {
         toast({
@@ -123,20 +118,18 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
         delete (dataToUpdate as Partial<PilotProfile>).pilotLicense;
         delete (dataToUpdate as Partial<PilotProfile>).logbookTemplateId;
     } else {
-        // Ensure personnel-specific fields are not on pilots, except role
+        // Ensure personnel-specific fields are not on pilots
         delete (dataToUpdate as Partial<Personnel>).department;
-        delete (dataToUpdate as Partial<Personnel>).permissions;
     }
 
     updateDocumentNonBlocking(userRef, dataToUpdate);
 
-
     toast({
         title: 'User Updated',
-        description: `User ${formData.firstName} ${formData.lastName} is being updated.`,
+        description: `User ${formData.firstName} ${formData.lastName} has been updated.`,
     });
     
-    onCancel(); // Go back to view mode after saving
+    onCancel();
   };
   
   // --- Permissions Logic ---
@@ -146,16 +139,12 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
     ),
   []);
 
-  const personnelData = formData as Personnel;
-
   const areAllSelected = useMemo(() => {
-    if (isPilotProfile(formData)) return false;
-    return allPermissionIds.length > 0 && personnelData.permissions?.length === allPermissionIds.length
-  }, [formData, allPermissionIds, personnelData.permissions]);
+    return allPermissionIds.length > 0 && (formData.permissions || []).length === allPermissionIds.length
+  }, [formData.permissions, allPermissionIds]);
 
   const handlePermissionToggle = (permissionId: string, checked: boolean) => {
-    if (isPilotProfile(formData)) return;
-    const currentPermissions = personnelData.permissions || [];
+    const currentPermissions = formData.permissions || [];
     const newPermissions = checked 
       ? [...currentPermissions, permissionId] 
       : currentPermissions.filter((id) => id !== permissionId);
@@ -163,7 +152,6 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
   };
 
   const handleSelectAllToggle = () => {
-    if (isPilotProfile(formData)) return;
     if (areAllSelected) {
       handleInputChange('permissions', []);
     } else {
@@ -174,19 +162,11 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
   const handleRoleChange = (roleId: string) => {
     const role = roles.find(r => r.id === roleId);
     if (role) {
-      if (isPilotProfile(formData)) {
-        const pilotFormData = formData as PilotProfile;
-        setFormData(prev => ({
-          ...prev,
-          role: role.id,
-        }));
-      } else {
-        setFormData(prev => ({
-          ...prev,
-          role: role.id,
-          permissions: role.permissions || []
-        }));
-      }
+      setFormData(prev => ({
+        ...prev,
+        role: role.id,
+        permissions: role.permissions || [] // Default permissions to the new role's set
+      }));
     }
   }
 
@@ -195,7 +175,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
       <CardHeader className="shrink-0 border-b bg-muted/5">
         <CardTitle>Edit Profile</CardTitle>
         <CardDescription>
-            Update details for {user.firstName} {user.lastName}.
+            Update details and granular permissions for {user.firstName} {user.lastName}.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
@@ -244,7 +224,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                   </div>
                   <div className="space-y-2">
                       <Label htmlFor="role">Role</Label>
-                      <Select onValueChange={handleRoleChange} value={(formData as Personnel)?.role}>
+                      <Select onValueChange={handleRoleChange} value={formData.role}>
                           <SelectTrigger id="role">
                               <SelectValue placeholder="Select a role" />
                           </SelectTrigger>
@@ -258,7 +238,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                   {!isPilotProfile(formData) && (
                       <div className="space-y-2">
                           <Label htmlFor="department">Department</Label>
-                          <Select onValueChange={(value) => handleInputChange('department', value)} value={personnelData.department}>
+                          <Select onValueChange={(value) => handleInputChange('department', value)} value={(formData as Personnel).department}>
                               <SelectTrigger id="department">
                                   <SelectValue placeholder="Select a department" />
                               </SelectTrigger>
@@ -376,65 +356,62 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                 </CollapsibleContent>
               </Collapsible>
               
-              {!isPilotProfile(formData) && (
-                <>
-                <Separator />
-                {/* --- Permissions --- */}
-                    <Collapsible open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-semibold">Permissions</h3>
-                                <CollapsibleTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="w-9 p-0">
-                                        <ChevronsUpDown className="h-4 w-4" />
-                                        <span className="sr-only">Toggle</span>
-                                    </Button>
-                                </CollapsibleTrigger>
-                            </div>
-                            <Button variant="link" onClick={handleSelectAllToggle} className="p-0 h-auto">
-                                {areAllSelected ? 'Deselect All' : 'Select All'}
-                            </Button>
-                        </div>
-                        <p className='text-sm text-muted-foreground'>Customize permissions that override the assigned role.</p>
-                        <CollapsibleContent>
-                            <ScrollArea className="h-72 w-full rounded-md border mt-2">
-                                <div className="p-4">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                                        {permissionsConfig.map((resource) => (
-                                            <div key={resource.id} className='space-y-2 break-inside-avoid'>
-                                                <h4 className='font-medium border-b pb-1'>{resource.name}</h4>
-                                                <div className="flex flex-col gap-2 pt-1">
-                                                    {resource.actions.map((action) => {
-                                                        const permissionId = `${resource.id}-${action}`;
-                                                        return (
-                                                            <div
-                                                                key={permissionId}
-                                                                className="flex items-center space-x-2"
-                                                            >
-                                                                <Checkbox
-                                                                    id={`edit-${permissionId}`}
-                                                                    checked={(personnelData.permissions || []).includes(permissionId)}
-                                                                    onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)}
-                                                                />
-                                                                <label
-                                                                    htmlFor={`edit-${permissionId}`}
-                                                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer capitalize"
-                                                                >
-                                                                    {action}
-                                                                </label>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </ScrollArea>
-                        </CollapsibleContent>
-                    </Collapsible>
-                </>
-              )}
+              <Separator />
+
+              {/* --- Permissions --- */}
+              <Collapsible open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
+                  <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-semibold">Permissions</h3>
+                          <CollapsibleTrigger asChild>
+                              <Button variant="ghost" size="sm" className="w-9 p-0">
+                                  <ChevronsUpDown className="h-4 w-4" />
+                                  <span className="sr-only">Toggle</span>
+                              </Button>
+                          </CollapsibleTrigger>
+                      </div>
+                      <Button variant="link" onClick={handleSelectAllToggle} className="p-0 h-auto">
+                          {areAllSelected ? 'Deselect All' : 'Select All'}
+                      </Button>
+                  </div>
+                  <p className='text-sm text-muted-foreground'>Individual permission overrides for this user.</p>
+                  <CollapsibleContent>
+                      <ScrollArea className="h-72 w-full rounded-md border mt-2">
+                          <div className="p-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                                  {permissionsConfig.map((resource) => (
+                                      <div key={resource.id} className='space-y-2 break-inside-avoid'>
+                                          <h4 className='font-medium border-b pb-1'>{resource.name}</h4>
+                                          <div className="flex flex-col gap-2 pt-1">
+                                              {resource.actions.map((action) => {
+                                                  const permissionId = `${resource.id}-${action}`;
+                                                  return (
+                                                      <div
+                                                          key={permissionId}
+                                                          className="flex items-center space-x-2"
+                                                      >
+                                                          <Checkbox
+                                                              id={`edit-${permissionId}`}
+                                                              checked={(formData.permissions || []).includes(permissionId)}
+                                                              onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)}
+                                                          />
+                                                          <label
+                                                              htmlFor={`edit-${permissionId}`}
+                                                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer capitalize"
+                                                          >
+                                                              {action}
+                                                          </label>
+                                                      </div>
+                                                  );
+                                              })}
+                                          </div>
+                                      </div>
+                                  ))}
+                              </div>
+                          </div>
+                      </ScrollArea>
+                  </CollapsibleContent>
+              </Collapsible>
             </div>
         </ScrollArea>
       </CardContent>
