@@ -38,6 +38,7 @@ import {
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { ManageCapDialog } from '../../cap-tracker/manage-cap-dialog';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type EnrichedAudit = QualityAudit & { template: QualityAuditChecklistTemplate };
 type EnrichedCorrectiveActionPlan = CorrectiveActionPlan & {
@@ -166,7 +167,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                 status: 'Finalized' as const,
                 complianceScore: complianceScore,
             };
-            batch.update(auditUpdateData);
+            batch.update(auditRef, auditUpdateData);
 
             // 2. Create CAPs for non-compliant findings
             const capsCollectionRef = collection(firestore, `tenants/${tenantId}/corrective-action-plans`);
@@ -230,7 +231,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
         const openActionsCount = cap?.actions?.filter(a => a.status === 'Open' || a.status === 'In Progress').length || 0;
 
         return (
-            <Card key={item.id} className="mb-2">
+            <Card key={item.id} className="mb-4">
                 <CardHeader className="py-2 px-4">
                     <CardTitle className="text-sm">{item.text}</CardTitle>
                 </CardHeader>
@@ -373,41 +374,52 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
     }
 
     return (
-        <>
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2 pb-20">
-                    {audit.template.sections.map((section) => (
-                        <div key={section.id}>
-                            <h2 className="text-base font-bold mt-4 mb-2 bg-muted/50 px-3 py-1 rounded border-l-4 border-primary">{section.title}</h2>
-                            {section.items.map(item => renderChecklistItem(item))}
-                        </div>
-                    ))}
-                    {!isReadOnly && (
-                        <div className="flex justify-end sticky bottom-0 py-3 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10 gap-2 border-t mt-4 px-4 shadow-up">
-                            <Button type="submit" variant="outline" size="sm" className="h-8 px-4 text-xs">Save Progress</Button>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="default" size="sm" className="h-8 px-4 text-xs">Finalize Audit</Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you sure you want to finalize?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This will calculate the compliance score and lock the audit from further edits.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleFinalizeAudit}>
-                                            Finalize Audit
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-                    )}
-                </form>
-            </Form>
+        <Card className="flex flex-col h-[calc(100vh-300px)] overflow-hidden shadow-none border">
+            <CardHeader className="border-b bg-muted/5 shrink-0">
+                <CardTitle>Audit Checklist Items</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
+                        <ScrollArea className="flex-1 p-6">
+                            <div className="space-y-8">
+                                {audit.template.sections.map((section) => (
+                                    <div key={section.id}>
+                                        <h2 className="text-base font-bold mb-4 bg-muted/50 px-3 py-1 rounded border-l-4 border-primary sticky top-0 z-10">{section.title}</h2>
+                                        <div className="space-y-2">
+                                            {section.items.map(item => renderChecklistItem(item))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                        {!isReadOnly && (
+                            <div className="shrink-0 flex justify-end py-3 bg-muted/10 px-6 gap-2 border-t">
+                                <Button type="submit" variant="outline" size="sm" className="h-8 px-4 text-xs">Save Progress</Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="default" size="sm" className="h-8 px-4 text-xs">Finalize Audit</Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure you want to finalize?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will calculate the compliance score and lock the audit from further edits.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleFinalizeAudit}>
+                                                Finalize Audit
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                        )}
+                    </form>
+                </Form>
+            </CardContent>
             <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
                 <DialogContent className="max-w-4xl max-h-[90vh]">
                     <DialogHeader><DialogTitle>Evidence Viewer</DialogTitle></DialogHeader>
@@ -423,6 +435,6 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                     personnel={personnel}
                 />
             )}
-        </>
+        </Card>
     );
 }
