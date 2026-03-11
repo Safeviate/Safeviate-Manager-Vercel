@@ -212,6 +212,11 @@ export const menuConfig: MenuItem[] = [
         label: 'Private Pilots',
         permissionId: 'users-view',
       },
+      {
+        href: '/users/external',
+        label: 'External',
+        permissionId: 'users-view',
+      },
     ],
   },
   {
