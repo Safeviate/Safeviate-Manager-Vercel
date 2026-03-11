@@ -2,7 +2,7 @@ import { DatabaseForm } from './database-form';
 
 export default function DatabasePage() {
   return (
-    <div className="container mx-auto py-10">
+    <div className="h-full overflow-hidden">
       <DatabaseForm />
     </div>
   );
