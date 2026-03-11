@@ -16,6 +16,7 @@ import type { ManagementOfChange } from '@/types/moc';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { PilotProfile, Personnel } from '../users/personnel/page';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type UserProfileData = PilotProfile | Personnel;
 type UnifiedTask = {
@@ -145,66 +146,78 @@ export default function MyDashboardPage() {
 
     return (
         <div className="w-full space-y-6">
-             <Card>
-                <CardHeader>
-                    <CardTitle>My Outstanding Tasks</CardTitle>
-                    <CardDescription>A list of all tasks assigned to you across all modules.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {isLoading ? (
-                         <Skeleton className="h-48 w-full" />
-                    ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[40%]">Task</TableHead>
-                                    <TableHead>Source</TableHead>
-                                    <TableHead>Due Date</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {myTasks.length > 0 ? (
-                                    myTasks.map(task => (
-                                        <TableRow key={task.id}>
-                                            <TableCell className="font-medium">{task.description}</TableCell>
-                                            <TableCell><Badge variant="outline">{task.sourceIdentifier}</Badge></TableCell>
-                                            <TableCell>{format(new Date(task.dueDate), 'PPP')}</TableCell>
-                                            <TableCell><Badge variant="secondary">{task.status}</Badge></TableCell>
-                                            <TableCell className="text-right">
-                                                <Button asChild variant="outline" size="sm">
-                                                    <Link href={task.link}>View</Link>
-                                                </Button>
-                                            </TableCell>
+            <Tabs defaultValue="tasks" className="w-full flex flex-col h-full overflow-hidden">
+                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 shrink-0 border-b-0 overflow-x-auto no-scrollbar justify-start">
+                    <TabsTrigger value="tasks" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Tasks</TabsTrigger>
+                    <TabsTrigger value="logbook" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">My Logbook</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="tasks" className="mt-0">
+                    <Card className="shadow-none border">
+                        <CardHeader>
+                            <CardTitle>My Outstanding Tasks</CardTitle>
+                            <CardDescription>A list of all tasks assigned to you across all modules.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {isLoading ? (
+                                <Skeleton className="h-48 w-full" />
+                            ) : (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[40%]">Task</TableHead>
+                                            <TableHead>Source</TableHead>
+                                            <TableHead>Due Date</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center">
-                                            You have no outstanding tasks.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    )}
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>My Logbook</CardTitle>
-                    <CardDescription>A dynamic view of your recent flight activities.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-center py-10">
-                        <p className="text-muted-foreground mb-4">The logbook feature is currently disabled.</p>
-                        <Button asChild>
-                            <Link href="/development/table-builder">Go to Table Builder</Link>
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {myTasks.length > 0 ? (
+                                            myTasks.map(task => (
+                                                <TableRow key={task.id}>
+                                                    <TableCell className="font-medium">{task.description}</TableCell>
+                                                    <TableCell><Badge variant="outline">{task.sourceIdentifier}</Badge></TableCell>
+                                                    <TableCell>{format(new Date(task.dueDate), 'PPP')}</TableCell>
+                                                    <TableCell><Badge variant="secondary">{task.status}</Badge></TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button asChild variant="outline" size="sm">
+                                                            <Link href={task.link}>View</Link>
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="h-24 text-center">
+                                                    You have no outstanding tasks.
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="logbook" className="mt-0">
+                    <Card className="shadow-none border">
+                        <CardHeader>
+                            <CardTitle>My Logbook</CardTitle>
+                            <CardDescription>A dynamic view of your recent flight activities.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-center py-10">
+                                <p className="text-muted-foreground mb-4">The logbook feature is currently disabled.</p>
+                                <Button asChild>
+                                    <Link href="/development/table-builder">Go to Table Builder</Link>
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
