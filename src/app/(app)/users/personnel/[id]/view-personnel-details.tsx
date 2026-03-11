@@ -68,6 +68,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   const { hasPermission } = usePermissions();
   const tenantId = 'safeviate';
 
+  // permission required to modify individual user overrides
   const canEdit = hasPermission('users-edit');
 
   const expirySettingsRef = useMemoFirebase(
@@ -171,7 +172,16 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   }, [role, user.documents]);
 
   const handlePermissionToggle = (permissionId: string, checked: boolean) => {
-    if (!firestore || !tenantId || !canEdit) return;
+    if (!firestore || !tenantId || !canEdit) {
+        if (!canEdit) {
+            toast({
+                variant: 'destructive',
+                title: 'Access Denied',
+                description: 'You do not have permission to modify user access levels.',
+            });
+        }
+        return;
+    }
 
     const currentOverrides = user.permissions || [];
     const newOverrides = checked 
@@ -188,7 +198,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
 
     toast({
         title: checked ? "Permission Added" : "Permission Removed",
-        description: `Custom access for this user has been updated.`,
+        description: `Custom access override for "${user.firstName} ${user.lastName}" has been updated.`,
     });
   };
 
