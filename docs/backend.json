@@ -22,6 +22,18 @@
       },
       "required": ["id", "email", "profilePath"]
     },
+    "ExternalOrganization": {
+      "title": "External Organization",
+      "type": "object",
+      "description": "An external company that participates in quality audits.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "contactEmail": { "type": "string", "format": "email" },
+        "address": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
     "PublishedTable": {
       "title": "Published Table",
       "type": "object",
@@ -295,6 +307,13 @@
         "definition": {
           "schema": { "$ref": "#/backend/entities/Tenant" },
           "description": "Stores tenant configuration and authorized features."
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/external-organizations/{orgId}",
+        "definition": {
+          "schema": { "$ref": "#/backend/entities/ExternalOrganization" },
+          "description": "Stores external companies involved in quality audits."
         }
       },
       {

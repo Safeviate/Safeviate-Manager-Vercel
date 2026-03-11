@@ -68,6 +68,7 @@ export interface QualityAudit {
     auditNumber: string;
     auditorId: string;
     auditeeId: string;
+    organizationId?: string | null; // NULL for internal (Safeviate) audits
     scope: string;
     auditDate: string; // ISO String
     status: AuditStatus;
@@ -82,6 +83,13 @@ export interface CorrectiveActionPlan {
     rootCauseAnalysis: string;
     status: CorrectiveActionStatus;
     actions?: CorrectiveAction[];
+}
+
+export interface ExternalOrganization {
+    id: string;
+    name: string;
+    contactEmail?: string;
+    address?: string;
 }
 
 export interface Tenant {

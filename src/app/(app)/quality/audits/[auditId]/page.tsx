@@ -1,6 +1,8 @@
+
 'use client';
 
-import { use, useMemo } from 'react';
+import { use, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -14,6 +16,8 @@ import { AuditChecklist } from './audit-checklist';
 import type { FindingLevelsSettings } from '@/app/(app)/admin/features/page';
 import { Progress } from '@/components/ui/progress';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface AuditDetailPageProps {
   params: { auditId: string };
@@ -30,39 +34,53 @@ const DetailItem = ({ label, value, children }: { label: string; value?: string 
 export default function AuditDetailPage({ params }: AuditDetailPageProps) {
   const resolvedParams = use(params);
   const firestore = useFirestore();
-  const tenantId = 'safeviate';
+  const router = useRouter();
+  const { tenantId, userProfile } = useUserProfile();
+  const { hasPermission } = usePermissions();
   const auditId = resolvedParams.auditId;
 
   const auditRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'tenants', tenantId, 'quality-audits', auditId) : null),
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'quality-audits', auditId) : null),
     [firestore, tenantId, auditId]
   );
   const { data: audit, isLoading: isLoadingAudit, error: auditError } = useDoc<QualityAudit>(auditRef);
 
   const templateRef = useMemoFirebase(
-      () => (firestore && audit?.templateId ? doc(firestore, 'tenants', tenantId, 'quality-audit-templates', audit.templateId) : null),
+      () => (firestore && tenantId && audit?.templateId ? doc(firestore, 'tenants', tenantId, 'quality-audit-templates', audit.templateId) : null),
       [firestore, tenantId, audit?.templateId]
   );
   const { data: template, isLoading: isLoadingTemplate } = useDoc<QualityAuditChecklistTemplate>(templateRef);
   
   const findingLevelsRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'finding-levels') : null),
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'finding-levels') : null),
     [firestore, tenantId]
   );
   const { data: findingLevelsSettings, isLoading: isLoadingFindingLevels } = useDoc<FindingLevelsSettings>(findingLevelsRef);
 
   const capsQuery = useMemoFirebase(
-      () => (firestore && auditId ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`), where('auditId', '==', auditId)) : null),
+      () => (firestore && tenantId && auditId ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`), where('auditId', '==', auditId)) : null),
       [firestore, tenantId, auditId]
   );
   const { data: caps, isLoading: isLoadingCaps } = useCollection<CorrectiveActionPlan>(capsQuery);
 
   const personnelQuery = useMemoFirebase(
-      () => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
+      () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
       [firestore, tenantId]
   );
   const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
 
+  // SECURITY: Scoped visibility guard
+  useEffect(() => {
+    if (!isLoadingAudit && audit && userProfile) {
+        const canViewAll = hasPermission('quality-audits-view-all');
+        const userOrgId = userProfile.organizationId;
+        
+        // If external user, they MUST belong to the organization tied to this audit
+        if (!canViewAll && userOrgId && audit.organizationId !== userOrgId) {
+            router.push('/quality/audits');
+        }
+    }
+  }, [isLoadingAudit, audit, userProfile, hasPermission, router]);
 
   const isLoading = isLoadingAudit || isLoadingTemplate || isLoadingFindingLevels || isLoadingCaps || isLoadingPersonnel;
 
@@ -146,7 +164,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
       </Card>
       <AuditChecklist 
           audit={enrichedAudit} 
-          tenantId={tenantId}
+          tenantId={tenantId!}
           findingLevels={findingLevelsSettings?.levels || []}
           caps={caps || []}
           personnel={personnel || []}

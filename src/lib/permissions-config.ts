@@ -1,4 +1,5 @@
-export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'manage-templates' | 'calculate-booking' | 'schedule-view' | 'schedule-manage' | 'history-view' | 'preflight-manage' | 'postflight-manage';
+
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'manage-templates' | 'calculate-booking' | 'schedule-view' | 'schedule-manage' | 'history-view' | 'preflight-manage' | 'postflight-manage' | 'view-all';
 
 export type PermissionResource = {
   id: string;
@@ -29,7 +30,7 @@ export const permissionsConfig: PermissionResource[] = [
   { id: 'moc', name: 'Management of Change', actions: ['manage'] },
 
   { id: 'quality', name: 'Quality', actions: ['view'] },
-  { id: 'quality-audits', name: 'Quality Audits', actions: ['view', 'manage'] },
+  { id: 'quality-audits', name: 'Quality Audits', actions: ['view', 'view-all', 'manage'] },
   { id: 'quality-templates', name: 'Quality Templates', actions: ['manage'] },
   { id: 'quality-caps', name: 'Quality CAPs', actions: ['view'] },
   { id: 'quality-tasks', name: 'Quality Tasks', actions: ['view'] },
@@ -47,6 +48,7 @@ export const permissionsConfig: PermissionResource[] = [
   { id: 'admin-roles', name: 'Admin: Roles', actions: ['manage'] },
   { id: 'admin-permissions', name: 'Admin: Permissions', actions: ['view', 'manage'] },
   { id: 'admin-departments', name: 'Admin: Departments', actions: ['manage'] },
+  { id: 'admin-external-orgs', name: 'Admin: External Orgs', actions: ['manage'] },
   { id: 'admin-settings', name: 'Admin: General Settings', actions: ['manage'] },
   { id: 'admin-database', name: 'Admin: Database Seeding', actions: ['manage'] },
 

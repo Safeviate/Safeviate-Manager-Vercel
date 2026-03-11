@@ -2,12 +2,12 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { doc } from 'firebase/firestore';
+import { doc, collection, query } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ChevronsUpDown } from 'lucide-react';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,6 +16,7 @@ import { permissionsConfig } from '@/lib/permissions-config';
 import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
+import type { ExternalOrganization } from '@/types/quality';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,7 +46,7 @@ const determineCollection = (userType: UserProfile['userType']): string => {
         case 'Instructor': return 'instructors';
         case 'Student': return 'students';
         case 'Private Pilot': return 'private-pilots';
-        default: return 'personnel'; // Fallback
+        default: return 'personnel'; 
     }
 }
 
@@ -53,17 +54,20 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  // State for collapsible sections
+  const orgsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/external-organizations`)) : null),
+    [firestore, tenantId]
+  );
+  const { data: organizations } = useCollection<ExternalOrganization>(orgsQuery);
+
   const [isContactOpen, setIsContactOpen] = useState(true);
   const [isAddressOpen, setIsAddressOpen] = useState(false);
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
 
-  // Form state
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
   
   useEffect(() => {
-    // Deep copy to avoid direct mutation
     setFormData(JSON.parse(JSON.stringify(user)));
   }, [user]);
   
@@ -83,56 +87,28 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
 
   const handleUpdateUser = () => {
     if (!formData.userType || !formData.firstName?.trim() || !formData.lastName?.trim() || !formData.email?.trim()) {
-        toast({
-            variant: 'destructive',
-            title: 'Missing Fields',
-            description: 'User Type, First Name, Last Name, and Email are required.',
-        });
+        toast({ variant: 'destructive', title: 'Missing Fields' });
         return;
     }
 
-    if (!formData.role) {
-      toast({
-          variant: 'destructive',
-          title: 'Missing Fields',
-          description: 'Role is required for all users.',
-      });
-      return;
-    }
-
-    if (!firestore || !tenantId) {
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Could not connect to the database.',
-        });
-        return;
-    }
+    if (!firestore || !tenantId) return;
     
     const collectionName = determineCollection(formData.userType);
     const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
     
     let dataToUpdate: Partial<UserProfile> = { ...formData };
     if (!isPilotProfile(formData)) {
-        // Ensure pilot-specific fields are not on personnel
         delete (dataToUpdate as Partial<PilotProfile>).pilotLicense;
         delete (dataToUpdate as Partial<PilotProfile>).logbookTemplateId;
     } else {
-        // Ensure personnel-specific fields are not on pilots
         delete (dataToUpdate as Partial<Personnel>).department;
     }
 
     updateDocumentNonBlocking(userRef, dataToUpdate);
-
-    toast({
-        title: 'User Updated',
-        description: `User ${formData.firstName} ${formData.lastName} has been updated.`,
-    });
-    
+    toast({ title: 'User Updated' });
     onCancel();
   };
   
-  // --- Permissions Logic ---
   const allPermissionIds = useMemo(() => 
     permissionsConfig.flatMap(resource => 
       resource.actions.map(action => `${resource.id}-${action}`)
@@ -152,11 +128,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
   };
 
   const handleSelectAllToggle = () => {
-    if (areAllSelected) {
-      handleInputChange('permissions', []);
-    } else {
-      handleInputChange('permissions', allPermissionIds);
-    }
+    handleInputChange('permissions', areAllSelected ? [] : allPermissionIds);
   };
   
   const handleRoleChange = (roleId: string) => {
@@ -165,7 +137,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
       setFormData(prev => ({
         ...prev,
         role: role.id,
-        permissions: role.permissions || [] // Default permissions to the new role's set
+        permissions: role.permissions || [] 
       }));
     }
   }
@@ -174,119 +146,50 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
     <Card className="flex flex-col h-full overflow-hidden shadow-none border">
       <CardHeader className="shrink-0 border-b bg-muted/5">
         <CardTitle>Edit Profile</CardTitle>
-        <CardDescription>
-            Update details and granular permissions for {user.firstName} {user.lastName}.
-        </CardDescription>
+        <CardDescription>Update details and granular permissions for {user.firstName} {user.lastName}.</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
         <ScrollArea className="h-full">
             <div className="p-6 flex flex-col gap-6">
-
-              {/* --- Contact & Role --- */}
               <Collapsible open={isContactOpen} onOpenChange={setIsContactOpen}>
                 <CollapsibleTrigger asChild>
                   <div className='flex items-center gap-2 mb-4 cursor-pointer'>
                     <h3 className="text-lg font-semibold">Contact & Role</h3>
-                    <Button variant="ghost" size="sm" className="w-9 p-0">
-                      <ChevronsUpDown className="h-4 w-4" />
-                    </Button>
+                    <Button variant="ghost" size="sm" className="w-9 p-0"><ChevronsUpDown className="h-4 w-4" /></Button>
                   </div>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="space-y-2"><Label>User Type</Label><Select onValueChange={(value) => handleInputChange('userType', value)} value={formData.userType} disabled><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{userTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
+                  <div className="space-y-2"><Label>First Name</Label><Input value={formData.firstName || ''} onChange={(e) => handleInputChange('firstName', e.target.value)} /></div>
+                  <div className="space-y-2"><Label>Last Name</Label><Input value={formData.lastName || ''} onChange={(e) => handleInputChange('lastName', e.target.value)} /></div>
+                  <div className="space-y-2"><Label>Email</Label><Input type="email" value={formData.email || ''} onChange={(e) => handleInputChange('email', e.target.value)} /></div>
+                  <div className="space-y-2"><Label>Contact Number</Label><Input value={formData.contactNumber || ''} onChange={(e) => handleInputChange('contactNumber', e.target.value)} /></div>
+                  <div className="space-y-2"><Label>Role</Label><Select onValueChange={handleRoleChange} value={formData.role}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{roles.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent></Select></div>
+                  
                   <div className="space-y-2">
-                      <Label htmlFor="userType">User Type</Label>
-                      <Select onValueChange={(value) => handleInputChange('userType', value)} value={formData.userType} disabled>
-                          <SelectTrigger id="userType">
-                              <SelectValue placeholder="Select a user type" />
-                          </SelectTrigger>
+                      <Label>Organization</Label>
+                      <Select onValueChange={(v) => handleInputChange('organizationId', v === 'internal' ? null : v)} value={formData.organizationId || 'internal'}>
+                          <SelectTrigger><SelectValue/></SelectTrigger>
                           <SelectContent>
-                              {userTypes.map(type => (
-                                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                              ))}
+                              <SelectItem value="internal">Safeviate (Internal)</SelectItem>
+                              {(organizations || []).map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
                           </SelectContent>
                       </Select>
                   </div>
-                  <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name</Label>
-                      <Input id="firstName" value={formData.firstName || ''} onChange={(e) => handleInputChange('firstName', e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name</Label>
-                      <Input id="lastName" value={formData.lastName || ''} onChange={(e) => handleInputChange('lastName', e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" value={formData.email || ''} onChange={(e) => handleInputChange('email', e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                      <Label htmlFor="contactNumber">Contact Number</Label>
-                      <Input id="contactNumber" value={formData.contactNumber || ''} onChange={(e) => handleInputChange('contactNumber', e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                      <Label htmlFor="role">Role</Label>
-                      <Select onValueChange={handleRoleChange} value={formData.role}>
-                          <SelectTrigger id="role">
-                              <SelectValue placeholder="Select a role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                              {roles.map(role => (
-                                  <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-                              ))}
-                          </SelectContent>
-                      </Select>
-                  </div>
+
                   {!isPilotProfile(formData) && (
                       <div className="space-y-2">
-                          <Label htmlFor="department">Department</Label>
+                          <Label>Department</Label>
                           <Select onValueChange={(value) => handleInputChange('department', value)} value={(formData as Personnel).department}>
-                              <SelectTrigger id="department">
-                                  <SelectValue placeholder="Select a department" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  {departments.map(dept => (
-                                      <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                                  ))}
-                              </SelectContent>
+                              <SelectTrigger><SelectValue/></SelectTrigger>
+                              <SelectContent>{departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
                           </Select>
                       </div>
                   )}
                   {isPilotProfile(formData) && (
                     <>
-                      <div className="space-y-2">
-                        <Label htmlFor="licenseNumber">License Number</Label>
-                        <Input id="licenseNumber" value={(formData as PilotProfile).pilotLicense?.licenseNumber || ''} onChange={(e) => handleNestedInputChange('pilotLicense', 'licenseNumber', e.target.value)} />
-                      </div>
-                      <div className="space-y-2 col-span-1 md:col-span-2 lg:col-span-3">
-                          <Label htmlFor="ratings">Ratings</Label>
-                          <TagInput
-                            id="ratings"
-                            value={(formData as PilotProfile).pilotLicense?.ratings || []}
-                            onChange={(newTags) => handleNestedInputChange('pilotLicense', 'ratings', newTags)}
-                            placeholder="Add a rating (e.g., IFR) and press Enter..."
-                          />
-                      </div>
-                       <div className="space-y-2 col-span-1 md:col-span-2 lg:col-span-3">
-                          <Label htmlFor="endorsements">Endorsements</Label>
-                          <TagInput
-                            id="endorsements"
-                            value={(formData as PilotProfile).pilotLicense?.endorsements || []}
-                            onChange={(newTags) => handleNestedInputChange('pilotLicense', 'endorsements', newTags)}
-                            placeholder="Add an endorsement (e.g., High Performance) and press Enter..."
-                          />
-                      </div>
-                      <div className="space-y-2">
-                          <Label htmlFor="logbookTemplate">Logbook Template</Label>
-                          <Select onValueChange={(value) => handleInputChange('logbookTemplateId', value)} value={(formData as PilotProfile).logbookTemplateId}>
-                              <SelectTrigger id="logbookTemplate">
-                                  <SelectValue placeholder="Select a logbook template" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  {logbookTemplates.map(template => (
-                                      <SelectItem key={template.id} value={template.id}>{template.name}</SelectItem>
-                                  ))}
-                              </SelectContent>
-                          </Select>
-                      </div>
+                      <div className="space-y-2"><Label>License Number</Label><Input value={(formData as PilotProfile).pilotLicense?.licenseNumber || ''} onChange={(e) => handleNestedInputChange('pilotLicense', 'licenseNumber', e.target.value)} /></div>
+                      <div className="space-y-2"><Label>Logbook Template</Label><Select onValueChange={(value) => handleInputChange('logbookTemplateId', value)} value={(formData as PilotProfile).logbookTemplateId}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{logbookTemplates.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent></Select></div>
                     </>
                   )}
                 </CollapsibleContent>
@@ -294,87 +197,14 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
 
               <Separator />
 
-              {/* --- Address --- */}
-              <Collapsible open={isAddressOpen} onOpenChange={setIsAddressOpen}>
-                <CollapsibleTrigger asChild>
-                  <div className='flex items-center gap-2 mb-4 cursor-pointer'>
-                    <h3 className="text-lg font-semibold">Address</h3>
-                    <Button variant="ghost" size="sm" className="w-9 p-0">
-                      <ChevronsUpDown className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2 col-span-3">
-                        <Label htmlFor="street">Street</Label>
-                        <Input id="street" value={formData.address?.street || ''} onChange={(e) => handleNestedInputChange('address', 'street', e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="city">City</Label>
-                        <Input id="city" value={formData.address?.city || ''} onChange={(e) => handleNestedInputChange('address', 'city', e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="state">State / Province</Label>
-                        <Input id="state" value={formData.address?.state || ''} onChange={(e) => handleNestedInputChange('address', 'state', e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="postalCode">Postal Code</Label>
-                        <Input id="postalCode" value={formData.address?.postalCode || ''} onChange={(e) => handleNestedInputChange('address', 'postalCode', e.target.value)} />
-                    </div>
-                    <div className="space-y-2 col-span-3">
-                        <Label htmlFor="country">Country</Label>
-                        <Input id="country" value={formData.address?.country || ''} onChange={(e) => handleNestedInputChange('address', 'country', e.target.value)} />
-                    </div>
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Separator />
-
-              {/* --- Emergency Contact --- */}
-              <Collapsible open={isEmergencyOpen} onOpenChange={setIsEmergencyOpen}>
-                <CollapsibleTrigger asChild>
-                  <div className='flex items-center gap-2 mb-4 cursor-pointer'>
-                    <h3 className="text-lg font-semibold">Emergency Contact</h3>
-                    <Button variant="ghost" size="sm" className="w-9 p-0">
-                      <ChevronsUpDown className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="emergencyName">Full Name</Label>
-                        <Input id="emergencyName" value={formData.emergencyContact?.name || ''} onChange={(e) => handleNestedInputChange('emergencyContact', 'name', e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="emergencyRelationship">Relationship</Label>
-                        <Input id="emergencyRelationship" value={formData.emergencyContact?.relationship || ''} onChange={(e) => handleNestedInputChange('emergencyContact', 'relationship', e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="emergencyPhone">Phone Number</Label>
-                        <Input id="emergencyPhone" value={formData.emergencyContact?.phone || ''} onChange={(e) => handleNestedInputChange('emergencyContact', 'phone', e.target.value)} />
-                    </div>
-                </CollapsibleContent>
-              </Collapsible>
-              
-              <Separator />
-
-              {/* --- Permissions --- */}
               <Collapsible open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
                   <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                           <h3 className="text-lg font-semibold">Permissions</h3>
-                          <CollapsibleTrigger asChild>
-                              <Button variant="ghost" size="sm" className="w-9 p-0">
-                                  <ChevronsUpDown className="h-4 w-4" />
-                                  <span className="sr-only">Toggle</span>
-                              </Button>
-                          </CollapsibleTrigger>
+                          <CollapsibleTrigger asChild><Button variant="ghost" size="sm" className="w-9 p-0"><ChevronsUpDown className="h-4 w-4" /></Button></CollapsibleTrigger>
                       </div>
-                      <Button variant="link" onClick={handleSelectAllToggle} className="p-0 h-auto">
-                          {areAllSelected ? 'Deselect All' : 'Select All'}
-                      </Button>
+                      <Button variant="link" onClick={handleSelectAllToggle} className="p-0 h-auto">{areAllSelected ? 'Deselect All' : 'Select All'}</Button>
                   </div>
-                  <p className='text-sm text-muted-foreground'>Individual permission overrides for this user.</p>
                   <CollapsibleContent>
                       <ScrollArea className="h-72 w-full rounded-md border mt-2">
                           <div className="p-4">
@@ -386,21 +216,9 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                                               {resource.actions.map((action) => {
                                                   const permissionId = `${resource.id}-${action}`;
                                                   return (
-                                                      <div
-                                                          key={permissionId}
-                                                          className="flex items-center space-x-2"
-                                                      >
-                                                          <Checkbox
-                                                              id={`edit-${permissionId}`}
-                                                              checked={(formData.permissions || []).includes(permissionId)}
-                                                              onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)}
-                                                          />
-                                                          <label
-                                                              htmlFor={`edit-${permissionId}`}
-                                                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer capitalize"
-                                                          >
-                                                              {action}
-                                                          </label>
+                                                      <div key={permissionId} className="flex items-center space-x-2">
+                                                          <Checkbox id={`edit-${permissionId}`} checked={(formData.permissions || []).includes(permissionId)} onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)} />
+                                                          <label htmlFor={`edit-${permissionId}`} className="text-sm font-medium leading-none cursor-pointer capitalize">{action}</label>
                                                       </div>
                                                   );
                                               })}

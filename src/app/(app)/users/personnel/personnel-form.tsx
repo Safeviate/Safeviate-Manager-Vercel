@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { collection, doc, writeBatch } from 'firebase/firestore';
+import { collection, doc, writeBatch, query } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,13 +17,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlusCircle } from 'lucide-react';
-import { useFirestore, useAuth } from '@/firebase';
+import { useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import type { Role } from '../../admin/roles/page';
 import type { Department } from '../../admin/department/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Personnel, PilotProfile } from './page';
+import type { ExternalOrganization } from '@/types/quality';
 
 type UserProfile = Personnel | PilotProfile;
 type UserType = UserProfile['userType'];
@@ -53,13 +54,20 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
 
+  const orgsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/external-organizations`)) : null),
+    [firestore, tenantId]
+  );
+  const { data: organizations } = useCollection<ExternalOrganization>(orgsQuery);
+
   // Form state
   const [userType, setUserType] = useState<UserType | ''>('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+  const [selectedOrganization, setSelectedOrganization] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   
   const handleAddUser = async () => {
@@ -72,14 +80,7 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
       return;
     }
 
-    if (!firestore || !auth) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Could not connect to the database or auth service.',
-      });
-      return;
-    }
+    if (!firestore || !auth) return;
 
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -97,11 +98,12 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
             lastName,
             email,
             role: selectedRole.id,
-            permissions: selectedRole.permissions || [], // Default permissions from role
+            organizationId: selectedOrganization || null,
+            permissions: selectedRole.permissions || [], 
         };
 
         if (userType === 'Personnel') {
-            (profileData as Personnel).department = selectedDepartment?.id;
+            (profileData as Personnel).department = selectedDepartment || undefined;
         }
         
         const userLinkRef = doc(firestore, 'users', authUser.uid);
@@ -116,23 +118,11 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
 
         await batch.commit();
 
-        toast({
-          title: 'User Created Successfully',
-          description: `Auth user and profile for ${email} have been created.`,
-        });
-        
-        // Introduce a small delay to allow Firebase Auth to propagate the new user
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
+        toast({ title: 'User Created Successfully' });
         resetForm();
 
     } catch (error: any) {
-        console.error("Error creating user:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Creation Failed',
-            description: error.message || 'An unexpected error occurred while creating the user.',
-        });
+        toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
     }
   };
 
@@ -143,111 +133,71 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
     setEmail('');
     setPassword('');
     setSelectedDepartment(null);
+    setSelectedOrganization(null);
     setSelectedRole(null);
     setIsOpen(false);
   }
 
-  const handleRoleChange = (roleId: string) => {
-    const role = roles.find(r => r.id === roleId);
-    setSelectedRole(role || null);
-  }
-
-  const handleDepartmentChange = (deptId: string) => {
-    const dept = departments.find(d => d.id === deptId);
-    setSelectedDepartment(dept || null);
-  }
-
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!open) {
-            resetForm();
-        }
-        setIsOpen(open);
-    }}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsOpen(open); }}>
       {trigger ? (
         <DialogTrigger asChild>{trigger}</DialogTrigger>
       ) : (
         <DialogTrigger asChild>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add User
-          </Button>
+          <Button><PlusCircle className="mr-2 h-4 w-4" /> Add User</Button>
         </DialogTrigger>
       )}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
-          <DialogDescription>
-            Create a new user profile and authentication account.
-          </DialogDescription>
+          <DialogDescription>Create a new user profile and authentication account.</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-6 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div className="space-y-2 col-span-2">
                     <Label htmlFor="userType">User Type</Label>
                     <Select onValueChange={(value) => setUserType(value as UserType)} value={userType}>
-                        <SelectTrigger id="userType">
-                            <SelectValue placeholder="Select a user type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {userTypes.map(type => (
-                                <SelectItem key={type} value={type}>{type}</SelectItem>
-                            ))}
-                        </SelectContent>
+                        <SelectTrigger id="userType"><SelectValue placeholder="Select a user type" /></SelectTrigger>
+                        <SelectContent>{userTypes.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent>
                     </Select>
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                </div>
-                <div className="space-y-2 col-span-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                </div>
-                 <div className="space-y-2 col-span-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                </div>
+                <div className="space-y-2"><Label htmlFor="firstName">First Name</Label><Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
+                <div className="space-y-2"><Label htmlFor="lastName">Last Name</Label><Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
+                <div className="space-y-2 col-span-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+                <div className="space-y-2 col-span-2"><Label htmlFor="password">Password</Label><Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
                 
                 <div className="space-y-2">
-                    <Label htmlFor="role">Role</Label>
-                    <Select onValueChange={handleRoleChange} value={selectedRole?.id}>
-                        <SelectTrigger id="role">
-                            <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
+                    <Label htmlFor="role">Base Role</Label>
+                    <Select onValueChange={(roleId) => setSelectedRole(roles.find(r => r.id === roleId) || null)} value={selectedRole?.id}>
+                        <SelectTrigger id="role"><SelectValue placeholder="Select a role" /></SelectTrigger>
+                        <SelectContent>{roles.map(role => (<SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>))}</SelectContent>
+                    </Select>
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="organization">Organization (Internal if empty)</Label>
+                    <Select onValueChange={setSelectedOrganization} value={selectedOrganization || ''}>
+                        <SelectTrigger id="organization"><SelectValue placeholder="Select Organization" /></SelectTrigger>
                         <SelectContent>
-                            {roles.map(role => (
-                                <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-                            ))}
+                            <SelectItem value="internal">Safeviate (Internal)</SelectItem>
+                            {(organizations || []).map(org => (<SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>))}
                         </SelectContent>
                     </Select>
                 </div>
 
                 {userType === 'Personnel' && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 col-span-2">
                         <Label htmlFor="department">Department</Label>
-                        <Select onValueChange={handleDepartmentChange} value={selectedDepartment?.id}>
-                            <SelectTrigger id="department">
-                                <SelectValue placeholder="Select a department" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {departments.map(dept => (
-                                    <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                                ))}
-                            </SelectContent>
+                        <Select onValueChange={setSelectedDepartment} value={selectedDepartment || ''}>
+                            <SelectTrigger id="department"><SelectValue placeholder="Select a department" /></SelectTrigger>
+                            <SelectContent>{departments.map(dept => (<SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>))}</SelectContent>
                         </Select>
                     </div>
                 )}
             </div>
         </div>
         <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
-          </DialogClose>
+          <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
           <Button onClick={handleAddUser}>Save User</Button>
         </DialogFooter>
       </DialogContent>

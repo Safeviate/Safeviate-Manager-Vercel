@@ -1,3 +1,4 @@
+
 import {
   LayoutDashboard,
   Users,
@@ -11,6 +12,7 @@ import {
   Plane,
   CheckSquare,
   CalendarDays,
+  Building2,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -236,6 +238,12 @@ export const menuConfig: MenuItem[] = [
         label: 'Department',
         description: 'Manage company departments.',
         permissionId: 'admin-departments-manage',
+      },
+      {
+        href: '/admin/external-organizations',
+        label: 'External Orgs',
+        description: 'Manage external companies for auditing.',
+        permissionId: 'admin-external-orgs-manage',
       },
       {
         href: '/admin/document-dates',

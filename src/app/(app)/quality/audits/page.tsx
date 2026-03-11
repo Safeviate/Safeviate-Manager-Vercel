@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -25,8 +25,11 @@ import { format } from 'date-fns';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { usePermissions } from '@/hooks/use-permissions';
+import { cn } from '@/lib/utils';
 
-import type { QualityAudit } from '@/types/quality';
+import type { QualityAudit, ExternalOrganization } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
 import type { Personnel } from '../../users/personnel/page';
 
@@ -154,38 +157,60 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
 
 export default function AuditsPage() {
     const firestore = useFirestore();
-    const tenantId = 'safeviate';
+    const { tenantId, userProfile } = useUserProfile();
+    const { hasPermission } = usePermissions();
+
+    const canViewAll = hasPermission('quality-audits-view-all');
+    const userOrgId = userProfile?.organizationId;
 
     const auditsQuery = useMemoFirebase(
-        () => (firestore ? query(collection(firestore, `tenants/${tenantId}/quality-audits`), orderBy('auditDate', 'desc')) : null),
-        [firestore, tenantId]
+        () => {
+            if (!firestore || !tenantId) return null;
+            
+            const baseCollection = collection(firestore, `tenants/${tenantId}/quality-audits`);
+            
+            // SECURITY: Scoped visibility for external organizations
+            if (!canViewAll && userOrgId) {
+                return query(baseCollection, where('organizationId', '==', userOrgId), orderBy('auditDate', 'desc'));
+            }
+            
+            return query(baseCollection, orderBy('auditDate', 'desc'));
+        },
+        [firestore, tenantId, canViewAll, userOrgId]
     );
+
     const personnelQuery = useMemoFirebase(
         () => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null),
         [firestore, tenantId]
     );
-     const departmentsQuery = useMemoFirebase(
+    const departmentsQuery = useMemoFirebase(
         () => (firestore ? collection(firestore, `tenants/${tenantId}/departments`) : null),
+        [firestore, tenantId]
+    );
+    const orgsQuery = useMemoFirebase(
+        () => (firestore ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null),
         [firestore, tenantId]
     );
 
     const { data: audits, isLoading: isLoadingAudits, error: auditsError } = useCollection<QualityAudit>(auditsQuery);
     const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
     const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
+    const { data: organizations } = useCollection<ExternalOrganization>(orgsQuery);
 
     const isLoading = isLoadingAudits || isLoadingPersonnel || isLoadingDepts;
 
     const enrichedAudits = useMemo((): EnrichedAudit[] => {
-        if (!audits || !personnel || !departments) return [];
+        if (!audits || !personnel || !departments || !organizations) return [];
 
         const personnelMap = new Map(personnel.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
         const departmentMap = new Map(departments.map(d => [d.id, d.name]));
+        const orgMap = new Map(organizations.map(o => [o.id, o.name]));
 
         return audits.map(audit => ({
             ...audit,
-            auditeeName: personnelMap.get(audit.auditeeId) || departmentMap.get(audit.auditeeId),
+            auditeeName: personnelMap.get(audit.auditeeId) || departmentMap.get(audit.auditeeId) || orgMap.get(audit.organizationId || ''),
         }));
-    }, [audits, personnel, departments]);
+    }, [audits, personnel, departments, organizations]);
 
     const activeAudits = useMemo(() => enrichedAudits.filter(a => a.status !== 'Archived'), [enrichedAudits]);
     const archivedAudits = useMemo(() => enrichedAudits.filter(a => a.status === 'Archived'), [enrichedAudits]);
@@ -218,10 +243,10 @@ export default function AuditsPage() {
                 </div>
                 <CardContent className="p-0 flex-1">
                     <TabsContent value="active" className="m-0">
-                        <AuditsTable audits={activeAudits} tenantId={tenantId} />
+                        <AuditsTable audits={activeAudits} tenantId={tenantId || 'safeviate'} />
                     </TabsContent>
                     <TabsContent value="archived" className="m-0">
-                        <AuditsTable audits={archivedAudits} tenantId={tenantId} />
+                        <AuditsTable audits={archivedAudits} tenantId={tenantId || 'safeviate'} />
                     </TabsContent>
                 </CardContent>
             </Tabs>

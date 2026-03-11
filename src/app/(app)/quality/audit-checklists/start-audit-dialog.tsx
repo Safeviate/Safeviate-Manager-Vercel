@@ -1,12 +1,13 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, runTransaction } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -29,12 +30,12 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { CalendarIcon, PlayCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { QualityAudit, QualityAuditChecklistTemplate } from '@/types/quality';
+import type { QualityAudit, QualityAuditChecklistTemplate, ExternalOrganization } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
 import type { Personnel } from '../../users/personnel/page';
 
@@ -69,6 +70,12 @@ export function StartAuditDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newAuditId, setNewAuditId] = useState<string | null>(null);
 
+  const orgsQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null),
+    [firestore, tenantId]
+  );
+  const { data: organizations } = useCollection<ExternalOrganization>(orgsQuery);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -79,10 +86,9 @@ export function StartAuditDialog({
   });
   
   useEffect(() => {
-    // When the dialog closes, if we have a new audit ID, navigate.
     if (!isOpen && newAuditId) {
       router.push(`/quality/audits/${newAuditId}`);
-      setNewAuditId(null); // Reset for next time
+      setNewAuditId(null);
     }
   }, [isOpen, newAuditId, router]);
 
@@ -105,6 +111,9 @@ export function StartAuditDialog({
             
             transaction.set(counterRef, { currentNumber: newCount }, { merge: true });
 
+            // Detect if auditee is an external organization
+            const isExternalOrg = organizations?.some(org => org.id === values.auditeeId);
+
             const newAuditRef = doc(auditsRef);
             const newAuditData: Omit<QualityAudit, 'id'> = {
                 templateId: template.id,
@@ -112,6 +121,7 @@ export function StartAuditDialog({
                 auditNumber: newAuditNumber,
                 auditorId: user.uid,
                 auditeeId: values.auditeeId,
+                organizationId: isExternalOrg ? values.auditeeId : null, // Scoping logic
                 scope: values.scope,
                 auditDate: values.auditDate.toISOString(),
                 status: 'Scheduled',
@@ -122,10 +132,7 @@ export function StartAuditDialog({
         });
         
         setNewAuditId(createdAuditId);
-
-        toast({ title: 'Audit Started', description: `A new audit based on "${template.title}" has been created.` });
-        
-        // Close the dialog, the useEffect will handle navigation.
+        toast({ title: 'Audit Started' });
         setIsOpen(false);
 
     } catch (error: any) {
@@ -134,8 +141,6 @@ export function StartAuditDialog({
         setIsSubmitting(false);
     }
   };
-  
-  const auditeeOptions = [...departments, ...personnel];
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -149,9 +154,7 @@ export function StartAuditDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Start New Audit</DialogTitle>
-          <DialogDescription>
-            Using template: &quot;{template.title}&quot;
-          </DialogDescription>
+          <DialogDescription>Using template: &quot;{template.title}&quot;</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
@@ -160,19 +163,32 @@ export function StartAuditDialog({
               name="auditeeId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Auditee (Department or Person)</FormLabel>
+                  <FormLabel>Auditee</FormLabel>
                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                             <SelectTrigger>
-                                <SelectValue placeholder="Select who is being audited" />
+                                <SelectValue placeholder="Select target..." />
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                           {auditeeOptions.map(opt => (
-                                <SelectItem key={opt.id} value={opt.id}>
-                                    {'firstName' in opt ? `${opt.firstName} ${opt.lastName}` : opt.name}
-                                </SelectItem>
-                           ))}
+                           <SelectGroup>
+                               <SelectLabel>Internal Departments</SelectLabel>
+                               {departments.map(dept => (
+                                    <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                               ))}
+                           </SelectGroup>
+                           <SelectGroup>
+                               <SelectLabel>External Organizations</SelectLabel>
+                               {(organizations || []).map(org => (
+                                    <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                               ))}
+                           </SelectGroup>
+                           <SelectGroup>
+                               <SelectLabel>Personnel</SelectLabel>
+                               {personnel.map(p => (
+                                    <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>
+                               ))}
+                           </SelectGroup>
                         </SelectContent>
                    </Select>
                   <FormMessage />
@@ -210,11 +226,7 @@ export function StartAuditDialog({
                 )}
              />
             <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline" disabled={isSubmitting}>
-                  Cancel
-                </Button>
-              </DialogClose>
+              <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
               <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Starting..." : "Start Audit"}</Button>
             </DialogFooter>
           </form>

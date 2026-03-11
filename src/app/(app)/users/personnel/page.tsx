@@ -20,6 +20,7 @@ export type PilotProfile = {
   lastName: string;
   email: string;
   role: string; // role ID
+  organizationId?: string | null; // NEW: Associate with external company
   permissions?: string[]; // Consolidating permissions across all user types
   contactNumber?: string;
   dateOfBirth?: string;
@@ -58,6 +59,7 @@ export type Personnel = {
   lastName: string;
   email: string;
   contactNumber?: string;
+  organizationId?: string | null; // NEW: Associate with external company
   department?: string; // department ID
   role: string; // role ID
   permissions: string[];
