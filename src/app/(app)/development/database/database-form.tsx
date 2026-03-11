@@ -16,7 +16,7 @@ import { useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
-import { menuConfig, settingsMenuItem } from '@/lib/menu-config';
+import { menuConfig } from '@/lib/menu-config';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 export function DatabaseForm() {
@@ -125,8 +125,6 @@ export function DatabaseForm() {
     }
   };
 
-  const allMenus = useMemo(() => [...menuConfig, settingsMenuItem], []);
-
   return (
     <Card className="flex flex-col h-full overflow-hidden shadow-none border">
       <CardHeader className="shrink-0 border-b bg-muted/5">
@@ -181,7 +179,7 @@ export function DatabaseForm() {
                 <p className="text-sm text-muted-foreground">Select the menus and submenus that should be visible for this tenant.</p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {allMenus.map((menu) => {
+                    {menuConfig.map((menu) => {
                         const subHrefs = menu.subItems?.map(s => s.href) || [];
                         const isEnabled = enabledHrefs.has(menu.href);
                         

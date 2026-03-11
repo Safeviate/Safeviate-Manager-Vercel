@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -14,7 +13,7 @@ import {
 import { useFirestore } from '@/firebase';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
-import { menuConfig, settingsMenuItem } from '@/lib/menu-config';
+import { menuConfig } from '@/lib/menu-config';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -32,7 +31,7 @@ export function DatabaseForm() {
             if (i.subItems) walk(i.subItems);
         });
     };
-    walk([...menuConfig, settingsMenuItem]);
+    walk(menuConfig);
     return new Set(hrefs);
   }, []);
 
@@ -99,8 +98,6 @@ export function DatabaseForm() {
     }
   };
 
-  const allMenus = useMemo(() => [...menuConfig, settingsMenuItem], []);
-
   return (
     <Card>
       <CardHeader>
@@ -113,7 +110,7 @@ export function DatabaseForm() {
         <div className="space-y-4">
             <h3 className="text-lg font-medium">Menu Visibility</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {allMenus.map((menu) => {
+                {menuConfig.map((menu) => {
                     const subHrefs = menu.subItems?.map(s => s.href) || [];
                     const isEnabled = enabledHrefs.has(menu.href);
                     

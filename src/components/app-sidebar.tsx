@@ -26,7 +26,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useMemo } from 'react';
 import {
   menuConfig,
-  settingsMenuItem,
   MenuItem as MenuItemType,
 } from '@/lib/menu-config';
 import { useAuth } from '@/firebase';
@@ -146,17 +145,8 @@ const SidebarItems = () => {
 const SidebarFooterContent = () => {
     const auth = useAuth();
     const router = useRouter();
-    const pathname = usePathname();
     const { setOpenMobile } = useSidebar();
     const { userProfile } = useUserProfile();
-    const { hasPermission } = usePermissions();
-    const { tenant } = useTenantConfig();
-
-    const canAccessSettings = useMemo(() => {
-        const hasPerm = !settingsMenuItem.permissionId || hasPermission(settingsMenuItem.permissionId);
-        const isTenantEnabled = !tenant?.enabledMenus || tenant.enabledMenus.includes(settingsMenuItem.href);
-        return hasPerm && isTenantEnabled;
-    }, [hasPermission, tenant?.enabledMenus]);
 
     const handleSignOut = () => {
       if (auth) {
@@ -176,24 +166,6 @@ const SidebarFooterContent = () => {
     return (
         <SidebarGroup>
           <SidebarMenu>
-              {canAccessSettings && (
-                <>
-                <SidebarSeparator className="my-1 mx-2" />
-                <SidebarMenuItem>
-                    <SidebarMenuButton
-                        asChild
-                        isActive={pathname.startsWith(settingsMenuItem.href)}
-                        tooltip={settingsMenuItem.label}
-                    >
-                        <Link href={settingsMenuItem.href} onClick={() => setOpenMobile(false)}>
-                            <settingsMenuItem.icon className="h-5 w-5" />
-                            <span>{settingsMenuItem.label}</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarSeparator className="my-1 mx-2" />
-                </>
-              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton

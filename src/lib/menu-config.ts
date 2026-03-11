@@ -1,7 +1,6 @@
 import {
   LayoutDashboard,
   Users,
-  Settings,
   LucideIcon,
   Code,
   UserCog,
@@ -12,7 +11,6 @@ import {
   Plane,
   CheckSquare,
   CalendarDays,
-  Palette,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -254,7 +252,7 @@ export const menuConfig: MenuItem[] = [
       {
         href: '/admin/appearance',
         label: 'Appearance',
-        description: 'Customize application branding and theme colors.',
+        description: customization application branding and theme colors.',
         permissionId: 'admin-settings-manage',
       },
       {
@@ -298,11 +296,3 @@ export const menuConfig: MenuItem[] = [
     ],
   },
 ];
-
-export const settingsMenuItem: MenuItem = {
-  href: '/settings',
-  label: 'Settings',
-  icon: Settings,
-  permissionId: 'settings-manage',
-  subItems: [],
-};
