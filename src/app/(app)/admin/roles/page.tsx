@@ -17,7 +17,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { usePermissions } from '@/hooks/use-permissions';
 
-export type RoleCategory = 'Personnel' | 'Instructor' | 'Student' | 'Private Pilot';
+export type RoleCategory = 'Personnel' | 'Instructor' | 'Student' | 'Private Pilot' | 'External';
 
 export type Role = {
   id: string;

@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { PersonnelForm } from './personnel-form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -54,7 +54,7 @@ export type PilotProfile = {
 
 export type Personnel = {
   id: string;
-  userType: 'Personnel';
+  userType: 'Personnel' | 'External';
   firstName: string;
   lastName: string;
   email: string;

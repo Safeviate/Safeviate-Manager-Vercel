@@ -34,6 +34,7 @@ const determineCollection = (userType: UserProfile['userType']): string => {
         case 'Instructor': return 'instructors';
         case 'Student': return 'students';
         case 'Private Pilot': return 'private-pilots';
+        case 'External': return 'personnel';
         default: return 'personnel';
     }
 }

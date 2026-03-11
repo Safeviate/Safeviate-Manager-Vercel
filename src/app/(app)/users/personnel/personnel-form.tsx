@@ -35,6 +35,7 @@ const determineCollectionName = (userType: UserType | ''): string => {
         case 'Instructor': return 'instructors';
         case 'Student': return 'students';
         case 'Private Pilot': return 'private-pilots';
+        case 'External': return 'personnel';
         default: return 'personnel';
     }
 }
@@ -109,7 +110,7 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
             permissions: selectedRole.permissions || [], 
         };
 
-        if (userType === 'Personnel') {
+        if (userType === 'Personnel' || userType === 'External') {
             (profileData as Personnel).department = selectedDepartment || undefined;
         }
         
@@ -185,7 +186,7 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
                     </Select>
                 </div>
 
-                {userType === 'Personnel' && (
+                {(userType === 'Personnel' || userType === 'External') && (
                     <div className="space-y-2 col-span-2">
                         <Label htmlFor="department">Department</Label>
                         <Select onValueChange={setSelectedDepartment} value={selectedDepartment || ''}>

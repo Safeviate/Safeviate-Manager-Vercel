@@ -41,7 +41,7 @@ interface RoleFormProps {
   trigger?: React.ReactNode;
 }
 
-const roleCategories: RoleCategory[] = ["Personnel", "Instructor", "Student", "Private Pilot"];
+const roleCategories: RoleCategory[] = ["Personnel", "Instructor", "Student", "Private Pilot", "External"];
 
 export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
   const firestore = useFirestore();

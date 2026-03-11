@@ -257,7 +257,7 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "category": { "type": "string", "enum": ["Personnel", "Instructor", "Student", "Private Pilot"] },
+        "category": { "type": "string", "enum": ["Personnel", "Instructor", "Student", "Private Pilot", "External"] },
         "permissions": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["id", "name", "category"]
