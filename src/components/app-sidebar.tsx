@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Sidebar,
@@ -43,15 +44,29 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { SheetHeader, SheetTitle } from './ui/sheet';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useTenantConfig } from '@/hooks/use-tenant-config';
 
 const SidebarItems = () => {
     const pathname = usePathname();
     const { setOpenMobile } = useSidebar();
     const { hasPermission } = usePermissions();
+    const { tenant } = useTenantConfig();
   
     const renderMenuItem = (item: MenuItemType) => {
+      // 1. Check Tenant-Level Visibility
+      if (tenant?.enabledMenus && !tenant.enabledMenus.includes(item.href)) {
+        return null;
+      }
+
+      // 2. Check Permission-Level Visibility
       const canAccessParent = !item.permissionId || hasPermission(item.permissionId);
-      const visibleSubItems = item.subItems ? item.subItems.filter(sub => !sub.permissionId || hasPermission(sub.permissionId)) : [];
+      
+      const visibleSubItems = item.subItems ? item.subItems.filter(sub => {
+        const hasPerm = !sub.permissionId || hasPermission(sub.permissionId);
+        // Also check sub-item tenant visibility
+        const isTenantEnabled = !tenant?.enabledMenus || tenant.enabledMenus.includes(sub.href);
+        return hasPerm && isTenantEnabled;
+      }) : [];
       
       if (!canAccessParent && visibleSubItems.length === 0) return null;
 
@@ -136,7 +151,13 @@ const SidebarFooterContent = () => {
     const { setOpenMobile } = useSidebar();
     const { userProfile } = useUserProfile();
     const { hasPermission } = usePermissions();
-    const canAccessSettings = !settingsMenuItem.permissionId || hasPermission(settingsMenuItem.permissionId);
+    const { tenant } = useTenantConfig();
+
+    const canAccessSettings = useMemo(() => {
+        const hasPerm = !settingsMenuItem.permissionId || hasPermission(settingsMenuItem.permissionId);
+        const isTenantEnabled = !tenant?.enabledMenus || tenant.enabledMenus.includes(settingsMenuItem.href);
+        return hasPerm && isTenantEnabled;
+    }, [hasPermission, tenant?.enabledMenus]);
 
     const handleSignOut = () => {
       if (auth) {

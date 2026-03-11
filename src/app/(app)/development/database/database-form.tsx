@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,6 +16,10 @@ import { Label } from '@/components/ui/label';
 import { useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown } from 'lucide-react';
+import { menuConfig, settingsMenuItem } from '@/lib/menu-config';
 
 export function DatabaseForm() {
   const firestore = useFirestore();
@@ -24,11 +29,37 @@ export function DatabaseForm() {
   const [primaryColour, setPrimaryColour] = useState('#7cc4f7');
   const [backgroundColour, setBackgroundColour] = useState('#ebf5fb');
   const [accentColour, setAccentColour] = useState('#63b2a7');
+  
+  // Menu visibility state
+  const [enabledHrefs, setEnabledHrefs] = useState<Set<string>>(new Set());
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setLogo(e.target.files[0]);
     }
+  };
+
+  const toggleMenu = (href: string, subHrefs?: string[]) => {
+    const newEnabled = new Set(enabledHrefs);
+    if (newEnabled.has(href)) {
+      newEnabled.delete(href);
+      subHrefs?.forEach(sh => newEnabled.delete(sh));
+    } else {
+      newEnabled.add(href);
+      subHrefs?.forEach(sh => newEnabled.add(sh));
+    }
+    setEnabledHrefs(newEnabled);
+  };
+
+  const toggleSubMenu = (parentHref: string, href: string) => {
+    const newEnabled = new Set(enabledHrefs);
+    if (newEnabled.has(href)) {
+      newEnabled.delete(href);
+    } else {
+      newEnabled.add(href);
+      newEnabled.add(parentHref); // Ensure parent is enabled if child is
+    }
+    setEnabledHrefs(newEnabled);
   };
 
   const handleAddTenant = () => {
@@ -47,9 +78,6 @@ export function DatabaseForm() {
       const tenantRef = doc(firestore, 'tenants', tenantId);
       const settingsRef = doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry');
 
-
-      // In a real app, you would upload the logo to Firebase Storage
-      // and get a download URL. For now, we'll use a placeholder.
       const logoUrl = logo ? URL.createObjectURL(logo) : '';
 
       setDocumentNonBlocking(
@@ -63,33 +91,29 @@ export function DatabaseForm() {
             backgroundColour,
             accentColour,
           },
+          enabledMenus: Array.from(enabledHrefs),
         },
         { merge: true }
       );
       
-      // Also create the initial settings document
       setDocumentNonBlocking(
         settingsRef,
         {
           id: 'document-expiry',
-          warningPeriods: [30, 60, 90], // Default values
+          warningPeriods: [30, 60, 90],
         },
         { merge: true }
       );
 
-
       toast({
-        title: 'Tenant Creation Initiated',
-        description: `The "${tenantName}" tenant document is being created with ID "${tenantId}".`,
+        title: 'Tenant Created',
+        description: `The "${tenantName}" tenant has been created with custom menu visibility.`,
       });
 
       // Reset form
       setTenantName('');
       setLogo(null);
-      setPrimaryColour('#7cc4f7');
-      setBackgroundColour('#ebf5fb');
-      setAccentColour('#63b2a7');
-      // Manually reset file input
+      setEnabledHrefs(new Set());
       const fileInput = document.getElementById('logo-upload') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
 
@@ -98,21 +122,22 @@ export function DatabaseForm() {
       toast({
         variant: 'destructive',
         title: 'Uh oh! Something went wrong.',
-        description:
-          e.message || 'There was a problem creating the tenant.',
+        description: e.message || 'There was a problem creating the tenant.',
       });
     }
   };
+
+  const allMenus = useMemo(() => [...menuConfig, settingsMenuItem], []);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Tenant Management</CardTitle>
         <CardDescription>
-          Add new tenants to the Firestore database with their branding. The Tenant ID will be auto-generated from the name.
+          Add new tenants with custom branding and granular control over which menus are visible.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-8">
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="tenant-name">Tenant Name</Label>
@@ -122,9 +147,6 @@ export function DatabaseForm() {
               value={tenantName}
               onChange={(e) => setTenantName(e.target.value)}
             />
-             <p className="text-sm text-muted-foreground">
-              The ID will be: {tenantName ? tenantName.toLowerCase().replace(/\s+/g, '-') : '...'}
-            </p>
           </div>
         </div>
 
@@ -135,7 +157,6 @@ export function DatabaseForm() {
             <div className="space-y-2">
                 <Label htmlFor="logo-upload">Company Logo</Label>
                 <Input id="logo-upload" type="file" onChange={handleLogoChange} accept="image/*" />
-                 {logo && <p className="text-sm text-muted-foreground">Selected: {logo.name}</p>}
             </div>
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
@@ -155,7 +176,58 @@ export function DatabaseForm() {
         
         <Separator />
 
-        <Button onClick={handleAddTenant} size="lg">Add Tenant</Button>
+        <div className="space-y-4">
+            <h3 className="text-lg font-medium">Menu Configuration</h3>
+            <p className="text-sm text-muted-foreground">Select the menus and submenus that should be visible for this tenant.</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {allMenus.map((menu) => {
+                    const subHrefs = menu.subItems?.map(s => s.href) || [];
+                    const isEnabled = enabledHrefs.has(menu.href);
+                    
+                    return (
+                        <div key={menu.href} className="space-y-3 p-4 border rounded-lg bg-muted/10">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox 
+                                        id={`menu-${menu.href}`} 
+                                        checked={isEnabled}
+                                        onCheckedChange={() => toggleMenu(menu.href, subHrefs)}
+                                    />
+                                    <Label htmlFor={`menu-${menu.href}`} className="font-bold flex items-center gap-2 cursor-pointer">
+                                        <menu.icon className="h-4 w-4" />
+                                        {menu.label}
+                                    </Label>
+                                </div>
+                            </div>
+                            
+                            {menu.subItems && (
+                                <div className="pl-6 space-y-2 pt-2 border-l ml-2">
+                                    {menu.subItems.map((sub) => (
+                                        <div key={sub.href} className="flex items-center space-x-2">
+                                            <Checkbox 
+                                                id={`sub-${sub.href}`} 
+                                                checked={enabledHrefs.has(sub.href)}
+                                                onCheckedChange={() => toggleSubMenu(menu.href, sub.href)}
+                                            />
+                                            <Label htmlFor={`sub-${sub.href}`} className="text-xs cursor-pointer">
+                                                {sub.label}
+                                            </Label>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+        
+        <Separator />
+
+        <div className="flex justify-end">
+            <Button onClick={handleAddTenant} size="lg">Create Tenant</Button>
+        </div>
       </CardContent>
     </Card>
   );

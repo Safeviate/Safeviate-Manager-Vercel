@@ -1,3 +1,4 @@
+
 import type { CorrectiveAction } from './safety-report';
 
 
@@ -81,4 +82,16 @@ export interface CorrectiveActionPlan {
     rootCauseAnalysis: string;
     status: CorrectiveActionStatus;
     actions?: CorrectiveAction[];
+}
+
+export interface Tenant {
+    id: string;
+    name: string;
+    logoUrl?: string;
+    theme?: {
+        primaryColour?: string;
+        backgroundColour?: string;
+        accentColour?: string;
+    };
+    enabledMenus?: string[];
 }
