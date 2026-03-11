@@ -121,7 +121,7 @@ export function StartAuditDialog({
                 auditNumber: newAuditNumber,
                 auditorId: user.uid,
                 auditeeId: values.auditeeId,
-                organizationId: isExternalOrg ? values.auditeeId : null, // Scoping logic
+                organizationId: isExternalOrg ? values.auditeeId : null,
                 scope: values.scope,
                 auditDate: values.auditDate.toISOString(),
                 status: 'Scheduled',

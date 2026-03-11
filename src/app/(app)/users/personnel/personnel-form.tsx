@@ -37,7 +37,7 @@ const determineCollectionName = (userType: UserType | ''): string => {
         case 'Instructor': return 'instructors';
         case 'Student': return 'students';
         case 'Private Pilot': return 'private-pilots';
-        default: return 'personnel'; // Fallback
+        default: return 'personnel';
     }
 }
 
@@ -98,7 +98,7 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
             lastName,
             email,
             role: selectedRole.id,
-            organizationId: selectedOrganization || null,
+            organizationId: selectedOrganization === 'internal' ? null : selectedOrganization,
             permissions: selectedRole.permissions || [], 
         };
 
@@ -175,7 +175,7 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
                 </div>
 
                 <div className="space-y-2">
-                    <Label htmlFor="organization">Organization (Internal if empty)</Label>
+                    <Label htmlFor="organization">Organization</Label>
                     <Select onValueChange={setSelectedOrganization} value={selectedOrganization || ''}>
                         <SelectTrigger id="organization"><SelectValue placeholder="Select Organization" /></SelectTrigger>
                         <SelectContent>
