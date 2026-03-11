@@ -169,11 +169,12 @@ export default function AuditsPage() {
             
             const baseCollection = collection(firestore, `tenants/${tenantId}/quality-audits`);
             
-            // SECURITY: Scoped visibility for external organizations
+            // SECURITY: Scoped visibility for external users (only their org)
             if (!canViewAll && userOrgId) {
                 return query(baseCollection, where('organizationId', '==', userOrgId), orderBy('auditDate', 'desc'));
             }
             
+            // Internal admins get everything
             return query(baseCollection, orderBy('auditDate', 'desc'));
         },
         [firestore, tenantId, canViewAll, userOrgId]
@@ -195,9 +196,9 @@ export default function AuditsPage() {
     const { data: audits, isLoading: isLoadingAudits, error: auditsError } = useCollection<QualityAudit>(auditsQuery);
     const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
     const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
-    const { data: organizations } = useCollection<ExternalOrganization>(orgsQuery);
+    const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
 
-    const isLoading = isLoadingAudits || isLoadingPersonnel || isLoadingDepts;
+    const isLoading = isLoadingAudits || isLoadingPersonnel || isLoadingDepts || isLoadingOrgs;
 
     const enrichedAudits = useMemo((): EnrichedAudit[] => {
         if (!audits || !personnel || !departments || !organizations) return [];
@@ -212,19 +213,49 @@ export default function AuditsPage() {
         }));
     }, [audits, personnel, departments, organizations]);
 
-    const activeAudits = useMemo(() => enrichedAudits.filter(a => a.status !== 'Archived'), [enrichedAudits]);
-    const archivedAudits = useMemo(() => enrichedAudits.filter(a => a.status === 'Archived'), [enrichedAudits]);
+    const renderOrgContext = (orgId: string | 'internal') => {
+        const filteredByOrg = enrichedAudits.filter(a => 
+            orgId === 'internal' ? !a.organizationId : a.organizationId === orgId
+        );
+        
+        const activeAudits = filteredByOrg.filter(a => a.status !== 'Archived');
+        const archivedAudits = filteredByOrg.filter(a => a.status === 'Archived');
+
+        return (
+            <Card className="min-h-[calc(100vh-15rem)] flex flex-col shadow-none border">
+                <Tabs defaultValue="active" className="flex-1 flex flex-col">
+                    <div className='px-6 pt-4 border-b bg-muted/10'>
+                        <TabsList className="bg-transparent h-auto p-0 gap-2 mb-2 border-b-0">
+                            <TabsTrigger value="active" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs">Active ({activeAudits.length})</TabsTrigger>
+                            <TabsTrigger value="archived" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs">Archived ({archivedAudits.length})</TabsTrigger>
+                        </TabsList>
+                    </div>
+                    <CardContent className="p-0 flex-1">
+                        <TabsContent value="active" className="m-0">
+                            <AuditsTable audits={activeAudits} tenantId={tenantId || 'safeviate'} />
+                        </TabsContent>
+                        <TabsContent value="archived" className="m-0">
+                            <AuditsTable audits={archivedAudits} tenantId={tenantId || 'safeviate'} />
+                        </TabsContent>
+                    </CardContent>
+                </Tabs>
+            </Card>
+        );
+    };
 
     if (isLoading) {
         return (
-            <Card>
-                <CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader>
-                <CardContent className="space-y-2">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                </CardContent>
-            </Card>
+            <div className="space-y-6">
+                <Skeleton className="h-10 w-[400px] rounded-full" />
+                <Card>
+                    <CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader>
+                    <CardContent className="space-y-2">
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                    </CardContent>
+                </Card>
+            </div>
         );
     }
     
@@ -232,24 +263,33 @@ export default function AuditsPage() {
         return <p className="text-destructive text-center p-8">Error: {auditsError.message}</p>
     }
 
+    // If external user, they land directly on their org's view
+    if (!canViewAll && userOrgId) {
+        return renderOrgContext(userOrgId);
+    }
+
     return (
-        <Card className="min-h-[calc(100vh-10rem)] flex flex-col shadow-none border">
-            <Tabs defaultValue="active" className="flex-1 flex flex-col">
-                <div className='px-6 pt-4 border-b bg-muted/10'>
-                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-2 border-b-0">
-                        <TabsTrigger value="active" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs">Active ({activeAudits.length})</TabsTrigger>
-                        <TabsTrigger value="archived" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs">Archived ({archivedAudits.length})</TabsTrigger>
-                    </TabsList>
-                </div>
-                <CardContent className="p-0 flex-1">
-                    <TabsContent value="active" className="m-0">
-                        <AuditsTable audits={activeAudits} tenantId={tenantId || 'safeviate'} />
+        <div className="flex flex-col gap-6 h-full">
+            <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
+                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 shrink-0 border-b-0 overflow-x-auto no-scrollbar justify-start">
+                    <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Internal</TabsTrigger>
+                    {(organizations || []).map(org => (
+                        <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">
+                            {org.name}
+                        </TabsTrigger>
+                    ))}
+                </TabsList>
+
+                <TabsContent value="internal" className="mt-0">
+                    {renderOrgContext('internal')}
+                </TabsContent>
+                
+                {(organizations || []).map(org => (
+                    <TabsContent key={org.id} value={org.id} className="mt-0">
+                        {renderOrgContext(org.id)}
                     </TabsContent>
-                    <TabsContent value="archived" className="m-0">
-                        <AuditsTable audits={archivedAudits} tenantId={tenantId || 'safeviate'} />
-                    </TabsContent>
-                </CardContent>
+                ))}
             </Tabs>
-        </Card>
+        </div>
     )
 }
