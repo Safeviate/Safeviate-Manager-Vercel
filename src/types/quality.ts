@@ -92,6 +92,14 @@ export interface Tenant {
         primaryColour?: string;
         backgroundColour?: string;
         accentColour?: string;
+        // Expanded theme keys
+        main?: Record<string, string>;
+        button?: Record<string, string>;
+        card?: Record<string, string>;
+        popover?: Record<string, string>;
+        sidebar?: Record<string, string>;
+        header?: Record<string, string>;
+        swimlane?: Record<string, string>;
     };
     enabledMenus?: string[];
 }

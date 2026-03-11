@@ -1,5 +1,6 @@
+
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -13,17 +14,7 @@ import { collection } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
-
-// Define a type for the tenant's theme from Firestore
-type TenantTheme = {
-    id: string;
-    name: string;
-    theme?: {
-        primaryColour?: string;
-        backgroundColour?: string;
-        accentColour?: string;
-    }
-}
+import type { Tenant } from '@/types/quality';
 
 export function ColorThemeForm() {
   const { toast } = useToast();
@@ -60,7 +51,7 @@ export function ColorThemeForm() {
     () => (firestore ? collection(firestore, 'tenants') : null),
     [firestore]
   );
-  const { data: tenants, isLoading: isLoadingTenants } = useCollection<TenantTheme>(tenantsQuery);
+  const { data: tenants, isLoading: isLoadingTenants } = useCollection<Tenant>(tenantsQuery);
 
   useEffect(() => {
     setIsMounted(true);
@@ -69,96 +60,80 @@ export function ColorThemeForm() {
   const handleApplyTenantTheme = (tenantId: string) => {
     const tenant = tenants?.find(t => t.id === tenantId);
     if (!tenant?.theme) {
-        toast({
-            variant: "destructive",
-            title: "Theme Not Found",
-            description: "The selected tenant does not have a configured theme.",
-        });
+        toast({ variant: "destructive", title: "Theme Not Found", description: "The selected tenant does not have a configured theme." });
         return;
     }
     
+    // Support comprehensive theme object if it exists, otherwise fallback to basic colors
     const themeToApply: SavedTheme = {
         name: tenant.name,
-        colors: {
+        colors: (tenant.theme.main as any) || {
             primary: tenant.theme.primaryColour || theme.primary,
             'primary-foreground': theme['primary-foreground'],
             background: tenant.theme.backgroundColour || theme.background,
             accent: tenant.theme.accentColour || theme.accent,
         },
-        buttonColors: {
+        buttonColors: (tenant.theme.button as any) || {
             'button-primary-background': tenant.theme.primaryColour || buttonTheme['button-primary-background'],
             'button-primary-foreground': buttonTheme['button-primary-foreground'],
             'button-primary-accent': tenant.theme.accentColour || buttonTheme['button-primary-accent'],
             'button-primary-accent-foreground': buttonTheme['button-primary-accent-foreground'],
         },
-        cardColors: { 
+        cardColors: (tenant.theme.card as any) || { 
             card: tenant.theme.backgroundColour || cardTheme.card, 
             'card-foreground': cardTheme['card-foreground'],
             'card-border': cardTheme['card-border']
         },
-        popoverColors: { popover: tenant.theme.backgroundColour || popoverTheme.popover, 'popover-foreground': popoverTheme['popover-foreground'] },
-        sidebarColors: {
+        popoverColors: (tenant.theme.popover as any) || { 
+            popover: tenant.theme.backgroundColour || popoverTheme.popover, 
+            'popover-foreground': popoverTheme['popover-foreground'] 
+        },
+        sidebarColors: (tenant.theme.sidebar as any) || {
             'sidebar-background': tenant.theme.backgroundColour || sidebarTheme['sidebar-background'],
             'sidebar-foreground': sidebarTheme['sidebar-foreground'],
             'sidebar-accent': tenant.theme.accentColour || sidebarTheme['sidebar-accent'],
             'sidebar-accent-foreground': sidebarTheme['sidebar-accent-foreground'],
             'sidebar-border': sidebarTheme['sidebar-border'],
         },
-        headerColors: { 'header-background': tenant.theme.backgroundColour || headerTheme['header-background'], 'header-foreground': headerTheme['header-foreground'], 'header-border': headerTheme['header-border'] },
-        swimlaneColors: swimlaneTheme,
+        headerColors: (tenant.theme.header as any) || { 
+            'header-background': tenant.theme.backgroundColour || headerTheme['header-background'], 
+            'header-foreground': headerTheme['header-foreground'], 
+            'header-border': headerTheme['header-border'] 
+        },
+        swimlaneColors: (tenant.theme.swimlane as any) || swimlaneTheme,
         scale: scale,
     };
 
     applySavedTheme(themeToApply);
     
-    toast({
-        title: "Tenant Theme Applied",
-        description: `The theme for "${tenant.name}" has been applied.`,
-    });
+    toast({ title: "Tenant Theme Applied", description: `The theme for "${tenant.name}" has been applied.` });
   };
 
   const handleSaveTheme = () => {
     if (!themeName.trim()) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Please enter a name for the theme.",
-        });
+        toast({ variant: "destructive", title: "Error", description: "Please enter a name for the theme." });
         return;
     }
     saveCurrentTheme(themeName);
     setThemeName('');
-    toast({
-        title: "Theme Saved",
-        description: `The theme "${themeName}" has been saved.`,
-    });
+    toast({ title: "Theme Saved", description: `The theme "${themeName}" has been saved.` });
   };
 
   const handleApplyTheme = (themeToApply: SavedTheme) => {
     applySavedTheme(themeToApply);
-    toast({
-        title: "Theme Applied",
-        description: `The "${themeToApply.name}" theme has been loaded.`,
-    });
+    toast({ title: "Theme Applied", description: `The "${themeToApply.name}" theme has been loaded.` });
   };
 
   const handleDeleteTheme = (themeNameToDelete: string) => {
     deleteSavedTheme(themeNameToDelete);
-    toast({
-        title: "Theme Deleted",
-        description: `The theme "${themeNameToDelete}" has been deleted.`,
-    });
+    toast({ title: "Theme Deleted", description: `The theme "${themeNameToDelete}" has been deleted.` });
   };
   
   const handleReset = () => {
     resetToDefaults();
-    toast({
-        title: "Theme Reset",
-        description: "The theme has been reset to its default values.",
-    });
+    toast({ title: "Theme Reset", description: "The theme has been reset to its default values." });
   }
 
-  // Filter sidebar theme entries to only show valid keys
   const validSidebarKeys = ['sidebar-background', 'sidebar-foreground', 'sidebar-accent', 'sidebar-accent-foreground', 'sidebar-border'];
   const filteredSidebarTheme = Object.entries(sidebarTheme).filter(([key]) => validSidebarKeys.includes(key));
 
@@ -175,13 +150,7 @@ export function ColorThemeForm() {
                 <h3 className="text-lg font-medium mb-2">UI Scaling</h3>
                 <p className='text-sm text-muted-foreground mb-4'>Adjust the overall size of the application interface.</p>
                 <div className='flex items-center gap-4'>
-                    <Slider
-                        value={[scale]}
-                        onValueChange={(value) => setScale(value[0])}
-                        min={75}
-                        max={150}
-                        step={5}
-                    />
+                    <Slider value={[scale]} onValueChange={(value) => setScale(value[0])} min={75} max={150} step={5} />
                     <span className='text-sm font-medium text-muted-foreground w-16 text-center'>{scale}%</span>
                 </div>
             </div>
@@ -244,13 +213,7 @@ export function ColorThemeForm() {
                     <div key={name} className="space-y-2">
                         <Label htmlFor={name} className="capitalize">{name.replace('button-primary-', '').replace('-', ' ')}</Label>
                         <div className='relative'>
-                        <Input
-                            id={name}
-                            type="color"
-                            value={value}
-                            onChange={(e) => setButtonThemeValue(name as keyof typeof buttonTheme, e.target.value)}
-                            className="p-1 h-10"
-                        />
+                        <Input id={name} type="color" value={value} onChange={(e) => setButtonThemeValue(name as keyof typeof buttonTheme, e.target.value)} className="p-1 h-10" />
                         </div>
                     </div>
                     ))}
@@ -266,13 +229,7 @@ export function ColorThemeForm() {
                   <div key={name} className="space-y-2">
                     <Label htmlFor={name} className="capitalize">{name.replace('header-', '')}</Label>
                     <div className='relative'>
-                      <Input
-                        id={name}
-                        type="color"
-                        value={value}
-                        onChange={(e) => setHeaderThemeValue(name as keyof typeof headerTheme, e.target.value)}
-                        className="p-1 h-10"
-                      />
+                      <Input id={name} type="color" value={value} onChange={(e) => setHeaderThemeValue(name as keyof typeof headerTheme, e.target.value)} className="p-1 h-10" />
                     </div>
                   </div>
                 ))}
@@ -288,13 +245,7 @@ export function ColorThemeForm() {
                   <div key={name} className="space-y-2">
                     <Label htmlFor={name} className="capitalize">{name.replace('swimlane-header-', '')}</Label>
                     <div className='relative'>
-                      <Input
-                        id={name}
-                        type="color"
-                        value={value}
-                        onChange={(e) => setSwimlaneThemeValue(name as keyof typeof swimlaneTheme, e.target.value)}
-                        className="p-1 h-10"
-                      />
+                      <Input id={name} type="color" value={value} onChange={(e) => setSwimlaneThemeValue(name as keyof typeof swimlaneTheme, e.target.value)} className="p-1 h-10" />
                     </div>
                   </div>
                 ))}
@@ -310,13 +261,7 @@ export function ColorThemeForm() {
                   <div key={name} className="space-y-2">
                     <Label htmlFor={name} className="capitalize">{name.replace('card-', '')}</Label>
                     <div className='relative'>
-                      <Input
-                        id={name}
-                        type="color"
-                        value={value}
-                        onChange={(e) => setCardThemeValue(name as keyof typeof cardTheme, e.target.value)}
-                        className="p-1 h-10"
-                      />
+                      <Input id={name} type="color" value={value} onChange={(e) => setCardThemeValue(name as keyof typeof cardTheme, e.target.value)} className="p-1 h-10" />
                     </div>
                   </div>
                 ))}
@@ -332,13 +277,7 @@ export function ColorThemeForm() {
                   <div key={name} className="space-y-2">
                     <Label htmlFor={name} className="capitalize">{name.replace('popover-', '')}</Label>
                     <div className='relative'>
-                      <Input
-                        id={name}
-                        type="color"
-                        value={value}
-                        onChange={(e) => setPopoverThemeValue(name as keyof typeof popoverTheme, e.target.value)}
-                        className="p-1 h-10"
-                      />
+                      <Input id={name} type="color" value={value} onChange={(e) => setPopoverThemeValue(name as keyof typeof popoverTheme, e.target.value)} className="p-1 h-10" />
                     </div>
                   </div>
                 ))}
@@ -354,13 +293,7 @@ export function ColorThemeForm() {
                   <div key={name} className="space-y-2">
                     <Label htmlFor={name} className="capitalize">{name.replace('sidebar-', '')}</Label>
                     <div className='relative'>
-                      <Input
-                        id={name}
-                        type="color"
-                        value={value}
-                        onChange={(e) => setSidebarThemeValue(name as keyof typeof sidebarTheme, e.target.value)}
-                        className="p-1 h-10"
-                      />
+                      <Input id={name} type="color" value={value} onChange={(e) => setSidebarThemeValue(name as keyof typeof sidebarTheme, e.target.value)} className="p-1 h-10" />
                     </div>
                   </div>
                 ))}
@@ -372,11 +305,7 @@ export function ColorThemeForm() {
             <div>
                 <h3 className="text-lg font-medium mb-4">Save Current Theme</h3>
                 <div className="flex items-center gap-2">
-                    <Input 
-                        placeholder="Enter theme name" 
-                        value={themeName} 
-                        onChange={(e) => setThemeName(e.target.value)}
-                    />
+                    <Input placeholder="Enter theme name" value={themeName} onChange={(e) => setThemeName(e.target.value)} />
                     <Button onClick={handleSaveTheme}>Save Theme</Button>
                 </div>
             </div>
@@ -392,9 +321,7 @@ export function ColorThemeForm() {
                                 <span className="font-medium">{theme.name}</span>
                                 <div className="flex items-center gap-2">
                                     <Button variant="outline" size="sm" onClick={() => handleApplyTheme(theme)}>Apply</Button>
-                                    <Button variant="destructive" size="icon" onClick={() => handleDeleteTheme(theme.name)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                    <Button variant="destructive" size="icon" onClick={() => handleDeleteTheme(theme.name)}><Trash2 className="h-4 w-4" /></Button>
                                 </div>
                             </div>
                         ))}
