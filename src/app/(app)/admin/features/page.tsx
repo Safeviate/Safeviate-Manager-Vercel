@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 export type FeatureSettings = {
   id: string;
   preFlightChecklistRequired: boolean;
+  enableExternalCompanyTabs: boolean;
 };
 
 export type FindingLevel = {
@@ -52,7 +53,7 @@ export default function FeaturesPage() {
     [firestore, tenantId]
   );
   const { data: featureSettings, isLoading: isLoadingFeatures } = useDoc<FeatureSettings>(featureSettingsRef, {
-    initialData: { id: featureSettingsId, preFlightChecklistRequired: true },
+    initialData: { id: featureSettingsId, preFlightChecklistRequired: true, enableExternalCompanyTabs: true },
   });
 
   // --- Finding Levels State & Logic ---
@@ -154,25 +155,43 @@ export default function FeaturesPage() {
             Enable or disable specific application features and workflows for your organization.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           {isLoadingFeatures ? (
-            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-24 w-full" />
           ) : (
-            <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
-              <div className='space-y-0.5'>
-                <Label htmlFor="checklist-required" className="text-base">
-                  Enforce Checklist Completion
-                </Label>
-                <p className='text-sm text-muted-foreground'>
-                  If enabled, a pre-flight check must be completed before the next booking for an aircraft can be actioned.
-                </p>
+            <>
+              <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+                <div className='space-y-0.5'>
+                  <Label htmlFor="checklist-required" className="text-base">
+                    Enforce Checklist Completion
+                  </Label>
+                  <p className='text-sm text-muted-foreground'>
+                    If enabled, a pre-flight check must be completed before the next booking for an aircraft can be actioned.
+                  </p>
+                </div>
+                <Switch
+                  id="checklist-required"
+                  checked={featureSettings?.preFlightChecklistRequired ?? true}
+                  onCheckedChange={(value) => handleToggleChange('preFlightChecklistRequired', value)}
+                />
               </div>
-              <Switch
-                id="checklist-required"
-                checked={featureSettings?.preFlightChecklistRequired ?? true}
-                onCheckedChange={(value) => handleToggleChange('preFlightChecklistRequired', value)}
-              />
-            </div>
+
+              <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+                <div className='space-y-0.5'>
+                  <Label htmlFor="org-tabs" className="text-base">
+                    Enable Multi-Company Scoping
+                  </Label>
+                  <p className='text-sm text-muted-foreground'>
+                    If enabled, administrators will see tabs to toggle views between internal and external organizations in key modules.
+                  </p>
+                </div>
+                <Switch
+                  id="org-tabs"
+                  checked={featureSettings?.enableExternalCompanyTabs ?? true}
+                  onCheckedChange={(value) => handleToggleChange('enableExternalCompanyTabs', value)}
+                />
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

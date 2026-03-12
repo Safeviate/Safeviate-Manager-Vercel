@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from 'react';
 import { collection, query, orderBy, doc, where } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -32,6 +32,7 @@ import { cn } from '@/lib/utils';
 import type { QualityAudit, ExternalOrganization } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
 import type { Personnel } from '../../users/personnel/page';
+import type { FeatureSettings } from '../../admin/features/page';
 
 type EnrichedAudit = QualityAudit & {
     auditeeName?: string;
@@ -183,13 +184,18 @@ export default function AuditsPage() {
         () => (firestore ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null),
         [firestore, tenantId]
     );
+    const featureSettingsRef = useMemoFirebase(
+        () => (firestore ? doc(firestore, `tenants/${tenantId}/settings`, 'features') : null),
+        [firestore, tenantId]
+    );
 
     const { data: audits, isLoading: isLoadingAudits } = useCollection<QualityAudit>(auditsQuery);
     const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
     const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
     const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
+    const { data: featureSettings, isLoading: isLoadingFeatures } = useDoc<FeatureSettings>(featureSettingsRef);
 
-    const isLoading = isLoadingAudits || isLoadingPersonnel || isLoadingDepts || isLoadingOrgs;
+    const isLoading = isLoadingAudits || isLoadingPersonnel || isLoadingDepts || isLoadingOrgs || isLoadingFeatures;
 
     const enrichedAudits = useMemo((): EnrichedAudit[] => {
         if (!audits || !personnel || !departments || !organizations) return [];
@@ -250,9 +256,11 @@ export default function AuditsPage() {
         );
     }
 
-    // If external user, they land directly on their org's view
-    if (!canViewAll && userOrgId) {
-        return renderOrgContext(userOrgId);
+    const showTabs = featureSettings?.enableExternalCompanyTabs && canViewAll;
+
+    // If external user or tabs disabled, they land directly on their scoped context
+    if (!showTabs) {
+        return renderOrgContext(userOrgId || 'internal');
     }
 
     return (

@@ -2,8 +2,8 @@
 'use client';
 
 import * as React from 'react';
-import { collection, query } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,7 @@ import { getRiskScoreStyle } from './utils';
 import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
+import type { FeatureSettings } from '../../admin/features/page';
 
 const HAZARD_AREAS = [
     'Flight Operations', 
@@ -42,7 +43,7 @@ export default function RiskRegisterPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [editingRisk, setEditingRisk] = React.useState<Risk | null>(null);
 
-  const canManageAll = hasPermission('risk-register-view'); // Simplified for MVP
+  const canManageAll = hasPermission('risk-register-view');
   const userOrgId = userProfile?.organizationId;
 
   const risksQuery = useMemoFirebase(
@@ -60,16 +61,22 @@ export default function RiskRegisterPage() {
     [firestore, tenantId]
   );
 
+  const featureSettingsRef = useMemoFirebase(
+    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'features') : null),
+    [firestore, tenantId]
+  );
+
   const { data: allRisks, isLoading: isLoadingRisks } = useCollection<Risk>(risksQuery);
   const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
   const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
+  const { data: featureSettings, isLoading: isLoadingFeatures } = useDoc<FeatureSettings>(featureSettingsRef);
 
   const personnelMap = React.useMemo(() => {
     if (!personnel) return new Map<string, string>();
     return new Map(personnel.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
   }, [personnel]);
   
-  const isLoading = isLoadingRisks || isLoadingPersonnel || isLoadingOrgs;
+  const isLoading = isLoadingRisks || isLoadingPersonnel || isLoadingOrgs || isLoadingFeatures;
   
   const handleEditClick = (risk: Risk) => {
     setEditingRisk(risk);
@@ -152,9 +159,10 @@ export default function RiskRegisterPage() {
     return <div className="space-y-6"><Skeleton className="h-10 w-[400px] rounded-full" /><Skeleton className="h-[500px] w-full" /></div>;
   }
 
-  // If external user, they land directly on their org's view
-  if (!canManageAll && userOrgId) {
-    return renderOrgContext(userOrgId);
+  const showTabs = featureSettings?.enableExternalCompanyTabs && canManageAll;
+
+  if (!showTabs) {
+    return renderOrgContext(userOrgId || 'internal');
   }
 
   return (

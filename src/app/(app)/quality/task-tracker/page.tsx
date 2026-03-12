@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, query } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -15,13 +16,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 
-// Import necessary types
 import type { ManagementOfChange } from '@/types/moc';
 import type { SafetyReport } from '@/types/safety-report';
 import type { CorrectiveActionPlan, QualityAudit, ExternalOrganization } from '@/types/quality';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
+import type { FeatureSettings } from '../../admin/features/page';
 
-// Unified Task Type
 type UnifiedTask = {
   id: string;
   description: string;
@@ -30,7 +30,7 @@ type UnifiedTask = {
   link: string;
   assigneeId: string;
   assigneeName?: string;
-  dueDate: string; // ISO string
+  dueDate: string;
   status: 'Open' | 'In Progress' | 'Completed' | 'Closed' | 'Cancelled';
   organizationId?: string | null;
 };
@@ -40,16 +40,16 @@ export default function TaskTrackerPage() {
   const { tenantId, userProfile } = useUserProfile();
   const { hasPermission } = usePermissions();
 
-  const canViewAll = hasPermission('quality-tasks-view'); // Simplified for MVP
+  const canViewAll = hasPermission('quality-tasks-view');
   const userOrgId = userProfile?.organizationId;
 
-  // --- Data Fetching ---
   const mocsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/management-of-change`)) : null), [firestore, tenantId]);
   const safetyReportsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/safety-reports`)) : null), [firestore, tenantId]);
   const capsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`)) : null), [firestore, tenantId]);
   const auditsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/quality-audits`)) : null), [firestore, tenantId]);
   const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
-  const orgsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/external-organizations`)) : null), [firestore, tenantId]);
+  const orgsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null), [firestore, tenantId]);
+  const featureSettingsRef = useMemoFirebase(() => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'features') : null), [firestore, tenantId]);
 
   const { data: mocs, isLoading: isLoadingMocs } = useCollection<ManagementOfChange>(mocsQuery);
   const { data: safetyReports, isLoading: isLoadingSafetyReports } = useCollection<SafetyReport>(safetyReportsQuery);
@@ -57,17 +57,16 @@ export default function TaskTrackerPage() {
   const { data: audits, isLoading: isLoadingAudits } = useCollection<QualityAudit>(auditsQuery);
   const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
   const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
+  const { data: featureSettings, isLoading: isLoadingFeatures } = useDoc<FeatureSettings>(featureSettingsRef);
 
-  const isLoading = isLoadingMocs || isLoadingSafetyReports || isLoadingCaps || isLoadingAudits || isLoadingPersonnel || isLoadingOrgs;
+  const isLoading = isLoadingMocs || isLoadingSafetyReports || isLoadingCaps || isLoadingAudits || isLoadingPersonnel || isLoadingOrgs || isLoadingFeatures;
 
-  // --- Data Transformation ---
   const allTasks = useMemo((): UnifiedTask[] => {
     if (isLoading || !personnel) return [];
 
     const personnelMap = new Map(personnel.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
     const tasks: UnifiedTask[] = [];
 
-    // 1. Extract tasks from Management of Change
     (mocs || []).forEach(moc => {
       moc.phases?.forEach(phase => {
         phase.steps?.forEach(step => {
@@ -95,7 +94,6 @@ export default function TaskTrackerPage() {
       });
     });
     
-    // 2. Extract tasks from Safety Reports
     (safetyReports || []).forEach(report => {
         (report.investigationTasks || []).forEach(task => {
             if (task.status !== 'Completed') {
@@ -115,7 +113,6 @@ export default function TaskTrackerPage() {
         });
     });
 
-    // 3. Extract tasks from Corrective Action Plans
     const auditsMap = new Map((audits || []).map(a => [a.id, a]));
     (caps || []).forEach(cap => {
       const audit = auditsMap.get(cap.auditId);
@@ -137,7 +134,6 @@ export default function TaskTrackerPage() {
       });
     });
 
-    // Sort all tasks by due date
     return tasks.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
   }, [mocs, safetyReports, caps, audits, personnel, isLoading]);
@@ -149,7 +145,7 @@ export default function TaskTrackerPage() {
              return 'default';
         case 'In Progress':
             return 'secondary';
-        default: // Open
+        default:
             return 'outline';
     }
   };
@@ -216,24 +212,13 @@ export default function TaskTrackerPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-[400px] rounded-full" />
-        <Card>
-            <CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader>
-            <CardContent className="space-y-2">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-            </CardContent>
-        </Card>
-      </div>
-    );
+    return <div className="space-y-6"><Skeleton className="h-10 w-[400px] rounded-full" /><Skeleton className="h-[400px] w-full" /></div>;
   }
 
-  // If external user, they land directly on their org's view
-  if (!canViewAll && userOrgId) {
-    return renderOrgContext(userOrgId);
+  const showTabs = featureSettings?.enableExternalCompanyTabs && canViewAll;
+
+  if (!showTabs) {
+    return renderOrgContext(userOrgId || 'internal');
   }
 
   return (

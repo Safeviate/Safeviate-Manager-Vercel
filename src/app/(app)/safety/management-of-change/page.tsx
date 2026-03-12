@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -5,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -17,13 +18,14 @@ import type { ExternalOrganization } from '@/types/quality';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { MocActions } from './moc-actions';
+import type { FeatureSettings } from '../../admin/features/page';
 
 export default function ManagementOfChangePage() {
     const firestore = useFirestore();
     const { hasPermission } = usePermissions();
     const { tenantId, userProfile } = useUserProfile();
 
-    const canViewAll = hasPermission('moc-manage'); // Simplified permission check
+    const canViewAll = hasPermission('moc-manage');
     const userOrgId = userProfile?.organizationId;
 
     const mocsQuery = useMemoFirebase(
@@ -36,10 +38,16 @@ export default function ManagementOfChangePage() {
         [firestore, tenantId]
     );
 
+    const featureSettingsRef = useMemoFirebase(
+        () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'features') : null),
+        [firestore, tenantId]
+    );
+
     const { data: mocs, isLoading: isLoadingMocs, error } = useCollection<ManagementOfChange>(mocsQuery);
     const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
+    const { data: featureSettings, isLoading: isLoadingFeatures } = useDoc<FeatureSettings>(featureSettingsRef);
 
-    const isLoading = isLoadingMocs || isLoadingOrgs;
+    const isLoading = isLoadingMocs || isLoadingOrgs || isLoadingFeatures;
 
     const renderOrgContext = (orgId: string | 'internal') => {
         const filteredMocs = (mocs || []).filter(moc => 
@@ -110,9 +118,10 @@ export default function ManagementOfChangePage() {
         return <div className="text-center py-10 text-destructive"><p>Error loading records: {error.message}</p></div>;
     }
 
-    // If external user, land on their org's view
-    if (!canViewAll && userOrgId) {
-        return renderOrgContext(userOrgId);
+    const showTabs = featureSettings?.enableExternalCompanyTabs && canViewAll;
+
+    if (!showTabs) {
+        return renderOrgContext(userOrgId || 'internal');
     }
 
     return (
