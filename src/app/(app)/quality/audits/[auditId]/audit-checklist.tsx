@@ -202,7 +202,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
         setIsImageViewerOpen(true);
     };
 
-    const handleEvidenceUploaded = (checklistItemId: string, docDetails: { name: string; url: string; }) => {
+    const handleEvidenceUploaded = (checklistItemId: string, docDetails: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => {
         const itemIndex = form.getValues('findings').findIndex(f => f.checklistItemId === checklistItemId);
         if (itemIndex === -1) return;
 
@@ -293,19 +293,26 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                                     <div className="flex justify-between items-center">
                                         <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Evidence</FormLabel>
                                         {!isReadOnly && (
-                                            <DocumentUploader
-                                            onDocumentUploaded={(docDetails) => handleEvidenceUploaded(item.id, docDetails)}
-                                            trigger={(openDialog) => (
-                                                <div className="flex gap-2">
-                                                    <Button type="button" variant="outline" size="sm" className="h-6 text-[9px]" onClick={() => openDialog('file')}>
-                                                        <FileUp className="mr-1 h-3 w-3" /> Add Document
-                                                    </Button>
-                                                    <Button type="button" variant="outline" size="sm" className="h-6 text-[9px]" onClick={() => openDialog('camera')}>
-                                                        <Camera className="mr-1 h-3 w-3" /> Add Photo
-                                                    </Button>
-                                                </div>
-                                            )}
-                                            />
+                                            <div className="flex gap-2">
+                                                <DocumentUploader
+                                                    restrictedMode="file"
+                                                    onDocumentUploaded={(docDetails) => handleEvidenceUploaded(item.id, docDetails)}
+                                                    trigger={(openDialog) => (
+                                                        <Button type="button" variant="outline" size="sm" className="h-6 text-[9px]" onClick={() => openDialog('file')}>
+                                                            <FileUp className="mr-1 h-3 w-3" /> Add Document
+                                                        </Button>
+                                                    )}
+                                                />
+                                                <DocumentUploader
+                                                    restrictedMode="camera"
+                                                    onDocumentUploaded={(docDetails) => handleEvidenceUploaded(item.id, docDetails)}
+                                                    trigger={(openDialog) => (
+                                                        <Button type="button" variant="outline" size="sm" className="h-6 text-[9px]" onClick={() => openDialog('camera')}>
+                                                            <Camera className="mr-1 h-3 w-3" /> Add Photo
+                                                        </Button>
+                                                    )}
+                                                />
+                                            </div>
                                         )}
                                     </div>
                                     <div className="flex flex-wrap gap-2 pt-1">

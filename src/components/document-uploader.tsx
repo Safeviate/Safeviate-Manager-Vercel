@@ -23,22 +23,23 @@ interface DocumentUploaderProps {
   trigger: (open: (mode?: UploadMode) => void) => ReactNode;
   defaultFileName?: string;
   onDocumentUploaded: (document: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => void;
+  restrictedMode?: UploadMode;
 }
 
-export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUploaded }: DocumentUploaderProps) {
+export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUploaded, restrictedMode }: DocumentUploaderProps) {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
-  const [uploadMode, setUploadMode] = useState<UploadMode>('file');
-
-  // Form state
-  const [fileName, setFileName] = useState(defaultFileName);
-  const [file, setFile] = useState<File | null>(null);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [uploadMode, setUploadMode] = useState<UploadMode>(restrictedMode || 'file');
 
   // Camera state
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+
+  // Form state
+  const [fileName, setFileName] = useState(defaultFileName);
+  const [file, setFile] = useState<File | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
 
   const cleanupCamera = useCallback(() => {
     if (videoRef.current && videoRef.current.srcObject) {
@@ -53,8 +54,8 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
     setFile(null);
     setCapturedImage(null);
     setHasCameraPermission(null);
-    setUploadMode('file');
-  }, [defaultFileName]);
+    setUploadMode(restrictedMode || 'file');
+  }, [defaultFileName, restrictedMode]);
 
   const onOpenChange = (open: boolean) => {
     setIsOpen(open);
@@ -67,7 +68,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
   };
 
   const openDialog = (mode: UploadMode = 'file') => {
-    setUploadMode(mode);
+    setUploadMode(restrictedMode || mode);
     setIsOpen(true);
   };
   
@@ -190,7 +191,11 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
         <DialogHeader>
           <DialogTitle>Upload Document</DialogTitle>
           <DialogDescription>
-            Upload a file or take a photo of the document.
+            {restrictedMode === 'camera' 
+              ? 'Take a photo of the document using your camera.' 
+              : restrictedMode === 'file' 
+              ? 'Select a file from your device to upload.' 
+              : 'Upload a file or take a photo of the document.'}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">
@@ -203,11 +208,13 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
                     placeholder="e.g., C of A, Insurance"
                 />
             </div>
-            <Tabs value={uploadMode} onValueChange={(value) => setUploadMode(value as UploadMode)} className='w-full'>
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="file">Upload File</TabsTrigger>
-                    <TabsTrigger value="camera">Take Photo</TabsTrigger>
-                </TabsList>
+            <Tabs value={uploadMode} onValueChange={(value) => !restrictedMode && setUploadMode(value as UploadMode)} className='w-full'>
+                {!restrictedMode && (
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="file">Upload File</TabsTrigger>
+                        <TabsTrigger value="camera">Take Photo</TabsTrigger>
+                    </TabsList>
+                )}
                 <TabsContent value="file">
                     <div className="space-y-2 pt-4">
                         <Label htmlFor="file-upload">File</Label>
