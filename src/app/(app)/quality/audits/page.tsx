@@ -107,7 +107,7 @@ interface AuditsTableProps {
 
 function AuditsTable({ audits, tenantId }: AuditsTableProps) {
     if (audits.length === 0) {
-        return <div className="text-center p-8 text-muted-foreground text-sm italic">No audits found.</div>
+        return <div className="text-center p-8 text-muted-foreground text-sm italic">No audits found for this context.</div>
     }
 
     return (
@@ -166,18 +166,9 @@ export default function AuditsPage() {
     const auditsQuery = useMemoFirebase(
         () => {
             if (!firestore || !tenantId) return null;
-            
-            const baseCollection = collection(firestore, `tenants/${tenantId}/quality-audits`);
-            
-            // SECURITY: Scoped visibility for external users (only their org)
-            if (!canViewAll && userOrgId) {
-                return query(baseCollection, where('organizationId', '==', userOrgId), orderBy('auditDate', 'desc'));
-            }
-            
-            // Internal admins get everything
-            return query(baseCollection, orderBy('auditDate', 'desc'));
+            return query(collection(firestore, `tenants/${tenantId}/quality-audits`), orderBy('auditDate', 'desc'));
         },
-        [firestore, tenantId, canViewAll, userOrgId]
+        [firestore, tenantId]
     );
 
     const personnelQuery = useMemoFirebase(
@@ -193,7 +184,7 @@ export default function AuditsPage() {
         [firestore, tenantId]
     );
 
-    const { data: audits, isLoading: isLoadingAudits, error: auditsError } = useCollection<QualityAudit>(auditsQuery);
+    const { data: audits, isLoading: isLoadingAudits } = useCollection<QualityAudit>(auditsQuery);
     const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
     const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
     const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
@@ -258,10 +249,6 @@ export default function AuditsPage() {
             </div>
         );
     }
-    
-    if (auditsError) {
-        return <p className="text-destructive text-center p-8">Error: {auditsError.message}</p>
-    }
 
     // If external user, they land directly on their org's view
     if (!canViewAll && userOrgId) {
@@ -270,15 +257,22 @@ export default function AuditsPage() {
 
     return (
         <div className="flex flex-col gap-6 h-full">
+            <div className="px-1">
+                <h1 className="text-3xl font-bold tracking-tight">Quality Audits</h1>
+                <p className="text-muted-foreground">Manage internal and external quality assurance activities.</p>
+            </div>
+
             <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
-                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 shrink-0 border-b-0 overflow-x-auto no-scrollbar justify-start">
-                    <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Internal</TabsTrigger>
-                    {(organizations || []).map(org => (
-                        <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">
-                            {org.name}
-                        </TabsTrigger>
-                    ))}
-                </TabsList>
+                <div className="px-1 shrink-0">
+                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar">
+                        <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Internal</TabsTrigger>
+                        {(organizations || []).map(org => (
+                            <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">
+                                {org.name}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+                </div>
 
                 <TabsContent value="internal" className="mt-0">
                     {renderOrgContext('internal')}
