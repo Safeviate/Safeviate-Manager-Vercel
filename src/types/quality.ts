@@ -27,6 +27,7 @@ export interface ComplianceRequirement {
     responsibleManagerId: string;
     lastAuditDate?: string; // ISO String
     nextAuditDate?: string; // ISO String
+    organizationId?: string | null; // Associated external company ID
 }
 
 export interface AuditChecklistItem {

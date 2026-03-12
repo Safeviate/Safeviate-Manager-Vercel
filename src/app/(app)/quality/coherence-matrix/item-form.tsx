@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -26,6 +27,7 @@ const formSchema = z.object({
     companyReference: z.string().min(1, 'Reference is required.'),
     responsibleManagerId: z.string().optional(),
     nextAuditDate: z.date().optional(),
+    organizationId: z.string().nullable().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -50,6 +52,7 @@ export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tena
             companyReference: existingItem?.companyReference || '',
             responsibleManagerId: existingItem?.responsibleManagerId || '',
             nextAuditDate: existingItem?.nextAuditDate ? new Date(existingItem.nextAuditDate) : undefined,
+            organizationId: existingItem?.organizationId || null,
         },
     });
 
