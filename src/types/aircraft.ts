@@ -30,6 +30,7 @@ export interface Aircraft {
     tachoAtNext50Inspection?: number;
     tachoAtNext100Inspection?: number;
     maintenanceLogs?: string[];
+    organizationId?: string | null; // Associated external company ID
     documents?: {
         name: string;
         url: string;

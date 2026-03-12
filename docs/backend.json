@@ -223,6 +223,7 @@
         "tailNumber": { "type": "string" },
         "model": { "type": "string" },
         "type": { "type": "string", "enum": ["Single-Engine", "Multi-Engine"] },
+        "organizationId": { "type": "string", "description": "ID of the associated external organization, if applicable." },
         "frameHours": { "type": "number" },
         "engineHours": { "type": "number" },
         "currentHobbs": { "type": "number" },
