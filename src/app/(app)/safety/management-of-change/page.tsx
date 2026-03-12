@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -18,7 +17,7 @@ import type { ExternalOrganization } from '@/types/quality';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { MocActions } from './moc-actions';
-import type { FeatureSettings } from '../../admin/features/page';
+import type { TabVisibilitySettings } from '../../admin/external/page';
 
 export default function ManagementOfChangePage() {
     const firestore = useFirestore();
@@ -38,16 +37,16 @@ export default function ManagementOfChangePage() {
         [firestore, tenantId]
     );
 
-    const featureSettingsRef = useMemoFirebase(
-        () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'features') : null),
+    const visibilitySettingsRef = useMemoFirebase(
+        () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'tab-visibility') : null),
         [firestore, tenantId]
     );
 
     const { data: mocs, isLoading: isLoadingMocs, error } = useCollection<ManagementOfChange>(mocsQuery);
     const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
-    const { data: featureSettings, isLoading: isLoadingFeatures } = useDoc<FeatureSettings>(featureSettingsRef);
+    const { data: visibilitySettings, isLoading: isLoadingVisibility } = useDoc<TabVisibilitySettings>(visibilitySettingsRef);
 
-    const isLoading = isLoadingMocs || isLoadingOrgs || isLoadingFeatures;
+    const isLoading = isLoadingMocs || isLoadingOrgs || isLoadingVisibility;
 
     const renderOrgContext = (orgId: string | 'internal') => {
         const filteredMocs = (mocs || []).filter(moc => 
@@ -118,7 +117,8 @@ export default function ManagementOfChangePage() {
         return <div className="text-center py-10 text-destructive"><p>Error loading records: {error.message}</p></div>;
     }
 
-    const showTabs = featureSettings?.enableExternalCompanyTabs && canViewAll;
+    const isTabEnabled = visibilitySettings?.visibilities?.['moc'] ?? true;
+    const showTabs = isTabEnabled && canViewAll;
 
     if (!showTabs) {
         return renderOrgContext(userOrgId || 'internal');

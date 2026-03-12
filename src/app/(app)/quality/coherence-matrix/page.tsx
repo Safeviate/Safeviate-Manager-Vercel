@@ -1,12 +1,11 @@
-
 'use client';
 
-import { useState, useMemo, useCallback, ChangeEvent } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, writeBatch, doc, deleteDoc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, ChevronDown, Upload, Loader2, ClipboardPaste, WandSparkles } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -27,7 +26,7 @@ import Image from 'next/image';
 import { Switch } from '@/components/ui/switch';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
-import type { FeatureSettings } from '../../admin/features/page';
+import type { TabVisibilitySettings } from '../../admin/external/page';
 
 
 function UploadRegulationsDialog({ tenantId, organizationId }: { tenantId: string, organizationId: string | null }) {
@@ -249,15 +248,15 @@ export default function CoherenceMatrixPage() {
   const auditsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/quality-audits`)) : null), [firestore, tenantId]);
   const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
   const orgsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null), [firestore, tenantId]);
-  const featureSettingsRef = useMemoFirebase(() => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'features') : null), [firestore, tenantId]);
+  const visibilitySettingsRef = useMemoFirebase(() => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'tab-visibility') : null), [firestore, tenantId]);
 
   const { data: complianceItems, isLoading: isLoadingItems } = useCollection<ComplianceRequirement>(complianceQuery);
   const { data: audits, isLoading: isLoadingAudits } = useCollection<QualityAudit>(auditsQuery);
   const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
   const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
-  const { data: featureSettings, isLoading: isLoadingFeatures } = useDoc<FeatureSettings>(featureSettingsRef);
+  const { data: visibilitySettings, isLoading: isLoadingVisibility } = useDoc<TabVisibilitySettings>(visibilitySettingsRef);
 
-  const isLoading = isLoadingItems || isLoadingAudits || isLoadingPersonnel || isLoadingOrgs || isLoadingFeatures;
+  const isLoading = isLoadingItems || isLoadingAudits || isLoadingPersonnel || isLoadingOrgs || isLoadingVisibility;
 
   const naturalSort = (a: string, b: string) => {
     const re = /(\d+)/g;
@@ -278,20 +277,6 @@ export default function CoherenceMatrixPage() {
         }
     }
     return a.length - b.length;
-  };
-
-  const getAuditDataForRegulation = (regulationCode: string) => {
-    if (!audits) return { lastAudit: null, findings: [] };
-    const relevantAudits = audits
-        .filter(audit => audit.findings.some(finding => true))
-        .sort((a, b) => new Date(b.auditDate).getTime() - new Date(a.auditDate).getTime());
-    if (relevantAudits.length === 0) return { lastAudit: null, findings: [] };
-    const lastAudit = relevantAudits[0];
-    const findings = lastAudit.findings.filter(f => f.finding !== 'Compliant');
-    return {
-        lastAudit: format(new Date(lastAudit.auditDate), 'PPP'),
-        findings: findings.map(f => f.comment).filter(Boolean) as string[],
-    };
   };
 
   const handleSeedData = async (orgId: string | null) => {
@@ -408,7 +393,8 @@ export default function CoherenceMatrixPage() {
     return <div className="space-y-6"><Skeleton className="h-10 w-[400px] rounded-full" /><Skeleton className="h-[500px] w-full" /></div>;
   }
 
-  const showTabs = featureSettings?.enableExternalCompanyTabs && canManageAll;
+  const isTabEnabled = visibilitySettings?.visibilities?.['coherence-matrix'] ?? true;
+  const showTabs = isTabEnabled && canManageAll;
 
   if (!showTabs) {
     return renderOrgContext(userOrgId || 'internal');

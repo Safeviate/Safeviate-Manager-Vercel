@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -18,7 +17,7 @@ import type { SpiConfig, SpiConfigurations } from '@/types/spi';
 import type { ExternalOrganization } from '@/types/quality';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
-import type { FeatureSettings } from '../../admin/features/page';
+import type { TabVisibilitySettings } from '../../admin/external/page';
 
 const initialSpiConfig: SpiConfig[] = [
     {
@@ -116,8 +115,8 @@ export default function SafetyIndicatorsPage() {
     () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, settingsDocId) : null),
     [firestore, tenantId]
   );
-  const featureSettingsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'features') : null),
+  const visibilitySettingsRef = useMemoFirebase(
+    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'tab-visibility') : null),
     [firestore, tenantId]
   );
 
@@ -125,7 +124,7 @@ export default function SafetyIndicatorsPage() {
   const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
   const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
   const { data: spiDocument, isLoading: isLoadingSpiDocument } = useDoc<SpiConfigurations>(spiConfigRef);
-  const { data: featureSettings, isLoading: isLoadingFeatures } = useDoc<FeatureSettings>(featureSettingsRef);
+  const { data: visibilitySettings, isLoading: isLoadingVisibility } = useDoc<TabVisibilitySettings>(visibilitySettingsRef);
   
   const saveConfigToFirestore = useCallback((updatedConfig: SpiConfig[]) => {
     if (!firestore || !spiConfigRef) return;
@@ -197,11 +196,12 @@ export default function SafetyIndicatorsPage() {
     );
   };
 
-  if (isLoadingReports || isLoadingBookings || isLoadingOrgs || isLoadingSpiDocument || isLoadingFeatures) {
+  if (isLoadingReports || isLoadingBookings || isLoadingOrgs || isLoadingSpiDocument || isLoadingVisibility) {
     return <div className="space-y-6"><Skeleton className="h-10 w-[400px] rounded-full" /><Skeleton className="h-[200px] w-full" /></div>;
   }
 
-  const showTabs = featureSettings?.enableExternalCompanyTabs && canViewAll;
+  const isTabEnabled = visibilitySettings?.visibilities?.['safety-indicators'] ?? true;
+  const showTabs = isTabEnabled && canViewAll;
 
   if (!showTabs) {
     return renderOrgContext(userOrgId || 'internal');

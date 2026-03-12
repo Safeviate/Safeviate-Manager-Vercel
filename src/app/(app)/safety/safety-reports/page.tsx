@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useMemo } from 'react';
-import { collection, query, orderBy, where, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,7 +16,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import type { SafetyReport } from '@/types/safety-report';
 import type { ExternalOrganization } from '@/types/quality';
-import type { FeatureSettings } from '../../admin/features/page';
+import type { TabVisibilitySettings } from '../../admin/external/page';
 
 const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
@@ -94,16 +93,16 @@ export default function SafetyReportsPage() {
     [firestore, tenantId]
   );
 
-  const featureSettingsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'features') : null),
+  const visibilitySettingsRef = useMemoFirebase(
+    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'tab-visibility') : null),
     [firestore, tenantId]
   );
 
   const { data: allReports, isLoading: isLoadingReports } = useCollection<SafetyReport>(reportsQuery);
   const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
-  const { data: featureSettings, isLoading: isLoadingFeatures } = useDoc<FeatureSettings>(featureSettingsRef);
+  const { data: visibilitySettings, isLoading: isLoadingVisibility } = useDoc<TabVisibilitySettings>(visibilitySettingsRef);
 
-  const isLoading = isLoadingReports || isLoadingOrgs || isLoadingFeatures;
+  const isLoading = isLoadingReports || isLoadingOrgs || isLoadingVisibility;
 
   const renderOrgContext = (orgId: string | 'internal') => {
     const filteredReports = (allReports || []).filter(r => 
@@ -119,7 +118,7 @@ export default function SafetyReportsPage() {
                         <CardDescription>Review occurrences and safety concerns reported within this context.</CardDescription>
                     </div>
                     <Button asChild size="sm">
-                        <Link href="/safety/new-report">
+                        <Link href={`/safety/new-report?orgId=${orgId}`}>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             File Report
                         </Link>
@@ -137,7 +136,8 @@ export default function SafetyReportsPage() {
     return <div className="space-y-6"><Skeleton className="h-10 w-[400px] rounded-full" /><Skeleton className="h-64 w-full" /></div>;
   }
 
-  const showTabs = featureSettings?.enableExternalCompanyTabs && canViewAll;
+  const isTabEnabled = visibilitySettings?.visibilities?.['safety-reports'] ?? true;
+  const showTabs = isTabEnabled && canViewAll;
 
   // If external user or tabs disabled
   if (!showTabs) {

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -20,7 +19,7 @@ import type { ManagementOfChange } from '@/types/moc';
 import type { SafetyReport } from '@/types/safety-report';
 import type { CorrectiveActionPlan, QualityAudit, ExternalOrganization } from '@/types/quality';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import type { FeatureSettings } from '../../admin/features/page';
+import type { TabVisibilitySettings } from '../../admin/external/page';
 
 type UnifiedTask = {
   id: string;
@@ -49,7 +48,7 @@ export default function TaskTrackerPage() {
   const auditsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/quality-audits`)) : null), [firestore, tenantId]);
   const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
   const orgsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null), [firestore, tenantId]);
-  const featureSettingsRef = useMemoFirebase(() => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'features') : null), [firestore, tenantId]);
+  const visibilitySettingsRef = useMemoFirebase(() => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'tab-visibility') : null), [firestore, tenantId]);
 
   const { data: mocs, isLoading: isLoadingMocs } = useCollection<ManagementOfChange>(mocsQuery);
   const { data: safetyReports, isLoading: isLoadingSafetyReports } = useCollection<SafetyReport>(safetyReportsQuery);
@@ -57,9 +56,9 @@ export default function TaskTrackerPage() {
   const { data: audits, isLoading: isLoadingAudits } = useCollection<QualityAudit>(auditsQuery);
   const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
   const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
-  const { data: featureSettings, isLoading: isLoadingFeatures } = useDoc<FeatureSettings>(featureSettingsRef);
+  const { data: visibilitySettings, isLoading: isLoadingVisibility } = useDoc<TabVisibilitySettings>(visibilitySettingsRef);
 
-  const isLoading = isLoadingMocs || isLoadingSafetyReports || isLoadingCaps || isLoadingAudits || isLoadingPersonnel || isLoadingOrgs || isLoadingFeatures;
+  const isLoading = isLoadingMocs || isLoadingSafetyReports || isLoadingCaps || isLoadingAudits || isLoadingPersonnel || isLoadingOrgs || isLoadingVisibility;
 
   const allTasks = useMemo((): UnifiedTask[] => {
     if (isLoading || !personnel) return [];
@@ -215,7 +214,8 @@ export default function TaskTrackerPage() {
     return <div className="space-y-6"><Skeleton className="h-10 w-[400px] rounded-full" /><Skeleton className="h-[400px] w-full" /></div>;
   }
 
-  const showTabs = featureSettings?.enableExternalCompanyTabs && canViewAll;
+  const isTabEnabled = visibilitySettings?.visibilities?.['task-tracker'] ?? true;
+  const showTabs = isTabEnabled && canViewAll;
 
   if (!showTabs) {
     return renderOrgContext(userOrgId || 'internal');
