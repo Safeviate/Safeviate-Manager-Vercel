@@ -1,4 +1,3 @@
-
 import type { RiskAssessment } from './safety-report';
 
 export type MocStatus = 'Proposed' | 'Under Review' | 'Approved' | 'In Progress' | 'Closed' | 'Cancelled';
@@ -60,4 +59,5 @@ export interface ManagementOfChange {
     status: MocStatus;
     phases: MocPhase[];
     signatures?: MocSignature[];
+    organizationId?: string | null; // Associated external company ID
 }

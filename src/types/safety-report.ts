@@ -71,6 +71,7 @@ export interface SafetyReport {
     eventTime: string;
     location: string;
     description: string;
+    organizationId?: string | null; // Associated external company ID
     // Conditional Fields
     phaseOfFlight?: string;
     systemOrComponent?: string;
@@ -90,5 +91,3 @@ export interface SafetyReport {
     // Closure Fields
     signatures?: ReportSignature[];
 }
-
-    

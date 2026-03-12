@@ -1,4 +1,3 @@
-
 export type BookingStatus = 'Tentative' | 'Confirmed' | 'Completed' | 'Cancelled' | 'Cancelled with Reason';
 
 export interface MassAndBalance {
@@ -63,4 +62,5 @@ export interface Booking {
   preFlightData?: PreFlightData;
   postFlightData?: PostFlightData;
   massAndBalance?: MassAndBalance;
+  organizationId?: string | null; // Associated external company ID
 }

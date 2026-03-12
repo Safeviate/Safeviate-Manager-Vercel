@@ -1,10 +1,9 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense, use } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { addDoc, collection, doc, runTransaction } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import { collection, doc, runTransaction } from 'firebase/firestore';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NewMocForm, type NewMocFormValues } from './new-moc-form';
@@ -14,22 +13,25 @@ import type { Personnel } from '@/app/(app)/users/personnel/page';
 
 const getMocPrefix = (): string => 'MOC';
 
-export default function NewMocPage() {
+function NewMocContent() {
   const firestore = useFirestore();
   const { user } = useUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const tenantId = 'safeviate'; // Hardcoded for now
+  const tenantId = 'safeviate';
+
+  const orgId = searchParams.get('orgId');
 
   // Fetch departments and personnel for the form dropdowns
   const departmentsQuery = useMemoFirebase(
     () => (firestore ? collection(firestore, 'tenants', tenantId, 'departments') : null),
-    [firestore]
+    [firestore, tenantId]
   );
   const personnelQuery = useMemoFirebase(
     () => (firestore ? collection(firestore, 'tenants', tenantId, 'personnel') : null),
-    [firestore]
+    [firestore, tenantId]
   );
 
   const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
@@ -71,7 +73,8 @@ export default function NewMocPage() {
                 status: 'Proposed',
                 proposedBy: user.uid,
                 proposalDate: new Date().toISOString(),
-                phases: [], // Start with empty phases
+                phases: [],
+                organizationId: orgId === 'internal' ? null : orgId,
             };
 
             transaction.set(newMocRef, mocData);
@@ -100,16 +103,8 @@ export default function NewMocPage() {
   if (!user || isLoadingDepts || isLoadingPersonnel) {
     return (
         <div className="max-w-4xl mx-auto space-y-8">
-            <div className="space-y-6">
-                <Skeleton className="h-10 w-1/3" />
-                <Skeleton className="h-4 w-2/3" />
-            </div>
-            <div className="space-y-6">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-12 w-full" />
-            </div>
+            <Skeleton className="h-10 w-1/3" />
+            <Skeleton className="h-64 w-full" />
         </div>
     )
   }
@@ -122,4 +117,12 @@ export default function NewMocPage() {
         personnel={personnel || []}
     />
   );
+}
+
+export default function NewMocPage() {
+    return (
+        <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+            <NewMocContent />
+        </Suspense>
+    )
 }

@@ -1,4 +1,3 @@
-
 import type { RiskAssessment } from './safety-report';
 
 export interface Mitigation {
@@ -22,6 +21,7 @@ export type Risk = { // This is the top-level document, which is a Hazard
     hazard: string;
     status: 'Open' | 'Closed' | 'Archived';
     risks: RiskItem[];
+    organizationId?: string | null; // Associated external company ID
 };
 
 export interface RiskMatrixSettings {
