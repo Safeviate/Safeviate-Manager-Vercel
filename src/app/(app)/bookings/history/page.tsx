@@ -126,7 +126,7 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
             </TableHeader>
             <TableBody>
                 {bookings.map(b => {
-                    const flightHours = (b.status === 'Completed' && b.postFlightData?.hobbs && b.preFlightData?.hobbs)
+                    const flightHours = (b.status === 'Completed' && b.postFlightData?.hobbs !== undefined && b.preFlightData?.hobbs !== undefined)
                         ? (b.postFlightData.hobbs - b.preFlightData.hobbs).toFixed(1)
                         : null;
 
@@ -137,7 +137,7 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                             <TableCell>{b.creatorName}</TableCell>
                             <TableCell>{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
                             <TableCell className="text-right font-mono font-bold">
-                                {flightHours ? (
+                                {flightHours !== null ? (
                                     <div className="flex items-center justify-end gap-1 text-primary">
                                         <Clock className="h-3 w-3" />
                                         {flightHours}h

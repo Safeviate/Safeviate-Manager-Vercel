@@ -59,7 +59,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const isLoading = loadingAc || loadingIns || loadingStu || loadingPer;
 
     const flightHours = useMemo(() => {
-        if (booking.status === 'Completed' && booking.postFlightData?.hobbs && booking.preFlightData?.hobbs) {
+        if (booking.status === 'Completed' && booking.postFlightData?.hobbs !== undefined && booking.preFlightData?.hobbs !== undefined) {
             return (booking.postFlightData.hobbs - booking.preFlightData.hobbs).toFixed(1);
         }
         return null;
@@ -110,7 +110,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         </CardDescription>
                     </div>
                     <div className="flex items-center gap-3">
-                        {flightHours && (
+                        {flightHours !== null && (
                             <div className="text-right">
                                 <p className="text-[10px] uppercase font-bold text-muted-foreground">Flight Time</p>
                                 <p className="text-3xl font-bold text-primary flex items-center justify-end gap-2">

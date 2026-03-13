@@ -25,7 +25,7 @@ import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '../../users/personnel/page';
 import type { Booking } from '@/types/booking';
 import { Button } from '@/components/ui/button';
-import { Eye, Trash2, FilePlus } from 'lucide-react';
+import { Eye, Trash2, FilePlus, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -119,41 +119,56 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                   <TableHead>Aircraft</TableHead>
                   <TableHead>Creator</TableHead>
                   <TableHead>Start Time</TableHead>
+                  <TableHead className="text-right">Flight Time</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className='text-right'>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-                {bookings.map(b => (
-                    <TableRow key={b.id} className={cn((b.status === 'Cancelled' || b.status === 'Cancelled with Reason' || b.status === 'Completed') && 'text-muted-foreground')}>
-                        <TableCell className="font-medium">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
-                        <TableCell>{b.aircraftTailNumber}</TableCell>
-                        <TableCell>{b.creatorName}</TableCell>
-                        <TableCell>{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
-                        <TableCell>
-                            <Badge variant={getStatusBadgeVariant(b.status)}>{b.status}</Badge>
-                        </TableCell>
-                        <TableCell className='text-right'>
-                            <div className="flex justify-end gap-2">
-                                <Button asChild variant="default" size="icon" className="h-8 w-8">
-                                    <Link href={`/operations/booking-history/${b.id}`}>
-                                        <Eye className="h-4 w-4" />
-                                        <span className="sr-only">View</span>
-                                    </Link>
-                                </Button>
-                                {b.type === 'Training Flight' && b.status === 'Completed' && (
-                                    <Button asChild variant="secondary" size="icon" className="h-8 w-8">
-                                        <Link href={`/training/student-debriefs/new?bookingId=${b.id}`}>
-                                            <FilePlus className="h-4 w-4" />
-                                            <span className="sr-only">Debrief</span>
+                {bookings.map(b => {
+                    const flightHours = (b.status === 'Completed' && b.postFlightData?.hobbs !== undefined && b.preFlightData?.hobbs !== undefined)
+                        ? (b.postFlightData.hobbs - b.preFlightData.hobbs).toFixed(1)
+                        : null;
+
+                    return (
+                        <TableRow key={b.id} className={cn((b.status === 'Cancelled' || b.status === 'Cancelled with Reason' || b.status === 'Completed') && 'text-muted-foreground')}>
+                            <TableCell className="font-medium">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
+                            <TableCell>{b.aircraftTailNumber}</TableCell>
+                            <TableCell>{b.creatorName}</TableCell>
+                            <TableCell>{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
+                            <TableCell className="text-right font-mono font-bold">
+                                {flightHours !== null ? (
+                                    <div className="flex items-center justify-end gap-1 text-primary">
+                                        <Clock className="h-3 w-3" />
+                                        {flightHours}h
+                                    </div>
+                                ) : '-'}
+                            </TableCell>
+                            <TableCell>
+                                <Badge variant={getStatusBadgeVariant(b.status)}>{b.status}</Badge>
+                            </TableCell>
+                            <TableCell className='text-right'>
+                                <div className="flex justify-end gap-2">
+                                    <Button asChild variant="default" size="icon" className="h-8 w-8">
+                                        <Link href={`/operations/booking-history/${b.id}`}>
+                                            <Eye className="h-4 w-4" />
+                                            <span className="sr-only">View</span>
                                         </Link>
                                     </Button>
-                                )}
-                                <DeleteBookingButton bookingId={b.id} bookingNumber={b.bookingNumber} />
-                            </div>
-                        </TableCell>
-                    </TableRow>
-                ))}
+                                    {b.type === 'Training Flight' && b.status === 'Completed' && (
+                                        <Button asChild variant="secondary" size="icon" className="h-8 w-8">
+                                            <Link href={`/training/student-debriefs/new?bookingId=${b.id}`}>
+                                                <FilePlus className="h-4 w-4" />
+                                                <span className="sr-only">Debrief</span>
+                                            </Link>
+                                        </Button>
+                                    )}
+                                    <DeleteBookingButton bookingId={b.id} bookingNumber={b.bookingNumber} />
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    );
+                })}
             </TableBody>
         </Table>
     )
