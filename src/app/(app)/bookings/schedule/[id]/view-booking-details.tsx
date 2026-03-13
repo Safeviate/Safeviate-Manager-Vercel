@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Label as UILabel } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const FUEL_WEIGHT_PER_GALLON = 6;
 
@@ -161,8 +162,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const envelope = aircraft?.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
 
     return (
-        <Card>
-            <CardHeader className="border-b bg-muted/20">
+        <Card className="flex flex-col h-[calc(100vh-180px)] overflow-hidden shadow-none border">
+            <CardHeader className="border-b bg-muted/20 shrink-0">
                 <div className="space-y-1">
                     <CardTitle>{booking.type}</CardTitle>
                     <CardDescription>
@@ -171,130 +172,132 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 </div>
             </CardHeader>
             
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
-                <DetailItem label="Status" value={booking.status} />
-                <DetailItem label="Aircraft" value={aircraftLabel} />
-                <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
-                <DetailItem label="Start Time" value={formatDateSafe(booking.start, 'p')} />
-                <DetailItem label="End Time" value={formatDateSafe(booking.end, 'p')} />
-                <DetailItem label="Instructor" value={instructorLabel} />
-                <DetailItem label="Student" value={studentLabel} />
-                <div className="md:col-span-2 lg:col-span-3">
-                    <p className="text-sm text-muted-foreground">Notes</p>
-                    <p className="font-semibold whitespace-pre-wrap">{booking.notes || 'No notes provided.'}</p>
-                </div>
-            </CardContent>
-
-            <Separator className="my-2" />
-
-            <CardHeader className="pb-2">
-                <div className="flex justify-between items-center">
-                    <CardTitle className="text-xl flex items-center gap-2">
-                        <AlertTriangle className="h-5 w-5 text-primary" />
-                        Mass & Balance Calculator
-                    </CardTitle>
-                    {aircraft?.cgEnvelope && (
-                        <Button size="sm" onClick={handleSaveToBooking} className="gap-2">
-                            <Save className="h-4 w-4" /> Save to Booking
-                        </Button>
-                    )}
-                </div>
-            </CardHeader>
-
-            <CardContent className="pt-4">
-                {!aircraft?.cgEnvelope ? (
-                    <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                        This aircraft does not have a Mass & Balance profile configured.
+            <ScrollArea className="flex-1">
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
+                    <DetailItem label="Status" value={booking.status} />
+                    <DetailItem label="Aircraft" value={aircraftLabel} />
+                    <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
+                    <DetailItem label="Start Time" value={formatDateSafe(booking.start, 'p')} />
+                    <DetailItem label="End Time" value={formatDateSafe(booking.end, 'p')} />
+                    <DetailItem label="Instructor" value={instructorLabel} />
+                    <DetailItem label="Student" value={studentLabel} />
+                    <div className="md:col-span-2 lg:col-span-3">
+                        <p className="text-sm text-muted-foreground">Notes</p>
+                        <p className="font-semibold whitespace-pre-wrap">{booking.notes || 'No notes provided.'}</p>
                     </div>
-                ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
-                        <div className="space-y-6">
-                            <div className="relative border rounded-xl p-4 bg-background overflow-hidden h-[600px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={['auto', 'auto']} allowDataOverflow>
-                                            <Label value="CG (inches)" position="insideBottom" offset={-10} />
-                                        </XAxis>
-                                        <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={['auto', 'auto']} allowDataOverflow>
-                                            <Label value="Weight (lbs)" angle={-90} position="insideLeft" />
-                                        </YAxis>
-                                        <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                        <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} />
-                                        <Scatter data={[{ x: results.cg, y: results.weight }]}>
-                                            <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={2} />
-                                        </Scatter>
-                                    </ScatterChart>
-                                </ResponsiveContainer>
-                                
-                                <div className={cn(
-                                    "absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 text-white",
-                                    results.isSafe ? 'bg-green-600' : 'bg-red-600'
-                                )}>
-                                    {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
+                </CardContent>
+
+                <Separator className="my-2" />
+
+                <CardHeader className="pb-2">
+                    <div className="flex justify-between items-center">
+                        <CardTitle className="text-xl flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-primary" />
+                            Mass & Balance Calculator
+                        </CardTitle>
+                        {aircraft?.cgEnvelope && (
+                            <Button size="sm" onClick={handleSaveToBooking} className="gap-2">
+                                <Save className="h-4 w-4" /> Save to Booking
+                            </Button>
+                        )}
+                    </div>
+                </CardHeader>
+
+                <CardContent className="pt-4 pb-10">
+                    {!aircraft?.cgEnvelope ? (
+                        <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                            This aircraft does not have a Mass & Balance profile configured.
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
+                            <div className="space-y-6">
+                                <div className="relative border rounded-xl p-4 bg-background overflow-hidden h-[600px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={['auto', 'auto']} allowDataOverflow>
+                                                <Label value="CG (inches)" position="insideBottom" offset={-10} />
+                                            </XAxis>
+                                            <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={['auto', 'auto']} allowDataOverflow>
+                                                <Label value="Weight (lbs)" angle={-90} position="insideLeft" />
+                                            </YAxis>
+                                            <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                                            <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} />
+                                            <Scatter data={[{ x: results.cg, y: results.weight }]}>
+                                                <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={2} />
+                                            </Scatter>
+                                        </ScatterChart>
+                                    </ResponsiveContainer>
+                                    
+                                    <div className={cn(
+                                        "absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 text-white",
+                                        results.isSafe ? 'bg-green-600' : 'bg-red-600'
+                                    )}>
+                                        {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="space-y-6">
-                            <Card className="bg-muted/30 shadow-none border-none">
-                                <CardContent className="p-4 grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Weight</p>
-                                        <p className="text-xl font-bold">{results.weight} <span className="text-xs font-normal">lbs</span></p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] uppercase font-bold text-muted-foreground">Center Gravity</p>
-                                        <p className="text-xl font-bold">{results.cg} <span className="text-xs font-normal">in</span></p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <div className="space-y-4">
-                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Loading Stations</h4>
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-center text-sm border-b pb-2">
-                                        <span className="text-muted-foreground">Basic Empty Weight</span>
-                                        <span className="font-bold">{aircraft.emptyWeight} lbs</span>
-                                    </div>
-                                    {stations.map((s) => (
-                                        <div key={s.id} className="space-y-1.5">
-                                            <div className="flex justify-between items-center">
-                                                <UILabel className="text-xs font-semibold">{s.name}</UILabel>
-                                                <span className="text-[10px] text-muted-foreground">Arm: {s.arm}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className="relative flex-1">
-                                                    <Input 
-                                                        type="number" 
-                                                        value={s.weight} 
-                                                        onChange={(e) => handleStationWeightChange(s.id, e.target.value)}
-                                                        className="h-8 text-right pr-8"
-                                                    />
-                                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-muted-foreground">LBS</span>
-                                                </div>
-                                                {s.type === 'fuel' && (
-                                                    <div className="flex items-center gap-1 w-24">
-                                                        <div className="relative">
-                                                            <Input 
-                                                                type="number" 
-                                                                value={s.gallons} 
-                                                                onChange={(e) => handleFuelGallonsChange(s.id, e.target.value)}
-                                                                className="h-8 w-full p-1 text-right text-xs pr-8"
-                                                            />
-                                                            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] font-bold text-muted-foreground">GAL</span>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
+                            <div className="space-y-6">
+                                <Card className="bg-muted/30 shadow-none border-none">
+                                    <CardContent className="p-4 grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Weight</p>
+                                            <p className="text-xl font-bold">{results.weight} <span className="text-xs font-normal">lbs</span></p>
                                         </div>
-                                    ))}
+                                        <div>
+                                            <p className="text-[10px] uppercase font-bold text-muted-foreground">Center Gravity</p>
+                                            <p className="text-xl font-bold">{results.cg} <span className="text-xs font-normal">in</span></p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <div className="space-y-4">
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Loading Stations</h4>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center text-sm border-b pb-2">
+                                            <span className="text-muted-foreground">Basic Empty Weight</span>
+                                            <span className="font-bold">{aircraft.emptyWeight} lbs</span>
+                                        </div>
+                                        {stations.map((s) => (
+                                            <div key={s.id} className="space-y-1.5">
+                                                <div className="flex justify-between items-center">
+                                                    <UILabel className="text-xs font-semibold">{s.name}</UILabel>
+                                                    <span className="text-[10px] text-muted-foreground">Arm: {s.arm}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="relative flex-1">
+                                                        <Input 
+                                                            type="number" 
+                                                            value={s.weight} 
+                                                            onChange={(e) => handleStationWeightChange(s.id, e.target.value)}
+                                                            className="h-8 text-right pr-8"
+                                                        />
+                                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-muted-foreground">LBS</span>
+                                                    </div>
+                                                    {s.type === 'fuel' && (
+                                                        <div className="flex items-center gap-1 w-24">
+                                                            <div className="relative">
+                                                                <Input 
+                                                                    type="number" 
+                                                                    value={s.gallons} 
+                                                                    onChange={(e) => handleFuelGallonsChange(s.id, e.target.value)}
+                                                                    className="h-8 w-full p-1 text-right text-xs pr-8"
+                                                                />
+                                                                <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] font-bold text-muted-foreground">GAL</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
-            </CardContent>
+                    )}
+                </CardContent>
+            </ScrollArea>
         </Card>
     );
 }
