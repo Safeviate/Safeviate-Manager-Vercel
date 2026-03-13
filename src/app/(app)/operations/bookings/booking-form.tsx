@@ -37,7 +37,7 @@ const bookingFormSchema = z.object({
     overnightBookingDate: z.date().optional(),
     overnightEndTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid overnight end time").optional(),
     notes: z.string().optional(),
-    status: z.enum(['Tentative', 'Confirmed', 'Completed', 'Cancelled', 'Cancelled with Reason']).default('Confirmed'),
+    status: z.enum(['Tentative', 'Confirmed', 'Approved', 'Completed', 'Cancelled', 'Cancelled with Reason']).default('Confirmed'),
     cancellationReason: z.string().optional(),
 })
 .refine(data => {
@@ -257,7 +257,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel>Booking Type</FormLabel><FormControl><Input placeholder='e.g., Training, Rental' {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                                    <FormField control={form.control} name="status" render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{['Tentative', 'Confirmed', 'Completed', 'Cancelled', 'Cancelled with Reason'].map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )} />
+                                    <FormField control={form.control} name="status" render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{['Tentative', 'Confirmed', 'Approved', 'Completed', 'Cancelled', 'Cancelled with Reason'].map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )} />
                                 </div>
 
                                 {watchStatus === 'Cancelled with Reason' && (

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -12,7 +11,7 @@ import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle } from 'lucide-react';
+import { Save, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +19,8 @@ import { cn } from '@/lib/utils';
 import { Label as UILabel } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { usePermissions } from '@/hooks/use-permissions';
+import { Badge } from '@/components/ui/badge';
 
 const FUEL_WEIGHT_PER_GALLON = 6;
 
@@ -27,10 +28,10 @@ interface ViewBookingDetailsProps {
     booking: Booking;
 }
 
-const DetailItem = ({ label, value }: { label: string, value: string | undefined | null }) => (
+const DetailItem = ({ label, value, children }: { label: string, value?: string | undefined | null, children?: React.ReactNode }) => (
     <div>
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="font-semibold">{value || 'N/A'}</p>
+        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">{label}</p>
+        {children ? children : <p className="text-sm font-semibold">{value || 'N/A'}</p>}
     </div>
 );
 
@@ -48,6 +49,7 @@ const formatDateSafe = (dateString: string | undefined, formatString: string): s
 export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
+    const { hasPermission } = usePermissions();
     const tenantId = 'safeviate';
 
     const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
@@ -139,6 +141,16 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         });
     };
 
+    const handleApprove = () => {
+        if (!firestore) return;
+        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
+        updateDocumentNonBlocking(bookingRef, { status: 'Approved' });
+        toast({
+            title: 'Flight Approved',
+            description: `Booking #${booking.bookingNumber} has been approved for flight.`
+        });
+    };
+
     const aircraftLabel = useMemo(() => {
         return aircraft ? `${aircraft.tailNumber} (${aircraft.model})` : booking.aircraftId;
     }, [aircraft, booking.aircraftId]);
@@ -160,21 +172,33 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     }
 
     const envelope = aircraft?.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
+    
+    const canApprove = hasPermission('bookings-approve');
+    const showApproveButton = canApprove && booking.status !== 'Approved' && booking.status !== 'Completed' && !booking.status.startsWith('Cancelled');
 
     return (
         <Card className="flex flex-col h-[calc(100vh-180px)] overflow-hidden shadow-none border">
             <CardHeader className="border-b bg-muted/20 shrink-0">
-                <div className="space-y-1">
-                    <CardTitle>{booking.type}</CardTitle>
-                    <CardDescription>
-                        Booking Number: {booking.bookingNumber} • {aircraftLabel}
-                    </CardDescription>
+                <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                        <CardTitle>{booking.type}</CardTitle>
+                        <CardDescription>
+                            Booking Number: {booking.bookingNumber} • {aircraftLabel}
+                        </CardDescription>
+                    </div>
+                    {showApproveButton && (
+                        <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-sm">
+                            <CheckCircle2 className="h-4 w-4" /> Approve Flight
+                        </Button>
+                    )}
                 </div>
             </CardHeader>
             
             <ScrollArea className="flex-1">
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
-                    <DetailItem label="Status" value={booking.status} />
+                    <DetailItem label="Status">
+                        <Badge variant={getStatusBadgeVariant(booking.status)}>{booking.status}</Badge>
+                    </DetailItem>
                     <DetailItem label="Aircraft" value={aircraftLabel} />
                     <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
                     <DetailItem label="Start Time" value={formatDateSafe(booking.start, 'p')} />
@@ -182,8 +206,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     <DetailItem label="Instructor" value={instructorLabel} />
                     <DetailItem label="Student" value={studentLabel} />
                     <div className="md:col-span-2 lg:col-span-3">
-                        <p className="text-sm text-muted-foreground">Notes</p>
-                        <p className="font-semibold whitespace-pre-wrap">{booking.notes || 'No notes provided.'}</p>
+                        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Notes</p>
+                        <p className="text-sm font-semibold whitespace-pre-wrap">{booking.notes || 'No notes provided.'}</p>
                     </div>
                 </CardContent>
 
@@ -196,7 +220,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             Mass & Balance Calculator
                         </CardTitle>
                         {aircraft?.cgEnvelope && (
-                            <Button size="sm" onClick={handleSaveToBooking} className="gap-2">
+                            <Button size="sm" onClick={handleSaveToBooking} variant="outline" className="gap-2">
                                 <Save className="h-4 w-4" /> Save to Booking
                             </Button>
                         )}
@@ -300,4 +324,15 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             </ScrollArea>
         </Card>
     );
+}
+
+function getStatusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+    switch (status) {
+        case 'Approved': return 'default';
+        case 'Completed': return 'secondary';
+        case 'Cancelled':
+        case 'Cancelled with Reason': return 'destructive';
+        case 'Confirmed': return 'default';
+        default: return 'outline';
+    }
 }

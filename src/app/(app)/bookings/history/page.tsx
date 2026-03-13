@@ -50,6 +50,7 @@ const getBookingTypeAbbreviation = (type: Booking['type']): string => {
 
 const getStatusBadgeVariant = (status: Booking['status']): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
+        case 'Approved': return 'default';
         case 'Completed': return 'secondary';
         case 'Cancelled':
         case 'Cancelled with Reason': return 'destructive';

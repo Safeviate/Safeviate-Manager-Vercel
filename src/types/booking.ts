@@ -1,4 +1,4 @@
-export type BookingStatus = 'Tentative' | 'Confirmed' | 'Completed' | 'Cancelled' | 'Cancelled with Reason';
+export type BookingStatus = 'Tentative' | 'Confirmed' | 'Approved' | 'Completed' | 'Cancelled' | 'Cancelled with Reason';
 
 export interface MassAndBalance {
     takeoffWeight?: number;
