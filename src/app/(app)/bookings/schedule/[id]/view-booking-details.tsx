@@ -11,7 +11,7 @@ import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Save, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -19,7 +19,6 @@ import { cn } from '@/lib/utils';
 import { Label as UILabel } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { usePermissions } from '@/hooks/use-permissions';
 import { Badge } from '@/components/ui/badge';
 
 const FUEL_WEIGHT_PER_GALLON = 6;
@@ -49,7 +48,6 @@ const formatDateSafe = (dateString: string | undefined, formatString: string): s
 export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
-    const { hasPermission } = usePermissions();
     const tenantId = 'safeviate';
 
     const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
@@ -141,16 +139,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         });
     };
 
-    const handleApprove = () => {
-        if (!firestore) return;
-        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
-        updateDocumentNonBlocking(bookingRef, { status: 'Approved' });
-        toast({
-            title: 'Flight Approved',
-            description: `Booking #${booking.bookingNumber} has been approved for flight.`
-        });
-    };
-
     const aircraftLabel = useMemo(() => {
         return aircraft ? `${aircraft.tailNumber} (${aircraft.model})` : booking.aircraftId;
     }, [aircraft, booking.aircraftId]);
@@ -173,9 +161,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
     const envelope = aircraft?.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
     
-    const canApprove = hasPermission('bookings-approve');
-    const showApproveButton = canApprove && booking.status !== 'Approved' && booking.status !== 'Completed' && !booking.status.startsWith('Cancelled');
-
     return (
         <Card className="flex flex-col h-[calc(100vh-180px)] overflow-hidden shadow-none border">
             <CardHeader className="border-b bg-muted/20 shrink-0">
@@ -186,11 +171,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             Booking Number: {booking.bookingNumber} • {aircraftLabel}
                         </CardDescription>
                     </div>
-                    {showApproveButton && (
-                        <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-sm">
-                            <CheckCircle2 className="h-4 w-4" /> Approve Flight
-                        </Button>
-                    )}
                 </div>
             </CardHeader>
             

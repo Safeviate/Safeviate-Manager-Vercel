@@ -1,14 +1,19 @@
 'use client';
 
 import { useMemo } from 'react';
-import { collection } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import type { Booking } from "@/types/booking";
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { CheckCircle2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { usePermissions } from '@/hooks/use-permissions';
+import { Badge } from '@/components/ui/badge';
 
 interface ViewBookingDetailsProps {
     booking: Booking;
@@ -34,6 +39,8 @@ const formatDateSafe = (dateString: string | undefined, formatString: string): s
 
 export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const firestore = useFirestore();
+    const { toast } = useToast();
+    const { hasPermission } = usePermissions();
     const tenantId = 'safeviate';
 
     const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
@@ -47,6 +54,16 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const { data: personnel, isLoading: loadingPer } = useCollection<Personnel>(personnelQuery);
 
     const isLoading = loadingAc || loadingIns || loadingStu || loadingPer;
+
+    const handleApprove = () => {
+        if (!firestore) return;
+        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
+        updateDocumentNonBlocking(bookingRef, { status: 'Approved' });
+        toast({
+            title: 'Flight Approved',
+            description: `Booking #${booking.bookingNumber} has been approved.`
+        });
+    };
 
     const aircraftLabel = useMemo(() => {
         const ac = aircrafts?.find(a => a.id === booking.aircraftId);
@@ -69,16 +86,28 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         return <Skeleton className="h-64 w-full" />;
     }
 
+    const canApprove = hasPermission('bookings-approve');
+    const showApproveButton = canApprove && booking.status !== 'Approved' && booking.status !== 'Completed' && !booking.status.startsWith('Cancelled');
+
     return (
         <Card>
-            <CardHeader>
-                <CardTitle>{booking.type}</CardTitle>
-                <CardDescription>
-                    Booking Number: {booking.bookingNumber}
-                </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div className="space-y-1">
+                    <CardTitle>{booking.type}</CardTitle>
+                    <CardDescription>
+                        Booking Number: {booking.bookingNumber}
+                    </CardDescription>
+                </div>
+                {showApproveButton && (
+                    <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-sm">
+                        <CheckCircle2 className="h-4 w-4" /> Approve Flight
+                    </Button>
+                )}
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <DetailItem label="Status" value={booking.status} />
+                <DetailItem label="Status">
+                    <Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'}>{booking.status}</Badge>
+                </DetailItem>
                 <DetailItem label="Aircraft" value={aircraftLabel} />
                 <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
                 <DetailItem label="Start Time" value={formatDateSafe(booking.start, 'p')} />
