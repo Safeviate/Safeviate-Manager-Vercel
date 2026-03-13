@@ -100,6 +100,34 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     const onSubmit = async (data: z.infer<typeof bookingFormSchema>) => {
         if (!firestore) return;
         setIsSubmitting(true);
+
+        const startIso = new Date(`${format(data.date, 'yyyy-MM-dd')}T${data.startTime}`).toISOString();
+        const endIso = new Date(`${format(data.date, 'yyyy-MM-dd')}T${data.endTime}`).toISOString();
+
+        // VALIDATION: Check for schedule overlaps
+        const newStart = new Date(startIso);
+        const newEnd = new Date(endIso);
+
+        const hasOverlap = allBookingsForAircraft.some(other => {
+            if (other.id === existingBooking?.id) return false;
+            if (other.status === 'Cancelled' || other.status === 'Cancelled with Reason') return false;
+            
+            const otherStart = new Date(other.start);
+            const otherEnd = new Date(other.end);
+            
+            // Basic overlap logic: (StartA < EndB) AND (EndA > StartB)
+            return newStart < otherEnd && newEnd > otherStart;
+        });
+
+        if (hasOverlap) {
+            toast({
+                variant: 'destructive',
+                title: 'Schedule Conflict',
+                description: 'The booking period overlaps with an existing flight for this aircraft. Please adjust the times.',
+            });
+            setIsSubmitting(false);
+            return;
+        }
         
         const bookingData: any = {
             aircraftId: aircraft.id,
@@ -107,8 +135,8 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             date: format(data.date, 'yyyy-MM-dd'),
             startTime: data.startTime,
             endTime: data.endTime,
-            start: new Date(`${format(data.date, 'yyyy-MM-dd')}T${data.startTime}`).toISOString(),
-            end: new Date(`${format(data.date, 'yyyy-MM-dd')}T${data.endTime}`).toISOString(),
+            start: startIso,
+            end: endIso,
             instructorId: data.instructorId || null,
             studentId: data.studentId || null,
             status: data.status,
@@ -181,6 +209,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader className="pb-4">
                     <DialogTitle>{existingBooking ? `Booking #${existingBooking.bookingNumber}` : `New Booking for ${aircraft.tailNumber}`}</DialogTitle>
+                    <DialogTitle className="sr-only">Edit Booking Details</DialogTitle>
                     <DialogDescription>
                         {format(startTime, 'PPP')} • Fleet: {aircraft.tailNumber}
                     </DialogDescription>
