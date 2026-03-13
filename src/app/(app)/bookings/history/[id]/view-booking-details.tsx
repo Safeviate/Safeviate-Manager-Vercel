@@ -93,8 +93,9 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         });
 
         const cg = totalWt > 0 ? (totalMom / totalWt) : 0;
-        const envelope = aircraft.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
-        const safe = envelope.length > 2 ? isPointInPolygon({ x: cg, y: totalWt }, envelope) : false;
+        const envelope = aircraft.cgEnvelope?.map(p => ({ weight: p.weight, cg: p.cg })) || [];
+        const chartPoints = envelope.map(p => ({ x: p.cg, y: p.weight }));
+        const safe = chartPoints.length > 2 ? isPointInPolygon({ x: cg, y: totalWt }, chartPoints) : false;
 
         setResults({
             cg: parseFloat(cg.toFixed(2)),
@@ -193,11 +194,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         </CardDescription>
                     </div>
                     <div className="flex items-center gap-3">
-                        {showApproveButton && (
-                            <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-sm">
-                                <CheckCircle2 className="h-4 w-4" /> Approve Flight
-                            </Button>
-                        )}
                         {flightHours && (
                             <div className="text-right">
                                 <p className="text-[10px] uppercase font-bold text-muted-foreground">Flight Time</p>
@@ -242,11 +238,18 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             <AlertTriangle className="h-5 w-5 text-primary" />
                             Mass & Balance Calculator
                         </CardTitle>
-                        {aircraft?.cgEnvelope && (
-                            <Button size="sm" onClick={handleSaveToBooking} variant="outline" className="gap-2">
-                                <Save className="h-4 w-4" /> Save to Booking
-                            </Button>
-                        )}
+                        <div className="flex items-center gap-2">
+                            {showApproveButton && (
+                                <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-sm h-8 px-3 text-xs">
+                                    <CheckCircle2 className="h-4 w-4" /> Approve Flight
+                                </Button>
+                            )}
+                            {aircraft?.cgEnvelope && (
+                                <Button size="sm" onClick={handleSaveToBooking} variant="outline" className="gap-2 h-8 px-3 text-xs">
+                                    <Save className="h-4 w-4" /> Save to Booking
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 </CardHeader>
 
