@@ -120,11 +120,17 @@ export default function ExternalCompaniesPage() {
       </div>
 
       <Tabs defaultValue="manage" className="w-full">
-        <TabsList className="bg-muted/50 p-1 mb-6">
-          <TabsTrigger value="manage" className="gap-2">
+        <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start">
+          <TabsTrigger 
+            value="manage" 
+            className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground gap-2"
+          >
             <Building2 className="h-4 w-4" /> Manage Companies
           </TabsTrigger>
-          <TabsTrigger value="visibility" className="gap-2">
+          <TabsTrigger 
+            value="visibility" 
+            className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground gap-2"
+          >
             <Settings2 className="h-4 w-4" /> Tab Visibility
           </TabsTrigger>
         </TabsList>
