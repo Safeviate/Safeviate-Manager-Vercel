@@ -181,7 +181,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const envelope = aircraft?.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
     
     const canApprove = hasPermission('bookings-approve');
-    const showApproveButton = canApprove && booking.status !== 'Approved' && booking.status !== 'Completed' && !booking.status.startsWith('Cancelled');
+    const isApprovableState = booking.status !== 'Approved' && booking.status !== 'Completed' && !booking.status.startsWith('Cancelled');
 
     return (
         <Card className="shadow-none border flex flex-col h-[calc(100vh-180px)] overflow-hidden">
@@ -239,8 +239,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             Mass & Balance Calculator
                         </CardTitle>
                         <div className="flex items-center gap-2">
-                            {showApproveButton && (
-                                <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-sm h-8 px-3 text-xs">
+                            {canApprove && isApprovableState && (
+                                <Button 
+                                    onClick={handleApprove} 
+                                    disabled={!booking.preFlight}
+                                    title={!booking.preFlight ? "Requires recorded Pre-Flight Checklist" : ""}
+                                    className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-sm h-8 px-3 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
                                     <CheckCircle2 className="h-4 w-4" /> Approve Flight
                                 </Button>
                             )}

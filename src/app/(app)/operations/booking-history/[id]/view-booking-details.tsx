@@ -87,7 +87,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     }
 
     const canApprove = hasPermission('bookings-approve');
-    const showApproveButton = canApprove && booking.status !== 'Approved' && booking.status !== 'Completed' && !booking.status.startsWith('Cancelled');
+    const isApprovableState = booking.status !== 'Approved' && booking.status !== 'Completed' && !booking.status.startsWith('Cancelled');
 
     return (
         <Card>
@@ -98,8 +98,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         Booking Number: {booking.bookingNumber}
                     </CardDescription>
                 </div>
-                {showApproveButton && (
-                    <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-sm">
+                {canApprove && isApprovableState && (
+                    <Button 
+                        onClick={handleApprove} 
+                        disabled={!booking.preFlight}
+                        title={!booking.preFlight ? "Requires recorded Pre-Flight Checklist" : ""}
+                        className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                         <CheckCircle2 className="h-4 w-4" /> Approve Flight
                     </Button>
                 )}
