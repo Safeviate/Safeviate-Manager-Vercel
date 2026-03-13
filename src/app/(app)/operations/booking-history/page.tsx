@@ -201,9 +201,10 @@ export default function BookingsHistoryPage() {
     });
   }, [bookings, aircraft, personnel, instructors, students, privatePilots]);
 
-  const trainingBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Training Flight'), [enrichedBookings]);
-  const privateBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Private Flight'), [enrichedBookings]);
-  const maintenanceBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Maintenance Flight'), [enrichedBookings]);
+  const trainingBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Training Flight' && b.status !== 'Cancelled' && b.status !== 'Cancelled with Reason'), [enrichedBookings]);
+  const privateBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Private Flight' && b.status !== 'Cancelled' && b.status !== 'Cancelled with Reason'), [enrichedBookings]);
+  const maintenanceBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Maintenance Flight' && b.status !== 'Cancelled' && b.status !== 'Cancelled with Reason'), [enrichedBookings]);
+  const cancelledBookings = useMemo(() => enrichedBookings.filter(b => b.status === 'Cancelled' || b.status === 'Cancelled with Reason'), [enrichedBookings]);
 
   return (
     <div className="flex flex-col gap-6 h-full">
@@ -216,11 +217,12 @@ export default function BookingsHistoryPage() {
       <Card className="flex-grow flex flex-col">
         <Tabs defaultValue="all">
             <div className='px-6 pt-4'>
-                <TabsList>
+                <TabsList className="overflow-x-auto no-scrollbar justify-start">
                     <TabsTrigger value="all">All</TabsTrigger>
                     <TabsTrigger value="training">Training</TabsTrigger>
                     <TabsTrigger value="private">Private</TabsTrigger>
                     <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+                    <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
                 </TabsList>
             </div>
             <CardContent className='p-0'>
@@ -236,6 +238,9 @@ export default function BookingsHistoryPage() {
                     </TabsContent>
                     <TabsContent value="maintenance" className='m-0'>
                         <BookingsTable bookings={maintenanceBookings} />
+                    </TabsContent>
+                    <TabsContent value="cancelled" className='m-0'>
+                        <BookingsTable bookings={cancelledBookings} />
                     </TabsContent>
                 </ScrollArea>
             </CardContent>
