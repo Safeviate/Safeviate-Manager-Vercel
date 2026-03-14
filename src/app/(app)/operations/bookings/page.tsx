@@ -7,7 +7,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
-import { format, startOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, endOfHour, parse, isAfter } from 'date-fns';
+import { format, startOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, parse } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -169,16 +169,20 @@ export default function SchedulePage() {
   }, [selectedDate]);
   
   const handleSlotClick = (ac: Aircraft, hour: number) => {
-    const time = setMinutes(setHours(selectedDate, hour), 0);
-    const nowTime = new Date();
+    const slotTime = setMinutes(setHours(selectedDate, hour), 0);
+    const currentTime = new Date();
     
     // Block clicks strictly in the past
-    if (isSameDay(selectedDate, nowTime) && hour < getHours(nowTime)) {
+    if (isSameDay(selectedDate, currentTime) && hour < getHours(currentTime)) {
         return; 
     }
+    if (isBefore(selectedDate, startOfDay(currentTime))) {
+        return;
+    }
 
-    const isCurrentHourSlot = isSameDay(time, nowTime) && getHours(time) === getHours(nowTime);
-    const startTime = isCurrentHourSlot ? nowTime : time;
+    // If clicking current hour, default start time to 'now' to satisfy future-booking validation
+    const isCurrentHourSlot = isSameDay(slotTime, currentTime) && getHours(slotTime) === getHours(currentTime);
+    const startTime = isCurrentHourSlot ? currentTime : slotTime;
     
     const allBookingsForAircraft = allBookings?.filter(b => b.aircraftId === ac.id) || [];
 
@@ -201,6 +205,9 @@ export default function SchedulePage() {
   if (isLoading) {
     return <Skeleton className="h-[600px] w-full" />;
   }
+
+  const isTodaySelected = isSameDay(selectedDate, startOfToday());
+  const isPastDaySelected = isBefore(selectedDate, startOfToday());
 
   return (
     <>
@@ -235,51 +242,59 @@ export default function SchedulePage() {
         <Card className="overflow-hidden flex-grow flex flex-col shadow-none border">
             <CardContent className="p-0 flex-grow flex flex-col overflow-hidden">
                 <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 220px)' }}>
-                    <div className="flex min-w-full w-fit relative">
+                    <div className="min-w-full w-fit">
                         
-                        {/* Solid Sticky Time Column */}
-                        <div className="w-24 flex-shrink-0 bg-swimlane-header border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
-                            <div className="sticky top-0 z-50 h-16 bg-swimlane-header border-b border-white/10 flex items-center justify-center font-bold text-sm text-swimlane-header-foreground uppercase tracking-wider">
+                        {/* Headers Row */}
+                        <div className="flex sticky top-0 z-50 bg-swimlane-header border-b border-white/10">
+                            <div className="w-24 flex-shrink-0 flex items-center justify-center font-bold text-sm text-swimlane-header-foreground uppercase tracking-wider h-16 bg-swimlane-header border-r">
                                 TIME
                             </div>
-                            {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
-                                <div 
-                                    key={hour} 
-                                    className="flex items-center justify-center border-b text-sm md:text-base font-mono font-bold text-swimlane-header-foreground/80 bg-swimlane-header"
-                                    style={{ height: `${HOUR_HEIGHT_PX}px` }}
-                                >
-                                    {format(new Date(0, 0, 0, hour), 'HH:mm')}
+                            {(aircraft || []).map((ac) => (
+                                <div key={ac.id} className="flex-1 min-w-[180px] border-r flex items-center justify-center font-bold text-sm px-2 text-center text-swimlane-header-foreground h-16 bg-swimlane-header whitespace-normal leading-tight">
+                                    {ac.tailNumber}
                                 </div>
+                            ))}
+                            {extraLanes.map((_, laneIdx) => (
+                                <div key={`extra-h-${laneIdx}`} className="flex-1 min-w-[180px] border-r bg-swimlane-header h-16" />
                             ))}
                         </div>
 
-                        <div className="flex flex-1 relative">
-                            {(aircraft || []).map((ac) => {
-                                const relevantBookings = (bookings || []).filter(b => {
-                                    if (b.isOvernight) {
-                                        return (b.aircraftId === ac.id) && (b.date === format(selectedDate, 'yyyy-MM-dd') || b.overnightBookingDate === format(selectedDate, 'yyyy-MM-dd'));
-                                    }
-                                    return (b.aircraftId === ac.id) && (b.date === format(selectedDate, 'yyyy-MM-dd'));
-                                });
+                        {/* Schedule Body */}
+                        <div className="flex relative">
+                            
+                            {/* Time Column Body */}
+                            <div className="w-24 flex-shrink-0 border-r bg-swimlane-header/5">
+                                {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
+                                    <div 
+                                        key={hour} 
+                                        className="flex items-center justify-center border-b text-sm md:text-base font-mono font-bold text-muted-foreground bg-muted/5"
+                                        style={{ height: `${HOUR_HEIGHT_PX}px` }}
+                                    >
+                                        {format(new Date(0, 0, 0, hour), 'HH:mm')}
+                                    </div>
+                                ))}
+                            </div>
 
-                                return (
-                                    <div key={ac.id} className="flex-1 min-w-[180px] border-r relative flex flex-col">
-                                        <div className="sticky top-0 z-30 h-16 bg-swimlane-header text-swimlane-header-foreground border-b border-white/10 flex items-center justify-center font-bold text-sm px-2 text-center shrink-0 whitespace-normal leading-tight">
-                                            {ac.tailNumber}
-                                        </div>
-                                        <div className="relative">
+                            {/* Main Grid Area */}
+                            <div className="flex flex-1">
+                                {(aircraft || []).map((ac) => {
+                                    const relevantBookings = (bookings || []).filter(b => {
+                                        if (b.isOvernight) {
+                                            return (b.aircraftId === ac.id) && (b.date === format(selectedDate, 'yyyy-MM-dd') || b.overnightBookingDate === format(selectedDate, 'yyyy-MM-dd'));
+                                        }
+                                        return (b.aircraftId === ac.id) && (b.date === format(selectedDate, 'yyyy-MM-dd'));
+                                    });
+
+                                    return (
+                                        <div key={ac.id} className="flex-1 min-w-[180px] border-r relative">
                                             {Array.from({ length: TOTAL_HOURS }).map((_, hour) => {
-                                                const slotTime = setMinutes(setHours(selectedDate, hour), 0);
-                                                const isPast = isSameDay(selectedDate, startOfToday()) 
-                                                    ? hour < getHours(now) 
-                                                    : isBefore(selectedDate, startOfToday());
-                                                
+                                                const isPast = isPastDaySelected || (isTodaySelected && hour < getHours(now));
                                                 return (
                                                     <div 
                                                         key={hour} 
                                                         className={cn(
                                                             "border-b relative transition-colors",
-                                                            isPast ? "bg-red-500/5" : "cursor-pointer hover:bg-accent/50"
+                                                            isPast ? "bg-muted/10 cursor-not-allowed" : "cursor-pointer hover:bg-accent/50"
                                                         )} 
                                                         style={{ height: `${HOUR_HEIGHT_PX}px` }}
                                                         onClick={() => !isPast && handleSlotClick(ac, hour)}
@@ -295,30 +310,28 @@ export default function SchedulePage() {
                                                 />
                                             ))}
                                         </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
 
-                            {extraLanes.map((_, laneIdx) => (
-                                <div key={`extra-${laneIdx}`} className="flex-1 min-w-[180px] border-r bg-muted/5 opacity-50 flex flex-col">
-                                    <div className="sticky top-0 z-30 h-16 bg-swimlane-header text-swimlane-header-foreground border-b border-white/10 flex items-center justify-center font-bold text-[10px] uppercase px-2 text-center shrink-0">
-                                        &nbsp;
+                                {extraLanes.map((_, laneIdx) => (
+                                    <div key={`extra-${laneIdx}`} className="flex-1 min-w-[180px] border-r bg-muted/5 opacity-50">
+                                        {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
+                                            <div 
+                                                key={hour} 
+                                                className="border-b"
+                                                style={{ height: `${HOUR_HEIGHT_PX}px` }}
+                                            />
+                                        ))}
                                     </div>
-                                    {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
-                                        <div 
-                                            key={hour} 
-                                            className="border-b"
-                                            style={{ height: `${HOUR_HEIGHT_PX}px` }}
-                                        />
-                                    ))}
-                                </div>
-                            ))}
+                                ))}
+                            </div>
 
+                            {/* Precise Past Mask & Red Line (Overlaying Full Width) */}
                             {showNowLine && (
                                 <>
-                                    {/* Precise Past Mask */}
+                                    {/* Precise Past Mask (Updates minute by minute) */}
                                     <div 
-                                        className="absolute left-0 right-0 bg-red-500/[0.03] z-20 pointer-events-none" 
+                                        className="absolute left-0 right-0 bg-slate-500/[0.08] z-20 pointer-events-none" 
                                         style={{ top: 0, height: `${nowLinePosition}px` }}
                                     />
                                     {/* Red Now Line */}
