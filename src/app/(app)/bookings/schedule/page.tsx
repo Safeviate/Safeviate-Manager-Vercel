@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -71,6 +72,7 @@ const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booki
                         'absolute left-1 right-1 p-2 text-[10px] md:text-xs leading-tight shadow-md flex flex-col justify-center z-10 border border-gray-400/50 cursor-pointer hover:opacity-90 transition-opacity rounded',
                         isCancelled && 'bg-muted text-muted-foreground opacity-60',
                         booking.status === 'Completed' && 'bg-muted text-muted-foreground border-slate-300',
+                        booking.status === 'Approved' && 'bg-green-600 text-white border-green-700',
                         booking.status === 'Confirmed' && booking.preFlight && !booking.postFlight && 'bg-amber-500 text-primary-foreground',
                         booking.status === 'Confirmed' && !booking.preFlight && 'bg-primary text-primary-foreground'
                     )}
@@ -83,6 +85,7 @@ const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booki
                     <p className="font-semibold truncate">#{booking.bookingNumber} - {booking.type}</p>
                     {isCancelled && <p className="font-bold uppercase text-[8px] mt-0.5">Cancelled</p>}
                     {booking.status === 'Completed' && <p className="font-bold uppercase text-[8px] mt-0.5">Completed</p>}
+                    {booking.status === 'Approved' && <p className="font-bold uppercase text-[8px] mt-0.5">Approved</p>}
                 </div>
             )
         })}

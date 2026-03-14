@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -12,7 +13,7 @@ import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Clock, CheckCircle2, ClipboardCheck, FileClock, History, PencilLine } from 'lucide-react';
+import { Save, AlertTriangle, Clock, CheckCircle2, ClipboardCheck, FileClock, History, PencilLine, ShieldAlert } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -113,7 +114,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
         const cg = totalWt > 0 ? (totalMom / totalWt) : 0;
         const chartPoints = aircraft.cgEnvelope?.map(p => ({ weight: p.weight, cg: p.cg })) || [];
-        // Envelope expects x as cg, y as weight
         const polygon = chartPoints.map(p => ({ x: p.cg, y: p.weight }));
         const safe = polygon.length > 2 ? isPointInPolygon({ x: cg, y: totalWt }, polygon) : false;
 
@@ -195,13 +195,17 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const canLogPre = hasPermission('bookings-preflight-manage');
     const canLogPost = hasPermission('bookings-postflight-manage');
     const isApprovableState = booking.status !== 'Approved' && booking.status !== 'Completed' && !booking.status.startsWith('Cancelled');
+    const isApproved = booking.status === 'Approved' || booking.status === 'Completed';
 
     return (
         <Card className="shadow-none border flex flex-col h-[calc(100vh-180px)] overflow-hidden">
             <CardHeader className="border-b bg-muted/20 shrink-0">
                 <div className="flex justify-between items-start">
                     <div className="space-y-1">
-                        <CardTitle>{booking.type}</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                            {booking.type}
+                            <Badge variant={getStatusBadgeVariant(booking.status)}>{booking.status}</Badge>
+                        </CardTitle>
                         <CardDescription>
                             Booking Number: {booking.bookingNumber} • {aircraftLabel}
                         </CardDescription>
@@ -222,17 +226,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             
             <ScrollArea className="flex-1">
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
-                    <DetailItem label="Status">
-                        <Badge variant={getStatusBadgeVariant(booking.status)}>{booking.status}</Badge>
-                    </DetailItem>
                     <DetailItem label="Aircraft" value={aircraftLabel} />
                     <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
-                    <DetailItem label="Start Time" value={formatDateSafe(booking.start, 'p')} />
-                    <DetailItem label="End Time" value={formatDateSafe(booking.end, 'p')} />
+                    <DetailItem label="Schedule" value={`${formatDateSafe(booking.start, 'p')} - ${formatDateSafe(booking.end, 'p')}`} />
                     <DetailItem label="Instructor" value={instructorLabel} />
                     <DetailItem label="Student" value={studentLabel} />
                     <div className="md:col-span-2 lg:col-span-3">
-                        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Notes</p>
+                        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Schedule Notes</p>
                         <p className="text-sm font-semibold whitespace-pre-wrap">{booking.notes || 'No notes provided.'}</p>
                     </div>
                 </CardContent>
@@ -249,7 +249,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 <CardContent className="space-y-8 pt-2 pb-10">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {/* Pre-Flight Data Display/Form */}
-                        <div className={cn("space-y-4 p-4 rounded-xl border bg-muted/10", !booking.preFlight && !canLogPre && "opacity-50 grayscale")}>
+                        <div className={cn("space-y-4 p-4 rounded-xl border bg-muted/10 transition-all", !booking.preFlight && !canLogPre && "opacity-50 grayscale")}>
                             <div className="flex items-center justify-between">
                                 <h3 className="font-bold text-sm uppercase tracking-wider flex items-center gap-2">
                                     <ClipboardCheck className="h-4 w-4 text-green-600" />
@@ -265,7 +265,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
                             {isPreFlightBlocked && !booking.preFlight && (
                                 <p className="text-[10px] text-destructive bg-destructive/10 p-2 rounded">
-                                    Pre-flight logging is restricted until the previous flight (Booking #{precedingBooking?.bookingNumber}) is finalized.
+                                    Log restricted: Waiting for Booking #{precedingBooking?.bookingNumber} to finalize.
                                 </p>
                             )}
 
@@ -297,13 +297,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         </div>
 
                         {/* Post-Flight Data Display/Form */}
-                        <div className={cn("space-y-4 p-4 rounded-xl border bg-muted/10", !booking.postFlight && (!canLogPost || !booking.preFlight) && "opacity-50 grayscale")}>
+                        <div className={cn("space-y-4 p-4 rounded-xl border bg-muted/10 transition-all", !booking.postFlight && (!canLogPost || !isApproved) && "opacity-50 grayscale")}>
                             <div className="flex items-center justify-between">
                                 <h3 className="font-bold text-sm uppercase tracking-wider flex items-center gap-2">
                                     <FileClock className="h-4 w-4 text-blue-600" />
                                     Post-Flight Record
                                 </h3>
-                                {!booking.postFlight && canLogPost && booking.preFlight && activeEditView !== 'post-flight' && (
+                                {!booking.postFlight && canLogPost && isApproved && activeEditView !== 'post-flight' && (
                                     <Button size="sm" onClick={() => setActiveEditView('post-flight')} className="h-7 text-[10px] gap-1 px-2">
                                         <PencilLine className="h-3 w-3" /> Record
                                     </Button>
@@ -311,6 +311,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 {booking.postFlight && <Badge variant="secondary" className="text-[10px] bg-blue-100 text-blue-700 border-blue-200">Finalized</Badge>}
                             </div>
                             
+                            {!isApproved && !booking.postFlight && (
+                                <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded flex items-center gap-2 text-[10px] text-amber-800 dark:text-amber-200">
+                                    <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+                                    <span>Approval required before recording post-flight results.</span>
+                                </div>
+                            )}
+
                             {activeEditView === 'post-flight' ? (
                                 <PostFlightLogForm 
                                     booking={booking} 
@@ -329,7 +336,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     </div>
                                 </div>
                             ) : (
-                                <p className="text-xs text-muted-foreground italic py-4">No post-flight data recorded.</p>
+                                <p className="text-xs text-muted-foreground italic py-4">Waiting for approval and flight completion.</p>
                             )}
                         </div>
                     </div>
@@ -341,7 +348,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     <div className="flex justify-between items-center">
                         <CardTitle className="text-xl flex items-center gap-2">
                             <AlertTriangle className="h-5 w-5 text-primary" />
-                            Mass & Balance Calculator
+                            Technical Inspection & Approval
                         </CardTitle>
                         <div className="flex items-center gap-2">
                             {canApprove && isApprovableState && (
@@ -538,6 +545,13 @@ function PostFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }:
 
     const handleSave = async (data: any) => {
         if (!firestore) return;
+        
+        // Simple range validation
+        if (data.hobbs < (booking.preFlightData?.hobbs || 0)) {
+            toast({ variant: 'destructive', title: 'Invalid Reading', description: 'End Hobbs cannot be less than Start Hobbs.' });
+            return;
+        }
+
         setIsSaving(true);
         const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
         const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
@@ -553,7 +567,7 @@ function PostFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }:
             currentTacho: data.tacho,
         });
 
-        toast({ title: 'Flight Finalized', description: 'Aircraft hours updated.' });
+        toast({ title: 'Flight Finalized', description: 'Aircraft total hours have been updated.' });
         onSuccess();
         setIsSaving(false);
     }
@@ -575,7 +589,7 @@ function PostFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }:
                 </div>
                 <div className="col-span-full space-y-1">
                     <UILabel className="text-[10px] uppercase font-bold text-muted-foreground">Defects / Observations</UILabel>
-                    <Textarea placeholder="Any issues?" {...form.register('defects')} className="min-h-[60px] text-xs py-1" />
+                    <Textarea placeholder="Any mechanical issues or findings?" {...form.register('defects')} className="min-h-[60px] text-xs py-1" />
                 </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
@@ -592,7 +606,7 @@ function getStatusBadgeVariant(status: string): "default" | "secondary" | "destr
         case 'Completed': return 'secondary';
         case 'Cancelled':
         case 'Cancelled with Reason': return 'destructive';
-        case 'Confirmed': return 'default';
+        case 'Confirmed': return 'outline';
         default: return 'outline';
     }
 }
