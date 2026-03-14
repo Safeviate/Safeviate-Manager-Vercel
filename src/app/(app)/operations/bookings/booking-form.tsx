@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -104,10 +105,21 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
         const startIso = new Date(`${format(data.date, 'yyyy-MM-dd')}T${data.startTime}`).toISOString();
         const endIso = new Date(`${format(data.date, 'yyyy-MM-dd')}T${data.endTime}`).toISOString();
 
-        // VALIDATION: Check for schedule overlaps
         const newStart = new Date(startIso);
         const newEnd = new Date(endIso);
 
+        // VALIDATION: Cannot book in the past
+        if (!existingBooking && isBefore(newStart, new Date())) {
+            toast({
+                variant: 'destructive',
+                title: 'Invalid Time',
+                description: 'You cannot create a booking in the past.',
+            });
+            setIsSubmitting(false);
+            return;
+        }
+
+        // VALIDATION: Check for schedule overlaps
         const hasOverlap = allBookingsForAircraft.some(other => {
             if (other.id === existingBooking?.id) return false;
             if (other.status === 'Cancelled' || other.status === 'Cancelled with Reason') return false;
@@ -115,7 +127,6 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             const otherStart = new Date(other.start);
             const otherEnd = new Date(other.end);
             
-            // Basic overlap logic: (StartA < EndB) AND (EndA > StartB)
             return newStart < otherEnd && newEnd > otherStart;
         });
 
@@ -219,7 +230,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel>Booking Type</FormLabel><FormControl><Input placeholder='e.g., Training, Rental' {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                            <FormField control={form.control} name="status" render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{['Tentative', 'Confirmed', 'Approved', 'Completed', 'Cancelled', 'Cancelled with Reason'].map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )} />
+                            <FormField control={form.control} name="status" render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{['Tentative', 'Confirmed', 'Approved', 'Completed', 'Cancelled', 'Cancelled with Reason'].map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectItem></Select><FormMessage /></FormItem> )} />
                         </div>
 
                         {watchStatus === 'Cancelled with Reason' && (

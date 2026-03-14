@@ -98,6 +98,7 @@ export default function SchedulePage() {
   const { tenantId } = useUserProfile();
   const [selectedDate, setSelectedDate] = useState(startOfToday());
 
+  const [now, setNow] = useState(new Date());
   const [nowLinePosition, setNowLinePosition] = useState(0);
   const [showNowLine, setShowNowLine] = useState(false);
   
@@ -151,12 +152,13 @@ export default function SchedulePage() {
 
   useEffect(() => {
     const calculateNowLine = () => {
-        const now = new Date();
-        const isToday = isSameDay(now, selectedDate);
+        const currentTime = new Date();
+        setNow(currentTime);
+        const isToday = isSameDay(currentTime, selectedDate);
         setShowNowLine(isToday);
 
         if (isToday) {
-            const minutes = now.getHours() * 60 + now.getMinutes();
+            const minutes = currentTime.getHours() * 60 + currentTime.getMinutes();
             const position = minutes * (HOUR_HEIGHT_PX / 60);
             setNowLinePosition(position);
         }
@@ -169,9 +171,17 @@ export default function SchedulePage() {
   
   const handleSlotClick = (ac: Aircraft, hour: number) => {
     const time = setMinutes(setHours(selectedDate, hour), 0);
-    const now = new Date();
-    const isCurrentHourSlot = isSameDay(time, now) && getHours(time) === getHours(now);
-    const startTime = isCurrentHourSlot && isAfter(now, time) ? now : time;
+    const nowTime = new Date();
+    
+    // Block clicks strictly in the past (full hours that have finished)
+    if (isSameDay(selectedDate, nowTime) && hour < getHours(nowTime)) {
+        return; 
+    }
+
+    // If clicking current hour, default start time to 'now' to satisfy validation
+    const isCurrentHourSlot = isSameDay(time, nowTime) && getHours(time) === getHours(nowTime);
+    const startTime = isCurrentHourSlot ? nowTime : time;
+    
     const allBookingsForAircraft = allBookings?.filter(b => b.aircraftId === ac.id) || [];
 
     setBookingFormData({ aircraft: ac, startTime, allBookingsForAircraft });
@@ -262,15 +272,17 @@ export default function SchedulePage() {
                                         <div className="relative">
                                             {Array.from({ length: TOTAL_HOURS }).map((_, hour) => {
                                                 const slotTime = setMinutes(setHours(selectedDate, hour), 0);
-                                                const endOfSlot = endOfHour(slotTime);
-                                                const isPast = isSameDay(selectedDate, startOfToday()) ? isBefore(endOfSlot, new Date()) : isBefore(selectedDate, startOfToday());
+                                                // Hour is past if it's strictly before current hour on the same day
+                                                const isPast = isSameDay(selectedDate, startOfToday()) 
+                                                    ? hour < getHours(now) 
+                                                    : isBefore(selectedDate, startOfToday());
                                                 
                                                 return (
                                                     <div 
                                                         key={hour} 
                                                         className={cn(
                                                             "border-b relative transition-colors",
-                                                            isPast ? "bg-red-500/10" : "cursor-pointer hover:bg-accent/50"
+                                                            isPast ? "bg-red-500/5" : "cursor-pointer hover:bg-accent/50"
                                                         )} 
                                                         style={{ height: `${HOUR_HEIGHT_PX}px` }}
                                                         onClick={() => !isPast && handleSlotClick(ac, hour)}
@@ -306,12 +318,20 @@ export default function SchedulePage() {
                             ))}
 
                             {showNowLine && (
-                                <div 
-                                    className="absolute left-0 right-0 h-0.5 bg-red-500 z-20 pointer-events-none" 
-                                    style={{ top: `${nowLinePosition}px` }}
-                                >
-                                    <div className="absolute -left-1.5 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full" />
-                                </div>
+                                <>
+                                    {/* Precise Past Mask */}
+                                    <div 
+                                        className="absolute left-0 right-0 bg-red-500/[0.03] z-20 pointer-events-none" 
+                                        style={{ top: 0, height: `${nowLinePosition}px` }}
+                                    />
+                                    {/* Red Now Line */}
+                                    <div 
+                                        className="absolute left-0 right-0 h-0.5 bg-red-500 z-30 pointer-events-none" 
+                                        style={{ top: `${nowLinePosition}px` }}
+                                    >
+                                        <div className="absolute -left-1.5 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full" />
+                                    </div>
+                                </>
                             )}
                         </div>
                     </div>

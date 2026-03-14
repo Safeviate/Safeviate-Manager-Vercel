@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -104,10 +105,21 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
         const startIso = new Date(`${format(data.date, 'yyyy-MM-dd')}T${data.startTime}`).toISOString();
         const endIso = new Date(`${format(data.date, 'yyyy-MM-dd')}T${data.endTime}`).toISOString();
 
-        // VALIDATION: Check for schedule overlaps
         const newStart = new Date(startIso);
         const newEnd = new Date(endIso);
 
+        // VALIDATION: Cannot book in the past
+        if (!existingBooking && isBefore(newStart, new Date())) {
+            toast({
+                variant: 'destructive',
+                title: 'Invalid Time',
+                description: 'You cannot create a booking in the past.',
+            });
+            setIsSubmitting(false);
+            return;
+        }
+
+        // VALIDATION: Check for schedule overlaps
         const hasOverlap = allBookingsForAircraft.some(other => {
             if (other.id === existingBooking?.id) return false;
             if (other.status === 'Cancelled' || other.status === 'Cancelled with Reason') return false;
@@ -115,7 +127,6 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             const otherStart = new Date(other.start);
             const otherEnd = new Date(other.end);
             
-            // Basic overlap logic: (StartA < EndB) AND (EndA > StartB)
             return newStart < otherEnd && newEnd > otherStart;
         });
 
