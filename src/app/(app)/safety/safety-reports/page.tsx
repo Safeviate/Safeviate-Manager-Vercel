@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -30,6 +29,7 @@ import {
 import type { SafetyReport } from '@/types/safety-report';
 import type { ExternalOrganization } from '@/types/quality';
 import type { TabVisibilitySettings } from '../../admin/external/page';
+import { EditReportDialog } from './edit-report-dialog';
 
 const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
@@ -86,9 +86,10 @@ function DeleteReportButton({ reportId, reportNumber, tenantId }: { reportId: st
 interface ReportsTableProps {
     reports: SafetyReport[];
     tenantId: string;
+    canManage: boolean;
 }
 
-function ReportsTable({ reports, tenantId }: ReportsTableProps) {
+function ReportsTable({ reports, tenantId, canManage }: ReportsTableProps) {
     if (reports.length === 0) {
         return <div className="text-center p-8 text-muted-foreground text-sm italic">No safety reports found for this context.</div>;
     }
@@ -121,6 +122,7 @@ function ReportsTable({ reports, tenantId }: ReportsTableProps) {
                                         <span className="sr-only">View</span>
                                     </Link>
                                 </Button>
+                                {canManage && <EditReportDialog report={report} tenantId={tenantId} />}
                                 <DeleteReportButton reportId={report.id} reportNumber={report.reportNumber} tenantId={tenantId} />
                             </div>
                         </TableCell>
@@ -136,7 +138,7 @@ export default function SafetyReportsPage() {
   const { tenantId, userProfile } = useUserProfile();
   const { hasPermission } = usePermissions();
 
-  const canViewAll = hasPermission('safety-reports-manage');
+  const canManageAll = hasPermission('safety-reports-manage');
   const userOrgId = userProfile?.organizationId;
 
   const reportsQuery = useMemoFirebase(
@@ -185,7 +187,7 @@ export default function SafetyReportsPage() {
                 </div>
             </CardHeader>
             <CardContent className="p-0">
-                <ReportsTable reports={filteredReports} tenantId={tenantId || 'safeviate'} />
+                <ReportsTable reports={filteredReports} tenantId={tenantId || 'safeviate'} canManage={canManageAll} />
             </CardContent>
         </Card>
     );
@@ -196,7 +198,7 @@ export default function SafetyReportsPage() {
   }
 
   const isTabEnabled = visibilitySettings?.visibilities?.['safety-reports'] ?? true;
-  const showTabs = isTabEnabled && canViewAll;
+  const showTabs = isTabEnabled && canManageAll;
 
   // If external user or tabs disabled
   if (!showTabs) {
