@@ -331,7 +331,7 @@ export default function SchedulePage() {
                                 <>
                                     {/* Precise Past Mask (Updates minute by minute) */}
                                     <div 
-                                        className="absolute left-0 right-0 bg-slate-500/[0.08] z-20 pointer-events-none" 
+                                        className="absolute left-0 right-0 bg-red-500/[0.08] z-20 pointer-events-none" 
                                         style={{ top: 0, height: `${nowLinePosition}px` }}
                                     />
                                     {/* Red Now Line */}
