@@ -1,19 +1,32 @@
+
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Eye } from 'lucide-react';
+import { PlusCircle, Eye, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useToast } from '@/hooks/use-toast';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import type { SafetyReport } from '@/types/safety-report';
 import type { ExternalOrganization } from '@/types/quality';
 import type { TabVisibilitySettings } from '../../admin/external/page';
@@ -26,6 +39,49 @@ const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destr
         default: return 'outline';
     }
 };
+
+function DeleteReportButton({ reportId, reportNumber, tenantId }: { reportId: string, reportNumber: string, tenantId: string }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const { hasPermission } = usePermissions();
+
+    const canDelete = hasPermission('safety-reports-manage');
+
+    if (!canDelete) return null;
+
+    const handleDelete = () => {
+        if (!firestore) return;
+        const reportRef = doc(firestore, `tenants/${tenantId}/safety-reports`, reportId);
+        deleteDocumentNonBlocking(reportRef);
+        toast({
+            title: 'Report Deleted',
+            description: `Safety Report #${reportNumber} is being deleted.`,
+        });
+    };
+
+    return (
+        <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="icon" className="h-8 w-8">
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Delete Report</span>
+                </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete safety report #{reportNumber}. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
 
 interface ReportsTableProps {
     reports: SafetyReport[];
@@ -58,12 +114,15 @@ function ReportsTable({ reports, tenantId }: ReportsTableProps) {
                         <TableCell className="text-xs">{report.submittedByName}</TableCell>
                         <TableCell><Badge variant={getStatusBadgeVariant(report.status)} className="text-[10px] py-0">{report.status}</Badge></TableCell>
                         <TableCell className="text-right">
-                            <Button asChild variant="default" size="sm" className="h-8 px-3 text-xs">
-                                <Link href={`/safety/safety-reports/${report.id}`}>
-                                    <Eye className="mr-1.5 h-3.5 w-3.5" />
-                                    View
-                                </Link>
-                            </Button>
+                            <div className="flex justify-end gap-2">
+                                <Button asChild variant="default" size="icon" className="h-8 w-8">
+                                    <Link href={`/safety/safety-reports/${report.id}`}>
+                                        <Eye className="h-4 w-4" />
+                                        <span className="sr-only">View</span>
+                                    </Link>
+                                </Button>
+                                <DeleteReportButton reportId={report.id} reportNumber={report.reportNumber} tenantId={tenantId} />
+                            </div>
                         </TableCell>
                     </TableRow>
                 ))}
