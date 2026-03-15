@@ -223,9 +223,10 @@ interface HazardIdentificationFormProps {
   report: SafetyReport;
   tenantId: string;
   riskMatrixColors?: Record<string, string>;
+  isStacked?: boolean;
 }
 
-export function HazardIdentificationForm({ report, tenantId, riskMatrixColors }: HazardIdentificationFormProps) {
+export function HazardIdentificationForm({ report, tenantId, riskMatrixColors, isStacked = false }: HazardIdentificationFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -249,7 +250,7 @@ export function HazardIdentificationForm({ report, tenantId, riskMatrixColors }:
   };
 
   return (
-    <Card className="flex flex-col h-[calc(100vh-300px)] overflow-hidden shadow-none border">
+    <Card className={cn("flex flex-col shadow-none border", !isStacked && "h-[calc(100vh-300px)] overflow-hidden")}>
       <CardHeader className="shrink-0 border-b bg-muted/5">
         <div className="flex justify-between items-center">
             <div>
@@ -261,43 +262,21 @@ export function HazardIdentificationForm({ report, tenantId, riskMatrixColors }:
             </Button>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
+      <div className={cn("flex-1 p-0 overflow-hidden", isStacked && "overflow-visible")}>
         <FormProvider {...form}>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
-              <ScrollArea className="flex-1 p-6">
-                <div className="space-y-6">
-                    {hazardFields.map((field, index) => (
-                        <Card key={field.id} className="border-none shadow-none bg-muted/10">
-                            <CardHeader className="p-4 pb-0">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold">
-                                        {index + 1}
-                                    </div>
-                                    <FormField control={form.control} name={`initialHazards.${index}.description`} render={({ field }) => (
-                                        <FormItem className='flex-1 space-y-0'>
-                                            <FormControl>
-                                                <Input placeholder="Hazard description..." {...field} className="h-8 text-sm font-bold bg-background" />
-                                            </FormControl>
-                                        </FormItem>
-                                    )} />
-                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeHazard(index)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="p-4 pt-2">
-                                <RisksArray hazardIndex={index} riskMatrixColors={riskMatrixColors} />
-                            </CardContent>
-                        </Card>
-                    ))}
-                    {hazardFields.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
-                            <ShieldAlert className="h-12 w-12 mb-4" />
-                            <p className="text-sm font-medium">No hazards identified yet.</p>
-                            <p className="text-xs">Start by identifying the primary hazards associated with this report.</p>
-                        </div>
-                    )}
+              {isStacked ? (
+                <div className="p-6 space-y-6">
+                  <HazardFields hazardFields={hazardFields} form={form} riskMatrixColors={riskMatrixColors} removeHazard={removeHazard} />
                 </div>
-              </ScrollArea>
+              ) : (
+                <ScrollArea className="flex-1 p-6">
+                  <div className="space-y-6">
+                    <HazardFields hazardFields={hazardFields} form={form} riskMatrixColors={riskMatrixColors} removeHazard={removeHazard} />
+                  </div>
+                </ScrollArea>
+              )}
               <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2">
                 <Button type="submit">
                   <Save className="mr-2 h-4 w-4" /> Save Hazard Identification
@@ -306,7 +285,43 @@ export function HazardIdentificationForm({ report, tenantId, riskMatrixColors }:
             </form>
           </Form>
         </FormProvider>
-      </CardContent>
+      </div>
     </Card>
+  );
+}
+
+function HazardFields({ hazardFields, form, riskMatrixColors, removeHazard }: { hazardFields: any[], form: any, riskMatrixColors?: Record<string, string>, removeHazard: (i: number) => void }) {
+  return (
+    <>
+      {hazardFields.map((field, index) => (
+          <Card key={field.id} className="border-none shadow-none bg-muted/10">
+              <CardHeader className="p-4 pb-0">
+                  <div className="flex items-center gap-3">
+                      <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold">
+                          {index + 1}
+                      </div>
+                      <FormField control={form.control} name={`initialHazards.${index}.description`} render={({ field }) => (
+                          <FormItem className='flex-1 space-y-0'>
+                              <FormControl>
+                                  <Input placeholder="Hazard description..." {...field} className="h-8 text-sm font-bold bg-background" />
+                              </FormControl>
+                          </FormItem>
+                      )} />
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeHazard(index)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+              </CardHeader>
+              <CardContent className="p-4 pt-2">
+                  <RisksArray hazardIndex={index} riskMatrixColors={riskMatrixColors} />
+              </CardContent>
+          </Card>
+      ))}
+      {hazardFields.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
+              <ShieldAlert className="h-12 w-12 mb-4" />
+              <p className="text-sm font-medium">No hazards identified yet.</p>
+              <p className="text-xs">Start by identifying the primary hazards associated with this report.</p>
+          </div>
+      )}
+    </>
   );
 }

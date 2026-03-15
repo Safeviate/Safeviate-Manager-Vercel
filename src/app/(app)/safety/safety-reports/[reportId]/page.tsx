@@ -20,6 +20,7 @@ import { FinalReview } from './final-review';
 import { ReportForum } from './report-forum';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import type { RiskMatrixSettings } from '@/types/risk';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface SafetyReportDetailPageProps {
   params: Promise<{ reportId: string }>;
@@ -118,6 +119,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
       <Tabs defaultValue="triage" className="w-full flex-1 flex flex-col min-h-0">
         <div className="shrink-0">
           <TabsList className="bg-transparent h-auto p-0 gap-2 mb-4 border-b-0 justify-start overflow-x-auto no-scrollbar">
+            <TabsTrigger value="full" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Full Report</TabsTrigger>
             <TabsTrigger value="triage" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Report & Triage</TabsTrigger>
             <TabsTrigger value="hazards" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Hazard & Risk ID</TabsTrigger>
             <TabsTrigger value="investigation" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Investigation</TabsTrigger>
@@ -128,6 +130,35 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
         </div>
         
         <div className="flex-1 min-h-0">
+          <TabsContent value="full" className="m-0 h-full">
+            <Card className="h-full flex flex-col overflow-hidden shadow-none border">
+              <ScrollArea className="h-full">
+                <div className="flex flex-col gap-8 p-6 pb-20">
+                  <TriageForm report={report} tenantId={tenantId} isStacked />
+                  <HazardIdentificationForm 
+                    report={report} 
+                    tenantId={tenantId} 
+                    riskMatrixColors={riskMatrixSettings?.colors}
+                    isStacked
+                  />
+                  <InvestigationForm 
+                    report={report} 
+                    tenantId={tenantId} 
+                    personnel={personnel || []} 
+                    isStacked
+                  />
+                  <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} isStacked />
+                  <FinalReview 
+                    report={report} 
+                    tenantId={tenantId} 
+                    personnel={personnel || []} 
+                    riskMatrixColors={riskMatrixSettings?.colors}
+                    isStacked
+                  />
+                </div>
+              </ScrollArea>
+            </Card>
+          </TabsContent>
           <TabsContent value="triage" className="m-0 h-full">
               <TriageForm report={report} tenantId={tenantId} />
           </TabsContent>
