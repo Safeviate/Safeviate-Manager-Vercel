@@ -19,10 +19,16 @@ export interface RiskAssessment {
     riskLevel: RiskLevel;
 }
 
+export interface ReportRisk {
+    id: string;
+    description: string;
+    riskAssessment: RiskAssessment;
+}
+
 export interface ReportHazard {
     id: string;
     description: string;
-    riskAssessment?: RiskAssessment;
+    risks?: ReportRisk[];
 }
 
 export interface InvestigationTask {
