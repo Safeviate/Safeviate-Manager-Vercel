@@ -1,4 +1,4 @@
-export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'manage-templates' | 'calculate-booking' | 'schedule-view' | 'schedule-manage' | 'history-view' | 'preflight-manage' | 'postflight-manage' | 'view-all' | 'approve' | 'approve-override' | 'techlog-override';
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'manage-templates' | 'calculate-booking' | 'schedule-view' | 'schedule-manage' | 'history-view' | 'preflight-manage' | 'postflight-manage' | 'view-all' | 'approve' | 'approve-override' | 'techlog-override' | 'manage-definitions';
 
 export type PermissionResource = {
   id: string;
@@ -24,7 +24,7 @@ export const permissionsConfig: PermissionResource[] = [
   { id: 'safety', name: 'Safety', actions: ['view'] },
   { id: 'safety-reports', name: 'Safety Reports', actions: ['manage'] },
   { id: 'risk-register', name: 'Risk Register', actions: ['view'] },
-  { id: 'risk-matrix', name: 'Risk Matrix', actions: ['view'] },
+  { id: 'risk-matrix', name: 'Risk Matrix', actions: ['view', 'manage-definitions'] },
   { id: 'safety-indicators', name: 'Safety Indicators', actions: ['view'] },
   { id: 'moc', name: 'Management of Change', actions: ['manage'] },
 

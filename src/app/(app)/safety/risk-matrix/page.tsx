@@ -12,6 +12,9 @@ import type { RiskMatrixSettings } from '@/types/risk';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { Pencil, Check } from 'lucide-react';
+import { usePermissions } from '@/hooks/use-permissions';
 
 const defaultLikelihoods = [
     { name: 'Frequent', description: 'Likely to occur many times (has happened frequently).', value: 5 },
@@ -39,9 +42,12 @@ const defaultColors: Record<string, string> = {
 
 export default function RiskMatrixPage() {
   const firestore = useFirestore();
+  const { hasPermission } = usePermissions();
   const tenantId = 'safeviate';
   const settingsId = 'risk-matrix-config';
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const canManage = hasPermission('risk-matrix-manage-definitions');
 
   const settingsRef = useMemoFirebase(() => (
     firestore ? doc(firestore, 'tenants', tenantId, 'settings', settingsId) : null
@@ -52,6 +58,9 @@ export default function RiskMatrixPage() {
   const [colors, setColors] = useState<Record<string, string>>(defaultColors);
   const [likelihoods, setLikelihoods] = useState(defaultLikelihoods);
   const [severities, setSeverities] = useState(defaultSeverities);
+  
+  const [isEditingSeverity, setIsEditingSeverity] = useState(false);
+  const [isEditingLikelihood, setIsEditingLikelihood] = useState(false);
   
   const colorInputRef = React.useRef<HTMLInputElement>(null);
   const [activeCell, setActiveCell] = useState<string | null>(null);
@@ -102,6 +111,7 @@ export default function RiskMatrixPage() {
 
   const handleRightClick = (e: React.MouseEvent, cellId: string) => {
       e.preventDefault();
+      if (!canManage) return;
       setActiveCell(cellId);
       if (colorInputRef.current) {
           colorInputRef.current.click();
@@ -114,7 +124,7 @@ export default function RiskMatrixPage() {
         <CardHeader className="shrink-0 border-b bg-muted/5">
           <CardTitle>Risk Matrix Configuration</CardTitle>
           <CardDescription>
-            This matrix is used to determine the level of risk associated with an identified hazard. Right-click a cell to change the color.
+            This matrix determines the level of risk for identified hazards. {canManage ? 'Right-click a cell to customize colors.' : ''}
           </CardDescription>
         </CardHeader>
         
@@ -124,7 +134,7 @@ export default function RiskMatrixPage() {
               
               {/* MATRIX TABLE */}
               <div className="overflow-x-auto max-w-4xl mx-auto border rounded-xl overflow-hidden shadow-sm bg-card">
-                <table className="w-full border-collapse border-separate" style={{ borderSpacing: 0 }}>
+                <table className="w-full border-separate" style={{ borderSpacing: 0 }}>
                     <colgroup>
                         <col className="w-[16.66%]" />
                         <col className="w-[16.66%]" />
@@ -159,7 +169,7 @@ export default function RiskMatrixPage() {
                                         style={{ backgroundColor: colors[cellId] }}
                                         className={cn(
                                             "border-b border-r border-slate-200 dark:border-slate-700 p-1 text-center align-middle font-black text-[10px] text-black transition-all",
-                                            "cursor-pointer hover:scale-[0.98] active:scale-95"
+                                            canManage && "cursor-pointer hover:scale-[0.98] active:scale-95"
                                         )}
                                     >
                                         {cellId}
@@ -183,27 +193,45 @@ export default function RiskMatrixPage() {
                 
                 {/* SEVERITY CARD */}
                 <Card className="shadow-none border flex flex-col overflow-hidden">
-                  <CardHeader className="py-3 border-b bg-muted/5 shrink-0">
+                  <CardHeader className="py-3 border-b bg-muted/5 shrink-0 flex flex-row items-center justify-between space-y-0">
                     <CardTitle className="text-[10px] uppercase font-black tracking-widest text-primary">Severity Definitions</CardTitle>
+                    {canManage && (
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-7 px-2 text-[10px] uppercase font-bold"
+                            onClick={() => setIsEditingSeverity(!isEditingSeverity)}
+                        >
+                            {isEditingSeverity ? <><Check className="mr-1 h-3 w-3" /> Done</> : <><Pencil className="mr-1 h-3 w-3" /> Edit</>}
+                        </Button>
+                    )}
                   </CardHeader>
                   <CardContent className="p-4 space-y-4">
                     {severities.map((s, index) => (
-                        <div key={s.value} className="p-3 bg-background rounded-lg border border-border shadow-sm space-y-3">
+                        <div key={s.value} className="p-3 bg-background rounded-lg border border-border shadow-sm space-y-2">
                             <div className="flex items-center gap-3">
                                 <Badge variant="outline" className="h-7 w-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0">{s.value}</Badge>
-                                <Input 
-                                    value={s.name} 
-                                    onChange={(e) => handleSeverityChange(index, 'name', e.target.value)}
-                                    className="h-8 text-xs font-bold bg-muted/10 border-none shadow-none focus-visible:ring-1"
-                                    placeholder="Name"
-                                />
+                                {isEditingSeverity ? (
+                                    <Input 
+                                        value={s.name} 
+                                        onChange={(e) => handleSeverityChange(index, 'name', e.target.value)}
+                                        className="h-8 text-xs font-bold bg-muted/10 border-none shadow-none focus-visible:ring-1"
+                                        placeholder="Name"
+                                    />
+                                ) : (
+                                    <span className="text-xs font-bold">{s.name}</span>
+                                )}
                             </div>
-                            <Textarea 
-                                value={s.description} 
-                                onChange={(e) => handleSeverityChange(index, 'description', e.target.value)}
-                                className="text-xs min-h-[60px] py-2 bg-muted/5 border-none shadow-none focus-visible:ring-1"
-                                placeholder="Description"
-                            />
+                            {isEditingSeverity ? (
+                                <Textarea 
+                                    value={s.description} 
+                                    onChange={(e) => handleSeverityChange(index, 'description', e.target.value)}
+                                    className="text-xs min-h-[60px] py-2 bg-muted/5 border-none shadow-none focus-visible:ring-1"
+                                    placeholder="Description"
+                                />
+                            ) : (
+                                <p className="text-[11px] text-muted-foreground leading-relaxed">{s.description}</p>
+                            )}
                         </div>
                     ))}
                   </CardContent>
@@ -211,27 +239,45 @@ export default function RiskMatrixPage() {
 
                 {/* LIKELIHOOD CARD */}
                 <Card className="shadow-none border flex flex-col overflow-hidden">
-                  <CardHeader className="py-3 border-b bg-muted/5 shrink-0">
+                  <CardHeader className="py-3 border-b bg-muted/5 shrink-0 flex flex-row items-center justify-between space-y-0">
                     <CardTitle className="text-[10px] uppercase font-black tracking-widest text-primary">Likelihood Definitions</CardTitle>
+                    {canManage && (
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-7 px-2 text-[10px] uppercase font-bold"
+                            onClick={() => setIsEditingLikelihood(!isEditingLikelihood)}
+                        >
+                            {isEditingLikelihood ? <><Check className="mr-1 h-3 w-3" /> Done</> : <><Pencil className="mr-1 h-3 w-3" /> Edit</>}
+                        </Button>
+                    )}
                   </CardHeader>
                   <CardContent className="p-4 space-y-4">
                     {likelihoods.map((l, index) => (
-                        <div key={l.value} className="p-3 bg-background rounded-lg border border-border shadow-sm space-y-3">
+                        <div key={l.value} className="p-3 bg-background rounded-lg border border-border shadow-sm space-y-2">
                             <div className="flex items-center gap-3">
                                 <Badge variant="outline" className="h-7 w-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0">{l.value}</Badge>
-                                <Input 
-                                    value={l.name} 
-                                    onChange={(e) => handleLikelihoodChange(index, 'name', e.target.value)}
-                                    className="h-8 text-xs font-bold bg-muted/10 border-none shadow-none focus-visible:ring-1"
-                                    placeholder="Name"
-                                />
+                                {isEditingLikelihood ? (
+                                    <Input 
+                                        value={l.name} 
+                                        onChange={(e) => handleLikelihoodChange(index, 'name', e.target.value)}
+                                        className="h-8 text-xs font-bold bg-muted/10 border-none shadow-none focus-visible:ring-1"
+                                        placeholder="Name"
+                                    />
+                                ) : (
+                                    <span className="text-xs font-bold">{l.name}</span>
+                                )}
                             </div>
-                            <Textarea 
-                                value={l.description} 
-                                onChange={(e) => handleLikelihoodChange(index, 'description', e.target.value)}
-                                className="text-xs min-h-[60px] py-2 bg-muted/5 border-none shadow-none focus-visible:ring-1"
-                                placeholder="Description"
-                            />
+                            {isEditingLikelihood ? (
+                                <Textarea 
+                                    value={l.description} 
+                                    onChange={(e) => handleLikelihoodChange(index, 'description', e.target.value)}
+                                    className="text-xs min-h-[60px] py-2 bg-muted/5 border-none shadow-none focus-visible:ring-1"
+                                    placeholder="Description"
+                                />
+                            ) : (
+                                <p className="text-[11px] text-muted-foreground leading-relaxed">{l.description}</p>
+                            )}
                         </div>
                     ))}
                   </CardContent>
