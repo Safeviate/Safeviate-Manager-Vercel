@@ -1,4 +1,3 @@
-
 'use client';
 
 import { use, useMemo } from 'react';
@@ -155,12 +154,12 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
         </CardContent>
       </Card>
       
-      <Tabs defaultValue="implementation">
-        <TabsList className="grid w-full grid-cols-2 no-print">
-          <TabsTrigger value="implementation">Implementation &amp; Analysis</TabsTrigger>
-          <TabsTrigger value="approval">Approval &amp; Sign-off</TabsTrigger>
+      <Tabs defaultValue="implementation" className="w-full">
+        <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar no-print">
+          <TabsTrigger value="implementation" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Implementation & Analysis</TabsTrigger>
+          <TabsTrigger value="approval" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Approval & Sign-off</TabsTrigger>
         </TabsList>
-        <TabsContent value="implementation">
+        <TabsContent value="implementation" className="m-0">
           <ImplementationForm
             key={moc.id}
             moc={moc}
@@ -169,7 +168,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
             riskMatrixColors={riskMatrixSettings?.colors}
           />
         </TabsContent>
-        <TabsContent value="approval">
+        <TabsContent value="approval" className="m-0">
           <ApprovalForm moc={moc} tenantId={tenantId} personnel={personnel || []} />
         </TabsContent>
       </Tabs>

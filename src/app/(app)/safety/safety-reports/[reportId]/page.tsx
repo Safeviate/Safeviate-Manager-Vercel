@@ -102,23 +102,23 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
         </CardContent>
       </Card>
       
-      <Tabs defaultValue="triage">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="triage">Report & Triage</TabsTrigger>
-          <TabsTrigger value="investigation">Investigation</TabsTrigger>
-          <TabsTrigger value="cap">Corrective Actions</TabsTrigger>
-          <TabsTrigger value="review">Final Review</TabsTrigger>
+      <Tabs defaultValue="triage" className="w-full">
+        <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar">
+          <TabsTrigger value="triage" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Report & Triage</TabsTrigger>
+          <TabsTrigger value="investigation" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Investigation</TabsTrigger>
+          <TabsTrigger value="cap" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Corrective Actions</TabsTrigger>
+          <TabsTrigger value="review" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Final Review</TabsTrigger>
         </TabsList>
-        <TabsContent value="triage">
+        <TabsContent value="triage" className="m-0">
             <TriageForm report={report} tenantId={tenantId} />
         </TabsContent>
-        <TabsContent value="investigation">
+        <TabsContent value="investigation" className="m-0">
           <InvestigationForm report={report} tenantId={tenantId} personnel={personnel || []} />
         </TabsContent>
-        <TabsContent value="cap">
+        <TabsContent value="cap" className="m-0">
           <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} />
         </TabsContent>
-        <TabsContent value="review">
+        <TabsContent value="review" className="m-0">
           <FinalReview report={report} tenantId={tenantId} personnel={personnel || []} />
         </TabsContent>
       </Tabs>

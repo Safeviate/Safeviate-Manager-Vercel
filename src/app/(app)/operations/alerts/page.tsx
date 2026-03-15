@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -35,7 +34,7 @@ export default function AlertsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center px-1">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Alerts & Notices</h1>
           <p className="text-muted-foreground">
@@ -46,19 +45,22 @@ export default function AlertsPage() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-4">
+        <div className="space-y-4 px-1">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-64 w-full" />
         </div>
       ) : (
-        <Tabs defaultValue="red-tags" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="red-tags">Red Tags ({redTags.length})</TabsTrigger>
-                <TabsTrigger value="yellow-tags">Yellow Tags ({yellowTags.length})</TabsTrigger>
-                <TabsTrigger value="company-notices">Company Notices ({companyNotices.length})</TabsTrigger>
-            </TabsList>
-            <TabsContent value="red-tags">
-                <div className="space-y-4 pt-4">
+        <Tabs defaultValue="red-tags" className="w-full flex flex-col h-full overflow-hidden">
+            <div className="px-1 shrink-0">
+                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar">
+                    <TabsTrigger value="red-tags" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Red Tags ({redTags.length})</TabsTrigger>
+                    <TabsTrigger value="yellow-tags" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Yellow Tags ({yellowTags.length})</TabsTrigger>
+                    <TabsTrigger value="company-notices" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Company Notices ({companyNotices.length})</TabsTrigger>
+                </TabsList>
+            </div>
+            
+            <TabsContent value="red-tags" className="mt-0">
+                <div className="space-y-4 px-1">
                     {redTags.length > 0 ? (
                         redTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
                     ) : (
@@ -68,8 +70,8 @@ export default function AlertsPage() {
                     )}
                 </div>
             </TabsContent>
-            <TabsContent value="yellow-tags">
-                <div className="space-y-4 pt-4">
+            <TabsContent value="yellow-tags" className="mt-0">
+                <div className="space-y-4 px-1">
                     {yellowTags.length > 0 ? (
                         yellowTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
                     ) : (
@@ -79,8 +81,8 @@ export default function AlertsPage() {
                     )}
                 </div>
             </TabsContent>
-            <TabsContent value="company-notices">
-                <div className="space-y-4 pt-4">
+            <TabsContent value="company-notices" className="mt-0">
+                <div className="space-y-4 px-1">
                     {companyNotices.length > 0 ? (
                         companyNotices.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
                     ) : (
