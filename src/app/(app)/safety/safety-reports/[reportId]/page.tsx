@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { TriageForm } from './triage-form';
 import { useToast } from '@/hooks/use-toast';
 import { InvestigationForm } from './investigation-form';
+import { HazardIdentificationForm } from './hazard-identification-form';
 import { CorrectiveActionsForm } from './corrective-actions-form';
 import { FinalReview } from './final-review';
 import { ReportForum } from './report-forum';
@@ -21,7 +22,7 @@ import type { Personnel } from '@/app/(app)/users/personnel/page';
 import type { RiskMatrixSettings } from '@/types/risk';
 
 interface SafetyReportDetailPageProps {
-  params: { reportId: string };
+  params: Promise<{ reportId: string }>;
 }
 
 export default function SafetyReportDetailPage({ params }: SafetyReportDetailPageProps) {
@@ -118,6 +119,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
         <div className="shrink-0">
           <TabsList className="bg-transparent h-auto p-0 gap-2 mb-4 border-b-0 justify-start overflow-x-auto no-scrollbar">
             <TabsTrigger value="triage" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Report & Triage</TabsTrigger>
+            <TabsTrigger value="hazards" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Hazard & Risk ID</TabsTrigger>
             <TabsTrigger value="investigation" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Investigation</TabsTrigger>
             <TabsTrigger value="cap" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Corrective Actions</TabsTrigger>
             <TabsTrigger value="review" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Final Review</TabsTrigger>
@@ -129,12 +131,18 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
           <TabsContent value="triage" className="m-0 h-full">
               <TriageForm report={report} tenantId={tenantId} />
           </TabsContent>
+          <TabsContent value="hazards" className="m-0 h-full">
+            <HazardIdentificationForm 
+              report={report} 
+              tenantId={tenantId} 
+              riskMatrixColors={riskMatrixSettings?.colors}
+            />
+          </TabsContent>
           <TabsContent value="investigation" className="m-0 h-full">
             <InvestigationForm 
               report={report} 
               tenantId={tenantId} 
               personnel={personnel || []} 
-              riskMatrixColors={riskMatrixSettings?.colors}
             />
           </TabsContent>
           <TabsContent value="cap" className="m-0 h-full">
