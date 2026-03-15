@@ -103,7 +103,7 @@ export function CorrectiveActionsForm({ report, tenantId, personnel, isStacked =
                 <CardTitle>Corrective Action Plan (CAP)</CardTitle>
                 <CardDescription>Define and track actions to mitigate risks and prevent recurrence.</CardDescription>
             </div>
-             <Button type="button" variant="outline" size="sm" onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', deadline: new Date(), status: 'Open' })}>
+             <Button type="button" variant="outline" size="sm" onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', deadline: new Date(), status: 'Open' })} className="no-print">
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Action
             </Button>
         </div>
@@ -122,7 +122,7 @@ export function CorrectiveActionsForm({ report, tenantId, personnel, isStacked =
                 </div>
               </ScrollArea>
             )}
-            <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2">
+            <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
               <Button type="submit">
                 <Save className="mr-2 h-4 w-4" /> Save Corrective Actions
               </Button>
@@ -140,10 +140,10 @@ function CapFields({ fields, form, personnel, remove }: any) {
       {fields.map((field: any, index: number) => (
           <div key={field.id} className="grid grid-cols-1 md:grid-cols-4 items-end gap-4 p-4 border rounded-lg bg-muted/10">
               <FormField control={form.control} name={`correctiveActions.${index}.description`} render={({ field }) => (<FormItem className='md:col-span-4'><FormLabel>Action</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name={`correctiveActions.${index}.responsiblePersonId`} render={({ field }) => ( <FormItem><FormLabel>Assignee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Assign to..." /></SelectTrigger></FormControl><SelectContent>{personnel.map((p: any) => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name={`correctiveActions.${index}.deadline`} render={({ field }) => (<FormItem className='flex flex-col'><FormLabel>Deadline</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
-              <FormField control={form.control} name={`correctiveActions.${index}.status`} render={({ field }) => (<FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{['Open', 'In Progress', 'Closed', 'Cancelled'].map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
-              <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4" /></Button>
+              <FormField control={form.control} name={`correctiveActions.${index}.responsiblePersonId`} render={({ field }) => ( <FormItem><FormLabel>Assignee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-8 text-xs bg-background"><SelectValue placeholder="Assign to..." /></SelectTrigger></FormControl><SelectContent>{personnel.map((p: any) => (<SelectItem key={p.id} value={p.id} className="text-xs">{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select></FormItem> )} />
+              <FormField control={form.control} name={`correctiveActions.${index}.deadline`} render={({ field }) => (<FormItem className='flex flex-col'><FormLabel>Deadline</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("h-8 pl-3 text-left font-normal bg-background text-xs", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "dd MMM") : <span>Date</span>}<CalendarIcon className="ml-auto h-3 w-3 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover></FormItem>)}/>
+              <FormField control={form.control} name={`correctiveActions.${index}.status`} render={({ field }) => (<FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-8 text-xs bg-background"><SelectValue /></SelectTrigger></FormControl><SelectContent>{['Open', 'In Progress', 'Closed', 'Cancelled'].map(s => (<SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>))}</SelectContent></Select></FormItem>)} />
+              <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="h-8 w-8 no-print"><Trash2 className="h-4 w-4" /></Button>
           </div>
       ))}
       {fields.length === 0 && (

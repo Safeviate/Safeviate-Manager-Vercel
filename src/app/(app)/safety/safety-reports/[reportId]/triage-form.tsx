@@ -137,7 +137,7 @@ export function TriageForm({ report, tenantId, isStacked = false }: TriageFormPr
                 </div>
               </ScrollArea>
             )}
-            <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2">
+            <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
               <Button type="submit">
                 <Save className="mr-2 h-4 w-4" /> Save Triage Details
               </Button>

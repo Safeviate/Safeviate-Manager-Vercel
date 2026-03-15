@@ -155,7 +155,7 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
                 </div>
               </ScrollArea>
             )}
-            <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2">
+            <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
               <Button type="submit">
                 <Save className="mr-2 h-4 w-4" /> Save Final Review
               </Button>
@@ -173,7 +173,7 @@ function ReviewFields({ form, hazardFields, removeHazard, appendHazard, riskMatr
       <div>
           <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">Mitigated Hazards</h3>
-              <Button type="button" variant="outline" size="sm" onClick={() => appendHazard({ id: uuidv4(), description: '', riskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' } })}>
+              <Button type="button" variant="outline" size="sm" onClick={() => appendHazard({ id: uuidv4(), description: '', riskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' } })} className="no-print">
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Hazard
               </Button>
           </div>
@@ -195,7 +195,7 @@ function ReviewFields({ form, hazardFields, removeHazard, appendHazard, riskMatr
                           >
                               {displayValue}
                           </div>
-                          <Button type="button" variant="ghost" size="icon" onClick={() => removeHazard(index)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                          <Button type="button" variant="ghost" size="icon" onClick={() => removeHazard(index)} className="text-destructive no-print"><Trash2 className="h-4 w-4" /></Button>
                       </div>
                   );
               })}
@@ -224,7 +224,7 @@ function ReviewFields({ form, hazardFields, removeHazard, appendHazard, riskMatr
                   <p className="text-center text-muted-foreground py-4">No signatures yet.</p>
               )}
           </div>
-          <div className="mt-4 flex justify-end">
+          <div className="mt-4 flex justify-end no-print">
               <Button type="button" onClick={handleSignReport} variant="outline">
                   <Signature className="mr-2 h-4 w-4" /> Sign and Close Report
               </Button>

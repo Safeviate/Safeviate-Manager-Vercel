@@ -190,7 +190,7 @@ const RisksArray = ({ hazardIndex, riskMatrixColors }: { hazardIndex: number; ri
                             variant="ghost" 
                             size="icon" 
                             onClick={() => remove(riskIndex)} 
-                            className="h-8 w-8 text-destructive mt-5"
+                            className="h-8 w-8 text-destructive mt-5 no-print"
                         >
                             <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -211,7 +211,7 @@ const RisksArray = ({ hazardIndex, riskMatrixColors }: { hazardIndex: number; ri
                     description: '', 
                     riskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' } 
                 })}
-                className="h-7 text-[10px]"
+                className="h-7 text-[10px] no-print"
             >
                 <PlusCircle className="mr-1 h-3 w-3" /> Add Risk Assessment
             </Button>
@@ -257,8 +257,8 @@ export function HazardIdentificationForm({ report, tenantId, riskMatrixColors, i
                 <CardTitle>Hazard & Risk Identification</CardTitle>
                 <CardDescription>Break down the event into core hazards and assess their potential outcomes.</CardDescription>
             </div>
-            <Button type="button" variant="outline" size="sm" onClick={() => appendHazard({ id: uuidv4(), description: '', risks: [] })}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Hazard
+            <Button type="button" variant="outline" size="sm" onClick={() => appendHazard({ id: uuidv4(), description: '', risks: [] })} className="no-print">
+                <PlusCircle className="mr-2 h-4 w-4 " /> Add Hazard
             </Button>
         </div>
       </CardHeader>
@@ -277,7 +277,7 @@ export function HazardIdentificationForm({ report, tenantId, riskMatrixColors, i
                   </div>
                 </ScrollArea>
               )}
-              <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2">
+              <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
                 <Button type="submit">
                   <Save className="mr-2 h-4 w-4" /> Save Hazard Identification
                 </Button>
@@ -307,7 +307,7 @@ function HazardFields({ hazardFields, form, riskMatrixColors, removeHazard }: { 
                               </FormControl>
                           </FormItem>
                       )} />
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeHazard(index)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeHazard(index)} className="text-destructive no-print"><Trash2 className="h-4 w-4" /></Button>
                   </div>
               </CardHeader>
               <CardContent className="p-4 pt-2">

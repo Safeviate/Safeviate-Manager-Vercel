@@ -1,4 +1,3 @@
-
 'use client';
 
 import { use, useMemo, useState } from 'react';
@@ -9,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { SafetyReport } from '@/types/safety-report';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { TriageForm } from './triage-form';
@@ -61,6 +60,10 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
 
   const isLoading = isLoadingReport || isLoadingPersonnel || isLoadingRiskMatrix;
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -102,12 +105,16 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
 
   return (
     <div className="flex flex-col h-full overflow-hidden gap-4">
-       <div className="shrink-0">
+       <div className="shrink-0 flex justify-between items-center no-print">
           <Button asChild variant="outline" className="w-fit">
             <Link href="/safety/safety-reports">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to All Reports
             </Link>
+          </Button>
+          <Button onClick={handlePrint} variant="outline" className="gap-2">
+            <Printer className="h-4 w-4" />
+            Print Report
           </Button>
        </div>
 
@@ -126,7 +133,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
       </div>
       
       <Tabs defaultValue="triage" className="w-full flex-1 flex flex-col min-h-0">
-        <div className="shrink-0">
+        <div className="shrink-0 no-print">
           <TabsList className="bg-transparent h-auto p-0 gap-2 mb-4 border-b-0 justify-start overflow-x-auto no-scrollbar">
             <TabsTrigger value="full" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Full Report</TabsTrigger>
             <TabsTrigger value="triage" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Report & Triage</TabsTrigger>
@@ -198,7 +205,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
               riskMatrixColors={riskMatrixSettings?.colors}
             />
           </TabsContent>
-          <TabsContent value="discussion" className="m-0 h-full">
+          <TabsContent value="discussion" className="m-0 h-full no-print">
             <ReportForum report={report} tenantId={tenantId} />
           </TabsContent>
         </div>

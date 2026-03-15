@@ -156,7 +156,7 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
                   </div>
                 </ScrollArea>
               )}
-              <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2">
+              <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
                 <Button type="submit" size="sm" className="h-8 px-4"><Save className="mr-2 h-4 w-4" /> Save Investigation Details</Button>
               </div>
             </form>
@@ -174,7 +174,7 @@ function InvestigationFields({ form, teamFields, taskFields, personnel, removeTe
       <section>
         <div className="flex justify-between items-center mb-4">
             <SectionHeader title="Investigation Team" icon={Users} />
-            <Button type="button" variant="outline" size="sm" onClick={() => appendTeamMember({ userId: '', name: '', role: 'Team Member' })} className="h-7 text-[10px]">
+            <Button type="button" variant="outline" size="sm" onClick={() => appendTeamMember({ userId: '', name: '', role: 'Team Member' })} className="h-7 text-[10px] no-print">
                 <PlusCircle className="mr-1 h-3 w-3" /> Add Member
             </Button>
         </div>
@@ -207,7 +207,7 @@ function InvestigationFields({ form, teamFields, taskFields, personnel, removeTe
                       </Select>
                   </FormItem> 
               )} />
-              <Button type="button" variant="ghost" size="icon" onClick={() => removeTeamMember(index)} className="h-8 w-8 text-destructive"><Trash2 className="h-4 w-4" /></Button>
+              <Button type="button" variant="ghost" size="icon" onClick={() => removeTeamMember(index)} className="h-8 w-8 text-destructive no-print"><Trash2 className="h-4 w-4" /></Button>
             </div>
           ))}
         </div>
@@ -219,7 +219,7 @@ function InvestigationFields({ form, teamFields, taskFields, personnel, removeTe
       <section>
         <div className="flex justify-between items-center mb-4">
             <SectionHeader title="Investigation Tasks" icon={CheckCircle2} />
-            <Button type="button" variant="outline" size="sm" onClick={() => appendTask({ id: uuidv4(), description: '', assigneeId: '', dueDate: new Date(), status: 'Open' })} className="h-7 text-[10px]">
+            <Button type="button" variant="outline" size="sm" onClick={() => appendTask({ id: uuidv4(), description: '', assigneeId: '', dueDate: new Date(), status: 'Open' })} className="h-7 text-[10px] no-print">
                 <PlusCircle className="mr-1 h-3 w-3" /> Add Task
             </Button>
         </div>
@@ -238,7 +238,7 @@ function InvestigationFields({ form, teamFields, taskFields, personnel, removeTe
                   <FormField control={form.control} name={`investigationTasks.${index}.status`} render={({ field }) => (
                       <FormItem className='md:col-span-2'><Label>Status</Label><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-8 text-xs bg-background"><SelectValue /></SelectTrigger></FormControl><SelectContent>{['Open', 'In Progress', 'Completed'].map(s => (<SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>))}</SelectContent></Select></FormItem>
                   )} />
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeTask(index)} className="md:col-span-1 text-destructive h-8 w-8"><Trash2 className="h-4 w-4" /></Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeTask(index)} className="md:col-span-1 text-destructive h-8 w-8 no-print"><Trash2 className="h-4 w-4" /></Button>
               </div>
           ))}
         </div>
