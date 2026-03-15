@@ -110,7 +110,12 @@ export default function ManagementOfChangePage() {
     };
 
     if (isLoading) {
-        return <div className="space-y-6 max-w-6xl mx-auto w-full"><Skeleton className="h-10 w-[400px] rounded-full" /><Skeleton className="h-[400px] w-full" /></div>;
+        return (
+            <div className="max-w-6xl mx-auto w-full space-y-6">
+                <Skeleton className="h-10 w-[400px] rounded-full" />
+                <Skeleton className="h-[400px] w-full" />
+            </div>
+        );
     }
 
     if (error) {

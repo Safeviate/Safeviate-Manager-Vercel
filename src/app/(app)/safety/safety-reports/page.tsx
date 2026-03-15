@@ -194,7 +194,12 @@ export default function SafetyReportsPage() {
   };
 
   if (isLoading) {
-    return <div className="space-y-6 max-w-6xl mx-auto w-full"><Skeleton className="h-10 w-[400px] rounded-full" /><Skeleton className="h-64 w-full" /></div>;
+    return (
+        <div className="max-w-6xl mx-auto w-full space-y-6">
+            <Skeleton className="h-10 w-[400px] rounded-full" />
+            <Skeleton className="h-64 w-full" />
+        </div>
+    );
   }
 
   const isTabEnabled = visibilitySettings?.visibilities?.['safety-reports'] ?? true;
