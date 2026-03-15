@@ -1,3 +1,27 @@
+export interface ChecklistPhoto {
+    url: string;
+    description: string;
+}
+
+export interface PreFlightData {
+    hobbs: number;
+    tacho: number;
+    fuelUpliftGallons: number;
+    fuelUpliftLitres: number;
+    oilUplift: number;
+    documentsChecked: boolean;
+}
+
+export interface PostFlightData {
+    hobbs: number;
+    tacho: number;
+    fuelUpliftGallons: number;
+    fuelUpliftLitres: number;
+    oilUplift: number;
+    defects: string;
+    photos?: ChecklistPhoto[];
+}
+
 export type BookingStatus = 'Tentative' | 'Confirmed' | 'Approved' | 'Completed' | 'Cancelled' | 'Cancelled with Reason';
 
 export interface MassAndBalance {
@@ -15,27 +39,6 @@ export interface MassAndBalance {
         gallons?: number;
         maxGallons?: number;
     }[];
-}
-
-export interface ChecklistPhoto {
-    url: string;
-    description: string;
-}
-
-export interface PreFlightData {
-    hobbs: number;
-    tacho: number;
-    fuelUplift: number;
-    oilUplift: number;
-    documentsChecked: boolean;
-}
-
-export interface PostFlightData {
-    hobbs: number;
-    tacho: number;
-    fuelUplift: number;
-    defects: string;
-    photos?: ChecklistPhoto[];
 }
 
 export interface OverrideLog {

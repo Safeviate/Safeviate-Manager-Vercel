@@ -281,7 +281,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 <div className="grid grid-cols-2 gap-4">
                                     <DetailItem label="Start Hobbs" value={booking.preFlightData.hobbs.toFixed(1)} />
                                     <DetailItem label="Start Tacho" value={booking.preFlightData.tacho.toFixed(1)} />
-                                    <DetailItem label="Fuel Uplifted" value={`${booking.preFlightData.fuelUplift} Gal`} />
+                                    <DetailItem label="Fuel Uplifted" value={`${booking.preFlightData.fuelUpliftGallons || 0} Gal / ${booking.preFlightData.fuelUpliftLitres || 0} L`} />
                                     <DetailItem label="Oil Uplift" value={`${booking.preFlightData.oilUplift} Qts`} />
                                     <div className="col-span-2">
                                         <DetailItem label="Documents Checked">
@@ -323,7 +323,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 <div className="grid grid-cols-2 gap-4">
                                     <DetailItem label="End Hobbs" value={booking.postFlightData.hobbs.toFixed(1)} />
                                     <DetailItem label="End Tacho" value={booking.postFlightData.tacho.toFixed(1)} />
-                                    <DetailItem label="Fuel Uplifted" value={`${booking.postFlightData.fuelUplift} Gal`} />
+                                    <DetailItem label="Fuel Uplifted" value={`${booking.postFlightData.fuelUpliftGallons || 0} Gal / ${booking.postFlightData.fuelUpliftLitres || 0} L`} />
+                                    <DetailItem label="Oil Uplift" value={`${booking.postFlightData.oilUplift || 0} Qts`} />
                                     <div className="col-span-2">
                                         <DetailItem label="Defects / Observations" value={booking.postFlightData.defects || "None reported."} />
                                     </div>
@@ -350,9 +351,10 @@ function PreFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess, is
         defaultValues: booking.preFlightData || {
             hobbs: aircraft.currentHobbs || 0,
             tacho: aircraft.currentTacho || 0,
-            fuelUplift: 0,
+            fuelUpliftGallons: 0,
+            fuelUpliftLitres: 0,
             oilUplift: 0,
-            documentsChecked: false, // Default to OFF
+            documentsChecked: false,
         }
     });
 
@@ -433,8 +435,12 @@ function PreFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess, is
                     <Input type="number" step="0.1" {...form.register('tacho', { valueAsNumber: true })} className="h-8 text-xs" />
                 </div>
                 <div className="space-y-1">
-                    <UILabel className="text-[10px] uppercase font-bold text-muted-foreground">Fuel Uplifted (Gal)</UILabel>
-                    <Input type="number" {...form.register('fuelUplift', { valueAsNumber: true })} className="h-8 text-xs" />
+                    <UILabel className="text-[10px] uppercase font-bold text-muted-foreground">Fuel Uplift (Gal)</UILabel>
+                    <Input type="number" step="0.1" {...form.register('fuelUpliftGallons', { valueAsNumber: true })} className="h-8 text-xs" />
+                </div>
+                <div className="space-y-1">
+                    <UILabel className="text-[10px] uppercase font-bold text-muted-foreground">Fuel Uplift (Litres)</UILabel>
+                    <Input type="number" step="0.1" {...form.register('fuelUpliftLitres', { valueAsNumber: true })} className="h-8 text-xs" />
                 </div>
                 <div className="space-y-1">
                     <UILabel className="text-[10px] uppercase font-bold text-muted-foreground">Oil Uplift (Qts)</UILabel>
@@ -462,7 +468,9 @@ function PostFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }:
         defaultValues: booking.postFlightData || {
             hobbs: (booking.preFlightData?.hobbs || aircraft.currentHobbs || 0) + 1,
             tacho: (booking.preFlightData?.tacho || aircraft.currentTacho || 0) + 0.8,
-            fuelUplift: 0,
+            fuelUpliftGallons: 0,
+            fuelUpliftLitres: 0,
+            oilUplift: 0,
             defects: '',
         }
     });
@@ -470,7 +478,6 @@ function PostFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }:
     const handleSave = async (data: any) => {
         if (!firestore) return;
         
-        // Simple range validation
         if (data.hobbs < (booking.preFlightData?.hobbs || 0)) {
             toast({ variant: 'destructive', title: 'Invalid Reading', description: 'End Hobbs cannot be less than Start Hobbs.' });
             return;
@@ -508,8 +515,16 @@ function PostFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }:
                     <Input type="number" step="0.1" {...form.register('tacho', { valueAsNumber: true })} className="h-8 text-xs" />
                 </div>
                 <div className="space-y-1">
-                    <UILabel className="text-[10px] uppercase font-bold text-muted-foreground">Fuel Uplifted (Gal)</UILabel>
-                    <Input type="number" {...form.register('fuelUplift', { valueAsNumber: true })} className="h-8 text-xs" />
+                    <UILabel className="text-[10px] uppercase font-bold text-muted-foreground">Fuel Uplift (Gal)</UILabel>
+                    <Input type="number" step="0.1" {...form.register('fuelUpliftGallons', { valueAsNumber: true })} className="h-8 text-xs" />
+                </div>
+                <div className="space-y-1">
+                    <UILabel className="text-[10px] uppercase font-bold text-muted-foreground">Fuel Uplift (Litres)</UILabel>
+                    <Input type="number" step="0.1" {...form.register('fuelUpliftLitres', { valueAsNumber: true })} className="h-8 text-xs" />
+                </div>
+                <div className="space-y-1">
+                    <UILabel className="text-[10px] uppercase font-bold text-muted-foreground">Oil Uplift (Qts)</UILabel>
+                    <Input type="number" step="0.5" {...form.register('oilUplift', { valueAsNumber: true })} className="h-8 text-xs" />
                 </div>
                 <div className="col-span-full space-y-1">
                     <UILabel className="text-[10px] uppercase font-bold text-muted-foreground">Defects / Observations</UILabel>
