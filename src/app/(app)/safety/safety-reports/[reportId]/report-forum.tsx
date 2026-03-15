@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -49,15 +50,22 @@ export function ReportForum({ report, tenantId }: ReportForumProps) {
     setIsSubmitting(true);
     const reportRef = doc(firestore, `tenants/${tenantId}/safety-reports`, report.id);
     
+    // Construct the message item carefully to avoid 'undefined' properties which Firestore rejects
     const messageItem: ReportDiscussionItem = {
       id: uuidv4(),
       userId: userProfile.id,
       userName: `${userProfile.firstName} ${userProfile.lastName}`,
       message: newMessage.trim(),
       timestamp: new Date().toISOString(),
-      assignedToId: assignedUserId || undefined,
-      assignedToName: assignedUser ? `${assignedUser.firstName} ${assignedUser.lastName}` : undefined,
     };
+
+    if (assignedUserId) {
+      messageItem.assignedToId = assignedUserId;
+    }
+    
+    if (assignedUser) {
+      messageItem.assignedToName = `${assignedUser.firstName} ${assignedUser.lastName}`;
+    }
 
     updateDocumentNonBlocking(reportRef, {
       discussion: arrayUnion(messageItem)
