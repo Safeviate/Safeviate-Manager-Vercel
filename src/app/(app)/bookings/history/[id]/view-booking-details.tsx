@@ -12,7 +12,7 @@ import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Clock, CheckCircle2, ClipboardCheck, FileClock, History, PencilLine, ShieldAlert, Lock } from 'lucide-react';
+import { Save, AlertTriangle, Clock, CheckCircle2, ClipboardCheck, FileClock, History, PencilLine, ShieldAlert, Lock, Edit2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -194,6 +194,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const canOverride = hasPermission('bookings-approve-override');
     const canLogPre = hasPermission('bookings-preflight-manage');
     const canLogPost = hasPermission('bookings-postflight-manage');
+    const canOverrideTechLog = hasPermission('bookings-techlog-override');
     
     const isApprovableState = booking.status !== 'Approved' && booking.status !== 'Completed' && !booking.status.startsWith('Cancelled');
     const isApproved = booking.status === 'Approved' || booking.status === 'Completed';
@@ -270,6 +271,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 {!booking.preFlight && canLogPre && !isPreFlightBlocked && activeEditView !== 'pre-flight' && !isCompleted && (
                                     <Button size="sm" onClick={() => setActiveEditView('pre-flight')} className="h-7 text-[10px] gap-1 px-2">
                                         <PencilLine className="h-3 w-3" /> Record
+                                    </Button>
+                                )}
+                                {booking.preFlight && !isCompleted && canOverrideTechLog && activeEditView !== 'pre-flight' && (
+                                    <Button size="sm" variant="ghost" onClick={() => setActiveEditView('pre-flight')} className="h-7 text-[10px] gap-1 px-2">
+                                        <Edit2 className="h-3 w-3" /> Edit
                                     </Button>
                                 )}
                                 {booking.preFlight && <Badge variant="secondary" className="text-[10px] bg-green-100 text-green-700 border-green-200">Completed</Badge>}

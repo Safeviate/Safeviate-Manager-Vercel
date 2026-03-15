@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
-import { CheckCircle2, ClipboardCheck, FileClock, History, Clock, PencilLine } from 'lucide-react';
+import { CheckCircle2, ClipboardCheck, FileClock, History, Clock, PencilLine, Edit2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -120,6 +120,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const canOverride = hasPermission('bookings-approve-override');
     const canLogPre = hasPermission('bookings-preflight-manage');
     const canLogPost = hasPermission('bookings-postflight-manage');
+    const canOverrideTechLog = hasPermission('bookings-techlog-override');
     
     const isApprovableState = booking.status !== 'Approved' && booking.status !== 'Completed' && !booking.status.startsWith('Cancelled');
 
@@ -195,6 +196,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 {!booking.preFlight && canLogPre && !isPreFlightBlocked && activeEditView !== 'pre-flight' && (
                                     <Button size="sm" onClick={() => setActiveEditView('pre-flight')} className="h-7 text-[10px] gap-1 px-2">
                                         <PencilLine className="h-3 w-3" /> Record
+                                    </Button>
+                                )}
+                                {booking.preFlight && booking.status !== 'Completed' && canOverrideTechLog && activeEditView !== 'pre-flight' && (
+                                    <Button size="sm" variant="ghost" onClick={() => setActiveEditView('pre-flight')} className="h-7 text-[10px] gap-1 px-2">
+                                        <Edit2 className="h-3 w-3" /> Edit
                                     </Button>
                                 )}
                                 {booking.preFlight && <Badge variant="secondary" className="text-[10px] bg-green-100 text-green-700 border-green-200">Completed</Badge>}

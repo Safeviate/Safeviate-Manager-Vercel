@@ -1,4 +1,4 @@
-export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'manage-templates' | 'calculate-booking' | 'schedule-view' | 'schedule-manage' | 'history-view' | 'preflight-manage' | 'postflight-manage' | 'view-all' | 'approve' | 'approve-override';
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'manage-templates' | 'calculate-booking' | 'schedule-view' | 'schedule-manage' | 'history-view' | 'preflight-manage' | 'postflight-manage' | 'view-all' | 'approve' | 'approve-override' | 'techlog-override';
 
 export type PermissionResource = {
   id: string;
@@ -19,7 +19,7 @@ export const permissionsConfig: PermissionResource[] = [
   { id: 'operations', name: 'Operations', actions: ['view'] },
   { id: 'operations-alerts', name: 'Operations Alerts', actions: ['view', 'create', 'edit', 'delete'] },
   
-  { id: 'bookings', name: 'Bookings', actions: ['view', 'schedule-view', 'schedule-manage', 'history-view', 'preflight-manage', 'postflight-manage', 'delete', 'approve', 'approve-override'] },
+  { id: 'bookings', name: 'Bookings', actions: ['view', 'schedule-view', 'schedule-manage', 'history-view', 'preflight-manage', 'postflight-manage', 'delete', 'approve', 'approve-override', 'techlog-override'] },
 
   { id: 'safety', name: 'Safety', actions: ['view'] },
   { id: 'safety-reports', name: 'Safety Reports', actions: ['manage'] },
