@@ -23,7 +23,8 @@ import { Badge } from '@/components/ui/badge';
 const HOUR_HEIGHT_PX = 60;
 const TOTAL_HOURS = 24;
 const TIME_COL_WIDTH_CLASS = "w-20";
-const LANE_MIN_WIDTH = "150px";
+const LANE_WIDTH_CLASS = "w-[150px]";
+const LANE_FLEX_CLASS = "flex-[0_0_150px]";
 
 const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
     if (!dateStr || !timeStr) {
@@ -277,8 +278,7 @@ export default function SchedulePage() {
                             {(aircraft || []).map((ac) => (
                                 <div 
                                     key={ac.id} 
-                                    style={{ minWidth: LANE_MIN_WIDTH }}
-                                    className="flex-1 border-r flex items-center justify-center font-bold text-xs px-2 text-center text-swimlane-header-foreground h-12 bg-swimlane-header whitespace-normal leading-tight"
+                                    className={cn(LANE_FLEX_CLASS, LANE_WIDTH_CLASS, "border-r flex items-center justify-center font-bold text-xs px-2 text-center text-swimlane-header-foreground h-12 bg-swimlane-header whitespace-normal leading-tight")}
                                 >
                                     {ac.tailNumber}
                                 </div>
@@ -286,8 +286,7 @@ export default function SchedulePage() {
                             {extraLanes.map((_, laneIdx) => (
                                 <div 
                                     key={`extra-h-${laneIdx}`} 
-                                    style={{ minWidth: LANE_MIN_WIDTH }}
-                                    className="flex-1 border-r bg-swimlane-header h-12" 
+                                    className={cn(LANE_FLEX_CLASS, LANE_WIDTH_CLASS, "border-r bg-swimlane-header h-12")}
                                 />
                             ))}
                         </div>
@@ -308,7 +307,7 @@ export default function SchedulePage() {
                                 ))}
                             </div>
 
-                            {/* Main Grid Area - siblings to time column for perfect alignment */}
+                            {/* Main Grid Area - siblings to time column for alignment */}
                             {(aircraft || []).map((ac) => {
                                 const relevantBookings = (bookings || []).filter(b => {
                                     if (b.isOvernight) {
@@ -320,8 +319,7 @@ export default function SchedulePage() {
                                 return (
                                     <div 
                                         key={ac.id} 
-                                        style={{ minWidth: LANE_MIN_WIDTH }}
-                                        className="flex-1 border-r relative"
+                                        className={cn(LANE_FLEX_CLASS, LANE_WIDTH_CLASS, "border-r relative")}
                                     >
                                         {Array.from({ length: TOTAL_HOURS }).map((_, hour) => {
                                             const isPast = isPastDaySelected || (isTodaySelected && hour < getHours(now));
@@ -353,8 +351,7 @@ export default function SchedulePage() {
                             {extraLanes.map((_, laneIdx) => (
                                 <div 
                                     key={`extra-${laneIdx}`} 
-                                    style={{ minWidth: LANE_MIN_WIDTH }}
-                                    className="flex-1 border-r bg-muted/5 opacity-50"
+                                    className={cn(LANE_FLEX_CLASS, LANE_WIDTH_CLASS, "border-r bg-muted/5 opacity-50")}
                                 >
                                     {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
                                         <div 
