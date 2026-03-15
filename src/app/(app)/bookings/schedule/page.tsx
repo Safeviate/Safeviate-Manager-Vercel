@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -12,11 +11,13 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Lock } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { BookingForm } from './booking-form';
 import type { Booking } from '@/types/booking';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { usePermissions } from '@/hooks/use-permissions';
+import { useToast } from '@/hooks/use-toast';
 
 const HOUR_HEIGHT_PX = 60;
 const TOTAL_HOURS = 24;
@@ -95,7 +96,9 @@ const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booki
 
 export default function SchedulePage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const { tenantId } = useUserProfile();
+  const { hasPermission } = usePermissions();
   const [selectedDate, setSelectedDate] = useState(startOfToday());
 
   const [now, setNow] = useState(new Date());
@@ -105,6 +108,9 @@ export default function SchedulePage() {
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
   const [bookingFormData, setBookingFormData] = useState<{ aircraft: Aircraft; startTime: Date; allBookingsForAircraft: Booking[]; booking?: Booking } | null>(null);
   const [dataVersion, setDataVersion] = useState(0);
+
+  // PERMISSIONS
+  const canManageSchedule = hasPermission('bookings-schedule-manage');
 
   const aircraftQuery = useMemoFirebase(
     () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
@@ -170,6 +176,15 @@ export default function SchedulePage() {
   }, [selectedDate]);
   
   const handleSlotClick = (ac: Aircraft, hour: number) => {
+    if (!canManageSchedule) {
+        toast({
+            variant: 'destructive',
+            title: 'Access Restricted',
+            description: 'You do not have permission to create bookings on the schedule.',
+        });
+        return;
+    }
+
     const slotTime = setMinutes(setHours(selectedDate, hour), 0);
     const currentTime = new Date();
     
@@ -214,11 +229,18 @@ export default function SchedulePage() {
     <>
       <div className="flex flex-col gap-6 h-full">
         <div className="flex justify-between items-center">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Daily Schedule</h1>
-                <p className="text-muted-foreground">
-                    Fleet timeline for {format(selectedDate, 'PPP')}.
-                </p>
+            <div className="flex items-center gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Daily Schedule</h1>
+                    <p className="text-muted-foreground">
+                        Fleet timeline for {format(selectedDate, 'PPP')}.
+                    </p>
+                </div>
+                {!canManageSchedule && (
+                    <Badge variant="outline" className="h-6 gap-1.5 text-muted-foreground bg-muted/20 border-border">
+                        <Lock className="h-3 w-3" /> Read Only
+                    </Badge>
+                )}
             </div>
             <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>Previous Day</Button>
@@ -295,7 +317,8 @@ export default function SchedulePage() {
                                                         key={hour} 
                                                         className={cn(
                                                             "border-b relative transition-colors",
-                                                            isPast ? "bg-muted/10 cursor-not-allowed" : "cursor-pointer hover:bg-accent/50"
+                                                            isPast ? "bg-red-500/[0.02] cursor-not-allowed" : "cursor-pointer hover:bg-accent/50",
+                                                            !canManageSchedule && !isPast && "cursor-default"
                                                         )} 
                                                         style={{ height: `${HOUR_HEIGHT_PX}px` }}
                                                         onClick={() => !isPast && handleSlotClick(ac, hour)}

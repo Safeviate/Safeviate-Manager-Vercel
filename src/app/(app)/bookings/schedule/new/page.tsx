@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, runTransaction } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
@@ -10,16 +9,26 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { NewBookingForm, type NewBookingFormValues } from './new-booking-form';
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile } from '@/app/(app)/users/personnel/page';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { format } from 'date-fns';
+import { usePermissions } from '@/hooks/use-permissions';
 
 export default function NewBookingPage() {
   const firestore = useFirestore();
   const { user } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const tenantId = 'safeviate';
+
+  const canManageSchedule = hasPermission('bookings-schedule-manage');
+
+  useEffect(() => {
+    if (!canManageSchedule && user) {
+        toast({ variant: 'destructive', title: 'Access Denied', description: 'You do not have permission to create aircraft bookings.' });
+        router.push('/bookings/schedule');
+    }
+  }, [canManageSchedule, user, router, toast]);
 
   const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
   const instructorsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
@@ -32,10 +41,7 @@ export default function NewBookingPage() {
   const isLoading = isLoadingAircrafts || isLoadingInstructors || isLoadingStudents;
 
   const handleNewBooking = async (values: NewBookingFormValues) => {
-    if (!firestore) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Database not available.' });
-      return;
-    }
+    if (!firestore || !canManageSchedule) return;
     
     setIsSubmitting(true);
 
@@ -95,7 +101,7 @@ export default function NewBookingPage() {
     }
   };
   
-  if (isLoading) {
+  if (isLoading || !canManageSchedule) {
     return <Skeleton className="h-96 w-full" />;
   }
 
