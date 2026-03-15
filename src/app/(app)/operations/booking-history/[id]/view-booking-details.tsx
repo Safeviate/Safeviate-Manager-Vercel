@@ -341,12 +341,20 @@ function PreFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess, is
             tacho: aircraft.currentTacho || 0,
             fuelUplift: 0,
             oilUplift: 0,
-            documentsChecked: true,
+            documentsChecked: false, // Default to OFF
         }
     });
 
+    const isDocsVerified = form.watch('documentsChecked');
+
     const handleSave = async (data: any) => {
         if (!firestore) return;
+        
+        if (!data.documentsChecked) {
+            toast({ variant: 'destructive', title: 'Action Required', description: 'You must verify that all documents are checked.' });
+            return;
+        }
+
         setIsSaving(true);
         const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
         
@@ -414,7 +422,7 @@ function PreFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess, is
             </div>
             <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="ghost" size="sm" onClick={onCancel} className="h-7 text-[10px]">Cancel</Button>
-                <Button type="submit" size="sm" disabled={isSaving} className="h-7 text-[10px]">Save Pre-Flight</Button>
+                <Button type="submit" size="sm" disabled={isSaving || !isDocsVerified} className="h-7 text-[10px]">Save Pre-Flight</Button>
             </div>
         </form>
     )
