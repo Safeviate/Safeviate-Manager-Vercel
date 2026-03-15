@@ -19,9 +19,11 @@ import type { SafetyReport, ReportHazard } from '@/types/safety-report';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { PlusCircle, Trash2, Signature } from 'lucide-react';
+import { PlusCircle, Trash2, Signature, Save } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import Image from 'next/image';
 
 const riskAssessmentSchema = z.object({
     severity: z.number().min(1).max(5),
@@ -107,63 +109,76 @@ export function FinalReview({ report, tenantId, personnel }: FinalReviewProps) {
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Final Review & Closure</CardTitle>
-            <CardDescription>Review the final state of hazards and provide sign-off to close the report.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-medium">Mitigated Hazards</h3>
-                    <Button type="button" variant="outline" size="sm" onClick={() => appendHazard({ id: uuidv4(), description: '' })}>
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add Hazard
-                    </Button>
-                </div>
-                <p className="text-sm text-muted-foreground mb-4">Re-assess hazards after corrective actions have been implemented.</p>
-                <div className='space-y-4'>
-                    {hazardFields.map((field, index) => (
-                        <div key={field.id} className="flex items-end gap-2 p-4 border rounded-lg">
-                             <p className="flex-1 text-sm">{field.description || "New Hazard"}</p>
-                            {/* Placeholder for risk matrix */}
-                             <div className="w-48 h-10 bg-muted rounded-md flex items-center justify-center text-muted-foreground text-sm">
-                                Risk Matrix
+    <Card className="flex flex-col h-[calc(100vh-300px)] overflow-hidden shadow-none border">
+      <CardHeader className="shrink-0 border-b bg-muted/5">
+        <CardTitle>Final Review & Closure</CardTitle>
+        <CardDescription>Review the final state of hazards and provide sign-off to close the report.</CardDescription>
+      </CardHeader>
+      <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
+            <ScrollArea className="flex-1 p-6">
+              <div className="space-y-10">
+                <div>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-medium">Mitigated Hazards</h3>
+                        <Button type="button" variant="outline" size="sm" onClick={() => appendHazard({ id: uuidv4(), description: '' })}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add Hazard
+                        </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">Re-assess hazards after corrective actions have been implemented.</p>
+                    <div className='space-y-4'>
+                        {hazardFields.map((field, index) => (
+                            <div key={field.id} className="flex items-end gap-2 p-4 border rounded-lg bg-muted/10">
+                                 <p className="flex-1 text-sm">{field.description || "New Hazard"}</p>
+                                {/* Placeholder for risk matrix */}
+                                 <div className="w-48 h-10 bg-background border rounded-md flex items-center justify-center text-muted-foreground text-sm">
+                                    Risk Matrix
+                                </div>
+                                <Button type="button" variant="destructive" size="icon" onClick={() => removeHazard(index)}><Trash2 className="h-4 w-4" /></Button>
                             </div>
-                            <Button type="button" variant="destructive" size="icon" onClick={() => removeHazard(index)}><Trash2 className="h-4 w-4" /></Button>
-                        </div>
-                    ))}
+                        ))}
+                        {hazardFields.length === 0 && <p className="text-sm text-muted-foreground italic text-center py-4">No mitigated hazards recorded.</p>}
+                    </div>
                 </div>
-            </div>
 
-            <Separator />
-            
-            <div>
-                <h3 className="text-lg font-medium mb-4">Signatures</h3>
-                <div className="space-y-4">
-                    {(form.watch('signatures') || []).map((sig, index) => (
-                        <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                            <div>
-                                <p className="font-semibold">{sig.userName}</p>
-                                <p className="text-sm text-muted-foreground">{sig.role}</p>
+                <Separator />
+                
+                <div>
+                    <h3 className="text-lg font-medium mb-4">Signatures</h3>
+                    <div className="space-y-4">
+                        {(form.watch('signatures') || []).map((sig, index) => (
+                            <div key={index} className="flex items-center justify-between p-4 border rounded-lg bg-muted/10">
+                                <div>
+                                    <p className="font-semibold">{sig.userName}</p>
+                                    <p className="text-sm text-muted-foreground">{sig.role}</p>
+                                </div>
+                                <div className="text-right">
+                                    <Image src={sig.signatureUrl} alt="Signature" width={100} height={50} className="bg-white border rounded p-1 ml-auto" />
+                                    <p className="text-[10px] text-muted-foreground mt-1">{new Date(sig.signedAt).toLocaleString()}</p>
+                                </div>
                             </div>
-                            <p className="text-sm text-muted-foreground">{new Date(sig.signedAt).toLocaleString()}</p>
-                        </div>
-                    ))}
-                    {form.watch('signatures')?.length === 0 && (
-                        <p className="text-center text-muted-foreground py-4">No signatures yet.</p>
-                    )}
+                        ))}
+                        {form.watch('signatures')?.length === 0 && (
+                            <p className="text-center text-muted-foreground py-4">No signatures yet.</p>
+                        )}
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                        <Button type="button" onClick={handleSignReport} variant="outline">
+                            <Signature className="mr-2 h-4 w-4" /> Sign and Close Report
+                        </Button>
+                    </div>
                 </div>
-                <div className="mt-4 flex justify-end">
-                    <Button type="button" onClick={handleSignReport}>
-                        <Signature className="mr-2 h-4 w-4" /> Sign and Close Report
-                    </Button>
-                </div>
+              </div>
+            </ScrollArea>
+            <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2">
+              <Button type="submit">
+                <Save className="mr-2 h-4 w-4" /> Save Final Review
+              </Button>
             </div>
-          </CardContent>
-        </Card>
-      </form>
-    </Form>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
 }
