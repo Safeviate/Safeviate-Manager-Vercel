@@ -19,6 +19,7 @@ import type { PilotProfile, Personnel } from '../users/personnel/page';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type UserProfileData = PilotProfile | Personnel;
+
 type UnifiedTask = {
     id: string;
     description: string;
@@ -29,6 +30,15 @@ type UnifiedTask = {
     assigneeName?: string;
     dueDate: string; // ISO string
     status: 'Open' | 'In Progress' | 'Completed' | 'Closed' | 'Cancelled';
+};
+
+type UnifiedMessage = {
+    id: string;
+    from: string;
+    content: string;
+    timestamp: string;
+    link: string;
+    source: string;
 };
 
 
@@ -142,6 +152,29 @@ export default function MyDashboardPage() {
         return allTasks.filter(task => task.assigneeId === userProfile.id);
     }, [allTasks, userProfile]);
 
+    const myMessages = useMemo((): UnifiedMessage[] => {
+        if (!reports || !userProfile) return [];
+
+        const messages: UnifiedMessage[] = [];
+
+        reports.forEach(report => {
+            (report.discussion || []).forEach(item => {
+                if (item.assignedToId === userProfile.id) {
+                    messages.push({
+                        id: item.id,
+                        from: item.userName,
+                        content: item.message,
+                        timestamp: item.timestamp,
+                        link: `/safety/safety-reports/${report.id}?tab=discussion`,
+                        source: `Safety Report ${report.reportNumber}`,
+                    });
+                }
+            });
+        });
+
+        return messages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }, [reports, userProfile]);
+
     const isLoading = isProfileLoading || isLoadingPersonnel || isLoadingInstructors || isLoadingStudents || isLoadingPrivatePilots || isLoadingMocs || isLoadingAudits || isLoadingReports || isLoadingCaps;
 
     return (
@@ -149,7 +182,9 @@ export default function MyDashboardPage() {
             <Tabs defaultValue="tasks" className="w-full flex flex-col h-full overflow-hidden">
                 <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 shrink-0 border-b-0 overflow-x-auto no-scrollbar justify-start">
                     <TabsTrigger value="tasks" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Tasks</TabsTrigger>
-                    <TabsTrigger value="messages" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Messages</TabsTrigger>
+                    <TabsTrigger value="messages" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">
+                        Messages {myMessages.length > 0 && <Badge className="ml-2 h-4 px-1.5 min-w-4 flex items-center justify-center text-[10px]">{myMessages.length}</Badge>}
+                    </TabsTrigger>
                     <TabsTrigger value="logbook" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">My Logbook</TabsTrigger>
                 </TabsList>
 
@@ -206,12 +241,36 @@ export default function MyDashboardPage() {
                     <Card className="shadow-none border">
                         <CardHeader>
                             <CardTitle>Messages</CardTitle>
-                            <CardDescription>View your notifications and mentions.</CardDescription>
+                            <CardDescription>Recent assignments and mentions directed to you.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-center py-10">
-                                <p className="text-muted-foreground">You have no new messages.</p>
-                            </div>
+                            {isLoading ? (
+                                <Skeleton className="h-48 w-full" />
+                            ) : (
+                                <div className="space-y-4">
+                                    {myMessages.length > 0 ? (
+                                        myMessages.map(msg => (
+                                            <div key={msg.id} className="flex flex-col gap-1 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                                                <div className="flex justify-between items-start">
+                                                    <span className="text-sm font-bold">{msg.from}</span>
+                                                    <span className="text-[10px] text-muted-foreground">{format(new Date(msg.timestamp), 'PPP p')}</span>
+                                                </div>
+                                                <p className="text-sm line-clamp-2 italic text-muted-foreground">&quot;{msg.content}&quot;</p>
+                                                <div className="flex justify-between items-center mt-2">
+                                                    <Badge variant="outline" className="text-[10px]">{msg.source}</Badge>
+                                                    <Button asChild variant="link" size="sm" className="h-auto p-0 text-xs">
+                                                        <Link href={msg.link}>View Discussion</Link>
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-10">
+                                            <p className="text-muted-foreground">You have no new messages.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>
