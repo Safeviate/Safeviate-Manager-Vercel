@@ -104,7 +104,7 @@ export default function RiskMatrixPage() {
         <CardHeader className="py-4">
           <CardTitle>Risk Matrix Configuration</CardTitle>
           <CardDescription>
-            This matrix is used to determine the level of risk associated with an identified hazard, based on ICAO Document 9859. Right-click a cell to change the color.
+            This matrix is used to determine the level of risk associated with an identified hazard. Right-click a cell to change the color.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -119,10 +119,10 @@ export default function RiskMatrixPage() {
                     <col className="w-[16.66%]" />
                 </colgroup>
                 <thead>
-                    <tr>
-                        <th className="border-b border-r border-slate-200 dark:border-slate-700 bg-muted/30 h-12"></th>
+                    <tr className="h-12">
+                        <th className="border-b border-r border-slate-200 dark:border-slate-700 bg-muted/30"></th>
                         {severities.map(s => (
-                            <th key={s.value} className="h-12 border-r border-b border-slate-200 dark:border-slate-700 p-2 text-center align-middle font-bold text-[10px] uppercase tracking-wider bg-muted/30">
+                            <th key={s.value} className="border-r border-b border-slate-200 dark:border-slate-700 p-1 text-center align-middle font-bold text-[9px] uppercase tracking-wider bg-muted/30">
                                 {s.name} ({s.value})
                             </th>
                         ))}
@@ -130,10 +130,10 @@ export default function RiskMatrixPage() {
                 </thead>
                 <tbody>
                     {likelihoods.slice().reverse().map(l => (
-                        <tr key={l.value}>
-                            <th className="h-14 border-r border-b border-slate-200 dark:border-slate-700 p-2 text-right align-middle font-bold text-[10px] uppercase tracking-wider bg-muted/10">
+                        <tr key={l.value} className="h-12">
+                            <th className="border-r border-b border-slate-200 dark:border-slate-700 p-1 text-right align-middle font-bold text-[9px] uppercase tracking-wider bg-muted/10">
                                 {l.name}
-                                <span className="block text-[9px] text-muted-foreground font-normal">({l.value})</span>
+                                <span className="block text-[8px] text-muted-foreground font-normal">({l.value})</span>
                             </th>
                             {severities.map(s => {
                                 const cellId = `${l.value}${s.value}`;
@@ -143,7 +143,7 @@ export default function RiskMatrixPage() {
                                     onContextMenu={(e) => handleRightClick(e, cellId)}
                                     style={{ backgroundColor: colors[cellId] }}
                                     className={cn(
-                                        "h-14 border-b border-r border-slate-200 dark:border-slate-700 p-2 text-center align-middle font-black text-xs text-black transition-all",
+                                        "border-b border-r border-slate-200 dark:border-slate-700 p-1 text-center align-middle font-black text-[10px] text-black transition-all",
                                         "cursor-pointer hover:scale-[0.98] active:scale-95"
                                     )}
                                 >
