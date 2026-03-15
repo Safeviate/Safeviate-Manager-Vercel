@@ -208,6 +208,9 @@ export default function BookingsHistoryPage() {
     const aircraftMap = new Map(aircraft.map(a => [a.id, a]));
     const allUsers = [...personnel, ...instructors, ...students, ...privatePilots];
     const userMap = new Map(allUsers.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
+    
+    // Add Special lookup for developer mode
+    userMap.set('DEVELOPER_MODE', 'System (Developer)');
 
     return bookings.map(b => {
       const bookingAircraft = aircraftMap.get(b.aircraftId);

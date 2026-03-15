@@ -11,6 +11,7 @@ import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile } from '@/app/(app)/users/personnel/page';
 import { format } from 'date-fns';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function NewBookingPage() {
   const firestore = useFirestore();
@@ -18,6 +19,7 @@ export default function NewBookingPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
+  const { userProfile } = useUserProfile();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const tenantId = 'safeviate';
 
@@ -63,6 +65,7 @@ export default function NewBookingPage() {
         instructorId: rest.instructorId || null,
         studentId: rest.studentId || null,
         notes: rest.notes || null,
+        createdById: userProfile?.id || user?.uid || null,
     };
 
     try {

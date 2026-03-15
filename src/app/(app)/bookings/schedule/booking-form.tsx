@@ -211,6 +211,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                         bookingNumber: String(newCount).padStart(5, '0'),
                         preFlight: false,
                         postFlight: false,
+                        createdById: userProfile?.id || null,
                     });
                 });
                 toast({ title: 'Booking Created' });

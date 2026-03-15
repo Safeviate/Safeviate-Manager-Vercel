@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { collection, doc, runTransaction } from 'firebase/firestore';
 import { format, addMinutes, isBefore } from 'date-fns';
 import type { Aircraft } from '@/types/aircraft';
@@ -61,6 +62,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     const firestore = useFirestore();
     const { toast } = useToast();
     const { hasPermission } = usePermissions();
+    const { userProfile } = useUserProfile();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // PERMISSIONS
@@ -194,6 +196,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                         bookingNumber: String(newCount).padStart(5, '0'),
                         preFlight: false,
                         postFlight: false,
+                        createdById: userProfile?.id || null,
                     });
                 });
                 toast({ title: 'Booking Created' });
@@ -258,7 +261,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel>Booking Type</FormLabel><FormControl><Input placeholder='e.g., Training, Rental' {...field} disabled={isUnderway || !canManageSchedule} /></FormControl><FormMessage /></FormItem> )}/>
-                            <FormField control={form.control} name="status" render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isUnderway || !canManageSchedule}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{['Tentative', 'Confirmed', 'Approved', 'Completed', 'Cancelled', 'Cancelled with Reason'].map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectItem></Select><FormMessage /></FormItem> )} />
+                            <FormField control={form.control} name="status" render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isUnderway || !canManageSchedule}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{['Tentative', 'Confirmed', 'Approved', 'Completed', 'Cancelled', 'Cancelled with Reason'].map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )} />
                         </div>
 
                         {watchStatus === 'Cancelled with Reason' && (
