@@ -13,6 +13,9 @@ import type { Booking } from '@/types/booking';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Trophy, History, CheckCircle2 } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 interface TrainingRecordsProps {
     studentId: string;
@@ -29,6 +32,15 @@ const getRatingColor = (rating: number) => {
     }
 }
 
+const SectionHeader = ({ title, icon: Icon }: { title: string, icon: any }) => (
+    <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 rounded-lg bg-primary/10 text-primary">
+            <Icon className="h-5 w-5" />
+        </div>
+        <h3 className="text-lg font-bold leading-tight">{title}</h3>
+    </div>
+);
+
 const MilestoneProgress = ({ totalHours, milestone, warningThreshold }: { totalHours: number, milestone: number, warningThreshold: number }) => {
     const progress = Math.min((totalHours / milestone) * 100, 100);
     const isWarning = totalHours >= warningThreshold && totalHours < milestone;
@@ -41,12 +53,18 @@ const MilestoneProgress = ({ totalHours, milestone, warningThreshold }: { totalH
     }
 
     return (
-        <div className="space-y-2">
-            <div className="flex justify-between items-baseline">
-                <p className="font-semibold">{milestone} Hour Milestone</p>
-                <p className="text-sm text-muted-foreground">{totalHours.toFixed(1)} / {milestone} hrs</p>
+        <div className='space-y-3 bg-background/50 p-4 rounded-xl border border-card-border/50'>
+            <div className="flex justify-between items-baseline border-b border-primary/20 pb-2 mb-3">
+                <h4 className='text-[10px] font-bold uppercase text-primary tracking-wider'>{milestone} Hour Milestone</h4>
+                <p className="text-[10px] font-mono font-bold text-muted-foreground">{totalHours.toFixed(1)} / {milestone}h</p>
             </div>
-            <Progress value={progress} indicatorClassName={getIndicatorColor()} />
+            <Progress value={progress} indicatorClassName={getIndicatorColor()} className='h-2' />
+            {isComplete && (
+                <div className='flex items-center gap-1 text-[10px] text-green-600 font-bold uppercase mt-1'>
+                    <CheckCircle2 className='h-3 w-3' />
+                    Goal Reached
+                </div>
+            )}
         </div>
     )
 }
@@ -121,90 +139,102 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
 
     if (isLoading) {
         return (
-            <div className="space-y-6">
-                <Skeleton className="h-48 w-full" />
-                <Skeleton className="h-24 w-full" />
+            <div className="h-full space-y-6">
+                <Skeleton className="h-10 w-48" />
                 <Skeleton className="h-64 w-full" />
             </div>
         );
     }
     
     return (
-        <div className="space-y-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Flight Hour Milestones</CardTitle>
-                    <CardDescription>Visual progress towards key flight hour goals based on completed bookings.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                    {milestones.map(ms => (
-                        <MilestoneProgress 
-                            key={ms.milestone}
-                            totalHours={totalFlightHours}
-                            milestone={ms.milestone}
-                            warningThreshold={ms.warningHours}
-                        />
-                    ))}
-                </CardContent>
-            </Card>
+        <Card className="flex flex-col h-full overflow-hidden shadow-none border">
+            <CardHeader className="shrink-0 border-b bg-muted/5">
+                <CardTitle>Training Progress & History</CardTitle>
+                <CardDescription>Comprehensive overview of flight hour milestones and instructor debriefs.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1 p-0 overflow-hidden">
+                <ScrollArea className="h-full">
+                    <div className="p-6 space-y-10">
+                        <section>
+                            <SectionHeader title="Flight Hour Milestones" icon={Trophy} />
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {milestones.map(ms => (
+                                    <MilestoneProgress 
+                                        key={ms.milestone}
+                                        totalHours={totalFlightHours}
+                                        milestone={ms.milestone}
+                                        warningThreshold={ms.warningHours}
+                                    />
+                                ))}
+                            </div>
+                        </section>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Training History</CardTitle>
-                    <CardDescription>A log of all completed instructor debriefs.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {sortedReports && sortedReports.length > 0 ? (
-                         <Accordion type="multiple" className="w-full">
-                            {sortedReports.filter(r => r.entries.length > 0).map(report => (
-                                <AccordionItem key={report.id} value={report.id}>
-                                    <AccordionTrigger>
-                                        <div className="flex justify-between items-center w-full pr-4">
-                                            <div className="text-left">
-                                                <p className="font-semibold">Debrief {report.bookingNumber ? `#${report.bookingNumber}` : ''}</p>
-                                                <p className="text-sm text-muted-foreground">{format(new Date(report.date), 'PPP')} with {instructorsMap.get(report.instructorId!) || 'Unknown'}</p>
-                                            </div>
-                                        </div>
-                                    </AccordionTrigger>
-                                    <AccordionContent className="pl-6 pr-2 space-y-4">
-                                        {report.entries.map(entry => (
-                                            <div key={entry.id} className="p-4 rounded-md bg-muted/50">
-                                                <div className="flex justify-between items-start">
-                                                    <p className="font-semibold">{entry.exercise}</p>
-                                                    <Badge className={cn(getRatingColor(entry.rating), "text-white")}>{entry.rating}/4</Badge>
+                        <Separator />
+
+                        <section>
+                            <SectionHeader title="Detailed Training History" icon={History} />
+                            {sortedReports && sortedReports.length > 0 ? (
+                                <Accordion type="multiple" className="w-full space-y-4">
+                                    {sortedReports.filter(r => r.entries.length > 0).map(report => (
+                                        <AccordionItem key={report.id} value={report.id} className='border rounded-xl bg-background overflow-hidden'>
+                                            <AccordionTrigger className='px-4 hover:no-underline'>
+                                                <div className="flex justify-between items-center w-full pr-4">
+                                                    <div className="text-left">
+                                                        <p className="font-bold text-sm">Debrief {report.bookingNumber ? `#${report.bookingNumber}` : ''}</p>
+                                                        <p className="text-xs text-muted-foreground">{format(new Date(report.date), 'PPP')} with {instructorsMap.get(report.instructorId!) || 'Unknown'}</p>
+                                                    </div>
                                                 </div>
-                                                <p className="text-sm text-muted-foreground mt-2">{entry.comment}</p>
-                                            </div>
-                                        ))}
-                                        {report.overallComment && (
-                                            <div className="pt-4 border-t">
-                                                <p className="font-semibold">Overall Comment</p>
-                                                <p className="text-sm text-muted-foreground mt-1">{report.overallComment}</p>
-                                            </div>
-                                        )}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-                                            {report.instructorSignatureUrl && (
-                                                <div>
-                                                    <p className="text-sm font-semibold text-muted-foreground">Instructor Signature</p>
-                                                    <img src={report.instructorSignatureUrl} alt="Instructor Signature" className="mt-2 border rounded-md bg-white max-h-32 object-contain" />
+                                            </AccordionTrigger>
+                                            <AccordionContent className="px-4 pb-4 space-y-4 pt-2 border-t bg-muted/10">
+                                                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                                                    {report.entries.map(entry => (
+                                                        <div key={entry.id} className="p-3 rounded-lg border bg-background flex flex-col justify-between">
+                                                            <div className="flex justify-between items-start gap-2 mb-2">
+                                                                <p className="font-bold text-xs">{entry.exercise}</p>
+                                                                <Badge className={cn(getRatingColor(entry.rating), "text-white text-[10px] h-5")}>{entry.rating}/4</Badge>
+                                                            </div>
+                                                            <p className="text-xs text-muted-foreground italic">{entry.comment || 'No specific notes.'}</p>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            )}
-                                            {report.studentSignatureUrl && (
-                                                <div>
-                                                    <p className="text-sm font-semibold text-muted-foreground">Student Signature</p>
-                                                    <img src={report.studentSignatureUrl} alt="Student Signature" className="mt-2 border rounded-md bg-white max-h-32 object-contain" />
+                                                {report.overallComment && (
+                                                    <div className="pt-4 border-t">
+                                                        <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Overall Instructor Comment</p>
+                                                        <p className="text-sm font-medium leading-relaxed">{report.overallComment}</p>
+                                                    </div>
+                                                )}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
+                                                    {report.instructorSignatureUrl && (
+                                                        <div>
+                                                            <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Instructor Signature</p>
+                                                            <div className='bg-white border rounded-lg p-2 flex justify-center'>
+                                                                <img src={report.instructorSignatureUrl} alt="Instructor Signature" className="max-h-20 object-contain" />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {report.studentSignatureUrl && (
+                                                        <div>
+                                                            <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Student Acknowledgement</p>
+                                                            <div className='bg-white border rounded-lg p-2 flex justify-center'>
+                                                                <img src={report.studentSignatureUrl} alt="Student Signature" className="max-h-20 object-contain" />
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
-                                    </AccordionContent>
-                                </AccordionItem>
-                            ))}
-                         </Accordion>
-                    ) : (
-                        <p className="text-center text-muted-foreground p-4">No debriefs recorded.</p>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    ))}
+                                </Accordion>
+                            ) : (
+                                <div className='py-12 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-muted-foreground'>
+                                    <History className='h-8 w-8 mb-2 opacity-20' />
+                                    <p className="text-sm">No debriefs recorded yet.</p>
+                                </div>
+                            )}
+                        </section>
+                    </div>
+                </ScrollArea>
+            </CardContent>
+        </Card>
     );
 }
