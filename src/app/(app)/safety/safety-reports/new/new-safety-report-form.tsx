@@ -122,7 +122,7 @@ export function NewSafetyReportForm({ onSubmit, isSubmitting }: NewSafetyReportF
                                     <Button
                                     variant={"outline"}
                                     className={cn(
-                                        "w-full pl-3 text-left font-normal",
+                                        "w-full pl-3 text-left font-normal h-10",
                                         !field.value && "text-muted-foreground"
                                     )}
                                     >
@@ -142,8 +142,20 @@ export function NewSafetyReportForm({ onSubmit, isSubmitting }: NewSafetyReportF
                             </FormItem>
                         )}
                     />
-                    <FormField control={form.control} name="eventTime" render={({ field }) => (<FormItem><FormLabel>Time of Event (24h)</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Location</FormLabel><FormControl><Input placeholder="e.g., Apron Bravo, near Hangar 3" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="eventTime" render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Time of Event (24h)</FormLabel>
+                            <FormControl><Input type="time" {...field} className="h-10" /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="location" render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Location</FormLabel>
+                            <FormControl><Input placeholder="e.g., Apron Bravo, near Hangar 3" {...field} className="h-10" /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
                 </div>
             </div>
             

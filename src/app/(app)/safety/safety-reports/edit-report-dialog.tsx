@@ -105,7 +105,7 @@ export function EditReportDialog({ report, tenantId }: EditReportDialogProps) {
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
-                        <Button variant="outline" className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                        <Button variant="outline" className={cn("w-full pl-3 text-left font-normal h-10", !field.value && "text-muted-foreground")}>
                           {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -119,9 +119,9 @@ export function EditReportDialog({ report, tenantId }: EditReportDialogProps) {
                 </FormItem>
               )} />
               <FormField control={form.control} name="eventTime" render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Event Time (24h)</FormLabel>
-                  <FormControl><Input type="time" {...field} /></FormControl>
+                  <FormControl><Input type="time" {...field} className="h-10" /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
