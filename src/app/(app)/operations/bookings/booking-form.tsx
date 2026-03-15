@@ -14,11 +14,11 @@ import { Switch } from '@/components/ui/switch';
 import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { collection, doc, runTransaction } from 'firebase/firestore';
+import { collection, doc, runTransaction, arrayUnion } from 'firebase/firestore';
 import { format, addMinutes, isBefore } from 'date-fns';
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
-import type { Booking } from '@/types/booking';
+import type { Booking, OverrideLog } from '@/types/booking';
 import { Trash2, Lock, ShieldAlert, Eye } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -68,10 +68,12 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
 
     // PERMISSIONS
     const canManageSchedule = hasPermission('bookings-schedule-manage');
+    const canOverride = hasPermission('bookings-approve-override');
     const canDelete = hasPermission('bookings-delete');
 
     // LOGIC: A booking is "underway" if it is Approved or tech logs have started
     const isUnderway = existingBooking?.status === 'Approved' || existingBooking?.status === 'Completed' || existingBooking?.preFlight;
+    const canEditUnderway = canOverride;
 
     const instructors = useMemo(() => pilots.filter(p => p.userType === 'Instructor'), [pilots]);
     const students = useMemo(() => pilots.filter(p => p.userType === 'Student'), [pilots]);
@@ -174,6 +176,25 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
         if (data.status === 'Cancelled with Reason') {
             bookingData.notes = `Cancelled: ${data.cancellationReason}\n\n${data.notes || ''}`;
             bookingData.status = 'Cancelled';
+        }
+
+        // Audit Admin/Locked Record Override
+        if (existingBooking && isUnderway && canEditUnderway && userProfile) {
+            const reason = window.prompt("This booking is locked (underway or approved). Please provide a reason for modifying the schedule details:");
+            if (!reason) {
+                toast({ variant: 'destructive', title: 'Save Cancelled', description: 'A reason is required to override locked records.' });
+                setIsSubmitting(false);
+                return;
+            }
+            const log: OverrideLog = {
+                userId: userProfile.id,
+                userName: `${userProfile.firstName} ${userProfile.lastName}`,
+                permissionId: 'bookings-approve-override',
+                action: 'Modified schedule details of a locked/underway record',
+                reason: reason,
+                timestamp: new Date().toISOString()
+            };
+            bookingData.overrides = arrayUnion(log);
         }
 
         try {

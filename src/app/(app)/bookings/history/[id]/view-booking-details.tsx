@@ -175,11 +175,17 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
         // Record Override Audit
         if (!booking.preFlight && hasPermission('bookings-approve-override') && userProfile) {
+            const reason = window.prompt("A pre-flight checklist has not been recorded. Please provide a reason for overriding this requirement:");
+            if (!reason) {
+                toast({ variant: 'destructive', title: 'Override Cancelled', description: 'A reason is required to proceed with an override.' });
+                return;
+            }
             const log: OverrideLog = {
                 userId: userProfile.id,
                 userName: `${userProfile.firstName} ${userProfile.lastName}`,
                 permissionId: 'bookings-approve-override',
                 action: 'Flight Approved without recorded pre-flight checklist',
+                reason: reason,
                 timestamp: new Date().toISOString()
             };
             updateData.overrides = arrayUnion(log);
@@ -275,9 +281,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         </h4>
                         <div className="space-y-1.5">
                             {booking.overrides.map((ov, i) => (
-                                <div key={i} className="text-[10px] bg-amber-50 border border-amber-100 p-2 rounded flex justify-between items-center">
-                                    <span><span className="font-bold">{ov.userName}</span>: {ov.action}</span>
-                                    <span className="text-muted-foreground">{format(new Date(ov.timestamp), 'dd MMM HH:mm')}</span>
+                                <div key={i} className="text-[10px] bg-amber-50 border border-amber-100 p-2 rounded flex flex-col gap-1">
+                                    <div className="flex justify-between items-center">
+                                        <span><span className="font-bold">{ov.userName}</span>: {ov.action}</span>
+                                        <span className="text-muted-foreground">{format(new Date(ov.timestamp), 'dd MMM HH:mm')}</span>
+                                    </div>
+                                    <p className="text-[9px] text-amber-900 border-t border-amber-200/50 pt-1 mt-1">
+                                        <span className="font-bold uppercase opacity-70">Reason:</span> {ov.reason}
+                                    </p>
                                 </div>
                             ))}
                         </div>
@@ -576,21 +587,35 @@ function PreFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess, is
         const logs: OverrideLog[] = [];
         
         if (booking.preFlight && hasPermission('bookings-techlog-override') && userProfile) {
+            const reason = window.prompt("You are modifying an already completed pre-flight record. Please provide a reason:");
+            if (!reason) {
+                toast({ variant: 'destructive', title: 'Save Cancelled', description: 'A reason is required to proceed with this modification.' });
+                setIsSaving(false);
+                return;
+            }
             logs.push({
                 userId: userProfile.id,
                 userName: `${userProfile.firstName} ${userProfile.lastName}`,
                 permissionId: 'bookings-techlog-override',
                 action: 'Modified already completed pre-flight technical log',
+                reason: reason,
                 timestamp: new Date().toISOString()
             });
         }
 
         if (isPreFlightBlocked && hasPermission('bookings-techlog-override') && userProfile) {
+            const reason = window.prompt("The aircraft's previous flight has not been finalized. Please provide a reason for overriding this sequence:");
+            if (!reason) {
+                toast({ variant: 'destructive', title: 'Save Cancelled', description: 'A reason is required to proceed with this sequence override.' });
+                setIsSaving(false);
+                return;
+            }
             logs.push({
                 userId: userProfile.id,
                 userName: `${userProfile.firstName} ${userProfile.lastName}`,
                 permissionId: 'bookings-techlog-override',
                 action: 'Recorded pre-flight log while previous flight was outstanding',
+                reason: reason,
                 timestamp: new Date().toISOString()
             });
         }

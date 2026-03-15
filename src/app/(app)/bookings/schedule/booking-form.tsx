@@ -181,11 +181,18 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
 
         // Audit Admin/Locked Record Override
         if (existingBooking && isUnderway && canEditUnderway && userProfile) {
+            const reason = window.prompt("This booking is locked (underway or approved). Please provide a reason for modifying the schedule details:");
+            if (!reason) {
+                toast({ variant: 'destructive', title: 'Save Cancelled', description: 'A reason is required to override locked records.' });
+                setIsSubmitting(false);
+                return;
+            }
             const log: OverrideLog = {
                 userId: userProfile.id,
                 userName: `${userProfile.firstName} ${userProfile.lastName}`,
                 permissionId: 'bookings-approve-override',
                 action: 'Modified schedule details of a locked/underway record',
+                reason: reason,
                 timestamp: new Date().toISOString()
             };
             bookingData.overrides = arrayUnion(log);

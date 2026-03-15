@@ -43,6 +43,7 @@ export interface OverrideLog {
     userName: string;
     permissionId: string;
     action: string;
+    reason: string;
     timestamp: string;
 }
 
