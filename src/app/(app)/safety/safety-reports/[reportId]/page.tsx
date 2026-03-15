@@ -118,98 +118,141 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
           </Button>
        </div>
 
-      <div className="shrink-0">
-        <Card className="shadow-none border bg-muted/5">
-          <CardHeader className="py-4">
-            <CardTitle className="text-xl">Report {report.reportNumber}</CardTitle>
-            <CardDescription>
-              Filed on {format(new Date(report.submittedAt), 'PPP')} by {report.submittedByName}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pb-4">
-            <p className="text-sm whitespace-pre-wrap flex-1">{report.description}</p>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <Tabs defaultValue="triage" className="w-full flex-1 flex flex-col min-h-0">
-        <div className="shrink-0 no-print">
-          <TabsList className="bg-transparent h-auto p-0 gap-2 mb-4 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
-            <TabsTrigger value="full" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Full Report</TabsTrigger>
-            <TabsTrigger value="triage" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Report & Triage</TabsTrigger>
-            <TabsTrigger value="hazards" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Hazard & Risk ID</TabsTrigger>
-            <TabsTrigger value="investigation" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Investigation</TabsTrigger>
-            <TabsTrigger value="cap" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Corrective Actions</TabsTrigger>
-            <TabsTrigger value="review" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Final Review</TabsTrigger>
-            <TabsTrigger value="discussion" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">
-              Discussion {myMentionsCount > 0 && <Badge className="ml-2 h-4 px-1.5 min-w-4 flex items-center justify-center text-[10px]">{myMentionsCount}</Badge>}
-            </TabsTrigger>
-          </TabsList>
+      {/* --- Screen-Optimized Layout --- */}
+      <div className="flex-1 flex flex-col min-h-0 no-print">
+        <div className="shrink-0 mb-4">
+            <Card className="shadow-none border bg-muted/5">
+            <CardHeader className="py-4">
+                <CardTitle className="text-xl">Report {report.reportNumber}</CardTitle>
+                <CardDescription>
+                Filed on {format(new Date(report.submittedAt), 'PPP')} by {report.submittedByName}
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="pb-4">
+                <p className="text-sm whitespace-pre-wrap flex-1">{report.description}</p>
+            </CardContent>
+            </Card>
         </div>
         
-        <div className="flex-1 min-h-0">
-          <TabsContent value="full" className="m-0 h-full">
-            <Card className="h-full flex flex-col overflow-hidden shadow-none border print:border-none print:shadow-none">
-              <ScrollArea className="h-full">
-                <div className="flex flex-col gap-8 p-6 pb-20 print:p-0">
-                  <TriageForm report={report} tenantId={tenantId} isStacked />
-                  <HazardIdentificationForm 
-                    report={report} 
-                    tenantId={tenantId} 
-                    riskMatrixColors={riskMatrixSettings?.colors}
-                    isStacked
-                  />
-                  <InvestigationForm 
-                    report={report} 
-                    tenantId={tenantId} 
-                    personnel={personnel || []} 
-                    isStacked
-                  />
-                  <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} isStacked />
-                  <FinalReview 
-                    report={report} 
-                    tenantId={tenantId} 
-                    personnel={personnel || []} 
-                    riskMatrixColors={riskMatrixSettings?.colors}
-                    isStacked
-                  />
-                </div>
-              </ScrollArea>
-            </Card>
-          </TabsContent>
-          <TabsContent value="triage" className="m-0 h-full">
-              <TriageForm report={report} tenantId={tenantId} />
-          </TabsContent>
-          <TabsContent value="hazards" className="m-0 h-full">
-            <HazardIdentificationForm 
-              report={report} 
-              tenantId={tenantId} 
-              riskMatrixColors={riskMatrixSettings?.colors}
-            />
-          </TabsContent>
-          <TabsContent value="investigation" className="m-0 h-full">
-            <InvestigationForm 
-              report={report} 
-              tenantId={tenantId} 
-              personnel={personnel || []} 
-            />
-          </TabsContent>
-          <TabsContent value="cap" className="m-0 h-full">
-            <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} />
-          </TabsContent>
-          <TabsContent value="review" className="m-0 h-full">
-            <FinalReview 
-              report={report} 
-              tenantId={tenantId} 
-              personnel={personnel || []} 
-              riskMatrixColors={riskMatrixSettings?.colors}
-            />
-          </TabsContent>
-          <TabsContent value="discussion" className="m-0 h-full no-print">
-            <ReportForum report={report} tenantId={tenantId} />
-          </TabsContent>
-        </div>
-      </Tabs>
+        <Tabs defaultValue="triage" className="w-full flex-1 flex flex-col min-h-0">
+            <div className="shrink-0">
+            <TabsList className="bg-transparent h-auto p-0 gap-2 mb-4 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
+                <TabsTrigger value="full" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Full Report</TabsTrigger>
+                <TabsTrigger value="triage" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Report & Triage</TabsTrigger>
+                <TabsTrigger value="hazards" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Hazard & Risk ID</TabsTrigger>
+                <TabsTrigger value="investigation" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Investigation</TabsTrigger>
+                <TabsTrigger value="cap" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Corrective Actions</TabsTrigger>
+                <TabsTrigger value="review" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Final Review</TabsTrigger>
+                <TabsTrigger value="discussion" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">
+                Discussion {myMentionsCount > 0 && <Badge className="ml-2 h-4 px-1.5 min-w-4 flex items-center justify-center text-[10px]">{myMentionsCount}</Badge>}
+                </TabsTrigger>
+            </TabsList>
+            </div>
+            
+            <div className="flex-1 min-h-0">
+            <TabsContent value="full" className="m-0 h-full">
+                <Card className="h-full flex flex-col overflow-hidden shadow-none border">
+                <ScrollArea className="h-full">
+                    <div className="flex flex-col gap-8 p-6 pb-20">
+                    <TriageForm report={report} tenantId={tenantId} isStacked />
+                    <HazardIdentificationForm 
+                        report={report} 
+                        tenantId={tenantId} 
+                        riskMatrixColors={riskMatrixSettings?.colors}
+                        isStacked
+                    />
+                    <InvestigationForm 
+                        report={report} 
+                        tenantId={tenantId} 
+                        personnel={personnel || []} 
+                        isStacked
+                    />
+                    <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} isStacked />
+                    <FinalReview 
+                        report={report} 
+                        tenantId={tenantId} 
+                        personnel={personnel || []} 
+                        riskMatrixColors={riskMatrixSettings?.colors}
+                        isStacked
+                    />
+                    </div>
+                </ScrollArea>
+                </Card>
+            </TabsContent>
+            <TabsContent value="triage" className="m-0 h-full">
+                <TriageForm report={report} tenantId={tenantId} />
+            </TabsContent>
+            <TabsContent value="hazards" className="m-0 h-full">
+                <HazardIdentificationForm 
+                report={report} 
+                tenantId={tenantId} 
+                riskMatrixColors={riskMatrixSettings?.colors}
+                />
+            </TabsContent>
+            <TabsContent value="investigation" className="m-0 h-full">
+                <InvestigationForm 
+                report={report} 
+                tenantId={tenantId} 
+                personnel={personnel || []} 
+                />
+            </TabsContent>
+            <TabsContent value="cap" className="m-0 h-full">
+                <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} />
+            </TabsContent>
+            <TabsContent value="review" className="m-0 h-full">
+                <FinalReview 
+                report={report} 
+                tenantId={tenantId} 
+                personnel={personnel || []} 
+                riskMatrixColors={riskMatrixSettings?.colors}
+                />
+            </TabsContent>
+            <TabsContent value="discussion" className="m-0 h-full">
+                <ReportForum report={report} tenantId={tenantId} />
+            </TabsContent>
+            </div>
+        </Tabs>
+      </div>
+
+      {/* --- Dedicated Print Layout (Always in DOM, visible only during print) --- */}
+      <div className="hidden print:block space-y-8">
+          <Card className="shadow-none border-none">
+            <CardHeader className="p-0 pb-4">
+                <CardTitle className="text-2xl">Safety Report {report.reportNumber}</CardTitle>
+                <CardDescription>
+                Filed on {format(new Date(report.submittedAt), 'PPP')} by {report.submittedByName}
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 border-t pt-4">
+                <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Original Description</h4>
+                <p className="text-sm whitespace-pre-wrap">{report.description}</p>
+            </CardContent>
+          </Card>
+
+          <div className="flex flex-col gap-10">
+              <TriageForm report={report} tenantId={tenantId} isStacked />
+              <HazardIdentificationForm 
+                report={report} 
+                tenantId={tenantId} 
+                riskMatrixColors={riskMatrixSettings?.colors}
+                isStacked
+              />
+              <InvestigationForm 
+                report={report} 
+                tenantId={tenantId} 
+                personnel={personnel || []} 
+                isStacked
+              />
+              <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} isStacked />
+              <FinalReview 
+                report={report} 
+                tenantId={tenantId} 
+                personnel={personnel || []} 
+                riskMatrixColors={riskMatrixSettings?.colors}
+                isStacked
+              />
+          </div>
+      </div>
     </div>
   );
 }

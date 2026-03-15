@@ -133,6 +133,7 @@
     print-color-adjust: exact;
     height: auto !important;
     overflow: visible !important;
+    background: white !important;
   }
 
   html {
@@ -140,7 +141,7 @@
     overflow: visible !important;
   }
 
-  /* Reset layout constraints for printing */
+  /* Force all layout parents to be visible and un-clipped */
   main, 
   .flex-1, 
   .h-full, 
@@ -148,7 +149,8 @@
   .overflow-hidden, 
   .overflow-y-auto,
   [data-sidebar="inset"],
-  .sidebar-inset {
+  .sidebar-inset,
+  .sidebar-provider {
     height: auto !important;
     min-height: auto !important;
     overflow: visible !important;
@@ -157,6 +159,7 @@
     margin: 0 !important;
     border: none !important;
     box-shadow: none !important;
+    position: static !important;
   }
 
   /* Specifically target Radix ScrollArea which is used in many places */
@@ -166,42 +169,17 @@
     display: block !important;
   }
 
-  /* Hide the tabs list during print */
-  [role="tablist"] {
-    display: none !important;
-  }
-
-  /* Prioritize the "Full Report" tab panel and hide other specific panels during print to avoid duplicates */
-  [role="tabpanel"] {
-    display: none !important;
-  }
-  
-  /* Show only the consolidated 'Full' view */
-  [role="tabpanel"][value="full"] {
-    display: block !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  /* Hide interactive elements like sliders and buttons */
-  [role="slider"] {
-    display: none !important;
-  }
-
-  button, .button {
-    display: none !important;
-  }
-
   /* Ensure cards break appropriately and don't get truncated */
   .card, .border {
     break-inside: avoid;
-    margin-bottom: 1.5rem !important;
+    margin-bottom: 2rem !important;
     height: auto !important;
     overflow: visible !important;
+    page-break-inside: avoid;
   }
 
   @page {
     size: auto;
-    margin: 0.75in;
+    margin: 0.5in;
   }
 }
