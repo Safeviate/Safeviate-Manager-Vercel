@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -119,7 +118,7 @@ export default function RiskMatrixPage() {
                     <col className="w-[16.66%]" />
                 </colgroup>
                 <thead>
-                    <tr className="h-12">
+                    <tr className="h-16">
                         <th className="border-b border-r border-slate-200 dark:border-slate-700 bg-muted/30"></th>
                         {severities.map(s => (
                             <th key={s.value} className="border-r border-b border-slate-200 dark:border-slate-700 p-1 text-center align-middle font-bold text-[9px] uppercase tracking-wider bg-muted/30">
@@ -130,7 +129,7 @@ export default function RiskMatrixPage() {
                 </thead>
                 <tbody>
                     {likelihoods.slice().reverse().map(l => (
-                        <tr key={l.value} className="h-12">
+                        <tr key={l.value} className="h-16">
                             <th className="border-r border-b border-slate-200 dark:border-slate-700 p-1 text-right align-middle font-bold text-[9px] uppercase tracking-wider bg-muted/10">
                                 {l.name}
                                 <span className="block text-[8px] text-muted-foreground font-normal">({l.value})</span>
