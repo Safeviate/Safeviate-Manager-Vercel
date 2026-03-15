@@ -149,9 +149,9 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
         
         <div className="flex-1 min-h-0">
           <TabsContent value="full" className="m-0 h-full">
-            <Card className="h-full flex flex-col overflow-hidden shadow-none border">
+            <Card className="h-full flex flex-col overflow-hidden shadow-none border print:border-none print:shadow-none">
               <ScrollArea className="h-full">
-                <div className="flex flex-col gap-8 p-6 pb-20">
+                <div className="flex flex-col gap-8 p-6 pb-20 print:p-0">
                   <TriageForm report={report} tenantId={tenantId} isStacked />
                   <HazardIdentificationForm 
                     report={report} 
