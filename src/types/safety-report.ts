@@ -45,6 +45,8 @@ export interface ReportDiscussionItem {
     userName: string;
     message: string;
     timestamp: string; // ISO String
+    assignedToId?: string;
+    assignedToName?: string;
 }
 
 export interface CorrectiveAction {

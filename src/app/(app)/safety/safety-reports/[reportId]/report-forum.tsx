@@ -1,19 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc, arrayUnion } from 'firebase/firestore';
+import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, arrayUnion, collection, query } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { Send, MessageSquare } from 'lucide-react';
+import { Send, MessageSquare, UserPlus, X } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import type { SafetyReport, ReportDiscussionItem } from '@/types/safety-report';
+import type { Personnel } from '@/app/(app)/users/personnel/page';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 interface ReportForumProps {
   report: SafetyReport;
@@ -22,10 +25,23 @@ interface ReportForumProps {
 
 export function ReportForum({ report, tenantId }: ReportForumProps) {
   const [newMessage, setNewMessage] = useState('');
+  const [assignedUserId, setAssignedUserId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const { userProfile } = useUserProfile();
   const firestore = useFirestore();
   const { toast } = useToast();
+
+  const personnelQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
+    [firestore, tenantId]
+  );
+  const { data: personnel } = useCollection<Personnel>(personnelQuery);
+
+  const assignedUser = useMemo(() => 
+    personnel?.find(p => p.id === assignedUserId), 
+    [personnel, assignedUserId]
+  );
 
   const handleSendMessage = () => {
     if (!newMessage.trim() || !userProfile || !firestore) return;
@@ -39,6 +55,8 @@ export function ReportForum({ report, tenantId }: ReportForumProps) {
       userName: `${userProfile.firstName} ${userProfile.lastName}`,
       message: newMessage.trim(),
       timestamp: new Date().toISOString(),
+      assignedToId: assignedUserId || undefined,
+      assignedToName: assignedUser ? `${assignedUser.firstName} ${assignedUser.lastName}` : undefined,
     };
 
     updateDocumentNonBlocking(reportRef, {
@@ -46,6 +64,7 @@ export function ReportForum({ report, tenantId }: ReportForumProps) {
     });
 
     setNewMessage('');
+    setAssignedUserId(null);
     setIsSubmitting(false);
     toast({ title: 'Comment Posted' });
   };
@@ -83,10 +102,16 @@ export function ReportForum({ report, tenantId }: ReportForumProps) {
                         <span className="text-xs font-bold">{msg.userName}</span>
                         <span className="text-[10px] text-muted-foreground">{format(new Date(msg.timestamp), 'dd MMM HH:mm')}</span>
                       </div>
-                      <div className={`p-3 rounded-2xl text-sm shadow-sm border ${
+                      <div className={`p-3 rounded-2xl text-sm shadow-sm border space-y-2 ${
                         isMe ? 'bg-primary text-primary-foreground rounded-tr-none border-primary/20' : 'bg-background rounded-tl-none border-border'
                       }`}>
-                        {msg.message}
+                        {msg.assignedToName && (
+                            <Badge variant="secondary" className="flex items-center gap-1 w-fit text-[10px] bg-background/50 border-none">
+                                <UserPlus className="h-3 w-3" />
+                                Assigned to: {msg.assignedToName}
+                            </Badge>
+                        )}
+                        <p className="whitespace-pre-wrap">{msg.message}</p>
                       </div>
                     </div>
                   </div>
@@ -103,24 +128,52 @@ export function ReportForum({ report, tenantId }: ReportForumProps) {
         </ScrollArea>
       </CardContent>
 
-      <CardFooter className="shrink-0 border-t p-4 bg-background">
+      <CardFooter className="shrink-0 border-t p-4 bg-background flex flex-col gap-3">
+        {assignedUserId && (
+            <div className="flex items-center gap-2 w-full">
+                <Badge variant="secondary" className="pl-2 pr-1 py-1 gap-2 border-primary/20">
+                    <UserPlus className="h-3.5 w-3.5 text-primary" />
+                    <span>Assigning to: <span className="font-bold">{assignedUser ? `${assignedUser.firstName} ${assignedUser.lastName}` : '...'}</span></span>
+                    <Button variant="ghost" size="icon" className="h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setAssignedUserId(null)}>
+                        <X className="h-3 w-3" />
+                    </Button>
+                </Badge>
+            </div>
+        )}
         <div className="flex w-full gap-3 items-end">
-          <Textarea 
-            placeholder="Type your comment here..." 
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            className="min-h-[80px] resize-none"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
-              }
-            }}
-          />
+          <div className="flex-1 flex flex-col gap-2">
+            <Textarea 
+                placeholder="Type your comment here..." 
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                className="min-h-[80px] resize-none"
+                onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                }
+                }}
+            />
+            <div className="flex items-center gap-2">
+                <Select onValueChange={setAssignedUserId} value={assignedUserId || ''}>
+                    <SelectTrigger className="h-8 w-[200px] text-xs">
+                        <UserPlus className="h-3.5 w-3.5 mr-2" />
+                        <SelectValue placeholder="Assign user..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {(personnel || []).map(p => (
+                            <SelectItem key={p.id} value={p.id} className="text-xs">
+                                {p.firstName} {p.lastName}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+          </div>
           <Button 
             onClick={handleSendMessage} 
             disabled={!newMessage.trim() || isSubmitting}
-            className="shrink-0 mb-1"
+            className="shrink-0 mb-1 h-8"
           >
             <Send className="h-4 w-4 mr-2" />
             Send
