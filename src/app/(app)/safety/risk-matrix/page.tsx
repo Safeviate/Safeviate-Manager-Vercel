@@ -101,14 +101,14 @@ export default function RiskMatrixPage() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
+        <CardHeader className="py-4">
           <CardTitle>Risk Matrix Configuration</CardTitle>
           <CardDescription>
-            This matrix is used to determine the level of risk associated with an identified hazard, based on ICAO Document 9859 (Safety Management Manual). Right-click a cell to change the color.
+            This matrix is used to determine the level of risk associated with an identified hazard, based on ICAO Document 9859. Right-click a cell to change the color.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-w-4xl mx-auto border rounded-xl overflow-hidden shadow-sm">
             <table className="w-full border-collapse border-separate" style={{ borderSpacing: 0 }}>
                 <colgroup>
                     <col className="w-[16.66%]" />
@@ -120,9 +120,9 @@ export default function RiskMatrixPage() {
                 </colgroup>
                 <thead>
                     <tr>
-                        <th className="border border-slate-200 dark:border-slate-700 p-2"></th>
+                        <th className="border-b border-r border-slate-200 dark:border-slate-700 bg-muted/30 h-12"></th>
                         {severities.map(s => (
-                            <th key={s.value} className="h-24 border-t border-r border-b border-slate-200 dark:border-slate-700 p-2 text-center align-middle font-semibold">
+                            <th key={s.value} className="h-12 border-r border-b border-slate-200 dark:border-slate-700 p-2 text-center align-middle font-bold text-[10px] uppercase tracking-wider bg-muted/30">
                                 {s.name} ({s.value})
                             </th>
                         ))}
@@ -131,9 +131,9 @@ export default function RiskMatrixPage() {
                 <tbody>
                     {likelihoods.slice().reverse().map(l => (
                         <tr key={l.value}>
-                            <th className="h-24 border-l border-b border-r border-slate-200 dark:border-slate-700 p-2 text-right align-middle font-semibold">
+                            <th className="h-14 border-r border-b border-slate-200 dark:border-slate-700 p-2 text-right align-middle font-bold text-[10px] uppercase tracking-wider bg-muted/10">
                                 {l.name}
-                                <span className="block text-muted-foreground font-normal">({l.value})</span>
+                                <span className="block text-[9px] text-muted-foreground font-normal">({l.value})</span>
                             </th>
                             {severities.map(s => {
                                 const cellId = `${l.value}${s.value}`;
@@ -143,8 +143,8 @@ export default function RiskMatrixPage() {
                                     onContextMenu={(e) => handleRightClick(e, cellId)}
                                     style={{ backgroundColor: colors[cellId] }}
                                     className={cn(
-                                        "h-24 border-b border-r border-slate-200 dark:border-slate-700 p-2 text-center align-middle font-bold text-black transition-colors",
-                                        "cursor-pointer"
+                                        "h-14 border-b border-r border-slate-200 dark:border-slate-700 p-2 text-center align-middle font-black text-xs text-black transition-all",
+                                        "cursor-pointer hover:scale-[0.98] active:scale-95"
                                     )}
                                 >
                                     {cellId}
@@ -166,28 +166,28 @@ export default function RiskMatrixPage() {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Severity</CardTitle>
+        <Card className="shadow-none border bg-muted/5">
+          <CardHeader className="py-3">
+            <CardTitle className="text-[10px] uppercase font-black tracking-widest text-primary">Severity Definitions</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p><strong>(A) Catastrophic:</strong> Equipment destroyed, multiple deaths.</p>
-            <p><strong>(B) Hazardous:</strong> Large reduction in safety margins, serious injury, major equipment damage.</p>
-            <p><strong>(C) Major:</strong> Significant reduction in safety margins, serious incident, injury to persons.</p>
-            <p><strong>(D) Minor:</strong> Nuisance, operating limitations, minor incident.</p>
-            <p><strong>(E) Negligible:</strong> Little or no effect on safety.</p>
+          <CardContent className="space-y-2 text-[11px] text-muted-foreground leading-relaxed">
+            <p><strong className="text-foreground font-bold">(A) Catastrophic:</strong> Equipment destroyed, multiple deaths.</p>
+            <p><strong className="text-foreground font-bold">(B) Hazardous:</strong> Large reduction in safety margins, serious injury, major equipment damage.</p>
+            <p><strong className="text-foreground font-bold">(C) Major:</strong> Significant reduction in safety margins, serious incident, injury to persons.</p>
+            <p><strong className="text-foreground font-bold">(D) Minor:</strong> Nuisance, operating limitations, minor incident.</p>
+            <p><strong className="text-foreground font-bold">(E) Negligible:</strong> Little or no effect on safety.</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Likelihood</CardTitle>
+        <Card className="shadow-none border bg-muted/5">
+          <CardHeader className="py-3">
+            <CardTitle className="text-[10px] uppercase font-black tracking-widest text-primary">Likelihood Definitions</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p><strong>(5) Frequent:</strong> Likely to occur many times (has happened frequently).</p>
-            <p><strong>(4) Occasional:</strong> Likely to occur some times (has happened infrequently).</p>
-            <p><strong>(3) Remote:</strong> Unlikely, but possible to occur (has happened rarely).</p>
-            <p><strong>(2) Improbable:</strong> Very unlikely to occur (not known to have happened).</p>
-            <p><strong>(1) Extremely Improbable:</strong> Almost inconceivable that the event will occur.</p>
+          <CardContent className="space-y-2 text-[11px] text-muted-foreground leading-relaxed">
+            <p><strong className="text-foreground font-bold">(5) Frequent:</strong> Likely to occur many times (has happened frequently).</p>
+            <p><strong className="text-foreground font-bold">(4) Occasional:</strong> Likely to occur some times (has happened infrequently).</p>
+            <p><strong className="text-foreground font-bold">(3) Remote:</strong> Unlikely, but possible to occur (has happened rarely).</p>
+            <p><strong className="text-foreground font-bold">(2) Improbable:</strong> Very unlikely to occur (not known to have happened).</p>
+            <p><strong className="text-foreground font-bold">(1) Extremely Improbable:</strong> Almost inconceivable that the event will occur.</p>
           </CardContent>
         </Card>
       </div>
