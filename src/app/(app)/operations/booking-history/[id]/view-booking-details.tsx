@@ -193,7 +193,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     <ClipboardCheck className="h-4 w-4 text-green-600" />
                                     Pre-Flight Record
                                 </h3>
-                                {!booking.preFlight && canLogPre && !isPreFlightBlocked && activeEditView !== 'pre-flight' && (
+                                {!booking.preFlight && canLogPre && (!isPreFlightBlocked || canOverrideTechLog) && activeEditView !== 'pre-flight' && (
                                     <Button size="sm" onClick={() => setActiveEditView('pre-flight')} className="h-7 text-[10px] gap-1 px-2">
                                         <PencilLine className="h-3 w-3" /> Record
                                     </Button>
@@ -209,6 +209,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             {isPreFlightBlocked && !booking.preFlight && (
                                 <p className="text-[10px] text-destructive bg-destructive/10 p-2 rounded">
                                     Log restricted: Waiting for Booking #{precedingBooking?.bookingNumber} to finalize.
+                                    {canOverrideTechLog && <span className="block font-bold mt-1 text-primary italic">Override active: You can still record pre-flight.</span>}
                                 </p>
                             )}
 
