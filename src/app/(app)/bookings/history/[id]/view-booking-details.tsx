@@ -1,18 +1,18 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, arrayUnion } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { useForm } from 'react-hook-form';
-import type { Booking } from "@/types/booking";
+import type { Booking, OverrideLog } from "@/types/booking";
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Clock, CheckCircle2, ClipboardCheck, FileClock, History, PencilLine, ShieldAlert, Lock, Edit2 } from 'lucide-react';
+import { Save, AlertTriangle, Clock, CheckCircle2, ClipboardCheck, FileClock, History, PencilLine, ShieldAlert, Lock, Edit2, ShieldCheck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,7 @@ import { Label as UILabel } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 
@@ -53,15 +54,15 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const { hasPermission } = usePermissions();
-    const tenantId = 'safeviate';
+    const { tenantId, userProfile } = useUserProfile();
 
     const [activeEditView, setActiveEditView] = useState<'none' | 'pre-flight' | 'post-flight'>('none');
 
-    const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
-    const instructorsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
-    const studentsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
-    const personnelQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
-    const allBookingsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/bookings`) : null), [firestore, tenantId]);
+    const aircraftQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
+    const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
+    const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
+    const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
+    const allBookingsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/bookings`) : null), [firestore, tenantId]);
 
     const { data: aircrafts, isLoading: loadingAc } = useCollection<Aircraft>(aircraftQuery);
     const { data: instructors, isLoading: loadingIns } = useCollection<PilotProfile>(instructorsQuery);
@@ -149,7 +150,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     };
 
     const handleSaveToBooking = () => {
-        if (!firestore) return;
+        if (!firestore || !tenantId) return;
         const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
         updateDocumentNonBlocking(bookingRef, {
             massAndBalance: {
@@ -163,9 +164,23 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     };
 
     const handleApprove = () => {
-        if (!firestore) return;
+        if (!firestore || !tenantId) return;
         const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
-        updateDocumentNonBlocking(bookingRef, { status: 'Approved' });
+        const updateData: any = { status: 'Approved' };
+
+        // Record Override Audit
+        if (!booking.preFlight && hasPermission('bookings-approve-override') && userProfile) {
+            const log: OverrideLog = {
+                userId: userProfile.id,
+                userName: `${userProfile.firstName} ${userProfile.lastName}`,
+                permissionId: 'bookings-approve-override',
+                action: 'Flight Approved without recorded pre-flight checklist',
+                timestamp: new Date().toISOString()
+            };
+            updateData.overrides = arrayUnion(log);
+        }
+
+        updateDocumentNonBlocking(bookingRef, updateData);
         toast({ title: 'Flight Approved' });
     };
 
@@ -240,6 +255,22 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     </div>
                 </CardContent>
 
+                {booking.overrides && booking.overrides.length > 0 && (
+                    <div className="px-6 mb-4">
+                        <h4 className="text-[10px] font-bold uppercase text-amber-600 mb-2 flex items-center gap-1">
+                            <ShieldCheck className="h-3 w-3" /> Audit Log: Overrides Active
+                        </h4>
+                        <div className="space-y-1.5">
+                            {booking.overrides.map((ov, i) => (
+                                <div key={i} className="text-[10px] bg-amber-50 border border-amber-100 p-2 rounded flex justify-between items-center">
+                                    <span><span className="font-bold">{ov.userName}</span>: {ov.action}</span>
+                                    <span className="text-muted-foreground">{format(new Date(ov.timestamp), 'dd MMM HH:mm')}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <Separator className="my-2" />
 
                 {/* Technical Logs Section */}
@@ -292,9 +323,10 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 <PreFlightLogForm 
                                     booking={booking} 
                                     aircraft={aircraft!} 
-                                    tenantId={tenantId} 
+                                    tenantId={tenantId!} 
                                     onCancel={() => setActiveEditView('none')} 
                                     onSuccess={() => setActiveEditView('none')}
+                                    isPreFlightBlocked={isPreFlightBlocked}
                                 />
                             ) : booking.preFlightData ? (
                                 <div className="grid grid-cols-2 gap-4">
@@ -341,7 +373,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 <PostFlightLogForm 
                                     booking={booking} 
                                     aircraft={aircraft!} 
-                                    tenantId={tenantId} 
+                                    tenantId={tenantId!} 
                                     onCancel={() => setActiveEditView('none')} 
                                     onSuccess={() => setActiveEditView('none')}
                                 />
@@ -491,9 +523,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     );
 }
 
-function PreFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }: { booking: Booking, aircraft: Aircraft, tenantId: string, onCancel: () => void, onSuccess: () => void }) {
+function PreFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess, isPreFlightBlocked }: { booking: Booking, aircraft: Aircraft, tenantId: string, onCancel: () => void, onSuccess: () => void, isPreFlightBlocked: boolean }) {
     const firestore = useFirestore();
     const { toast } = useToast();
+    const { hasPermission } = usePermissions();
+    const { userProfile } = useUserProfile();
     const [isSaving, setIsSaving] = useState(false);
 
     const form = useForm({
@@ -510,10 +544,40 @@ function PreFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }: 
         if (!firestore) return;
         setIsSaving(true);
         const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
-        updateDocumentNonBlocking(bookingRef, {
+        
+        const updateData: any = {
             preFlight: true,
             preFlightData: data,
-        });
+        };
+
+        // Record Override Audits
+        const logs: OverrideLog[] = [];
+        
+        if (booking.preFlight && hasPermission('bookings-techlog-override') && userProfile) {
+            logs.push({
+                userId: userProfile.id,
+                userName: `${userProfile.firstName} ${userProfile.lastName}`,
+                permissionId: 'bookings-techlog-override',
+                action: 'Modified already completed pre-flight technical log',
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        if (isPreFlightBlocked && hasPermission('bookings-techlog-override') && userProfile) {
+            logs.push({
+                userId: userProfile.id,
+                userName: `${userProfile.firstName} ${userProfile.lastName}`,
+                permissionId: 'bookings-techlog-override',
+                action: 'Recorded pre-flight log while previous flight was outstanding',
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        if (logs.length > 0) {
+            updateData.overrides = arrayUnion(...logs);
+        }
+
+        updateDocumentNonBlocking(bookingRef, updateData);
         toast({ title: 'Pre-Flight Saved' });
         onSuccess();
         setIsSaving(false);

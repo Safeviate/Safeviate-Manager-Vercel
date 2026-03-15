@@ -13,11 +13,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { collection, doc, runTransaction } from 'firebase/firestore';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { collection, doc, runTransaction, arrayUnion } from 'firebase/firestore';
 import { format, addMinutes, isBefore } from 'date-fns';
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
-import type { Booking } from '@/types/booking';
+import type { Booking, OverrideLog } from '@/types/booking';
 import { Trash2, ShieldAlert, Lock } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -61,6 +62,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     const firestore = useFirestore();
     const { toast } = useToast();
     const { hasPermission } = usePermissions();
+    const { userProfile } = useUserProfile();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // PERMISSIONS: Can user edit/save?
@@ -174,6 +176,18 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
         if (data.status === 'Cancelled with Reason') {
             bookingData.notes = `Cancelled: ${data.cancellationReason}\n\n${data.notes || ''}`;
             bookingData.status = 'Cancelled';
+        }
+
+        // Audit Admin/Locked Record Override
+        if (existingBooking && isUnderway && canEditUnderway && userProfile) {
+            const log: OverrideLog = {
+                userId: userProfile.id,
+                userName: `${userProfile.firstName} ${userProfile.lastName}`,
+                permissionId: 'bookings-approve-override',
+                action: 'Modified schedule details of a locked/underway record',
+                timestamp: new Date().toISOString()
+            };
+            bookingData.overrides = arrayUnion(log);
         }
 
         try {

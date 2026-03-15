@@ -38,6 +38,14 @@ export interface PostFlightData {
     photos?: ChecklistPhoto[];
 }
 
+export interface OverrideLog {
+    userId: string;
+    userName: string;
+    permissionId: string;
+    action: string;
+    timestamp: string;
+}
+
 export interface Booking {
   id: string;
   bookingNumber: string;
@@ -63,4 +71,5 @@ export interface Booking {
   postFlightData?: PostFlightData;
   massAndBalance?: MassAndBalance;
   organizationId?: string | null; // Associated external company ID
+  overrides?: OverrideLog[];
 }
