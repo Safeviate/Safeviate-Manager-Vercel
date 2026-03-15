@@ -18,9 +18,12 @@ import type { Booking } from '@/types/booking';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 const HOUR_HEIGHT_PX = 60;
 const TOTAL_HOURS = 24;
+const TIME_COL_WIDTH_CLASS = "w-20";
+const LANE_MIN_WIDTH = "150px";
 
 const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
     if (!dateStr || !timeStr) {
@@ -58,7 +61,7 @@ const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booki
             const startTime = combineDateAndTime(segment.date, segment.startTime);
             const endTime = combineDateAndTime(segment.date, segment.endTime);
 
-            if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) return null;
+            if (isNaN(startTime.getTime()) || iNaN(endTime.getTime())) return null;
 
             const top = (getHours(startTime) * 60 + getMinutes(startTime)) * (HOUR_HEIGHT_PX / 60);
             const durationMinutes = Math.max(0, differenceInMinutes(endTime, startTime));
@@ -228,78 +231,86 @@ export default function SchedulePage() {
   return (
     <>
       <div className="flex flex-col gap-6 h-full">
-        <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Daily Schedule</h1>
-                    <p className="text-muted-foreground">
-                        Fleet timeline for {format(selectedDate, 'PPP')}.
-                    </p>
+        <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 h-full">
+            <div className="flex justify-between items-center px-1">
+                <div className="flex items-center gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Daily Schedule</h1>
+                        <p className="text-muted-foreground">
+                            Fleet timeline for {format(selectedDate, 'PPP')}.
+                        </p>
+                    </div>
+                    {!canManageSchedule && (
+                        <Badge variant="outline" className="h-6 gap-1.5 text-muted-foreground bg-muted/20 border-border">
+                            <Lock className="h-3 w-3" /> Read Only
+                        </Badge>
+                    )}
                 </div>
-                {!canManageSchedule && (
-                    <Badge variant="outline" className="h-6 gap-1.5 text-muted-foreground bg-muted/20 border-border">
-                        <Lock className="h-3 w-3" /> Read Only
-                    </Badge>
-                )}
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>Previous Day</Button>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm">
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {format(selectedDate, 'PPP')}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <CustomCalendar 
+                                selectedDate={selectedDate}
+                                onDateSelect={(date) => date && setSelectedDate(startOfDay(date))}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                    <Button variant="outline" size="sm" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>Next Day</Button>
+                </div>
             </div>
-            <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>Previous Day</Button>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm">
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {format(selectedDate, 'PPP')}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                        <CustomCalendar 
-                            selectedDate={selectedDate}
-                            onDateSelect={(date) => date && setSelectedDate(startOfDay(date))}
-                        />
-                    </PopoverContent>
-                </Popover>
-                <Button variant="outline" size="sm" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>Next Day</Button>
-            </div>
-        </div>
 
-        <Card className="overflow-hidden flex-grow flex flex-col shadow-none border">
-            <CardContent className="p-0 flex-grow flex flex-col overflow-hidden">
-                <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 220px)' }}>
-                    <div className="min-w-full w-fit">
-                        
-                        {/* Headers Row */}
-                        <div className="flex sticky top-0 z-50 bg-swimlane-header border-b border-white/10">
-                            <div className="w-24 flex-shrink-0 flex items-center justify-center font-bold text-sm text-swimlane-header-foreground uppercase tracking-wider h-16 bg-swimlane-header border-r">
-                                TIME
-                            </div>
-                            {(aircraft || []).map((ac) => (
-                                <div key={ac.id} className="flex-1 min-w-[180px] border-r flex items-center justify-center font-bold text-sm px-2 text-center text-swimlane-header-foreground h-16 bg-swimlane-header whitespace-normal leading-tight">
-                                    {ac.tailNumber}
-                                </div>
-                            ))}
-                            {extraLanes.map((_, laneIdx) => (
-                                <div key={`extra-h-${laneIdx}`} className="flex-1 min-w-[180px] border-r bg-swimlane-header h-16" />
-                            ))}
-                        </div>
-
-                        {/* Schedule Body */}
-                        <div className="flex relative">
+            <Card className="overflow-hidden flex-grow flex flex-col shadow-none border">
+                <CardContent className="p-0 flex-grow flex flex-col overflow-hidden">
+                    <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 220px)' }}>
+                        <div className="min-w-full w-fit">
                             
-                            {/* Time Column Body */}
-                            <div className="w-24 flex-shrink-0 border-r bg-swimlane-header/5">
-                                {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
+                            {/* Headers Row */}
+                            <div className="flex sticky top-0 z-50 bg-swimlane-header border-b border-white/10">
+                                <div className={cn(TIME_COL_WIDTH_CLASS, "flex-shrink-0 flex items-center justify-center font-bold text-[10px] text-swimlane-header-foreground uppercase tracking-wider h-12 bg-swimlane-header border-r")}>
+                                    TIME
+                                </div>
+                                {(aircraft || []).map((ac) => (
                                     <div 
-                                        key={hour} 
-                                        className="flex items-center justify-center border-b text-sm md:text-base font-mono font-bold text-muted-foreground bg-muted/5"
-                                        style={{ height: `${HOUR_HEIGHT_PX}px` }}
+                                        key={ac.id} 
+                                        style={{ minWidth: LANE_MIN_WIDTH }}
+                                        className="flex-1 border-r flex items-center justify-center font-bold text-xs px-2 text-center text-swimlane-header-foreground h-12 bg-swimlane-header whitespace-normal leading-tight"
                                     >
-                                        {format(new Date(0, 0, 0, hour), 'HH:mm')}
+                                        {ac.tailNumber}
                                     </div>
+                                ))}
+                                {extraLanes.map((_, laneIdx) => (
+                                    <div 
+                                        key={`extra-h-${laneIdx}`} 
+                                        style={{ minWidth: LANE_MIN_WIDTH }}
+                                        className="flex-1 border-r bg-swimlane-header h-12" 
+                                    />
                                 ))}
                             </div>
 
-                            {/* Main Grid Area */}
-                            <div className="flex flex-1">
+                            {/* Schedule Body */}
+                            <div className="flex relative">
+                                
+                                {/* Time Column Body */}
+                                <div className={cn(TIME_COL_WIDTH_CLASS, "flex-shrink-0 border-r bg-swimlane-header/5")}>
+                                    {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
+                                        <div 
+                                            key={hour} 
+                                            className="flex items-center justify-center border-b text-[10px] md:text-xs font-mono font-bold text-muted-foreground bg-muted/5"
+                                            style={{ height: `${HOUR_HEIGHT_PX}px` }}
+                                        >
+                                            {format(new Date(0, 0, 0, hour), 'HH:mm')}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Main Grid Area - NO WRAPPER flex flex-1 here to maintain identical siblings to header */}
                                 {(aircraft || []).map((ac) => {
                                     const relevantBookings = (bookings || []).filter(b => {
                                         if (b.isOvernight) {
@@ -309,7 +320,11 @@ export default function SchedulePage() {
                                     });
 
                                     return (
-                                        <div key={ac.id} className="flex-1 min-w-[180px] border-r relative">
+                                        <div 
+                                            key={ac.id} 
+                                            style={{ minWidth: LANE_MIN_WIDTH }}
+                                            className="flex-1 border-r relative"
+                                        >
                                             {Array.from({ length: TOTAL_HOURS }).map((_, hour) => {
                                                 const isPast = isPastDaySelected || (isTodaySelected && hour < getHours(now));
                                                 return (
@@ -338,7 +353,11 @@ export default function SchedulePage() {
                                 })}
 
                                 {extraLanes.map((_, laneIdx) => (
-                                    <div key={`extra-${laneIdx}`} className="flex-1 min-w-[180px] border-r bg-muted/5 opacity-50">
+                                    <div 
+                                        key={`extra-${laneIdx}`} 
+                                        style={{ minWidth: LANE_MIN_WIDTH }}
+                                        className="flex-1 border-r bg-muted/5 opacity-50"
+                                    >
                                         {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
                                             <div 
                                                 key={hour} 
@@ -348,30 +367,30 @@ export default function SchedulePage() {
                                         ))}
                                     </div>
                                 ))}
-                            </div>
 
-                            {/* Precise Past Mask & Red Line (Overlaying Full Width) */}
-                            {showNowLine && (
-                                <>
-                                    {/* Precise Past Mask (Updates minute by minute) */}
-                                    <div 
-                                        className="absolute left-0 right-0 bg-red-500/[0.08] z-20 pointer-events-none" 
-                                        style={{ top: 0, height: `${nowLinePosition}px` }}
-                                    />
-                                    {/* Red Now Line */}
-                                    <div 
-                                        className="absolute left-0 right-0 h-0.5 bg-red-500 z-30 pointer-events-none" 
-                                        style={{ top: `${nowLinePosition}px` }}
-                                    >
-                                        <div className="absolute -left-1.5 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full" />
-                                    </div>
-                                </>
-                            )}
+                                {/* Precise Past Mask & Red Line (Overlaying Full Width) */}
+                                {showNowLine && (
+                                    <>
+                                        {/* Precise Past Mask (Updates minute by minute) */}
+                                        <div 
+                                            className="absolute left-0 right-0 bg-red-500/[0.08] z-20 pointer-events-none" 
+                                            style={{ top: 0, height: `${nowLinePosition}px` }}
+                                        />
+                                        {/* Red Now Line */}
+                                        <div 
+                                            className="absolute left-0 right-0 h-0.5 bg-red-500 z-30 pointer-events-none" 
+                                            style={{ top: `${nowLinePosition}px` }}
+                                        >
+                                            <div className="absolute -left-1.5 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full" />
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            </CardContent>
-        </Card>
+                </CardContent>
+            </Card>
+        </div>
       </div>
 
       {bookingFormData && tenantId && (

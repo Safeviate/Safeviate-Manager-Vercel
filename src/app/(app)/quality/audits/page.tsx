@@ -172,19 +172,19 @@ export default function AuditsPage() {
     );
 
     const personnelQuery = useMemoFirebase(
-        () => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null),
+        () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/personnel`) : null),
         [firestore, tenantId]
     );
     const departmentsQuery = useMemoFirebase(
-        () => (firestore ? collection(firestore, `tenants/${tenantId}/departments`) : null),
+        () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/departments`) : null),
         [firestore, tenantId]
     );
     const orgsQuery = useMemoFirebase(
-        () => (firestore ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null),
+        () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null),
         [firestore, tenantId]
     );
     const visibilitySettingsRef = useMemoFirebase(
-        () => (firestore ? doc(firestore, `tenants/${tenantId}/settings`, 'tab-visibility') : null),
+        () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'tab-visibility') : null),
         [firestore, tenantId]
     );
 
@@ -241,7 +241,7 @@ export default function AuditsPage() {
 
     if (isLoading) {
         return (
-            <div className="space-y-6">
+            <div className="space-y-6 max-w-6xl mx-auto w-full">
                 <Skeleton className="h-10 w-[400px] rounded-full" />
                 <Card>
                     <CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader>
@@ -258,40 +258,39 @@ export default function AuditsPage() {
     const isTabEnabled = visibilitySettings?.visibilities?.['audits'] ?? true;
     const showTabs = isTabEnabled && canViewAll;
 
-    // If external user or tabs disabled, they land directly on their scoped context
-    if (!showTabs) {
-        return renderOrgContext(userOrgId || 'internal');
-    }
-
     return (
-        <div className="flex flex-col gap-6 h-full">
+        <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 h-full">
             <div className="px-1">
                 <h1 className="text-3xl font-bold tracking-tight">Quality Audits</h1>
                 <p className="text-muted-foreground">Manage internal and external quality assurance activities.</p>
             </div>
 
-            <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
-                <div className="px-1 shrink-0">
-                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar">
-                        <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Internal</TabsTrigger>
-                        {(organizations || []).map(org => (
-                            <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">
-                                {org.name}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
-                </div>
+            {!showTabs ? (
+                renderOrgContext(userOrgId || 'internal')
+            ) : (
+                <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
+                    <div className="px-1 shrink-0">
+                        <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
+                            <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Internal</TabsTrigger>
+                            {(organizations || []).map(org => (
+                                <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">
+                                    {org.name}
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
+                    </div>
 
-                <TabsContent value="internal" className="mt-0">
-                    {renderOrgContext('internal')}
-                </TabsContent>
-                
-                {(organizations || []).map(org => (
-                    <TabsContent key={org.id} value={org.id} className="mt-0">
-                        {renderOrgContext(org.id)}
+                    <TabsContent value="internal" className="mt-0">
+                        {renderOrgContext('internal')}
                     </TabsContent>
-                ))}
-            </Tabs>
+                    
+                    {(organizations || []).map(org => (
+                        <TabsContent key={org.id} value={org.id} className="mt-0">
+                            {renderOrgContext(org.id)}
+                        </TabsContent>
+                    ))}
+                </Tabs>
+            )}
         </div>
     )
 }

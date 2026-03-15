@@ -22,7 +22,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 
 import type { Aircraft } from '@/types/aircraft';
-import type { PilotProfile, Personnel } from '../../users/personnel/page';
+import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import type { Booking } from '@/types/booking';
 import { Button } from '@/components/ui/button';
 import { Eye, Trash2, FilePlus, Clock } from 'lucide-react';
@@ -225,22 +225,22 @@ export default function BookingsHistoryPage() {
   const cancelledBookings = useMemo(() => enrichedBookings.filter(b => b.status === 'Cancelled' || b.status === 'Cancelled with Reason'), [enrichedBookings]);
 
   return (
-    <div className="flex flex-col gap-6 h-full">
-       <div className="flex justify-between items-center">
+    <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 h-full">
+       <div className="flex justify-between items-center px-1">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Bookings History</h1>
                 <p className="text-muted-foreground">A complete log of all past and present bookings.</p>
             </div>
         </div>
-      <Card className="flex-grow flex flex-col">
+      <Card className="flex-grow flex flex-col shadow-none border">
         <Tabs defaultValue="all">
             <div className='px-6 pt-4'>
-                <TabsList className="overflow-x-auto no-scrollbar justify-start">
-                    <TabsTrigger value="all">All</TabsTrigger>
-                    <TabsTrigger value="training">Training</TabsTrigger>
-                    <TabsTrigger value="private">Private</TabsTrigger>
-                    <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
-                    <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
+                    <TabsTrigger value="all" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">All</TabsTrigger>
+                    <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Training</TabsTrigger>
+                    <TabsTrigger value="private" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Private</TabsTrigger>
+                    <TabsTrigger value="maintenance" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Maintenance</TabsTrigger>
+                    <TabsTrigger value="cancelled" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Cancelled</TabsTrigger>
                 </TabsList>
             </div>
             <CardContent className='p-0'>

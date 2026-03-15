@@ -390,55 +390,53 @@ export default function CoherenceMatrixPage() {
   };
 
   if (isLoading) {
-    return <div className="space-y-6"><Skeleton className="h-10 w-[400px] rounded-full" /><Skeleton className="h-[500px] w-full" /></div>;
+    return <div className="space-y-6 max-w-6xl mx-auto w-full"><Skeleton className="h-10 w-[400px] rounded-full" /><Skeleton className="h-[500px] w-full" /></div>;
   }
 
   const isTabEnabled = visibilitySettings?.visibilities?.['coherence-matrix'] ?? true;
   const showTabs = isTabEnabled && canManageAll;
 
-  if (!showTabs) {
-    return renderOrgContext(userOrgId || 'internal');
-  }
-
   return (
-    <>
-      <div className="flex flex-col gap-6 h-full">
+    <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 h-full">
         <div className="px-1">
             <h1 className="text-3xl font-bold tracking-tight">Coherence Matrix</h1>
             <p className="text-muted-foreground">Manage and track regulatory compliance across organizations.</p>
         </div>
 
-        <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
-            <div className="px-1 shrink-0">
-                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar">
-                    <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Internal</TabsTrigger>
-                    {(organizations || []).map(org => (
-                        <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">
-                            {org.name}
-                        </TabsTrigger>
-                    ))}
-                </TabsList>
-            </div>
-            <TabsContent value="internal" className="mt-0">{renderOrgContext('internal')}</TabsContent>
-            {(organizations || []).map(org => (
-                <TabsContent key={org.id} value={org.id} className="mt-0">{renderOrgContext(org.id)}</TabsContent>
-            ))}
-        </Tabs>
-      </div>
+        {!showTabs ? (
+            renderOrgContext(userOrgId || 'internal')
+        ) : (
+            <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
+                <div className="px-1 shrink-0">
+                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
+                        <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Internal</TabsTrigger>
+                        {(organizations || []).map(org => (
+                            <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">
+                                {org.name}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+                </div>
+                <TabsContent value="internal" className="mt-0">{renderOrgContext('internal')}</TabsContent>
+                {(organizations || []).map(org => (
+                    <TabsContent key={org.id} value={org.id} className="mt-0">{renderOrgContext(org.id)}</TabsContent>
+                ))}
+            </Tabs>
+        )}
 
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingItem ? 'Edit' : 'Add'} Compliance Requirement</DialogTitle>
-          </DialogHeader>
-          <ComplianceItemForm 
-            personnel={personnel || []}
-            existingItem={editingItem}
-            onFormSubmit={() => setIsFormOpen(false)}
-            tenantId={tenantId!}
-          />
-        </DialogContent>
-      </Dialog>
-    </>
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogContent>
+            <DialogHeader>
+                <DialogTitle>{editingItem ? 'Edit' : 'Add'} Compliance Requirement</DialogTitle>
+            </DialogHeader>
+            <ComplianceItemForm 
+                personnel={personnel || []}
+                existingItem={editingItem}
+                onFormSubmit={() => setIsFormOpen(false)}
+                tenantId={tenantId!}
+            />
+            </DialogContent>
+        </Dialog>
+    </div>
   );
 }

@@ -232,8 +232,8 @@ export default function BookingsHistoryPage() {
   const cancelledBookings = useMemo(() => enrichedBookings.filter(b => b.status === 'Cancelled' || b.status === 'Cancelled with Reason'), [enrichedBookings]);
 
   return (
-    <div className="flex flex-col gap-6 h-full">
-       <div className="flex justify-between items-center">
+    <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 h-full">
+       <div className="flex justify-between items-center px-1">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Bookings History</h1>
                 <p className="text-muted-foreground">A complete log of all past and present bookings.</p>
@@ -242,7 +242,7 @@ export default function BookingsHistoryPage() {
       <Card className="flex-grow flex flex-col shadow-none border">
         <Tabs defaultValue="all">
             <div className='px-6 pt-4'>
-                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 overflow-x-auto no-scrollbar">
+                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 overflow-x-auto no-scrollbar justify-start w-full flex">
                     <TabsTrigger value="all" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">All</TabsTrigger>
                     <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Training</TabsTrigger>
                     <TabsTrigger value="private" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Private</TabsTrigger>

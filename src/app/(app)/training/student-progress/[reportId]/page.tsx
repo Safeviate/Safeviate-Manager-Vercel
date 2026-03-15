@@ -12,7 +12,7 @@ import type { PilotProfile } from '@/app/(app)/users/personnel/page';
 import { TrainingRecords } from '@/app/(app)/users/personnel/[id]/training-records';
 
 interface StudentDetailPageProps {
-  params: Promise<{ reportId: string }>; // reportId is actually studentId here
+  params: Promise<{ reportId: string }>;
 }
 
 
@@ -31,7 +31,7 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-full gap-6">
+      <div className="max-w-6xl mx-auto w-full flex flex-col h-full gap-6">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-24 w-full" />
         <Skeleton className="flex-1 w-full" />
@@ -48,8 +48,8 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden gap-4">
-      <div className="shrink-0">
+    <div className="max-w-6xl mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
+      <div className="shrink-0 px-1">
         <Button asChild variant="outline">
             <Link href="/training/student-progress">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -58,7 +58,7 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
         </Button>
       </div>
 
-      <div className="shrink-0">
+      <div className="shrink-0 px-1">
         <Card className='shadow-none border bg-muted/5'>
             <CardHeader className="py-4">
             <CardTitle className="text-2xl">{student.firstName} {student.lastName}</CardTitle>
@@ -69,7 +69,7 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
         </Card>
       </div>
       
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden px-1">
         <TrainingRecords studentId={studentId} tenantId={tenantId} />
       </div>
     </div>

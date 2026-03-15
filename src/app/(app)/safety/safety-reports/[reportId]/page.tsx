@@ -66,7 +66,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-6xl mx-auto w-full">
         <Skeleton className="h-10 w-48" />
         <Card>
           <CardHeader>
@@ -104,8 +104,8 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden gap-4">
-       <div className="shrink-0 flex justify-between items-center no-print">
+    <div className="max-w-6xl mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
+       <div className="shrink-0 flex justify-between items-center no-print px-1">
           <Button asChild variant="outline" className="w-fit">
             <Link href="/safety/safety-reports">
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -120,7 +120,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
 
       {/* --- Screen-Optimized Layout --- */}
       <div className="flex-1 flex flex-col min-h-0 no-print">
-        <div className="shrink-0 mb-4">
+        <div className="shrink-0 mb-4 px-1">
             <Card className="shadow-none border bg-muted/5">
             <CardHeader className="py-4">
                 <CardTitle className="text-xl">Report {report.reportNumber}</CardTitle>
@@ -135,7 +135,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
         </div>
         
         <Tabs defaultValue="triage" className="w-full flex-1 flex flex-col min-h-0">
-            <div className="shrink-0">
+            <div className="shrink-0 px-1">
             <TabsList className="bg-transparent h-auto p-0 gap-2 mb-4 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
                 <TabsTrigger value="full" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Full Report</TabsTrigger>
                 <TabsTrigger value="triage" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Report & Triage</TabsTrigger>
@@ -149,7 +149,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
             </TabsList>
             </div>
             
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0 px-1">
             <TabsContent value="full" className="m-0 h-full">
                 <Card className="h-full flex flex-col overflow-hidden shadow-none border">
                 <ScrollArea className="h-full">
@@ -215,7 +215,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
       </div>
 
       {/* --- Dedicated Print Layout (Always in DOM, visible only during print) --- */}
-      <div className="hidden print:block space-y-8">
+      <div className="hidden print:block space-y-8 max-w-6xl mx-auto w-full">
           <Card className="shadow-none border-none">
             <CardHeader className="p-0 pb-4">
                 <CardTitle className="text-2xl">Safety Report {report.reportNumber}</CardTitle>
