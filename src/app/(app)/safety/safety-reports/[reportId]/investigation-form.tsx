@@ -53,12 +53,31 @@ const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => 
     return 'Critical';
 }
 
-const getRiskScoreColor = (likelihood: number, severity: number): { backgroundColor: string; color: string } => {
+const getRiskScoreColor = (
+    likelihood: number,
+    severity: number,
+    colors?: Record<string, string>
+  ): { backgroundColor: string; color: string } => {
+    const severityToLetter: { [key: number]: string } = { 5: 'A', 4: 'B', 3: 'C', 2: 'D', 1: 'E' };
+    const severityLetter = severityToLetter[severity] || 'E';
+    const cellId = `${likelihood}${severityLetter}`;
+    
+    if (colors && colors[cellId]) {
+        const hex = colors[cellId].replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        const textColor = (yiq >= 128) ? 'black' : 'white';
+        return { backgroundColor: colors[cellId], color: textColor };
+    }
+    
+    // Fallback logic
     const score = likelihood * severity;
     if (score > 9) return { backgroundColor: '#ef4444', color: 'white' }; // red-500
     if (score > 4) return { backgroundColor: '#f59e0b', color: 'black' }; // amber-500
     return { backgroundColor: '#10b981', color: 'white' }; // emerald-500
-};
+  };
 
 // --- Form Schemas ---
 const riskAssessmentSchema = z.object({
@@ -105,7 +124,7 @@ type FormValues = z.infer<typeof investigationSchema>;
 
 // --- Components ---
 
-const RiskAssessmentEditor = ({ path, label }: { path: string; label: string }) => {
+const RiskAssessmentEditor = ({ path, label, riskMatrixColors }: { path: string; label: string; riskMatrixColors?: Record<string, string> }) => {
     const { control, setValue, watch } = useFormContext<FormValues>();
     
     const likelihood = watch(`${path}.likelihood` as any) || 1;
@@ -113,7 +132,7 @@ const RiskAssessmentEditor = ({ path, label }: { path: string; label: string }) 
     
     const riskScore = likelihood * severity;
     const riskLevel = getRiskLevel(riskScore);
-    const { backgroundColor, color } = getRiskScoreColor(likelihood, severity);
+    const { backgroundColor, color } = getRiskScoreColor(likelihood, severity, riskMatrixColors);
 
     const severityLetters: Record<number, string> = { 5: 'A', 4: 'B', 3: 'C', 2: 'D', 1: 'E' };
     const displayValue = `${likelihood}${severityLetters[severity] || 'E'}`;
@@ -168,7 +187,7 @@ const RiskAssessmentEditor = ({ path, label }: { path: string; label: string }) 
     );
 };
 
-const RisksArray = ({ hazardIndex }: { hazardIndex: number }) => {
+const RisksArray = ({ hazardIndex, riskMatrixColors }: { hazardIndex: number; riskMatrixColors?: Record<string, string> }) => {
     const { control } = useFormContext<FormValues>();
     const { fields, append, remove } = useFieldArray({
         control,
@@ -206,6 +225,7 @@ const RisksArray = ({ hazardIndex }: { hazardIndex: number }) => {
                     <RiskAssessmentEditor 
                         path={`initialHazards.${hazardIndex}.risks.${riskIndex}.riskAssessment`}
                         label="Assessment"
+                        riskMatrixColors={riskMatrixColors}
                     />
                 </div>
             ))}
@@ -241,7 +261,14 @@ const Label = ({ children, className }: { children: React.ReactNode, className?:
     </label>
 );
 
-export function InvestigationForm({ report, tenantId, personnel }: InvestigationFormProps) {
+interface InvestigationFormProps {
+  report: SafetyReport;
+  tenantId: string;
+  personnel: Personnel[];
+  riskMatrixColors?: Record<string, string>;
+}
+
+export function InvestigationForm({ report, tenantId, personnel, riskMatrixColors }: InvestigationFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -376,7 +403,7 @@ export function InvestigationForm({ report, tenantId, personnel }: Investigation
                                     </div>
                                 </CardHeader>
                                 <CardContent className="p-4 pt-2">
-                                    <RisksArray hazardIndex={index} />
+                                    <RisksArray hazardIndex={index} riskMatrixColors={riskMatrixColors} />
                                 </CardContent>
                             </Card>
                         ))}

@@ -17,6 +17,7 @@ import { InvestigationForm } from './investigation-form';
 import { CorrectiveActionsForm } from './corrective-actions-form';
 import { FinalReview } from './final-review';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
+import type { RiskMatrixSettings } from '@/types/risk';
 
 interface SafetyReportDetailPageProps {
   params: { reportId: string };
@@ -37,11 +38,16 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
     () => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null),
     [firestore, tenantId]
   );
+  const riskMatrixSettingsRef = useMemoFirebase(
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-matrix-config') : null),
+    [firestore, tenantId]
+  );
 
   const { data: report, isLoading: isLoadingReport, error } = useDoc<SafetyReport>(reportRef);
   const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
+  const { data: riskMatrixSettings, isLoading: isLoadingRiskMatrix } = useDoc<RiskMatrixSettings>(riskMatrixSettingsRef);
 
-  const isLoading = isLoadingReport || isLoadingPersonnel;
+  const isLoading = isLoadingReport || isLoadingPersonnel || isLoadingRiskMatrix;
 
   if (isLoading) {
     return (
@@ -122,13 +128,23 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
               <TriageForm report={report} tenantId={tenantId} />
           </TabsContent>
           <TabsContent value="investigation" className="m-0 h-full">
-            <InvestigationForm report={report} tenantId={tenantId} personnel={personnel || []} />
+            <InvestigationForm 
+              report={report} 
+              tenantId={tenantId} 
+              personnel={personnel || []} 
+              riskMatrixColors={riskMatrixSettings?.colors}
+            />
           </TabsContent>
           <TabsContent value="cap" className="m-0 h-full">
             <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} />
           </TabsContent>
           <TabsContent value="review" className="m-0 h-full">
-            <FinalReview report={report} tenantId={tenantId} personnel={personnel || []} />
+            <FinalReview 
+              report={report} 
+              tenantId={tenantId} 
+              personnel={personnel || []} 
+              riskMatrixColors={riskMatrixSettings?.colors}
+            />
           </TabsContent>
         </div>
       </Tabs>

@@ -24,6 +24,33 @@ import { v4 as uuidv4 } from 'uuid';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
+import React from 'react';
+
+// --- Helper Functions ---
+const getRiskScoreColor = (
+    likelihood: number,
+    severity: number,
+    colors?: Record<string, string>
+  ): { backgroundColor: string; color: string } => {
+    const severityToLetter: { [key: number]: string } = { 5: 'A', 4: 'B', 3: 'C', 2: 'D', 1: 'E' };
+    const severityLetter = severityToLetter[severity] || 'E';
+    const cellId = `${likelihood}${severityLetter}`;
+    
+    if (colors && colors[cellId]) {
+        const hex = colors[cellId].replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        const textColor = (yiq >= 128) ? 'black' : 'white';
+        return { backgroundColor: colors[cellId], color: textColor };
+    }
+    
+    const score = likelihood * severity;
+    if (score > 9) return { backgroundColor: '#ef4444', color: 'white' };
+    if (score > 4) return { backgroundColor: '#f59e0b', color: 'black' };
+    return { backgroundColor: '#10b981', color: 'white' };
+};
 
 const riskAssessmentSchema = z.object({
     severity: z.number().min(1).max(5),
@@ -49,19 +76,20 @@ const finalReviewSchema = z.object({
   })),
 });
 
-type FinalReviewFormValues = z.infer<typeof finalReviewSchema>;
+type FormValues = z.infer<typeof finalReviewSchema>;
 
 interface FinalReviewProps {
   report: SafetyReport;
   tenantId: string;
   personnel: Personnel[];
+  riskMatrixColors?: Record<string, string>;
 }
 
-export function FinalReview({ report, tenantId, personnel }: FinalReviewProps) {
+export function FinalReview({ report, tenantId, personnel, riskMatrixColors }: FinalReviewProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const form = useForm<FinalReviewFormValues>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(finalReviewSchema),
     defaultValues: {
       mitigatedHazards: report.mitigatedHazards || [],
@@ -74,7 +102,7 @@ export function FinalReview({ report, tenantId, personnel }: FinalReviewProps) {
       name: "mitigatedHazards"
   });
 
-  const onSubmit = (values: FinalReviewFormValues) => {
+  const onSubmit = (values: FormValues) => {
     if (!firestore) return;
     const reportRef = doc(firestore, 'tenants', tenantId, 'safety-reports', report.id);
     updateDocumentNonBlocking(reportRef, values);
@@ -82,9 +110,7 @@ export function FinalReview({ report, tenantId, personnel }: FinalReviewProps) {
   };
   
   const handleSignReport = () => {
-    // In a real app, this would open a signature pad modal.
-    // For now, we'll just add a placeholder signature.
-    const currentUser = personnel[0]; // Placeholder for logged-in user
+    const currentUser = personnel[0]; 
     if (!currentUser) {
         toast({variant: "destructive", title: "Cannot Sign", description: "No user available to sign."});
         return;
@@ -93,15 +119,14 @@ export function FinalReview({ report, tenantId, personnel }: FinalReviewProps) {
     const newSignature = {
         userId: currentUser.id,
         userName: `${currentUser.firstName} ${currentUser.lastName}`,
-        role: "Safety Manager", // Placeholder
-        signatureUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/Pj2IeAAAAABJRU5ErkJggg==", // 1x1 transparent png
+        role: "Safety Manager", 
+        signatureUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/Pj2IeAAAAABJRU5ErkJggg==", 
         signedAt: new Date().toISOString(),
     };
     
     const currentSignatures = form.getValues('signatures') || [];
     form.setValue('signatures', [...currentSignatures, newSignature]);
 
-    // This would typically be part of the main form submit, but we can save it directly.
     const reportRef = doc(firestore, 'tenants', tenantId, 'safety-reports', report.id);
     updateDocumentNonBlocking(reportRef, { signatures: [...currentSignatures, newSignature] });
 
@@ -122,22 +147,32 @@ export function FinalReview({ report, tenantId, personnel }: FinalReviewProps) {
                 <div>
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-medium">Mitigated Hazards</h3>
-                        <Button type="button" variant="outline" size="sm" onClick={() => appendHazard({ id: uuidv4(), description: '' })}>
+                        <Button type="button" variant="outline" size="sm" onClick={() => appendHazard({ id: uuidv4(), description: '', riskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' } })}>
                             <PlusCircle className="mr-2 h-4 w-4" /> Add Hazard
                         </Button>
                     </div>
                     <p className="text-sm text-muted-foreground mb-4">Re-assess hazards after corrective actions have been implemented.</p>
                     <div className='space-y-4'>
-                        {hazardFields.map((field, index) => (
-                            <div key={field.id} className="flex items-end gap-2 p-4 border rounded-lg bg-muted/10">
-                                 <p className="flex-1 text-sm">{field.description || "New Hazard"}</p>
-                                {/* Placeholder for risk matrix */}
-                                 <div className="w-48 h-10 bg-background border rounded-md flex items-center justify-center text-muted-foreground text-sm">
-                                    Risk Matrix
+                        {hazardFields.map((field, index) => {
+                            const likelihood = field.riskAssessment?.likelihood || 1;
+                            const severity = field.riskAssessment?.severity || 1;
+                            const { backgroundColor, color } = getRiskScoreColor(likelihood, severity, riskMatrixColors);
+                            const severityLetters: Record<number, string> = { 5: 'A', 4: 'B', 3: 'C', 2: 'D', 1: 'E' };
+                            const displayValue = `${likelihood}${severityLetters[severity] || 'E'}`;
+
+                            return (
+                                <div key={field.id} className="flex items-center gap-4 p-4 border rounded-lg bg-muted/10">
+                                    <p className="flex-1 text-sm font-semibold">{field.description || "New Hazard"}</p>
+                                    <div 
+                                        className="h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm"
+                                        style={{ backgroundColor, color }}
+                                    >
+                                        {displayValue}
+                                    </div>
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeHazard(index)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
                                 </div>
-                                <Button type="button" variant="destructive" size="icon" onClick={() => removeHazard(index)}><Trash2 className="h-4 w-4" /></Button>
-                            </div>
-                        ))}
+                            );
+                        })}
                         {hazardFields.length === 0 && <p className="text-sm text-muted-foreground italic text-center py-4">No mitigated hazards recorded.</p>}
                     </div>
                 </div>
