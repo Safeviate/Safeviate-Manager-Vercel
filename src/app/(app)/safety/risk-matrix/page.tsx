@@ -5,23 +5,25 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import type { RiskMatrixSettings } from '@/types/risk';
 
-const likelihoods = [
-    { name: 'Frequent', value: 5 },
-    { name: 'Occasional', value: 4 },
-    { name: 'Remote', value: 3 },
-    { name: 'Improbable', value: 2 },
-    { name: 'Extremely Improbable', value: 1 },
+const defaultLikelihoods = [
+    { name: 'Frequent', description: 'Likely to occur many times (has happened frequently).', value: 5 },
+    { name: 'Occasional', description: 'Likely to occur some times (has happened infrequently).', value: 4 },
+    { name: 'Remote', description: 'Unlikely, but possible to occur (has happened rarely).', value: 3 },
+    { name: 'Improbable', description: 'Very unlikely to occur (not known to have happened).', value: 2 },
+    { name: 'Extremely Improbable', description: 'Almost inconceivable that the event will occur.', value: 1 },
 ];
 
-const severities = [
-    { name: 'Catastrophic', value: 'A' },
-    { name: 'Hazardous', value: 'B' },
-    { name: 'Major', value: 'C' },
-    { name: 'Minor', value: 'D' },
-    { name: 'Negligible', value: 'E' },
+const defaultSeverities = [
+    { name: 'Catastrophic', description: 'Equipment destroyed, multiple deaths.', value: 'A' },
+    { name: 'Hazardous', description: 'Large reduction in safety margins, serious injury, major equipment damage.', value: 'B' },
+    { name: 'Major', description: 'Significant reduction in safety margins, serious incident, injury to persons.', value: 'C' },
+    { name: 'Minor', description: 'Nuisance, operating limitations, minor incident.', value: 'D' },
+    { name: 'Negligible', description: 'Little or no effect on safety.', value: 'E' },
 ];
 
 const defaultColors: Record<string, string> = {
@@ -31,11 +33,6 @@ const defaultColors: Record<string, string> = {
     '2A': '#f0ad4e', '2B': '#f0ad4e', '2C': '#5cb85c', '2D': '#5cb85c', '2E': '#5cb85c',
     '1A': '#f0ad4e', '1B': '#5cb85c', '1C': '#5cb85c', '1D': '#5cb85c', '1E': '#5cb85c',
 };
-
-type RiskMatrixSettings = {
-    id: string;
-    colors: Record<string, string>;
-}
 
 export default function RiskMatrixPage() {
   const firestore = useFirestore();
@@ -50,55 +47,66 @@ export default function RiskMatrixPage() {
   const { data: riskMatrixSettings, isLoading } = useDoc<RiskMatrixSettings>(settingsRef);
 
   const [colors, setColors] = useState<Record<string, string>>(defaultColors);
+  const [likelihoods, setLikelihoods] = useState(defaultLikelihoods);
+  const [severities, setSeverities] = useState(defaultSeverities);
+  
   const colorInputRef = React.useRef<HTMLInputElement>(null);
   const [activeCell, setActiveCell] = useState<string | null>(null);
 
-  // Load colors from Firestore on initial render or when they change on the server
   useEffect(() => {
     if (riskMatrixSettings) {
-        setColors(riskMatrixSettings.colors || defaultColors);
+        if (riskMatrixSettings.colors) setColors(riskMatrixSettings.colors);
+        if (riskMatrixSettings.likelihoodDefinitions) setLikelihoods(riskMatrixSettings.likelihoodDefinitions);
+        if (riskMatrixSettings.severityDefinitions) setSeverities(riskMatrixSettings.severityDefinitions);
     } else if (!isLoading && settingsRef) {
-        // If doc doesn't exist, create it with defaults
-        setDocumentNonBlocking(settingsRef, { id: settingsId, colors: defaultColors }, { merge: false });
+        setDocumentNonBlocking(settingsRef, { 
+            id: settingsId, 
+            colors: defaultColors,
+            likelihoodDefinitions: defaultLikelihoods,
+            severityDefinitions: defaultSeverities
+        }, { merge: false });
     }
   }, [riskMatrixSettings, isLoading, settingsRef]);
 
-  const handleColorChange = (cellId: string, newColor: string) => {
-    // Optimistically update the UI
-    const newColors = { ...colors, [cellId]: newColor };
-    setColors(newColors);
-
-    // Debounce the save operation
-    if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-    }
-
+  const queueSave = (updates: Partial<RiskMatrixSettings>) => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
         if (settingsRef) {
-            setDocumentNonBlocking(settingsRef, { colors: newColors }, { merge: true });
+            setDocumentNonBlocking(settingsRef, updates, { merge: true });
         }
-    }, 1000); // 1-second debounce delay
+    }, 1000);
   };
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-      return () => {
-          if (saveTimeoutRef.current) {
-              clearTimeout(saveTimeoutRef.current);
-          }
-      };
-  }, []);
-  
+  const handleColorChange = (cellId: string, newColor: string) => {
+    const newColors = { ...colors, [cellId]: newColor };
+    setColors(newColors);
+    queueSave({ colors: newColors });
+  };
+
+  const handleLikelihoodChange = (index: number, field: 'name' | 'description', value: string) => {
+      const newLikelihoods = [...likelihoods];
+      newLikelihoods[index] = { ...newLikelihoods[index], [field]: value };
+      setLikelihoods(newLikelihoods);
+      queueSave({ likelihoodDefinitions: newLikelihoods });
+  };
+
+  const handleSeverityChange = (index: number, field: 'name' | 'description', value: string) => {
+      const newSeverities = [...severities];
+      newSeverities[index] = { ...newSeverities[index], [field]: value };
+      setSeverities(newSeverities);
+      queueSave({ severityDefinitions: newSeverities });
+  };
+
   const handleRightClick = (e: React.MouseEvent, cellId: string) => {
       e.preventDefault();
       setActiveCell(cellId);
       if (colorInputRef.current) {
           colorInputRef.current.click();
       }
-  }
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-10">
       <Card>
         <CardHeader className="py-4">
           <CardTitle>Risk Matrix Configuration</CardTitle>
@@ -128,7 +136,7 @@ export default function RiskMatrixPage() {
                     </tr>
                 </thead>
                 <tbody>
-                    {likelihoods.slice().reverse().map(l => (
+                    {likelihoods.map(l => (
                         <tr key={l.value} className="h-16">
                             <th className="border-r border-b border-slate-200 dark:border-slate-700 p-1 text-right align-middle font-bold text-[9px] uppercase tracking-wider bg-muted/10">
                                 {l.name}
@@ -165,28 +173,57 @@ export default function RiskMatrixPage() {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="shadow-none border bg-muted/5">
-          <CardHeader className="py-3">
+        <Card className="shadow-none border">
+          <CardHeader className="py-3 border-b bg-muted/5">
             <CardTitle className="text-[10px] uppercase font-black tracking-widest text-primary">Severity Definitions</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-[11px] text-muted-foreground leading-relaxed">
-            <p><strong className="text-foreground font-bold">(A) Catastrophic:</strong> Equipment destroyed, multiple deaths.</p>
-            <p><strong className="text-foreground font-bold">(B) Hazardous:</strong> Large reduction in safety margins, serious injury, major equipment damage.</p>
-            <p><strong className="text-foreground font-bold">(C) Major:</strong> Significant reduction in safety margins, serious incident, injury to persons.</p>
-            <p><strong className="text-foreground font-bold">(D) Minor:</strong> Nuisance, operating limitations, minor incident.</p>
-            <p><strong className="text-foreground font-bold">(E) Negligible:</strong> Little or no effect on safety.</p>
+          <CardContent className="p-4 space-y-6">
+            {severities.map((s, index) => (
+                <div key={s.value} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="h-6 w-6 rounded-full flex items-center justify-center font-bold">{s.value}</Badge>
+                        <Input 
+                            value={s.name} 
+                            onChange={(e) => handleSeverityChange(index, 'name', e.target.value)}
+                            className="h-7 text-xs font-bold"
+                            placeholder="Name"
+                        />
+                    </div>
+                    <Textarea 
+                        value={s.description} 
+                        onChange={(e) => handleSeverityChange(index, 'description', e.target.value)}
+                        className="text-xs min-h-[40px] py-1"
+                        placeholder="Description"
+                    />
+                </div>
+            ))}
           </CardContent>
         </Card>
-        <Card className="shadow-none border bg-muted/5">
-          <CardHeader className="py-3">
+
+        <Card className="shadow-none border">
+          <CardHeader className="py-3 border-b bg-muted/5">
             <CardTitle className="text-[10px] uppercase font-black tracking-widest text-primary">Likelihood Definitions</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-[11px] text-muted-foreground leading-relaxed">
-            <p><strong className="text-foreground font-bold">(5) Frequent:</strong> Likely to occur many times (has happened frequently).</p>
-            <p><strong className="text-foreground font-bold">(4) Occasional:</strong> Likely to occur some times (has happened infrequently).</p>
-            <p><strong className="text-foreground font-bold">(3) Remote:</strong> Unlikely, but possible to occur (has happened rarely).</p>
-            <p><strong className="text-foreground font-bold">(2) Improbable:</strong> Very unlikely to occur (not known to have happened).</p>
-            <p><strong className="text-foreground font-bold">(1) Extremely Improbable:</strong> Almost inconceivable that the event will occur.</p>
+          <CardContent className="p-4 space-y-6">
+            {likelihoods.map((l, index) => (
+                <div key={l.value} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="h-6 w-6 rounded-full flex items-center justify-center font-bold">{l.value}</Badge>
+                        <Input 
+                            value={l.name} 
+                            onChange={(e) => handleLikelihoodChange(index, 'name', e.target.value)}
+                            className="h-7 text-xs font-bold"
+                            placeholder="Name"
+                        />
+                    </div>
+                    <Textarea 
+                        value={l.description} 
+                        onChange={(e) => handleLikelihoodChange(index, 'description', e.target.value)}
+                        className="text-xs min-h-[40px] py-1"
+                        placeholder="Description"
+                    />
+                </div>
+            ))}
           </CardContent>
         </Card>
       </div>

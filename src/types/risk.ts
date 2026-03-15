@@ -27,4 +27,6 @@ export type Risk = { // This is the top-level document, which is a Hazard
 export interface RiskMatrixSettings {
     id: string;
     colors: Record<string, string>;
+    likelihoodDefinitions?: { name: string; description: string; value: number }[];
+    severityDefinitions?: { name: string; description: string; value: string }[];
 }
