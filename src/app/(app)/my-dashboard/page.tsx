@@ -149,6 +149,7 @@ export default function MyDashboardPage() {
             <Tabs defaultValue="tasks" className="w-full flex flex-col h-full overflow-hidden">
                 <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 shrink-0 border-b-0 overflow-x-auto no-scrollbar justify-start">
                     <TabsTrigger value="tasks" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Tasks</TabsTrigger>
+                    <TabsTrigger value="messages" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Messages</TabsTrigger>
                     <TabsTrigger value="logbook" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">My Logbook</TabsTrigger>
                 </TabsList>
 
@@ -197,6 +198,20 @@ export default function MyDashboardPage() {
                                     </TableBody>
                                 </Table>
                             )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="messages" className="mt-0">
+                    <Card className="shadow-none border">
+                        <CardHeader>
+                            <CardTitle>Messages</CardTitle>
+                            <CardDescription>View your notifications and mentions.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-center py-10">
+                                <p className="text-muted-foreground">You have no new messages.</p>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
