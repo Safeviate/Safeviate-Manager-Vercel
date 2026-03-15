@@ -117,8 +117,10 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     }
 
     const canApprove = hasPermission('bookings-approve');
+    const canOverride = hasPermission('bookings-approve-override');
     const canLogPre = hasPermission('bookings-preflight-manage');
     const canLogPost = hasPermission('bookings-postflight-manage');
+    
     const isApprovableState = booking.status !== 'Approved' && booking.status !== 'Completed' && !booking.status.startsWith('Cancelled');
 
     return (
@@ -144,11 +146,12 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         {canApprove && isApprovableState && (
                             <Button 
                                 onClick={handleApprove} 
-                                disabled={!booking.preFlight}
-                                title={!booking.preFlight ? "Requires recorded Pre-Flight Checklist" : ""}
+                                disabled={!booking.preFlight && !canOverride}
+                                title={!booking.preFlight && !canOverride ? "Requires recorded Pre-Flight Checklist" : canOverride && !booking.preFlight ? "Overriding Checklist Requirement" : ""}
                                 className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ml-4"
                             >
-                                <CheckCircle2 className="h-4 w-4" /> Approve Flight
+                                <CheckCircle2 className="h-4 w-4" /> 
+                                {canOverride && !booking.preFlight ? "Approve (Override)" : "Approve Flight"}
                             </Button>
                         )}
                     </div>
@@ -395,4 +398,15 @@ function PostFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }:
             </div>
         </form>
     )
+}
+
+function getStatusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+    switch (status) {
+        case 'Approved': return 'default'; 
+        case 'Completed': return 'secondary';
+        case 'Cancelled':
+        case 'Cancelled with Reason': return 'destructive';
+        case 'Confirmed': return 'outline';
+        default: return 'outline';
+    }
 }

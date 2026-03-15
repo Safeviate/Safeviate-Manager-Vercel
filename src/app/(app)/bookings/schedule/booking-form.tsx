@@ -65,10 +65,13 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
 
     // PERMISSIONS: Can user edit/save?
     const canManageSchedule = hasPermission('bookings-schedule-manage');
+    const canOverride = hasPermission('bookings-approve-override');
     
     // LOGIC: A booking is "underway" if it is Approved or tech logs have started
     const isUnderway = existingBooking?.status === 'Approved' || existingBooking?.status === 'Completed' || existingBooking?.preFlight;
-    const canDelete = hasPermission('bookings-delete') && !isUnderway;
+    const canEditUnderway = canOverride; // If you have override, you can edit underway bookings
+    
+    const canDelete = hasPermission('bookings-delete') && (!isUnderway || canOverride);
 
     const instructors = useMemo(() => pilots.filter(p => p.userType === 'Instructor'), [pilots]);
     const students = useMemo(() => pilots.filter(p => p.userType === 'Student'), [pilots]);
@@ -223,6 +226,8 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
         }
     }
 
+    const isLocked = isUnderway && !canEditUnderway;
+
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -233,12 +238,22 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                     </DialogDescription>
                 </DialogHeader>
 
-                {isUnderway && (
+                {isLocked && (
                     <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4 flex items-start gap-3">
                         <ShieldAlert className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                         <div className="text-xs text-amber-800">
                             <p className="font-bold">Record Locked</p>
-                            <p>This flight has been approved or technical logging has started. Basic schedule details cannot be modified.</p>
+                            <p>This flight has been approved or technical logging has started. Basic schedule details cannot be modified by standard users.</p>
+                        </div>
+                    </div>
+                )}
+
+                {canEditUnderway && isUnderway && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4 flex items-start gap-3">
+                        <Lock className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                        <div className="text-xs text-blue-800">
+                            <p className="font-bold">Override Mode Active</p>
+                            <p>You have permission to modify this locked flight record. Use with caution.</p>
                         </div>
                     </div>
                 )}
@@ -256,8 +271,8 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel>Booking Type</FormLabel><FormControl><Input placeholder='e.g., Training, Rental' {...field} disabled={isUnderway || !canManageSchedule} /></FormControl><FormMessage /></FormItem> )}/>
-                            <FormField control={form.control} name="status" render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isUnderway || !canManageSchedule}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{['Tentative', 'Confirmed', 'Approved', 'Completed', 'Cancelled', 'Cancelled with Reason'].map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )} />
+                            <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel>Booking Type</FormLabel><FormControl><Input placeholder='e.g., Training, Rental' {...field} disabled={isLocked || !canManageSchedule} /></FormControl><FormMessage /></FormItem> )}/>
+                            <FormField control={form.control} name="status" render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isLocked || !canManageSchedule}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{['Tentative', 'Confirmed', 'Approved', 'Completed', 'Cancelled', 'Cancelled with Reason'].map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )} />
                         </div>
 
                         {watchStatus === 'Cancelled with Reason' && (
@@ -265,25 +280,25 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                         )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField control={form.control} name="startTime" render={({ field }) => ( <FormItem><FormLabel>Start Time</FormLabel><FormControl><Input type="time" {...field} disabled={isUnderway || !canManageSchedule} /></FormControl><FormMessage /></FormItem> )} />
-                            <FormField control={form.control} name="endTime" render={({ field }) => ( <FormItem><FormLabel>End Time</FormLabel><FormControl><Input type="time" {...field} disabled={isUnderway || !canManageSchedule} /></FormControl><FormMessage /></FormItem> )} />
+                            <FormField control={form.control} name="startTime" render={({ field }) => ( <FormItem><FormLabel>Start Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canManageSchedule} /></FormControl><FormMessage /></FormItem> )} />
+                            <FormField control={form.control} name="endTime" render={({ field }) => ( <FormItem><FormLabel>End Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canManageSchedule} /></FormControl><FormMessage /></FormItem> )} />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField control={form.control} name="instructorId" render={({ field }) => ( <FormItem><FormLabel>Instructor</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isUnderway || !canManageSchedule}><FormControl><SelectTrigger><SelectValue placeholder="Select Instructor..." /></SelectTrigger></FormControl><SelectContent>{instructors.map(p => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                            <FormField control={form.control} name="studentId" render={({ field }) => ( <FormItem><FormLabel>Student</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isUnderway || !canManageSchedule}><FormControl><SelectTrigger><SelectValue placeholder="Select Student..." /></SelectTrigger></FormControl><SelectContent>{students.map(p => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                            <FormField control={form.control} name="instructorId" render={({ field }) => ( <FormItem><FormLabel>Instructor</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canManageSchedule}><FormControl><SelectTrigger><SelectValue placeholder="Select Instructor..." /></SelectTrigger></FormControl><SelectContent>{instructors.map(p => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                            <FormField control={form.control} name="studentId" render={({ field }) => ( <FormItem><FormLabel>Student</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canManageSchedule}><FormControl><SelectTrigger><SelectValue placeholder="Select Student..." /></SelectTrigger></FormControl><SelectContent>{students.map(p => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
                         </div>
 
                         <FormField control={form.control} name="notes" render={({ field }) => ( <FormItem><FormLabel>Admin Notes</FormLabel><FormControl><Textarea placeholder="Add any relevant notes..." {...field} disabled={!canManageSchedule} /></FormControl><FormMessage /></FormItem> )}/>
                         
                         <div className="flex items-center space-x-2">
-                            <FormField control={form.control} name="isOvernight" render={({ field }) => ( <FormItem className="flex flex-row items-center space-x-2"><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} id="isOvernight" disabled={isUnderway || !canManageSchedule} /></FormControl><FormLabel htmlFor="isOvernight">Overnight Booking</FormLabel></FormItem> )}/>
+                            <FormField control={form.control} name="isOvernight" render={({ field }) => ( <FormItem className="flex flex-row items-center space-x-2"><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} id="isOvernight" disabled={isLocked || !canManageSchedule} /></FormControl><FormLabel htmlFor="isOvernight">Overnight Booking</FormLabel></FormItem> )}/>
                         </div>
 
                         {isOvernight && (
                             <div className="grid grid-cols-2 gap-4 p-4 border rounded-md">
-                                <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem><FormLabel>Return Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(new Date(e.target.value))} disabled={isUnderway || !canManageSchedule} /></FormControl><FormMessage /></FormItem> )} />
-                                <FormField control={form.control} name="overnightEndTime" render={({ field }) => ( <FormItem><FormLabel>Return Time</FormLabel><FormControl><Input type="time" {...field} disabled={isUnderway || !canManageSchedule} /></FormControl><FormMessage /></FormItem> )} />
+                                <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem><FormLabel>Return Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(new Date(e.target.value))} disabled={isLocked || !canManageSchedule} /></FormControl><FormMessage /></FormItem> )} />
+                                <FormField control={form.control} name="overnightEndTime" render={({ field }) => ( <FormItem><FormLabel>Return Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canManageSchedule} /></FormControl><FormMessage /></FormItem> )} />
                             </div>
                         )}
 
@@ -300,7 +315,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                 </AlertDialog>
                             )}
                             <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                            {canManageSchedule && !isUnderway && (
+                            {canManageSchedule && !isLocked && (
                                 <Button type="submit" disabled={isSubmitting}>
                                     {isSubmitting ? 'Saving...' : 'Save Booking'}
                                 </Button>

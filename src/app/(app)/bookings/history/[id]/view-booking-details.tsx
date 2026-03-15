@@ -191,8 +191,10 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
     const envelope = aircraft?.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
     const canApprove = hasPermission('bookings-approve');
+    const canOverride = hasPermission('bookings-approve-override');
     const canLogPre = hasPermission('bookings-preflight-manage');
     const canLogPost = hasPermission('bookings-postflight-manage');
+    
     const isApprovableState = booking.status !== 'Approved' && booking.status !== 'Completed' && !booking.status.startsWith('Cancelled');
     const isApproved = booking.status === 'Approved' || booking.status === 'Completed';
     const isCompleted = booking.status === 'Completed';
@@ -364,11 +366,12 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             {canApprove && isApprovableState && (
                                 <Button 
                                     onClick={handleApprove} 
-                                    disabled={!booking.preFlight}
-                                    title={!booking.preFlight ? "Requires recorded Pre-Flight Checklist" : ""}
+                                    disabled={!booking.preFlight && !canOverride}
+                                    title={!booking.preFlight && !canOverride ? "Requires recorded Pre-Flight Checklist" : canOverride && !booking.preFlight ? "Overriding Checklist Requirement" : ""}
                                     className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-sm h-8 px-3 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <CheckCircle2 className="h-4 w-4" /> Approve Flight
+                                    <CheckCircle2 className="h-4 w-4" /> 
+                                    {canOverride && !booking.preFlight ? "Approve (Override)" : "Approve Flight"}
                                 </Button>
                             )}
                             {aircraft?.cgEnvelope && !isCompleted && (
