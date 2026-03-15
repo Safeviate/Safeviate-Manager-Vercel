@@ -25,7 +25,7 @@ import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import type { Booking } from '@/types/booking';
 import { Button } from '@/components/ui/button';
-import { Eye, Trash2, FilePlus, Clock } from 'lucide-react';
+import { Eye, Trash2, FilePlus, Clock, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -58,23 +58,25 @@ const getStatusBadgeVariant = (status: Booking['status']): "default" | "secondar
     }
 }
 
-function DeleteBookingButton({ bookingId, bookingNumber }: { bookingId: string, bookingNumber: string }) {
+function DeleteBookingButton({ booking }: { booking: EnrichedBooking }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const { hasPermission } = usePermissions();
     const tenantId = 'safeviate';
 
-    const canDelete = hasPermission('bookings-delete');
+    const isCompleted = booking.status === 'Completed';
+    // Only admins can delete completed records to maintain audit logs
+    const canDelete = hasPermission('bookings-delete') && (!isCompleted || hasPermission('admin-database-manage'));
 
     if (!canDelete) return null;
 
     const handleDelete = () => {
         if (!firestore) return;
-        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, bookingId);
+        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
         deleteDocumentNonBlocking(bookingRef);
         toast({
             title: 'Booking Deleted',
-            description: `Booking #${bookingNumber} is being deleted.`,
+            description: `Booking #${booking.bookingNumber} is being deleted.`,
         });
     };
 
@@ -88,9 +90,14 @@ function DeleteBookingButton({ bookingId, bookingNumber }: { bookingId: string, 
             </AlertDialogTrigger>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                        {isCompleted && <ShieldAlert className="h-5 w-5 text-destructive" />}
+                        Are you sure?
+                    </AlertDialogTitle>
                     <AlertDialogDescription>
-                        This will permanently delete booking #{bookingNumber}. This action cannot be undone.
+                        {isCompleted 
+                            ? "Warning: You are deleting a COMPLETED flight record. This will remove the audit trail for these airframe hours. This action should only be taken for data entry errors."
+                            : `This will permanently delete booking #${booking.bookingNumber}. This action cannot be undone.`}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -163,7 +170,7 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                                             </Link>
                                         </Button>
                                     )}
-                                    <DeleteBookingButton bookingId={b.id} bookingNumber={b.bookingNumber} />
+                                    <DeleteBookingButton booking={b} />
                                 </div>
                             </TableCell>
                         </TableRow>

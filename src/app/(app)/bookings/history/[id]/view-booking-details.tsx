@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -13,7 +12,7 @@ import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Clock, CheckCircle2, ClipboardCheck, FileClock, History, PencilLine, ShieldAlert } from 'lucide-react';
+import { Save, AlertTriangle, Clock, CheckCircle2, ClipboardCheck, FileClock, History, PencilLine, ShieldAlert, Lock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -196,6 +195,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const canLogPost = hasPermission('bookings-postflight-manage');
     const isApprovableState = booking.status !== 'Approved' && booking.status !== 'Completed' && !booking.status.startsWith('Cancelled');
     const isApproved = booking.status === 'Approved' || booking.status === 'Completed';
+    const isCompleted = booking.status === 'Completed';
 
     return (
         <Card className="shadow-none border flex flex-col h-[calc(100vh-180px)] overflow-hidden">
@@ -247,6 +247,16 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-8 pt-2 pb-10">
+                    {isCompleted && (
+                        <div className="bg-muted border border-border p-4 rounded-xl flex items-center gap-3">
+                            <Lock className="h-5 w-5 text-muted-foreground" />
+                            <div className="text-xs text-muted-foreground">
+                                <p className="font-bold">Record Finalized</p>
+                                <p>This technical log is closed and the aircraft airframe hours have been updated. No further edits are possible.</p>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {/* Pre-Flight Data Display/Form */}
                         <div className={cn("space-y-4 p-4 rounded-xl border bg-muted/10 transition-all", !booking.preFlight && !canLogPre && "opacity-50 grayscale")}>
@@ -255,7 +265,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     <ClipboardCheck className="h-4 w-4 text-green-600" />
                                     Pre-Flight Record
                                 </h3>
-                                {!booking.preFlight && canLogPre && !isPreFlightBlocked && activeEditView !== 'pre-flight' && (
+                                {!booking.preFlight && canLogPre && !isPreFlightBlocked && activeEditView !== 'pre-flight' && !isCompleted && (
                                     <Button size="sm" onClick={() => setActiveEditView('pre-flight')} className="h-7 text-[10px] gap-1 px-2">
                                         <PencilLine className="h-3 w-3" /> Record
                                     </Button>
@@ -263,7 +273,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 {booking.preFlight && <Badge variant="secondary" className="text-[10px] bg-green-100 text-green-700 border-green-200">Completed</Badge>}
                             </div>
 
-                            {isPreFlightBlocked && !booking.preFlight && (
+                            {isPreFlightBlocked && !booking.preFlight && !isCompleted && (
                                 <p className="text-[10px] text-destructive bg-destructive/10 p-2 rounded">
                                     Log restricted: Waiting for Booking #{precedingBooking?.bookingNumber} to finalize.
                                 </p>
@@ -303,7 +313,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     <FileClock className="h-4 w-4 text-blue-600" />
                                     Post-Flight Record
                                 </h3>
-                                {!booking.postFlight && canLogPost && isApproved && activeEditView !== 'post-flight' && (
+                                {!booking.postFlight && canLogPost && isApproved && activeEditView !== 'post-flight' && !isCompleted && (
                                     <Button size="sm" onClick={() => setActiveEditView('post-flight')} className="h-7 text-[10px] gap-1 px-2">
                                         <PencilLine className="h-3 w-3" /> Record
                                     </Button>
@@ -311,7 +321,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 {booking.postFlight && <Badge variant="secondary" className="text-[10px] bg-blue-100 text-blue-700 border-blue-200">Finalized</Badge>}
                             </div>
                             
-                            {!isApproved && !booking.postFlight && (
+                            {!isApproved && !booking.postFlight && !isCompleted && (
                                 <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded flex items-center gap-2 text-[10px] text-amber-800 dark:text-amber-200">
                                     <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
                                     <span>Approval required before recording post-flight results.</span>
@@ -361,7 +371,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     <CheckCircle2 className="h-4 w-4" /> Approve Flight
                                 </Button>
                             )}
-                            {aircraft?.cgEnvelope && (
+                            {aircraft?.cgEnvelope && !isCompleted && (
                                 <Button size="sm" onClick={handleSaveToBooking} variant="outline" className="gap-2 h-8 px-3 text-xs">
                                     <Save className="h-4 w-4" /> Save to Booking
                                 </Button>
@@ -377,7 +387,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
-                            <div className="space-y-6">
+                            <div className={cn("space-y-6", isCompleted && "opacity-70 pointer-events-none")}>
                                 <div className="relative border rounded-xl p-4 bg-background overflow-hidden h-[600px]">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
@@ -419,7 +429,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     </CardContent>
                                 </Card>
 
-                                <div className="space-y-4">
+                                <div className={cn("space-y-4", isCompleted && "opacity-70 pointer-events-none")}>
                                     <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Loading Stations</h4>
                                     <div className="space-y-3">
                                         <div className="flex justify-between items-center text-sm border-b pb-2">
@@ -439,6 +449,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                             value={s.weight} 
                                                             onChange={(e) => handleStationWeightChange(s.id, e.target.value)}
                                                             className="h-8 text-right pr-8 text-xs"
+                                                            disabled={isCompleted}
                                                         />
                                                         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-muted-foreground">LBS</span>
                                                     </div>
@@ -450,6 +461,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                                     value={s.gallons} 
                                                                     onChange={(e) => handleFuelGallonsChange(s.id, e.target.value)}
                                                                     className="h-8 w-full p-1 text-right text-[10px] pr-8"
+                                                                    disabled={isCompleted}
                                                                 />
                                                                 <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] font-bold text-muted-foreground">GAL</span>
                                                             </div>

@@ -49,7 +49,7 @@ export const permissionsConfig: PermissionResource[] = [
   { id: 'admin-departments', name: 'Admin: Departments', actions: ['manage'] },
   { id: 'admin-external-orgs', name: 'Admin: External Orgs', actions: ['manage'] },
   { id: 'admin-settings', name: 'Admin: General Settings', actions: ['manage'] },
-  { id: 'admin-database', name: 'Admin: Database Seeding', actions: ['manage'] },
+  { id: 'admin-database', name: 'Admin: Database Management', actions: ['manage'] },
 
   // --- Settings Section ---
   { id: 'settings', name: 'Settings', actions: ['manage'] },
