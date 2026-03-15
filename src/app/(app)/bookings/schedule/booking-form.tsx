@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,9 +19,10 @@ import { format, addMinutes, isBefore } from 'date-fns';
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import type { Booking, OverrideLog } from '@/types/booking';
-import { Trash2, ShieldAlert, Lock } from 'lucide-react';
+import { Trash2, ShieldAlert, Lock, Eye } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { usePermissions } from '@/hooks/use-permissions';
+import Link from 'next/link';
 
 const bookingFormSchema = z.object({
     type: z.string().min(1, 'Booking type is required.'),
@@ -317,7 +318,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                             </div>
                         )}
 
-                        <DialogFooter>
+                        <DialogFooter className="flex flex-col sm:flex-row items-center gap-2">
                             {existingBooking && canDelete && (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
@@ -329,12 +330,23 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                     </AlertDialogContent>
                                 </AlertDialog>
                             )}
-                            <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                            {canManageSchedule && !isLocked && (
-                                <Button type="submit" disabled={isSubmitting}>
-                                    {isSubmitting ? 'Saving...' : 'Save Booking'}
+                            
+                            {existingBooking && (
+                                <Button variant="outline" asChild className="ml-auto sm:ml-0">
+                                    <Link href={`/bookings/history/${existingBooking.id}`}>
+                                        <Eye className="mr-2 h-4 w-4" /> Go to Booking
+                                    </Link>
                                 </Button>
                             )}
+
+                            <div className="flex gap-2 w-full sm:w-auto sm:ml-auto">
+                                <DialogClose asChild><Button type="button" variant="outline" className="flex-1 sm:flex-none">Cancel</Button></DialogClose>
+                                {canManageSchedule && !isLocked && (
+                                    <Button type="submit" disabled={isSubmitting} className="flex-1 sm:flex-none">
+                                        {isSubmitting ? 'Saving...' : 'Save Booking'}
+                                    </Button>
+                                )}
+                            </div>
                         </DialogFooter>
                     </form>
                 </Form>
