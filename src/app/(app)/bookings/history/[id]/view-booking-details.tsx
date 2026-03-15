@@ -345,7 +345,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 <div className="grid grid-cols-2 gap-4">
                                     <DetailItem label="Start Hobbs" value={booking.preFlightData.hobbs.toFixed(1)} />
                                     <DetailItem label="Start Tacho" value={booking.preFlightData.tacho.toFixed(1)} />
-                                    <DetailItem label="Fuel on Board" value={`${booking.preFlightData.fuelOnBoard} Gal`} />
+                                    <DetailItem label="Fuel Uplifted" value={`${booking.preFlightData.fuelUplift} Gal`} />
                                     <DetailItem label="Oil Uplift" value={`${booking.preFlightData.oilUplift} Qts`} />
                                     <div className="col-span-2">
                                         <DetailItem label="Documents Checked">
@@ -394,7 +394,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 <div className="grid grid-cols-2 gap-4">
                                     <DetailItem label="End Hobbs" value={booking.postFlightData.hobbs.toFixed(1)} />
                                     <DetailItem label="End Tacho" value={booking.postFlightData.tacho.toFixed(1)} />
-                                    <DetailItem label="Fuel Remaining" value={`${booking.postFlightData.fuelRemaining} Gal`} />
+                                    <DetailItem label="Fuel Uplifted" value={`${booking.postFlightData.fuelUplift} Gal`} />
                                     <div className="col-span-2">
                                         <DetailItem label="Defects / Observations" value={booking.postFlightData.defects || "None reported."} />
                                     </div>
@@ -547,7 +547,7 @@ function PreFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess, is
         defaultValues: booking.preFlightData || {
             hobbs: aircraft.currentHobbs || 0,
             tacho: aircraft.currentTacho || 0,
-            fuelOnBoard: 0,
+            fuelUplift: 0,
             oilUplift: 0,
             documentsChecked: true,
         }
@@ -608,8 +608,8 @@ function PreFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess, is
                     <Input type="number" step="0.1" {...form.register('tacho', { valueAsNumber: true })} className="h-8 text-xs" />
                 </div>
                 <div className="space-y-1">
-                    <UILabel className="text-[10px] uppercase font-bold text-muted-foreground">Fuel On Board (Gal)</UILabel>
-                    <Input type="number" {...form.register('fuelOnBoard', { valueAsNumber: true })} className="h-8 text-xs" />
+                    <UILabel className="text-[10px] uppercase font-bold text-muted-foreground">Fuel Uplifted (Gal)</UILabel>
+                    <Input type="number" {...form.register('fuelUplift', { valueAsNumber: true })} className="h-8 text-xs" />
                 </div>
                 <div className="space-y-1">
                     <UILabel className="text-[10px] uppercase font-bold text-muted-foreground">Oil Uplift (Qts)</UILabel>
@@ -637,7 +637,7 @@ function PostFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }:
         defaultValues: booking.postFlightData || {
             hobbs: (booking.preFlightData?.hobbs || aircraft.currentHobbs || 0) + 1,
             tacho: (booking.preFlightData?.tacho || aircraft.currentTacho || 0) + 0.8,
-            fuelRemaining: 0,
+            fuelUplift: 0,
             defects: '',
         }
     });
@@ -683,8 +683,8 @@ function PostFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }:
                     <Input type="number" step="0.1" {...form.register('tacho', { valueAsNumber: true })} className="h-8 text-xs" />
                 </div>
                 <div className="space-y-1">
-                    <UILabel className="text-[10px] uppercase font-bold text-muted-foreground">Fuel Remaining (Gal)</UILabel>
-                    <Input type="number" {...form.register('fuelRemaining', { valueAsNumber: true })} className="h-8 text-xs" />
+                    <UILabel className="text-[10px] uppercase font-bold text-muted-foreground">Fuel Uplifted (Gal)</UILabel>
+                    <Input type="number" {...form.register('fuelUplift', { valueAsNumber: true })} className="h-8 text-xs" />
                 </div>
                 <div className="col-span-full space-y-1">
                     <UILabel className="text-[10px] uppercase font-bold text-muted-foreground">Defects / Observations</UILabel>

@@ -25,7 +25,7 @@ export interface ChecklistPhoto {
 export interface PreFlightData {
     hobbs: number;
     tacho: number;
-    fuelOnBoard: number;
+    fuelUplift: number;
     oilUplift: number;
     documentsChecked: boolean;
 }
@@ -33,7 +33,7 @@ export interface PreFlightData {
 export interface PostFlightData {
     hobbs: number;
     tacho: number;
-    fuelRemaining: number;
+    fuelUplift: number;
     defects: string;
     photos?: ChecklistPhoto[];
 }
