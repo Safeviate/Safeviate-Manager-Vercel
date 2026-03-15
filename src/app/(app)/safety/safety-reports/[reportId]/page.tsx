@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { InvestigationForm } from './investigation-form';
 import { CorrectiveActionsForm } from './corrective-actions-form';
 import { FinalReview } from './final-review';
+import { ReportForum } from './report-forum';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import type { RiskMatrixSettings } from '@/types/risk';
 
@@ -120,6 +121,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
             <TabsTrigger value="investigation" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Investigation</TabsTrigger>
             <TabsTrigger value="cap" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Corrective Actions</TabsTrigger>
             <TabsTrigger value="review" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Final Review</TabsTrigger>
+            <TabsTrigger value="discussion" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Discussion</TabsTrigger>
           </TabsList>
         </div>
         
@@ -145,6 +147,9 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
               personnel={personnel || []} 
               riskMatrixColors={riskMatrixSettings?.colors}
             />
+          </TabsContent>
+          <TabsContent value="discussion" className="m-0 h-full">
+            <ReportForum report={report} tenantId={tenantId} />
           </TabsContent>
         </div>
       </Tabs>
