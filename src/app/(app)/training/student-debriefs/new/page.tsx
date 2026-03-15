@@ -23,6 +23,7 @@ import type { PilotProfile } from '@/app/(app)/users/personnel/page';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const debriefSchema = z.object({
     overallComment: z.string().min(1, "Please provide an overall comment."),
@@ -137,15 +138,17 @@ function NewDebriefContent() {
     const instructorName = instructor ? `${instructor.firstName} ${instructor.lastName}` : 'Unknown Instructor';
 
     return (
-        <div className="space-y-6 max-w-4xl mx-auto">
-            <Button asChild variant="ghost" className="mb-4">
-                <Link href="/bookings/history">
-                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to History
-                </Link>
-            </Button>
+        <div className="space-y-6 max-w-4xl mx-auto h-full flex flex-col overflow-hidden">
+            <div className="shrink-0">
+                <Button asChild variant="ghost" className="mb-4">
+                    <Link href="/bookings/history">
+                        <ArrowLeft className="mr-2 h-4 w-4" /> Back to History
+                    </Link>
+                </Button>
+            </div>
 
-            <Card>
-                <CardHeader>
+            <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
+                <CardHeader className="shrink-0 border-b bg-muted/20">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
                             <CardTitle>Post-Flight Instructor Debrief</CardTitle>
@@ -166,145 +169,149 @@ function NewDebriefContent() {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1 p-0 overflow-hidden">
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <h3 className="text-lg font-semibold">Exercise Ratings</h3>
-                                    <Button 
-                                        type="button" 
-                                        variant="outline" 
-                                        size="sm" 
-                                        onClick={() => append({ id: uuidv4(), exercise: '', rating: 4, comment: '' })}
-                                    >
-                                        <PlusCircle className="mr-2 h-4 w-4" /> Add Exercise
-                                    </Button>
-                                </div>
-
-                                {fields.map((field, index) => (
-                                    <div key={field.id} className="p-4 border rounded-lg bg-muted/20 space-y-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                                            <FormField 
-                                                control={form.control} 
-                                                name={`entries.${index}.exercise`} 
-                                                render={({ field }) => (
-                                                    <FormItem className="md:col-span-2">
-                                                        <FormLabel>Exercise / Maneuver</FormLabel>
-                                                        <FormControl><Input placeholder="e.g., Steep Turns" {...field} /></FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )} 
-                                            />
-                                            <FormField 
-                                                control={form.control} 
-                                                name={`entries.${index}.rating`} 
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Rating</FormLabel>
-                                                        <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
-                                                            <FormControl>
-                                                                <SelectTrigger>
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                            </FormControl>
-                                                            <SelectContent>
-                                                                <SelectItem value="1">1 - Unsatisfactory</SelectItem>
-                                                                <SelectItem value="2">2 - Needs Improvement</SelectItem>
-                                                                <SelectItem value="3">3 - Satisfactory</SelectItem>
-                                                                <SelectItem value="4">4 - Proficient</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )} 
-                                            />
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
+                            <ScrollArea className="flex-1 p-6">
+                                <div className="space-y-8">
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <h3 className="text-lg font-semibold">Exercise Ratings</h3>
                                             <Button 
                                                 type="button" 
-                                                variant="ghost" 
-                                                size="icon" 
-                                                onClick={() => remove(index)} 
-                                                className="text-destructive"
-                                                disabled={fields.length === 1}
+                                                variant="outline" 
+                                                size="sm" 
+                                                onClick={() => append({ id: uuidv4(), exercise: '', rating: 4, comment: '' })}
                                             >
-                                                <Trash2 className="h-4 w-4" />
+                                                <PlusCircle className="mr-2 h-4 w-4" /> Add Exercise
                                             </Button>
                                         </div>
+
+                                        {fields.map((field, index) => (
+                                            <div key={field.id} className="p-4 border rounded-lg bg-muted/20 space-y-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                                                    <FormField 
+                                                        control={form.control} 
+                                                        name={`entries.${index}.exercise`} 
+                                                        render={({ field }) => (
+                                                            <FormItem className="md:col-span-2">
+                                                                <FormLabel>Exercise / Maneuver</FormLabel>
+                                                                <FormControl><Input placeholder="e.g., Steep Turns" {...field} /></FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )} 
+                                                    />
+                                                    <FormField 
+                                                        control={form.control} 
+                                                        name={`entries.${index}.rating`} 
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>Rating</FormLabel>
+                                                                <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
+                                                                    <FormControl>
+                                                                        <SelectTrigger>
+                                                                            <SelectValue />
+                                                                        </SelectTrigger>
+                                                                    </FormControl>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="1">1 - Unsatisfactory</SelectItem>
+                                                                        <SelectItem value="2">2 - Needs Improvement</SelectItem>
+                                                                        <SelectItem value="3">3 - Satisfactory</SelectItem>
+                                                                        <SelectItem value="4">4 - Proficient</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )} 
+                                                    />
+                                                    <Button 
+                                                        type="button" 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        onClick={() => remove(index)} 
+                                                        className="text-destructive"
+                                                        disabled={fields.length === 1}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                                <FormField 
+                                                    control={form.control} 
+                                                    name={`entries.${index}.comment`} 
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Exercise Notes</FormLabel>
+                                                            <FormControl><Textarea placeholder="Specific feedback for this exercise..." {...field} /></FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )} 
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <Separator />
+
+                                    <FormField 
+                                        control={form.control} 
+                                        name="overallComment" 
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-lg font-semibold">Overall Progress Comment</FormLabel>
+                                                <FormControl>
+                                                    <Textarea 
+                                                        className="min-h-[120px]" 
+                                                        placeholder="Summarize the overall performance and objectives for the next flight..." 
+                                                        {...field} 
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} 
+                                    />
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-6">
                                         <FormField 
                                             control={form.control} 
-                                            name={`entries.${index}.comment`} 
+                                            name="instructorSignatureUrl" 
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Exercise Notes</FormLabel>
-                                                    <FormControl><Textarea placeholder="Specific feedback for this exercise..." {...field} /></FormControl>
+                                                    <FormLabel>Instructor Signature</FormLabel>
+                                                    <FormControl>
+                                                        <SignaturePad 
+                                                            onSignatureEnd={field.onChange} 
+                                                            height={150} 
+                                                            width={350} 
+                                                            className="w-full"
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )} 
+                                        />
+                                        <FormField 
+                                            control={form.control} 
+                                            name="studentSignatureUrl" 
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Student Acknowledgement</FormLabel>
+                                                    <FormControl>
+                                                        <SignaturePad 
+                                                            onSignatureEnd={field.onChange} 
+                                                            height={150} 
+                                                            width={350} 
+                                                            className="w-full"
+                                                        />
+                                                    </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             )} 
                                         />
                                     </div>
-                                ))}
-                            </div>
+                                </div>
+                            </ScrollArea>
 
-                            <Separator />
-
-                            <FormField 
-                                control={form.control} 
-                                name="overallComment" 
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-lg font-semibold">Overall Progress Comment</FormLabel>
-                                        <FormControl>
-                                            <Textarea 
-                                                className="min-h-[120px]" 
-                                                placeholder="Summarize the overall performance and objectives for the next flight..." 
-                                                {...field} 
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} 
-                            />
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <FormField 
-                                    control={form.control} 
-                                    name="instructorSignatureUrl" 
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Instructor Signature</FormLabel>
-                                            <FormControl>
-                                                <SignaturePad 
-                                                    onSignatureEnd={field.onChange} 
-                                                    height={150} 
-                                                    width={350} 
-                                                    className="w-full"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )} 
-                                />
-                                <FormField 
-                                    control={form.control} 
-                                    name="studentSignatureUrl" 
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Student Acknowledgement</FormLabel>
-                                            <FormControl>
-                                                <SignaturePad 
-                                                    onSignatureEnd={field.onChange} 
-                                                    height={150} 
-                                                    width={350} 
-                                                    className="w-full"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )} 
-                                />
-                            </div>
-
-                            <div className="flex justify-end gap-4 pt-6 border-t">
+                            <div className="shrink-0 flex justify-end gap-4 p-6 border-t bg-muted/5">
                                 <Button asChild variant="outline" type="button">
                                     <Link href="/bookings/history">Cancel</Link>
                                 </Button>
