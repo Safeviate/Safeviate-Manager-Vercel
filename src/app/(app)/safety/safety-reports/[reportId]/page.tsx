@@ -1,3 +1,4 @@
+
 'use client';
 
 import { use, useMemo, useState } from 'react';
@@ -21,6 +22,8 @@ import { ReportForum } from './report-forum';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import type { RiskMatrixSettings } from '@/types/risk';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { Badge } from '@/components/ui/badge';
 
 interface SafetyReportDetailPageProps {
   params: Promise<{ reportId: string }>;
@@ -30,6 +33,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
   const resolvedParams = use(params);
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { userProfile } = useUserProfile();
   const tenantId = 'safeviate';
   const reportId = resolvedParams.reportId;
 
@@ -49,6 +53,11 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
   const { data: report, isLoading: isLoadingReport, error } = useDoc<SafetyReport>(reportRef);
   const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
   const { data: riskMatrixSettings, isLoading: isLoadingRiskMatrix } = useDoc<RiskMatrixSettings>(riskMatrixSettingsRef);
+
+  const myMentionsCount = useMemo(() => {
+    if (!report?.discussion || !userProfile) return 0;
+    return report.discussion.filter(item => item.assignedToId === userProfile.id).length;
+  }, [report?.discussion, userProfile]);
 
   const isLoading = isLoadingReport || isLoadingPersonnel || isLoadingRiskMatrix;
 
@@ -125,7 +134,9 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
             <TabsTrigger value="investigation" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Investigation</TabsTrigger>
             <TabsTrigger value="cap" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Corrective Actions</TabsTrigger>
             <TabsTrigger value="review" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Final Review</TabsTrigger>
-            <TabsTrigger value="discussion" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Discussion</TabsTrigger>
+            <TabsTrigger value="discussion" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">
+              Discussion {myMentionsCount > 0 && <Badge className="ml-2 h-4 px-1.5 min-w-4 flex items-center justify-center text-[10px]">{myMentionsCount}</Badge>}
+            </TabsTrigger>
           </TabsList>
         </div>
         
