@@ -105,11 +105,17 @@ export default function RiskRegisterPage() {
             </CardHeader>
             <CardContent className="p-6">
                 <Tabs defaultValue={HAZARD_AREAS[0]}>
-                    <ScrollArea className="w-full whitespace-nowrap mb-4">
-                        <TabsList className="bg-muted/50 p-1">
-                            {HAZARD_AREAS.map(area => <TabsTrigger key={area} value={area} className="text-xs">{area}</TabsTrigger>)}
-                        </TabsList>
-                    </ScrollArea>
+                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
+                        {HAZARD_AREAS.map(area => (
+                            <TabsTrigger 
+                                key={area} 
+                                value={area} 
+                                className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs shrink-0"
+                            >
+                                {area}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
                     {HAZARD_AREAS.map(area => {
                         const areaRisks = orgRisks.filter(r => r.hazardArea === area && r.status === 'Open');
                         return (
@@ -161,41 +167,39 @@ export default function RiskRegisterPage() {
   const isTabEnabled = visibilitySettings?.visibilities?.['risk-register'] ?? true;
   const showTabs = isTabEnabled && canManageAll;
 
-  if (!showTabs) {
-    return renderOrgContext(userOrgId || 'internal');
-  }
-
   return (
-    <>
-      <div className="flex flex-col gap-6 h-full">
-        <div className="px-1">
-            <h1 className="text-3xl font-bold tracking-tight">Organizational Risk Register</h1>
-            <p className="text-muted-foreground">Proactive identification and management of safety hazards.</p>
-        </div>
-
-        <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
-            <div className="px-1 shrink-0">
-                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar">
-                    <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Internal</TabsTrigger>
-                    {(organizations || []).map(org => (
-                        <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">
-                            {org.name}
-                        </TabsTrigger>
-                    ))}
-                </TabsList>
-            </div>
-
-            <TabsContent value="internal" className="mt-0">
-                {renderOrgContext('internal')}
-            </TabsContent>
-            
-            {(organizations || []).map(org => (
-                <TabsContent key={org.id} value={org.id} className="mt-0">
-                    {renderOrgContext(org.id)}
-                </TabsContent>
-            ))}
-        </Tabs>
+    <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 h-full">
+      <div className="px-1">
+          <h1 className="text-3xl font-bold tracking-tight">Risk Register</h1>
+          <p className="text-muted-foreground">Proactive identification and management of safety hazards.</p>
       </div>
+
+      {!showTabs ? (
+          renderOrgContext(userOrgId || 'internal')
+      ) : (
+          <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
+              <div className="px-1 shrink-0">
+                  <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
+                      <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Internal</TabsTrigger>
+                      {(organizations || []).map(org => (
+                          <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
+                              {org.name}
+                          </TabsTrigger>
+                      ))}
+                  </TabsList>
+              </div>
+
+              <TabsContent value="internal" className="mt-0">
+                  {renderOrgContext('internal')}
+              </TabsContent>
+              
+              {(organizations || []).map(org => (
+                  <TabsContent key={org.id} value={org.id} className="mt-0">
+                      {renderOrgContext(org.id)}
+                  </TabsContent>
+              ))}
+          </Tabs>
+      )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh]">
@@ -215,7 +219,7 @@ export default function RiskRegisterPage() {
             </ScrollArea>
           </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
 
