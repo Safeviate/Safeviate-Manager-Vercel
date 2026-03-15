@@ -180,7 +180,7 @@ export default function MyDashboardPage() {
     return (
         <div className="w-full space-y-6">
             <Tabs defaultValue="tasks" className="w-full flex flex-col h-full overflow-hidden">
-                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 shrink-0 border-b-0 overflow-x-auto no-scrollbar justify-start">
+                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 shrink-0 border-b-0 overflow-x-auto no-scrollbar justify-start w-full flex">
                     <TabsTrigger value="tasks" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Tasks</TabsTrigger>
                     <TabsTrigger value="messages" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">
                         Messages {myMessages.length > 0 && <Badge className="ml-2 h-4 px-1.5 min-w-4 flex items-center justify-center text-[10px]">{myMessages.length}</Badge>}
