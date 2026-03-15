@@ -12,7 +12,7 @@ import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Clock, CheckCircle2, ClipboardCheck, FileClock, History, PencilLine, ShieldAlert, Lock, Edit2, ShieldCheck } from 'lucide-react';
+import { Save, AlertTriangle, Clock, CheckCircle2, ClipboardCheck, FileClock, History, PencilLine, ShieldAlert, Lock, Edit2, ShieldCheck, UserCheck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -168,6 +168,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
         const updateData: any = { status: 'Approved' };
 
+        if (userProfile) {
+            updateData.approvedById = userProfile.id;
+            updateData.approvedByName = `${userProfile.firstName} ${userProfile.lastName}`;
+        }
+
         // Record Override Audit
         if (!booking.preFlight && hasPermission('bookings-approve-override') && userProfile) {
             const log: OverrideLog = {
@@ -249,6 +254,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     <DetailItem label="Schedule" value={`${formatDateSafe(booking.start, 'p')} - ${formatDateSafe(booking.end, 'p')}`} />
                     <DetailItem label="Instructor" value={instructorLabel} />
                     <DetailItem label="Student" value={studentLabel} />
+                    <DetailItem label="Approved By">
+                        {booking.approvedByName ? (
+                            <div className="flex items-center gap-1.5 text-sm font-semibold">
+                                <UserCheck className="h-3.5 w-3.5 text-green-600" />
+                                {booking.approvedByName}
+                            </div>
+                        ) : 'Pending'}
+                    </DetailItem>
                     <div className="md:col-span-2 lg:col-span-3">
                         <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Schedule Notes</p>
                         <p className="text-sm font-semibold whitespace-pre-wrap">{booking.notes || 'No notes provided.'}</p>

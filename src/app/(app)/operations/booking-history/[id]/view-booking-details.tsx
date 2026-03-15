@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { CheckCircle2, ClipboardCheck, FileClock, History, Clock, PencilLine, Edit2, ShieldCheck, Lock } from 'lucide-react';
+import { CheckCircle2, ClipboardCheck, FileClock, History, Clock, PencilLine, Edit2, ShieldCheck, Lock, UserCheck } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -94,6 +94,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         if (!firestore || !tenantId) return;
         const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
         const updateData: any = { status: 'Approved' };
+
+        if (userProfile) {
+            updateData.approvedById = userProfile.id;
+            updateData.approvedByName = `${userProfile.firstName} ${userProfile.lastName}`;
+        }
 
         // Record Override Audit
         if (!booking.preFlight && hasPermission('bookings-approve-override') && userProfile) {
@@ -184,6 +189,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     <DetailItem label="End Time" value={formatDateSafe(booking.end, 'p')} />
                     <DetailItem label="Instructor" value={instructorLabel} />
                     <DetailItem label="Student" value={studentLabel} />
+                    <DetailItem label="Approved By">
+                        {booking.approvedByName ? (
+                            <div className="flex items-center gap-1.5 text-sm font-semibold">
+                                <UserCheck className="h-3.5 w-3.5 text-green-600" />
+                                {booking.approvedByName}
+                            </div>
+                        ) : 'Pending'}
+                    </DetailItem>
                     <div className="md:col-span-2 lg:col-span-3">
                         <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Notes</p>
                         <p className="text-sm font-semibold whitespace-pre-wrap">{booking.notes || 'No notes provided.'}</p>

@@ -59,6 +59,8 @@ export interface Booking {
   instructorId?: string;
   studentId?: string;
   createdById?: string;
+  approvedById?: string;
+  approvedByName?: string;
   cancellationReason?: string;
   status: BookingStatus;
   notes?: string;
