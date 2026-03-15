@@ -9,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-  CardFooter,
 } from '@/components/ui/card';
 import {
   Form,
@@ -26,7 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { SafetyReport } from '@/types/safety-report';
@@ -37,6 +35,39 @@ import { Save } from 'lucide-react';
 
 const reportStatuses = ['Open', 'Under Review', 'Awaiting Action', 'Closed'];
 const eventClassifications = ['Hazard', 'Incident', 'Accident'];
+
+// ICAO Occurrence Categories (CICTT Taxonomy)
+const ICAO_CATEGORIES = [
+  { code: 'ADRM', description: 'Aerodrome' },
+  { code: 'AMAN', description: 'Abrupt Maneuver' },
+  { code: 'ARC', description: 'Abnormal Runway Contact' },
+  { code: 'BIRD', description: 'Bird strike' },
+  { code: 'CABIN', description: 'Cabin Safety Events' },
+  { code: 'CFIT', description: 'Controlled Flight Into or Toward Terrain' },
+  { code: 'CTOL', description: 'Collision with obstacle(s) during take-off and landing' },
+  { code: 'EVAC', description: 'Evacuation' },
+  { code: 'F-NI', description: 'Fire/smoke (non-impact)' },
+  { code: 'F-POST', description: 'Fire/smoke (post-impact)' },
+  { code: 'FUEL', description: 'Fuel related' },
+  { code: 'GCOL', description: 'Ground Collision' },
+  { code: 'GRS', description: 'Ground Handling' },
+  { code: 'HIJACK', description: 'Hijacking' },
+  { code: 'ICE', description: 'Icing' },
+  { code: 'LOC-G', description: 'Loss of control - Ground' },
+  { code: 'LOC-I', description: 'Loss of control - Inflight' },
+  { code: 'MAC', description: 'Airprox/ ACAS alert/ loss of separation' },
+  { code: 'NAV', description: 'Navigation error' },
+  { code: 'RE', description: 'Runway Excursion' },
+  { code: 'RI', description: 'Runway Incursion' },
+  { code: 'SEC', description: 'Security related' },
+  { code: 'SCF-NP', description: 'System/ component failure or malfunction (non-powerplant)' },
+  { code: 'SCF-PP', description: 'System/ component failure or malfunction (powerplant)' },
+  { code: 'TURB', description: 'Turbulence encounter' },
+  { code: 'UCOL', description: 'Undershoot/ overshoot' },
+  { code: 'WSTR', description: 'Windshear or thunderstorm' },
+  { code: 'OTHER', description: 'Other' },
+  { code: 'UNK', description: 'Unknown or undetermined' },
+];
 
 const triageSchema = z.object({
   status: z.string().min(1),
@@ -155,13 +186,25 @@ export function TriageForm({ report, tenantId }: TriageFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Occurrence Category (ICAO)</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g., LOC-I, ARC"
-                          {...field}
-                          value={field.value ?? ''}
-                        />
-                      </FormControl>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <ScrollArea className="h-[300px]">
+                            {ICAO_CATEGORIES.map((cat) => (
+                              <SelectItem key={cat.code} value={cat.code}>
+                                {cat.code} - {cat.description}
+                              </SelectItem>
+                            ))}
+                          </ScrollArea>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
