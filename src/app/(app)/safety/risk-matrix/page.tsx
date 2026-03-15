@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { RiskMatrixSettings } from '@/types/risk';
+import { Badge } from '@/components/ui/badge';
 
 const defaultLikelihoods = [
     { name: 'Frequent', description: 'Likely to occur many times (has happened frequently).', value: 5 },
