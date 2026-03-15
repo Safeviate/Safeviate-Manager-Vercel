@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -146,7 +145,7 @@ export function ApprovalForm({ moc, tenantId, personnel }: ApprovalFormProps) {
                              <SignaturePad 
                                 onSignatureEnd={(dataUrl) => setSignatureDataUrl(dataUrl)}
                                 height={150}
-                                width={350}
+                                className="w-full"
                             />
                         </div>
                     </div>

@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Button } from './button';
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -9,13 +8,14 @@ import { cn } from '@/lib/utils';
 interface SignaturePadProps {
   onSignatureEnd: (dataUrl: string) => void;
   initialDataUrl?: string | null;
-  width?: number;
+  width?: number | string;
   height?: number;
   className?: string;
   isReadOnly?: boolean;
 }
 
-export function SignaturePad({ onSignatureEnd, initialDataUrl, width = 400, height = 200, className, isReadOnly = false }: SignaturePadProps) {
+export function SignaturePad({ onSignatureEnd, initialDataUrl, width = "100%", height = 200, className, isReadOnly = false }: SignaturePadProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSigned, setHasSigned] = useState(!!initialDataUrl);
@@ -77,34 +77,48 @@ export function SignaturePad({ onSignatureEnd, initialDataUrl, width = 400, heig
     }
   };
 
-  useEffect(() => {
+  const initCanvas = useCallback(() => {
     const canvas = canvasRef.current;
-    if (canvas) {
-        const context = canvas.getContext('2d');
-        if (context) {
-            context.strokeStyle = '#000';
-            context.lineWidth = 2;
-            context.lineCap = 'round';
-            context.lineJoin = 'round';
-            if (initialDataUrl) {
-                const img = new Image();
-                img.onload = () => {
-                    context.drawImage(img, 0, 0);
+    const container = containerRef.current;
+    if (canvas && container) {
+        const rect = container.getBoundingClientRect();
+        // Use a small buffer to ensure it fits within the border
+        const targetWidth = Math.floor(rect.width);
+        
+        if (canvas.width !== targetWidth || canvas.height !== height) {
+            canvas.width = targetWidth;
+            canvas.height = height;
+
+            const context = canvas.getContext('2d');
+            if (context) {
+                context.strokeStyle = '#000';
+                context.lineWidth = 2;
+                context.lineCap = 'round';
+                context.lineJoin = 'round';
+                
+                if (initialDataUrl) {
+                    const img = new Image();
+                    img.onload = () => {
+                        context.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    }
+                    img.src = initialDataUrl;
                 }
-                img.src = initialDataUrl;
-                setHasSigned(true);
             }
         }
     }
-  }, [initialDataUrl]);
+  }, [initialDataUrl, height]);
+
+  useEffect(() => {
+    initCanvas();
+    window.addEventListener('resize', initCanvas);
+    return () => window.removeEventListener('resize', initCanvas);
+  }, [initCanvas]);
 
   return (
-    <div className={cn("relative", className)} style={{ width, height }}>
+    <div ref={containerRef} className={cn("relative overflow-hidden w-full", className)} style={{ height }}>
       <canvas
         ref={canvasRef}
-        width={width}
-        height={height}
-        className={cn("border rounded-md bg-white", isReadOnly ? "cursor-not-allowed" : "cursor-crosshair")}
+        className={cn("border rounded-md bg-white block w-full h-full", isReadOnly ? "cursor-not-allowed" : "cursor-crosshair")}
         onMouseDown={startDrawing}
         onMouseMove={draw}
         onMouseUp={endDrawing}

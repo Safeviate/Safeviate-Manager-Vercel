@@ -281,7 +281,6 @@ function NewDebriefContent() {
                                                         <SignaturePad 
                                                             onSignatureEnd={field.onChange} 
                                                             height={150} 
-                                                            width={350} 
                                                             className="w-full"
                                                         />
                                                     </FormControl>
@@ -299,7 +298,6 @@ function NewDebriefContent() {
                                                         <SignaturePad 
                                                             onSignatureEnd={field.onChange} 
                                                             height={150} 
-                                                            width={350} 
                                                             className="w-full"
                                                         />
                                                     </FormControl>
