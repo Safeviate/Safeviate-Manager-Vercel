@@ -87,6 +87,8 @@ const initialSpiConfig: SpiConfig[] = [
     }
 ];
 
+const settingsDocId = 'spi-configurations';
+
 export default function SafetyIndicatorsPage() {
   const [spiConfig, setSpiConfig] = useState<SpiConfig[]>(initialSpiConfig);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -95,7 +97,6 @@ export default function SafetyIndicatorsPage() {
   const firestore = useFirestore();
   const { tenantId, userProfile } = useUserProfile();
   const { hasPermission } = usePermissions();
-  const settingsDocId = 'spi-configurations';
 
   const canViewAll = hasPermission('safety-indicators-view');
   const userOrgId = userProfile?.organizationId;
