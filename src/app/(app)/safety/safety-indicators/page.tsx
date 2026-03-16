@@ -197,48 +197,46 @@ export default function SafetyIndicatorsPage() {
   };
 
   if (isLoadingReports || isLoadingBookings || isLoadingOrgs || isLoadingSpiDocument || isLoadingVisibility) {
-    return <div className="space-y-6"><Skeleton className="h-10 w-[400px] rounded-full" /><Skeleton className="h-[200px] w-full" /></div>;
+    return <div className="space-y-6 max-w-[1200px] mx-auto w-full"><Skeleton className="h-10 w-[400px] rounded-full" /><Skeleton className="h-[200px] w-full" /></div>;
   }
 
   const isTabEnabled = visibilitySettings?.visibilities?.['safety-indicators'] ?? true;
   const showTabs = isTabEnabled && canViewAll;
 
-  if (!showTabs) {
-    return renderOrgContext(userOrgId || 'internal');
-  }
-
   return (
-    <>
-      <div className="flex flex-col gap-6 h-full">
-          <div className="flex justify-between items-center px-1">
-              <div>
-                  <h1 className="text-3xl font-bold tracking-tight">Safety Indicators</h1>
-                  <p className="text-muted-foreground">Monitoring Safety Performance Indicators (SPIs) across the fleet.</p>
-              </div>
-              <Button onClick={() => {
-                  setSelectedSpi({
-                      id: 'new-spi',
-                      name: '',
-                      comparison: 'lower-is-better',
-                      unit: 'Count',
-                      periodLabel: 'Month',
-                      description: '',
-                      target: 0,
-                      levels: { acceptable: 0, monitor: 1, actionRequired: 2, urgentAction: 3 },
-                      monthlyData: Array(12).fill(0),
-                  });
-                  setIsEditDialogOpen(true);
-              }}>
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add New SPI
-              </Button>
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
+      <div className="flex justify-between items-center px-1">
+          <div>
+              <h1 className="text-3xl font-bold tracking-tight">Safety Indicators</h1>
+              <p className="text-muted-foreground">Monitoring Safety Performance Indicators (SPIs) across the fleet.</p>
           </div>
+          <Button onClick={() => {
+              setSelectedSpi({
+                  id: 'new-spi',
+                  name: '',
+                  comparison: 'lower-is-better',
+                  unit: 'Count',
+                  periodLabel: 'Month',
+                  description: '',
+                  target: 0,
+                  levels: { acceptable: 0, monitor: 1, actionRequired: 2, urgentAction: 3 },
+                  monthlyData: Array(12).fill(0),
+              });
+              setIsEditDialogOpen(true);
+          }}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New SPI
+          </Button>
+      </div>
 
+      {!showTabs ? (
+          renderOrgContext(userOrgId || 'internal')
+      ) : (
           <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
                 <div className="px-1 shrink-0">
-                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar">
-                        <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Internal</TabsTrigger>
+                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
+                        <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Internal</TabsTrigger>
                         {(organizations || []).map(org => (
-                            <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">
+                            <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
                                 {org.name}
                             </TabsTrigger>
                         ))}
@@ -255,7 +253,7 @@ export default function SafetyIndicatorsPage() {
                     </TabsContent>
                 ))}
             </Tabs>
-      </div>
+      )}
       
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="sm:max-w-xl">
@@ -272,6 +270,6 @@ export default function SafetyIndicatorsPage() {
               )}
           </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
