@@ -1,66 +1,55 @@
 'use client';
 
-import { use, useMemo, useState, useEffect } from 'react';
-import { doc, collection, query, orderBy, arrayUnion } from 'firebase/firestore';
-import { useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
-import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from '@/components/ui/card';
+import { use, useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { doc, collection, query, orderBy, arrayUnion, updateDoc } from 'firebase/firestore';
+import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogTrigger,
-  DialogClose,
-} from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DocumentUploader } from '@/components/document-uploader';
-import {
-  ArrowLeft,
-  Calendar,
-  ClipboardList,
-  FileText,
-  History,
-  Plus,
-  Trash2,
-  Settings2,
-  Activity,
-  ShieldCheck,
-  Clock,
-} from 'lucide-react';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { format } from 'date-fns';
+import { ArrowLeft, PlusCircle, Trash2, FileText, Wrench, ShieldAlert, History, Eye, ZoomIn } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { DocumentUploader } from '@/components/document-uploader';
 import type { Aircraft, AircraftComponent } from '@/types/aircraft';
 import type { MaintenanceLog } from '@/types/maintenance';
+import Image from 'next/image';
 
 interface AircraftDetailPageProps {
   params: Promise<{ id: string }>;
 }
+
+const componentFormSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  manufacturer: z.string().optional(),
+  serialNumber: z.string().min(1, 'Serial number is required'),
+  partNumber: z.string().optional(),
+  installHours: z.number({ coerce: true }).min(0),
+  maxHours: z.number({ coerce: true }).min(0),
+  notes: z.string().optional(),
+});
+
+const logFormSchema = z.object({
+  maintenanceType: z.string().min(1, 'Type is required'),
+  date: z.string().min(1, 'Date is required'),
+  details: z.string().min(1, 'Details are required'),
+  reference: z.string().optional(),
+  ameNo: z.string().optional(),
+  amoNo: z.string().optional(),
+});
 
 export default function AircraftDetailPage({ params }: AircraftDetailPageProps) {
   const resolvedParams = use(params);
@@ -82,57 +71,95 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
   const { data: aircraft, isLoading: isLoadingAircraft } = useDoc<Aircraft>(aircraftRef);
   const { data: logs, isLoading: isLoadingLogs } = useCollection<MaintenanceLog>(logsQuery);
 
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+
+  const handleViewDocument = (url: string) => {
+    setViewingImageUrl(url);
+    setIsImageViewerOpen(true);
+  };
+
+  const handleAddLog = async (values: z.infer<typeof logFormSchema>) => {
+    if (!firestore) return;
+    try {
+      const logsCol = collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`);
+      const newLogRef = doc(logsCol);
+      await updateDoc(newLogRef, { ...values, id: newLogRef.id, aircraftId });
+      toast({ title: 'Maintenance Log Added' });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error', description: e.message });
+    }
+  };
+
+  const handleAddComponent = async (values: z.infer<typeof componentFormSchema>) => {
+    if (!firestore || !aircraftRef) return;
+    try {
+      const newComponent: AircraftComponent = {
+        ...values,
+        id: uuidv4(),
+        installDate: new Date().toISOString(),
+        tsn: 0,
+        tso: 0,
+        totalTime: 0,
+        name: values.name || '',
+        manufacturer: values.manufacturer || '',
+        partNumber: values.partNumber || '',
+        notes: values.notes || '',
+      };
+      await updateDoc(aircraftRef, {
+        components: arrayUnion(newComponent)
+      });
+      toast({ title: 'Component Added' });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error', description: e.message });
+    }
+  };
+
+  const onDocumentUploaded = async (docDetails: any) => {
+    if (!firestore || !aircraftRef) return;
+    try {
+      const updatedDocs = [...(aircraft?.documents || []), docDetails];
+      await updateDoc(aircraftRef, { documents: updatedDocs });
+      toast({ title: 'Document Uploaded' });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error', description: e.message });
+    }
+  };
+
   if (isLoadingAircraft) {
     return (
-      <div className="max-w-[1200px] mx-auto w-full space-y-6">
+      <div className="max-w-[1200px] mx-auto w-full p-6 space-y-6">
         <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-[400px] w-full" />
       </div>
     );
   }
 
-  if (!aircraft) {
-    return (
-      <div className="max-w-[1200px] mx-auto w-full text-center py-12">
-        <p className="text-muted-foreground mb-4">Aircraft not found.</p>
-        <Button asChild variant="outline">
-          <Link href="/assets/aircraft">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Fleet
-          </Link>
-        </Button>
-      </div>
-    );
-  }
+  if (!aircraft) return <div className="p-8 text-center">Aircraft not found.</div>;
 
-  const timeTo50 = aircraft.tachoAtNext50Inspection && aircraft.currentTacho 
-    ? (aircraft.tachoAtNext50Inspection - aircraft.currentTacho).toFixed(1)
-    : 'N/A';
-
-  const timeTo100 = aircraft.tachoAtNext100Inspection && aircraft.currentTacho
-    ? (aircraft.tachoAtNext100Inspection - aircraft.currentTacho).toFixed(1)
-    : 'N/A';
+  const currentTacho = aircraft.currentTacho || 0;
+  const timeTo50 = Math.max(0, (aircraft.tachoAtNext50Inspection || 0) - currentTacho).toFixed(1);
+  const timeTo100 = Math.max(0, (aircraft.tachoAtNext100Inspection || 0) - currentTacho).toFixed(1);
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full space-y-6 pb-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="max-w-[1200px] mx-auto w-full p-1 space-y-6">
+      <div className="flex justify-between items-start shrink-0">
         <div className="space-y-1">
-          <Button asChild variant="ghost" className="pl-0 hover:bg-transparent -ml-1 h-auto text-muted-foreground">
-            <Link href="/assets/aircraft">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Fleet
-            </Link>
+          <Button asChild variant="ghost" size="sm" className="-ml-2 h-8 text-muted-foreground">
+            <Link href="/assets/aircraft"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Fleet</Link>
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight">{aircraft.tailNumber}</h1>
+          <h1 className="text-4xl font-bold tracking-tight">{aircraft.tailNumber}</h1>
           <p className="text-muted-foreground">{aircraft.make} {aircraft.model} • {aircraft.type}</p>
         </div>
-
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 justify-end">
           <Badge variant="outline" className="px-3 py-1 bg-background shadow-sm border-slate-200">
             <span className="text-[10px] font-bold uppercase text-muted-foreground mr-2">Hobbs:</span>
-            <span className="font-mono font-bold">{aircraft.currentHobbs?.toFixed(1) || '0.0'}h</span>
+            <span className="font-mono font-bold text-primary">{(aircraft.currentHobbs || 0).toFixed(1)}h</span>
           </Badge>
           <Badge variant="outline" className="px-3 py-1 bg-background shadow-sm border-slate-200">
             <span className="text-[10px] font-bold uppercase text-muted-foreground mr-2">Tacho:</span>
-            <span className="font-mono font-bold">{aircraft.currentTacho?.toFixed(1) || '0.0'}h</span>
+            <span className="font-mono font-bold text-primary">{currentTacho.toFixed(1)}h</span>
           </Badge>
           <Badge variant="outline" className="px-3 py-1 bg-background shadow-sm border-slate-200">
             <span className="text-[10px] font-bold uppercase text-muted-foreground mr-2">To 50h:</span>
@@ -142,185 +169,121 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
           </Badge>
           <Badge variant="outline" className="px-3 py-1 bg-background shadow-sm border-slate-200">
             <span className="text-[10px] font-bold uppercase text-muted-foreground mr-2">To 100h:</span>
-            <span className={cn("font-mono font-bold", Number(timeTo100) < 20 ? "text-destructive" : "text-green-600")}>
+            <span className={cn("font-mono font-bold", Number(timeTo100) < 10 ? "text-destructive" : "text-green-600")}>
               {timeTo100}h
             </span>
           </Badge>
         </div>
       </div>
 
-      <Tabs defaultValue="maintenance" className="w-full">
-        <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar">
-          <TabsTrigger value="maintenance" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Maintenance Logs</TabsTrigger>
-          <TabsTrigger value="documents" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Technical Documents</TabsTrigger>
-          <TabsTrigger value="components" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Component Tracker</TabsTrigger>
+      <Tabs defaultValue="maintenance" className="w-full flex-1 flex flex-col min-h-0">
+        <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start">
+          <TabsTrigger value="maintenance" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Maintenance Logs</TabsTrigger>
+          <TabsTrigger value="documents" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Technical Documents</TabsTrigger>
+          <TabsTrigger value="components" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Component Tracker</TabsTrigger>
         </TabsList>
 
         <TabsContent value="maintenance" className="mt-0">
-          <MaintenanceTab 
-            aircraftId={aircraftId} 
-            tenantId={tenantId} 
-            logs={logs || []} 
-            isLoading={isLoadingLogs} 
-          />
+          <MaintenanceTab logs={logs || []} onAddLog={handleAddLog} />
         </TabsContent>
-
         <TabsContent value="documents" className="mt-0">
-          <DocumentsTab 
-            aircraft={aircraft} 
-            tenantId={tenantId} 
-          />
+          <DocumentsTab documents={aircraft.documents || []} onUpload={onDocumentUploaded} onView={handleViewDocument} />
         </TabsContent>
-
         <TabsContent value="components" className="mt-0">
-          <ComponentsTab 
-            aircraft={aircraft} 
-            tenantId={tenantId} 
-          />
+          <ComponentsTab components={aircraft.components || []} onAdd={handleAddComponent} />
         </TabsContent>
       </Tabs>
+
+      <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader><DialogTitle>Document Viewer</DialogTitle></DialogHeader>
+          {viewingImageUrl && (
+            <div className="relative h-[70vh] w-full bg-muted flex items-center justify-center rounded-md overflow-hidden">
+              <img src={viewingImageUrl} alt="Aircraft Document" className="max-h-full max-w-full object-contain" />
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIsImageViewerOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function MaintenanceTab({ aircraftId, tenantId, logs, isLoading }: { aircraftId: string, tenantId: string, logs: MaintenanceLog[], isLoading: boolean }) {
-  const firestore = useFirestore();
-  const { toast } = useToast();
+function MaintenanceTab({ logs, onAddLog }: { logs: MaintenanceLog[], onAddLog: (v: any) => Promise<void> }) {
   const [isOpen, setIsOpen] = useState(false);
-
-  const handleAddLog = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const data = {
-      aircraftId,
-      maintenanceType: formData.get('type') as string,
-      date: new Date(formData.get('date') as string).toISOString(),
-      details: formData.get('details') as string,
-      reference: formData.get('reference') as string,
-      ameNo: formData.get('ame') as string,
-    };
-
-    if (!firestore) return;
-    const colRef = collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`);
-    addDocumentNonBlocking(colRef, data);
-    toast({ title: 'Log Added', description: 'Maintenance entry has been recorded.' });
-    setIsOpen(false);
-  };
+  const form = useForm({ resolver: zodResolver(logFormSchema), defaultValues: { maintenanceType: '', date: format(new Date(), 'yyyy-MM-dd'), details: '', reference: '', ameNo: '', amoNo: '' } });
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
+    <Card className="shadow-none border">
+      <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/5 py-4">
+        <div className="flex items-center gap-2">
+          <History className="h-5 w-5 text-primary" />
+          <CardTitle className="text-lg">Maintenance History</CardTitle>
+        </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="mr-2 h-4 w-4" /> Add Maintenance Log
-            </Button>
-          </DialogTrigger>
+          <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Log</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>New Maintenance Entry</DialogTitle>
-              <DialogDescription>Record a technical intervention or inspection.</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleAddLog} className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="type">Entry Type</Label>
-                  <Input id="type" name="type" placeholder="e.g., 50h Inspection" required />
+            <DialogHeader><DialogTitle>Add Maintenance Log</DialogTitle></DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit((v) => onAddLog(v).then(() => setIsOpen(false)))} className="space-y-4">
+                <FormField control={form.control} name="maintenanceType" render={({ field }) => (<FormItem><FormLabel>Type</FormLabel><FormControl><Input placeholder="e.g., 100 Hour Inspection" {...field} /></FormControl></FormItem>)} />
+                <FormField control={form.control} name="date" render={({ field }) => (<FormItem><FormLabel>Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl></FormItem>)} />
+                <FormField control={form.control} name="details" render={({ field }) => (<FormItem><FormLabel>Details</FormLabel><FormControl><Textarea placeholder="Details of work performed..." {...field} /></FormControl></FormItem>)} />
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField control={form.control} name="reference" render={({ field }) => (<FormItem><FormLabel>Ref #</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
+                  <FormField control={form.control} name="ameNo" render={({ field }) => (<FormItem><FormLabel>AME #</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
+                  <FormField control={form.control} name="amoNo" render={({ field }) => (<FormItem><FormLabel>AMO #</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date</Label>
-                  <Input id="date" name="date" type="date" required />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="reference">Reference / Release to Service</Label>
-                <Input id="reference" name="reference" placeholder="e.g., CRS-12345" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="details">Work Details</Label>
-                <Textarea id="details" name="details" placeholder="Describe the maintenance performed..." required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ame">AME License No.</Label>
-                <Input id="ame" name="ame" placeholder="e.g., AME-9988" />
-              </div>
-              <DialogFooter>
-                <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                <Button type="submit">Save Log</Button>
-              </DialogFooter>
-            </form>
+                <DialogFooter><Button type="submit">Save Log Entry</Button></DialogFooter>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
-      </div>
-
-      <div className="rounded-md border bg-card">
+      </CardHeader>
+      <CardContent className="p-0">
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow>
-              <TableHead className="w-[120px]">Date</TableHead>
+              <TableHead>Date</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Details</TableHead>
-              <TableHead>Reference</TableHead>
-              <TableHead className="text-right">AME No.</TableHead>
+              <TableHead>Ref</TableHead>
+              <TableHead>AME/AMO</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-10">Loading logs...</TableCell></TableRow>
-            ) : logs.length > 0 ? (
-              logs.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell className="font-medium">{format(new Date(log.date), 'dd MMM yyyy')}</TableCell>
-                  <TableCell><Badge variant="outline">{log.maintenanceType}</Badge></TableCell>
-                  <TableCell className="max-w-md truncate" title={log.details}>{log.details}</TableCell>
-                  <TableCell>{log.reference || 'N/A'}</TableCell>
-                  <TableCell className="text-right font-mono text-xs">{log.ameNo || 'N/A'}</TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">No maintenance history recorded.</TableCell></TableRow>
-            )}
+            {logs.length > 0 ? logs.map(log => (
+              <TableRow key={log.id}>
+                <TableCell className="font-medium whitespace-nowrap">{format(new Date(log.date), 'dd MMM yyyy')}</TableCell>
+                <TableCell className="font-bold">{log.maintenanceType}</TableCell>
+                <TableCell className="text-xs max-w-md truncate">{log.details}</TableCell>
+                <TableCell>{log.reference || '-'}</TableCell>
+                <TableCell className="text-[10px]">{log.ameNo} / {log.amoNo}</TableCell>
+              </TableRow>
+            )) : <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No maintenance logs found.</TableCell></TableRow>}
           </TableBody>
         </Table>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
-function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft, tenantId: string }) {
-  const firestore = useFirestore();
-  const { toast } = useToast();
-
-  const handleDocUpload = (docDetails: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => {
-    if (!firestore) return;
-    const currentDocs = aircraft.documents || [];
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
-    updateDocumentNonBlocking(aircraftRef, { documents: [...currentDocs, docDetails] });
-    toast({ title: 'Document Added' });
-  };
-
-  const deleteDocItem = (name: string) => {
-    if (!firestore) return;
-    const filtered = (aircraft.documents || []).filter(d => d.name !== name);
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
-    updateDocumentNonBlocking(aircraftRef, { documents: filtered });
-    toast({ title: 'Document Deleted' });
-  };
-
+function DocumentsTab({ documents, onUpload, onView }: { documents: any[], onUpload: (v: any) => void, onView: (url: string) => void }) {
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
+    <Card className="shadow-none border">
+      <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/5 py-4">
+        <div className="flex items-center gap-2">
+          <FileText className="h-5 w-5 text-primary" />
+          <CardTitle className="text-lg">Technical Documents</CardTitle>
+        </div>
         <DocumentUploader
-          onDocumentUploaded={handleDocUpload}
-          trigger={(open) => (
-            <Button size="sm" onClick={() => open()}>
-              <Plus className="mr-2 h-4 w-4" /> Add Document
-            </Button>
-          )}
+          onDocumentUploaded={onUpload}
+          trigger={(open) => <Button size="sm" onClick={() => open()}><PlusCircle className="mr-2 h-4 w-4" /> Add Document</Button>}
         />
-      </div>
-
-      <div className="rounded-md border bg-card">
+      </CardHeader>
+      <CardContent className="p-0">
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow>
@@ -331,179 +294,106 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft, tenantId: st
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(aircraft.documents || []).length > 0 ? (
-              (aircraft.documents || []).map((d) => (
-                <TableRow key={d.name}>
-                  <TableCell className="font-medium">{d.name}</TableCell>
-                  <TableCell>{format(new Date(d.uploadDate), 'dd MMM yyyy')}</TableCell>
-                  <TableCell>{d.expirationDate ? format(new Date(d.expirationDate), 'dd MMM yyyy') : 'N/A'}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button asChild variant="ghost" size="icon" className="h-8 w-8">
-                        <a href={d.url} target="_blank" rel="noopener noreferrer"><FileText className="h-4 w-4" /></a>
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteDocItem(d.name)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow><TableCell colSpan={4} className="text-center py-10 text-muted-foreground">No technical documents uploaded.</TableCell></TableRow>
-            )}
+            {documents.length > 0 ? documents.map(doc => (
+              <TableRow key={doc.name}>
+                <TableCell className="font-bold">{doc.name}</TableCell>
+                <TableCell>{format(new Date(doc.uploadDate), 'dd MMM yyyy')}</TableCell>
+                <TableCell>{doc.expirationDate ? format(new Date(doc.expirationDate), 'dd MMM yyyy') : '-'}</TableCell>
+                <TableCell className="text-right">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onView(doc.url)}>
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )) : <TableRow><TableCell colSpan={4} className="h-24 text-center text-muted-foreground">No documents uploaded.</TableCell></TableRow>}
           </TableBody>
         </Table>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
-function ComponentsTab({ aircraft, tenantId }: { aircraft: Aircraft, tenantId: string }) {
-  const firestore = useFirestore();
-  const { toast } = useToast();
+function ComponentsTab({ components, onAdd }: { components: AircraftComponent[], onAdd: (v: any) => Promise<void> }) {
   const [isOpen, setIsOpen] = useState(false);
-
-  const handleAddComponent = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const component: AircraftComponent = {
-      id: uuidv4(),
-      name: formData.get('name') as string,
-      serialNumber: formData.get('serial') as string,
-      partNumber: formData.get('part') as string,
-      manufacturer: formData.get('manufacturer') as string,
-      installDate: new Date(formData.get('date') as string).toISOString(),
-      installHours: parseFloat(formData.get('installHours') as string) || 0,
-      maxHours: parseFloat(formData.get('maxHours') as string) || 0,
-      tsn: parseFloat(formData.get('tsn') as string) || 0,
-      tso: 0,
-      totalTime: 0,
-      notes: '',
-    };
-
-    if (!firestore) return;
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
-    updateDocumentNonBlocking(aircraftRef, { components: arrayUnion(component) });
-    toast({ title: 'Component Added', description: `Tracked item "${component.name}" added.` });
-    setIsOpen(false);
-  };
-
-  const removeComponent = (id: string) => {
-    if (!firestore) return;
-    const filtered = (aircraft.components || []).filter(c => c.id !== id);
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
-    updateDocumentNonBlocking(aircraftRef, { components: filtered });
-    toast({ title: 'Component Removed' });
-  };
+  const form = useForm({ resolver: zodResolver(componentFormSchema), defaultValues: { name: '', manufacturer: '', serialNumber: '', partNumber: '', installHours: 0, maxHours: 0, notes: '' } });
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
+    <Card className="shadow-none border">
+      <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/5 py-4">
+        <div className="flex items-center gap-2">
+          <Wrench className="h-5 w-5 text-primary" />
+          <CardTitle className="text-lg">Life-Limited Components</CardTitle>
+        </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="mr-2 h-4 w-4" /> Add Component
-            </Button>
-          </DialogTrigger>
+          <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Component</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Track New Component</DialogTitle>
-              <DialogDescription>Define a serialized part for lifecycle tracking.</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleAddComponent} className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Component Name</Label>
-                  <Input id="name" name="name" placeholder="e.g., Engine No. 1" required />
+            <DialogHeader><DialogTitle>Track New Component</DialogTitle></DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit((v) => onAdd(v).then(() => setIsOpen(false)))} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Component Name</FormLabel><FormControl><Input placeholder="e.g., Engine" {...field} /></FormControl></FormItem>)} />
+                  <FormField control={form.control} name="manufacturer" render={({ field }) => (<FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="manufacturer">Manufacturer</Label>
-                  <Input id="manufacturer" name="manufacturer" placeholder="e.g., Lycoming" />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="serialNumber" render={({ field }) => (<FormItem><FormLabel>Serial Number</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
+                  <FormField control={form.control} name="partNumber" render={({ field }) => (<FormItem><FormLabel>Part Number</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="part">Part Number</Label>
-                  <Input id="part" name="part" placeholder="O-360-A4M" />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="installHours" render={({ field }) => (<FormItem><FormLabel>Hours at Install</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>)} />
+                  <FormField control={form.control} name="maxHours" render={({ field }) => (<FormItem><FormLabel>Life Limit (Hours)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>)} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="serial">Serial Number</Label>
-                  <Input id="serial" name="serial" placeholder="L-12345-36A" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="date">Install Date</Label>
-                  <Input id="date" name="date" type="date" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tsn">TSN at Install</Label>
-                  <Input id="tsn" name="tsn" type="number" step="0.1" placeholder="0.0" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="installHours">A/C Hours at Install</Label>
-                  <Input id="installHours" name="installHours" type="number" step="0.1" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maxHours">Life Limit (Hours)</Label>
-                  <Input id="maxHours" name="maxHours" type="number" step="0.1" required />
-                </div>
-              </div>
-              <DialogFooter>
-                <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                <Button type="submit">Save Component</Button>
-              </DialogFooter>
-            </form>
+                <FormField control={form.control} name="notes" render={({ field }) => (<FormItem><FormLabel>Notes</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)} />
+                <DialogFooter><Button type="submit">Start Tracking</Button></DialogFooter>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {(aircraft.components || []).length > 0 ? (
-          (aircraft.components || []).map((comp) => {
-            const currentTsn = comp.tsn + (aircraft.currentHobbs || 0) - comp.installHours;
-            const hoursRemaining = comp.maxHours - currentTsn;
-            const progress = (currentTsn / comp.maxHours) * 100;
-            const isNearLimit = hoursRemaining < 100;
-
-            return (
-              <Card key={comp.id} className="shadow-sm">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-sm">{comp.name}</CardTitle>
-                      <CardDescription className="text-xs">SN: {comp.serialNumber}</CardDescription>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeComponent(comp.id)}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Hours Remaining:</span>
-                    <span className={cn("font-bold", isNearLimit ? "text-destructive" : "text-primary")}>
-                      {hoursRemaining.toFixed(1)}h
-                    </span>
-                  </div>
-                  <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className={cn("h-full transition-all", isNearLimit ? "bg-destructive" : "bg-primary")}
-                      style={{ width: `${Math.min(100, progress)}%` }}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-[10px] uppercase font-bold text-muted-foreground">
-                    <div>TSN: {currentTsn.toFixed(1)}h</div>
-                    <div className="text-right">Limit: {comp.maxHours}h</div>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })
-        ) : (
-          <div className="col-span-full py-12 text-center border-2 border-dashed rounded-lg bg-muted/10">
-            <Activity className="mx-auto h-8 w-8 text-muted-foreground opacity-20 mb-2" />
-            <p className="text-sm text-muted-foreground">No components tracked for this aircraft.</p>
-          </div>
-        )}
-      </div>
-    </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader className="bg-muted/50">
+            <TableRow>
+              <TableHead>Component</TableHead>
+              <TableHead>S/N</TableHead>
+              <TableHead className="text-right">TSN</TableHead>
+              <TableHead className="text-right">Limit</TableHead>
+              <TableHead className="text-right">Remaining</TableHead>
+              <TableHead className="w-[100px]"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {components.length > 0 ? components.map(comp => {
+              const remaining = Math.max(0, comp.maxHours - comp.tsn);
+              return (
+                <TableRow key={comp.id}>
+                  <TableCell>
+                    <p className="font-bold">{comp.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{comp.manufacturer}</p>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">{comp.serialNumber}</TableCell>
+                  <TableCell className="text-right font-mono">{comp.tsn.toFixed(1)}h</TableCell>
+                  <TableCell className="text-right font-mono">{comp.maxHours.toFixed(1)}h</TableCell>
+                  <TableCell className="text-right">
+                    <Badge variant={remaining < 50 ? 'destructive' : 'outline'} className="font-mono font-bold">
+                      {remaining.toFixed(1)}h
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {remaining < 50 && <ShieldAlert className="h-4 w-4 text-destructive" />}
+                  </TableCell>
+                </TableRow>
+              )
+            }) : <TableRow><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">No life-limited components tracked.</TableCell></TableRow>}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
+}
+
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 }
