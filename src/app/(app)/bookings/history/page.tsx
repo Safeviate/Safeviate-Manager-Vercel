@@ -65,7 +65,6 @@ function DeleteBookingButton({ booking }: { booking: EnrichedBooking }) {
     const tenantId = 'safeviate';
 
     const isCompleted = booking.status === 'Completed';
-    // Only admins can delete completed records to maintain audit logs
     const canDelete = hasPermission('bookings-delete') && (!isCompleted || hasPermission('admin-database-manage'));
 
     if (!canDelete) return null;
@@ -208,14 +207,11 @@ export default function BookingsHistoryPage() {
     const aircraftMap = new Map(aircraft.map(a => [a.id, a]));
     const allUsers = [...personnel, ...instructors, ...students, ...privatePilots];
     const userMap = new Map(allUsers.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
-    
-    // Add Special lookup for developer mode
     userMap.set('DEVELOPER_MODE', 'System (Developer)');
 
     return bookings.map(b => {
       const bookingAircraft = aircraftMap.get(b.aircraftId);
       const fullStartTime = b.date && b.startTime ? parse(`${b.date} ${b.startTime}`, 'yyyy-MM-dd HH:mm', new Date()) : undefined;
-      
       return {
         ...b,
         aircraftTailNumber: bookingAircraft?.tailNumber || 'Unknown Aircraft',
@@ -252,21 +248,11 @@ export default function BookingsHistoryPage() {
             </div>
             <CardContent className='p-0'>
                 <ScrollArea className="h-[calc(100vh-21rem)]">
-                    <TabsContent value="all" className='m-0'>
-                        <BookingsTable bookings={enrichedBookings} />
-                    </TabsContent>
-                    <TabsContent value="training" className='m-0'>
-                        <BookingsTable bookings={trainingBookings} />
-                    </TabsContent>
-                    <TabsContent value="private" className='m-0'>
-                        <BookingsTable bookings={privateBookings} />
-                    </TabsContent>
-                    <TabsContent value="maintenance" className='m-0'>
-                        <BookingsTable bookings={maintenanceBookings} />
-                    </TabsContent>
-                    <TabsContent value="cancelled" className='m-0'>
-                        <BookingsTable bookings={cancelledBookings} />
-                    </TabsContent>
+                    <TabsContent value="all" className='m-0'><BookingsTable bookings={enrichedBookings} /></TabsContent>
+                    <TabsContent value="training" className='m-0'><BookingsTable bookings={trainingBookings} /></TabsContent>
+                    <TabsContent value="private" className='m-0'><BookingsTable bookings={privateBookings} /></TabsContent>
+                    <TabsContent value="maintenance" className='m-0'><BookingsTable bookings={maintenanceBookings} /></TabsContent>
+                    <TabsContent value="cancelled" className='m-0'><BookingsTable bookings={cancelledBookings} /></TabsContent>
                 </ScrollArea>
             </CardContent>
         </Tabs>

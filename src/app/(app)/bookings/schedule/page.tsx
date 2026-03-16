@@ -192,7 +192,6 @@ export default function SchedulePage() {
     const slotTime = setMinutes(setHours(selectedDate, hour), 0);
     const currentTime = new Date();
     
-    // Block clicks strictly in the past
     if (isSameDay(selectedDate, currentTime) && hour < getHours(now)) {
         return; 
     }
@@ -200,7 +199,6 @@ export default function SchedulePage() {
         return;
     }
 
-    // If clicking current hour, default start time to 'now' to satisfy future-booking validation
     const isCurrentHourSlot = isSameDay(slotTime, currentTime) && getHours(slotTime) === getHours(now);
     const startTime = isCurrentHourSlot ? now : slotTime;
     
@@ -223,7 +221,7 @@ export default function SchedulePage() {
   const extraLanes = ['', '', ''];
 
   if (isLoading) {
-    return <Skeleton className="h-[600px] w-full" />;
+    return <div className="max-w-[1200px] mx-auto w-full"><Skeleton className="h-[600px] w-full" /></div>;
   }
 
   const isTodaySelected = isSameDay(selectedDate, startOfToday());
@@ -270,7 +268,6 @@ export default function SchedulePage() {
                 <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 220px)' }}>
                     <div className="min-w-full w-fit">
                         
-                        {/* Headers Row */}
                         <div className="flex sticky top-0 z-50 bg-swimlane-header border-b border-white/10">
                             <div className={cn(TIME_COL_WIDTH_CLASS, "flex-shrink-0 flex items-center justify-center font-bold text-[10px] text-swimlane-header-foreground uppercase tracking-wider h-12 bg-swimlane-header border-r")}>
                                 TIME
@@ -291,10 +288,8 @@ export default function SchedulePage() {
                             ))}
                         </div>
 
-                        {/* Schedule Body */}
                         <div className="flex relative">
                             
-                            {/* Time Column Body */}
                             <div className={cn(TIME_COL_WIDTH_CLASS, "flex-shrink-0 border-r bg-swimlane-header/5")}>
                                 {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
                                     <div 
@@ -307,7 +302,6 @@ export default function SchedulePage() {
                                 ))}
                             </div>
 
-                            {/* Main Grid Area */}
                             {(aircraft || []).map((ac) => {
                                 const relevantBookings = (bookings || []).filter(b => {
                                     if (b.isOvernight) {
@@ -363,7 +357,6 @@ export default function SchedulePage() {
                                 </div>
                             ))}
 
-                            {/* Precise Past Mask & Red Line */}
                             {showNowLine && (
                                 <>
                                     <div 

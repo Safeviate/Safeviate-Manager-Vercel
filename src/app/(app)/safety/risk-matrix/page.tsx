@@ -132,7 +132,6 @@ export default function RiskMatrixPage() {
           <ScrollArea className="h-full">
             <div className="p-6 space-y-10 pb-24">
               
-              {/* MATRIX TABLE */}
               <div className="overflow-x-auto max-w-4xl mx-auto border rounded-xl overflow-hidden shadow-sm bg-card">
                 <table className="w-full border-separate" style={{ borderSpacing: 0 }}>
                     <colgroup>
@@ -188,10 +187,8 @@ export default function RiskMatrixPage() {
                 />
               </div>
 
-              {/* DEFINITIONS GRID */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
-                {/* SEVERITY CARD */}
                 <Card className="shadow-none border flex flex-col overflow-hidden">
                   <CardHeader className="py-3 border-b bg-muted/5 shrink-0 flex flex-row items-center justify-between space-y-0">
                     <CardTitle className="text-[10px] uppercase font-black tracking-widest text-primary">Severity Definitions</CardTitle>
@@ -237,7 +234,6 @@ export default function RiskMatrixPage() {
                   </CardContent>
                 </Card>
 
-                {/* LIKELIHOOD CARD */}
                 <Card className="shadow-none border flex flex-col overflow-hidden">
                   <CardHeader className="py-3 border-b bg-muted/5 shrink-0 flex flex-row items-center justify-between space-y-0">
                     <CardTitle className="text-[10px] uppercase font-black tracking-widest text-primary">Likelihood Definitions</CardTitle>
@@ -285,7 +281,8 @@ export default function RiskMatrixPage() {
               </div>
             </div>
           </ScrollArea>
-        </Card>
+        </CardContent>
+      </Card>
     </div>
   );
 }

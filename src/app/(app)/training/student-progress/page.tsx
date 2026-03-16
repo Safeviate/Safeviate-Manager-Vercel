@@ -45,7 +45,7 @@ export default function StudentProgressPage() {
             <p className="text-muted-foreground">Select a student to view their training records and milestones.</p>
         </div>
         {students && students.length > 0 ? (
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-1">
                 {students.map(student => (
                     <Link key={student.id} href={`/training/student-progress/${student.id}`}>
                         <Card className="hover:bg-muted/50 transition-colors h-full shadow-none border">
@@ -64,13 +64,15 @@ export default function StudentProgressPage() {
                 ))}
             </div>
         ) : (
-             <Card className="flex items-center justify-center h-48 shadow-none border">
-                <div className="text-center">
-                    <GraduationCap className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-semibold">No Students Found</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Add students in the Users section to see their progress here.</p>
-                </div>
-            </Card>
+             <div className="px-1">
+                <Card className="flex items-center justify-center h-48 shadow-none border">
+                    <div className="text-center">
+                        <GraduationCap className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <h3 className="mt-4 text-lg font-semibold">No Students Found</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">Add students in the Users section to see their progress here.</p>
+                    </div>
+                </Card>
+             </div>
         )}
     </div>
   );
