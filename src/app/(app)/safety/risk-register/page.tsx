@@ -207,12 +207,12 @@ export default function RiskRegisterPage() {
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh]">
-            <DialogHeader>
+          <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+            <DialogHeader className="p-6 pb-2">
                 <DialogTitle>Edit Hazard</DialogTitle>
                 <DialogDescription>Update hazard details and associated risk assessments.</DialogDescription>
             </DialogHeader>
-            <ScrollArea className="flex-1 pr-4">
+            <ScrollArea className="flex-1 px-6 pb-6 custom-scrollbar">
                 <div className="p-1">
                     <RiskForm
                         hideHeader
