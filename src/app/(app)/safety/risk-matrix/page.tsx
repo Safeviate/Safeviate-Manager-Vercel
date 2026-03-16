@@ -144,7 +144,7 @@ export default function RiskMatrixPage() {
                             {severities.map(s => (
                                 <th key={s.value} className="w-24 border-r border-b border-slate-200 dark:border-slate-700 p-1 text-center align-middle font-bold text-[9px] uppercase tracking-wider bg-muted/30">
                                     <div className="flex flex-col items-center gap-0.5">
-                                        <span>{s.name}</span>
+                                        <span className="truncate w-full">{s.name}</span>
                                         <span className="text-primary font-black">({s.value})</span>
                                     </div>
                                 </th>
