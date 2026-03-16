@@ -27,6 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { cn } from '@/lib/utils';
+import { deleteDocumentNonBlocking } from '@/firebase';
 
 import type { QualityAudit, ExternalOrganization } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
@@ -241,7 +242,7 @@ export default function AuditsPage() {
 
     if (isLoading) {
         return (
-            <div className="space-y-6 max-w-6xl mx-auto w-full">
+            <div className="space-y-6 max-w-[1200px] mx-auto w-full">
                 <Skeleton className="h-10 w-[400px] rounded-full" />
                 <Card>
                     <CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader>
@@ -259,7 +260,7 @@ export default function AuditsPage() {
     const showTabs = isTabEnabled && canViewAll;
 
     return (
-        <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 h-full">
+        <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
             <div className="px-1">
                 <h1 className="text-3xl font-bold tracking-tight">Quality Audits</h1>
                 <p className="text-muted-foreground">Manage internal and external quality assurance activities.</p>

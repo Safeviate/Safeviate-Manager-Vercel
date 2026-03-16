@@ -282,7 +282,6 @@ export default function RiskMatrixPage() {
                     ))}
                   </CardContent>
                 </Card>
-
               </div>
             </div>
           </ScrollArea>

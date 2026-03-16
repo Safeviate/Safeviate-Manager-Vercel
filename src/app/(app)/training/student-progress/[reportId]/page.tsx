@@ -31,7 +31,7 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
 
   if (isLoading) {
     return (
-      <div className="max-w-6xl mx-auto w-full flex flex-col h-full gap-6">
+      <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full gap-6">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-24 w-full" />
         <Skeleton className="flex-1 w-full" />
@@ -40,15 +40,15 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
   }
   
   if (error) {
-      return <div className="max-w-6xl mx-auto w-full text-center py-10 text-destructive">Error: {error.message}</div>
+      return <div className="max-w-[1200px] mx-auto w-full text-center py-10 text-destructive">Error: {error.message}</div>
   }
   
   if (!student) {
-      return <div className="max-w-6xl mx-auto w-full text-center py-10">Student not found.</div>
+      return <div className="max-w-[1200px] mx-auto w-full text-center py-10">Student not found.</div>
   }
 
   return (
-    <div className="max-w-6xl mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
       <div className="shrink-0 px-1">
         <Button asChild variant="outline">
             <Link href="/training/student-progress">

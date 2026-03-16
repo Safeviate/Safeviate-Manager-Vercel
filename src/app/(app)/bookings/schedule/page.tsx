@@ -193,7 +193,7 @@ export default function SchedulePage() {
     const currentTime = new Date();
     
     // Block clicks strictly in the past
-    if (isSameDay(selectedDate, currentTime) && hour < getHours(currentTime)) {
+    if (isSameDay(selectedDate, currentTime) && hour < getHours(now)) {
         return; 
     }
     if (isBefore(selectedDate, startOfDay(currentTime))) {
@@ -201,8 +201,8 @@ export default function SchedulePage() {
     }
 
     // If clicking current hour, default start time to 'now' to satisfy future-booking validation
-    const isCurrentHourSlot = isSameDay(slotTime, currentTime) && getHours(slotTime) === getHours(currentTime);
-    const startTime = isCurrentHourSlot ? currentTime : slotTime;
+    const isCurrentHourSlot = isSameDay(slotTime, currentTime) && getHours(slotTime) === getHours(now);
+    const startTime = isCurrentHourSlot ? now : slotTime;
     
     const allBookingsForAircraft = allBookings?.filter(b => b.aircraftId === ac.id) || [];
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, useDoc } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, writeBatch, doc, deleteDoc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -391,7 +391,7 @@ export default function CoherenceMatrixPage() {
 
   if (isLoading) {
     return (
-        <div className="max-w-6xl mx-auto w-full space-y-6">
+        <div className="max-w-[1200px] mx-auto w-full space-y-6">
             <Skeleton className="h-10 w-[400px] rounded-full" />
             <Skeleton className="h-[500px] w-full" />
         </div>
@@ -402,7 +402,7 @@ export default function CoherenceMatrixPage() {
   const showTabs = isTabEnabled && canManageAll;
 
   return (
-    <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 h-full">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
         <div className="px-1">
             <h1 className="text-3xl font-bold tracking-tight">Coherence Matrix</h1>
             <p className="text-muted-foreground">Manage and track regulatory compliance across organizations.</p>

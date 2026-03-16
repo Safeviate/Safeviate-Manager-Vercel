@@ -23,7 +23,7 @@ export default function StudentProgressPage() {
 
   if (isLoadingStudents) {
     return (
-        <div className="max-w-6xl mx-auto w-full space-y-6">
+        <div className="max-w-[1200px] mx-auto w-full space-y-6">
             <Skeleton className="h-10 w-48" />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <Skeleton className="h-32" />
@@ -35,11 +35,11 @@ export default function StudentProgressPage() {
   }
 
   if (error) {
-      return <p className="max-w-6xl mx-auto w-full text-destructive text-center p-8">Error: {error.message}</p>
+      return <p className="max-w-[1200px] mx-auto w-full text-destructive text-center p-8">Error: {error.message}</p>
   }
 
   return (
-    <div className="max-w-6xl mx-auto w-full space-y-6">
+    <div className="max-w-[1200px] mx-auto w-full space-y-6">
         <div className="px-1">
             <h1 className="text-3xl font-bold tracking-tight">Student Progress</h1>
             <p className="text-muted-foreground">Select a student to view their training records and milestones.</p>
