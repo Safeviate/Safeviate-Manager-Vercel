@@ -3,28 +3,30 @@
 
 import * as React from 'react';
 import { collection, query, doc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlusCircle, Edit, ShieldAlert } from 'lucide-react';
+import { PlusCircle, Edit, ShieldAlert, Settings2, Trash2, Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Risk, Mitigation } from '@/types/risk';
+import type { Risk, Mitigation, RiskRegisterSettings } from '@/types/risk';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import type { ExternalOrganization } from '@/types/quality';
 import { format } from 'date-fns';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { RiskForm } from './risk-form';
 import { getRiskScoreStyle, getAlphanumericRisk } from './utils';
 import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import type { TabVisibilitySettings } from '../../admin/external/page';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 
-const HAZARD_AREAS = [
+const DEFAULT_HAZARD_AREAS = [
     'Flight Operations', 
     'Ground Operations',
     'Maintenance', 
@@ -33,6 +35,82 @@ const HAZARD_AREAS = [
     'Security', 
     'Administration & Management'
 ];
+
+function ManageAreasDialog({ tenantId, settings }: { tenantId: string, settings: RiskRegisterSettings | null }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [newArea, setNewArea] = React.useState('');
+    const [areas, setAreas] = React.useState<string[]>([]);
+
+    React.useEffect(() => {
+        setAreas(settings?.hazardAreas || DEFAULT_HAZARD_AREAS);
+    }, [settings]);
+
+    const handleAdd = () => {
+        if (newArea.trim() && !areas.includes(newArea.trim())) {
+            const updated = [...areas, newArea.trim()];
+            setAreas(updated);
+            save(updated);
+            setNewArea('');
+        }
+    };
+
+    const handleRemove = (areaToRemove: string) => {
+        const updated = areas.filter(a => a !== areaToRemove);
+        setAreas(updated);
+        save(updated);
+    };
+
+    const save = (updatedAreas: string[]) => {
+        if (!firestore) return;
+        const settingsRef = doc(firestore, `tenants/${tenantId}/settings`, 'risk-register-config');
+        setDocumentNonBlocking(settingsRef, { id: 'risk-register-config', hazardAreas: updatedAreas }, { merge: true });
+        toast({ title: 'Hazard Areas Updated' });
+    };
+
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-2">
+                    <Settings2 className="h-3.5 w-3.5" />
+                    Manage Areas
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Risk Register Categories</DialogTitle>
+                    <DialogDescription>Add or remove the menu tabs used to organize your hazard register.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="flex gap-2">
+                        <Input 
+                            placeholder="New area name..." 
+                            value={newArea} 
+                            onChange={(e) => setNewArea(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+                        />
+                        <Button size="icon" onClick={handleAdd} disabled={!newArea.trim()}>
+                            <Plus className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                        {areas.map(area => (
+                            <div key={area} className="flex items-center justify-between p-2 rounded-md bg-muted/50 border">
+                                <span className="text-sm font-medium">{area}</span>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleRemove(area)}>
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 export default function RiskRegisterPage() {
   const firestore = useFirestore();
@@ -65,17 +143,27 @@ export default function RiskRegisterPage() {
     [firestore, tenantId]
   );
 
+  const registerSettingsRef = useMemoFirebase(
+    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'risk-register-config') : null),
+    [firestore, tenantId]
+  );
+
   const { data: allRisks, isLoading: isLoadingRisks } = useCollection<Risk>(risksQuery);
   const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
   const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
   const { data: visibilitySettings, isLoading: isLoadingVisibility } = useDoc<TabVisibilitySettings>(visibilitySettingsRef);
+  const { data: registerSettings, isLoading: isLoadingSettings } = useDoc<RiskRegisterSettings>(registerSettingsRef);
+
+  const hazardAreas = React.useMemo(() => {
+      return registerSettings?.hazardAreas || DEFAULT_HAZARD_AREAS;
+  }, [registerSettings]);
 
   const personnelMap = React.useMemo(() => {
     if (!personnel) return new Map<string, string>();
     return new Map(personnel.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
   }, [personnel]);
   
-  const isLoading = isLoadingRisks || isLoadingPersonnel || isLoadingOrgs || isLoadingVisibility;
+  const isLoading = isLoadingRisks || isLoadingPersonnel || isLoadingOrgs || isLoadingVisibility || isLoadingSettings;
   
   const handleEditClick = (risk: Risk) => {
     setEditingRisk(risk);
@@ -87,6 +175,10 @@ export default function RiskRegisterPage() {
         orgId === 'internal' ? !r.organizationId : r.organizationId === orgId
     );
 
+    // Filter hazards that don't match any of the current dynamic areas
+    const uncategorizedRisks = orgRisks.filter(r => !hazardAreas.includes(r.hazardArea) && r.status === 'Open');
+    const displayAreas = uncategorizedRisks.length > 0 ? [...hazardAreas, 'Uncategorized'] : hazardAreas;
+
     return (
         <Card className="min-h-[500px] flex flex-col shadow-none border">
             <CardHeader className="bg-muted/10 border-b">
@@ -95,18 +187,21 @@ export default function RiskRegisterPage() {
                         <CardTitle>{orgId === 'internal' ? 'Internal Risk Register' : organizations?.find(o => o.id === orgId)?.name}</CardTitle>
                         <CardDescription>Identified hazards and risk management status for this organization.</CardDescription>
                     </div>
-                    <Button asChild size="sm">
-                        <Link href={`/safety/risk-register/new?orgId=${orgId}`}>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Add Hazard
-                        </Link>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <ManageAreasDialog tenantId={tenantId!} settings={registerSettings} />
+                        <Button asChild size="sm">
+                            <Link href={`/safety/risk-register/new?orgId=${orgId}`}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Add Hazard
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="p-6">
-                <Tabs defaultValue={HAZARD_AREAS[0]}>
+                <Tabs defaultValue={displayAreas[0]}>
                     <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
-                        {HAZARD_AREAS.map(area => (
+                        {displayAreas.map(area => (
                             <TabsTrigger 
                                 key={area} 
                                 value={area} 
@@ -116,8 +211,11 @@ export default function RiskRegisterPage() {
                             </TabsTrigger>
                         ))}
                     </TabsList>
-                    {HAZARD_AREAS.map(area => {
-                        const areaRisks = orgRisks.filter(r => r.hazardArea === area && r.status === 'Open');
+                    {displayAreas.map(area => {
+                        const areaRisks = area === 'Uncategorized' 
+                            ? uncategorizedRisks 
+                            : orgRisks.filter(r => r.hazardArea === area && r.status === 'Open');
+                            
                         return (
                             <TabsContent key={area} value={area} className="mt-0">
                                 <div className="rounded-md border overflow-hidden">

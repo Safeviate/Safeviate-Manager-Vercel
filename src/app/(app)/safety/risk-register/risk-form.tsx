@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray, Controller, FormProvider, useFormContext } from 'react-hook-form';
@@ -12,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useRouter } from 'next/navigation';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
-import type { Risk, RiskItem, Mitigation, RiskMatrixSettings } from '@/types/risk';
+import type { Risk, RiskItem, Mitigation, RiskMatrixSettings, RiskRegisterSettings } from '@/types/risk';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
@@ -26,7 +27,7 @@ import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc
 import { doc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
-const HAZARD_AREAS: Risk['hazardArea'][] = [
+const DEFAULT_HAZARD_AREAS = [
     'Flight Operations', 
     'Ground Operations',
     'Maintenance', 
@@ -60,7 +61,7 @@ const riskItemSchema: z.ZodType<Omit<RiskItem, 'mitigations'> & { mitigations: z
 }));
 
 const formSchema = z.object({
-  hazardArea: z.enum(HAZARD_AREAS, { required_error: 'Hazard area is required.' }),
+  hazardArea: z.string().min(1, 'Hazard area is required.'),
   hazard: z.string().min(1, 'Hazard description is required.'),
   risks: z.array(riskItemSchema).min(1, "At least one risk must be added."),
 });
@@ -71,7 +72,7 @@ export type RiskFormValues = z.infer<typeof formSchema>;
 const mapDatesToObjects = (risk?: Risk | null): RiskFormValues => {
     if (!risk) {
         return {
-            hazardArea: 'Flight Operations',
+            hazardArea: '',
             hazard: '',
             risks: [],
         };
@@ -275,6 +276,13 @@ export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false
 
   const riskMatrixRef = useMemoFirebase(() => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-matrix-config') : null), [firestore, tenantId]);
   const { data: riskMatrixSettings } = useDoc<RiskMatrixSettings>(riskMatrixRef);
+  
+  const riskRegisterSettingsRef = useMemoFirebase(() => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-register-config') : null), [firestore, tenantId]);
+  const { data: registerSettings } = useDoc<RiskRegisterSettings>(riskRegisterSettingsRef);
+
+  const hazardAreas = React.useMemo(() => {
+      return registerSettings?.hazardAreas || DEFAULT_HAZARD_AREAS;
+  }, [registerSettings]);
 
   const form = useForm<RiskFormValues>({
     resolver: zodResolver(formSchema),
@@ -328,7 +336,7 @@ export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false
             </CardHeader>
           )}
           <CardContent className="px-0 space-y-6">
-            <FormField control={form.control} name="hazardArea" render={({ field }) => ( <FormItem><FormLabel>Hazard Area</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a hazard area" /></SelectTrigger></FormControl><SelectContent>{HAZARD_AREAS.map(area => ( <SelectItem key={area} value={area}>{area}</SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="hazardArea" render={({ field }) => ( <FormItem><FormLabel>Hazard Area</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a hazard area" /></SelectTrigger></FormControl><SelectContent>{hazardAreas.map(area => ( <SelectItem key={area} value={area}>{area}</SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="hazard" render={({ field }) => ( <FormItem><FormLabel>Hazard Identification</FormLabel><FormControl><Textarea placeholder="Describe the identifiable hazard (e.g., Unstable approach conditions)..." {...field} /></FormControl><FormMessage /></FormItem> )} />
             <Separator />
             <div className="space-y-4">

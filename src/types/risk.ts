@@ -17,7 +17,7 @@ export interface RiskItem {
 
 export type Risk = { // This is the top-level document, which is a Hazard
     id: string;
-    hazardArea: 'Flight Operations' | 'Ground Operations' | 'Maintenance' | 'Cabin Safety' | 'Occupational Safety' | 'Security' | 'Administration & Management';
+    hazardArea: string; // Relaxed to string to support dynamic areas
     hazard: string;
     status: 'Open' | 'Closed' | 'Archived';
     risks: RiskItem[];
@@ -29,4 +29,9 @@ export interface RiskMatrixSettings {
     colors: Record<string, string>;
     likelihoodDefinitions?: { name: string; description: string; value: number }[];
     severityDefinitions?: { name: string; description: string; value: string }[];
+}
+
+export interface RiskRegisterSettings {
+    id: string;
+    hazardAreas: string[];
 }
