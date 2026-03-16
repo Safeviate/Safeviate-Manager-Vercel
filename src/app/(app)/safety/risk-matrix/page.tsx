@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Pencil, Check } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const defaultLikelihoods = [
     { name: 'Frequent', description: 'Likely to occur many times (has happened frequently).', value: 5 },
@@ -119,7 +120,12 @@ export default function RiskMatrixPage() {
   };
 
   if (isLoading) {
-    return <div className="max-w-[1200px] mx-auto w-full"><Skeleton className="h-[600px] w-full" /></div>;
+    return (
+      <div className="max-w-[1200px] mx-auto w-full space-y-6">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-[600px] w-full" />
+      </div>
+    );
   }
 
   return (
