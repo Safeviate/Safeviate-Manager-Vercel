@@ -119,11 +119,7 @@ export default function RiskMatrixPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="max-w-[1200px] mx-auto w-full px-1">
-        <Skeleton className="h-[600px] w-full" />
-      </div>
-    );
+    return <div className="max-w-[1200px] mx-auto w-full px-1"><Skeleton className="h-[600px] w-full" /></div>;
   }
 
   return (
@@ -138,9 +134,9 @@ export default function RiskMatrixPage() {
         
         <CardContent className="flex-1 p-0 overflow-hidden">
           <ScrollArea className="h-full custom-scrollbar">
-            <div className="p-6 space-y-10 pb-24">
+            <div className="p-6 space-y-10 pb-24 text-center">
               
-              <div className="overflow-x-auto border rounded-xl overflow-hidden shadow-sm bg-card w-fit mx-auto">
+              <div className="inline-block overflow-x-auto border rounded-xl overflow-hidden shadow-sm bg-card mx-auto">
                 <table className="table-fixed border-separate" style={{ borderSpacing: 0 }}>
                     <thead>
                         <tr className="h-14">
@@ -149,7 +145,7 @@ export default function RiskMatrixPage() {
                                 <th key={s.value} className="w-24 border-r border-b border-slate-200 dark:border-slate-700 p-1 text-center align-middle font-bold text-[9px] uppercase tracking-wider bg-muted/30">
                                     <div className="flex flex-col items-center gap-0.5">
                                         <span>{s.name}</span>
-                                        <span className="text-primary">({s.value})</span>
+                                        <span className="text-primary font-black">({s.value})</span>
                                     </div>
                                 </th>
                             ))}
@@ -190,7 +186,7 @@ export default function RiskMatrixPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                 
                 <Card className="shadow-none border flex flex-col overflow-hidden">
                   <CardHeader className="py-3 border-b bg-muted/5 shrink-0 flex flex-row items-center justify-between space-y-0">
