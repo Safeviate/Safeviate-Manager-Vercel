@@ -1,68 +1,58 @@
 'use client';
 
 import { use, useState, useMemo } from 'react';
+import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy, arrayUnion } from 'firebase/firestore';
-import { useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
-import { ArrowLeft, PlusCircle, Trash2, FileText, Settings, History, ClipboardCheck, Clock } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { 
+  PlusCircle, 
+  Trash2, 
+  ArrowLeft, 
+  Wrench, 
+  FileText, 
+  Activity, 
+  History, 
+  CheckCircle2, 
+  AlertTriangle,
+  Clock,
+  Settings2,
+  CalendarDays,
+  FilePlus,
+  Upload
+} from 'lucide-react';
 import Link from 'next/link';
-import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { DocumentUploader } from '@/components/document-uploader';
-import { Progress } from '@/components/ui/progress';
-import { v4 as uuidv4 } from 'uuid';
 import type { Aircraft, AircraftComponent } from '@/types/aircraft';
 import type { MaintenanceLog } from '@/types/maintenance';
+import { updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface AircraftDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-const componentSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  manufacturer: z.string().min(1, 'Manufacturer is required'),
-  partNumber: z.string().min(1, 'Part number is required'),
-  serialNumber: z.string().min(1, 'Serial number is required'),
-  installDate: z.string().min(1, 'Install date is required'),
-  installHours: z.coerce.number().min(0),
-  maxHours: z.coerce.number().min(0),
+const componentFormSchema = z.object({
+  name: z.string().min(1, "Name is required."),
+  serialNumber: z.string().min(1, "Serial number is required."),
+  installHours: z.number({ coerce: true }).min(0),
+  maxHours: z.number({ coerce: true }).min(1),
   notes: z.string().optional(),
 });
 
-const logSchema = z.object({
-  maintenanceType: z.string().min(1, 'Type is required'),
-  date: z.string().min(1, 'Date is required'),
-  details: z.string().min(1, 'Details are required'),
-  reference: z.string().optional(),
-  ameNo: z.string().optional(),
-  amoNo: z.string().optional(),
-});
+type ComponentFormValues = z.infer<typeof componentFormSchema>;
 
 export default function AircraftDetailPage({ params }: AircraftDetailPageProps) {
   const resolvedParams = use(params);
@@ -84,76 +74,59 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
   const { data: aircraft, isLoading: isLoadingAircraft } = useDoc<Aircraft>(aircraftRef);
   const { data: logs, isLoading: isLoadingLogs } = useCollection<MaintenanceLog>(logsQuery);
 
-  const [isAddComponentOpen, setIsAddComponentOpen] = useState(false);
-  const [isAddLogOpen, setIsAddLogOpen] = useState(false);
+  const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
+  const [isComponentDialogOpen, setIsComponentDialogOpen] = useState(false);
 
-  const componentForm = useForm<z.infer<typeof componentSchema>>({
-    resolver: zodResolver(componentSchema),
-    defaultValues: {
-      name: '',
-      manufacturer: '',
-      partNumber: '',
-      serialNumber: '',
-      installDate: new Date().toISOString().split('T')[0],
-      installHours: 0,
-      maxHours: 0,
-      notes: '',
-    },
+  // --- Maintenance Log Form ---
+  const logForm = useForm({
+    defaultValues: { maintenanceType: '', details: '', reference: '', date: format(new Date(), 'yyyy-MM-dd') }
   });
 
-  const logForm = useForm<z.infer<typeof logSchema>>({
-    resolver: zodResolver(logSchema),
-    defaultValues: {
-      maintenanceType: '',
-      date: new Date().toISOString().split('T')[0],
-      details: '',
-      reference: '',
-      ameNo: '',
-      amoNo: '',
-    },
-  });
-
-  const handleAddComponent = (values: z.infer<typeof componentSchema>) => {
-    if (!firestore || !aircraftRef) return;
-
-    const newComponent: AircraftComponent = {
-      ...values,
-      id: uuidv4(),
-      tsn: 0,
-      tso: 0,
-      totalTime: values.installHours,
-      installDate: values.installDate,
-      notes: values.notes || '',
-    };
-
-    updateDocumentNonBlocking(aircraftRef, {
-      components: arrayUnion(newComponent),
-    });
-
-    toast({ title: 'Component Added' });
-    setIsAddComponentOpen(false);
-    componentForm.reset();
-  };
-
-  const handleAddLog = (values: z.infer<typeof logSchema>) => {
+  const onAddLog = (values: any) => {
     if (!firestore) return;
-
-    const logsRef = collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`);
-    addDocumentNonBlocking(logsRef, values);
-
-    toast({ title: 'Log Added' });
-    setIsAddLogOpen(false);
+    const logsCol = collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`);
+    addDocumentNonBlocking(logsCol, { ...values, aircraftId, createdAt: new Date().toISOString() });
+    toast({ title: "Log Added", description: "Maintenance log has been recorded." });
+    setIsLogDialogOpen(false);
     logForm.reset();
   };
 
-  const onDocumentUploaded = (docDetails: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => {
+  // --- Component Form ---
+  const componentForm = useForm<ComponentFormValues>({
+    resolver: zodResolver(componentFormSchema),
+    defaultValues: { name: '', serialNumber: '', installHours: 0, maxHours: 1000, notes: '' }
+  });
+
+  const onAddComponent = (values: ComponentFormValues) => {
     if (!firestore || !aircraftRef) return;
+    
+    const newComponent: AircraftComponent = {
+      ...values,
+      id: uuidv4(),
+      manufacturer: '',
+      partNumber: '',
+      installDate: new Date().toISOString(),
+      tsn: values.installHours,
+      tso: 0,
+      totalTime: values.installHours,
+      notes: values.notes || ''
+    };
 
     updateDocumentNonBlocking(aircraftRef, {
-      documents: arrayUnion(docDetails),
+      components: arrayUnion(newComponent)
     });
 
-    toast({ title: 'Document Uploaded' });
+    toast({ title: "Component Added", description: `"${values.name}" is now being tracked.` });
+    setIsComponentDialogOpen(false);
+    componentForm.reset();
+  };
+
+  const onUploadDocument = (docDetails: any) => {
+    if (!aircraftRef) return;
+    updateDocumentNonBlocking(aircraftRef, {
+      documents: arrayUnion(docDetails)
+    });
+    toast({ title: "Document Saved" });
   };
 
   if (isLoadingAircraft) {
@@ -165,110 +138,112 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
     );
   }
 
-  if (!aircraft) {
-    return <div className="max-w-[1200px] mx-auto w-full p-8 text-center">Aircraft not found.</div>;
-  }
+  if (!aircraft) return <div className="p-10 text-center">Aircraft not found.</div>;
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
-      <div className="flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
-          <Button asChild variant="outline" size="icon">
-            <Link href="/assets/aircraft"><ArrowLeft className="h-4 w-4" /></Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{aircraft.tailNumber}</h1>
-            <p className="text-muted-foreground">{aircraft.make} {aircraft.model} • {aircraft.type}</p>
-          </div>
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-6">
+      <div className="flex justify-between items-center px-1">
+        <Button asChild variant="outline">
+          <Link href="/assets/aircraft">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Fleet
+          </Link>
+        </Button>
+        <div className="flex items-center gap-2">
+            <Badge variant="outline" className="h-8 px-3 font-mono">
+                Hobbs: {aircraft.currentHobbs?.toFixed(1) || '0.0'}
+            </Badge>
+            <Badge variant="outline" className="h-8 px-3 font-mono">
+                Tacho: {aircraft.currentTacho?.toFixed(1) || '0.0'}
+            </Badge>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 shrink-0">
-        <Card>
-          <CardHeader className="py-4">
-            <CardTitle className="text-xs uppercase font-bold text-muted-foreground">Hobbs Hours</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{aircraft.currentHobbs?.toFixed(1) || '0.0'}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="py-4">
-            <CardTitle className="text-xs uppercase font-bold text-muted-foreground">Tacho Hours</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{aircraft.currentTacho?.toFixed(1) || '0.0'}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="py-4">
-            <CardTitle className="text-xs uppercase font-bold text-muted-foreground">Next 50hr Inspection</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{aircraft.tachoAtNext50Inspection?.toFixed(1) || 'N/A'}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="maintenance" className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <TabsList className="bg-transparent h-auto p-0 gap-2 mb-4 border-b-0 justify-start shrink-0">
-          <TabsTrigger value="maintenance" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Maintenance Logs</TabsTrigger>
-          <TabsTrigger value="documents" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Technical Documents</TabsTrigger>
-          <TabsTrigger value="components" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Component Tracker</TabsTrigger>
-        </TabsList>
-
-        <div className="flex-1 overflow-hidden min-h-0">
-          <TabsContent value="maintenance" className="m-0 h-full">
-            <Card className="h-full flex flex-col shadow-none border overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/5 shrink-0">
-                <div>
-                  <CardTitle className="text-lg">Maintenance History</CardTitle>
-                  <CardDescription>Chronological record of all service and inspections.</CardDescription>
+      <Card className="shadow-none border bg-muted/5 shrink-0">
+        <CardHeader className="py-4">
+          <div className="flex justify-between items-start">
+            <div className="space-y-1">
+              <CardTitle className="text-2xl">{aircraft.tailNumber}</CardTitle>
+              <CardDescription>{aircraft.make} {aircraft.model} • {aircraft.type}</CardDescription>
+            </div>
+            <div className="text-right">
+                <p className="text-[10px] uppercase font-bold text-muted-foreground">Status</p>
+                <div className="flex items-center gap-1.5 text-green-600 font-bold">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Airworthy</span>
                 </div>
-                <Dialog open={isAddLogOpen} onOpenChange={setIsAddLogOpen}>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      <Tabs defaultValue="maintenance" className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="px-1 shrink-0">
+          <TabsList className="bg-transparent h-auto p-0 gap-2 mb-4 border-b-0 justify-start w-full flex overflow-x-auto no-scrollbar">
+            <TabsTrigger value="maintenance" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Maintenance Logs</TabsTrigger>
+            <TabsTrigger value="documents" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Technical Documents</TabsTrigger>
+            <TabsTrigger value="components" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Component Tracker</TabsTrigger>
+          </TabsList>
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-hidden px-1">
+          {/* --- Maintenance Content --- */}
+          <TabsContent value="maintenance" className="m-0 h-full">
+            <Card className="h-full flex flex-col overflow-hidden shadow-none border">
+              <CardHeader className="border-b py-3 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-sm uppercase font-black tracking-widest text-primary">Technical Log History</CardTitle>
+                <Dialog open={isLogDialogOpen} onOpenChange={setIsLogDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Log Entry</Button>
+                    <Button size="sm" className="h-8 gap-2"><PlusCircle className="h-3.5 w-3.5" /> Add Log Entry</Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Add Maintenance Log</DialogTitle>
+                      <DialogTitle>Record Maintenance</DialogTitle>
+                      <DialogDescription>Add a new entry to the aircraft's technical maintenance log.</DialogDescription>
                     </DialogHeader>
-                    <Form {...logForm}>
-                      <form onSubmit={logForm.handleSubmit(handleAddLog)} className="space-y-4 pt-4">
-                        <FormField control={logForm.control} name="maintenanceType" render={({ field }) => (
-                          <FormItem><FormLabel>Type</FormLabel><FormControl><Input placeholder="e.g., 50hr Inspection" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={logForm.control} name="date" render={({ field }) => (
-                          <FormItem><FormLabel>Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={logForm.control} name="details" render={({ field }) => (
-                          <FormItem><FormLabel>Details</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <DialogFooter><Button type="submit">Save Log</Button></DialogFooter>
-                      </form>
-                    </Form>
+                    <form onSubmit={logForm.handleSubmit(onAddLog)} className="space-y-4 pt-4">
+                      <div className="space-y-2">
+                        <Label>Maintenance Type</Label>
+                        <Input placeholder="e.g., 50 Hour Inspection, Oil Change" {...logForm.register('maintenanceType')} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Date</Label>
+                        <Input type="date" {...logForm.register('date')} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Details</Label>
+                        <Textarea placeholder="Describe work performed..." {...logForm.register('details')} className="min-h-32" />
+                      </div>
+                      <DialogFooter>
+                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                        <Button type="submit">Save Entry</Button>
+                      </DialogFooter>
+                    </form>
                   </DialogContent>
                 </Dialog>
               </CardHeader>
-              <CardContent className="p-0 overflow-auto">
+              <CardContent className="p-0 flex-1 overflow-auto custom-scrollbar">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-muted/30">
                     <TableRow>
-                      <TableHead>Date</TableHead>
+                      <TableHead className="w-32">Date</TableHead>
+                      <TableHead>Work Performed</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Details</TableHead>
+                      <TableHead className="text-right">Reference</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(logs || []).map(log => (
+                    {logs?.map(log => (
                       <TableRow key={log.id}>
-                        <TableCell className="whitespace-nowrap">{format(new Date(log.date), 'dd MMM yyyy')}</TableCell>
-                        <TableCell className="font-semibold">{log.maintenanceType}</TableCell>
-                        <TableCell className="max-w-md truncate">{log.details}</TableCell>
+                        <TableCell className="font-medium whitespace-nowrap">{log.date}</TableCell>
+                        <TableCell className="max-w-md truncate" title={log.details}>{log.details}</TableCell>
+                        <TableCell><Badge variant="secondary" className="text-[10px]">{log.maintenanceType}</Badge></TableCell>
+                        <TableCell className="text-right font-mono text-xs">{log.reference || 'N/A'}</TableCell>
                       </TableRow>
                     ))}
                     {(!logs || logs.length === 0) && !isLoadingLogs && (
-                      <TableRow><TableCell colSpan={3} className="text-center py-10 text-muted-foreground italic">No maintenance logs found.</TableCell></TableRow>
+                      <TableRow>
+                        <TableCell colSpan={4} className="h-24 text-center text-muted-foreground italic">No logs recorded.</TableCell>
+                      </TableRow>
                     )}
                   </TableBody>
                 </Table>
@@ -276,119 +251,123 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
             </Card>
           </TabsContent>
 
+          {/* --- Documents Content --- */}
           <TabsContent value="documents" className="m-0 h-full">
-            <Card className="h-full flex flex-col shadow-none border overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/5 shrink-0">
-                <div>
-                  <CardTitle className="text-lg">Technical Documents</CardTitle>
-                  <CardDescription>C of A, Insurance, and other mandatory compliance files.</CardDescription>
-                </div>
+            <Card className="h-full flex flex-col overflow-hidden shadow-none border">
+              <CardHeader className="border-b py-3 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-sm uppercase font-black tracking-widest text-primary">Compliance Documents</CardTitle>
                 <DocumentUploader
-                  onDocumentUploaded={onDocumentUploaded}
-                  trigger={(open) => (
-                    <Button size="sm" onClick={() => open()} variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Document</Button>
-                  )}
+                  onDocumentUploaded={onUploadDocument}
+                  trigger={(open) => <Button size="sm" onClick={() => open()} variant="outline" className="h-8 gap-2"><Upload className="h-3.5 w-3.5" /> Upload File</Button>}
                 />
               </CardHeader>
-              <CardContent className="p-0">
+              <CardContent className="p-0 flex-1 overflow-auto custom-scrollbar">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-muted/30">
                     <TableRow>
                       <TableHead>Document Name</TableHead>
                       <TableHead>Upload Date</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(aircraft.documents || []).map((doc, idx) => (
+                    {aircraft.documents?.map((doc, idx) => (
                       <TableRow key={idx}>
                         <TableCell className="font-semibold">{doc.name}</TableCell>
-                        <TableCell>{format(new Date(doc.uploadDate), 'dd MMM yyyy')}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{doc.uploadDate ? format(new Date(doc.uploadDate), 'PPP') : 'N/A'}</TableCell>
+                        <TableCell><Badge className="bg-green-500">Active</Badge></TableCell>
                         <TableCell className="text-right">
-                          <Button asChild variant="ghost" size="sm"><Link href={doc.url} target="_blank">View</Link></Button>
+                          <Button variant="ghost" size="sm" asChild><a href={doc.url} target="_blank" rel="noopener noreferrer">View</a></Button>
                         </TableCell>
                       </TableRow>
                     ))}
+                    {(!aircraft.documents || aircraft.documents.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="h-24 text-center text-muted-foreground italic">No documents uploaded.</TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
           </TabsContent>
 
+          {/* --- Components Content --- */}
           <TabsContent value="components" className="m-0 h-full">
-            <Card className="h-full flex flex-col shadow-none border overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/5 shrink-0">
-                <div>
-                  <CardTitle className="text-lg">Component Tracker</CardTitle>
-                  <CardDescription>Track life limits for critical serialized components.</CardDescription>
-                </div>
-                <Dialog open={isAddComponentOpen} onOpenChange={setIsAddComponentOpen}>
+            <Card className="h-full flex flex-col overflow-hidden shadow-none border">
+              <CardHeader className="border-b py-3 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-sm uppercase font-black tracking-widest text-primary">Serialized Item Tracker</CardTitle>
+                <Dialog open={isComponentDialogOpen} onOpenChange={setIsComponentDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Component</Button>
+                    <Button size="sm" className="h-8 gap-2"><PlusCircle className="h-3.5 w-3.5" /> Track Component</Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader><DialogTitle>Track New Component</DialogTitle></DialogHeader>
-                    <Form {...componentForm}>
-                      <form onSubmit={componentForm.handleSubmit(handleAddComponent)} className="space-y-4 pt-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField control={componentForm.control} name="name" render={({ field }) => (
-                            <FormItem><FormLabel>Component Name</FormLabel><FormControl><Input placeholder="e.g., Engine" {...field} /></FormControl><FormMessage /></FormItem>
-                          )} />
-                          <FormField control={componentForm.control} name="manufacturer" render={({ field }) => (
-                            <FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                          )} />
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Serialized Item</DialogTitle>
+                      <DialogDescription>Begin lifecycle tracking for a new aircraft component.</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={componentForm.handleSubmit(onAddComponent)} className="space-y-4 pt-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Component Name</Label>
+                          <Input placeholder="e.g., Engine, Propeller" {...componentForm.register('name')} />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField control={componentForm.control} name="partNumber" render={({ field }) => (
-                            <FormItem><FormLabel>Part #</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                          )} />
-                          <FormField control={componentForm.control} name="serialNumber" render={({ field }) => (
-                            <FormItem><FormLabel>Serial #</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                          )} />
+                        <div className="space-y-2">
+                          <Label>Serial Number</Label>
+                          <Input placeholder="S/N..." {...componentForm.register('serialNumber')} />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField control={componentForm.control} name="installHours" render={({ field }) => (
-                            <FormItem><FormLabel>Installed at (Hours)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
-                          )} />
-                          <FormField control={componentForm.control} name="maxHours" render={({ field }) => (
-                            <FormItem><FormLabel>Life Limit (Hours)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
-                          )} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Current Time (Hours)</Label>
+                          <Input type="number" step="0.1" {...componentForm.register('installHours', { valueAsNumber: true })} />
                         </div>
-                        <FormField control={componentForm.control} name="installDate" render={({ field }) => (
-                          <FormItem><FormLabel>Install Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <DialogFooter><Button type="submit">Track Component</Button></DialogFooter>
-                      </form>
-                    </Form>
+                        <div className="space-y-2">
+                          <Label>Life Limit (Hours)</Label>
+                          <Input type="number" step="0.1" {...componentForm.register('maxHours', { valueAsNumber: true })} />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                        <Button type="submit">Start Tracking</Button>
+                      </DialogFooter>
+                    </form>
                   </DialogContent>
                 </Dialog>
               </CardHeader>
-              <CardContent className="p-0 overflow-auto">
+              <CardContent className="p-0 flex-1 overflow-auto custom-scrollbar">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-muted/30">
                     <TableRow>
                       <TableHead>Component</TableHead>
-                      <TableHead>Serial #</TableHead>
-                      <TableHead className="text-right">TSN</TableHead>
+                      <TableHead>Serial No.</TableHead>
+                      <TableHead className="text-right">Current TSN</TableHead>
+                      <TableHead className="text-right">Limit</TableHead>
                       <TableHead className="text-right">Remaining</TableHead>
-                      <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(aircraft.components || []).map(comp => {
-                      const tsn = (aircraft.currentHobbs || 0) - comp.installHours + comp.tsn;
-                      const remaining = comp.maxHours - tsn;
-                      const progress = Math.min((tsn / comp.maxHours) * 100, 100);
+                    {aircraft.components?.map(comp => {
+                      const remaining = Math.max(0, comp.maxHours - comp.tsn);
+                      const isCritical = remaining < 50;
                       return (
                         <TableRow key={comp.id}>
-                          <TableCell className="font-semibold">{comp.name}</TableCell>
-                          <TableCell className="text-xs font-mono">{comp.serialNumber}</TableCell>
-                          <TableCell className="text-right font-mono">{tsn.toFixed(1)}</TableCell>
-                          <TableCell className="text-right font-mono">{remaining.toFixed(1)}</TableCell>
-                          <TableCell className="w-[150px]"><Progress value={progress} className="h-2" /></TableCell>
+                          <TableCell className="font-bold">{comp.name}</TableCell>
+                          <TableCell className="font-mono text-xs">{comp.serialNumber}</TableCell>
+                          <TableCell className="text-right font-mono">{comp.tsn.toFixed(1)}</TableCell>
+                          <TableCell className="text-right font-mono text-muted-foreground">{comp.maxHours.toFixed(1)}</TableCell>
+                          <TableCell className={cn("text-right font-black font-mono", isCritical ? "text-red-600" : "text-primary")}>
+                            {remaining.toFixed(1)}h
+                          </TableCell>
                         </TableRow>
-                      );
+                      )
                     })}
+                    {(!aircraft.components || aircraft.components.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="h-24 text-center text-muted-foreground italic">No components registered for tracking.</TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -400,8 +379,9 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
   );
 }
 
-// Dummy helper for addDocumentNonBlocking if not imported
-function addDocumentNonBlocking(collectionRef: any, data: any) {
-  // Real implementation is in src/firebase/non-blocking-updates.tsx
-  // This is just to satisfy the TS compiler if needed
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 }
