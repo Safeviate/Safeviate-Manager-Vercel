@@ -118,6 +118,10 @@ export default function RiskMatrixPage() {
       }
   };
 
+  if (isLoading) {
+    return <div className="max-w-[1200px] mx-auto w-full"><Skeleton className="h-[600px] w-full" /></div>;
+  }
+
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">

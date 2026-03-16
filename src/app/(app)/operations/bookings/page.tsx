@@ -228,7 +228,7 @@ export default function SchedulePage() {
 
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
-        <div className="flex justify-between items-center px-1">
+        <div className="flex justify-between items-center px-1 shrink-0">
             <div className="flex items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Daily Schedule</h1>

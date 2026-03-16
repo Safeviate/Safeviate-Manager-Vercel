@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlusCircle, Edit } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Risk, Mitigation } from '@/types/risk';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
@@ -208,11 +207,11 @@ export default function RiskRegisterPage() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-            <DialogHeader className="p-6 pb-2">
+            <DialogHeader className="p-6 pb-2 shrink-0">
                 <DialogTitle>Edit Hazard</DialogTitle>
                 <DialogDescription>Update hazard details and associated risk assessments.</DialogDescription>
             </DialogHeader>
-            <ScrollArea className="flex-1 px-6 pb-6 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto px-6 pb-6 custom-scrollbar">
                 <div className="p-1">
                     <RiskForm
                         hideHeader
@@ -221,7 +220,7 @@ export default function RiskRegisterPage() {
                         onCancel={() => setIsDialogOpen(false)}
                     />
                 </div>
-            </ScrollArea>
+            </div>
           </DialogContent>
       </Dialog>
     </div>
