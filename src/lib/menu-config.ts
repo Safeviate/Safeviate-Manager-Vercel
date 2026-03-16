@@ -288,6 +288,12 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'development-view',
     subItems: [
       {
+        href: '/development/database',
+        label: 'Database Seeder',
+        description: 'Manage database seeding and setup.',
+        permissionId: 'development-view',
+      },
+      {
         href: '/development/logbook-parser',
         label: 'Logbook Parser',
         description: 'Parse the structure of a logbook table.',
@@ -297,12 +303,6 @@ export const menuConfig: MenuItem[] = [
         href: '/development/table-builder',
         label: 'Table Builder',
         description: 'Create and manipulate table structures.',
-        permissionId: 'development-view',
-      },
-      {
-        href: '/development/database',
-        label: 'Tenant Creator',
-        description: 'Create new tenants with custom branding.',
         permissionId: 'development-view',
       },
     ],

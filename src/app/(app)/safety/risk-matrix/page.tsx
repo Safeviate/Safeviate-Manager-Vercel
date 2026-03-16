@@ -47,7 +47,7 @@ export default function RiskMatrixPage() {
   const settingsId = 'risk-matrix-config';
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const canManage = hasPermission('risk-register-manage-definitions');
+  const canManage = hasPermission('risk-matrix-manage-definitions');
 
   const settingsRef = useMemoFirebase(() => (
     firestore ? doc(firestore, 'tenants', tenantId, 'settings', settingsId) : null
@@ -123,7 +123,7 @@ export default function RiskMatrixPage() {
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 px-1">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 px-1 pb-10">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
         <CardHeader className="shrink-0 border-b bg-muted/5">
           <CardTitle>Risk Matrix Configuration</CardTitle>
@@ -132,7 +132,7 @@ export default function RiskMatrixPage() {
           </CardDescription>
         </CardHeader>
         
-        <CardContent className="flex-1 p-0 overflow-hidden">
+        <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5">
           <ScrollArea className="h-full custom-scrollbar">
             <div className="p-6 space-y-10 pb-24 text-center">
               
@@ -142,7 +142,7 @@ export default function RiskMatrixPage() {
                         <tr className="h-16">
                             <th className="w-32 border-b border-r border-slate-200 dark:border-slate-700 bg-muted/30"></th>
                             {severities.map(s => (
-                                <th key={s.value} className="w-24 border-r border-b border-slate-200 dark:border-slate-700 p-1 text-center align-middle font-bold text-[9px] uppercase tracking-wider bg-muted/30">
+                                <th key={s.value} className="w-24 border-r border-b border-slate-200 dark:border-slate-700 p-1 text-center align-middle font-bold text-[10px] uppercase tracking-wider bg-muted/30">
                                     <div className="flex flex-col items-center gap-0.5">
                                         <span className="truncate w-full">{s.name}</span>
                                         <span className="text-primary font-black">({s.value})</span>
@@ -154,7 +154,7 @@ export default function RiskMatrixPage() {
                     <tbody>
                         {likelihoods.map(l => (
                             <tr key={l.value} className="h-16">
-                                <th className="border-r border-b border-slate-200 dark:border-slate-700 p-1 text-right align-middle font-bold text-[9px] uppercase tracking-wider bg-muted/10">
+                                <th className="border-r border-b border-slate-200 dark:border-slate-700 p-1 text-right align-middle font-bold text-[10px] uppercase tracking-wider bg-muted/10">
                                     {l.name}
                                     <span className="block text-[8px] text-muted-foreground font-normal">({l.value})</span>
                                 </th>
@@ -187,7 +187,6 @@ export default function RiskMatrixPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-                
                 <Card className="shadow-none border flex flex-col overflow-hidden">
                   <CardHeader className="py-3 border-b bg-muted/5 shrink-0 flex flex-row items-center justify-between space-y-0">
                     <CardTitle className="text-[10px] uppercase font-black tracking-widest text-primary">Severity Definitions</CardTitle>
@@ -202,27 +201,27 @@ export default function RiskMatrixPage() {
                         </Button>
                     )}
                   </CardHeader>
-                  <CardContent className="p-4 space-y-4">
+                  <CardContent className="p-4 space-y-4 bg-background">
                     {severities.map((s, index) => (
-                        <div key={s.value} className="p-3 bg-background rounded-lg border border-border shadow-sm space-y-2">
+                        <div key={s.value} className="p-3 bg-muted/5 rounded-lg border border-border shadow-sm space-y-2">
                             <div className="flex items-center gap-3">
                                 <Badge variant="outline" className="h-7 w-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0">{s.value}</Badge>
                                 {isEditingSeverity ? (
                                     <Input 
                                         value={s.name} 
                                         onChange={(e) => handleSeverityChange(index, 'name', e.target.value)}
-                                        className="h-8 text-xs font-bold bg-muted/10 border-none shadow-none focus-visible:ring-1"
+                                        className="h-8 text-xs font-bold bg-background"
                                         placeholder="Name"
                                     />
                                 ) : (
-                                    <span className="text-xs font-bold">{s.name}</span>
+                                    <span className="text-xs font-bold uppercase tracking-tight">{s.name}</span>
                                 )}
                             </div>
                             {isEditingSeverity ? (
                                 <Textarea 
                                     value={s.description} 
                                     onChange={(e) => handleSeverityChange(index, 'description', e.target.value)}
-                                    className="text-xs min-h-[60px] py-2 bg-muted/5 border-none shadow-none focus-visible:ring-1"
+                                    className="text-xs min-h-[60px] py-2 bg-background"
                                     placeholder="Description"
                                 />
                             ) : (
@@ -247,27 +246,27 @@ export default function RiskMatrixPage() {
                         </Button>
                     )}
                   </CardHeader>
-                  <CardContent className="p-4 space-y-4">
+                  <CardContent className="p-4 space-y-4 bg-background">
                     {likelihoods.map((l, index) => (
-                        <div key={l.value} className="p-3 bg-background rounded-lg border border-border shadow-sm space-y-2">
+                        <div key={l.value} className="p-3 bg-muted/5 rounded-lg border border-border shadow-sm space-y-2">
                             <div className="flex items-center gap-3">
                                 <Badge variant="outline" className="h-7 w-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0">{l.value}</Badge>
                                 {isEditingLikelihood ? (
                                     <Input 
                                         value={l.name} 
                                         onChange={(e) => handleLikelihoodChange(index, 'name', e.target.value)}
-                                        className="h-8 text-xs font-bold bg-muted/10 border-none shadow-none focus-visible:ring-1"
+                                        className="h-8 text-xs font-bold bg-background"
                                         placeholder="Name"
                                     />
                                 ) : (
-                                    <span className="text-xs font-bold">{l.name}</span>
+                                    <span className="text-xs font-bold uppercase tracking-tight">{l.name}</span>
                                 )}
                             </div>
                             {isEditingLikelihood ? (
                                 <Textarea 
                                     value={l.description} 
                                     onChange={(e) => handleLikelihoodChange(index, 'description', e.target.value)}
-                                    className="text-xs min-h-[60px] py-2 bg-muted/5 border-none shadow-none focus-visible:ring-1"
+                                    className="text-xs min-h-[60px] py-2 bg-background"
                                     placeholder="Description"
                                 />
                             ) : (

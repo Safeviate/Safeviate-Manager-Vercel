@@ -15,12 +15,12 @@ import { collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
-  tailNumber: z.string().min(1, "Tail number is required."),
-  make: z.string().min(1, "Manufacturer is required."),
-  model: z.string().min(1, "Model is required."),
-  type: z.enum(['Single-Engine', 'Multi-Engine']),
-  currentHobbs: z.coerce.number().min(0),
-  currentTacho: z.coerce.number().min(0),
+  tailNumber: z.string().min(1, 'Tail number is required.'),
+  make: z.string().min(1, 'Make is required.'),
+  model: z.string().min(1, 'Model is required.'),
+  type: z.enum(['Single-Engine', 'Multi-Engine']).default('Single-Engine'),
+  currentHobbs: z.number({ coerce: true }).default(0),
+  currentTacho: z.number({ coerce: true }).default(0),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -45,7 +45,13 @@ export function AircraftForm({ tenantId }: { tenantId: string }) {
   const onSubmit = (values: FormValues) => {
     if (!firestore) return;
     const colRef = collection(firestore, `tenants/${tenantId}/aircrafts`);
-    addDocumentNonBlocking(colRef, values);
+    addDocumentNonBlocking(colRef, {
+      ...values,
+      engineHours: values.currentTacho,
+      frameHours: values.currentTacho,
+      components: [],
+      documents: [],
+    });
     toast({ title: 'Aircraft Added', description: `${values.tailNumber} has been added to the fleet.` });
     setIsOpen(false);
     form.reset();
@@ -54,18 +60,20 @@ export function AircraftForm({ tenantId }: { tenantId: string }) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Aircraft</Button>
+        <Button>
+          <PlusCircle className="mr-2 h-4 w-4" /> Add Aircraft
+        </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add New Aircraft</DialogTitle>
-          <DialogDescription>Register a new airframe into the organizational fleet.</DialogDescription>
+          <DialogTitle>Add Fleet Aircraft</DialogTitle>
+          <DialogDescription>Enter the basic technical details for the new aircraft.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="tailNumber" render={({ field }) => (
-                <FormItem><FormLabel>Tail Number</FormLabel><FormControl><Input placeholder="e.g., ZS-AAA" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Tail Number</FormLabel><FormControl><Input placeholder="e.g., ZS-FSM" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="type" render={({ field }) => (
                 <FormItem><FormLabel>Engine Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Single-Engine">Single-Engine</SelectItem><SelectItem value="Multi-Engine">Multi-Engine</SelectItem></SelectContent></Select></FormItem>
@@ -73,10 +81,10 @@ export function AircraftForm({ tenantId }: { tenantId: string }) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="make" render={({ field }) => (
-                <FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input placeholder="e.g., Cessna" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Make</FormLabel><FormControl><Input placeholder="e.g., Piper" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="model" render={({ field }) => (
-                <FormItem><FormLabel>Model</FormLabel><FormControl><Input placeholder="e.g., 172SP" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Model</FormLabel><FormControl><Input placeholder="e.g., PA-28-181" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -89,7 +97,7 @@ export function AircraftForm({ tenantId }: { tenantId: string }) {
             </div>
             <DialogFooter>
               <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-              <Button type="submit">Save Aircraft</Button>
+              <Button type="submit">Register Aircraft</Button>
             </DialogFooter>
           </form>
         </Form>
