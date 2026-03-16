@@ -40,11 +40,11 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
   }
   
   if (error) {
-      return <div className="text-center py-10 text-destructive">Error: {error.message}</div>
+      return <div className="max-w-6xl mx-auto w-full text-center py-10 text-destructive">Error: {error.message}</div>
   }
   
   if (!student) {
-      return <div className="text-center py-10">Student not found.</div>
+      return <div className="max-w-6xl mx-auto w-full text-center py-10">Student not found.</div>
   }
 
   return (

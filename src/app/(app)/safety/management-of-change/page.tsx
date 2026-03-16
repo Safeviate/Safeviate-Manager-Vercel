@@ -119,7 +119,7 @@ export default function ManagementOfChangePage() {
     }
 
     if (error) {
-        return <div className="text-center py-10 text-destructive"><p>Error loading records: {error.message}</p></div>;
+        return <div className="max-w-6xl mx-auto w-full text-center py-10 text-destructive"><p>Error loading records: {error.message}</p></div>;
     }
 
     const isTabEnabled = visibilitySettings?.visibilities?.['moc'] ?? true;
@@ -138,9 +138,9 @@ export default function ManagementOfChangePage() {
                 <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
                     <div className="px-1 shrink-0">
                         <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
-                            <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Internal</TabsTrigger>
+                            <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Internal</TabsTrigger>
                             {(organizations || []).map(org => (
-                                <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">
+                                <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
                                     {org.name}
                                 </TabsTrigger>
                             ))}

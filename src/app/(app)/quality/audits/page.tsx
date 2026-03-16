@@ -221,9 +221,9 @@ export default function AuditsPage() {
             <Card className="min-h-[calc(100vh-15rem)] flex flex-col shadow-none border">
                 <Tabs defaultValue="active" className="flex-1 flex flex-col">
                     <div className='px-6 pt-4 border-b bg-muted/10'>
-                        <TabsList className="bg-transparent h-auto p-0 gap-2 mb-2 border-b-0">
-                            <TabsTrigger value="active" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs">Active ({activeAudits.length})</TabsTrigger>
-                            <TabsTrigger value="archived" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs">Archived ({archivedAudits.length})</TabsTrigger>
+                        <TabsList className="bg-transparent h-auto p-0 gap-2 mb-2 border-b-0 overflow-x-auto no-scrollbar w-full flex">
+                            <TabsTrigger value="active" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs shrink-0">Active ({activeAudits.length})</TabsTrigger>
+                            <TabsTrigger value="archived" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs shrink-0">Archived ({archivedAudits.length})</TabsTrigger>
                         </TabsList>
                     </div>
                     <CardContent className="p-0 flex-1">
@@ -271,9 +271,9 @@ export default function AuditsPage() {
                 <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
                     <div className="px-1 shrink-0">
                         <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
-                            <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Internal</TabsTrigger>
+                            <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Internal</TabsTrigger>
                             {(organizations || []).map(org => (
-                                <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">
+                                <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
                                     {org.name}
                                 </TabsTrigger>
                             ))}

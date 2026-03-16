@@ -78,7 +78,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="max-w-6xl mx-auto w-full space-y-6">
         <Skeleton className="h-10 w-48" />
         <Card>
           <CardHeader>
@@ -95,7 +95,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
 
   if (error) {
     return (
-      <div className="text-center py-10">
+      <div className="max-w-6xl mx-auto w-full text-center py-10">
         <p className="text-destructive">Error loading MOC: {error.message}</p>
         <Button asChild variant="link">
           <Link href="/safety/management-of-change">Return to list</Link>
@@ -106,7 +106,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
 
   if (!moc) {
     return (
-      <div className="text-center py-10">
+      <div className="max-w-6xl mx-auto w-full text-center py-10">
         <p className="text-muted-foreground">MOC not found.</p>
         <Button asChild variant="link">
           <Link href="/safety/management-of-change">Return to list</Link>
@@ -116,7 +116,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-6xl mx-auto w-full space-y-6">
        <div className="flex justify-between items-center no-print">
           <Button asChild variant="outline" className="w-fit">
             <Link href="/safety/management-of-change">
@@ -156,8 +156,8 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
       
       <Tabs defaultValue="implementation" className="w-full">
         <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar no-print">
-          <TabsTrigger value="implementation" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Implementation & Analysis</TabsTrigger>
-          <TabsTrigger value="approval" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Approval & Sign-off</TabsTrigger>
+          <TabsTrigger value="implementation" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Implementation & Analysis</TabsTrigger>
+          <TabsTrigger value="approval" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Approval & Sign-off</TabsTrigger>
         </TabsList>
         <TabsContent value="implementation" className="m-0">
           <ImplementationForm

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { use, useMemo, useEffect } from 'react';
@@ -92,7 +91,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-6xl mx-auto w-full">
         <Skeleton className="h-10 w-48" />
         <Card>
           <CardHeader>
@@ -109,7 +108,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
 
   if (auditError) {
     return (
-      <div className="text-center py-10">
+      <div className="max-w-6xl mx-auto w-full text-center py-10">
         <p className="text-destructive">Error loading audit: {auditError.message}</p>
         <Button asChild variant="link">
           <Link href="/quality/audits">Return to list</Link>
@@ -120,7 +119,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
 
   if (!audit || !enrichedAudit) {
     return (
-      <div className="text-center py-10">
+      <div className="max-w-6xl mx-auto w-full text-center py-10">
         <p className="text-muted-foreground">Audit not found or template is missing.</p>
         <Button asChild variant="link">
           <Link href="/quality/audits">Return to list</Link>
@@ -137,7 +136,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
 
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6 min-h-full pb-8">
+    <div className="max-w-6xl mx-auto w-full flex flex-col gap-4 md:gap-6 min-h-full pb-8">
        <Button asChild variant="outline" className="w-fit">
           <Link href="/quality/audits">
             <ArrowLeft className="mr-2 h-4 w-4" />

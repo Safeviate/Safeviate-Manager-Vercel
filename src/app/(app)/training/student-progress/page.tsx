@@ -35,7 +35,7 @@ export default function StudentProgressPage() {
   }
 
   if (error) {
-      return <p className="text-destructive text-center p-8">Error: {error.message}</p>
+      return <p className="max-w-6xl mx-auto w-full text-destructive text-center p-8">Error: {error.message}</p>
   }
 
   return (
@@ -56,7 +56,7 @@ export default function StudentProgressPage() {
                                 </Avatar>
                                 <div>
                                     <CardTitle className="text-lg">{student.firstName} {student.lastName}</CardTitle>
-                                    <CardDescription>{student.email}</CardDescription>
+                                    <CardDescription className="truncate max-w-[180px]">{student.email}</CardDescription>
                                 </div>
                             </CardHeader>
                         </Card>
