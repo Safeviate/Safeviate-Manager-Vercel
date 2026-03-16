@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -138,7 +139,7 @@ export default function RiskMatrixPage() {
         </CardHeader>
         
         <CardContent className="flex-1 p-0 overflow-hidden">
-          <ScrollArea className="h-full">
+          <ScrollArea className="h-full custom-scrollbar">
             <div className="p-6 space-y-10 pb-24">
               
               <div className="overflow-x-auto border rounded-xl overflow-hidden shadow-sm bg-card w-fit mx-auto">

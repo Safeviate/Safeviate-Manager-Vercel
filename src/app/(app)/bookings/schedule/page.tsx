@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -228,7 +229,7 @@ export default function SchedulePage() {
   const isPastDaySelected = isBefore(selectedDate, startOfToday());
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full px-1">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full px-1 overflow-hidden">
         <div className="flex justify-between items-center px-1 shrink-0">
             <div className="flex items-center gap-4">
                 <div>
