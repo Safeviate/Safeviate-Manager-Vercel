@@ -120,7 +120,11 @@ export default function RiskMatrixPage() {
   };
 
   if (isLoading) {
-    return <div className="max-w-[1200px] mx-auto w-full"><Skeleton className="h-[600px] w-full" /></div>;
+    return (
+      <div className="max-w-[1200px] mx-auto w-full">
+        <Skeleton className="h-[600px] w-full" />
+      </div>
+    );
   }
 
   return (
@@ -140,11 +144,14 @@ export default function RiskMatrixPage() {
               <div className="overflow-x-auto border rounded-xl overflow-hidden shadow-sm bg-card w-fit mx-auto">
                 <table className="table-fixed border-separate" style={{ borderSpacing: 0 }}>
                     <thead>
-                        <tr className="h-12">
+                        <tr className="h-14">
                             <th className="w-32 border-b border-r border-slate-200 dark:border-slate-700 bg-muted/30"></th>
                             {severities.map(s => (
                                 <th key={s.value} className="w-24 border-r border-b border-slate-200 dark:border-slate-700 p-1 text-center align-middle font-bold text-[9px] uppercase tracking-wider bg-muted/30">
-                                    {s.name} ({s.value})
+                                    <div className="flex flex-col items-center gap-0.5">
+                                        <span>{s.name}</span>
+                                        <span className="text-primary">({s.value})</span>
+                                    </div>
                                 </th>
                             ))}
                         </tr>
