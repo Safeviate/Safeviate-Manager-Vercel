@@ -66,7 +66,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
 
   if (isLoading) {
     return (
-      <div className="space-y-6 max-w-6xl mx-auto w-full">
+      <div className="space-y-6 max-w-[1200px] mx-auto w-full">
         <Skeleton className="h-10 w-48" />
         <Card>
           <CardHeader>
@@ -83,7 +83,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
 
   if (error) {
     return (
-      <div className="max-w-6xl mx-auto w-full text-center py-10">
+      <div className="max-w-[1200px] mx-auto w-full text-center py-10">
         <p className="text-destructive">Error loading report: {error.message}</p>
         <Button asChild variant="link">
           <Link href="/safety/safety-reports">Return to list</Link>
@@ -94,7 +94,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
 
   if (!report) {
     return (
-      <div className="max-w-6xl mx-auto w-full text-center py-10">
+      <div className="max-w-[1200px] mx-auto w-full text-center py-10">
         <p className="text-muted-foreground">Report not found.</p>
         <Button asChild variant="link">
           <Link href="/safety/safety-reports">Return to list</Link>
@@ -104,7 +104,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
   }
 
   return (
-    <div className="max-w-6xl mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
        <div className="shrink-0 flex justify-between items-center no-print px-1">
           <Button asChild variant="outline" className="w-fit">
             <Link href="/safety/safety-reports">
@@ -215,7 +215,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
       </div>
 
       {/* --- Dedicated Print Layout (Always in DOM, visible only during print) --- */}
-      <div className="hidden print:block space-y-8 max-w-6xl mx-auto w-full">
+      <div className="hidden print:block space-y-8 max-w-[1200px] mx-auto w-full">
           <Card className="shadow-none border-none">
             <CardHeader className="p-0 pb-4">
                 <CardTitle className="text-2xl">Safety Report {report.reportNumber}</CardTitle>

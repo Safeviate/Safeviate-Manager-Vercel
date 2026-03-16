@@ -61,7 +61,7 @@ export default function ExternalUsersPage() {
   }, [roles]);
 
   return (
-    <div className="flex flex-col gap-6 h-full">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">External Users</h1>

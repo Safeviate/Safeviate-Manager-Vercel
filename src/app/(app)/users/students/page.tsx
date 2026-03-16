@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -14,7 +13,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 
 export default function StudentsPage() {
   const firestore = useFirestore();
-  const { hasPermission } = usePermissions();
+  const { hasPermission } = hasPermission();
   const tenantId = 'safeviate'; // Hardcoded for now
   const canCreateUsers = hasPermission('users-create');
 
@@ -52,7 +51,7 @@ export default function StudentsPage() {
   const error = studentsError || rolesError || deptsError;
 
   return (
-    <div className="flex flex-col gap-6 h-full">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
         <div className="flex justify-between items-center">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Students</h1>

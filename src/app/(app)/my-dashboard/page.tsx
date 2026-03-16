@@ -178,7 +178,7 @@ export default function MyDashboardPage() {
     const isLoading = isProfileLoading || isLoadingPersonnel || isLoadingInstructors || isLoadingStudents || isLoadingPrivatePilots || isLoadingMocs || isLoadingAudits || isLoadingReports || isLoadingCaps;
 
     return (
-        <div className="w-full space-y-6">
+        <div className="max-w-[1200px] mx-auto w-full space-y-6">
             <Tabs defaultValue="tasks" className="w-full flex flex-col h-full overflow-hidden">
                 <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 shrink-0 border-b-0 overflow-x-auto no-scrollbar justify-start w-full flex">
                     <TabsTrigger value="tasks" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Tasks</TabsTrigger>

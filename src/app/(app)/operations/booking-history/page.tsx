@@ -225,7 +225,7 @@ export default function BookingsHistoryPage() {
   const cancelledBookings = useMemo(() => enrichedBookings.filter(b => b.status === 'Cancelled' || b.status === 'Cancelled with Reason'), [enrichedBookings]);
 
   return (
-    <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 h-full">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
        <div className="flex justify-between items-center px-1">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Bookings History</h1>

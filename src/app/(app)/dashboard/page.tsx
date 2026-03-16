@@ -158,7 +158,7 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-[1200px] mx-auto w-full">
         <Skeleton className="h-10 w-[400px] rounded-full" />
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 w-full" />)}
@@ -174,7 +174,7 @@ export default function DashboardPage() {
   if (!stats) return null;
 
   return (
-    <div className="flex flex-col gap-6 h-full overflow-hidden">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <Tabs defaultValue="flight-stats" className="w-full flex flex-col h-full">
         <div className='px-1 shrink-0'>
             <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start">

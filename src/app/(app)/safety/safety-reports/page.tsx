@@ -195,7 +195,7 @@ export default function SafetyReportsPage() {
 
   if (isLoading) {
     return (
-        <div className="max-w-6xl mx-auto w-full space-y-6">
+        <div className="max-w-[1200px] mx-auto w-full space-y-6">
             <Skeleton className="h-10 w-[400px] rounded-full" />
             <Skeleton className="h-64 w-full" />
         </div>
@@ -206,7 +206,7 @@ export default function SafetyReportsPage() {
   const showTabs = isTabEnabled && canManageAll;
 
   return (
-    <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 h-full">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
         <div className="px-1">
             <h1 className="text-3xl font-bold tracking-tight">Safety Reports</h1>
             <p className="text-muted-foreground">Manage and track organizational safety occurrences.</p>

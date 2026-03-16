@@ -78,7 +78,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
 
   if (isLoading) {
     return (
-      <div className="max-w-6xl mx-auto w-full space-y-6">
+      <div className="max-w-[1200px] mx-auto w-full space-y-6">
         <Skeleton className="h-10 w-48" />
         <Card>
           <CardHeader>
@@ -95,7 +95,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
 
   if (error) {
     return (
-      <div className="max-w-6xl mx-auto w-full text-center py-10">
+      <div className="max-w-[1200px] mx-auto w-full text-center py-10">
         <p className="text-destructive">Error loading MOC: {error.message}</p>
         <Button asChild variant="link">
           <Link href="/safety/management-of-change">Return to list</Link>
@@ -106,7 +106,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
 
   if (!moc) {
     return (
-      <div className="max-w-6xl mx-auto w-full text-center py-10">
+      <div className="max-w-[1200px] mx-auto w-full text-center py-10">
         <p className="text-muted-foreground">MOC not found.</p>
         <Button asChild variant="link">
           <Link href="/safety/management-of-change">Return to list</Link>
@@ -116,7 +116,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
   }
 
   return (
-    <div className="max-w-6xl mx-auto w-full space-y-6">
+    <div className="max-w-[1200px] mx-auto w-full space-y-6">
        <div className="flex justify-between items-center no-print">
           <Button asChild variant="outline" className="w-fit">
             <Link href="/safety/management-of-change">
