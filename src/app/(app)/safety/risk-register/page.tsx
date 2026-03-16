@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -121,6 +120,7 @@ export default function RiskRegisterPage() {
   const [editingRisk, setEditingRisk] = React.useState<Risk | null>(null);
 
   const canManageAll = hasPermission('risk-register-view');
+  const canManageAreas = hasPermission('risk-register-manage-definitions');
   const userOrgId = userProfile?.organizationId;
 
   const risksQuery = useMemoFirebase(
@@ -175,7 +175,6 @@ export default function RiskRegisterPage() {
         orgId === 'internal' ? !r.organizationId : r.organizationId === orgId
     );
 
-    // Filter hazards that don't match any of the current dynamic areas
     const uncategorizedRisks = orgRisks.filter(r => !hazardAreas.includes(r.hazardArea) && r.status === 'Open');
     const displayAreas = uncategorizedRisks.length > 0 ? [...hazardAreas, 'Uncategorized'] : hazardAreas;
 
@@ -188,7 +187,7 @@ export default function RiskRegisterPage() {
                         <CardDescription>Identified hazards and risk management status for this organization.</CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
-                        <ManageAreasDialog tenantId={tenantId!} settings={registerSettings} />
+                        {canManageAreas && <ManageAreasDialog tenantId={tenantId!} settings={registerSettings} />}
                         <Button asChild size="sm">
                             <Link href={`/safety/risk-register/new?orgId=${orgId}`}>
                                 <PlusCircle className="mr-2 h-4 w-4" />

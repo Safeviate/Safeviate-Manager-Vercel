@@ -23,7 +23,7 @@ export const permissionsConfig: PermissionResource[] = [
 
   { id: 'safety', name: 'Safety', actions: ['view'] },
   { id: 'safety-reports', name: 'Safety Reports', actions: ['manage'] },
-  { id: 'risk-register', name: 'Risk Register', actions: ['view'] },
+  { id: 'risk-register', name: 'Risk Register', actions: ['view', 'manage-definitions'] },
   { id: 'risk-matrix', name: 'Risk Matrix', actions: ['view', 'manage-definitions'] },
   { id: 'safety-indicators', name: 'Safety Indicators', actions: ['view'] },
   { id: 'moc', name: 'Management of Change', actions: ['manage'] },
