@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -17,7 +18,7 @@ import type { ExternalOrganization } from '@/types/quality';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { RiskForm } from './risk-form';
-import { getRiskScoreStyle } from './utils';
+import { getRiskScoreStyle, getAlphanumericRisk } from './utils';
 import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -263,20 +264,20 @@ function RiskGroup({ hazard, personnelMap, onEditClick }: { hazard: Risk; person
           {isFirstRowOfRisk && <TableCell rowSpan={riskRowSpan} className={cn("whitespace-normal align-top text-xs", isLastRowOfRisk ? "" : "border-b")}>{risk.description}</TableCell>}
           {isFirstRowOfRisk && (
             <TableCell rowSpan={riskRowSpan} className={cn("align-top", isLastRowOfRisk ? "" : "border-b")}>
-              {risk.initialRiskAssessment?.riskScore !== undefined && (
-                <Badge className="text-[10px] h-5" style={getRiskScoreStyle(risk.initialRiskAssessment.riskScore)}>
-                  {risk.initialRiskAssessment.riskScore}
+              {risk.initialRiskAssessment?.likelihood !== undefined && risk.initialRiskAssessment?.severity !== undefined && (
+                <Badge className="text-[10px] h-5 font-black" style={getRiskScoreStyle(risk.initialRiskAssessment.riskScore)}>
+                  {getAlphanumericRisk(risk.initialRiskAssessment.likelihood, risk.initialRiskAssessment.severity)}
                 </Badge>
               )}
             </TableCell>
           )}
           <TableCell className="text-xs">{mitigation.description}</TableCell>
           <TableCell>
-            {mitigation.residualRiskAssessment?.riskScore !== undefined ? (
-              <Badge className="text-[10px] h-5" style={getRiskScoreStyle(mitigation.residualRiskAssessment.riskScore)}>
-                {mitigation.residualRiskAssessment.riskScore}
+            {mitigation.residualRiskAssessment?.likelihood !== undefined && mitigation.residualRiskAssessment?.severity !== undefined ? (
+              <Badge className="text-[10px] h-5 font-black" style={getRiskScoreStyle(mitigation.residualRiskAssessment.riskScore)}>
+                {getAlphanumericRisk(mitigation.residualRiskAssessment.likelihood, mitigation.residualRiskAssessment.severity)}
               </Badge>
-            ) : <Badge variant="outline" className="text-[10px] h-5 opacity-50">N/A</Badge>}
+            ) : <Badge variant="outline" className="text-[10px] h-5 opacity-50 font-black">N/A</Badge>}
           </TableCell>
           <TableCell className="text-xs whitespace-nowrap">{personnelMap.get(mitigation.responsiblePersonId) || 'N/A'}</TableCell>
           <TableCell className="text-xs whitespace-nowrap">{mitigation.reviewDate ? format(new Date(mitigation.reviewDate), 'dd MMM yy') : 'N/A'}</TableCell>
