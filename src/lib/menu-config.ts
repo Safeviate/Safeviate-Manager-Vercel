@@ -49,16 +49,16 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'bookings-view',
     subItems: [
       {
-        href: '/bookings/history',
-        label: 'Booking History',
-        description: 'View past bookings and logs.',
-        permissionId: 'bookings-history-view',
-      },
-      {
         href: '/bookings/schedule',
         label: 'Daily Schedule',
         description: 'View and manage resource bookings.',
         permissionId: 'bookings-schedule-view',
+      },
+      {
+        href: '/bookings/history',
+        label: 'History',
+        description: 'View past bookings and logs.',
+        permissionId: 'bookings-history-view',
       },
     ],
   },
@@ -244,6 +244,12 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'admin-departments-manage',
       },
       {
+        href: '/admin/document-dates',
+        label: 'Document Expiration',
+        description: 'Manage document expiration and inspection warnings.',
+        permissionId: 'admin-settings-manage',
+      },
+      {
         href: '/admin/external',
         label: 'External Companies',
         description: 'Manage external companies for auditing and scoping.',
@@ -272,12 +278,6 @@ export const menuConfig: MenuItem[] = [
         label: 'Roles',
         description: 'Create and manage user roles.',
         permissionId: 'admin-roles-manage',
-      },
-      {
-        href: '/admin/document-dates',
-        label: 'Warnings',
-        description: 'Manage document expiration and inspection warnings.',
-        permissionId: 'admin-settings-manage',
       },
     ],
   },
