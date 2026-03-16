@@ -192,7 +192,7 @@ export default function SchedulePage() {
     const currentTime = new Date();
     
     // Block clicks strictly in the past
-    if (isSameDay(selectedDate, currentTime) && hour < getHours(currentTime)) {
+    if (isSameDay(selectedDate, currentTime) && hour < getHours(now)) {
         return; 
     }
     if (isBefore(selectedDate, startOfDay(currentTime))) {
@@ -200,8 +200,8 @@ export default function SchedulePage() {
     }
 
     // If clicking current hour, default start time to 'now' to satisfy future-booking validation
-    const isCurrentHourSlot = isSameDay(slotTime, currentTime) && getHours(slotTime) === getHours(currentTime);
-    const startTime = isCurrentHourSlot ? currentTime : slotTime;
+    const isCurrentHourSlot = isSameDay(slotTime, currentTime) && getHours(slotTime) === getHours(now);
+    const startTime = isCurrentHourSlot ? now : slotTime;
     
     const allBookingsForAircraft = allBookings?.filter(b => b.aircraftId === ac.id) || [];
 
@@ -229,7 +229,7 @@ export default function SchedulePage() {
   const isPastDaySelected = isBefore(selectedDate, startOfToday());
 
   return (
-    <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 h-full">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
         <div className="flex justify-between items-center px-1">
             <div className="flex items-center gap-4">
                 <div>
@@ -306,7 +306,7 @@ export default function SchedulePage() {
                                 ))}
                             </div>
 
-                            {/* Main Grid Area - siblings to time column for alignment */}
+                            {/* Main Grid Area */}
                             {(aircraft || []).map((ac) => {
                                 const relevantBookings = (bookings || []).filter(b => {
                                     if (b.isOvernight) {

@@ -119,7 +119,7 @@ export default function RiskMatrixPage() {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden gap-4">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
         <CardHeader className="shrink-0 border-b bg-muted/5">
           <CardTitle>Risk Matrix Configuration</CardTitle>
@@ -286,8 +286,7 @@ export default function RiskMatrixPage() {
               </div>
             </div>
           </ScrollArea>
-        </CardContent>
-      </Card>
+        </Card>
     </div>
   );
 }

@@ -230,7 +230,7 @@ export default function SchedulePage() {
   const isPastDaySelected = isBefore(selectedDate, startOfToday());
 
   return (
-    <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 h-full">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
         <div className="flex justify-between items-center px-1">
             <div className="flex items-center gap-4">
                 <div>
@@ -307,7 +307,7 @@ export default function SchedulePage() {
                                 ))}
                             </div>
 
-                            {/* Main Grid Area - siblings to time column for alignment */}
+                            {/* Main Grid Area */}
                             {(aircraft || []).map((ac) => {
                                 const relevantBookings = (bookings || []).filter(b => {
                                     if (b.isOvernight) {
