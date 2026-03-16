@@ -120,12 +120,7 @@ export default function RiskMatrixPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="max-w-[1200px] mx-auto w-full space-y-6">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-[600px] w-full" />
-      </div>
-    );
+    return <div className="max-w-[1200px] mx-auto w-full"><Skeleton className="h-[600px] w-full" /></div>;
   }
 
   return (
@@ -142,21 +137,13 @@ export default function RiskMatrixPage() {
           <ScrollArea className="h-full">
             <div className="p-6 space-y-10 pb-24">
               
-              <div className="overflow-x-auto max-w-4xl mx-auto border rounded-xl overflow-hidden shadow-sm bg-card">
-                <table className="w-full border-separate" style={{ borderSpacing: 0 }}>
-                    <colgroup>
-                        <col className="w-[16.66%]" />
-                        <col className="w-[16.66%]" />
-                        <col className="w-[16.66%]" />
-                        <col className="w-[16.66%]" />
-                        <col className="w-[16.66%]" />
-                        <col className="w-[16.66%]" />
-                    </colgroup>
+              <div className="overflow-x-auto border rounded-xl overflow-hidden shadow-sm bg-card w-fit mx-auto">
+                <table className="table-fixed border-separate" style={{ borderSpacing: 0 }}>
                     <thead>
-                        <tr className="h-16">
-                            <th className="border-b border-r border-slate-200 dark:border-slate-700 bg-muted/30"></th>
+                        <tr className="h-12">
+                            <th className="w-32 border-b border-r border-slate-200 dark:border-slate-700 bg-muted/30"></th>
                             {severities.map(s => (
-                                <th key={s.value} className="border-r border-b border-slate-200 dark:border-slate-700 p-1 text-center align-middle font-bold text-[9px] uppercase tracking-wider bg-muted/30">
+                                <th key={s.value} className="w-24 border-r border-b border-slate-200 dark:border-slate-700 p-1 text-center align-middle font-bold text-[9px] uppercase tracking-wider bg-muted/30">
                                     {s.name} ({s.value})
                                 </th>
                             ))}
