@@ -33,7 +33,7 @@ export default function AlertsPage() {
   const companyNotices = useMemo(() => alerts?.filter(a => a.type === 'Company Notice') || [], [alerts]);
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-[1200px] mx-auto w-full space-y-6">
       <div className="flex justify-between items-center px-1">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Alerts & Notices</h1>
@@ -52,7 +52,7 @@ export default function AlertsPage() {
       ) : (
         <Tabs defaultValue="red-tags" className="w-full flex flex-col h-full overflow-hidden">
             <div className="px-1 shrink-0">
-                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar">
+                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
                     <TabsTrigger value="red-tags" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Red Tags ({redTags.length})</TabsTrigger>
                     <TabsTrigger value="yellow-tags" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Yellow Tags ({yellowTags.length})</TabsTrigger>
                     <TabsTrigger value="company-notices" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Company Notices ({companyNotices.length})</TabsTrigger>
@@ -64,7 +64,7 @@ export default function AlertsPage() {
                     {redTags.length > 0 ? (
                         redTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
                     ) : (
-                        <Card className="flex h-48 items-center justify-center">
+                        <Card className="flex h-48 items-center justify-center shadow-none border">
                             <p className="text-muted-foreground text-sm">No active red tags.</p>
                         </Card>
                     )}
@@ -75,7 +75,7 @@ export default function AlertsPage() {
                     {yellowTags.length > 0 ? (
                         yellowTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
                     ) : (
-                         <Card className="flex h-48 items-center justify-center">
+                         <Card className="flex h-48 items-center justify-center shadow-none border">
                             <p className="text-muted-foreground text-sm">No active yellow tags.</p>
                         </Card>
                     )}
@@ -86,7 +86,7 @@ export default function AlertsPage() {
                     {companyNotices.length > 0 ? (
                         companyNotices.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
                     ) : (
-                         <Card className="flex h-48 items-center justify-center">
+                         <Card className="flex h-48 items-center justify-center shadow-none border">
                             <p className="text-muted-foreground text-sm">No active company notices.</p>
                         </Card>
                     )}

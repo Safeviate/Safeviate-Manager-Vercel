@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -12,7 +11,6 @@ import { doc } from 'firebase/firestore';
 import type { RiskMatrixSettings } from '@/types/risk';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Pencil, Check } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -49,7 +47,7 @@ export default function RiskMatrixPage() {
   const settingsId = 'risk-matrix-config';
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const canManage = hasPermission('risk-matrix-manage-definitions');
+  const canManage = hasPermission('risk-register-manage-definitions');
 
   const settingsRef = useMemoFirebase(() => (
     firestore ? doc(firestore, 'tenants', tenantId, 'settings', settingsId) : null

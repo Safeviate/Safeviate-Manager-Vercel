@@ -14,10 +14,10 @@ export default function OperationsPage() {
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <div className="max-w-[1200px] mx-auto w-full grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {operationsMenu.subItems.map((item) => (
         <Link href={item.href} key={item.href}>
-          <Card className="hover:bg-muted/50 transition-colors">
+          <Card className="hover:bg-muted/50 transition-colors shadow-none border">
             <CardHeader>
               <CardTitle>{item.label}</CardTitle>
               <CardDescription>{item.description}</CardDescription>
