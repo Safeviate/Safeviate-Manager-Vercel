@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { ManagementOfChange, MocPhase, MocStep, MocHazard, MocRisk, MocMitigation } from '@/types/moc';
@@ -25,6 +25,7 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import React, { useState, useEffect, useMemo } from 'react';
 import { analyzeMoc, type AnalyzeMocInput } from '@/ai/flows/analyze-moc-flow';
+import type { RiskMatrixSettings } from '@/types/risk';
 
 // --- Zod Schemas ---
 const riskAssessmentSchema = z.object({
@@ -130,12 +131,11 @@ const getRiskScoreColor = (
     severity: number,
     colors?: Record<string, string>
   ): { backgroundColor: string; color: string } => {
-    const severityToLetter: { [key: number]: string } = { 5: 'A', 4: 'B', 3: 'C', 2: 'D', 1: 'E' };
+    const severityToLetter: Record<number, string> = { 5: 'A', 4: 'B', 3: 'C', 2: 'D', 1: 'E' };
     const severityLetter = severityToLetter[severity] || 'E';
     const cellId = `${likelihood}${severityLetter}`;
     
     if (colors && colors[cellId]) {
-        // Simple contrast check for custom colors
         const hex = colors[cellId].replace('#', '');
         const r = parseInt(hex.substring(0, 2), 16);
         const g = parseInt(hex.substring(2, 4), 16);
@@ -145,11 +145,10 @@ const getRiskScoreColor = (
         return { backgroundColor: colors[cellId], color: textColor };
     }
     
-    // Fallback to old logic
     const score = likelihood * severity;
-    if (score > 9) return { backgroundColor: '#d9534f', color: 'white' };
-    if (score > 4) return { backgroundColor: '#f0ad4e', color: 'black' };
-    return { backgroundColor: '#5cb85c', color: 'white' };
+    if (score > 9) return { backgroundColor: '#ef4444', color: 'white' };
+    if (score > 4) return { backgroundColor: '#f59e0b', color: 'black' };
+    return { backgroundColor: '#10b981', color: 'white' };
   };
 
 interface RiskAssessmentEditorProps {
@@ -159,16 +158,16 @@ interface RiskAssessmentEditorProps {
 }
 
 const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label, riskMatrixColors }) => {
-    const { control, setValue } = useFormContext();
+    const { control, setValue, watch } = useFormContext();
 
-    const likelihood = useWatch({ control, name: `${path}.likelihood`, defaultValue: 1 });
-    const severity = useWatch({ control, name: `${path}.severity`, defaultValue: 1 });
+    const likelihood = watch(`${path}.likelihood`, 1);
+    const severity = watch(`${path}.severity`, 1);
     
     const riskScore = (likelihood || 1) * (severity || 1);
     const riskLevel = getRiskLevel(riskScore);
     const { backgroundColor, color } = getRiskScoreColor(likelihood, severity, riskMatrixColors);
 
-    const likelihoodLabels: { [key: number]: string } = {
+    const likelihoodLabels: Record<number, string> = {
         5: 'Frequent',
         4: 'Occasional',
         3: 'Remote',
@@ -176,7 +175,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
         1: 'Extremely Improbable',
     };
     
-    const severityLabels: { [key: number]: { name: string; letter: string } } = {
+    const severityLabels: Record<number, { name: string; letter: string }> = {
         5: { name: 'Catastrophic', letter: 'A' },
         4: { name: 'Hazardous', letter: 'B' },
         3: { name: 'Major', letter: 'C' },
@@ -184,7 +183,8 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
         1: { name: 'Negligible', letter: 'E' },
     };
 
-    const displayValue = `${likelihood || 1}${severityLabels[severity || 1]?.letter || 'E'}`;
+    const severityLetter = severityLabels[severity]?.letter || 'E';
+    const displayValue = `${likelihood || 1}${severityLetter}`;
 
     React.useEffect(() => {
         setValue(`${path}.riskScore`, riskScore, { shouldDirty: true });
@@ -194,16 +194,32 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
     return (
         <Card className="bg-background/50">
             <CardHeader className="pb-2 pt-4">
-                <CardTitle className="text-sm">{label}</CardTitle>
+                <CardTitle className="text-sm uppercase font-bold tracking-wider">{label}</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-x-4 gap-y-2 items-center">
-                <div className="space-y-3">
-                    <Controller control={control} name={`${path}.likelihood`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel className="text-xs">Likelihood: {value} ({likelihoodLabels[value] || 'Unknown'})</FormLabel><FormControl><div className="no-print"><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></div></FormControl></FormItem> )} />
-                    <Controller control={control} name={`${path}.severity`} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel className="text-xs">Severity: {severityLabels[value]?.letter || 'E'} ({severityLabels[value]?.name || 'Unknown'})</FormLabel><FormControl><div className="no-print"><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></div></FormControl></FormItem> )}/>
+            <CardContent className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-x-8 gap-y-4 items-center">
+                <div className="space-y-6">
+                    <Controller control={control} name={`${path}.likelihood`} render={({ field: { onChange, value } }) => ( 
+                        <FormItem>
+                            <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground flex justify-between">
+                                <span>Likelihood: {value}</span>
+                                <span className="font-normal italic">({likelihoodLabels[value]})</span>
+                            </FormLabel>
+                            <FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl>
+                        </FormItem> 
+                    )} />
+                    <Controller control={control} name={`${path}.severity`} render={({ field: { onChange, value } }) => ( 
+                        <FormItem>
+                            <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground flex justify-between">
+                                <span>Severity: {severityLabels[value]?.letter}</span>
+                                <span className="font-normal italic">({severityLabels[value]?.name})</span>
+                            </FormLabel>
+                            <FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl>
+                        </FormItem> 
+                    )}/>
                 </div>
                 <div className="flex justify-center items-center">
                     <div
-                        className="flex items-center justify-center h-10 w-10 rounded-full text-base font-bold"
+                        className="flex items-center justify-center h-14 w-14 rounded-full text-base font-black shadow-md border-4 border-white/20"
                         style={{ backgroundColor, color }}
                     >
                         {displayValue}
@@ -224,7 +240,7 @@ const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, perso
     return (
         <div className='pl-6 mt-4 space-y-3'>
             {fields.map((field, mitigationIndex) => (
-                <div key={field.id} className="p-4 border rounded-md bg-background">
+                <div key={field.id} className="p-4 border rounded-md bg-background shadow-sm">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                       <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.description`} render={({ field }) => ( <FormItem className="md:col-span-4"><FormLabel>Mitigation</FormLabel><FormControl><Textarea placeholder='Describe the mitigation...' {...field} /></FormControl><FormMessage /></FormItem> )} />
                       <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.responsiblePersonId`} render={({ field }) => ( <FormItem><FormLabel>Assignee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Assign..." /></SelectTrigger></FormControl><SelectContent>{personnel.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
@@ -389,14 +405,16 @@ interface ImplementationFormProps {
   moc: ManagementOfChange;
   tenantId: string;
   personnel: Personnel[];
-  riskMatrixColors?: Record<string, string>;
 }
 
-export function ImplementationForm({ moc, tenantId, personnel, riskMatrixColors }: ImplementationFormProps) {
+export function ImplementationForm({ moc, tenantId, personnel }: ImplementationFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const formKey = useMemo(() => moc.id || uuidv4(), [moc.id]);
+
+  const riskMatrixRef = useMemoFirebase(() => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-matrix-config') : null), [firestore, tenantId]);
+  const { data: riskMatrixSettings } = useDoc<RiskMatrixSettings>(riskMatrixRef);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -485,7 +503,7 @@ export function ImplementationForm({ moc, tenantId, personnel, riskMatrixColors 
                     </CardHeader>
                     <CollapsibleContent>
                        <div className="p-4 pt-0">
-                          <StepsArray phaseIndex={index} personnel={personnel} riskMatrixColors={riskMatrixColors} />
+                          <StepsArray phaseIndex={index} personnel={personnel} riskMatrixColors={riskMatrixSettings?.colors} />
                        </div>
                     </CollapsibleContent>
                 </Card>

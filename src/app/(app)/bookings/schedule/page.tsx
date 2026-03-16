@@ -221,14 +221,14 @@ export default function SchedulePage() {
   const extraLanes = ['', '', ''];
 
   if (isLoading) {
-    return <div className="max-w-[1200px] mx-auto w-full"><Skeleton className="h-[600px] w-full" /></div>;
+    return <div className="max-w-[1200px] mx-auto w-full px-1"><Skeleton className="h-[600px] w-full" /></div>;
   }
 
   const isTodaySelected = isSameDay(selectedDate, startOfToday());
   const isPastDaySelected = isBefore(selectedDate, startOfToday());
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full px-1">
         <div className="flex justify-between items-center px-1 shrink-0">
             <div className="flex items-center gap-4">
                 <div>

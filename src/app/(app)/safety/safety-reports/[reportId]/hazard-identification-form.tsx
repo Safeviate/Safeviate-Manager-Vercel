@@ -23,7 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { SafetyReport } from '@/types/safety-report';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { PlusCircle, Trash2, Save, ShieldAlert, ChevronDown } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Slider } from '@/components/ui/slider';
+import type { RiskMatrixSettings } from '@/types/risk';
 
 // --- Helper Functions ---
 const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => {
@@ -45,7 +46,7 @@ const getRiskScoreColor = (
     severity: number,
     colors?: Record<string, string>
   ): { backgroundColor: string; color: string } => {
-    const severityToLetter: { [key: number]: string } = { 5: 'A', 4: 'B', 3: 'C', 2: 'D', 1: 'E' };
+    const severityToLetter: Record<number, string> = { 5: 'A', 4: 'B', 3: 'C', 2: 'D', 1: 'E' };
     const severityLetter = severityToLetter[severity] || 'E';
     const cellId = `${likelihood}${severityLetter}`;
     
@@ -91,12 +92,6 @@ const hazardIdentificationSchema = z.object({
 
 type FormValues = z.infer<typeof hazardIdentificationSchema>;
 
-const Label = ({ children, className }: { children: React.ReactNode, className?: string }) => (
-    <label className={cn("text-[10px] font-bold uppercase text-muted-foreground block", className)}>
-        {children}
-    </label>
-);
-
 const RiskAssessmentEditor = ({ path, label, riskMatrixColors }: { path: string; label: string; riskMatrixColors?: Record<string, string> }) => {
     const { control, setValue, watch } = useFormContext<FormValues>();
     
@@ -107,8 +102,24 @@ const RiskAssessmentEditor = ({ path, label, riskMatrixColors }: { path: string;
     const riskLevel = getRiskLevel(riskScore);
     const { backgroundColor, color } = getRiskScoreColor(likelihood, severity, riskMatrixColors);
 
-    const severityLetters: Record<number, string> = { 5: 'A', 4: 'B', 3: 'C', 2: 'D', 1: 'E' };
-    const displayValue = `${likelihood}${severityLetters[severity] || 'E'}`;
+    const likelihoodLabels: Record<number, string> = {
+        5: 'Frequent',
+        4: 'Occasional',
+        3: 'Remote',
+        2: 'Improbable',
+        1: 'Extremely Improbable',
+    };
+    
+    const severityLabels: Record<number, { letter: string; name: string }> = {
+        5: { letter: 'A', name: 'Catastrophic' },
+        4: { letter: 'B', name: 'Hazardous' },
+        3: { letter: 'C', name: 'Major' },
+        2: { letter: 'D', name: 'Minor' },
+        1: { letter: 'E', name: 'Negligible' },
+    };
+
+    const severityLetter = severityLabels[severity]?.letter || 'E';
+    const displayValue = `${likelihood}${severityLetter}`;
 
     React.useEffect(() => {
         setValue(`${path}.riskScore` as any, riskScore);
@@ -117,15 +128,18 @@ const RiskAssessmentEditor = ({ path, label, riskMatrixColors }: { path: string;
 
     return (
         <div className="flex items-center gap-4 p-3 bg-background border rounded-lg shadow-sm">
-            <div className="flex-1 space-y-3">
-                <p className="text-[10px] font-bold uppercase text-muted-foreground">{label}</p>
-                <div className="grid grid-cols-2 gap-4">
+            <div className="flex-1 space-y-4">
+                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{label}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                     <Controller
                         control={control}
                         name={`${path}.likelihood` as any}
                         render={({ field }) => (
                             <div className="space-y-1">
-                                <Label className="text-[9px] uppercase">Likelihood: {field.value}</Label>
+                                <label className="text-[9px] uppercase font-bold flex justify-between">
+                                    <span>Likelihood: {field.value}</span>
+                                    <span className="font-normal italic">({likelihoodLabels[field.value]})</span>
+                                </label>
                                 <Slider 
                                     value={[field.value || 1]} 
                                     onValueChange={(val) => field.onChange(val[0])} 
@@ -139,7 +153,10 @@ const RiskAssessmentEditor = ({ path, label, riskMatrixColors }: { path: string;
                         name={`${path}.severity` as any}
                         render={({ field }) => (
                             <div className="space-y-1">
-                                <Label className="text-[9px] uppercase">Severity: {field.value}</Label>
+                                <label className="text-[9px] uppercase font-bold flex justify-between">
+                                    <span>Severity: {severityLabels[field.value]?.letter}</span>
+                                    <span className="font-normal italic">({severityLabels[field.value]?.name})</span>
+                                </label>
                                 <Slider 
                                     value={[field.value || 1]} 
                                     onValueChange={(val) => field.onChange(val[0])} 
@@ -151,7 +168,7 @@ const RiskAssessmentEditor = ({ path, label, riskMatrixColors }: { path: string;
                 </div>
             </div>
             <div 
-                className="h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm shadow-inner"
+                className="h-12 w-12 rounded-full flex items-center justify-center font-black text-sm shadow-md border-4 border-white/20"
                 style={{ backgroundColor, color }}
             >
                 {displayValue}
@@ -179,7 +196,7 @@ const RisksArray = ({ hazardIndex, riskMatrixColors }: { hazardIndex: number; ri
                                 <FormItem className="flex-1">
                                     <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Identified Risk / Outcome</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="e.g., Loss of separation, Mid-air collision" {...field} className="h-8 text-xs" />
+                                        <Input placeholder="e.g., Loss of separation, Mid-air collision" {...field} className="h-8 text-xs bg-background" />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -197,7 +214,7 @@ const RisksArray = ({ hazardIndex, riskMatrixColors }: { hazardIndex: number; ri
                     </div>
                     <RiskAssessmentEditor 
                         path={`initialHazards.${hazardIndex}.risks.${riskIndex}.riskAssessment`}
-                        label="Assessment"
+                        label="Risk Assessment"
                         riskMatrixColors={riskMatrixColors}
                     />
                 </div>
@@ -213,7 +230,7 @@ const RisksArray = ({ hazardIndex, riskMatrixColors }: { hazardIndex: number; ri
                 })}
                 className="h-7 text-[10px] no-print"
             >
-                <PlusCircle className="mr-1 h-3 w-3" /> Add Risk Assessment
+                <PlusCircle className="mr-1 h-3 w-3" /> Add Risk Impact
             </Button>
         </div>
     );
@@ -222,13 +239,15 @@ const RisksArray = ({ hazardIndex, riskMatrixColors }: { hazardIndex: number; ri
 interface HazardIdentificationFormProps {
   report: SafetyReport;
   tenantId: string;
-  riskMatrixColors?: Record<string, string>;
   isStacked?: boolean;
 }
 
-export function HazardIdentificationForm({ report, tenantId, riskMatrixColors, isStacked = false }: HazardIdentificationFormProps) {
+export function HazardIdentificationForm({ report, tenantId, isStacked = false }: HazardIdentificationFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+
+  const riskMatrixRef = useMemoFirebase(() => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-matrix-config') : null), [firestore, tenantId]);
+  const { data: riskMatrixSettings } = useDoc<RiskMatrixSettings>(riskMatrixRef);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(hazardIdentificationSchema),
@@ -268,12 +287,12 @@ export function HazardIdentificationForm({ report, tenantId, riskMatrixColors, i
             <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
               {isStacked ? (
                 <div className="p-6 space-y-6">
-                  <HazardFields hazardFields={hazardFields} form={form} riskMatrixColors={riskMatrixColors} removeHazard={removeHazard} />
+                  <HazardFields hazardFields={hazardFields} form={form} riskMatrixColors={riskMatrixSettings?.colors} removeHazard={removeHazard} />
                 </div>
               ) : (
                 <ScrollArea className="flex-1 p-6">
                   <div className="space-y-6">
-                    <HazardFields hazardFields={hazardFields} form={form} riskMatrixColors={riskMatrixColors} removeHazard={removeHazard} />
+                    <HazardFields hazardFields={hazardFields} form={form} riskMatrixColors={riskMatrixSettings?.colors} removeHazard={removeHazard} />
                   </div>
                 </ScrollArea>
               )}
@@ -303,7 +322,7 @@ function HazardFields({ hazardFields, form, riskMatrixColors, removeHazard }: { 
                       <FormField control={form.control} name={`initialHazards.${index}.description`} render={({ field }) => (
                           <FormItem className='flex-1 space-y-0'>
                               <FormControl>
-                                  <Input placeholder="Hazard description..." {...field} className="h-8 text-sm font-bold bg-background" />
+                                  <Input placeholder="Describe the hazard (e.g., Bird strike on final)..." {...field} className="h-8 text-sm font-bold bg-background" />
                               </FormControl>
                           </FormItem>
                       )} />

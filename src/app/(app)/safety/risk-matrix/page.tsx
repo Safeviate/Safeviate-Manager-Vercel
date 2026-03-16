@@ -34,11 +34,11 @@ const defaultSeverities = [
 ];
 
 const defaultColors: Record<string, string> = {
-    '5A': '#d9534f', '5B': '#d9534f', '5C': '#f0ad4e', '5D': '#f0ad4e', '5E': '#f0ad4e',
-    '4A': '#d9534f', '4B': '#d9534f', '4C': '#d9534f', '4D': '#5cb85c', '4E': '#5cb85c',
-    '3A': '#d9534f', '3B': '#d9534f', '3C': '#f0ad4e', '3D': '#5cb85c', '3E': '#5cb85c',
-    '2A': '#f0ad4e', '2B': '#f0ad4e', '2C': '#5cb85c', '2D': '#5cb85c', '2E': '#5cb85c',
-    '1A': '#f0ad4e', '1B': '#5cb85c', '1C': '#5cb85c', '1D': '#5cb85c', '1E': '#5cb85c',
+    '5A': '#ef4444', '5B': '#ef4444', '5C': '#f59e0b', '5D': '#f59e0b', '5E': '#f59e0b',
+    '4A': '#ef4444', '4B': '#ef4444', '4C': '#ef4444', '4D': '#10b981', '4E': '#10b981',
+    '3A': '#ef4444', '3B': '#ef4444', '3C': '#f59e0b', '3D': '#10b981', '3E': '#10b981',
+    '2A': '#f59e0b', '2B': '#f59e0b', '2C': '#10b981', '2D': '#10b981', '2E': '#10b981',
+    '1A': '#f59e0b', '1B': '#10b981', '1C': '#10b981', '1D': '#10b981', '1E': '#10b981',
 };
 
 export default function RiskMatrixPage() {
@@ -121,14 +121,14 @@ export default function RiskMatrixPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1200px] mx-auto w-full">
+      <div className="max-w-[1200px] mx-auto w-full px-1">
         <Skeleton className="h-[600px] w-full" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 px-1">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
         <CardHeader className="shrink-0 border-b bg-muted/5">
           <CardTitle>Risk Matrix Configuration</CardTitle>

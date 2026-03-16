@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm, useFieldArray, Controller, FormProvider, useFormContext } from 'react-hook-form';
@@ -13,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useRouter } from 'next/navigation';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
-import type { Risk, RiskItem, Mitigation } from '@/types/risk';
+import type { Risk, RiskItem, Mitigation, RiskMatrixSettings } from '@/types/risk';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
@@ -23,7 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import React from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
@@ -90,16 +89,6 @@ const mapDatesToObjects = (risk?: Risk | null): RiskFormValues => {
     };
 };
 
-// --- Risk Assessment Component ---
-const getRiskScoreColorClass = (score: number) => {
-    if (score > 9) {
-        return 'bg-red-500';
-    }
-    if (score > 4) {
-        return 'bg-yellow-500 text-black';
-    }
-    return 'bg-green-500';
-};
 const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => {
     if (score <= 4) return 'Low';
     if (score <= 9) return 'Medium';
@@ -107,13 +96,61 @@ const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => 
     return 'Critical';
 }
 
-const RiskAssessmentEditor: React.FC<{ path: string; label: string; }> = ({ path, label }) => {
+const getRiskScoreColor = (
+    likelihood: number,
+    severity: number,
+    colors?: Record<string, string>
+  ): { backgroundColor: string; color: string } => {
+    const severityToLetter: { [key: number]: string } = { 5: 'A', 4: 'B', 3: 'C', 2: 'D', 1: 'E' };
+    const severityLetter = severityToLetter[severity] || 'E';
+    const cellId = `${likelihood}${severityLetter}`;
+    
+    if (colors && colors[cellId]) {
+        // Contrast check for customized colors
+        const hex = colors[cellId].replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        const textColor = (yiq >= 128) ? 'black' : 'white';
+        return { backgroundColor: colors[cellId], color: textColor };
+    }
+    
+    // Default safety-standard colors
+    const score = likelihood * severity;
+    if (score > 9) return { backgroundColor: '#ef4444', color: 'white' };
+    if (score > 4) return { backgroundColor: '#f59e0b', color: 'black' };
+    return { backgroundColor: '#10b981', color: 'white' };
+};
+
+// --- Risk Assessment Component ---
+const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixColors?: Record<string, string> }> = ({ path, label, riskMatrixColors }) => {
     const { control, setValue, watch } = useFormContext<RiskFormValues>();
     const likelihood = watch(`${path}.likelihood` as any, 1);
     const severity = watch(`${path}.severity` as any, 1);
+    
     const riskScore = (likelihood || 1) * (severity || 1);
     const riskLevel = getRiskLevel(riskScore);
-    const colorClass = getRiskScoreColorClass(riskScore);
+    const { backgroundColor, color } = getRiskScoreColor(likelihood, severity, riskMatrixColors);
+
+    const likelihoodLabels: Record<number, string> = {
+        5: 'Frequent',
+        4: 'Occasional',
+        3: 'Remote',
+        2: 'Improbable',
+        1: 'Extremely Improbable',
+    };
+    
+    const severityLabels: Record<number, { letter: string; name: string }> = {
+        5: { letter: 'A', name: 'Catastrophic' },
+        4: { letter: 'B', name: 'Hazardous' },
+        3: { letter: 'C', name: 'Major' },
+        2: { letter: 'D', name: 'Minor' },
+        1: { letter: 'E', name: 'Negligible' },
+    };
+
+    const severityLetter = severityLabels[severity]?.letter || 'E';
+    const displayValue = `${likelihood}${severityLetter}`;
 
     React.useEffect(() => {
         setValue(`${path}.riskScore` as any, riskScore);
@@ -122,15 +159,36 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; }> = ({ path
 
     return (
         <Card className="bg-background/50">
-            <CardHeader className="pb-4"><CardTitle className="text-base">{label}</CardTitle></CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                <div className="space-y-4">
-                    <Controller control={control} name={`${path}.likelihood` as any} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel>Likelihood: {value}</FormLabel><FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl></FormItem> )} />
-                    <Controller control={control} name={`${path}.severity` as any} render={({ field: { onChange, value } }) => ( <FormItem><FormLabel>Severity: {value}</FormLabel><FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl></FormItem> )}/>
+            <CardHeader className="pb-4 pt-4">
+                <CardTitle className="text-sm font-bold uppercase tracking-wider">{label}</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-x-8 gap-y-4 items-center">
+                <div className="space-y-6">
+                    <Controller control={control} name={`${path}.likelihood` as any} render={({ field: { onChange, value } }) => ( 
+                        <FormItem>
+                            <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground flex justify-between">
+                                <span>Likelihood: {value}</span>
+                                <span className="font-normal italic">({likelihoodLabels[value]})</span>
+                            </FormLabel>
+                            <FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl>
+                        </FormItem> 
+                    )} />
+                    <Controller control={control} name={`${path}.severity` as any} render={({ field: { onChange, value } }) => ( 
+                        <FormItem>
+                            <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground flex justify-between">
+                                <span>Severity: {severityLabels[value]?.letter}</span>
+                                <span className="font-normal italic">({severityLabels[value]?.name})</span>
+                            </FormLabel>
+                            <FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl>
+                        </FormItem> 
+                    )}/>
                 </div>
                 <div className="flex justify-center items-center">
-                    <div className={cn("flex items-center justify-center h-20 w-20 rounded-full text-white text-2xl font-bold", colorClass)}>
-                        {riskScore}
+                    <div 
+                        className="flex items-center justify-center h-16 w-16 rounded-full text-lg font-black shadow-md border-4 border-white/20 transition-all duration-300"
+                        style={{ backgroundColor, color }}
+                    >
+                        {displayValue}
                     </div>
                 </div>
             </CardContent>
@@ -140,14 +198,14 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; }> = ({ path
 
 // --- Nested Field Arrays ---
 
-const MitigationsArray = ({ riskIndex, personnel }: { riskIndex: number; personnel: Personnel[] }) => {
+const MitigationsArray = ({ riskIndex, personnel, riskMatrixColors }: { riskIndex: number; personnel: Personnel[]; riskMatrixColors?: Record<string, string> }) => {
     const { control } = useFormContext<RiskFormValues>();
     const { fields, append, remove } = useFieldArray({ control, name: `risks.${riskIndex}.mitigations` });
 
     return (
         <div className='pl-6 mt-4 space-y-4'>
             {fields.map((field, mitigationIndex) => (
-                <div key={field.id} className="p-4 border rounded-md bg-background">
+                <div key={field.id} className="p-4 border rounded-md bg-background shadow-sm">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                       <FormField control={control} name={`risks.${riskIndex}.mitigations.${mitigationIndex}.description`} render={({ field }) => ( <FormItem className="md:col-span-4"><FormLabel>Mitigation Action</FormLabel><FormControl><Textarea placeholder='Describe the mitigation...' {...field} /></FormControl><FormMessage /></FormItem> )} />
                       <FormField control={control} name={`risks.${riskIndex}.mitigations.${mitigationIndex}.responsiblePersonId`} render={({ field }) => ( <FormItem><FormLabel>Assignee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Assign..." /></SelectTrigger></FormControl><SelectContent>{personnel.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
@@ -156,7 +214,7 @@ const MitigationsArray = ({ riskIndex, personnel }: { riskIndex: number; personn
                         <Button type="button" variant="destructive" size="icon" onClick={() => remove(mitigationIndex)}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                   </div>
-                  <div className="mt-4"><RiskAssessmentEditor path={`risks.${riskIndex}.mitigations.${mitigationIndex}.residualRiskAssessment`} label="Residual Risk Assessment" /></div>
+                  <div className="mt-4"><RiskAssessmentEditor path={`risks.${riskIndex}.mitigations.${mitigationIndex}.residualRiskAssessment`} label="Residual Risk Assessment" riskMatrixColors={riskMatrixColors} /></div>
                 </div>
             ))}
             <Button type="button" variant="secondary" size="sm" onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', reviewDate: new Date(), residualRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' } })}><PlusCircle className="mr-2 h-4 w-4" />Add Mitigation</Button>
@@ -164,7 +222,7 @@ const MitigationsArray = ({ riskIndex, personnel }: { riskIndex: number; personn
     )
 }
 
-const RisksArray = ({ personnel }: { personnel: Personnel[] }) => {
+const RisksArray = ({ personnel, riskMatrixColors }: { personnel: Personnel[]; riskMatrixColors?: Record<string, string> }) => {
     const { control } = useFormContext<RiskFormValues>();
     const { fields, append, remove } = useFieldArray({ control, name: `risks` });
 
@@ -172,29 +230,29 @@ const RisksArray = ({ personnel }: { personnel: Personnel[] }) => {
         <div className="space-y-4">
             {fields.map((field, riskIndex) => (
                 <Collapsible key={field.id} defaultOpen>
-                    <Card className="bg-muted/30">
-                        <CardHeader className="flex flex-row items-center">
+                    <Card className="bg-muted/30 border-none shadow-none">
+                        <CardHeader className="flex flex-row items-center p-4 bg-muted/20">
                             <CollapsibleTrigger asChild>
                                 <Button variant="ghost" size="icon" className="mr-2 h-8 w-8 [&[data-state=open]>svg]:rotate-180">
                                     <ChevronDown className="h-4 w-4 transition-transform duration-200" />
                                 </Button>
                             </CollapsibleTrigger>
                             <div className="flex-1">
-                                <FormField control={control} name={`risks.${riskIndex}.description`} render={({ field }) => ( <FormItem><FormLabel>Risk</FormLabel><FormControl><Input placeholder='Describe the risk...' {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                                <FormField control={control} name={`risks.${riskIndex}.description`} render={({ field }) => ( <FormItem><FormLabel className="sr-only">Risk</FormLabel><FormControl><Input placeholder='Describe the potential risk outcome...' {...field} className="bg-background" /></FormControl><FormMessage /></FormItem> )}/>
                             </div>
-                            <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(riskIndex)}><Trash2 className="h-4 w-4" /></Button>
+                            <Button type="button" variant="ghost" size="icon" className="text-destructive ml-2" onClick={() => remove(riskIndex)}><Trash2 className="h-4 w-4" /></Button>
                         </CardHeader>
                         <CollapsibleContent>
-                            <CardContent className="space-y-4">
-                                <RiskAssessmentEditor path={`risks.${riskIndex}.initialRiskAssessment`} label="Initial Risk Assessment" />
-                                <h4 className="font-semibold pt-4 border-t">Mitigations</h4>
-                                <MitigationsArray riskIndex={riskIndex} personnel={personnel} />
+                            <CardContent className="space-y-4 p-4 pt-6">
+                                <RiskAssessmentEditor path={`risks.${riskIndex}.initialRiskAssessment`} label="Initial Risk Assessment" riskMatrixColors={riskMatrixColors} />
+                                <h4 className="font-bold text-xs uppercase text-muted-foreground pt-4 border-t tracking-widest">Mitigations & Actions</h4>
+                                <MitigationsArray riskIndex={riskIndex} personnel={personnel} riskMatrixColors={riskMatrixColors} />
                             </CardContent>
                         </CollapsibleContent>
                     </Card>
                 </Collapsible>
             ))}
-            <Button type="button" variant="outline" className="w-full" onClick={() => append({ id: uuidv4(), description: '', initialRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' }, mitigations: [] })}><PlusCircle className="mr-2 h-4 w-4" />Add Risk</Button>
+            <Button type="button" variant="outline" className="w-full h-12 border-dashed" onClick={() => append({ id: uuidv4(), description: '', initialRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' }, mitigations: [] })}><PlusCircle className="mr-2 h-4 w-4" />Add Risk Potential</Button>
         </div>
     )
 }
@@ -214,6 +272,9 @@ export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false
   const firestore = useFirestore();
   const { toast } = useToast();
   const tenantId = 'safeviate';
+
+  const riskMatrixRef = useMemoFirebase(() => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-matrix-config') : null), [firestore, tenantId]);
+  const { data: riskMatrixSettings } = useDoc<RiskMatrixSettings>(riskMatrixRef);
 
   const form = useForm<RiskFormValues>({
     resolver: zodResolver(formSchema),
@@ -268,17 +329,17 @@ export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false
           )}
           <CardContent className="px-0 space-y-6">
             <FormField control={form.control} name="hazardArea" render={({ field }) => ( <FormItem><FormLabel>Hazard Area</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a hazard area" /></SelectTrigger></FormControl><SelectContent>{HAZARD_AREAS.map(area => ( <SelectItem key={area} value={area}>{area}</SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem> )} />
-            <FormField control={form.control} name="hazard" render={({ field }) => ( <FormItem><FormLabel>Hazard</FormLabel><FormControl><Textarea placeholder="Describe the hazard..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="hazard" render={({ field }) => ( <FormItem><FormLabel>Hazard Identification</FormLabel><FormControl><Textarea placeholder="Describe the identifiable hazard (e.g., Unstable approach conditions)..." {...field} /></FormControl><FormMessage /></FormItem> )} />
             <Separator />
-            <div>
-              <h3 className="text-lg font-medium mb-2">Associated Risks</h3>
-              <RisksArray personnel={personnel} />
+            <div className="space-y-4">
+              <h3 className="text-sm font-black uppercase tracking-widest text-primary">Associated Risks & Outcomes</h3>
+              <RisksArray personnel={personnel} riskMatrixColors={riskMatrixSettings?.colors} />
               <FormField control={form.control} name="risks" render={({ field }) => ( <FormMessage className="mt-2" /> )} />
             </div>
           </CardContent>
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-6">
               <Button type="button" variant="outline" onClick={onCancel || (() => router.back())} disabled={isSubmitting}>Cancel</Button>
-              <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Submitting...' : (existingRisk ? 'Save Changes' : 'Add Hazard')}</Button>
+              <Button type="submit" disabled={isSubmitting} className="w-40">{isSubmitting ? 'Saving...' : (existingRisk ? 'Save Changes' : 'Add Hazard')}</Button>
           </div>
         </form>
       </Form>
