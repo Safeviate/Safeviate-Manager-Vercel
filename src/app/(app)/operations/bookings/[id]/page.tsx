@@ -28,7 +28,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
 
     if (isLoading) {
         return (
-            <div className="space-y-6">
+            <div className="max-w-[1200px] mx-auto w-full space-y-6">
                 <Skeleton className="h-10 w-48" />
                 <Skeleton className="h-64 w-full" />
             </div>
@@ -37,7 +37,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
 
     if (error || !booking) {
         return (
-            <div className="text-center py-10">
+            <div className="max-w-[1200px] mx-auto w-full text-center py-10">
                 <p className="text-destructive mb-4">
                     {error ? `Error: ${error.message}` : "Booking not found."}
                 </p>
@@ -52,7 +52,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="max-w-[1200px] mx-auto w-full space-y-6">
             <Button asChild variant="outline">
                 <Link href="/operations/bookings">
                     <ArrowLeft className="mr-2 h-4 w-4" />
