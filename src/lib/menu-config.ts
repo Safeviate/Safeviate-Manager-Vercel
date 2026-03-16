@@ -49,16 +49,16 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'bookings-view',
     subItems: [
       {
-        href: '/bookings/schedule',
-        label: 'Daily Schedule',
-        description: 'View and manage resource bookings.',
-        permissionId: 'bookings-schedule-view',
-      },
-      {
         href: '/bookings/history',
         label: 'Booking History',
         description: 'View past bookings and logs.',
         permissionId: 'bookings-history-view',
+      },
+      {
+        href: '/bookings/schedule',
+        label: 'Daily Schedule',
+        description: 'View and manage resource bookings.',
+        permissionId: 'bookings-schedule-view',
       },
     ],
   },
@@ -89,16 +89,10 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'safety-view',
     subItems: [
       {
-        href: '/safety/safety-reports',
-        label: 'Safety Reports',
-        description: 'View and manage safety reports.',
-        permissionId: 'safety-reports-manage',
-      },
-      {
-        href: '/safety/risk-register',
-        label: 'Risk Register',
-        description: 'View the organizational risk register.',
-        permissionId: 'risk-register-view',
+        href: '/safety/management-of-change',
+        label: 'Management of Change',
+        description: 'Manage changes to procedures and policies.',
+        permissionId: 'moc-manage',
       },
       {
         href: '/safety/risk-matrix',
@@ -107,16 +101,22 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'risk-matrix-view',
       },
       {
+        href: '/safety/risk-register',
+        label: 'Risk Register',
+        description: 'View the organizational risk register.',
+        permissionId: 'risk-register-view',
+      },
+      {
         href: '/safety/safety-indicators',
         label: 'Safety Indicators',
         description: 'Track and analyze key safety metrics.',
         permissionId: 'safety-indicators-view',
       },
       {
-        href: '/safety/management-of-change',
-        label: 'Management of Change',
-        description: 'Manage changes to procedures and policies.',
-        permissionId: 'moc-manage',
+        href: '/safety/safety-reports',
+        label: 'Safety Reports',
+        description: 'View and manage safety reports.',
+        permissionId: 'safety-reports-manage',
       },
     ],
   },
@@ -126,6 +126,12 @@ export const menuConfig: MenuItem[] = [
     icon: CheckSquare,
     permissionId: 'quality-view',
     subItems: [
+      {
+        href: '/quality/audit-checklists',
+        label: 'Audit Checklists',
+        description: 'Manage audit templates.',
+        permissionId: 'quality-templates-manage',
+      },
       {
         href: '/quality/audit-schedule',
         label: 'Audit Schedule',
@@ -139,22 +145,16 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'quality-audits-view',
       },
       {
-        href: '/quality/audit-checklists',
-        label: 'Audit Checklists',
-        description: 'Manage audit templates.',
-        permissionId: 'quality-templates-manage',
+        href: '/quality/coherence-matrix',
+        label: 'Coherence Matrix',
+        description: 'Ensure regulatory coherence.',
+        permissionId: 'quality-matrix-manage',
       },
       {
         href: '/quality/task-tracker',
         label: 'Task Tracker',
         description: 'Track all quality-related tasks.',
         permissionId: 'quality-tasks-view',
-      },
-      {
-        href: '/quality/coherence-matrix',
-        label: 'Coherence Matrix',
-        description: 'Ensure regulatory coherence.',
-        permissionId: 'quality-matrix-manage',
       },
     ],
   },
@@ -193,8 +193,8 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'users-view',
     subItems: [
       {
-        href: '/users/personnel',
-        label: 'Personnel',
+        href: '/users/external',
+        label: 'External',
         permissionId: 'users-view',
       },
       {
@@ -203,8 +203,8 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'users-view',
       },
       {
-        href: '/users/students',
-        label: 'Students',
+        href: '/users/personnel',
+        label: 'Personnel',
         permissionId: 'users-view',
       },
       {
@@ -213,8 +213,8 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'users-view',
       },
       {
-        href: '/users/external',
-        label: 'External',
+        href: '/users/students',
+        label: 'Students',
         permissionId: 'users-view',
       },
     ],
@@ -226,16 +226,16 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'admin-view',
     subItems: [
       {
-        href: '/admin/roles',
-        label: 'Roles',
-        description: 'Create and manage user roles.',
-        permissionId: 'admin-roles-manage',
+        href: '/admin/appearance',
+        label: 'Appearance',
+        description: 'Customize application branding and theme colors.',
+        permissionId: 'admin-settings-manage',
       },
       {
-        href: '/admin/permissions',
-        label: 'Permissions',
-        description: 'View all available application permissions.',
-        permissionId: 'admin-permissions-view',
+        href: '/admin/database',
+        label: 'Database',
+        description: 'Manage database seeding and setup.',
+        permissionId: 'admin-database-manage',
       },
       {
         href: '/admin/department',
@@ -250,21 +250,9 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'admin-external-orgs-manage',
       },
       {
-        href: '/admin/document-dates',
-        label: 'Warnings',
-        description: 'Manage document expiration and inspection warnings.',
-        permissionId: 'admin-settings-manage',
-      },
-      {
         href: '/admin/features',
         label: 'Features',
         description: 'Enable or disable application features.',
-        permissionId: 'admin-settings-manage',
-      },
-      {
-        href: '/admin/appearance',
-        label: 'Appearance',
-        description: 'Customize application branding and theme colors.',
         permissionId: 'admin-settings-manage',
       },
       {
@@ -274,10 +262,22 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'admin-settings-manage',
       },
       {
-        href: '/admin/database',
-        label: 'Database',
-        description: 'Manage database seeding and setup.',
-        permissionId: 'admin-database-manage',
+        href: '/admin/permissions',
+        label: 'Permissions',
+        description: 'View all available application permissions.',
+        permissionId: 'admin-permissions-view',
+      },
+      {
+        href: '/admin/roles',
+        label: 'Roles',
+        description: 'Create and manage user roles.',
+        permissionId: 'admin-roles-manage',
+      },
+      {
+        href: '/admin/document-dates',
+        label: 'Warnings',
+        description: 'Manage document expiration and inspection warnings.',
+        permissionId: 'admin-settings-manage',
       },
     ],
   },
@@ -288,12 +288,6 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'development-view',
     subItems: [
       {
-        href: '/development/database',
-        label: 'Tenant Creator',
-        description: 'Create new tenants with custom branding.',
-        permissionId: 'development-view',
-      },
-      {
         href: '/development/logbook-parser',
         label: 'Logbook Parser',
         description: 'Parse the structure of a logbook table.',
@@ -303,6 +297,12 @@ export const menuConfig: MenuItem[] = [
         href: '/development/table-builder',
         label: 'Table Builder',
         description: 'Create and manipulate table structures.',
+        permissionId: 'development-view',
+      },
+      {
+        href: '/development/database',
+        label: 'Tenant Creator',
+        description: 'Create new tenants with custom branding.',
         permissionId: 'development-view',
       },
     ],

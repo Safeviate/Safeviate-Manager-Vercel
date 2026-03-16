@@ -139,7 +139,7 @@ export default function RiskMatrixPage() {
               <div className="inline-block overflow-x-auto border rounded-xl overflow-hidden shadow-sm bg-card mx-auto">
                 <table className="table-fixed border-separate" style={{ borderSpacing: 0 }}>
                     <thead>
-                        <tr className="h-14">
+                        <tr className="h-16">
                             <th className="w-32 border-b border-r border-slate-200 dark:border-slate-700 bg-muted/30"></th>
                             {severities.map(s => (
                                 <th key={s.value} className="w-24 border-r border-b border-slate-200 dark:border-slate-700 p-1 text-center align-middle font-bold text-[9px] uppercase tracking-wider bg-muted/30">

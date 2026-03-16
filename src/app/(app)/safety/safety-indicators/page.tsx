@@ -175,7 +175,7 @@ export default function SafetyIndicatorsPage() {
   const renderOrgContext = (orgId: string | 'internal') => {
     const contextOrgId = orgId === 'internal' ? null : orgId;
     return (
-        <div className="grid grid-cols-1 gap-6 pb-10">
+        <div className="grid grid-cols-1 gap-6 pb-10 max-w-[1200px] mx-auto w-full">
             {spiConfig.map(spi => (
                 <SPICard 
                     key={spi.id} 
@@ -207,7 +207,7 @@ export default function SafetyIndicatorsPage() {
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
       <Tabs defaultValue="internal" className="w-full flex-1 flex flex-col min-h-0">
-        <Card className="shrink-0 sticky top-0 z-20 border shadow-sm">
+        <Card className="shrink-0 sticky top-0 z-20 border shadow-sm max-w-[1200px] mx-auto w-full">
             <CardHeader className="py-4">
                 <div className="flex justify-between items-center">
                     <div>
