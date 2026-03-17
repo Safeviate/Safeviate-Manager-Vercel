@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -10,6 +11,8 @@ import {
 } from '@/components/ui/table';
 import type { PilotProfile } from '../personnel/page';
 import { PersonnelActions } from '../personnel/personnel-actions';
+import { ShieldAlert } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface InstructorsTableProps {
   data: PilotProfile[];
@@ -26,27 +29,41 @@ export function InstructorsTable({ data, tenantId }: InstructorsTableProps) {
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>License No.</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {data.map((pilot) => (
-          <TableRow key={pilot.id}>
-            <TableCell className="font-medium">{pilot.firstName} {pilot.lastName}</TableCell>
-            <TableCell>{pilot.email}</TableCell>
-            <TableCell>{pilot.pilotLicense?.licenseNumber || 'N/A'}</TableCell>
-            <TableCell className="text-right">
-              <PersonnelActions tenantId={tenantId} user={pilot} />
-            </TableCell>
+    <TooltipProvider>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>License No.</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {data.map((pilot) => (
+            <TableRow key={pilot.id}>
+              <TableCell className="font-medium">
+                <div className="flex items-center gap-2">
+                  {pilot.firstName} {pilot.lastName}
+                  {pilot.isErpIncerfaContact && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <ShieldAlert className="h-3.5 w-3.5 text-red-600" />
+                      </TooltipTrigger>
+                      <TooltipContent>Designated ERP INCERFA Contact</TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>{pilot.email}</TableCell>
+              <TableCell>{pilot.pilotLicense?.licenseNumber || 'N/A'}</TableCell>
+              <TableCell className="text-right">
+                <PersonnelActions tenantId={tenantId} user={pilot} />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TooltipProvider>
   );
 }

@@ -8,7 +8,7 @@ import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Trash2, Upload, View, PlusCircle, Contact, MapPin, PhoneCall, ShieldCheck } from 'lucide-react';
+import { CalendarIcon, Trash2, Upload, View, PlusCircle, Contact, MapPin, PhoneCall, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -68,7 +68,6 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   const { hasPermission } = usePermissions();
   const tenantId = 'safeviate';
 
-  // permission required to modify individual user overrides
   const canEdit = hasPermission('users-edit');
 
   const expirySettingsRef = useMemoFirebase(
@@ -172,16 +171,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   }, [role, user.documents]);
 
   const handlePermissionToggle = (permissionId: string, checked: boolean) => {
-    if (!firestore || !tenantId || !canEdit) {
-        if (!canEdit) {
-            toast({
-                variant: 'destructive',
-                title: 'Access Denied',
-                description: 'You do not have permission to modify user access levels.',
-            });
-        }
-        return;
-    }
+    if (!firestore || !tenantId || !canEdit) return;
 
     const currentPermissions = user.permissions || [];
     const isInherited = role?.permissions?.includes(permissionId);
@@ -190,18 +180,14 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     
     if (isInherited) {
         if (checked) {
-            // Permission was explicitly denied via override, now removing that deny
             newPermissions = currentPermissions.filter(p => p !== `!${permissionId}`);
         } else {
-            // Permission is inherited, but we want to explicitly deny it
             newPermissions = [...currentPermissions.filter(p => p !== permissionId), `!${permissionId}`];
         }
     } else {
         if (checked) {
-            // Permission is NOT inherited, we are granting it
             newPermissions = [...currentPermissions.filter(p => p !== `!${permissionId}`), permissionId];
         } else {
-            // Permission was explicitly granted via override, now removing that grant
             newPermissions = currentPermissions.filter(p => p !== permissionId);
         }
     }
@@ -221,7 +207,6 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   };
 
   const isStudent = isPilotProfile(user) && user.userType === 'Student';
-  const isInstructor = isPilotProfile(user) && user.userType === 'Instructor';
   const isAnyPilot = isPilotProfile(user);
 
   return (
@@ -238,8 +223,18 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
         <TabsContent value="overview" className="mt-0 flex-1 min-h-0 overflow-hidden">
             <Card className="flex flex-col h-full overflow-hidden shadow-none border">
                 <CardHeader className="shrink-0 border-b bg-muted/5">
-                    <CardTitle>Personnel Overview</CardTitle>
-                    <CardDescription>Primary identification and organizational details.</CardDescription>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <CardTitle>Personnel Overview</CardTitle>
+                            <CardDescription>Primary identification and organizational details.</CardDescription>
+                        </div>
+                        {user.isErpIncerfaContact && (
+                            <Badge className="bg-red-600 text-white gap-1.5 h-7 px-3">
+                                <ShieldAlert className="h-3.5 w-3.5" />
+                                Designated ERP Contact
+                            </Badge>
+                        )}
+                    </div>
                 </CardHeader>
                 <CardContent className="flex-1 p-0 overflow-hidden">
                     <ScrollArea className="h-full">
@@ -481,7 +476,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                 <PilotLogbook 
                     userId={user.id} 
                     tenantId={tenantId} 
-                    role={isInstructor ? 'instructor' : isStudent ? 'student' : 'private'} 
+                    role={user.userType === 'Instructor' ? 'instructor' : user.userType === 'Student' ? 'student' : 'private'} 
                 />
             </TabsContent>
         )}

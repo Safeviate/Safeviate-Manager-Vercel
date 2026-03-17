@@ -12,6 +12,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { Personnel } from './page';
 import { PersonnelActions } from './personnel-actions';
+import { ShieldAlert } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface PersonnelTableProps {
   data: Personnel[];
@@ -30,29 +32,43 @@ export function PersonnelTable({ data, rolesMap, departmentsMap, tenantId }: Per
   }
   
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Department</TableHead>
-          <TableHead>Role</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {data.map((person) => (
-          <TableRow key={person.id}>
-            <TableCell className="font-medium">{person.firstName} {person.lastName}</TableCell>
-            <TableCell>{person.email}</TableCell>
-            <TableCell>{departmentsMap.get(person.department || '') || 'N/A'}</TableCell>
-            <TableCell>{rolesMap.get(person.role) || person.role}</TableCell>
-            <TableCell className="text-right">
-              <PersonnelActions tenantId={tenantId} user={person} />
-            </TableCell>
+    <TooltipProvider>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Department</TableHead>
+            <TableHead>Role</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {data.map((person) => (
+            <TableRow key={person.id}>
+              <TableCell className="font-medium">
+                <div className="flex items-center gap-2">
+                  {person.firstName} {person.lastName}
+                  {person.isErpIncerfaContact && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <ShieldAlert className="h-3.5 w-3.5 text-red-600" />
+                      </TooltipTrigger>
+                      <TooltipContent>Designated ERP INCERFA Contact</TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>{person.email}</TableCell>
+              <TableCell>{departmentsMap.get(person.department || '') || 'N/A'}</TableCell>
+              <TableCell>{rolesMap.get(person.role) || person.role}</TableCell>
+              <TableCell className="text-right">
+                <PersonnelActions tenantId={tenantId} user={person} />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TooltipProvider>
   );
 }
