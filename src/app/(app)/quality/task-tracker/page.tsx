@@ -175,8 +175,11 @@ export default function TaskTrackerPage() {
                 <Badge variant={getStatusBadgeVariant(task.status)} className="text-[10px] py-0">{task.status}</Badge>
               </TableCell>
               <TableCell className="text-right">
-                  <Button asChild variant="default" size="icon" className="h-7 w-7">
-                      <Link href={task.link}><Eye className="h-3.5 w-3.5" /></Link>
+                  <Button asChild variant="outline" size="sm" className="h-8 gap-2">
+                      <Link href={task.link}>
+                        <Eye className="h-4 w-4" />
+                        View
+                      </Link>
                   </Button>
               </TableCell>
             </TableRow>

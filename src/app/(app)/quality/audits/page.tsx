@@ -67,9 +67,9 @@ function AuditActions({ audit, tenantId }: AuditActionsProps) {
     
     return (
         <div className="flex items-center justify-end gap-2">
-            <Button asChild variant="default" size="sm" className="h-8 px-3 text-xs">
+            <Button asChild variant="outline" size="sm" className="h-8 gap-2">
                 <Link href={`/quality/audits/${audit.id}`}>
-                    <Eye className="mr-1.5 h-3.5 w-3.5" />
+                    <Eye className="h-4 w-4" />
                     View
                 </Link>
             </Button>

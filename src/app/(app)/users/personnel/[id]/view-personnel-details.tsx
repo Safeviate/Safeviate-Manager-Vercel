@@ -7,7 +7,7 @@ import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Trash2, Upload, View, PlusCircle, Contact, MapPin, PhoneCall, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, MapPin, PhoneCall, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -356,8 +356,8 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                                                         <TableCell className="text-right">
                                                             {doc.isUploaded ? (
                                                                 <div className="flex gap-2 justify-end">
-                                                                <Button variant="outline" size="sm" onClick={() => handleViewImage(doc.url!)}>
-                                                                    <View className="mr-2 h-4 w-4" /> View
+                                                                <Button variant="outline" size="sm" className="h-8 gap-2" onClick={() => handleViewImage(doc.url!)}>
+                                                                    <Eye className="h-4 w-4" /> View
                                                                 </Button>
                                                                 <Button variant="destructive" size="icon" onClick={() => handleDocumentDelete(doc.name)}>
                                                                     <Trash2 className="h-4 w-4" />

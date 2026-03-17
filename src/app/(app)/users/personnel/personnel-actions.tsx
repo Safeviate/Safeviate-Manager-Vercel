@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -67,9 +66,9 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
   return (
     <>
       <div className="flex items-center justify-end gap-2">
-        <Button asChild variant="default" size="sm">
+        <Button asChild variant="outline" size="sm" className="h-8 gap-2">
           <Link href={`/users/personnel/${user.id}?type=${user.userType}`}>
-            <Eye className="mr-2 h-4 w-4" />
+            <Eye className="h-4 w-4" />
             View
           </Link>
         </Button>
@@ -80,7 +79,7 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
             size="sm"
             onClick={() => setIsDeleteDialogOpen(true)}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </Button>
         )}

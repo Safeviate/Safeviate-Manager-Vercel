@@ -155,10 +155,10 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                             </TableCell>
                             <TableCell className='text-right'>
                                 <div className="flex justify-end gap-2">
-                                    <Button asChild variant="default" size="icon" className="h-8 w-8">
+                                    <Button asChild variant="outline" size="sm" className="h-8 gap-2">
                                         <Link href={`/bookings/history/${b.id}`}>
                                             <Eye className="h-4 w-4" />
-                                            <span className="sr-only">View</span>
+                                            View
                                         </Link>
                                     </Button>
                                     {b.type === 'Training Flight' && b.status === 'Completed' && (

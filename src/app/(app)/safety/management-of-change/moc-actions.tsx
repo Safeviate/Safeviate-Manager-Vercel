@@ -47,10 +47,10 @@ export function MocActions({ moc, tenantId }: MocActionsProps) {
   return (
     <>
       <div className="flex items-center justify-end gap-2">
-        <Button asChild variant="default" size="sm">
+        <Button asChild variant="outline" size="sm" className="h-8 gap-2">
           <Link href={`/safety/management-of-change/${moc.id}`}>
-            <Eye className="mr-2 h-4 w-4" />
-            {canManage ? 'View / Edit' : 'View'}
+            <Eye className="h-4 w-4" />
+            View
           </Link>
         </Button>
         

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -114,8 +113,8 @@ export function DepartmentActions({ tenantId, department }: DepartmentActionsPro
   return (
     <div className="flex items-center justify-end gap-2">
       {/* Action Buttons */}
-      <Button variant="outline" size="sm" onClick={() => setIsViewOpen(true)}>
-        <Eye className="mr-2 h-4 w-4" />
+      <Button variant="outline" size="sm" className="h-8 gap-2" onClick={() => setIsViewOpen(true)}>
+        <Eye className="h-4 w-4" />
         View
       </Button>
 
