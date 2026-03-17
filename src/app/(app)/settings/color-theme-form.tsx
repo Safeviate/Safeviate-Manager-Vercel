@@ -69,7 +69,6 @@ export function ColorThemeForm() {
         return;
     }
     
-    // Support comprehensive theme object if it exists, otherwise fallback to basic colors
     const themeToApply: SavedTheme = {
         name: tenant.name,
         colors: (tenant.theme.main as any) || {
@@ -91,7 +90,9 @@ export function ColorThemeForm() {
         },
         popoverColors: (tenant.theme.popover as any) || { 
             popover: tenant.theme.backgroundColour || popoverTheme.popover, 
-            'popover-foreground': popoverTheme['popover-foreground'] 
+            'popover-foreground': popoverTheme['popover-foreground'],
+            'popover-accent': popoverTheme['popover-accent'],
+            'popover-accent-foreground': popoverTheme['popover-accent-foreground'],
         },
         sidebarColors: (tenant.theme.sidebar as any) || {
             'sidebar-background': tenant.theme.backgroundColour || sidebarTheme['sidebar-background'],
@@ -167,8 +168,14 @@ export function ColorThemeForm() {
     toast({ title: "Theme Reset", description: "The theme has been reset to its default values." });
   }
 
-  const validSidebarKeys = ['sidebar-background', 'sidebar-foreground', 'sidebar-accent', 'sidebar-accent-foreground', 'sidebar-border'];
-  const filteredSidebarTheme = Object.entries(sidebarTheme).filter(([key]) => validSidebarKeys.includes(key));
+  const formatLabel = (key: string) => {
+    const clean = key.replace('popover-', '').replace('button-primary-', '').replace('sidebar-', '').replace('header-', '').replace('swimlane-header-', '');
+    if (clean === 'popover' || clean === 'card' || clean === 'background') return 'Background';
+    if (clean === 'foreground') return 'Text';
+    if (clean === 'accent') return 'Selection / Hover';
+    if (clean === 'accent-foreground') return 'Selection Text';
+    return clean.replace(/-/g, ' ');
+  };
 
   return (
     <Card className="flex flex-col h-full overflow-hidden shadow-none border">
@@ -262,7 +269,7 @@ export function ColorThemeForm() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {Object.entries(buttonTheme).map(([name, value]) => (
                     <div key={name} className="space-y-2">
-                        <Label htmlFor={name} className="capitalize">{name.replace('button-primary-', '').replace('-', ' ')}</Label>
+                        <Label htmlFor={name} className="capitalize">{formatLabel(name)}</Label>
                         <div className='relative'>
                         <Input id={name} type="color" value={value} onChange={(e) => setButtonThemeValue(name as keyof typeof buttonTheme, e.target.value)} className="p-1 h-10" />
                         </div>
@@ -278,7 +285,7 @@ export function ColorThemeForm() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {Object.entries(headerTheme).map(([name, value]) => (
                   <div key={name} className="space-y-2">
-                    <Label htmlFor={name} className="capitalize">{name.replace('header-', '')}</Label>
+                    <Label htmlFor={name} className="capitalize">{formatLabel(name)}</Label>
                     <div className='relative'>
                       <Input id={name} type="color" value={value} onChange={(e) => setHeaderThemeValue(name as keyof typeof headerTheme, e.target.value)} className="p-1 h-10" />
                     </div>
@@ -294,7 +301,7 @@ export function ColorThemeForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {Object.entries(swimlaneTheme).map(([name, value]) => (
                   <div key={name} className="space-y-2">
-                    <Label htmlFor={name} className="capitalize">{name.replace('swimlane-header-', '')}</Label>
+                    <Label htmlFor={name} className="capitalize">{formatLabel(name)}</Label>
                     <div className='relative'>
                       <Input id={name} type="color" value={value} onChange={(e) => setSwimlaneThemeValue(name as keyof typeof swimlaneTheme, e.target.value)} className="p-1 h-10" />
                     </div>
@@ -310,7 +317,7 @@ export function ColorThemeForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {Object.entries(cardTheme).map(([name, value]) => (
                   <div key={name} className="space-y-2">
-                    <Label htmlFor={name} className="capitalize">{name.replace('card-', '')}</Label>
+                    <Label htmlFor={name} className="capitalize">{formatLabel(name)}</Label>
                     <div className='relative'>
                       <Input id={name} type="color" value={value} onChange={(e) => setCardThemeValue(name as keyof typeof cardTheme, e.target.value)} className="p-1 h-10" />
                     </div>
@@ -326,7 +333,7 @@ export function ColorThemeForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {Object.entries(popoverTheme).map(([name, value]) => (
                   <div key={name} className="space-y-2">
-                    <Label htmlFor={name} className="capitalize">{name.replace('popover-', '')}</Label>
+                    <Label htmlFor={name} className="capitalize">{formatLabel(name)}</Label>
                     <div className='relative'>
                       <Input id={name} type="color" value={value} onChange={(e) => setPopoverThemeValue(name as keyof typeof popoverTheme, e.target.value)} className="p-1 h-10" />
                     </div>
@@ -340,9 +347,9 @@ export function ColorThemeForm() {
             <div>
               <h3 className="text-lg font-medium mb-4">Sidebar Theme</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredSidebarTheme.map(([name, value]) => (
+                {Object.entries(sidebarTheme).map(([name, value]) => (
                   <div key={name} className="space-y-2">
-                    <Label htmlFor={name} className="capitalize">{name.replace('sidebar-', '')}</Label>
+                    <Label htmlFor={name} className="capitalize">{formatLabel(name)}</Label>
                     <div className='relative'>
                       <Input id={name} type="color" value={value} onChange={(e) => setSidebarThemeValue(name as keyof typeof sidebarTheme, e.target.value)} className="p-1 h-10" />
                     </div>

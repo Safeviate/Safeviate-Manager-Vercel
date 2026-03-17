@@ -176,13 +176,22 @@ export function DatabaseForm() {
     }
   };
 
+  const formatLabel = (key: string, prefix: string) => {
+    const clean = key.replace(prefix, '');
+    if (clean === 'popover' || clean === 'card' || clean === 'background') return 'Background';
+    if (clean === 'foreground') return 'Text';
+    if (clean === 'accent') return 'Selection / Hover';
+    if (clean === 'accent-foreground') return 'Selection Text';
+    return clean.replace(/-/g, ' ');
+  };
+
   const ColorSection = ({ title, themeState, setter, prefix }: { title: string, themeState: any, setter: Function, prefix: string }) => (
     <div className="space-y-4 p-4 border rounded-lg bg-background/50">
         <h4 className="font-semibold text-sm uppercase tracking-wider text-primary">{title}</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {Object.entries(themeState).map(([key, value]) => (
                 <div key={key} className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">{key.replace(prefix, '').replace(/-/g, ' ')}</Label>
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">{formatLabel(key, prefix)}</Label>
                     <Input type="color" value={value as string} onChange={(e) => updateColor(setter, key, e.target.value)} className="h-8 p-1" />
                 </div>
             ))}
@@ -245,7 +254,7 @@ export function DatabaseForm() {
                     <ColorSection title="Swimlane Header" themeState={swimlaneTheme} setter={setSwimlaneTheme} prefix="swimlane-header-" />
                     <ColorSection title="Sidebar" themeState={sidebarTheme} setter={setSidebarTheme} prefix="sidebar-" />
                     <ColorSection title="Cards" themeState={cardTheme} setter={setCardTheme} prefix="card-" />
-                    <ColorSection title="Popovers & Tooltips" themeState={popoverTheme} setter={setPopoverTheme} prefix="popover-" />
+                    <ColorSection title="Popovers & Dropdowns" themeState={popoverTheme} setter={setPopoverTheme} prefix="popover-" />
                 </div>
             </div>
             
