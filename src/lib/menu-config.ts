@@ -11,6 +11,7 @@ import {
   Plane,
   CheckSquare,
   CalendarDays,
+  ShieldAlert,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -48,16 +49,16 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'bookings-view',
     subItems: [
       {
-        href: '/bookings/schedule',
-        label: 'Daily Schedule',
-        description: 'View and manage resource bookings.',
-        permissionId: 'bookings-schedule-view',
-      },
-      {
         href: '/bookings/history',
         label: 'History',
         description: 'View past bookings and logs.',
         permissionId: 'bookings-history-view',
+      },
+      {
+        href: '/bookings/schedule',
+        label: 'Daily Schedule',
+        description: 'View and manage resource bookings.',
+        permissionId: 'bookings-schedule-view',
       },
     ],
   },
@@ -72,6 +73,12 @@ export const menuConfig: MenuItem[] = [
         label: 'Alerts',
         description: 'View and manage critical system alerts.',
         permissionId: 'operations-alerts-view',
+      },
+      {
+        href: '/operations/emergency-response',
+        label: 'Emergency Response Plan',
+        description: 'Manage emergency contacts, triggers, and live response diaries.',
+        permissionId: 'operations-view',
       },
       {
         href: '/operations/flight-planner',

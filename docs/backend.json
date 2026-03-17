@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "User": {
@@ -6,289 +5,49 @@
       "type": "object",
       "description": "Represents a user's link between authentication and their profile data.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "The Firebase Authentication UID."
-        },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "The user's email address, used for lookups."
-        },
-        "profilePath": {
-          "type": "string",
-          "description": "The full Firestore path to the user's detailed profile document (e.g., 'tenants/safeviate/personnel/xyz123')."
-        }
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "profilePath": { "type": "string" }
       },
       "required": ["id", "email", "profilePath"]
     },
-    "ExternalOrganization": {
-      "title": "External Organization",
+    "ERPContact": {
+      "title": "ERP Contact",
       "type": "object",
-      "description": "An external company that participates in quality audits.",
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "contactEmail": { "type": "string", "format": "email" },
-        "address": { "type": "string" }
+        "role": { "type": "string" },
+        "organization": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "priority": { "type": "number" },
+        "category": { "type": "string", "enum": ["Internal", "Aviation Authorities", "Emergency Services", "External Partners"] }
       },
-      "required": ["id", "name"]
+      "required": ["id", "name", "role", "phone", "category"]
     },
-    "PublishedTable": {
-      "title": "Published Table",
+    "ERPEvent": {
+      "title": "ERP Event",
       "type": "object",
-      "properties": {
-        "pageId": { "type": "string" },
-        "tableData": { "$ref": "#/backend/entities/TableTemplate/properties/tableData" }
-      },
-      "required": ["pageId", "tableData"]
-    },
-    "TableTemplate": {
-        "title": "Table Template",
-        "type": "object",
-        "properties": {
-            "name": { "type": "string" },
-            "tableData": {
-                "type": "object",
-                "properties": {
-                    "rows": { "type": "number" },
-                    "cols": { "type": "number" },
-                    "cells": { 
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "r": { "type": "number" },
-                                "c": { "type": "number" },
-                                "content": { "type": "string" },
-                                "rowSpan": { "type": "number" },
-                                "colSpan": { "type": "number" },
-                                "hidden": { "type": "boolean" }
-                            },
-                            "required": ["r", "c", "rowSpan", "colSpan", "hidden"]
-                        }
-                    },
-                    "colWidths": { "type": "array", "items": { "type": "number" } },
-                    "rowHeights": { "type": "array", "items": { "type": "number" } }
-                },
-                "required": ["rows", "cols", "cells", "colWidths", "rowHeights"]
-            }
-        },
-        "required": ["name", "tableData"]
-    },
-    "Regulation": {
-        "title": "Regulation",
-        "type": "object",
-        "properties": {
-            "regulationCode": { "type": "string" },
-            "regulationStatement": { "type": "string" },
-            "technicalStandard": { "type": "string" },
-            "companyReference": { "type": "string" },
-            "parentRegulationCode": { "type": "string", "description": "The code of the parent regulation, if this is a sub-regulation." }
-        }
-    },
-    "FindingLevel": {
-        "title": "Finding Level",
-        "type": "object",
-        "description": "Represents a single audit finding level with its associated color.",
-        "properties": {
-            "id": { "type": "string" },
-            "name": { "type": "string" },
-            "color": { "type": "string", "description": "The hex color code for the background of this level." },
-            "foregroundColor": { "type": "string", "description": "The hex color code for the text of this level." }
-        },
-        "required": ["id", "name", "color", "foregroundColor"]
-    },
-    "FindingLevelsSettings": {
-        "title": "Finding Levels Settings",
-        "type": "object",
-        "description": "Represents the audit finding levels settings for a tenant.",
-        "properties": {
-            "id": { "type": "string" },
-            "levels": {
-                "type": "array",
-                "items": { "$ref": "#/backend/entities/FindingLevel" }
-            }
-        },
-        "required": ["id", "levels"]
-    },
-    "ComplianceRequirement": {
-        "title": "Compliance Requirement",
-        "type": "object",
-        "description": "A single regulatory or internal compliance requirement.",
-        "properties": {
-            "id": { "type": "string" },
-            "regulationCode": { "type": "string", "description": "The official code for the regulation (e.g., '141.02.2')." },
-            "parentRegulationCode": { "type": "string", "description": "The code of the parent regulation, if this is a sub-regulation." },
-            "regulationStatement": { "type": "string", "description": "The short, official title or heading of the regulation." },
-            "technicalStandard": { "type": "string", "description": "The full, detailed text body of the regulation." },
-            "companyReference": { "type": "string", "description": "A reference to the internal manual or procedure (e.g., 'Ops Manual, Sec 4.2.1')." },
-            "responsibleManagerId": { "type": "string", "description": "The ID of the manager responsible for this requirement." },
-            "lastAuditDate": { "type": "string", "format": "date-time" },
-            "nextAuditDate": { "type": "string", "format": "date-time" }
-        },
-        "required": ["id", "regulationCode", "regulationStatement", "companyReference"]
-    },
-    "Risk": {
-      "title": "Risk",
-      "type": "object",
-      "description": "Represents an identified organizational risk.",
       "properties": {
         "id": { "type": "string" },
-        "hazard": { "type": "string" },
-        "risk": { "type": "string" },
-        "hazardArea": { "type": "string" },
-        "likelihood": { "type": "number" },
-        "severity": { "type": "number" },
-        "riskScore": { "type": "number" },
-        "residualLikelihood": { "type": "number" },
-        "residualSeverity": { "type": "number" },
-        "residualRiskScore": { "type": "number" },
-        "status": { "type": "string", "enum": ["Open", "Closed", "Archived"] },
-        "mitigation": { "type": "string" },
-        "responsiblePersonId": { "type": "string" },
-        "reviewDate": { "type": "string", "format": "date" }
-      },
-      "required": ["id", "hazard", "risk", "hazardArea", "likelihood", "severity", "riskScore", "status"]
-    },
-    "SafetyReport": {
-      "title": "Safety Report",
-      "type": "object",
-      "description": "Represents a single safety report, from initial filing to final closure.",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the safety report." },
-        "reportNumber": { "type": "string", "description": "A unique, sequential, human-readable report number (e.g., FLT-001)." },
-        "reportType": {
-          "type": "string",
-          "description": "The category of the event being reported.",
-          "enum": ["Flight Operations", "Aircraft Defect", "Ground Operations", "General Safety Concern"]
-        },
-        "status": {
-          "type": "string",
-          "description": "The current stage of the report in its lifecycle.",
-          "enum": ["Open", "Under Review", "Awaiting Action", "Closed"]
-        },
-        "submittedBy": { "type": "string", "description": "The user ID of the person who filed the report." },
-        "submittedByName": { "type": "string", "description": "The name of the user who filed the report." },
-        "submittedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the report was submitted." },
-        "closedDate": { "type": "string", "format": "date-time", "description": "Timestamp of when the report was closed." },
-        "isAnonymous": { "type": "boolean", "description": "If true, the submitter's identity is hidden." },
-        "eventDate": { "type": "string", "format": "date", "description": "The date the event occurred." },
-        "eventTime": { "type": "string", "description": "The time the event occurred." },
-        "location": { "type": "string", "description": "The location where the event occurred." },
-        "aircraftId": { "type": "string", "description": "The ID of the aircraft involved, if any." },
-        "description": { "type": "string", "description": "A detailed narrative of the event." },
-        "phaseOfFlight": { "type": "string", "description": "For flight operations, the phase of flight when the event occurred." },
-        "systemOrComponent": { "type": "string", "description": "For defect reports, the specific system or component involved." },
-        "departmentId": { "type": "string", "description": "The department ID responsible for handling the report." },
-        "occurrenceCategory": { "type": "string", "description": "The official ICAO occurrence category assigned during triage." },
-        "eventClassification": {
-          "type": "string",
-          "description": "The final classification of the event.",
-          "enum": ["Hazard", "Incident", "Accident"]
-        }
-      },
-      "required": ["id", "reportNumber", "reportType", "status", "submittedAt", "eventDate", "description"]
-    },
-    "ManagementOfChange": {
-      "title": "Management of Change",
-      "type": "object",
-      "description": "Represents a Management of Change (MOC) record.",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the MOC." },
-        "mocNumber": { "type": "string", "description": "A unique, sequential, human-readable MOC number (e.g., MOC-001)." },
-        "title": { "type": "string", "description": "A clear, concise title for the change." },
-        "description": { "type": "string", "description": "A detailed explanation of what is changing." },
-        "reason": { "type": "string", "description": "The reason why the change is being made." },
-        "scope": { "type": "string", "description": "Who and what will be affected by the change." },
-        "proposingDepartmentId": { "type": "string", "description": "The ID of the department proposing the change." },
-        "responsiblePersonId": { "type": "string", "description": "The ID of the person responsible for the proposal." },
-        "proposedBy": { "type": "string", "description": "The user ID of the person who initiated the change." },
-        "proposalDate": { "type": "string", "format": "date-time", "description": "Timestamp of when the MOC was proposed." },
-        "status": {
-          "type": "string",
-          "enum": ["Proposed", "Under Review", "Approved", "In Progress", "Closed", "Cancelled"]
-        }
-      },
-      "required": ["id", "mocNumber", "title", "status", "proposalDate", "proposingDepartmentId"]
-    },
-    "Aircraft": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Aircraft",
-      "type": "object",
-      "description": "Represents an aircraft used for training.",
-      "properties": {
-        "id": { "type": "string" },
-        "make": { "type": "string" },
-        "tailNumber": { "type": "string" },
-        "model": { "type": "string" },
-        "type": { "type": "string", "enum": ["Single-Engine", "Multi-Engine"] },
-        "organizationId": { "type": "string", "description": "ID of the associated external organization, if applicable." },
-        "frameHours": { "type": "number" },
-        "engineHours": { "type": "number" },
-        "currentHobbs": { "type": "number" },
-        "currentTacho": { "type": "number" },
-        "tachoAtNext50Inspection": { "type": "number" },
-        "tachoAtNext100Inspection": { "type": "number" }
-      },
-      "required": ["id", "make", "tailNumber", "model"]
-    },
-    "MaintenanceLog": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "MaintenanceLog",
-      "type": "object",
-      "description": "Represents a maintenance log entry for an aircraft.",
-      "properties": {
-        "id": { "type": "string" },
-        "aircraftId": { "type": "string" },
-        "maintenanceType": { "type": "string" },
-        "date": { "type": "string", "format": "date-time" },
-        "details": { "type": "string" },
-        "reference": { "type": "string", "description": "Internal or external reference number for the work." },
-        "ameNo": { "type": "string", "description": "AME license number." },
-        "amoNo": { "type": "string", "description": "AMO number." }
-      },
-      "required": ["id", "aircraftId", "maintenanceType", "date", "details"]
-    },
-    "Role": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Role",
-      "type": "object",
-      "description": "Represents a role within the application.",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "category": { "type": "string", "enum": ["Personnel", "Instructor", "Student", "Private Pilot", "External"] },
-        "permissions": { "type": "array", "items": { "type": "string" } }
-      },
-      "required": ["id", "name", "category"]
-    },
-    "Tenant": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Tenant",
-      "type": "object",
-      "description": "Represents a Tenant on the system.",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "logoUrl": { "type": "string" },
-        "theme": { "$ref": "#/backend/entities/Theme" },
-        "enabledMenus": {
+        "title": { "type": "string" },
+        "status": { "type": "string", "enum": ["Mock", "Active", "Closed"] },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "endedAt": { "type": "string", "format": "date-time" },
+        "log": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "A list of menu/submenu hrefs enabled for this tenant."
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" },
+              "description": { "type": "string" },
+              "userName": { "type": "string" },
+              "isMilestone": { "type": "boolean" }
+            }
+          }
         }
-      },
-      "required": ["id", "name"]
-    },
-    "Theme": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Theme",
-      "type": "object",
-      "properties": {
-        "primaryColour": { "type": "string" },
-        "backgroundColour": { "type": "string" },
-        "accentColour": { "type": "string" }
       }
     }
   },
@@ -301,35 +60,21 @@
         "path": "users/{userId}",
         "definition": {
           "schema": { "$ref": "#/backend/entities/User" },
-          "description": "Stores a link between a Firebase Auth user and their profile document."
+          "description": "User profile link."
         }
       },
       {
-        "path": "tenants/{tenantId}",
+        "path": "tenants/{tenantId}/erp-contacts/{contactId}",
         "definition": {
-          "schema": { "$ref": "#/backend/entities/Tenant" },
-          "description": "Stores tenant configuration and authorized features."
+          "schema": { "$ref": "#/backend/entities/ERPContact" },
+          "description": "Emergency contacts for ERP."
         }
       },
       {
-        "path": "tenants/{tenantId}/external-organizations/{orgId}",
+        "path": "tenants/{tenantId}/erp-events/{eventId}",
         "definition": {
-          "schema": { "$ref": "#/backend/entities/ExternalOrganization" },
-          "description": "Stores external companies involved in quality audits."
-        }
-      },
-      {
-        "path": "tenants/{tenantId}/aircrafts/{aircraftId}",
-        "definition": {
-          "schema": { "$ref": "#/backend/entities/Aircraft" },
-          "description": "Stores aircraft information."
-        }
-      },
-      {
-        "path": "tenants/{tenantId}/aircrafts/{aircraftId}/maintenanceLogs/{maintenanceLogId}",
-        "definition": {
-          "schema": { "$ref": "#/backend/entities/MaintenanceLog" },
-          "description": "Stores maintenance log entries for a specific aircraft."
+          "schema": { "$ref": "#/backend/entities/ERPEvent" },
+          "description": "Real-time ERP response logs."
         }
       }
     ]
