@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { collection, query, doc, deleteDoc, writeBatch } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Megaphone, Copy, Database, Printer } from 'lucide-react';
+import { PlusCircle, Trash2, Megaphone, Copy, Database, Printer, Pencil } from 'lucide-react';
 import type { ERPMediaTemplate } from '@/types/erp';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -74,6 +74,8 @@ export function MediaTab({ tenantId }: MediaTabProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<ERPMediaTemplate | null>(null);
 
   const mediaQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/erp-media`)) : null),
@@ -94,6 +96,23 @@ export function MediaTab({ tenantId }: MediaTabProps) {
     addDocumentNonBlocking(collection(firestore, `tenants/${tenantId}/erp-media`), newTemplate);
     setIsAddOpen(false);
     toast({ title: 'Template Saved' });
+  };
+
+  const handleUpdateTemplate = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingTemplate || !firestore) return;
+    const formData = new FormData(e.currentTarget);
+    const updatedTemplate = {
+      type: formData.get('type') as any,
+      title: formData.get('title') as string,
+      content: formData.get('content') as string,
+    };
+
+    const templateRef = doc(firestore, `tenants/${tenantId}/erp-media`, editingTemplate.id);
+    updateDocumentNonBlocking(templateRef, updatedTemplate);
+    setIsEditOpen(false);
+    setEditingTemplate(null);
+    toast({ title: 'Template Updated' });
   };
 
   const handleSeedStandardTemplates = async () => {
@@ -200,6 +219,7 @@ export function MediaTab({ tenantId }: MediaTabProps) {
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => handlePrint(template)}><Printer className="h-4 w-4 mr-2" /> Print</Button>
                 <Button variant="outline" size="sm" onClick={() => handleCopy(template.content)}><Copy className="h-4 w-4 mr-2" /> Copy</Button>
+                <Button variant="ghost" size="icon" onClick={() => { setEditingTemplate(template); setIsEditOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                 <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(template.id)}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </CardHeader>
@@ -217,6 +237,41 @@ export function MediaTab({ tenantId }: MediaTabProps) {
           </div>
         )}
       </div>
+
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Media Statement Template</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdateTemplate} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Statement Type</Label>
+                <Select name="type" defaultValue={editingTemplate?.type}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Immediate">Immediate Statement</SelectItem>
+                    <SelectItem value="Second Statement">Secondary Update</SelectItem>
+                    <SelectItem value="Post-Incident">Final Closure</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Internal Title</Label>
+                <Input name="title" defaultValue={editingTemplate?.title} required />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Statement Content</Label>
+              <Textarea name="content" className="min-h-64" defaultValue={editingTemplate?.content} required />
+            </div>
+            <DialogFooter>
+              <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+              <Button type="submit">Update Template</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
