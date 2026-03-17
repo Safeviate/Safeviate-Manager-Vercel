@@ -68,7 +68,8 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [selectedOrganization, setSelectedOrganization] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [isErpContact, setIsErpContact] = useState(false);
+  const [isIncerfaContact, setIsIncerfaContact] = useState(false);
+  const [isAlerfaContact, setIsAlerfaContact] = useState(false);
   
   const handleRoleChange = (roleId: string) => {
     const role = roles.find(r => r.id === roleId);
@@ -109,7 +110,8 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
             role: selectedRole.id,
             organizationId: selectedOrganization === 'internal' ? null : selectedOrganization,
             permissions: selectedRole.permissions || [], 
-            isErpIncerfaContact: isErpContact,
+            isErpIncerfaContact: isIncerfaContact,
+            isErpAlerfaContact: isAlerfaContact,
         };
 
         if (userType === 'Personnel' || userType === 'External') {
@@ -145,7 +147,8 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
     setSelectedDepartment(null);
     setSelectedOrganization(null);
     setSelectedRole(null);
-    setIsErpContact(false);
+    setIsIncerfaContact(false);
+    setIsAlerfaContact(false);
     setIsOpen(false);
   }
 
@@ -189,13 +192,23 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
                     </Select>
                 </div>
 
-                <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10 col-span-2">
-                  <Switch 
-                    id="erp-contact-new" 
-                    checked={isErpContact} 
-                    onCheckedChange={setIsErpContact} 
-                  />
-                  <Label htmlFor="erp-contact-new" className="cursor-pointer">Designate as ERP INCERFA Contact</Label>
+                <div className="col-span-2 grid grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10">
+                    <Switch 
+                      id="erp-incerfa-new" 
+                      checked={isIncerfaContact} 
+                      onCheckedChange={setIsIncerfaContact} 
+                    />
+                    <Label htmlFor="erp-incerfa-new" className="cursor-pointer text-xs">INCERFA Contact</Label>
+                  </div>
+                  <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10">
+                    <Switch 
+                      id="erp-alerfa-new" 
+                      checked={isAlerfaContact} 
+                      onCheckedChange={setIsAlerfaContact} 
+                    />
+                    <Label htmlFor="erp-alerfa-new" className="cursor-pointer text-xs">ALERFA Contact</Label>
+                  </div>
                 </div>
 
                 {(userType === 'Personnel' || userType === 'External') && (

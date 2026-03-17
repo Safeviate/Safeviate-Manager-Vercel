@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -228,12 +227,20 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                             <CardTitle>Personnel Overview</CardTitle>
                             <CardDescription>Primary identification and organizational details.</CardDescription>
                         </div>
-                        {user.isErpIncerfaContact && (
-                            <Badge className="bg-red-600 text-white gap-1.5 h-7 px-3">
-                                <ShieldAlert className="h-3.5 w-3.5" />
-                                Designated ERP Contact
-                            </Badge>
-                        )}
+                        <div className="flex flex-col gap-2 items-end">
+                          {user.isErpIncerfaContact && (
+                              <Badge className="bg-red-600 text-white gap-1.5 h-7 px-3">
+                                  <ShieldAlert className="h-3.5 w-3.5" />
+                                  Designated INCERFA Contact
+                              </Badge>
+                          )}
+                          {user.isErpAlerfaContact && (
+                              <Badge className="bg-amber-600 text-white gap-1.5 h-7 px-3">
+                                  <ShieldAlert className="h-3.5 w-3.5" />
+                                  Designated ALERFA Contact
+                              </Badge>
+                          )}
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="flex-1 p-0 overflow-hidden">

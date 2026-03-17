@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -45,14 +44,24 @@ export function InstructorsTable({ data, tenantId }: InstructorsTableProps) {
               <TableCell className="font-medium">
                 <div className="flex items-center gap-2">
                   {pilot.firstName} {pilot.lastName}
-                  {pilot.isErpIncerfaContact && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <ShieldAlert className="h-3.5 w-3.5 text-red-600" />
-                      </TooltipTrigger>
-                      <TooltipContent>Designated ERP INCERFA Contact</TooltipContent>
-                    </Tooltip>
-                  )}
+                  <div className="flex gap-1">
+                    {pilot.isErpIncerfaContact && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <ShieldAlert className="h-3.5 w-3.5 text-red-600" />
+                        </TooltipTrigger>
+                        <TooltipContent>Designated ERP INCERFA Contact</TooltipContent>
+                      </Tooltip>
+                    )}
+                    {pilot.isErpAlerfaContact && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <ShieldAlert className="h-3.5 w-3.5 text-amber-600" />
+                        </TooltipTrigger>
+                        <TooltipContent>Designated ERP ALERFA Contact</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
                 </div>
               </TableCell>
               <TableCell>{pilot.email}</TableCell>

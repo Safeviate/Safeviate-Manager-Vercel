@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -49,14 +48,24 @@ export function PersonnelTable({ data, rolesMap, departmentsMap, tenantId }: Per
               <TableCell className="font-medium">
                 <div className="flex items-center gap-2">
                   {person.firstName} {person.lastName}
-                  {person.isErpIncerfaContact && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <ShieldAlert className="h-3.5 w-3.5 text-red-600" />
-                      </TooltipTrigger>
-                      <TooltipContent>Designated ERP INCERFA Contact</TooltipContent>
-                    </Tooltip>
-                  )}
+                  <div className="flex gap-1">
+                    {person.isErpIncerfaContact && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <ShieldAlert className="h-3.5 w-3.5 text-red-600" />
+                        </TooltipTrigger>
+                        <TooltipContent>Designated ERP INCERFA Contact</TooltipContent>
+                      </Tooltip>
+                    )}
+                    {person.isErpAlerfaContact && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <ShieldAlert className="h-3.5 w-3.5 text-amber-600" />
+                        </TooltipTrigger>
+                        <TooltipContent>Designated ERP ALERFA Contact</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
                 </div>
               </TableCell>
               <TableCell>{person.email}</TableCell>

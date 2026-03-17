@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -37,23 +36,38 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
   const [newLogEntry, setNewLogEntry] = useState('');
   const [isMilestone, setIsMilestone] = useState(false);
 
-  const personnelQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
-  const privatePilotsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/private-pilots`) : null), [firestore, tenantId]);
+  const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
+  const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
 
   const { data: personnel } = useCollection<Personnel>(personnelQuery);
   const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
   const { data: students } = useCollection<PilotProfile>(studentsQuery);
   const { data: privatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
 
+  const allUsers = useMemo(() => {
+    return [
+      ...(personnel || []), 
+      ...(instructors || []), 
+      ...(students || []), 
+      ...(privatePilots || [])
+    ];
+  }, [personnel, instructors, students, privatePilots]);
+
   const incerfaContacts = useMemo(() => {
-    const allUsers = [...(personnel || []), ...(instructors || []), ...(students || []), ...(privatePilots || [])];
     return allUsers
       .filter(u => u.isErpIncerfaContact)
       .map(u => `${u.firstName} ${u.lastName}`)
       .join(', ');
-  }, [personnel, instructors, students, privatePilots]);
+  }, [allUsers]);
+
+  const alerfaContacts = useMemo(() => {
+    return allUsers
+      .filter(u => u.isErpAlerfaContact)
+      .map(u => `${u.firstName} ${u.lastName}`)
+      .join(', ');
+  }, [allUsers]);
 
   const dynamicPhaseChecklists = useMemo(() => [
     {
@@ -74,6 +88,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
         { id: 'ale-2', label: 'Ground support teams on standby' },
         { id: 'ale-3', label: 'Internal management team alerted' },
         { id: 'ale-4', label: 'Secondary communication search expanded' },
+        { id: 'ale-5', label: `Contact designated ALERFA response team${alerfaContacts ? `: ${alerfaContacts}` : ''}` },
       ]
     },
     {
@@ -85,7 +100,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
         { id: 'det-4', label: 'Issue media holding statement' },
       ]
     }
-  ], [incerfaContacts]);
+  ], [incerfaContacts, alerfaContacts]);
 
   const eventsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/erp-events`), orderBy('startedAt', 'desc')) : null),

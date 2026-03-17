@@ -174,13 +174,22 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                       </Select>
                   </div>
 
-                  <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10 self-end">
+                  <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10">
                     <Switch 
-                      id="erp-contact" 
+                      id="erp-incerfa" 
                       checked={!!formData.isErpIncerfaContact} 
                       onCheckedChange={(val) => handleInputChange('isErpIncerfaContact', val)} 
                     />
-                    <Label htmlFor="erp-contact" className="cursor-pointer">ERP INCERFA Contact</Label>
+                    <Label htmlFor="erp-incerfa" className="cursor-pointer text-xs">ERP INCERFA Contact</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10">
+                    <Switch 
+                      id="erp-alerfa" 
+                      checked={!!formData.isErpAlerfaContact} 
+                      onCheckedChange={(val) => handleInputChange('isErpAlerfaContact', val)} 
+                    />
+                    <Label htmlFor="erp-alerfa" className="cursor-pointer text-xs">ERP ALERFA Contact</Label>
                   </div>
 
                   {!isPilotProfile(formData) && (
@@ -195,7 +204,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                   {isPilotProfile(formData) && (
                     <>
                       <div className="space-y-2"><Label>License Number</Label><Input value={(formData as PilotProfile).pilotLicense?.licenseNumber || ''} onChange={(e) => handleNestedInputChange('pilotLicense', 'licenseNumber', e.target.value)} /></div>
-                      <div className="space-y-2"><Label>Logbook Template</Label><Select onValueChange={(value) => handleInputChange('logbookTemplateId', value)} value={(formData as PilotProfile).logbookTemplateId}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{logbookTemplates.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent></Select></div>
+                      <div className="space-y-2"><Label>Logbook Template</Label><Select onValueChange={(value) => handleInputChange('logbookTemplateId', value)} value={(formData as PilotProfile).logbookTemplateId}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{logbookTemplates.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                     </>
                   )}
                 </CollapsibleContent>

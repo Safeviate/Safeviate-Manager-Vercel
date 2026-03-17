@@ -24,7 +24,8 @@ export type PilotProfile = {
   contactNumber?: string;
   dateOfBirth?: string;
   logbookTemplateId?: string;
-  isErpIncerfaContact?: boolean; // Designated ERP contact
+  isErpIncerfaContact?: boolean; // Designated ERP INCERFA contact
+  isErpAlerfaContact?: boolean; // Designated ERP ALERFA contact
   address?: {
     street?: string;
     city?: string;
@@ -64,7 +65,8 @@ export type Personnel = {
   role: string; // role ID
   permissions: string[];
   dateOfBirth?: string;
-  isErpIncerfaContact?: boolean; // Designated ERP contact
+  isErpIncerfaContact?: boolean; // Designated ERP INCERFA contact
+  isErpAlerfaContact?: boolean; // Designated ERP ALERFA contact
   address?: {
     street?: string;
     city?: string;
@@ -134,7 +136,7 @@ export default function PersonnelPage() {
   const error = personnelError || rolesError || deptsError;
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
+    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full">
       <div className="flex justify-between items-center px-1">
         <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Personnel</h1>
