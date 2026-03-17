@@ -38,8 +38,20 @@
         "endedAt": { "type": "string", "format": "date-time" },
         "completedTasks": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "List of checklist task IDs completed during this session."
+          "items": { "type": "string" }
+        },
+        "collectedDocuments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "securedAt": { "type": "string", "format": "date-time" },
+              "securedBy": { "type": "string" },
+              "status": { "type": "string", "enum": ["Pending", "Secured", "Not Available"] }
+            }
+          }
         },
         "log": {
           "type": "array",

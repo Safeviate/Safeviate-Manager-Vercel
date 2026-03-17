@@ -37,6 +37,14 @@ export interface ERPLogEntry {
 
 export type ERPEventStatus = 'Mock' | 'Active' | 'Closed';
 
+export interface ERPCollectedDocument {
+  id: string;
+  name: string;
+  securedAt?: string;
+  securedBy?: string;
+  status: 'Pending' | 'Secured' | 'Not Available';
+}
+
 export interface ERPEvent {
   id: string;
   title: string;
@@ -45,5 +53,6 @@ export interface ERPEvent {
   endedAt?: string;
   summary?: string;
   completedTasks?: string[];
+  collectedDocuments?: ERPCollectedDocument[];
   log: ERPLogEntry[];
 }
