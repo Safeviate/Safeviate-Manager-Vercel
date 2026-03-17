@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -35,6 +34,7 @@ const PHASE_CHECKLISTS = [
       { id: 'inc-2', label: 'Start communication search (all frequencies)' },
       { id: 'inc-3', label: 'Contact alternate airfields' },
       { id: 'inc-4', label: 'Check with last known ATC unit' },
+      { id: 'inc-5', label: 'Directly contact crew on mobile devices' },
     ]
   },
   {
