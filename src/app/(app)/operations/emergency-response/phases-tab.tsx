@@ -9,8 +9,8 @@ export function PhasesTab() {
   return (
     <div className="space-y-6">
       <div className="px-1">
-        <h2 className="text-xl font-bold">Aviation Emergency Phases (SAR)</h2>
-        <p className="text-sm text-muted-foreground">Standardized ICAO terminology for search and rescue (SAR) notification.</p>
+        <h2 className="text-xl font-bold">International SAR Phases</h2>
+        <p className="text-sm text-muted-foreground">Standardized ICAO terminology used for Search and Rescue (SAR) notification and external escalation.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
@@ -36,9 +36,9 @@ export function PhasesTab() {
               </ul>
             </div>
             <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-              <p className="text-xs font-bold text-blue-800 uppercase mb-1">Action Required</p>
+              <p className="text-xs font-bold text-blue-800 uppercase mb-1">Standard Action</p>
               <p className="text-xs text-blue-700 leading-relaxed">
-                Start communication search. Verify flight plan details. Contact alternate airfields and known frequencies.
+                Initiate communication search. Verify flight plan details. Contact alternate airfields and known frequencies.
               </p>
             </div>
           </CardContent>
@@ -67,7 +67,7 @@ export function PhasesTab() {
               </ul>
             </div>
             <div className="p-3 bg-amber-50 rounded-lg border border-amber-100">
-              <p className="text-xs font-bold text-amber-800 uppercase mb-1">Action Required</p>
+              <p className="text-xs font-bold text-amber-800 uppercase mb-1">Standard Action</p>
               <p className="text-xs text-amber-700 leading-relaxed">
                 Notify Search and Rescue Coordination Center (RCC). Prepare ground support. Alert internal management and staff.
               </p>
@@ -98,7 +98,7 @@ export function PhasesTab() {
               </ul>
             </div>
             <div className="p-3 bg-red-50 rounded-lg border border-red-100">
-              <p className="text-xs font-bold text-red-800 uppercase mb-1">Action Required</p>
+              <p className="text-xs font-bold text-red-800 uppercase mb-1">Standard Action</p>
               <p className="text-xs text-red-700 leading-relaxed">
                 Activate full Emergency Response Plan. Dispatch resources. Finalize media holding statements. Contact next of kin.
               </p>

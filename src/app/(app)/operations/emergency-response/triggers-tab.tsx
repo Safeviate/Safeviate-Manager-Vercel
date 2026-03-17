@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -53,7 +54,10 @@ export function TriggersTab({ tenantId }: TriggersTabProps) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center px-1">
-        <h2 className="text-xl font-bold">ERP Activation Triggers</h2>
+        <div>
+          <h2 className="text-xl font-bold">Internal Activation Triggers</h2>
+          <p className="text-sm text-muted-foreground">Internal company policies that dictate when the ERP must be initiated.</p>
+        </div>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger asChild>
             <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Define Trigger</Button>
@@ -63,9 +67,9 @@ export function TriggersTab({ tenantId }: TriggersTabProps) {
               <DialogTitle>Define Activation Trigger</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleAddTrigger} className="space-y-4">
-              <div className="space-y-2"><Label>Event Type</Label><Input name="eventType" placeholder="e.g., Aircraft Accident" required /></div>
-              <div className="space-y-2"><Label>Activation Criteria</Label><Textarea name="criteria" placeholder="Define the threshold for activation..." required /></div>
-              <div className="space-y-2"><Label>Initial Checklist (One per line)</Label><Textarea name="checklist" placeholder="1. Secure scene&#10;2. Call Fire Services..." required /></div>
+              <div className="space-y-2"><Label>Event Type</Label><Input name="eventType" placeholder="e.g., Aircraft 30m Overdue" required /></div>
+              <div className="space-y-2"><Label>Activation Criteria</Label><Textarea name="criteria" placeholder="Describe exactly what triggers this action..." required /></div>
+              <div className="space-y-2"><Label>Initial Checklist (One per line)</Label><Textarea name="checklist" placeholder="1. Secure flight log&#10;2. Call Safety Manager..." required /></div>
               <DialogFooter>
                 <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
                 <Button type="submit">Define Trigger</Button>
@@ -103,7 +107,7 @@ export function TriggersTab({ tenantId }: TriggersTabProps) {
         ))}
         {(!triggers || triggers.length === 0) && (
           <div className="col-span-2 h-48 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
-            No triggers defined yet.
+            No internal triggers defined yet. Define triggers to streamline session activation.
           </div>
         )}
       </div>

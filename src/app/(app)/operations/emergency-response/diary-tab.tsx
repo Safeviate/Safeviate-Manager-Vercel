@@ -10,11 +10,12 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Play, StopCircle, PlusCircle, Clock, User, Flag, ShieldAlert, CheckCircle2 } from 'lucide-react';
-import type { ERPEvent, ERPLogEntry, ERPEventStatus } from '@/types/erp';
+import type { ERPEvent, ERPLogEntry, ERPEventStatus, ERPTrigger } from '@/types/erp';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -34,8 +35,16 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
   const { toast } = useToast();
   
   const [isStartOpen, setIsStartOpen] = useState(false);
+  const [selectedTriggerId, setSelectedTriggerId] = useState<string | null>(null);
   const [newLogEntry, setNewLogEntry] = useState('');
   const [isMilestone, setIsMilestone] = useState(false);
+
+  // --- Data Fetching ---
+  const triggersQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/erp-triggers`)) : null),
+    [firestore, tenantId]
+  );
+  const { data: triggers } = useCollection<ERPTrigger>(triggersQuery);
 
   const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
   const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
@@ -116,25 +125,43 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const isMock = formData.get('isMock') === 'on';
+    const triggerId = formData.get('triggerId') as string;
+    const trigger = triggers?.find(t => t.id === triggerId);
     
-    const newEvent = {
-      title: formData.get('title') as string,
-      status: isMock ? 'Mock' : 'Active' as ERPEventStatus,
-      startedAt: new Date().toISOString(),
-      completedTasks: [],
-      log: [{
+    const title = formData.get('title') as string || (trigger ? `ERP: ${trigger.eventType}` : 'Emergency Response');
+
+    const initialLog: ERPLogEntry[] = [{
+      id: uuidv4(),
+      timestamp: new Date().toISOString(),
+      description: `ERP ${isMock ? 'Mock Exercise' : 'Response'} Initialized: ${title}`,
+      loggedBy: userProfile?.id || 'System',
+      userName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'System',
+      isMilestone: true
+    }];
+
+    if (trigger) {
+      initialLog.push({
         id: uuidv4(),
         timestamp: new Date().toISOString(),
-        description: `ERP ${isMock ? 'Mock Exercise' : 'Response'} Initialized: ${formData.get('title')}`,
+        description: `INTERNAL TRIGGER IDENTIFIED: ${trigger.eventType}. Criteria: ${trigger.criteria}`,
         loggedBy: userProfile?.id || 'System',
         userName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'System',
         isMilestone: true
-      }]
+      });
+    }
+
+    const newEvent = {
+      title,
+      status: isMock ? 'Mock' : 'Active' as ERPEventStatus,
+      startedAt: new Date().toISOString(),
+      completedTasks: [],
+      log: initialLog
     };
 
     if (!firestore) return;
     addDocumentNonBlocking(collection(firestore, `tenants/${tenantId}/erp-events`), newEvent);
     setIsStartOpen(false);
+    setSelectedTriggerId(null);
     toast({ title: isMock ? 'Mock Started' : 'ERP ACTIVATED', variant: isMock ? 'default' : 'destructive' });
   };
 
@@ -219,17 +246,33 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
             <DialogTrigger asChild>
               <Button variant="destructive" className="animate-bounce shadow-lg"><Play className="mr-2 h-4 w-4" /> Start ERP Session</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Activate Emergency Response</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleStartERP} className="space-y-4 pt-4">
-                <div className="space-y-2"><Label>Session Title</Label><Input name="title" placeholder="e.g., ZS-ABC Overdue - Mock Exercise" required /></div>
+                <div className="space-y-2">
+                  <Label>Activation Trigger (Internal)</Label>
+                  <Select name="triggerId" onValueChange={setSelectedTriggerId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select internal trigger..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(triggers || []).map(t => (
+                        <SelectItem key={t.id} value={t.id}>{t.eventType}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Session Title / Context</Label>
+                  <Input name="title" placeholder="e.g., ZS-ABC Overdue - Flight 123" required />
+                </div>
                 <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10">
                   <Switch name="isMock" id="mock-mode" defaultChecked={true} />
                   <Label htmlFor="mock-mode" className="cursor-pointer">Simulation / Mock Exercise</Label>
                 </div>
-                <p className="text-xs text-muted-foreground italic">Running a simulation will mark all log entries as "Mock".</p>
+                <p className="text-xs text-muted-foreground italic">Initiating based on an internal trigger provides immediate response context.</p>
                 <DialogFooter>
                   <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
                   <Button type="submit" variant="destructive">Activate Protocol</Button>
@@ -246,13 +289,13 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 flex-1 min-h-0">
           <Card className="flex flex-col h-full overflow-hidden shadow-none border border-red-200">
             <CardHeader className="bg-red-50/50 border-b">
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex items-center justify-between text-lg">
                 <span>{activeEvent.title}</span>
                 <Badge variant={activeEvent.status === 'Active' ? 'destructive' : 'secondary'}>{activeEvent.status}</Badge>
               </CardTitle>
               <CardDescription>Started: {format(new Date(activeEvent.startedAt), 'PPP p')}</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 p-0 overflow-hidden">
+            <CardContent className="flex-1 p-0 overflow-hidden bg-background">
               <ScrollArea className="h-full">
                 <div className="p-6 space-y-6">
                   {activeEvent.log.map((entry) => (
