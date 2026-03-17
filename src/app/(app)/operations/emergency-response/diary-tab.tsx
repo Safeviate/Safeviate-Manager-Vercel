@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -9,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Play, StopCircle, PlusCircle, Clock, User, Flag, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { Play, StopCircle, PlusCircle, Clock, User, Flag, ShieldAlert, CheckCircle2, ArrowLeft, History } from 'lucide-react';
 import type { ERPEvent, ERPLogEntry, ERPEventStatus, ERPTrigger } from '@/types/erp';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -35,9 +34,12 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
   const { toast } = useToast();
   
   const [isStartOpen, setIsStartOpen] = useState(false);
+  const [isCloseOpen, setIsCloseOpen] = useState(false);
   const [selectedTriggerId, setSelectedTriggerId] = useState<string | null>(null);
   const [newLogEntry, setNewLogEntry] = useState('');
   const [isMilestone, setIsMilestone] = useState(false);
+  const [closingSummary, setClosingSummary] = useState('');
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   // --- Data Fetching ---
   const triggersQuery = useMemoFirebase(
@@ -46,10 +48,22 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
   );
   const { data: triggers } = useCollection<ERPTrigger>(triggersQuery);
 
-  const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
-  const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
+  const personnelQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
+    [firestore, tenantId]
+  );
+  const instructorsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null),
+    [firestore, tenantId]
+  );
+  const studentsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null),
+    [firestore, tenantId]
+  );
+  const privatePilotsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null),
+    [firestore, tenantId]
+  );
 
   const { data: personnel } = useCollection<Personnel>(personnelQuery);
   const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
@@ -120,6 +134,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
   const { data: events } = useCollection<ERPEvent>(eventsQuery);
 
   const activeEvent = useMemo(() => events?.find(e => e.status !== 'Closed'), [events]);
+  const viewingEvent = useMemo(() => events?.find(e => e.id === selectedEventId), [events, selectedEventId]);
 
   const handleStartERP = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -221,84 +236,159 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
 
   const handleCloseERP = () => {
     if (!activeEvent || !firestore) return;
-    if (!window.confirm("Are you sure you want to close this ERP session?")) return;
 
     const eventRef = doc(firestore, `tenants/${tenantId}/erp-events`, activeEvent.id);
+    
+    const finalLog: ERPLogEntry = {
+      id: uuidv4(),
+      timestamp: new Date().toISOString(),
+      description: `SESSION CLOSED. Final Summary: ${closingSummary || 'No closing notes provided.'}`,
+      loggedBy: userProfile?.id || 'System',
+      userName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'System',
+      isMilestone: true
+    };
+
     updateDocumentNonBlocking(eventRef, {
       status: 'Closed',
-      endedAt: new Date().toISOString()
+      endedAt: new Date().toISOString(),
+      summary: closingSummary,
+      log: arrayUnion(finalLog)
     });
-    toast({ title: 'Session Closed' });
+
+    setIsCloseOpen(false);
+    setClosingSummary('');
+    toast({ title: 'ERP Session Finalized' });
   };
+
+  const currentActiveOrViewing = activeEvent || viewingEvent;
 
   return (
     <div className="flex flex-col h-full gap-6">
       <div className="flex justify-between items-center px-1">
-        <h2 className="text-xl font-bold flex items-center gap-2 font-headline">
-          {activeEvent ? (
-            <span className="flex items-center gap-2 text-red-600 animate-pulse">
-              <ShieldAlert className="h-5 w-5" /> Active Session
-            </span>
-          ) : 'Response History'}
-        </h2>
-        {!activeEvent ? (
-          <Dialog open={isStartOpen} onOpenChange={setIsStartOpen}>
-            <DialogTrigger asChild>
-              <Button variant="destructive" className="animate-bounce shadow-lg"><Play className="mr-2 h-4 w-4" /> Start ERP Session</Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Activate Emergency Response</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleStartERP} className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label>Activation Trigger (Internal)</Label>
-                  <Select name="triggerId" onValueChange={setSelectedTriggerId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select internal trigger..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(triggers || []).map(t => (
-                        <SelectItem key={t.id} value={t.id}>{t.eventType}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl font-bold flex items-center gap-2 font-headline">
+            {activeEvent ? (
+              <span className="flex items-center gap-2 text-red-600 animate-pulse">
+                <ShieldAlert className="h-5 w-5" /> Active Session
+              </span>
+            ) : viewingEvent ? (
+              <span className="flex items-center gap-2">
+                <History className="h-5 w-5 text-muted-foreground" /> Session Archive
+              </span>
+            ) : (
+              'Response History'
+            )}
+          </h2>
+          {viewingEvent && (
+            <Button variant="ghost" size="sm" onClick={() => setSelectedEventId(null)} className="h-8 gap-2">
+              <ArrowLeft className="h-4 w-4" /> Return to History
+            </Button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {!activeEvent && !viewingEvent && (
+            <Dialog open={isStartOpen} onOpenChange={setIsStartOpen}>
+              <DialogTrigger asChild>
+                <Button variant="destructive" className="animate-bounce shadow-lg"><Play className="mr-2 h-4 w-4" /> Start ERP Session</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Activate Emergency Response</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleStartERP} className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label>Activation Trigger (Internal)</Label>
+                    <Select name="triggerId" onValueChange={setSelectedTriggerId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select internal trigger..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(triggers || []).map(t => (
+                          <SelectItem key={t.id} value={t.id}>{t.eventType}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Session Title / Context</Label>
+                    <Input name="title" placeholder="e.g., ZS-ABC Overdue - Flight 123" required />
+                  </div>
+                  <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10">
+                    <Switch name="isMock" id="mock-mode" defaultChecked={true} />
+                    <Label htmlFor="mock-mode" className="cursor-pointer">Simulation / Mock Exercise</Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground italic">Initiating based on an internal trigger provides immediate response context.</p>
+                  <DialogFooter>
+                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                    <Button type="submit" variant="destructive">Activate Protocol</Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {activeEvent && (
+            <Dialog open={isCloseOpen} onOpenChange={setIsCloseOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm"><StopCircle className="mr-2 h-4 w-4" /> Close Session</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Finalize ERP Session</DialogTitle>
+                  <DialogDescription>Provide a summary of the response outcomes and any critical observations before closing the diary.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="close-summary">Response Summary / Closing Notes</Label>
+                    <Textarea 
+                      id="close-summary"
+                      placeholder="e.g., Aircraft located safely. All personnel accounted for. Coordination with RCC was successful."
+                      value={closingSummary}
+                      onChange={(e) => setClosingSummary(e.target.value)}
+                      className="min-h-[150px]"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Session Title / Context</Label>
-                  <Input name="title" placeholder="e.g., ZS-ABC Overdue - Flight 123" required />
-                </div>
-                <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10">
-                  <Switch name="isMock" id="mock-mode" defaultChecked={true} />
-                  <Label htmlFor="mock-mode" className="cursor-pointer">Simulation / Mock Exercise</Label>
-                </div>
-                <p className="text-xs text-muted-foreground italic">Initiating based on an internal trigger provides immediate response context.</p>
                 <DialogFooter>
                   <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                  <Button type="submit" variant="destructive">Activate Protocol</Button>
+                  <Button variant="destructive" onClick={handleCloseERP}>Close & Save Session</Button>
                 </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        ) : (
-          <Button variant="outline" size="sm" onClick={handleCloseERP}><StopCircle className="mr-2 h-4 w-4" /> Close Session</Button>
-        )}
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </div>
 
-      {activeEvent ? (
+      {currentActiveOrViewing ? (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 flex-1 min-h-0">
-          <Card className="flex flex-col h-full overflow-hidden shadow-none border border-red-200">
-            <CardHeader className="bg-red-50/50 border-b">
+          <Card className={cn(
+            "flex flex-col h-full overflow-hidden shadow-none border",
+            activeEvent ? "border-red-200" : "border-slate-200"
+          )}>
+            <CardHeader className={cn(
+              "border-b",
+              activeEvent ? "bg-red-50/50" : "bg-muted/30"
+            )}>
               <CardTitle className="flex items-center justify-between text-lg">
-                <span>{activeEvent.title}</span>
-                <Badge variant={activeEvent.status === 'Active' ? 'destructive' : 'secondary'}>{activeEvent.status}</Badge>
+                <span>{currentActiveOrViewing.title}</span>
+                <Badge variant={currentActiveOrViewing.status === 'Active' ? 'destructive' : 'secondary'}>{currentActiveOrViewing.status}</Badge>
               </CardTitle>
-              <CardDescription>Started: {format(new Date(activeEvent.startedAt), 'PPP p')}</CardDescription>
+              <CardDescription>
+                Started: {format(new Date(currentActiveOrViewing.startedAt), 'PPP p')}
+                {currentActiveOrViewing.endedAt && ` • Closed: ${format(new Date(currentActiveOrViewing.endedAt), 'PPP p')}`}
+              </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 p-0 overflow-hidden bg-background">
               <ScrollArea className="h-full">
                 <div className="p-6 space-y-6">
-                  {activeEvent.log.map((entry) => (
+                  {currentActiveOrViewing.summary && (
+                    <div className="p-4 bg-primary/5 border rounded-lg space-y-2">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-primary">Response Summary</h4>
+                      <p className="text-sm font-medium leading-relaxed italic">&quot;{currentActiveOrViewing.summary}&quot;</p>
+                    </div>
+                  )}
+                  {currentActiveOrViewing.log.map((entry) => (
                     <div key={entry.id} className={cn("flex gap-4 p-3 rounded-lg border transition-colors", entry.isMilestone ? "bg-primary/5 border-primary/20" : "bg-muted/5")}>
                       <div className="shrink-0 flex flex-col items-center gap-1 pt-1">
                         <Clock className="h-3 w-3 text-muted-foreground" />
@@ -316,23 +406,25 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
                 </div>
               </ScrollArea>
             </CardContent>
-            <CardFooter className="border-t p-4 bg-muted/10 gap-3">
-              <div className="flex-1 space-y-3">
-                <Textarea 
-                  placeholder="Manual diary entry..." 
-                  value={newLogEntry}
-                  onChange={(e) => setNewLogEntry(e.target.value)}
-                  className="min-h-[80px] bg-background"
-                />
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Switch checked={isMilestone} onCheckedChange={setIsMilestone} id="milestone-sw" />
-                    <Label htmlFor="milestone-sw" className="text-xs cursor-pointer">Mark as Milestone</Label>
+            {activeEvent && (
+              <CardFooter className="border-t p-4 bg-muted/10 gap-3">
+                <div className="flex-1 space-y-3">
+                  <Textarea 
+                    placeholder="Manual diary entry..." 
+                    value={newLogEntry}
+                    onChange={(e) => setNewLogEntry(e.target.value)}
+                    className="min-h-[80px] bg-background"
+                  />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Switch checked={isMilestone} onCheckedChange={setIsMilestone} id="milestone-sw" />
+                      <Label htmlFor="milestone-sw" className="text-xs cursor-pointer">Mark as Milestone</Label>
+                    </div>
+                    <Button onClick={() => handleAddLog()} disabled={!newLogEntry.trim()}><PlusCircle className="mr-2 h-4 w-4" /> Log Event</Button>
                   </div>
-                  <Button onClick={() => handleAddLog()} disabled={!newLogEntry.trim()}><PlusCircle className="mr-2 h-4 w-4" /> Log Event</Button>
                 </div>
-              </div>
-            </CardFooter>
+              </CardFooter>
+            )}
           </Card>
 
           <div className="space-y-6 overflow-y-auto no-scrollbar">
@@ -342,19 +434,19 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
                   <CheckCircle2 className="h-4 w-4 text-primary" /> Phase Checklists
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 space-y-6">
+              <CardContent className={cn("p-4 space-y-6", !activeEvent && "opacity-70 pointer-events-none")}>
                 {dynamicPhaseChecklists.map((phase) => (
                   <div key={phase.phase} className="space-y-2">
                     <h4 className="text-[10px] font-black uppercase text-muted-foreground tracking-widest border-b pb-1">{phase.phase}</h4>
                     <div className="space-y-2 pt-1">
                       {phase.tasks.map((task) => {
-                        const isChecked = activeEvent.completedTasks?.includes(task.id);
+                        const isChecked = currentActiveOrViewing.completedTasks?.includes(task.id);
                         return (
                           <div key={task.id} className="flex items-start space-x-2">
                             <Checkbox 
                               id={task.id} 
                               checked={isChecked}
-                              onCheckedChange={() => handleToggleTask(task.id, task.label)}
+                              onCheckedChange={() => activeEvent && handleToggleTask(task.id, task.label)}
                               className="mt-0.5"
                             />
                             <Label 
@@ -402,7 +494,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
           <CardContent className="p-0">
             <div className="space-y-4 p-6">
               {(events || []).filter(e => e.status === 'Closed').map(event => (
-                <div key={event.id} className="p-4 border rounded-lg hover:bg-muted/10 transition-colors flex justify-between items-center group">
+                <div key={event.id} onClick={() => setSelectedEventId(event.id)} className="p-4 border rounded-lg hover:bg-muted/10 transition-colors flex justify-between items-center group cursor-pointer">
                   <div className="space-y-1">
                     <p className="font-bold">{event.title}</p>
                     <p className="text-xs text-muted-foreground">Started: {format(new Date(event.startedAt), 'PPP p')}</p>
