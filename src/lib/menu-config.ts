@@ -80,12 +80,6 @@ export const menuConfig: MenuItem[] = [
         description: 'Manage emergency contacts, triggers, and live response diaries.',
         permissionId: 'operations-view',
       },
-      {
-        href: '/operations/flight-planner',
-        label: 'Flight Planner',
-        description: 'Create and manage flight plans.',
-        permissionId: 'operations-view',
-      },
     ],
   },
   {
