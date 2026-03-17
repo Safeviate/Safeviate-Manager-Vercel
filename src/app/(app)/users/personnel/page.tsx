@@ -24,7 +24,7 @@ export type PilotProfile = {
   contactNumber?: string;
   dateOfBirth?: string;
   logbookTemplateId?: string;
-  isErpIncerfaContact?: boolean; // NEW: Designated ERP contact
+  isErpIncerfaContact?: boolean; // Designated ERP contact
   address?: {
     street?: string;
     city?: string;
@@ -64,7 +64,7 @@ export type Personnel = {
   role: string; // role ID
   permissions: string[];
   dateOfBirth?: string;
-  isErpIncerfaContact?: boolean; // NEW: Designated ERP contact
+  isErpIncerfaContact?: boolean; // Designated ERP contact
   address?: {
     street?: string;
     city?: string;
