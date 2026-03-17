@@ -5,7 +5,7 @@ import { collection, query, doc, deleteDoc, writeBatch } from 'firebase/firestor
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Megaphone, Copy, Database } from 'lucide-react';
+import { PlusCircle, Trash2, Megaphone, Copy, Database, Printer } from 'lucide-react';
 import type { ERPMediaTemplate } from '@/types/erp';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -120,6 +120,21 @@ export function MediaTab({ tenantId }: MediaTabProps) {
     toast({ title: 'Copied to Clipboard' });
   };
 
+  const handlePrint = (template: ERPMediaTemplate) => {
+    const printWindow = window.open('', '_blank', 'height=600,width=800');
+    if (printWindow) {
+      printWindow.document.write('<html><head><title>Media Release</title>');
+      printWindow.document.write('<style>body { font-family: serif; padding: 3rem; white-space: pre-wrap; line-height: 1.6; color: #000; } h1 { border-bottom: 2px solid #000; padding-bottom: 0.5rem; margin-bottom: 2rem; font-size: 1.5rem; } .footer { margin-top: 3rem; border-top: 1px solid #ccc; padding-top: 1rem; font-style: italic; font-size: 0.8rem; }</style>');
+      printWindow.document.write('</head><body>');
+      printWindow.document.write(`<h1>${template.title}</h1>`);
+      printWindow.document.write(template.content);
+      printWindow.document.write(`<div class="footer">Printed from Safeviate ERP on ${new Date().toLocaleString()}</div>`);
+      printWindow.document.write('</body></html>');
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!firestore) return;
     await deleteDoc(doc(firestore, `tenants/${tenantId}/erp-media`, id));
@@ -183,6 +198,7 @@ export function MediaTab({ tenantId }: MediaTabProps) {
                 <CardDescription>Type: {template.type}</CardDescription>
               </div>
               <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => handlePrint(template)}><Printer className="h-4 w-4 mr-2" /> Print</Button>
                 <Button variant="outline" size="sm" onClick={() => handleCopy(template.content)}><Copy className="h-4 w-4 mr-2" /> Copy</Button>
                 <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(template.id)}><Trash2 className="h-4 w-4" /></Button>
               </div>
