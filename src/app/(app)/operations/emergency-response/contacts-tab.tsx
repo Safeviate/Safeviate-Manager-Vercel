@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Phone, Mail, Trash2 } from 'lucide-react';
+import { PlusCircle, Phone, Mail, Trash2, Pencil } from 'lucide-react';
 import type { ERPContact, ERPContactCategory } from '@/types/erp';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -24,18 +24,24 @@ const CATEGORIES: ERPContactCategory[] = ['Internal', 'Aviation Authorities', 'E
 export function ContactsTab({ tenantId }: ContactsTabProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<ERPContact | null>(null);
 
   const contactsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/erp-contacts`), orderBy('priority', 'asc')) : null),
     [firestore, tenantId]
   );
-  const { data: contacts, isLoading } = useCollection<ERPContact>(contactsQuery);
+  const { data: contacts } = useCollection<ERPContact>(contactsQuery);
 
-  const handleAddContact = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleOpenDialog = (contact: ERPContact | null = null) => {
+    setEditingContact(contact);
+    setIsDialogOpen(true);
+  };
+
+  const handleSaveContact = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const newContact = {
+    const contactData = {
       name: formData.get('name') as string,
       role: formData.get('role') as string,
       organization: formData.get('organization') as string,
@@ -46,14 +52,24 @@ export function ContactsTab({ tenantId }: ContactsTabProps) {
     };
 
     if (!firestore) return;
-    const colRef = collection(firestore, `tenants/${tenantId}/erp-contacts`);
-    addDocumentNonBlocking(colRef, newContact);
-    setIsAddOpen(false);
-    toast({ title: 'Contact Added' });
+
+    if (editingContact) {
+      const contactRef = doc(firestore, `tenants/${tenantId}/erp-contacts`, editingContact.id);
+      updateDocumentNonBlocking(contactRef, contactData);
+      toast({ title: 'Contact Updated' });
+    } else {
+      const colRef = collection(firestore, `tenants/${tenantId}/erp-contacts`);
+      addDocumentNonBlocking(colRef, contactData);
+      toast({ title: 'Contact Added' });
+    }
+
+    setIsDialogOpen(false);
+    setEditingContact(null);
   };
 
   const handleDelete = async (id: string) => {
     if (!firestore) return;
+    if (!window.confirm("Are you sure you want to delete this contact?")) return;
     await deleteDoc(doc(firestore, `tenants/${tenantId}/erp-contacts`, id));
     toast({ title: 'Contact Deleted' });
   };
@@ -62,31 +78,49 @@ export function ContactsTab({ tenantId }: ContactsTabProps) {
     <div className="space-y-6">
       <div className="flex justify-between items-center px-1">
         <h2 className="text-xl font-bold">Emergency Call List</h2>
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) setEditingContact(null); setIsDialogOpen(open); }}>
           <DialogTrigger asChild>
-            <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Emergency Contact</Button>
+            <Button size="sm" onClick={() => handleOpenDialog()}><PlusCircle className="mr-2 h-4 w-4" /> Add Emergency Contact</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>New Emergency Contact</DialogTitle>
+              <DialogTitle>{editingContact ? 'Edit' : 'New'} Emergency Contact</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleAddContact} className="space-y-4">
+            <form onSubmit={handleSaveContact} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Name</Label><Input name="name" required /></div>
-                <div className="space-y-2"><Label>Role</Label><Input name="role" required /></div>
-                <div className="space-y-2 col-span-2"><Label>Organization</Label><Input name="organization" required /></div>
-                <div className="space-y-2"><Label>Phone</Label><Input name="phone" required /></div>
-                <div className="space-y-2"><Label>Email</Label><Input name="email" type="email" /></div>
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input name="name" defaultValue={editingContact?.name} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <Input name="role" defaultValue={editingContact?.role} required />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Organization</Label>
+                  <Input name="organization" defaultValue={editingContact?.organization} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Phone</Label>
+                  <Input name="phone" defaultValue={editingContact?.phone} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input name="email" type="email" defaultValue={editingContact?.email} />
+                </div>
                 <div className="space-y-2">
                   <Label>Category</Label>
-                  <Select name="category" defaultValue="Internal">
+                  <Select name="category" defaultValue={editingContact?.category || 'Internal'}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2"><Label>Priority (1-10)</Label><Input name="priority" type="number" defaultValue="1" /></div>
+                <div className="space-y-2">
+                  <Label>Priority (1-10)</Label>
+                  <Input name="priority" type="number" defaultValue={editingContact?.priority || 1} />
+                </div>
               </div>
               <DialogFooter>
                 <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
@@ -117,19 +151,26 @@ export function ContactsTab({ tenantId }: ContactsTabProps) {
                   <TableCell><Badge variant="outline">{contact.category}</Badge></TableCell>
                   <TableCell>
                     <div>
-                      <p className="font-bold">{contact.name}</p>
-                      <p className="text-xs text-muted-foreground">{contact.role}</p>
+                      <p className="font-bold text-sm">{contact.name}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase font-medium">{contact.role}</p>
                     </div>
                   </TableCell>
-                  <TableCell>{contact.organization}</TableCell>
+                  <TableCell className="text-sm">{contact.organization}</TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <a href={`tel:${contact.phone}`} className="text-xs flex items-center gap-1 hover:text-primary"><Phone className="h-3 w-3" /> {contact.phone}</a>
-                      {contact.email && <a href={`mailto:${contact.email}`} className="text-xs flex items-center gap-1 hover:text-primary"><Mail className="h-3 w-3" /> {contact.email}</a>}
+                      <a href={`tel:${contact.phone}`} className="text-[11px] flex items-center gap-1 hover:text-primary font-medium"><Phone className="h-2.5 w-2.5" /> {contact.phone}</a>
+                      {contact.email && <a href={`mailto:${contact.email}`} className="text-[11px] flex items-center gap-1 hover:text-primary font-medium"><Mail className="h-2.5 w-2.5" /> {contact.email}</a>}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(contact.id)}><Trash2 className="h-4 w-4" /></Button>
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(contact)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(contact.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

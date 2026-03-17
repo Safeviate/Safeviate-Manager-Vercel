@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { collection, query, orderBy, doc, arrayUnion, serverTimestamp } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, doc, arrayUnion } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { v4 as uuidv4 } from 'uuid';
 import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 interface DiaryTabProps {
   tenantId: string;
@@ -36,7 +38,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/erp-events`), orderBy('startedAt', 'desc')) : null),
     [firestore, tenantId]
   );
-  const { data: events, isLoading } = useCollection<ERPEvent>(eventsQuery);
+  const { data: events } = useCollection<ERPEvent>(eventsQuery);
 
   const activeEvent = useMemo(() => events?.find(e => e.status !== 'Closed'), [events]);
 
