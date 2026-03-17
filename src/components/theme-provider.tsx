@@ -28,6 +28,8 @@ type CardThemeColors = {
 type PopoverThemeColors = {
   popover: string;
   'popover-foreground': string;
+  'popover-accent': string;
+  'popover-accent-foreground': string;
 };
 
 type SidebarThemeColors = {
@@ -117,6 +119,8 @@ const defaultCardColors: CardThemeColors = {
 const defaultPopoverColors: PopoverThemeColors = {
     popover: '#ebf5fb',
     'popover-foreground': '#1e293b',
+    'popover-accent': '#7cc4f7',
+    'popover-accent-foreground': '#1e293b',
 };
 const defaultSidebarColors: SidebarThemeColors = {
   'sidebar-background': '#dbeafb',
@@ -183,7 +187,7 @@ export const useTheme = () => {
   return context;
 };
 
-export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
+export const ThemeProvider = ({ children }: { children: React.BlackNode }) => {
   const [theme, setTheme] = useState<ThemeColors>(() => getInitialState(THEME_KEY, defaultColors));
   const [buttonTheme, setButtonTheme] = useState<ButtonThemeColors>(() => getInitialState(BUTTON_THEME_KEY, defaultButtonColors));
   const [cardTheme, setCardTheme] = useState<CardThemeColors>(() => getInitialState(CARD_THEME_KEY, defaultCardColors));

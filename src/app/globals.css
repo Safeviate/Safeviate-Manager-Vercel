@@ -11,6 +11,8 @@
     --card-border: 205 30% 85%;
     --popover: 205 67% 95%;
     --popover-foreground: 215 28% 17%;
+    --popover-accent: 205 85% 73%;
+    --popover-accent-foreground: 215 28% 17%;
     --primary: 205 85% 73%;
     --primary-foreground: 215 28% 17%;
     --button-primary-background: 205 85% 73%;
@@ -54,6 +56,8 @@
     --card-border: 215 20% 25%;
     --popover: 215 28% 17%;
     --popover-foreground: 205 67% 95%;
+    --popover-accent: 215 20% 25%;
+    --popover-accent-foreground: 205 67% 95%;
     --primary: 205 85% 73%;
     --primary-foreground: 215 28% 17%;
     --button-primary-background: 205 85% 73%;

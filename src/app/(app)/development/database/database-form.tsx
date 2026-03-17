@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -26,7 +25,7 @@ import type { Tenant } from '@/types/quality';
 const DEFAULT_MAIN = { background: '#ebf5fb', primary: '#7cc4f7', 'primary-foreground': '#1e293b', accent: '#63b2a7' };
 const DEFAULT_BUTTON = { 'button-primary-background': '#7cc4f7', 'button-primary-foreground': '#1e293b', 'button-primary-accent': '#63b2a7', 'button-primary-accent-foreground': '#ffffff' };
 const DEFAULT_CARD = { card: '#ebf5fb', 'card-foreground': '#1e293b', 'card-border': '#d1d5db' };
-const DEFAULT_POPOVER = { popover: '#ebf5fb', 'popover-foreground': '#1e293b' };
+const DEFAULT_POPOVER = { popover: '#ebf5fb', 'popover-foreground': '#1e293b', 'popover-accent': '#7cc4f7', 'popover-accent-foreground': '#1e293b' };
 const DEFAULT_SIDEBAR = { 'sidebar-background': '#dbeafb', 'sidebar-foreground': '#1e293b', 'sidebar-accent': '#f1f5f9', 'sidebar-accent-foreground': '#1e293b', 'sidebar-border': '#94a3b8' };
 const DEFAULT_HEADER = { 'header-background': '#ebf5fb', 'header-foreground': '#1e293b', 'header-border': '#e2e8f0' };
 const DEFAULT_SWIMLANE = { 'swimlane-header-background': '#f1f5f9', 'swimlane-header-foreground': '#475569' };
