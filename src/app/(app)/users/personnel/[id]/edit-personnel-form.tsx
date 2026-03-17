@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -21,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
-import { TagInput } from '@/components/ui/tag-input';
+import { Switch } from '@/components/ui/switch';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -61,8 +60,6 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
   const { data: organizations } = useCollection<ExternalOrganization>(orgsQuery);
 
   const [isContactOpen, setIsContactOpen] = useState(true);
-  const [isAddressOpen, setIsAddressOpen] = useState(false);
-  const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
 
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
@@ -154,7 +151,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
               <Collapsible open={isContactOpen} onOpenChange={setIsContactOpen}>
                 <CollapsibleTrigger asChild>
                   <div className='flex items-center gap-2 mb-4 cursor-pointer'>
-                    <h3 className="text-lg font-semibold">Contact & Role</h3>
+                    <h3 className="text-lg font-semibold font-headline">Contact & Role</h3>
                     <Button variant="ghost" size="sm" className="w-9 p-0"><ChevronsUpDown className="h-4 w-4" /></Button>
                   </div>
                 </CollapsibleTrigger>
@@ -175,6 +172,15 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                               {(organizations || []).map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
                           </SelectContent>
                       </Select>
+                  </div>
+
+                  <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10 self-end">
+                    <Switch 
+                      id="erp-contact" 
+                      checked={!!formData.isErpIncerfaContact} 
+                      onCheckedChange={(val) => handleInputChange('isErpIncerfaContact', val)} 
+                    />
+                    <Label htmlFor="erp-contact" className="cursor-pointer">ERP INCERFA Contact</Label>
                   </div>
 
                   {!isPilotProfile(formData) && (
@@ -200,7 +206,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
               <Collapsible open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
                   <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-semibold">Permissions</h3>
+                          <h3 className="text-lg font-semibold font-headline">Permissions</h3>
                           <CollapsibleTrigger asChild><Button variant="ghost" size="sm" className="w-9 p-0"><ChevronsUpDown className="h-4 w-4" /></Button></CollapsibleTrigger>
                       </div>
                       <Button variant="link" onClick={handleSelectAllToggle} className="p-0 h-auto">{areAllSelected ? 'Deselect All' : 'Select All'}</Button>
@@ -233,7 +239,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
             </div>
         </ScrollArea>
       </CardContent>
-      <CardFooter className="shrink-0 border-t pt-6 flex justify-end gap-2">
+      <CardFooter className="shrink-0 border-t pt-6 flex justify-end gap-2 bg-muted/5">
           <Button variant="outline" onClick={onCancel}>Cancel</Button>
           <Button onClick={handleUpdateUser}>Save Changes</Button>
       </CardFooter>

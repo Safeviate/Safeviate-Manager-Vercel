@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Play, StopCircle, PlusCircle, History, Clock, User, Flag, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { Play, StopCircle, PlusCircle, Clock, User, Flag, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import type { ERPEvent, ERPLogEntry, ERPEventStatus } from '@/types/erp';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -21,41 +21,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import type { Personnel, PilotProfile } from '../../users/personnel/page';
 
 interface DiaryTabProps {
   tenantId: string;
 }
-
-const PHASE_CHECKLISTS = [
-  {
-    phase: 'INCERFA (Uncertainty)',
-    tasks: [
-      { id: 'inc-1', label: 'Verify flight plan details' },
-      { id: 'inc-2', label: 'Start communication search (all frequencies)' },
-      { id: 'inc-3', label: 'Contact alternate airfields' },
-      { id: 'inc-4', label: 'Check with last known ATC unit' },
-      { id: 'inc-5', label: 'Directly contact crew on mobile devices' },
-    ]
-  },
-  {
-    phase: 'ALERFA (Alert)',
-    tasks: [
-      { id: 'ale-1', label: 'Notify Search and Rescue Center (RCC)' },
-      { id: 'ale-2', label: 'Ground support teams on standby' },
-      { id: 'ale-3', label: 'Internal management team alerted' },
-      { id: 'ale-4', label: 'Secondary communication search expanded' },
-    ]
-  },
-  {
-    phase: 'DETRESFA (Distress)',
-    tasks: [
-      { id: 'det-1', label: 'Full ERP protocol activated' },
-      { id: 'det-2', label: 'Dispatch emergency services to scene' },
-      { id: 'det-3', label: 'Contact Next of Kin (NOK)' },
-      { id: 'det-4', label: 'Issue media holding statement' },
-    ]
-  }
-];
 
 export function DiaryTab({ tenantId }: DiaryTabProps) {
   const firestore = useFirestore();
@@ -65,6 +35,57 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
   const [isStartOpen, setIsStartOpen] = useState(false);
   const [newLogEntry, setNewLogEntry] = useState('');
   const [isMilestone, setIsMilestone] = useState(false);
+
+  // Fetch all potential contacts to identify INCERFA contacts
+  const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
+  const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
+
+  const { data: personnel } = useCollection<Personnel>(personnelQuery);
+  const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
+  const { data: students } = useCollection<PilotProfile>(studentsQuery);
+  const { data: privatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
+
+  const incerfaContacts = useMemo(() => {
+    const allUsers = [...(personnel || []), ...(instructors || []), ...(students || []), ...(privatePilots || [])];
+    return allUsers
+      .filter(u => u.isErpIncerfaContact)
+      .map(u => `${u.firstName} ${u.lastName}`)
+      .join(', ');
+  }, [personnel, instructors, students, privatePilots]);
+
+  const dynamicPhaseChecklists = useMemo(() => [
+    {
+      phase: 'INCERFA (Uncertainty)',
+      tasks: [
+        { id: 'inc-1', label: 'Verify flight plan details' },
+        { id: 'inc-2', label: 'Start communication search (all frequencies)' },
+        { id: 'inc-3', label: 'Contact alternate airfields' },
+        { id: 'inc-4', label: 'Check with last known ATC unit' },
+        { id: 'inc-5', label: 'Directly contact crew on mobile devices' },
+        { id: 'inc-6', label: `Contact designated INCERFA response person${incerfaContacts ? `: ${incerfaContacts}` : ''}` },
+      ]
+    },
+    {
+      phase: 'ALERFA (Alert)',
+      tasks: [
+        { id: 'ale-1', label: 'Notify Search and Rescue Center (RCC)' },
+        { id: 'ale-2', label: 'Ground support teams on standby' },
+        { id: 'ale-3', label: 'Internal management team alerted' },
+        { id: 'ale-4', label: 'Secondary communication search expanded' },
+      ]
+    },
+    {
+      phase: 'DETRESFA (Distress)',
+      tasks: [
+        { id: 'det-1', label: 'Full ERP protocol activated' },
+        { id: 'det-2', label: 'Dispatch emergency services to scene' },
+        { id: 'det-3', label: 'Contact Next of Kin (NOK)' },
+        { id: 'det-4', label: 'Issue media holding statement' },
+      ]
+    }
+  ], [incerfaContacts]);
 
   const eventsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/erp-events`), orderBy('startedAt', 'desc')) : null),
@@ -132,7 +153,6 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
     const eventRef = doc(firestore, `tenants/${tenantId}/erp-events`, activeEvent.id);
 
     if (!isCompleted) {
-      // Mark as completed and log automatically
       const entry: ERPLogEntry = {
         id: uuidv4(),
         timestamp: new Date().toISOString(),
@@ -148,7 +168,6 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
       });
       toast({ title: "Timeline updated" });
     } else {
-      // Just uncheck, don't necessarily log removal unless critical
       const updatedTasks = (activeEvent.completedTasks || []).filter(id => id !== taskId);
       updateDocumentNonBlocking(eventRef, {
         completedTasks: updatedTasks
@@ -171,7 +190,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
   return (
     <div className="flex flex-col h-full gap-6">
       <div className="flex justify-between items-center px-1">
-        <h2 className="text-xl font-bold flex items-center gap-2">
+        <h2 className="text-xl font-bold flex items-center gap-2 font-headline">
           {activeEvent ? (
             <span className="flex items-center gap-2 text-red-600 animate-pulse">
               <ShieldAlert className="h-5 w-5" /> Active Session
@@ -191,7 +210,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
                 <div className="space-y-2"><Label>Session Title</Label><Input name="title" placeholder="e.g., ZS-ABC Overdue - Mock Exercise" required /></div>
                 <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10">
                   <Switch name="isMock" id="mock-mode" defaultChecked={true} />
-                  <Label htmlFor="mock-mode">Simulation / Mock Exercise</Label>
+                  <Label htmlFor="mock-mode" className="cursor-pointer">Simulation / Mock Exercise</Label>
                 </div>
                 <p className="text-xs text-muted-foreground italic">Running a simulation will mark all log entries as "Mock".</p>
                 <DialogFooter>
@@ -220,7 +239,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
               <ScrollArea className="h-full">
                 <div className="p-6 space-y-6">
                   {activeEvent.log.map((entry) => (
-                    <div key={entry.id} className={cn("flex gap-4 p-3 rounded-lg border", entry.isMilestone ? "bg-primary/5 border-primary/20" : "bg-muted/5")}>
+                    <div key={entry.id} className={cn("flex gap-4 p-3 rounded-lg border transition-colors", entry.isMilestone ? "bg-primary/5 border-primary/20" : "bg-muted/5")}>
                       <div className="shrink-0 flex flex-col items-center gap-1 pt-1">
                         <Clock className="h-3 w-3 text-muted-foreground" />
                         <span className="text-[10px] font-bold font-mono">{format(new Date(entry.timestamp), 'HH:mm:ss')}</span>
@@ -248,7 +267,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Switch checked={isMilestone} onCheckedChange={setIsMilestone} id="milestone-sw" />
-                    <Label htmlFor="milestone-sw" className="text-xs">Mark as Milestone</Label>
+                    <Label htmlFor="milestone-sw" className="text-xs cursor-pointer">Mark as Milestone</Label>
                   </div>
                   <Button onClick={() => handleAddLog()} disabled={!newLogEntry.trim()}><PlusCircle className="mr-2 h-4 w-4" /> Log Event</Button>
                 </div>
@@ -259,12 +278,12 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
           <div className="space-y-6 overflow-y-auto no-scrollbar">
             <Card className="shadow-none border">
               <CardHeader className="bg-muted/10 py-3">
-                <CardTitle className="text-sm flex items-center gap-2">
+                <CardTitle className="text-sm flex items-center gap-2 font-headline">
                   <CheckCircle2 className="h-4 w-4 text-primary" /> Phase Checklists
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 space-y-6">
-                {PHASE_CHECKLISTS.map((phase) => (
+                {dynamicPhaseChecklists.map((phase) => (
                   <div key={phase.phase} className="space-y-2">
                     <h4 className="text-[10px] font-black uppercase text-muted-foreground tracking-widest border-b pb-1">{phase.phase}</h4>
                     <div className="space-y-2 pt-1">
@@ -295,7 +314,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
 
             <Card className="shadow-none border">
               <CardHeader className="bg-muted/10 py-3">
-                <CardTitle className="text-sm">ERP Quick Reference</CardTitle>
+                <CardTitle className="text-sm font-headline">ERP Quick Reference</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 pt-4">
                 <div className="p-3 rounded-lg border border-emerald-200 bg-emerald-50 text-[11px] font-medium leading-relaxed">
@@ -318,7 +337,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
       ) : (
         <Card className="shadow-none border">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><History className="h-5 w-5" /> Past Sessions</CardTitle>
+            <CardTitle className="flex items-center gap-2 font-headline"><Clock className="h-5 w-5" /> Past Sessions</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="space-y-4 p-6">

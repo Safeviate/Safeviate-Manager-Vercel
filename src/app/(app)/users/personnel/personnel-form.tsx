@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -25,6 +24,7 @@ import type { Department } from '../../admin/department/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Personnel, PilotProfile } from './page';
 import type { ExternalOrganization } from '@/types/quality';
+import { Switch } from '@/components/ui/switch';
 
 type UserProfile = Personnel | PilotProfile;
 type UserType = UserProfile['userType'];
@@ -68,6 +68,7 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [selectedOrganization, setSelectedOrganization] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [isErpContact, setIsErpContact] = useState(false);
   
   const handleRoleChange = (roleId: string) => {
     const role = roles.find(r => r.id === roleId);
@@ -108,6 +109,7 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
             role: selectedRole.id,
             organizationId: selectedOrganization === 'internal' ? null : selectedOrganization,
             permissions: selectedRole.permissions || [], 
+            isErpIncerfaContact: isErpContact,
         };
 
         if (userType === 'Personnel' || userType === 'External') {
@@ -143,6 +145,7 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
     setSelectedDepartment(null);
     setSelectedOrganization(null);
     setSelectedRole(null);
+    setIsErpContact(false);
     setIsOpen(false);
   }
 
@@ -184,6 +187,15 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
                             {(organizations || []).map(org => (<SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>))}
                         </SelectContent>
                     </Select>
+                </div>
+
+                <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10 col-span-2">
+                  <Switch 
+                    id="erp-contact-new" 
+                    checked={isErpContact} 
+                    onCheckedChange={setIsErpContact} 
+                  />
+                  <Label htmlFor="erp-contact-new" className="cursor-pointer">Designate as ERP INCERFA Contact</Label>
                 </div>
 
                 {(userType === 'Personnel' || userType === 'External') && (

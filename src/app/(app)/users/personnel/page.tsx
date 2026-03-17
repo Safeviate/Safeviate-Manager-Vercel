@@ -19,11 +19,12 @@ export type PilotProfile = {
   lastName: string;
   email: string;
   role: string; // role ID
-  organizationId?: string | null; // NEW: Associate with external company
+  organizationId?: string | null; // Associated external company ID
   permissions?: string[]; // Consolidating permissions across all user types
   contactNumber?: string;
   dateOfBirth?: string;
   logbookTemplateId?: string;
+  isErpIncerfaContact?: boolean; // NEW: Designated ERP contact
   address?: {
     street?: string;
     city?: string;
@@ -58,11 +59,12 @@ export type Personnel = {
   lastName: string;
   email: string;
   contactNumber?: string;
-  organizationId?: string | null; // NEW: Associate with external company
+  organizationId?: string | null; // Associated external company ID
   department?: string; // department ID
   role: string; // role ID
   permissions: string[];
   dateOfBirth?: string;
+  isErpIncerfaContact?: boolean; // NEW: Designated ERP contact
   address?: {
     street?: string;
     city?: string;
@@ -133,9 +135,9 @@ export default function PersonnelPage() {
 
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center px-1">
         <div>
-            <h1 className="text-3xl font-bold tracking-tight">Personnel</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Personnel</h1>
             <p className="text-muted-foreground">Manage all non-flying staff in your organization.</p>
         </div>
         <PersonnelForm 
@@ -151,7 +153,7 @@ export default function PersonnelPage() {
         />
       </div>
 
-      <Card>
+      <Card className="shadow-none border">
         <CardContent className="p-0">
           {isLoading && (
             <div className="text-center p-8">Loading personnel...</div>
