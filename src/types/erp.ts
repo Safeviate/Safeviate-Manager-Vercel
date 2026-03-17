@@ -1,3 +1,4 @@
+
 export type ERPContactCategory = 'Internal' | 'Aviation Authorities' | 'Emergency Services' | 'External Partners';
 
 export interface ERPContact {
@@ -43,5 +44,6 @@ export interface ERPEvent {
   startedAt: string;
   endedAt?: string;
   summary?: string;
+  completedTasks?: string[];
   log: ERPLogEntry[];
 }

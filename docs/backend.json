@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -35,6 +36,11 @@
         "status": { "type": "string", "enum": ["Mock", "Active", "Closed"] },
         "startedAt": { "type": "string", "format": "date-time" },
         "endedAt": { "type": "string", "format": "date-time" },
+        "completedTasks": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of checklist task IDs completed during this session."
+        },
         "log": {
           "type": "array",
           "items": {

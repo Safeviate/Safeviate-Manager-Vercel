@@ -1,13 +1,15 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
 import { collection, query, orderBy, doc, arrayUnion } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Play, StopCircle, PlusCircle, History, Clock, User, Flag, ShieldAlert } from 'lucide-react';
+import { Play, StopCircle, PlusCircle, History, Clock, User, Flag, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import type { ERPEvent, ERPLogEntry, ERPEventStatus } from '@/types/erp';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -24,6 +26,36 @@ import { cn } from '@/lib/utils';
 interface DiaryTabProps {
   tenantId: string;
 }
+
+const PHASE_CHECKLISTS = [
+  {
+    phase: 'INCERFA (Uncertainty)',
+    tasks: [
+      { id: 'inc-1', label: 'Verify flight plan details' },
+      { id: 'inc-2', label: 'Start communication search (all frequencies)' },
+      { id: 'inc-3', label: 'Contact alternate airfields' },
+      { id: 'inc-4', label: 'Check with last known ATC unit' },
+    ]
+  },
+  {
+    phase: 'ALERFA (Alert)',
+    tasks: [
+      { id: 'ale-1', label: 'Notify Search and Rescue Center (RCC)' },
+      { id: 'ale-2', label: 'Ground support teams on standby' },
+      { id: 'ale-3', label: 'Internal management team alerted' },
+      { id: 'ale-4', label: 'Secondary communication search expanded' },
+    ]
+  },
+  {
+    phase: 'DETRESFA (Distress)',
+    tasks: [
+      { id: 'det-1', label: 'Full ERP protocol activated' },
+      { id: 'det-2', label: 'Dispatch emergency services to scene' },
+      { id: 'det-3', label: 'Contact Next of Kin (NOK)' },
+      { id: 'det-4', label: 'Issue media holding statement' },
+    ]
+  }
+];
 
 export function DiaryTab({ tenantId }: DiaryTabProps) {
   const firestore = useFirestore();
@@ -51,6 +83,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
       title: formData.get('title') as string,
       status: isMock ? 'Mock' : 'Active' as ERPEventStatus,
       startedAt: new Date().toISOString(),
+      completedTasks: [],
       log: [{
         id: uuidv4(),
         timestamp: new Date().toISOString(),
@@ -67,16 +100,17 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
     toast({ title: isMock ? 'Mock Started' : 'ERP ACTIVATED', variant: isMock ? 'default' : 'destructive' });
   };
 
-  const handleAddLog = () => {
-    if (!newLogEntry.trim() || !activeEvent || !firestore) return;
+  const handleAddLog = (customDesc?: string, milestoneOverride?: boolean) => {
+    const desc = customDesc || newLogEntry.trim();
+    if (!desc || !activeEvent || !firestore) return;
 
     const entry: ERPLogEntry = {
       id: uuidv4(),
       timestamp: new Date().toISOString(),
-      description: newLogEntry.trim(),
+      description: desc,
       loggedBy: userProfile?.id || 'Unknown',
       userName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Unknown',
-      isMilestone: isMilestone
+      isMilestone: milestoneOverride !== undefined ? milestoneOverride : isMilestone
     };
 
     const eventRef = doc(firestore, `tenants/${tenantId}/erp-events`, activeEvent.id);
@@ -84,9 +118,42 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
       log: arrayUnion(entry)
     });
 
-    setNewLogEntry('');
-    setIsMilestone(false);
-    toast({ title: 'Logged' });
+    if (!customDesc) {
+      setNewLogEntry('');
+      setIsMilestone(false);
+      toast({ title: 'Logged' });
+    }
+  };
+
+  const handleToggleTask = (taskId: string, label: string) => {
+    if (!activeEvent || !firestore) return;
+
+    const isCompleted = activeEvent.completedTasks?.includes(taskId);
+    const eventRef = doc(firestore, `tenants/${tenantId}/erp-events`, activeEvent.id);
+
+    if (!isCompleted) {
+      // Mark as completed and log automatically
+      const entry: ERPLogEntry = {
+        id: uuidv4(),
+        timestamp: new Date().toISOString(),
+        description: `ACTION COMPLETED: ${label}`,
+        loggedBy: userProfile?.id || 'System',
+        userName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'System',
+        isMilestone: true
+      };
+
+      updateDocumentNonBlocking(eventRef, {
+        completedTasks: arrayUnion(taskId),
+        log: arrayUnion(entry)
+      });
+      toast({ title: "Timeline updated" });
+    } else {
+      // Just uncheck, don't necessarily log removal unless critical
+      const updatedTasks = (activeEvent.completedTasks || []).filter(id => id !== taskId);
+      updateDocumentNonBlocking(eventRef, {
+        completedTasks: updatedTasks
+      });
+    }
   };
 
   const handleCloseERP = () => {
@@ -173,42 +240,80 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
             <CardFooter className="border-t p-4 bg-muted/10 gap-3">
               <div className="flex-1 space-y-3">
                 <Textarea 
-                  placeholder="Log an event or communication..." 
+                  placeholder="Manual diary entry..." 
                   value={newLogEntry}
                   onChange={(e) => setNewLogEntry(e.target.value)}
-                  className="min-h-[80px]"
+                  className="min-h-[80px] bg-background"
                 />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Switch checked={isMilestone} onCheckedChange={setIsMilestone} id="milestone-sw" />
                     <Label htmlFor="milestone-sw" className="text-xs">Mark as Milestone</Label>
                   </div>
-                  <Button onClick={handleAddLog} disabled={!newLogEntry.trim()}><PlusCircle className="mr-2 h-4 w-4" /> Log Event</Button>
+                  <Button onClick={() => handleAddLog()} disabled={!newLogEntry.trim()}><PlusCircle className="mr-2 h-4 w-4" /> Log Event</Button>
                 </div>
               </div>
             </CardFooter>
           </Card>
 
-          <Card className="shadow-none border h-fit sticky top-0">
-            <CardHeader className="bg-muted/10">
-              <CardTitle className="text-sm">ERP Quick Reference</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-4">
-              <div className="p-3 rounded-lg border border-emerald-200 bg-emerald-50 text-[11px] font-medium leading-relaxed">
-                <p className="font-bold text-emerald-800 mb-1">Standard Announcement:</p>
-                "Safeviate Flight Center is responding to a reported incident. Our emergency team has been activated. No further details are confirmed at this time."
-              </div>
-              <Separator />
-              <div className="space-y-2">
-                <p className="text-[10px] font-bold uppercase text-muted-foreground">Critical Reminders</p>
-                <ul className="text-xs space-y-2 list-disc pl-4">
-                  <li>Direct all media inquiries to the Media Officer.</li>
-                  <li>Do not speculate on aircraft or personnel identity.</li>
-                  <li>Ensure all actions are timestamped in this diary.</li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-6 overflow-y-auto no-scrollbar">
+            <Card className="shadow-none border">
+              <CardHeader className="bg-muted/10 py-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary" /> Phase Checklists
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 space-y-6">
+                {PHASE_CHECKLISTS.map((phase) => (
+                  <div key={phase.phase} className="space-y-2">
+                    <h4 className="text-[10px] font-black uppercase text-muted-foreground tracking-widest border-b pb-1">{phase.phase}</h4>
+                    <div className="space-y-2 pt-1">
+                      {phase.tasks.map((task) => {
+                        const isChecked = activeEvent.completedTasks?.includes(task.id);
+                        return (
+                          <div key={task.id} className="flex items-start space-x-2">
+                            <Checkbox 
+                              id={task.id} 
+                              checked={isChecked}
+                              onCheckedChange={() => handleToggleTask(task.id, task.label)}
+                              className="mt-0.5"
+                            />
+                            <Label 
+                              htmlFor={task.id} 
+                              className={cn("text-xs leading-relaxed cursor-pointer", isChecked && "text-muted-foreground line-through")}
+                            >
+                              {task.label}
+                            </Label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-none border">
+              <CardHeader className="bg-muted/10 py-3">
+                <CardTitle className="text-sm">ERP Quick Reference</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-4">
+                <div className="p-3 rounded-lg border border-emerald-200 bg-emerald-50 text-[11px] font-medium leading-relaxed">
+                  <p className="font-bold text-emerald-800 mb-1">Standard Announcement:</p>
+                  "Safeviate Flight Center is responding to a reported incident. Our emergency team has been activated. No further details are confirmed at this time."
+                </div>
+                <Separator />
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground">Critical Reminders</p>
+                  <ul className="text-xs space-y-2 list-disc pl-4">
+                    <li>Direct all media inquiries to the Media Officer.</li>
+                    <li>Do not speculate on aircraft or personnel identity.</li>
+                    <li>Ensure all actions are timestamped in this diary.</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       ) : (
         <Card className="shadow-none border">
@@ -223,7 +328,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
                     <p className="font-bold">{event.title}</p>
                     <p className="text-xs text-muted-foreground">Started: {format(new Date(event.startedAt), 'PPP p')}</p>
                   </div>
-                  <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100">View Log</Button>
+                  <Badge variant="outline" className="text-[10px]">Closed</Badge>
                 </div>
               ))}
               {(!events || events.filter(e => e.status === 'Closed').length === 0) && (
