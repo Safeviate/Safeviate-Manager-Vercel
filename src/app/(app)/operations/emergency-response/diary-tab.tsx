@@ -98,10 +98,10 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
         { id: 'det-2', label: 'Dispatch emergency services to scene' },
         { id: 'det-3', label: 'Contact Next of Kin (NOK)' },
         { id: 'det-4', label: 'Issue media holding statement' },
-        { id: 'det-5', label: 'SECURE EVIDENCE: Pilot Logbook & Medical' },
-        { id: 'det-6', label: 'SECURE EVIDENCE: Aircraft Technical Log & Maintenance records' },
-        { id: 'det-7', label: 'SECURE EVIDENCE: Weight & Balance & Flight Plan' },
-        { id: 'det-8', label: 'SECURE EVIDENCE: Weather briefs & Fuel receipts' },
+        { id: 'det-5', label: 'Documents secured: Pilot Logbook & Medical' },
+        { id: 'det-6', label: 'Documents secured: Aircraft Technical Log & Maintenance records' },
+        { id: 'det-7', label: 'Documents secured: Weight & Balance & Flight Plan' },
+        { id: 'det-8', label: 'Documents secured: Weather briefs & Fuel receipts' },
       ]
     }
   ], [incerfaContacts, alerfaContacts]);
