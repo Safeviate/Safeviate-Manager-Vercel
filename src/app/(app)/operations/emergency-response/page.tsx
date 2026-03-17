@@ -1,13 +1,15 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Phone, AlertCircle, Megaphone, ScrollText, Play } from 'lucide-react';
+import { Phone, AlertCircle, Megaphone, ScrollText, Play, HelpCircle } from 'lucide-react';
 import { ContactsTab } from './contacts-tab';
 import { TriggersTab } from './triggers-tab';
 import { MediaTab } from './media-tab';
 import { DiaryTab } from './diary-tab';
+import { PhasesTab } from './phases-tab';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function EmergencyResponsePage() {
@@ -35,6 +37,9 @@ export default function EmergencyResponsePage() {
             <TabsTrigger value="media" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2">
               <Megaphone className="h-4 w-4" /> Media Release
             </TabsTrigger>
+            <TabsTrigger value="phases" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2">
+              <HelpCircle className="h-4 w-4" /> Emergency Phases Guide
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -50,6 +55,9 @@ export default function EmergencyResponsePage() {
           </TabsContent>
           <TabsContent value="media" className="m-0">
             <MediaTab tenantId={tenantId || 'safeviate'} />
+          </TabsContent>
+          <TabsContent value="phases" className="m-0">
+            <PhasesTab />
           </TabsContent>
         </div>
       </Tabs>
