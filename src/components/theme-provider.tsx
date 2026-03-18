@@ -153,7 +153,7 @@ const applyScaleToDOM = (scale: number) => {
     document.documentElement.style.fontSize = `${scale}%`;
 };
 
-const getInitialState = <T,>(key: string, defaultValue: T): T => {
+const getInitialState = <T extends object>(key: string, defaultValue: T): T => {
     if (typeof window === 'undefined') {
         return defaultValue;
     }
@@ -164,12 +164,17 @@ const getInitialState = <T,>(key: string, defaultValue: T): T => {
         }
         const stored = JSON.parse(item);
 
-        // For objects (but not arrays), merge with defaults.
+        // Strict picking: only allow keys that exist in the default definition
         if (typeof defaultValue === 'object' && defaultValue !== null && !Array.isArray(defaultValue)) {
-             return { ...(defaultValue as object), ...stored };
+             const result: any = { ...defaultValue };
+             Object.keys(defaultValue).forEach(k => {
+                 if (stored[k] !== undefined) {
+                     result[k] = stored[k];
+                 }
+             });
+             return result;
         }
         
-        // For primitives and arrays, return the stored value directly.
         return stored;
     } catch (error) {
         console.warn(`Error reading localStorage key “${key}”:`, error);
@@ -187,7 +192,7 @@ export const useTheme = () => {
   return context;
 };
 
-export const ThemeProvider = ({ children }: { children: React.BlackNode }) => {
+export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [theme, setTheme] = useState<ThemeColors>(() => getInitialState(THEME_KEY, defaultColors));
   const [buttonTheme, setButtonTheme] = useState<ButtonThemeColors>(() => getInitialState(BUTTON_THEME_KEY, defaultButtonColors));
   const [cardTheme, setCardTheme] = useState<CardThemeColors>(() => getInitialState(CARD_THEME_KEY, defaultCardColors));
@@ -204,12 +209,31 @@ export const ThemeProvider = ({ children }: { children: React.BlackNode }) => {
   useEffect(() => {
     if (tenant?.theme) {
       const t = tenant.theme;
-      // Overwrite local state with tenant defaults if available
+      // Overwrite local state with tenant defaults if available, applying strict keys
       if (t.main) setTheme(prev => ({ ...prev, ...t.main }));
       if (t.button) setButtonTheme(prev => ({ ...prev, ...t.button }));
       if (t.card) setCardTheme(prev => ({ ...prev, ...t.card }));
-      if (t.popover) setPopoverTheme(prev => ({ ...prev, ...t.popover }));
-      if (t.sidebar) setSidebarTheme(prev => ({ ...prev, ...t.sidebar }));
+      
+      if (t.popover) {
+          setPopoverTheme(prev => {
+              const next = { ...prev };
+              Object.keys(defaultPopoverColors).forEach(k => {
+                  if ((t.popover as any)[k]) (next as any)[k] = (t.popover as any)[k];
+              });
+              return next;
+          });
+      }
+
+      if (t.sidebar) {
+          setSidebarTheme(prev => {
+              const next = { ...prev };
+              Object.keys(defaultSidebarColors).forEach(k => {
+                  if ((t.sidebar as any)[k]) (next as any)[k] = (t.sidebar as any)[k];
+              });
+              return next;
+          });
+      }
+
       if (t.header) setHeaderTheme(prev => ({ ...prev, ...t.header }));
       if (t.swimlane) setSwimlaneTheme(prev => ({ ...prev, ...t.swimlane }));
     }
@@ -259,8 +283,18 @@ export const ThemeProvider = ({ children }: { children: React.BlackNode }) => {
     const newTheme = { ...defaultColors, ...themeToApply.colors };
     const newButtonTheme = { ...defaultButtonColors, ...themeToApply.buttonColors };
     const newCardTheme = { ...defaultCardColors, ...themeToApply.cardColors };
-    const newPopoverTheme = { ...defaultPopoverColors, ...themeToApply.popoverColors };
-    const newSidebarTheme = { ...defaultSidebarColors, ...themeToApply.sidebarColors };
+    
+    // Strict picking for sidebar and popover to avoid redundant keys
+    const newPopoverTheme = { ...defaultPopoverColors };
+    Object.keys(defaultPopoverColors).forEach(k => {
+        if ((themeToApply.popoverColors as any)[k]) (newPopoverTheme as any)[k] = (themeToApply.popoverColors as any)[k];
+    });
+
+    const newSidebarTheme = { ...defaultSidebarColors };
+    Object.keys(defaultSidebarColors).forEach(k => {
+        if ((themeToApply.sidebarColors as any)[k]) (newSidebarTheme as any)[k] = (themeToApply.sidebarColors as any)[k];
+    });
+
     const newHeaderTheme = { ...defaultHeaderColors, ...themeToApply.headerColors };
     const newSwimlaneTheme = { ...defaultSwimlaneColors, ...themeToApply.swimlaneColors };
     const newScale = themeToApply.scale || defaultScale;
