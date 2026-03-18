@@ -78,4 +78,5 @@ export interface Booking {
   massAndBalance?: MassAndBalance;
   organizationId?: string | null; // Associated external company ID
   overrides?: OverrideLog[];
+  landingConfirmed?: boolean; // New safety tracking field
 }

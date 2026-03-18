@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "User": {
@@ -67,6 +66,18 @@
           }
         }
       }
+    },
+    "Booking": {
+      "title": "Booking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "bookingNumber": { "type": "string" },
+        "aircraftId": { "type": "string" },
+        "end": { "type": "string", "format": "date-time" },
+        "status": { "type": "string" },
+        "landingConfirmed": { "type": "boolean", "description": "Safety flag to track if aircraft arrival is confirmed." }
+      }
     }
   },
   "auth": {
@@ -93,6 +104,13 @@
         "definition": {
           "schema": { "$ref": "#/backend/entities/ERPEvent" },
           "description": "Real-time ERP response logs."
+        }
+      },
+      {
+        "path": "tenants/{tenantId}/bookings/{bookingId}",
+        "definition": {
+          "schema": { "$ref": "#/backend/entities/Booking" },
+          "description": "Aircraft bookings and safety status."
         }
       }
     ]
