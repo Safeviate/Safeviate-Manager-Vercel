@@ -49,16 +49,16 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'bookings-view',
     subItems: [
       {
-        href: '/bookings/history',
-        label: 'History',
-        description: 'View past bookings and logs.',
-        permissionId: 'bookings-history-view',
-      },
-      {
         href: '/bookings/schedule',
         label: 'Daily Schedule',
         description: 'View and manage resource bookings.',
         permissionId: 'bookings-schedule-view',
+      },
+      {
+        href: '/bookings/history',
+        label: 'History',
+        description: 'View past bookings and logs.',
+        permissionId: 'bookings-history-view',
       },
     ],
   },
