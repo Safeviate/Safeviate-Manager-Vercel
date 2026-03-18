@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Navigation, Wind, MapPin, Clock, Save, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Navigation, Wind, MapPin, Clock, Save, ChevronRight, Info } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Booking, NavlogLeg, Navlog } from '@/types/booking';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
@@ -13,11 +13,28 @@ import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { calculateWindTriangle, calculateEte } from '@/lib/e6b';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface NavlogBuilderProps {
     booking: Booking;
     tenantId: string;
 }
+
+const HeaderWithTooltip = ({ label, tooltip, highlight = false }: { label: string, tooltip: string, highlight?: boolean }) => (
+    <Tooltip>
+        <TooltipTrigger asChild>
+            <div className={cn("flex items-center justify-center gap-1 cursor-help", highlight && "text-primary")}>
+                {label}
+                <Info className="h-2 w-2 opacity-50" />
+            </div>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-[200px] text-[10px]">
+            <p>{tooltip}</p>
+        </TooltipContent>
+    </Tooltip>
+);
+
+import { cn } from '@/lib/utils';
 
 export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
     const firestore = useFirestore();
@@ -96,186 +113,202 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
     };
 
     return (
-        <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-            <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-row items-center justify-between space-y-0">
-                <div className="space-y-1">
-                    <CardTitle className="text-xl flex items-center gap-2">
-                        <Navigation className="h-5 w-5 text-primary" />
-                        Navigation Log (Navlog)
-                    </CardTitle>
-                    <CardDescription>Plan legs and calculate headings/time burn.</CardDescription>
-                </div>
-                {!isReadOnly && (
-                    <Button size="sm" onClick={handleSave} className="gap-2">
-                        <Save className="h-4 w-4" /> Save Plan
-                    </Button>
-                )}
-            </CardHeader>
-            <div className="p-4 border-b bg-muted/10 grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                    <label className="text-[10px] uppercase font-bold text-muted-foreground">Departure ICAO</label>
-                    <Input 
-                        placeholder="e.g., FACT" 
-                        value={departure} 
-                        onChange={(e) => setDeparture(e.target.value.toUpperCase())}
-                        disabled={isReadOnly}
-                        className="h-8 uppercase font-mono"
-                    />
-                </div>
-                <div className="space-y-1.5">
-                    <label className="text-[10px] uppercase font-bold text-muted-foreground">Arrival ICAO</label>
-                    <Input 
-                        placeholder="e.g., FASH" 
-                        value={arrival} 
-                        onChange={(e) => setArrival(e.target.value.toUpperCase())}
-                        disabled={isReadOnly}
-                        className="h-8 uppercase font-mono"
-                    />
-                </div>
-            </div>
-            <ScrollArea className="flex-1">
-                <Table>
-                    <TableHeader className="bg-muted/30">
-                        <TableRow>
-                            <TableHead className="w-10"></TableHead>
-                            <TableHead className="w-32 text-[10px] uppercase font-bold">Waypoint</TableHead>
-                            <TableHead className="w-20 text-[10px] uppercase font-bold">Alt</TableHead>
-                            <TableHead className="w-24 text-[10px] uppercase font-bold">Wind (Dir/Vel)</TableHead>
-                            <TableHead className="w-16 text-[10px] uppercase font-bold">TAS</TableHead>
-                            <TableHead className="w-16 text-[10px] uppercase font-bold">TC</TableHead>
-                            <TableHead className="w-16 text-[10px] uppercase font-bold text-primary">WCA</TableHead>
-                            <TableHead className="w-16 text-[10px] uppercase font-bold text-primary">MH</TableHead>
-                            <TableHead className="w-16 text-[10px] uppercase font-bold">Dist</TableHead>
-                            <TableHead className="w-16 text-[10px] uppercase font-bold text-primary">GS</TableHead>
-                            <TableHead className="w-16 text-[10px] uppercase font-bold text-primary">ETE</TableHead>
-                            <TableHead className="w-16 text-[10px] uppercase font-bold">ATA</TableHead>
-                            {!isReadOnly && <TableHead className="w-10"></TableHead>}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {legs.map((leg, index) => (
-                            <TableRow key={leg.id} className="group">
-                                <TableCell className="p-2 text-center text-[10px] font-bold text-muted-foreground">{index + 1}</TableCell>
-                                <TableCell className="p-1">
-                                    <Input 
-                                        placeholder="..." 
-                                        value={leg.waypoint} 
-                                        onChange={(e) => handleLegChange(leg.id, 'waypoint', e.target.value)}
-                                        disabled={isReadOnly}
-                                        className="h-7 text-xs border-transparent hover:border-input focus:border-input bg-transparent"
-                                    />
-                                </TableCell>
-                                <TableCell className="p-1">
-                                    <Input 
-                                        type="number" 
-                                        placeholder="Alt" 
-                                        value={leg.altitude || ''} 
-                                        onChange={(e) => handleLegChange(leg.id, 'altitude', Number(e.target.value))}
-                                        disabled={isReadOnly}
-                                        className="h-7 text-xs border-transparent hover:border-input focus:border-input bg-transparent text-right"
-                                    />
-                                </TableCell>
-                                <TableCell className="p-1">
-                                    <div className="flex gap-1">
-                                        <Input 
-                                            type="number" 
-                                            placeholder="Dir" 
-                                            value={leg.windDirection || ''} 
-                                            onChange={(e) => handleLegChange(leg.id, 'windDirection', Number(e.target.value))}
-                                            disabled={isReadOnly}
-                                            className="h-7 text-xs border-transparent hover:border-input focus:border-input bg-transparent text-right p-1"
-                                        />
-                                        <span className="pt-1.5 opacity-30">/</span>
-                                        <Input 
-                                            type="number" 
-                                            placeholder="Vel" 
-                                            value={leg.windSpeed || ''} 
-                                            onChange={(e) => handleLegChange(leg.id, 'windSpeed', Number(e.target.value))}
-                                            disabled={isReadOnly}
-                                            className="h-7 text-xs border-transparent hover:border-input focus:border-input bg-transparent text-right p-1"
-                                        />
-                                    </div>
-                                </TableCell>
-                                <TableCell className="p-1">
-                                    <Input 
-                                        type="number" 
-                                        value={leg.trueAirspeed || ''} 
-                                        onChange={(e) => handleLegChange(leg.id, 'trueAirspeed', Number(e.target.value))}
-                                        disabled={isReadOnly}
-                                        className="h-7 text-xs border-transparent hover:border-input focus:border-input bg-transparent text-right"
-                                    />
-                                </TableCell>
-                                <TableCell className="p-1">
-                                    <Input 
-                                        type="number" 
-                                        value={leg.trueCourse || ''} 
-                                        onChange={(e) => handleLegChange(leg.id, 'trueCourse', Number(e.target.value))}
-                                        disabled={isReadOnly}
-                                        className="h-7 text-xs border-transparent hover:border-input focus:border-input bg-transparent text-right"
-                                    />
-                                </TableCell>
-                                <TableCell className="p-1 text-center font-mono font-bold text-primary text-xs">
-                                    {leg.wca || '-'}
-                                </TableCell>
-                                <TableCell className="p-1 text-center font-mono font-bold text-primary text-xs">
-                                    {leg.magneticHeading !== undefined ? Math.round(leg.magneticHeading).toString().padStart(3, '0') : '-'}
-                                </TableCell>
-                                <TableCell className="p-1">
-                                    <Input 
-                                        type="number" 
-                                        value={leg.distance || ''} 
-                                        onChange={(e) => handleLegChange(leg.id, 'distance', Number(e.target.value))}
-                                        disabled={isReadOnly}
-                                        className="h-7 text-xs border-transparent hover:border-input focus:border-input bg-transparent text-right"
-                                    />
-                                </TableCell>
-                                <TableCell className="p-1 text-center font-mono font-bold text-primary text-xs">
-                                    {leg.groundSpeed || '-'}
-                                </TableCell>
-                                <TableCell className="p-1 text-center font-mono font-bold text-primary text-xs">
-                                    {leg.ete || '-'}
-                                </TableCell>
-                                <TableCell className="p-1">
-                                    <Input 
-                                        placeholder="Time" 
-                                        value={leg.ata || ''} 
-                                        onChange={(e) => handleLegChange(leg.id, 'ata', e.target.value)}
-                                        disabled={isReadOnly}
-                                        className="h-7 text-xs border-transparent hover:border-input focus:border-input bg-transparent text-right"
-                                    />
-                                </TableCell>
-                                {!isReadOnly && (
-                                    <TableCell className="p-1">
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            onClick={() => handleRemoveLeg(leg.id)}
-                                            className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100"
-                                        >
-                                            <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                    </TableCell>
-                                )}
-                            </TableRow>
-                        ))}
-                        {legs.length === 0 && (
-                            <TableRow>
-                                <TableCell colSpan={13} className="h-32 text-center text-muted-foreground italic">
-                                    <MapPin className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                                    No legs defined. Add your first checkpoint to start planning.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-                {!isReadOnly && (
-                    <div className="p-4 flex justify-start">
-                        <Button variant="outline" size="sm" onClick={handleAddLeg} className="gap-2">
-                            <Plus className="h-4 w-4" /> Add Leg
-                        </Button>
+        <TooltipProvider>
+            <Card className="flex flex-col h-full overflow-hidden shadow-none border">
+                <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-row items-center justify-between space-y-0">
+                    <div className="space-y-1">
+                        <CardTitle className="text-xl flex items-center gap-2">
+                            <Navigation className="h-5 w-5 text-primary" />
+                            Navigation Log (Navlog)
+                        </CardTitle>
+                        <CardDescription>Plan legs and calculate headings/time burn.</CardDescription>
                     </div>
-                )}
-            </ScrollArea>
-        </Card>
+                    {!isReadOnly && (
+                        <Button size="sm" onClick={handleSave} className="gap-2">
+                            <Save className="h-4 w-4" /> Save Plan
+                        </Button>
+                    )}
+                </CardHeader>
+                <div className="p-4 border-b bg-muted/10 grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground">Departure ICAO</label>
+                        <Input 
+                            placeholder="e.g., FACT" 
+                            value={departure} 
+                            onChange={(e) => setDeparture(e.target.value.toUpperCase())}
+                            disabled={isReadOnly}
+                            className="h-8 uppercase font-mono"
+                        />
+                    </div>
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground">Arrival ICAO</label>
+                        <Input 
+                            placeholder="e.g., FASH" 
+                            value={arrival} 
+                            onChange={(e) => setArrival(e.target.value.toUpperCase())}
+                            disabled={isReadOnly}
+                            className="h-8 uppercase font-mono"
+                        />
+                    </div>
+                </div>
+                <ScrollArea className="flex-1">
+                    <Table>
+                        <TableHeader className="bg-muted/30">
+                            <TableRow>
+                                <TableHead className="w-10"></TableHead>
+                                <TableHead className="w-32 text-[10px] uppercase font-bold">Waypoint</TableHead>
+                                <TableHead className="w-20 text-[10px] uppercase font-bold text-center">Alt</TableHead>
+                                <TableHead className="w-24 text-[10px] uppercase font-bold text-center">Wind (Dir/Vel)</TableHead>
+                                <TableHead className="w-16 text-[10px] uppercase font-bold text-center">
+                                    <HeaderWithTooltip label="TAS" tooltip="True Airspeed: The speed of the aircraft relative to the air it's flying through." />
+                                </TableHead>
+                                <TableHead className="w-16 text-[10px] uppercase font-bold text-center">
+                                    <HeaderWithTooltip label="TC" tooltip="True Course: The intended path over the ground relative to True North." />
+                                </TableHead>
+                                <TableHead className="w-16 text-[10px] uppercase font-bold text-center text-primary">
+                                    <HeaderWithTooltip highlight label="WCA" tooltip="Wind Correction Angle: Degrees to point the nose into the wind to stay on course." />
+                                </TableHead>
+                                <TableHead className="w-16 text-[10px] uppercase font-bold text-center text-primary">
+                                    <HeaderWithTooltip highlight label="MH" tooltip="Magnetic Heading: The direction to point the nose relative to Magnetic North (Compass)." />
+                                </TableHead>
+                                <TableHead className="w-16 text-[10px] uppercase font-bold text-center">Dist</TableHead>
+                                <TableHead className="w-16 text-[10px] uppercase font-bold text-center text-primary">
+                                    <HeaderWithTooltip highlight label="GS" tooltip="Ground Speed: The actual speed of the aircraft over the ground after wind effects." />
+                                </TableHead>
+                                <TableHead className="w-16 text-[10px] uppercase font-bold text-center text-primary">
+                                    <HeaderWithTooltip highlight label="ETE" tooltip="Estimated Time En-route: How long this leg will take in minutes." />
+                                </HeaderWithTooltip>
+                                <TableHead className="w-16 text-[10px] uppercase font-bold text-center">
+                                    <HeaderWithTooltip label="ATA" tooltip="Actual Time of Arrival: The real time you reached this waypoint." />
+                                </TableHead>
+                                {!isReadOnly && <TableHead className="w-10"></TableHead>}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {legs.map((leg, index) => (
+                                <TableRow key={leg.id} className="group">
+                                    <TableCell className="p-2 text-center text-[10px] font-bold text-muted-foreground">{index + 1}</TableCell>
+                                    <TableCell className="p-1">
+                                        <Input 
+                                            placeholder="..." 
+                                            value={leg.waypoint} 
+                                            onChange={(e) => handleLegChange(leg.id, 'waypoint', e.target.value)}
+                                            disabled={isReadOnly}
+                                            className="h-7 text-xs border-transparent hover:border-input focus:border-input bg-transparent"
+                                        />
+                                    </TableCell>
+                                    <TableCell className="p-1 text-center">
+                                        <Input 
+                                            type="number" 
+                                            placeholder="Alt" 
+                                            value={leg.altitude || ''} 
+                                            onChange={(e) => handleLegChange(leg.id, 'altitude', Number(e.target.value))}
+                                            disabled={isReadOnly}
+                                            className="h-7 text-xs border-transparent hover:border-input focus:border-input bg-transparent text-center"
+                                        />
+                                    </TableCell>
+                                    <TableCell className="p-1">
+                                        <div className="flex gap-1 justify-center">
+                                            <Input 
+                                                type="number" 
+                                                placeholder="Dir" 
+                                                value={leg.windDirection || ''} 
+                                                onChange={(e) => handleLegChange(leg.id, 'windDirection', Number(e.target.value))}
+                                                disabled={isReadOnly}
+                                                className="h-7 w-10 text-xs border-transparent hover:border-input focus:border-input bg-transparent text-right p-1"
+                                            />
+                                            <span className="pt-1.5 opacity-30">/</span>
+                                            <Input 
+                                                type="number" 
+                                                placeholder="Vel" 
+                                                value={leg.windSpeed || ''} 
+                                                onChange={(e) => handleLegChange(leg.id, 'windSpeed', Number(e.target.value))}
+                                                disabled={isReadOnly}
+                                                className="h-7 w-8 text-xs border-transparent hover:border-input focus:border-input bg-transparent text-left p-1"
+                                            />
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="p-1 text-center">
+                                        <Input 
+                                            type="number" 
+                                            value={leg.trueAirspeed || ''} 
+                                            onChange={(e) => handleLegChange(leg.id, 'trueAirspeed', Number(e.target.value))}
+                                            disabled={isReadOnly}
+                                            className="h-7 text-xs border-transparent hover:border-input focus:border-input bg-transparent text-center"
+                                        />
+                                    </TableCell>
+                                    <TableCell className="p-1 text-center">
+                                        <Input 
+                                            type="number" 
+                                            value={leg.trueCourse || ''} 
+                                            onChange={(e) => handleLegChange(leg.id, 'trueCourse', Number(e.target.value))}
+                                            disabled={isReadOnly}
+                                            className="h-7 text-xs border-transparent hover:border-input focus:border-input bg-transparent text-center"
+                                        />
+                                    </TableCell>
+                                    <TableCell className="p-1 text-center font-mono font-bold text-primary text-xs">
+                                        {leg.wca || '-'}
+                                    </TableCell>
+                                    <TableCell className="p-1 text-center font-mono font-bold text-primary text-xs">
+                                        {leg.magneticHeading !== undefined ? Math.round(leg.magneticHeading).toString().padStart(3, '0') : '-'}
+                                    </TableCell>
+                                    <TableCell className="p-1 text-center">
+                                        <Input 
+                                            type="number" 
+                                            value={leg.distance || ''} 
+                                            onChange={(e) => handleLegChange(leg.id, 'distance', Number(e.target.value))}
+                                            disabled={isReadOnly}
+                                            className="h-7 text-xs border-transparent hover:border-input focus:border-input bg-transparent text-center"
+                                        />
+                                    </TableCell>
+                                    <TableCell className="p-1 text-center font-mono font-bold text-primary text-xs">
+                                        {leg.groundSpeed || '-'}
+                                    </TableCell>
+                                    <TableCell className="p-1 text-center font-mono font-bold text-primary text-xs">
+                                        {leg.ete || '-'}
+                                    </TableCell>
+                                    <TableCell className="p-1 text-center">
+                                        <Input 
+                                            placeholder="Time" 
+                                            value={leg.ata || ''} 
+                                            onChange={(e) => handleLegChange(leg.id, 'ata', e.target.value)}
+                                            disabled={isReadOnly}
+                                            className="h-7 text-xs border-transparent hover:border-input focus:border-input bg-transparent text-center"
+                                        />
+                                    </TableCell>
+                                    {!isReadOnly && (
+                                        <TableCell className="p-1 text-center">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                onClick={() => handleRemoveLeg(leg.id)}
+                                                className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100"
+                                            >
+                                                <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                        </TableCell>
+                                    )}
+                                </TableRow>
+                            ))}
+                            {legs.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={13} className="h-32 text-center text-muted-foreground italic">
+                                        <MapPin className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                                        No legs defined. Add your first checkpoint to start planning.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                    {!isReadOnly && (
+                        <div className="p-4 flex justify-start">
+                            <Button variant="outline" size="sm" onClick={handleAddLeg} className="gap-2">
+                                <Plus className="h-4 w-4" /> Add Leg
+                            </Button>
+                        </div>
+                    )}
+                </ScrollArea>
+            </Card>
+        </TooltipProvider>
     );
 }
