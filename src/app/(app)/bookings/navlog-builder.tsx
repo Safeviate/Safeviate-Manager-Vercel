@@ -162,7 +162,7 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                                     <HeaderWithTooltip label="TAS" tooltip="True Airspeed: The speed of the aircraft relative to the air it's flying through." />
                                 </TableHead>
                                 <TableHead className="w-16 text-[10px] uppercase font-bold text-center">
-                                    <HeaderWithTooltip label="TC" tooltip="True Course: The intended path over the ground relative to True North." />
+                                    <HeaderWithTooltip label="Track" tooltip="Track: The intended path over the ground relative to True North (True Course)." />
                                 </TableHead>
                                 <TableHead className="w-16 text-[10px] uppercase font-bold text-center text-primary">
                                     <HeaderWithTooltip highlight label="WCA" tooltip="Wind Correction Angle: Degrees to point the nose into the wind to stay on course." />
