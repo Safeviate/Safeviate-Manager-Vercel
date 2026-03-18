@@ -130,10 +130,11 @@ const SidebarItems = () => {
             {visibleMenuConfig.map((item, index) => {
                 const content = renderMenuItem(item);
                 if (!content) return null;
+                const isLast = index === visibleMenuConfig.length - 1;
                 return (
                     <React.Fragment key={item.href}>
                         <SidebarMenuItem>{content}</SidebarMenuItem>
-                        {index > 0 && index < visibleMenuConfig.length - 1 && item.subItems && <SidebarSeparator />}
+                        {!isLast && <SidebarSeparator />}
                     </React.Fragment>
                 );
             })}
