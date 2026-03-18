@@ -2,7 +2,9 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Standard permissive rule for development: Allow all authenticated users
+    // Standard permissive rule for development: Allow all authenticated users.
+    // This allows Barry and others to perform list, get, and write operations 
+    // across the entire database hierarchy.
     match /{document=**} {
       allow read, write: if request.auth != null;
     }
