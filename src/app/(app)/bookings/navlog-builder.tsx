@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { calculateWindTriangle, calculateEte } from '@/lib/e6b';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 interface NavlogBuilderProps {
     booking: Booking;
@@ -33,8 +34,6 @@ const HeaderWithTooltip = ({ label, tooltip, highlight = false }: { label: strin
         </TooltipContent>
     </Tooltip>
 );
-
-import { cn } from '@/lib/utils';
 
 export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
     const firestore = useFirestore();
@@ -177,7 +176,7 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                                 </TableHead>
                                 <TableHead className="w-16 text-[10px] uppercase font-bold text-center text-primary">
                                     <HeaderWithTooltip highlight label="ETE" tooltip="Estimated Time En-route: How long this leg will take in minutes." />
-                                </HeaderWithTooltip>
+                                </TableHead>
                                 <TableHead className="w-16 text-[10px] uppercase font-bold text-center">
                                     <HeaderWithTooltip label="ATA" tooltip="Actual Time of Arrival: The real time you reached this waypoint." />
                                 </TableHead>
