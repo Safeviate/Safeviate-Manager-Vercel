@@ -1,4 +1,4 @@
-export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'manage-templates' | 'calculate-booking' | 'schedule-view' | 'schedule-manage' | 'history-view' | 'preflight-manage' | 'postflight-manage' | 'view-all' | 'approve' | 'approve-override' | 'techlog-override' | 'manage-definitions';
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'manage-templates' | 'calculate-booking' | 'schedule-view' | 'schedule-manage' | 'history-view' | 'preflight-manage' | 'postflight-manage' | 'view-all' | 'approve' | 'approve-override' | 'techlog-override' | 'manage-definitions' | 'admin';
 
 export type PermissionResource = {
   id: string;
@@ -18,6 +18,7 @@ export const permissionsConfig: PermissionResource[] = [
   // --- Core Features ---
   { id: 'operations', name: 'Operations', actions: ['view'] },
   { id: 'operations-alerts', name: 'Operations Alerts', actions: ['view', 'create', 'edit', 'delete'] },
+  { id: 'operations-erp', name: 'Emergency Response Plan', actions: ['view', 'manage', 'admin'] },
   
   { id: 'bookings', name: 'Bookings', actions: ['view', 'schedule-view', 'schedule-manage', 'history-view', 'preflight-manage', 'postflight-manage', 'delete', 'approve', 'approve-override', 'techlog-override'] },
 

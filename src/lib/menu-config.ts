@@ -78,7 +78,7 @@ export const menuConfig: MenuItem[] = [
         href: '/operations/emergency-response',
         label: 'Emergency Response Plan',
         description: 'Manage emergency contacts, triggers, and live response diaries.',
-        permissionId: 'operations-view',
+        permissionId: 'operations-erp-view',
       },
     ],
   },

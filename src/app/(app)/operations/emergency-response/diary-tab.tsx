@@ -23,6 +23,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import type { Personnel, PilotProfile } from '../../users/personnel/page';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface DiaryTabProps {
   tenantId: string;
@@ -32,7 +33,10 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
   const firestore = useFirestore();
   const { userProfile } = useUserProfile();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
   
+  const canManage = hasPermission('operations-erp-manage');
+
   const [isStartOpen, setIsStartOpen] = useState(false);
   const [isCloseOpen, setIsCloseOpen] = useState(false);
   const [selectedTriggerId, setSelectedTriggerId] = useState<string | null>(null);
@@ -138,6 +142,8 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
 
   const handleStartERP = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!canManage) return;
+
     const formData = new FormData(e.currentTarget);
     const isMock = formData.get('isMock') === 'on';
     const triggerId = formData.get('triggerId') as string;
@@ -182,7 +188,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
 
   const handleAddLog = (customDesc?: string, milestoneOverride?: boolean) => {
     const desc = customDesc || newLogEntry.trim();
-    if (!desc || !activeEvent || !firestore) return;
+    if (!desc || !activeEvent || !firestore || !canManage) return;
 
     const entry: ERPLogEntry = {
       id: uuidv4(),
@@ -206,7 +212,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
   };
 
   const handleToggleTask = (taskId: string, label: string) => {
-    if (!activeEvent || !firestore) return;
+    if (!activeEvent || !firestore || !canManage) return;
 
     const isCompleted = activeEvent.completedTasks?.includes(taskId);
     const eventRef = doc(firestore, `tenants/${tenantId}/erp-events`, activeEvent.id);
@@ -235,7 +241,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
   };
 
   const handleCloseERP = () => {
-    if (!activeEvent || !firestore) return;
+    if (!activeEvent || !firestore || !canManage) return;
 
     const eventRef = doc(firestore, `tenants/${tenantId}/erp-events`, activeEvent.id);
     
@@ -287,7 +293,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          {!activeEvent && !viewingEvent && (
+          {!activeEvent && !viewingEvent && canManage && (
             <Dialog open={isStartOpen} onOpenChange={setIsStartOpen}>
               <DialogTrigger asChild>
                 <Button variant="destructive" className="animate-bounce shadow-lg"><Play className="mr-2 h-4 w-4" /> Start ERP Session</Button>
@@ -328,7 +334,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
             </Dialog>
           )}
 
-          {activeEvent && (
+          {activeEvent && canManage && (
             <Dialog open={isCloseOpen} onOpenChange={setIsCloseOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm"><StopCircle className="mr-2 h-4 w-4" /> Close Session</Button>
@@ -406,7 +412,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
                 </div>
               </ScrollArea>
             </CardContent>
-            {activeEvent && (
+            {activeEvent && canManage && (
               <CardFooter className="border-t p-4 bg-muted/10 gap-3">
                 <div className="flex-1 space-y-3">
                   <Textarea 
@@ -446,8 +452,9 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
                             <Checkbox 
                               id={task.id} 
                               checked={isChecked}
-                              onCheckedChange={() => activeEvent && handleToggleTask(task.id, task.label)}
+                              onCheckedChange={() => activeEvent && canManage && handleToggleTask(task.id, task.label)}
                               className="mt-0.5"
+                              disabled={!activeEvent || !canManage}
                             />
                             <Label 
                               htmlFor={task.id} 

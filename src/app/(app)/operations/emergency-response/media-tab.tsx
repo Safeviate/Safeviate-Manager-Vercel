@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface MediaTabProps {
   tenantId: string;
@@ -28,60 +29,29 @@ const STANDARD_TEMPLATES: Omit<ERPMediaTemplate, 'id'>[] = [
   {
     type: 'Immediate',
     title: 'Initial Holding Statement (Crisis Start)',
-    content: `FOR IMMEDIATE RELEASE
-
-[ORGANIZATION NAME] confirms that one of its aircraft, a [AIRCRAFT TYPE], was involved in an occurrence at approximately [TIME] on [DATE] near [LOCATION].
-
-Our emergency response protocols have been activated, and we are working closely with the relevant local authorities and emergency services.
-
-Our primary concern at this time is the safety and well-being of the individuals involved. We are currently gathering further information and will provide updates as soon as confirmed facts are available.
-
-Out of respect for the privacy of those involved and their families, no names or further details will be released until next of kin have been notified.
-
-Media inquiries should be directed to the Media Relations Office at [PHONE NUMBER] or [EMAIL].
-
-###`,
+    content: `FOR IMMEDIATE RELEASE\n\n[ORGANIZATION NAME] confirms that one of its aircraft, a [AIRCRAFT TYPE], was involved in an occurrence at approximately [TIME] on [DATE] near [LOCATION].\n\nOur emergency response protocols have been activated, and we are working closely with the relevant local authorities and emergency services.\n\nOur primary concern at this time is the safety and well-being of the individuals involved. We are currently gathering further information and will provide updates as soon as confirmed facts are available.\n\nOut of respect for the privacy of those involved and their families, no names or further details will be released until next of kin have been notified.\n\nMedia inquiries should be directed to the Media Relations Office at [PHONE NUMBER] or [EMAIL].\n\n###`,
   },
   {
     type: 'Second Statement',
     title: 'Secondary Update (Ongoing Response)',
-    content: `FOR IMMEDIATE RELEASE - UPDATE #1
-
-[ORGANIZATION NAME] provides the following update regarding the aircraft occurrence involving a [AIRCRAFT TYPE] near [LOCATION] on [DATE].
-
-At this time, we can confirm that [NUMBER] people were on board. We are working with [HOSPITAL/SERVICES] to ensure all individuals receive the necessary care. 
-
-The aircraft was performing a [TRAINING/PRIVATE/MAINTENANCE] flight at the time of the event. [ORGANIZATION NAME] is cooperating fully with the [AVIATION AUTHORITY/INVESTIGATION BOARD] as they begin their inquiry.
-
-We will provide further information as it becomes available and is confirmed by the appropriate authorities.
-
-Media inquiries: [PHONE/EMAIL]
-
-###`,
+    content: `FOR IMMEDIATE RELEASE - UPDATE #1\n\n[ORGANIZATION NAME] provides the following update regarding the aircraft occurrence involving a [AIRCRAFT TYPE] near [LOCATION] on [DATE].\n\nAt this time, we can confirm that [NUMBER] people were on board. We are working with [HOSPITAL/SERVICES] to ensure all individuals receive the necessary care.\n\nThe aircraft was performing a [TRAINING/PRIVATE/MAINTENANCE] flight at the time of the event. [ORGANIZATION NAME] is cooperating fully with the [AVIATION AUTHORITY/INVESTIGATION BOARD] as they begin their inquiry.\n\nWe will provide further information as it becomes available and is confirmed by the appropriate authorities.\n\nMedia inquiries: [PHONE/EMAIL]\n\n###`,
   },
   {
     type: 'Post-Incident',
     title: 'Final Closure Statement',
-    content: `FOR IMMEDIATE RELEASE
-
-[ORGANIZATION NAME] wishes to express its deepest gratitude to the emergency services, local authorities, and volunteers who responded to the aircraft occurrence on [DATE].
-
-The local response phase of this event has now concluded. The [AVIATION AUTHORITY] has assumed control of the investigation, and [ORGANIZATION NAME] will continue to provide all necessary support to their team.
-
-Our thoughts remain with the individuals and families affected by this event. We are providing internal support and counseling to our staff and students during this difficult time.
-
-This will be the final statement from [ORGANIZATION NAME] regarding the immediate response. Future updates regarding the investigation will be issued by the [AVIATION AUTHORITY].
-
-###`,
+    content: `FOR IMMEDIATE RELEASE\n\n[ORGANIZATION NAME] wishes to express its deepest gratitude to the emergency services, local authorities, and volunteers who responded to the aircraft occurrence on [DATE].\n\nThe local response phase of this event has now concluded. The [AVIATION AUTHORITY] has assumed control of the investigation, and [ORGANIZATION NAME] will continue to provide all necessary support to their team.\n\nOur thoughts remain with the individuals and families affected by this event. We are providing internal support and counseling to our staff and students during this difficult time.\n\nThis will be the final statement from [ORGANIZATION NAME] regarding the immediate response. Future updates regarding the investigation will be issued by the [AVIATION AUTHORITY].\n\n###`,
   }
 ];
 
 export function MediaTab({ tenantId }: MediaTabProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ERPMediaTemplate | null>(null);
+
+  const canAdmin = hasPermission('operations-erp-admin');
 
   const mediaQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/erp-media`)) : null),
@@ -100,6 +70,8 @@ export function MediaTab({ tenantId }: MediaTabProps) {
 
   const handleAddTemplate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!canAdmin) return;
+
     const formData = new FormData(e.currentTarget);
     const newTemplate = {
       type: formData.get('type') as any,
@@ -115,7 +87,7 @@ export function MediaTab({ tenantId }: MediaTabProps) {
 
   const handleUpdateTemplate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!editingTemplate || !firestore) return;
+    if (!editingTemplate || !firestore || !canAdmin) return;
     const formData = new FormData(e.currentTarget);
     const updatedTemplate = {
       type: formData.get('type') as any,
@@ -131,7 +103,7 @@ export function MediaTab({ tenantId }: MediaTabProps) {
   };
 
   const handleSeedStandardTemplates = async () => {
-    if (!firestore) return;
+    if (!firestore || !canAdmin) return;
     
     try {
       const batch = writeBatch(firestore);
@@ -143,7 +115,7 @@ export function MediaTab({ tenantId }: MediaTabProps) {
       });
 
       await batch.commit();
-      toast({ title: 'Standard Templates Added', description: 'Immediate, Secondary, and Closure statements have been added.' });
+      toast({ title: 'Standard Templates Added' });
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Seeding Failed', description: error.message });
     }
@@ -170,7 +142,7 @@ export function MediaTab({ tenantId }: MediaTabProps) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!firestore) return;
+    if (!firestore || !canAdmin) return;
     await deleteDoc(doc(firestore, `tenants/${tenantId}/erp-media`, id));
     toast({ title: 'Template Deleted' });
   };
@@ -179,48 +151,50 @@ export function MediaTab({ tenantId }: MediaTabProps) {
     <div className="space-y-6">
       <div className="flex justify-between items-center px-1">
         <div>
-          <h2 className="text-xl font-bold">Media Release Templates</h2>
+          <h2 className="text-xl font-bold font-headline">Media Release Templates</h2>
           <p className="text-sm text-muted-foreground">Standardized statements for managing public information during a crisis.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleSeedStandardTemplates}>
-            <Database className="mr-2 h-4 w-4" /> Seed Standard Templates
-          </Button>
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> New Template</Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>New Media Statement Template</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddTemplate} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Statement Type</Label>
-                    <Select name="type" defaultValue="Immediate">
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Immediate">Immediate Statement</SelectItem>
-                        <SelectItem value="Second Statement">Secondary Update</SelectItem>
-                        <SelectItem value="Post-Incident">Final Closure</SelectItem>
-                      </SelectContent>
-                    </Select>
+        {canAdmin && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleSeedStandardTemplates}>
+              <Database className="mr-2 h-4 w-4" /> Seed Standard Templates
+            </Button>
+            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> New Template</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>New Media Statement Template</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleAddTemplate} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Statement Type</Label>
+                      <Select name="type" defaultValue="Immediate">
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Immediate">Immediate Statement</SelectItem>
+                          <SelectItem value="Second Statement">Secondary Update</SelectItem>
+                          <SelectItem value="Post-Incident">Final Closure</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2"><Label>Internal Title</Label><Input name="title" required /></div>
                   </div>
-                  <div className="space-y-2"><Label>Internal Title</Label><Input name="title" required /></div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Statement Content</Label>
-                  <Textarea name="content" className="min-h-64" placeholder="Use placeholders like [DATE], [LOCATION], [AIRCRAFT]..." required />
-                </div>
-                <DialogFooter>
-                  <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                  <Button type="submit">Save Template</Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
+                  <div className="space-y-2">
+                    <Label>Statement Content</Label>
+                    <Textarea name="content" className="min-h-64" placeholder="Use placeholders like [DATE], [LOCATION], [AIRCRAFT]..." required />
+                  </div>
+                  <DialogFooter>
+                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                    <Button type="submit">Save Template</Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">
@@ -234,8 +208,12 @@ export function MediaTab({ tenantId }: MediaTabProps) {
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => handlePrint(template)}><Printer className="h-4 w-4 mr-2" /> Print</Button>
                 <Button variant="outline" size="sm" onClick={() => handleCopy(template.content)}><Copy className="h-4 w-4 mr-2" /> Copy</Button>
-                <Button variant="ghost" size="icon" onClick={() => { setEditingTemplate(template); setIsEditOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(template.id)}><Trash2 className="h-4 w-4" /></Button>
+                {canAdmin && (
+                  <>
+                    <Button variant="ghost" size="icon" onClick={() => { setEditingTemplate(template); setIsEditOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(template.id)}><Trash2 className="h-4 w-4" /></Button>
+                  </>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -248,7 +226,7 @@ export function MediaTab({ tenantId }: MediaTabProps) {
         {(!templates || templates.length === 0) && (
           <div className="h-48 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground gap-4">
             <Megaphone className="h-10 w-10 opacity-20" />
-            <p className="text-sm">No media templates found. Click "Seed Standard Templates" to load best practices.</p>
+            <p className="text-sm">No media templates found.</p>
           </div>
         )}
       </div>
