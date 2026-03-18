@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { collection, query, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -17,6 +17,12 @@ import { useToast } from '@/hooks/use-toast';
 interface MediaTabProps {
   tenantId: string;
 }
+
+const TYPE_ORDER: Record<string, number> = {
+  'Immediate': 1,
+  'Second Statement': 2,
+  'Post-Incident': 3
+};
 
 const STANDARD_TEMPLATES: Omit<ERPMediaTemplate, 'id'>[] = [
   {
@@ -82,6 +88,15 @@ export function MediaTab({ tenantId }: MediaTabProps) {
     [firestore, tenantId]
   );
   const { data: templates } = useCollection<ERPMediaTemplate>(mediaQuery);
+
+  const sortedTemplates = useMemo(() => {
+    if (!templates) return [];
+    return [...templates].sort((a, b) => {
+      const orderA = TYPE_ORDER[a.type] || 99;
+      const orderB = TYPE_ORDER[b.type] || 99;
+      return orderA - orderB;
+    });
+  }, [templates]);
 
   const handleAddTemplate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -209,7 +224,7 @@ export function MediaTab({ tenantId }: MediaTabProps) {
       </div>
 
       <div className="space-y-4">
-        {(templates || []).map(template => (
+        {sortedTemplates.map(template => (
           <Card key={template.id} className="shadow-none border">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>

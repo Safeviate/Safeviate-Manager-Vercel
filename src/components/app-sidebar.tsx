@@ -50,87 +50,94 @@ const SidebarItems = () => {
     const { hasPermission } = usePermissions();
     const { tenant } = useTenantConfig();
   
-    const renderMenuItem = (item: MenuItemType) => {
-      // 1. Check Tenant-Level Visibility
-      if (tenant?.enabledMenus && !tenant.enabledMenus.includes(item.href)) {
-        return null;
-      }
-
-      // 2. Check Permission-Level Visibility
-      const canAccessParent = !item.permissionId || hasPermission(item.permissionId);
-      
-      const visibleSubItems = item.subItems ? item.subItems.filter(sub => {
-        const hasPerm = !sub.permissionId || hasPermission(sub.permissionId);
-        const isTenantEnabled = !tenant?.enabledMenus || tenant.enabledMenus.includes(sub.href);
-        return hasPerm && isTenantEnabled;
-      }) : [];
-      
-      if (!canAccessParent && visibleSubItems.length === 0) return null;
-
-      const isParentActive = pathname.startsWith(item.href);
-      const Icon = item.icon;
-  
-      if (item.subItems) {
-        return (
-          <SidebarCollapsible defaultOpen={isParentActive}>
-            <SidebarCollapsibleTrigger asChild>
-              <SidebarMenuButton
-                isActive={isParentActive && !visibleSubItems.some(sub => pathname === sub.href)}
-                tooltip={item.label}
-                className="justify-between"
-              >
-                <div className="flex items-center gap-2">
-                  <Icon className="h-5 w-5" />
-                  <span>{item.label}</span>
-                </div>
-                <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 ease-in-out group-data-[state=open]:-rotate-180" />
-              </SidebarMenuButton>
-            </SidebarCollapsibleTrigger>
-            <SidebarCollapsibleContent>
-              <SidebarMenuSub>
-                {visibleSubItems.map((subItem) => (
-                    <SidebarMenuSubItem key={subItem.href}>
-                        <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
-                            <Link 
-                                href={subItem.href} 
-                                onClick={() => setOpenMobile(false)}
-                            >
-                                <span>{subItem.label}</span>
-                            </Link>
-                        </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                ))}
-              </SidebarMenuSub>
-            </SidebarCollapsibleContent>
-          </SidebarCollapsible>
-        );
-      }
-  
-      return (
-        <SidebarMenuButton
-            asChild
-            isActive={pathname === item.href}
-            tooltip={item.label}
-        >
-            <Link href={item.href} onClick={() => setOpenMobile(false)}>
-                <Icon className="h-5 w-5" />
-                <span>{item.label}</span>
-            </Link>
-        </SidebarMenuButton>
+    const filteredItems = useMemo(() => {
+      const config = menuConfig.filter(
+        (item) =>
+          item.label !== 'Development' || process.env.NODE_ENV === 'development'
       );
-    };
-  
-    const visibleMenuConfig = menuConfig.filter(
-      (item) =>
-        item.label !== 'Development' || process.env.NODE_ENV === 'development'
-    );
+
+      return config.filter(item => {
+        // 1. Check Tenant-Level Visibility
+        if (tenant?.enabledMenus && !tenant.enabledMenus.includes(item.href)) {
+          return false;
+        }
+
+        // 2. Check Permission-Level Visibility
+        const canAccessParent = !item.permissionId || hasPermission(item.permissionId);
+        
+        const visibleSubItems = item.subItems ? item.subItems.filter(sub => {
+          const hasPerm = !sub.permissionId || hasPermission(sub.permissionId);
+          const isTenantEnabled = !tenant?.enabledMenus || tenant.enabledMenus.includes(sub.href);
+          return hasPerm && isTenantEnabled;
+        }) : [];
+        
+        return canAccessParent || visibleSubItems.length > 0;
+      });
+    }, [tenant, hasPermission]);
 
     return (
         <SidebarMenu>
-            {visibleMenuConfig.map((item, index) => {
-                const content = renderMenuItem(item);
-                if (!content) return null;
-                const isLast = index === visibleMenuConfig.length - 1;
+            {filteredItems.map((item, index) => {
+                const isLast = index === filteredItems.length - 1;
+                const Icon = item.icon;
+                const isParentActive = pathname.startsWith(item.href);
+
+                const visibleSubItems = item.subItems ? item.subItems.filter(sub => {
+                    const hasPerm = !sub.permissionId || hasPermission(sub.permissionId);
+                    const isTenantEnabled = !tenant?.enabledMenus || tenant.enabledMenus.includes(sub.href);
+                    return hasPerm && isTenantEnabled;
+                }) : [];
+
+                let content;
+                if (item.subItems && visibleSubItems.length > 0) {
+                    content = (
+                        <SidebarCollapsible defaultOpen={isParentActive}>
+                            <SidebarCollapsibleTrigger asChild>
+                                <SidebarMenuButton
+                                    isActive={isParentActive && !visibleSubItems.some(sub => pathname === sub.href)}
+                                    tooltip={item.label}
+                                    className="justify-between"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Icon className="h-5 w-5" />
+                                        <span>{item.label}</span>
+                                    </div>
+                                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 ease-in-out group-data-[state=open]:-rotate-180" />
+                                </SidebarMenuButton>
+                            </SidebarCollapsibleTrigger>
+                            <SidebarCollapsibleContent>
+                                <SidebarMenuSub>
+                                    {visibleSubItems.map((subItem) => (
+                                        <SidebarMenuSubItem key={subItem.href}>
+                                            <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                                                <Link 
+                                                    href={subItem.href} 
+                                                    onClick={() => setOpenMobile(false)}
+                                                >
+                                                    <span>{subItem.label}</span>
+                                                </Link>
+                                            </SidebarMenuSubButton>
+                                        </SidebarMenuSubItem>
+                                    ))}
+                                </SidebarMenuSub>
+                            </SidebarCollapsibleContent>
+                        </SidebarCollapsible>
+                    );
+                } else {
+                    content = (
+                        <SidebarMenuButton
+                            asChild
+                            isActive={pathname === item.href}
+                            tooltip={item.label}
+                        >
+                            <Link href={item.href} onClick={() => setOpenMobile(false)}>
+                                <Icon className="h-5 w-5" />
+                                <span>{item.label}</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    );
+                }
+
                 return (
                     <React.Fragment key={item.href}>
                         <SidebarMenuItem>{content}</SidebarMenuItem>
