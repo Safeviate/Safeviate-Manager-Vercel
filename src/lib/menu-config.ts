@@ -268,6 +268,12 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'admin-settings-manage',
       },
       {
+        href: '/admin/overdue',
+        label: 'Overdue Alerts',
+        description: 'Manage settings for the overdue aircraft safety monitor.',
+        permissionId: 'admin-settings-manage',
+      },
+      {
         href: '/admin/permissions',
         label: 'Permissions',
         description: 'View all available application permissions.',

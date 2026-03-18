@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, doc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, updateDocumentNonBlocking } from '@/firebase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, PlaneLanding, CheckCircle2 } from 'lucide-react';
@@ -11,11 +11,12 @@ import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/types/aircraft';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useToast } from '@/hooks/use-toast';
+import type { OverdueMonitorSettings } from '@/app/(app)/admin/overdue/page';
 
 /**
  * OverdueBookingMonitor
- * Global component that monitors for aircraft that should have landed 5+ minutes ago
- * and prompts the user to confirm their safety.
+ * Global component that monitors for aircraft that should have landed X minutes ago
+ * and prompts the user to confirm their safety based on dynamic admin settings.
  */
 export function OverdueBookingMonitor() {
   const firestore = useFirestore();
@@ -23,15 +24,20 @@ export function OverdueBookingMonitor() {
   const { toast } = useToast();
   const [now, setNow] = useState(Date.now());
 
-  // 1. Tick every minute to re-evaluate "overdue" status as time passes
+  // 1. Fetch Dynamic Settings
+  const settingsRef = useMemoFirebase(
+    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'overdue-monitor') : null),
+    [firestore, tenantId]
+  );
+  const { data: settings } = useDoc<OverdueMonitorSettings>(settingsRef);
+
+  // 2. Tick every minute to re-evaluate "overdue" status as time passes
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60000);
     return () => clearInterval(timer);
   }, []);
 
-  // 2. Fetch bookings from yesterday and today
-  // Note: We perform status filtering on the client because Firestore 
-  // doesn't allow combining 'in' and 'not-in' filters in one query.
+  // 3. Fetch bookings from yesterday and today
   const bookingsQuery = useMemoFirebase(() => {
     if (!firestore || !tenantId) return null;
     const today = format(startOfToday(), 'yyyy-MM-dd');
@@ -56,9 +62,9 @@ export function OverdueBookingMonitor() {
     return new Map(aircrafts.map(a => [a.id, a.tailNumber]));
   }, [aircrafts]);
 
-  // 3. Filter for truly overdue bookings (End Time + 5 minutes)
+  // 4. Filter for truly overdue bookings (End Time + Threshold minutes)
   const overdueBookings = useMemo(() => {
-    if (!bookings) return [];
+    if (!bookings || !settings || !settings.isEnabled) return [];
     
     return bookings.filter(b => {
       // Filter out statuses that don't represent an active/overdue flight
@@ -70,11 +76,12 @@ export function OverdueBookingMonitor() {
       if (b.landingConfirmed) return false;
       
       const endTime = new Date(b.end).getTime();
-      const overdueThreshold = 5 * 60 * 1000; // 5 minutes
+      const thresholdMinutes = settings.thresholdMinutes || 5;
+      const overdueThreshold = thresholdMinutes * 60 * 1000;
       
       return endTime + overdueThreshold < now;
     });
-  }, [bookings, now]);
+  }, [bookings, now, settings]);
 
   // Handle confirmation
   const handleConfirmLanding = (bookingId: string) => {
@@ -89,10 +96,10 @@ export function OverdueBookingMonitor() {
     });
   };
 
-  // We only show one alert at a time to prevent dialog stacking
+  // We only show one alert at a time
   const activeAlert = overdueBookings[0];
 
-  if (!activeAlert) return null;
+  if (!activeAlert || !settings?.isEnabled) return null;
 
   const tailNumber = aircraftMap.get(activeAlert.aircraftId) || 'Unknown Aircraft';
 
@@ -122,14 +129,16 @@ export function OverdueBookingMonitor() {
                 </div>
             </div>
             <p className="text-xs leading-relaxed italic border-t pt-2">
-                Flight tracking policy requires confirmation of safe arrival within 5 minutes of scheduled landing.
+                Flight tracking policy requires confirmation of safe arrival within {settings.thresholdMinutes} minutes of scheduled landing.
             </p>
         </div>
 
         <DialogFooter className="sm:justify-between gap-2">
-          <Button variant="outline" size="sm" asChild className="no-print">
-            <a href="tel:555-0199">Contact Crew</a>
-          </Button>
+          {settings.contactPhone && (
+            <Button variant="outline" size="sm" asChild className="no-print">
+              <a href={`tel:${settings.contactPhone}`}>Contact Crew</a>
+            </Button>
+          )}
           <Button 
             className="bg-green-600 hover:bg-green-700 text-white gap-2 font-bold"
             onClick={() => handleConfirmLanding(activeAlert.id)}
