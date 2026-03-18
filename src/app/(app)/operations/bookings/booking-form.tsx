@@ -327,9 +327,9 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                             )}
 
                             {existingBooking && (
-                                <Button variant="outline" asChild className="ml-auto sm:ml-0">
+                                <Button variant="outline" size="sm" asChild className="h-8 gap-2 ml-auto sm:ml-0">
                                     <Link href={`/operations/booking-history/${existingBooking.id}`}>
-                                        <Eye className="mr-2 h-4 w-4" /> Go to Booking
+                                        <Eye className="h-4 w-4" /> View
                                     </Link>
                                 </Button>
                             )}

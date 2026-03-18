@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import type { PilotProfile, Personnel } from '../users/personnel/page';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Eye } from 'lucide-react';
 
 type UserProfileData = PilotProfile | Personnel;
 
@@ -201,31 +202,34 @@ export default function MyDashboardPage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="w-[40%]">Task</TableHead>
-                                            <TableHead>Source</TableHead>
-                                            <TableHead>Due Date</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead className="text-right">Actions</TableHead>
+                                            <TableHead className="w-[40%] text-xs uppercase font-bold">Task</TableHead>
+                                            <TableHead className="text-xs uppercase font-bold">Source</TableHead>
+                                            <TableHead className="text-xs uppercase font-bold">Due Date</TableHead>
+                                            <TableHead className="text-xs uppercase font-bold">Status</TableHead>
+                                            <TableHead className="text-right text-xs uppercase font-bold">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {myTasks.length > 0 ? (
                                             myTasks.map(task => (
                                                 <TableRow key={task.id}>
-                                                    <TableCell className="font-medium">{task.description}</TableCell>
-                                                    <TableCell><Badge variant="outline">{task.sourceIdentifier}</Badge></TableCell>
-                                                    <TableCell>{format(new Date(task.dueDate), 'PPP')}</TableCell>
-                                                    <TableCell><Badge variant="secondary">{task.status}</Badge></TableCell>
+                                                    <TableCell className="font-medium text-xs">{task.description}</TableCell>
+                                                    <TableCell><Badge variant="outline" className="text-[10px]">{task.sourceIdentifier}</Badge></TableCell>
+                                                    <TableCell className="text-xs">{format(new Date(task.dueDate), 'PPP')}</TableCell>
+                                                    <TableCell><Badge variant="secondary" className="text-[10px] py-0">{task.status}</Badge></TableCell>
                                                     <TableCell className="text-right">
-                                                        <Button asChild variant="outline" size="sm">
-                                                            <Link href={task.link}>View</Link>
+                                                        <Button asChild variant="outline" size="sm" className="h-8 gap-2">
+                                                            <Link href={task.link}>
+                                                                <Eye className="h-4 w-4" />
+                                                                View
+                                                            </Link>
                                                         </Button>
                                                     </TableCell>
                                                 </TableRow>
                                             ))
                                         ) : (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="h-24 text-center">
+                                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground italic text-sm">
                                                     You have no outstanding tasks.
                                                 </TableCell>
                                             </TableRow>
