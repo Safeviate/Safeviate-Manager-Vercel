@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { NavlogBuilder } from '../../../bookings/navlog-builder';
 
 interface ViewBookingDetailsProps {
     booking: Booking;
@@ -362,27 +363,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     </TabsContent>
 
                     <TabsContent value="navlog" className="m-0 h-full">
-                        <Card className="shadow-none border flex flex-col h-[calc(100vh-240px)]">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <NavIcon className="h-5 w-5 text-primary" />
-                                    Navigation Log (Navlog)
-                                </CardTitle>
-                                <CardDescription>Comprehensive flight planning and leg tracking for this booking.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex-1 flex flex-col items-center justify-center text-center p-10">
-                                <div className="max-w-md space-y-4">
-                                    <div className="p-4 rounded-full bg-primary/10 w-fit mx-auto">
-                                        <NavIcon className="h-10 w-10 text-primary opacity-40" />
-                                    </div>
-                                    <h3 className="text-lg font-semibold">Navlog Builder Coming Soon</h3>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        The integrated navigation log will allow you to plan legs, calculate wind correction, and track fuel/time burn directly within the flight record.
-                                    </p>
-                                    <Badge variant="secondary" className="uppercase tracking-widest text-[10px]">Development in Progress</Badge>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <NavlogBuilder booking={booking} tenantId={tenantId!} />
                     </TabsContent>
                 </div>
             </Tabs>

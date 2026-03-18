@@ -21,6 +21,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { NavlogBuilder } from '../../navlog-builder';
 
 const FUEL_WEIGHT_PER_GALLON = 6;
 
@@ -250,7 +251,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                             <Tooltip cursor={{ strokeDasharray: '3 3' }} />
                                                             <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} />
                                                             <Scatter data={[{ x: results.cg, y: results.weight }]}>
-                                                                <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={2} />
+                                                                <ReferenceDot x={results.cg, y: results.weight} r={8} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={2} />
                                                             </Scatter>
                                                         </ScatterChart>
                                                     </ResponsiveContainer>
@@ -297,7 +298,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                                             type="number" 
                                                                             value={s.weight} 
                                                                             onChange={(e) => handleStationWeightChange(s.id, e.target.value)}
-                                                                            className="h-8 text-right pr-8"
+                                                                            className="h-8 text-right pr-8 text-xs"
                                                                         />
                                                                         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-muted-foreground">LBS</span>
                                                                     </div>
@@ -308,7 +309,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                                                     type="number" 
                                                                                     value={s.gallons} 
                                                                                     onChange={(e) => handleFuelGallonsChange(s.id, e.target.value)}
-                                                                                    className="h-8 w-full p-1 text-right text-xs pr-8"
+                                                                                    className="h-8 w-full p-1 text-right text-[10px] pr-8"
                                                                                 />
                                                                                 <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] font-bold text-muted-foreground">GAL</span>
                                                                             </div>
@@ -328,27 +329,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     </TabsContent>
 
                     <TabsContent value="navlog" className="m-0 h-full">
-                        <Card className="shadow-none border flex flex-col h-[calc(100vh-240px)]">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <NavIcon className="h-5 w-5 text-primary" />
-                                    Navigation Log (Navlog)
-                                </CardTitle>
-                                <CardDescription>Comprehensive flight planning and leg tracking for this booking.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex-1 flex flex-col items-center justify-center text-center p-10">
-                                <div className="max-w-md space-y-4">
-                                    <div className="p-4 rounded-full bg-primary/10 w-fit mx-auto">
-                                        <NavIcon className="h-10 w-10 text-primary opacity-40" />
-                                    </div>
-                                    <h3 className="text-lg font-semibold">Navlog Builder Coming Soon</h3>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        The integrated navigation log will allow you to plan legs, calculate wind correction, and track fuel/time burn directly within the flight record.
-                                    </p>
-                                    <Badge variant="secondary" className="uppercase tracking-widest text-[10px]">Development in Progress</Badge>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <NavlogBuilder booking={booking} tenantId={tenantId!} />
                     </TabsContent>
                 </div>
             </Tabs>

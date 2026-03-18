@@ -50,6 +50,32 @@ export interface OverrideLog {
     timestamp: string;
 }
 
+export interface NavlogLeg {
+    id: string;
+    waypoint: string;
+    altitude?: number;
+    windDirection?: number;
+    windSpeed?: number;
+    trueAirspeed?: number;
+    trueCourse?: number;
+    variation?: number;
+    distance?: number;
+    // Calculated
+    wca?: number;
+    trueHeading?: number;
+    magneticHeading?: number;
+    groundSpeed?: number;
+    ete?: number;
+    // Actuals
+    ata?: string;
+}
+
+export interface Navlog {
+    legs: NavlogLeg[];
+    departureIcao?: string;
+    arrivalIcao?: string;
+}
+
 export interface Booking {
   id: string;
   bookingNumber: string;
@@ -76,6 +102,7 @@ export interface Booking {
   preFlightData?: PreFlightData;
   postFlightData?: PostFlightData;
   massAndBalance?: MassAndBalance;
+  navlog?: Navlog;
   organizationId?: string | null; // Associated external company ID
   overrides?: OverrideLog[];
   landingConfirmed?: boolean; // New safety tracking field
