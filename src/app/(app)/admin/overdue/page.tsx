@@ -118,7 +118,7 @@ export default function OverdueSettingsPage() {
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-muted-foreground" />
-                Emergency Contact Number
+                Operations Fallback Number
               </Label>
               <Input
                 type="text"
@@ -127,7 +127,7 @@ export default function OverdueSettingsPage() {
                 placeholder="e.g., 555-0199"
               />
               <p className="text-xs text-muted-foreground">
-                The number displayed on the alert dialog for quick communication with the crew.
+                This number is displayed only if no specific contact numbers are found in the instructor or student profiles.
               </p>
             </div>
           </div>
