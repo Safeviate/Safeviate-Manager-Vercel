@@ -1,8 +1,6 @@
-
-
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -15,6 +13,7 @@ import { Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { useDebounce } from '@/hooks/use-debounce';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import type { StudentMilestoneSettings } from '@/types/training';
 import type { AircraftInspectionWarningSettings, HourWarning } from '@/types/inspection';
 
@@ -292,26 +291,28 @@ export default function DocumentDatesPage() {
             <h4 className="text-sm font-medium text-muted-foreground mb-2">
               Current Warning Periods (Closest to expiry takes precedence)
             </h4>
-            <div className="flex flex-col gap-2 p-4 border rounded-lg min-h-16">
-              {(expirySettings?.warningPeriods || []).length > 0 ? (
-                (expirySettings?.warningPeriods || []).map(({ period, color }) => (
-                  <div key={period} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
-                      <div className="flex items-center gap-3">
-                          <div className="relative h-6 w-6 rounded-full border cursor-pointer" style={{ backgroundColor: periodColors[period] || color }}>
-                            <Input type="color" value={periodColors[period] || color} onChange={(e) => setPeriodColors(prev => ({...prev, [period]: e.target.value}))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0" />
-                          </div>
-                          <Badge variant="secondary" className="flex items-center gap-2 text-base py-1">{period} days</Badge>
-                      </div>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-destructive/20" onClick={() => handleRemovePeriod(period)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                          <span className="sr-only">Remove {period} days</span>
-                      </Button>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground w-full text-center">No warning periods configured.</p>
-              )}
-            </div>
+            <ScrollArea className="h-64 border rounded-lg bg-muted/5">
+              <div className="flex flex-col gap-2 p-4">
+                {(expirySettings?.warningPeriods || []).length > 0 ? (
+                  (expirySettings?.warningPeriods || []).map(({ period, color }) => (
+                    <div key={period} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
+                        <div className="flex items-center gap-3">
+                            <div className="relative h-6 w-6 rounded-full border cursor-pointer" style={{ backgroundColor: periodColors[period] || color }}>
+                              <Input type="color" value={periodColors[period] || color} onChange={(e) => setPeriodColors(prev => ({...prev, [period]: e.target.value}))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0" />
+                            </div>
+                            <Badge variant="secondary" className="flex items-center gap-2 text-base py-1">{period} days</Badge>
+                        </div>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-destructive/20" onClick={() => handleRemovePeriod(period)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <span className="sr-only">Remove {period} days</span>
+                        </Button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground w-full text-center py-8">No warning periods configured.</p>
+                )}
+              </div>
+            </ScrollArea>
           </div>
         </CardContent>
       </Card>
@@ -365,23 +366,27 @@ export default function DocumentDatesPage() {
                     <h5 className="text-sm font-medium text-muted-foreground mb-2">
                         Current Warnings (Highest hours takes precedence)
                     </h5>
-                    <div className="flex flex-col gap-2 min-h-16">
-                        {fiftyHourWarnings.map(({ hours, color, foregroundColor }) => (
-                            <div key={hours} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
-                                <div className="flex items-center gap-3">
-                                    <Badge style={{ backgroundColor: color, color: foregroundColor }} className="border-transparent flex items-center gap-2 text-base py-1">{hours} hrs remaining</Badge>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Input type="color" value={color} onChange={(e) => { const newWarnings = fiftyHourWarnings.map(w => w.hours === hours ? { ...w, color: e.target.value } : w); setDocumentNonBlocking(inspectionSettingsRef!, { fiftyHourWarnings: newWarnings }, { merge: true }); }} className="p-0 h-8 w-8" />
-                                    <Input type="color" value={foregroundColor} onChange={(e) => { const newWarnings = fiftyHourWarnings.map(w => w.hours === hours ? { ...w, foregroundColor: e.target.value } : w); setDocumentNonBlocking(inspectionSettingsRef!, { fiftyHourWarnings: newWarnings }, { merge: true }); }} className="p-0 h-8 w-8" />
-                                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-destructive/20" onClick={() => handleRemoveInspectionWarning('50hr', hours)}>
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                        <span className="sr-only">Remove {hours} hours</span>
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    <ScrollArea className="h-48 border rounded-lg bg-muted/5 mt-2">
+                      <div className="flex flex-col gap-2 p-4">
+                          {fiftyHourWarnings.length > 0 ? fiftyHourWarnings.map(({ hours, color, foregroundColor }) => (
+                              <div key={hours} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
+                                  <div className="flex items-center gap-3">
+                                      <Badge style={{ backgroundColor: color, color: foregroundColor }} className="border-transparent flex items-center gap-2 text-base py-1">{hours} hrs remaining</Badge>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                      <Input type="color" value={color} onChange={(e) => { const newWarnings = fiftyHourWarnings.map(w => w.hours === hours ? { ...w, color: e.target.value } : w); setDocumentNonBlocking(inspectionSettingsRef!, { fiftyHourWarnings: newWarnings }, { merge: true }); }} className="p-0 h-8 w-8" />
+                                      <Input type="color" value={foregroundColor} onChange={(e) => { const newWarnings = fiftyHourWarnings.map(w => w.hours === hours ? { ...w, foregroundColor: e.target.value } : w); setDocumentNonBlocking(inspectionSettingsRef!, { fiftyHourWarnings: newWarnings }, { merge: true }); }} className="p-0 h-8 w-8" />
+                                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-destructive/20" onClick={() => handleRemoveInspectionWarning('50hr', hours)}>
+                                          <Trash2 className="h-4 w-4 text-destructive" />
+                                          <span className="sr-only">Remove {hours} hours</span>
+                                      </Button>
+                                  </div>
+                              </div>
+                          )) : (
+                            <p className="text-sm text-muted-foreground w-full text-center py-8">No 50-hour warnings configured.</p>
+                          )}
+                      </div>
+                    </ScrollArea>
                 </div>
             </div>
 
@@ -401,23 +406,27 @@ export default function DocumentDatesPage() {
                     <h5 className="text-sm font-medium text-muted-foreground mb-2">
                         Current Warnings (Highest hours takes precedence)
                     </h5>
-                    <div className="flex flex-col gap-2 min-h-16">
-                        {hundredHourWarnings.map(({ hours, color, foregroundColor }) => (
-                             <div key={hours} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
-                                <div className="flex items-center gap-3">
-                                    <Badge style={{ backgroundColor: color, color: foregroundColor }} className="border-transparent flex items-center gap-2 text-base py-1">{hours} hrs remaining</Badge>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                     <Input type="color" value={color} onChange={(e) => { const newWarnings = hundredHourWarnings.map(w => w.hours === hours ? { ...w, color: e.target.value } : w); setDocumentNonBlocking(inspectionSettingsRef!, { oneHundredHourWarnings: newWarnings }, { merge: true }); }} className="p-0 h-8 w-8" />
-                                     <Input type="color" value={foregroundColor} onChange={(e) => { const newWarnings = hundredHourWarnings.map(w => w.hours === hours ? { ...w, foregroundColor: e.target.value } : w); setDocumentNonBlocking(inspectionSettingsRef!, { oneHundredHourWarnings: newWarnings }, { merge: true }); }} className="p-0 h-8 w-8" />
-                                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-destructive/20" onClick={() => handleRemoveInspectionWarning('100hr', hours)}>
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                        <span className="sr-only">Remove {hours} hours</span>
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    <ScrollArea className="h-48 border rounded-lg bg-muted/5 mt-2">
+                      <div className="flex flex-col gap-2 p-4">
+                          {hundredHourWarnings.length > 0 ? hundredHourWarnings.map(({ hours, color, foregroundColor }) => (
+                               <div key={hours} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
+                                  <div className="flex items-center gap-3">
+                                      <Badge style={{ backgroundColor: color, color: foregroundColor }} className="border-transparent flex items-center gap-2 text-base py-1">{hours} hrs remaining</Badge>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                       <Input type="color" value={color} onChange={(e) => { const newWarnings = hundredHourWarnings.map(w => w.hours === hours ? { ...w, color: e.target.value } : w); setDocumentNonBlocking(inspectionSettingsRef!, { oneHundredHourWarnings: newWarnings }, { merge: true }); }} className="p-0 h-8 w-8" />
+                                       <Input type="color" value={foregroundColor} onChange={(e) => { const newWarnings = hundredHourWarnings.map(w => w.hours === hours ? { ...w, foregroundColor: e.target.value } : w); setDocumentNonBlocking(inspectionSettingsRef!, { oneHundredHourWarnings: newWarnings }, { merge: true }); }} className="p-0 h-8 w-8" />
+                                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-destructive/20" onClick={() => handleRemoveInspectionWarning('100hr', hours)}>
+                                          <Trash2 className="h-4 w-4 text-destructive" />
+                                          <span className="sr-only">Remove {hours} hours</span>
+                                      </Button>
+                                  </div>
+                              </div>
+                          )) : (
+                            <p className="text-sm text-muted-foreground w-full text-center py-8">No 100-hour warnings configured.</p>
+                          )}
+                      </div>
+                    </ScrollArea>
                 </div>
             </div>
         </CardContent>
