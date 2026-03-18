@@ -29,7 +29,9 @@ export function OverdueBookingMonitor() {
     return () => clearInterval(timer);
   }, []);
 
-  // 2. Fetch bookings from yesterday and today that aren't closed
+  // 2. Fetch bookings from yesterday and today
+  // Note: We perform status filtering on the client because Firestore 
+  // doesn't allow combining 'in' and 'not-in' filters in one query.
   const bookingsQuery = useMemoFirebase(() => {
     if (!firestore || !tenantId) return null;
     const today = format(startOfToday(), 'yyyy-MM-dd');
@@ -37,8 +39,7 @@ export function OverdueBookingMonitor() {
     
     return query(
       collection(firestore, `tenants/${tenantId}/bookings`),
-      where('date', 'in', [today, yesterday]),
-      where('status', 'not-in', ['Completed', 'Cancelled'])
+      where('date', 'in', [today, yesterday])
     );
   }, [firestore, tenantId]);
 
@@ -60,8 +61,13 @@ export function OverdueBookingMonitor() {
     if (!bookings) return [];
     
     return bookings.filter(b => {
-      // Ignore if already confirmed or not a flying status
-      if (b.landingConfirmed || b.status === 'Tentative') return false;
+      // Filter out statuses that don't represent an active/overdue flight
+      if (b.status === 'Completed' || b.status === 'Cancelled' || b.status === 'Cancelled with Reason' || b.status === 'Tentative') {
+        return false;
+      }
+      
+      // Ignore if landing is already confirmed
+      if (b.landingConfirmed) return false;
       
       const endTime = new Date(b.end).getTime();
       const overdueThreshold = 5 * 60 * 1000; // 5 minutes
