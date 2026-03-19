@@ -7,7 +7,7 @@ import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, MapPin, PhoneCall, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, MapPin, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid, Layers } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -28,6 +28,9 @@ import { permissionsConfig } from '@/lib/permissions-config';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { usePermissions } from '@/hooks/use-permissions';
+import { menuConfig } from '@/lib/menu-config';
+import { Switch } from '@/components/ui/switch';
+import { Label as UILabel } from '@/components/ui/label';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -38,6 +41,17 @@ interface ViewPersonnelDetailsProps {
 }
 
 type Document = NonNullable<UserProfile['documents']>[0];
+
+const PAGE_OPTIONS = [
+  { id: 'audits', label: 'Quality Audits' },
+  { id: 'safety-reports', label: 'Safety Reports' },
+  { id: 'risk-register', label: 'Risk Register' },
+  { id: 'safety-indicators', label: 'Safety Indicators' },
+  { id: 'moc', label: 'Management of Change' },
+  { id: 'task-tracker', label: 'Task Tracker' },
+  { id: 'coherence-matrix', label: 'Coherence Matrix' },
+  { id: 'aircraft', label: 'Aircraft Management' },
+];
 
 const DetailItem = ({ label, value, children }: { label: string; value?: string | null, children?: React.ReactNode }) => (
     <div>
@@ -102,10 +116,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   };
   
   const handleDocumentUpdate = (updatedDocuments: Document[]) => {
-    if (!firestore || !tenantId) {
-        toast({ variant: "destructive", title: "Error", description: "Database not connected." });
-        return;
-    }
+    if (!firestore || !tenantId) return;
     const collectionName = isPilotProfile(user) ? 
         user.userType === 'Student' ? 'students' : 
         user.userType === 'Instructor' ? 'instructors' : 'private-pilots' 
@@ -144,16 +155,12 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     const currentDocs = user.documents || [];
     const updatedDocs = currentDocs.filter(doc => doc.name !== docNameToDelete);
     handleDocumentUpdate(updatedDocs);
-    toast({
-        title: "Document Deleted",
-        description: `"${docNameToDelete}" has been removed.`,
-    });
+    toast({ title: "Document Deleted" });
   };
 
   const combinedDocuments = useMemo(() => {
     const required = role?.requiredDocuments || [];
     const uploaded = user.documents || [];
-
     const allDocNames = new Set([...required, ...uploaded.map(d => d.name)]);
 
     return Array.from(allDocNames).map(docName => {
@@ -169,40 +176,42 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     });
   }, [role, user.documents]);
 
+  const handleToggleMenuOverride = (href: string, hidden: boolean) => {
+    if (!firestore || !tenantId || !canEdit) return;
+    const currentHidden = user.accessOverrides?.hiddenMenus || [];
+    const newHidden = hidden ? [...currentHidden, href] : currentHidden.filter(h => h !== href);
+    
+    const collectionName = isPilotProfile(user) ? (user.userType === 'Student' ? 'students' : user.userType === 'Instructor' ? 'instructors' : 'private-pilots') : 'personnel';
+    const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
+    updateDocumentNonBlocking(userRef, { 'accessOverrides.hiddenMenus': newHidden });
+    toast({ title: hidden ? "Menu Hidden" : "Menu Shown" });
+  };
+
+  const handleToggleTabOverride = (pageId: string, hidden: boolean) => {
+    if (!firestore || !tenantId || !canEdit) return;
+    const currentHidden = user.accessOverrides?.hiddenTabs || [];
+    const newHidden = hidden ? [...currentHidden, pageId] : currentHidden.filter(h => h !== pageId);
+    
+    const collectionName = isPilotProfile(user) ? (user.userType === 'Student' ? 'students' : user.userType === 'Instructor' ? 'instructors' : 'private-pilots') : 'personnel';
+    const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
+    updateDocumentNonBlocking(userRef, { 'accessOverrides.hiddenTabs': newHidden });
+    toast({ title: hidden ? "Tabs Hidden" : "Tabs Shown" });
+  };
+
   const handlePermissionToggle = (permissionId: string, checked: boolean) => {
     if (!firestore || !tenantId || !canEdit) return;
-
     const currentPermissions = user.permissions || [];
     const isInherited = role?.permissions?.includes(permissionId);
-    
     let newPermissions: string[];
-    
     if (isInherited) {
-        if (checked) {
-            newPermissions = currentPermissions.filter(p => p !== `!${permissionId}`);
-        } else {
-            newPermissions = [...currentPermissions.filter(p => p !== permissionId), `!${permissionId}`];
-        }
+        newPermissions = checked ? currentPermissions.filter(p => p !== `!${permissionId}`) : [...currentPermissions.filter(p => p !== permissionId), `!${permissionId}`];
     } else {
-        if (checked) {
-            newPermissions = [...currentPermissions.filter(p => p !== `!${permissionId}`), permissionId];
-        } else {
-            newPermissions = currentPermissions.filter(p => p !== permissionId);
-        }
+        newPermissions = checked ? [...currentPermissions.filter(p => p !== `!${permissionId}`), permissionId] : currentPermissions.filter(p => p !== permissionId);
     }
-
-    const collectionName = isPilotProfile(user) ? 
-        user.userType === 'Student' ? 'students' : 
-        user.userType === 'Instructor' ? 'instructors' : 'private-pilots' 
-        : 'personnel';
-    
+    const collectionName = isPilotProfile(user) ? (user.userType === 'Student' ? 'students' : user.userType === 'Instructor' ? 'instructors' : 'private-pilots') : 'personnel';
     const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
     updateDocumentNonBlocking(userRef, { permissions: newPermissions });
-
-    toast({
-        title: "Access Level Updated",
-        description: `Permissions for "${user.firstName} ${user.lastName}" have been modified.`,
-    });
+    toast({ title: "Access Level Updated" });
   };
 
   const isStudent = isPilotProfile(user) && user.userType === 'Student';
@@ -213,8 +222,8 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
         <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 shrink-0 border-b-0 overflow-x-auto no-scrollbar justify-start">
             <TabsTrigger value="overview" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Overview</TabsTrigger>
             <TabsTrigger value="documents" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Documents</TabsTrigger>
-            <TabsTrigger value="address" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Address</TabsTrigger>
-            <TabsTrigger value="permissions" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Permissions</TabsTrigger>
+            <TabsTrigger value="access" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Access & Tabs</TabsTrigger>
+            <TabsTrigger value="permissions" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Granular Permissions</TabsTrigger>
             {isStudent && <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Training Records</TabsTrigger>}
             {isAnyPilot && <TabsTrigger value="logbook" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Logbook</TabsTrigger>}
         </TabsList>
@@ -275,9 +284,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                                     )}
                                 </div>
                             </section>
-
                             <Separator />
-
                             <section>
                                 <SectionHeader title="Emergency Contact" icon={PhoneCall} />
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -331,49 +338,25 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                                                         <TableCell className="min-w-[150px] whitespace-nowrap">
                                                             <div className="flex items-center gap-2 text-sm">
                                                                 {statusColor && (
-                                                                    <span 
-                                                                        className="h-2.5 w-2.5 rounded-full flex-shrink-0"
-                                                                        style={{ backgroundColor: statusColor }}
-                                                                    />
+                                                                    <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: statusColor }} />
                                                                 )}
                                                                 {doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'N/A'}
                                                             </div>
                                                         </TableCell>
                                                         <TableCell className='text-center'>
                                                             <Popover>
-                                                                <PopoverTrigger asChild>
-                                                                    <Button variant="outline" size="icon" className='h-8 w-8'>
-                                                                        <CalendarIcon className="h-4 w-4" />
-                                                                    </Button>
-                                                                </PopoverTrigger>
-                                                                <PopoverContent className="w-auto p-0">
-                                                                    <CustomCalendar
-                                                                        selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined}
-                                                                        onDateSelect={(date) => date && handleExpirationDateChange(doc.name, date)}
-                                                                    />
-                                                                </PopoverContent>
+                                                                <PopoverTrigger asChild><Button variant="outline" size="icon" className='h-8 w-8'><CalendarIcon className="h-4 w-4" /></Button></PopoverTrigger>
+                                                                <PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined} onDateSelect={(date) => date && handleExpirationDateChange(doc.name, date)} /></PopoverContent>
                                                             </Popover>
                                                         </TableCell>
                                                         <TableCell className="text-right">
                                                             {doc.isUploaded ? (
                                                                 <div className="flex gap-2 justify-end">
-                                                                <Button variant="outline" size="sm" className="h-8 gap-2" onClick={() => handleViewImage(doc.url!)}>
-                                                                    <Eye className="h-4 w-4" /> View
-                                                                </Button>
-                                                                <Button variant="destructive" size="icon" onClick={() => handleDocumentDelete(doc.name)}>
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
+                                                                <Button variant="outline" size="sm" className="h-8 gap-2" onClick={() => handleViewImage(doc.url!)}><Eye className="h-4 w-4" /> View</Button>
+                                                                <Button variant="destructive" size="icon" onClick={() => handleDocumentDelete(doc.name)}><Trash2 className="h-4 w-4" /></Button>
                                                                 </div>
                                                             ) : (
-                                                                <DocumentUploader
-                                                                    defaultFileName={doc.name}
-                                                                    onDocumentUploaded={onDocumentUploaded}
-                                                                    trigger={(openDialog) => (
-                                                                        <Button size="sm" onClick={() => openDialog()} variant="secondary">
-                                                                            <Upload className="mr-2 h-4 w-4" /> Upload
-                                                                        </Button>
-                                                                    )}
-                                                                />
+                                                                <DocumentUploader defaultFileName={doc.name} onDocumentUploaded={onDocumentUploaded} trigger={(openDialog) => (<Button size="sm" onClick={() => openDialog()} variant="secondary"><Upload className="mr-2 h-4 w-4" /> Upload</Button>)} />
                                                             )}
                                                         </TableCell>
                                                     </TableRow>
@@ -381,9 +364,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                                             })}
                                         </TableBody>
                                     </Table>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground text-center py-8 bg-muted/10">No documents required for this role.</p>
-                                    )}
+                                    ) : <p className="text-sm text-muted-foreground text-center py-8 bg-muted/10">No documents required.</p>}
                             </div>
                         </div>
                     </ScrollArea>
@@ -391,23 +372,59 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
             </Card>
         </TabsContent>
 
-        <TabsContent value="address" className="mt-0 flex-1 min-h-0 overflow-hidden">
+        <TabsContent value="access" className="mt-0 flex-1 min-h-0 overflow-hidden">
             <Card className="flex flex-col h-full overflow-hidden shadow-none border">
                 <CardHeader className="shrink-0 border-b bg-muted/5">
-                    <CardTitle>Address Details</CardTitle>
-                    <CardDescription>Primary residence and contact location.</CardDescription>
+                    <CardTitle>User Access Overrides</CardTitle>
+                    <CardDescription>Specifically control what this individual can see, overriding global and role defaults.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-1 p-0 overflow-hidden">
                     <ScrollArea className="h-full">
-                        <div className="p-6">
-                            <SectionHeader title="Residential Address" icon={MapPin} />
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <DetailItem label="Street" value={user.address?.street} />
-                                <DetailItem label="City" value={user.address?.city} />
-                                <DetailItem label="State / Province" value={user.address?.state} />
-                                <DetailItem label="Postal Code" value={user.address?.postalCode} />
-                                <DetailItem label="Country" value={user.address?.country} />
-                            </div>
+                        <div className="p-6 space-y-10">
+                            <section>
+                                <SectionHeader title="Sidebar Module Visibility" icon={LayoutGrid} />
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {menuConfig.map((menu) => {
+                                        if (menu.label === 'Admin' || menu.label === 'Development') return null;
+                                        const isHidden = user.accessOverrides?.hiddenMenus?.includes(menu.href);
+                                        return (
+                                            <div key={menu.href} className="flex items-center justify-between p-4 border rounded-xl bg-muted/10">
+                                                <div className="flex items-center gap-3">
+                                                    <menu.icon className="h-4 w-4 text-primary" />
+                                                    <span className="text-sm font-bold">{menu.label}</span>
+                                                </div>
+                                                <Switch 
+                                                    checked={!isHidden} 
+                                                    onCheckedChange={(val) => handleToggleMenuOverride(menu.href, !val)}
+                                                    disabled={!canEdit}
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </section>
+
+                            <Separator />
+
+                            <section>
+                                <SectionHeader title="Page Tab Contexts" icon={Layers} />
+                                <p className="text-xs text-muted-foreground mb-4">Enable or disable Internal/External switcher tabs for this specific user.</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {PAGE_OPTIONS.map((page) => {
+                                        const isHidden = user.accessOverrides?.hiddenTabs?.includes(page.id);
+                                        return (
+                                            <div key={page.id} className="flex items-center justify-between p-4 border rounded-xl bg-muted/10">
+                                                <span className="text-sm font-bold">{page.label}</span>
+                                                <Switch 
+                                                    checked={!isHidden} 
+                                                    onCheckedChange={(val) => handleToggleTabOverride(page.id, !val)}
+                                                    disabled={!canEdit}
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </section>
                         </div>
                     </ScrollArea>
                 </CardContent>
@@ -418,9 +435,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
             <Card className="flex flex-col h-full overflow-hidden shadow-none border">
                 <CardHeader className="shrink-0 border-b bg-muted/5">
                     <CardTitle>Individual Permission Control</CardTitle>
-                    <CardDescription>
-                        Manage custom overrides for this user. Permissions inherited from their role are locked.
-                    </CardDescription>
+                    <CardDescription>Manage custom overrides for this user. Inherited permissions are locked.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-1 p-0 overflow-hidden">
                     <ScrollArea className="h-full">
@@ -433,28 +448,14 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                                         <div className="flex flex-col gap-2.5">
                                             {resource.actions.map(action => {
                                                 const permissionId = `${resource.id}-${action}`;
-                                                
                                                 const isInherited = role?.permissions?.includes(permissionId);
                                                 const isOverridden = user.permissions?.includes(permissionId);
                                                 const isDenied = user.permissions?.includes(`!${permissionId}`);
-                                                
                                                 const isEffective = (isInherited && !isDenied) || isOverridden;
-
                                                 return (
                                                     <div key={action} className="flex items-center space-x-3">
-                                                        <Checkbox 
-                                                            id={`perm-${permissionId}`}
-                                                            checked={!!isEffective}
-                                                            disabled={!canEdit}
-                                                            onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)}
-                                                        />
-                                                        <label 
-                                                            htmlFor={`perm-${permissionId}`} 
-                                                            className={cn(
-                                                                "text-sm font-medium leading-none cursor-pointer capitalize",
-                                                                isInherited && !isDenied && !isOverridden && "text-muted-foreground italic"
-                                                            )}
-                                                        >
+                                                        <Checkbox id={`perm-${permissionId}`} checked={!!isEffective} disabled={!canEdit} onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)} />
+                                                        <label htmlFor={`perm-${permissionId}`} className={cn("text-sm font-medium leading-none cursor-pointer capitalize", isInherited && !isDenied && !isOverridden && "text-muted-foreground italic")}>
                                                             {action}
                                                             {isInherited && !isDenied && !isOverridden && <span className="ml-2 text-[10px] opacity-70">(Role)</span>}
                                                             {isOverridden && <span className="ml-2 text-[10px] text-primary opacity-70">(Override)</span>}
@@ -473,37 +474,13 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
             </Card>
         </TabsContent>
         
-        {isStudent && (
-            <TabsContent value="training" className="mt-0 flex-1 overflow-hidden">
-                <TrainingRecords studentId={user.id} tenantId={tenantId} />
-            </TabsContent>
-        )}
-        
-        {isAnyPilot && (
-            <TabsContent value="logbook" className="mt-0 flex-1 overflow-hidden">
-                <PilotLogbook 
-                    userId={user.id} 
-                    tenantId={tenantId} 
-                    role={user.userType === 'Instructor' ? 'instructor' : user.userType === 'Student' ? 'student' : 'private'} 
-                />
-            </TabsContent>
-        )}
+        {isStudent && <TabsContent value="training" className="mt-0 flex-1 overflow-hidden"><TrainingRecords studentId={user.id} tenantId={tenantId} /></TabsContent>}
+        {isAnyPilot && <TabsContent value="logbook" className="mt-0 flex-1 overflow-hidden"><PilotLogbook userId={user.id} tenantId={tenantId} role={user.userType === 'Instructor' ? 'instructor' : user.userType === 'Student' ? 'student' : 'private'} /></TabsContent>}
 
         <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
             <DialogContent className="max-w-4xl max-h-[90vh]">
-                <DialogHeader>
-                    <DialogTitle>Document Viewer</DialogTitle>
-                </DialogHeader>
-                {viewingImageUrl && (
-                    <div className="relative h-[80vh] w-full">
-                        <Image 
-                            src={viewingImageUrl}
-                            alt="Document" 
-                            fill
-                            className="object-contain"
-                        />
-                    </div>
-                )}
+                <DialogHeader><DialogTitle>Document Viewer</DialogTitle></DialogHeader>
+                {viewingImageUrl && <div className="relative h-[80vh] w-full"><Image src={viewingImageUrl} alt="Document" fill className="object-contain" /></div>}
             </DialogContent>
         </Dialog>
     </Tabs>

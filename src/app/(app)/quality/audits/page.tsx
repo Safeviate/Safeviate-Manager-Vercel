@@ -26,13 +26,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useTabVisibility } from '@/hooks/use-tab-visibility';
 import { cn } from '@/lib/utils';
 import { deleteDocumentNonBlocking } from '@/firebase';
 
 import type { QualityAudit, ExternalOrganization } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
 import type { Personnel } from '../../users/personnel/page';
-import type { TabVisibilitySettings } from '../../admin/external/page';
 
 type EnrichedAudit = QualityAudit & {
     auditeeName?: string;
@@ -184,18 +184,15 @@ export default function AuditsPage() {
         () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null),
         [firestore, tenantId]
     );
-    const visibilitySettingsRef = useMemoFirebase(
-        () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'tab-visibility') : null),
-        [firestore, tenantId]
-    );
 
     const { data: audits, isLoading: isLoadingAudits } = useCollection<QualityAudit>(auditsQuery);
     const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
     const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
     const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
-    const { data: visibilitySettings, isLoading: isLoadingVisibility } = useDoc<TabVisibilitySettings>(visibilitySettingsRef);
 
-    const isLoading = isLoadingAudits || isLoadingPersonnel || isLoadingDepts || isLoadingOrgs || isLoadingVisibility;
+    const showTabs = useTabVisibility('audits', canViewAll);
+
+    const isLoading = isLoadingAudits || isLoadingPersonnel || isLoadingDepts || isLoadingOrgs;
 
     const enrichedAudits = useMemo((): EnrichedAudit[] => {
         if (!audits || !personnel || !departments || !organizations) return [];
@@ -255,9 +252,6 @@ export default function AuditsPage() {
             </div>
         );
     }
-
-    const isTabEnabled = visibilitySettings?.visibilities?.['audits'] ?? true;
-    const showTabs = isTabEnabled && canViewAll;
 
     return (
         <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">

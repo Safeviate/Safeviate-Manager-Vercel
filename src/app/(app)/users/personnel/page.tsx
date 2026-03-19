@@ -12,6 +12,11 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 
+export type UserAccessOverrides = {
+  hiddenMenus?: string[];
+  hiddenTabs?: string[];
+};
+
 export type PilotProfile = {
   id: string;
   userType: 'Student' | 'Private Pilot' | 'Instructor';
@@ -22,6 +27,7 @@ export type PilotProfile = {
   role: string; // role ID
   organizationId?: string | null; // Associated external company ID
   permissions?: string[]; // Consolidating permissions across all user types
+  accessOverrides?: UserAccessOverrides;
   contactNumber?: string;
   dateOfBirth?: string;
   logbookTemplateId?: string;
@@ -66,6 +72,7 @@ export type Personnel = {
   department?: string; // department ID
   role: string; // role ID
   permissions: string[];
+  accessOverrides?: UserAccessOverrides;
   dateOfBirth?: string;
   isErpIncerfaContact?: boolean; // Designated ERP INCERFA contact
   isErpAlerfaContact?: boolean; // Designated ERP ALERFA contact

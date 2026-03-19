@@ -48,6 +48,7 @@ const SidebarItems = () => {
     const pathname = usePathname();
     const { setOpenMobile } = useSidebar();
     const { hasPermission } = usePermissions();
+    const { userProfile } = useUserProfile();
     const { tenant } = useTenantConfig();
   
     const filteredItems = useMemo(() => {
@@ -57,23 +58,29 @@ const SidebarItems = () => {
       );
 
       return config.filter(item => {
-        // 1. Check Tenant-Level Visibility
+        // 1. Check Individual User Override (explicit hide)
+        if (userProfile?.accessOverrides?.hiddenMenus?.includes(item.href)) {
+          return false;
+        }
+
+        // 2. Check Tenant-Level Visibility
         if (tenant?.enabledMenus && !tenant.enabledMenus.includes(item.href)) {
           return false;
         }
 
-        // 2. Check Permission-Level Visibility
+        // 3. Check Permission-Level Visibility
         const canAccessParent = !item.permissionId || hasPermission(item.permissionId);
         
         const visibleSubItems = item.subItems ? item.subItems.filter(sub => {
           const hasPerm = !sub.permissionId || hasPermission(sub.permissionId);
           const isTenantEnabled = !tenant?.enabledMenus || tenant.enabledMenus.includes(sub.href);
-          return hasPerm && isTenantEnabled;
+          const isUserVisible = !userProfile?.accessOverrides?.hiddenMenus?.includes(sub.href);
+          return hasPerm && isTenantEnabled && isUserVisible;
         }) : [];
         
         return canAccessParent || visibleSubItems.length > 0;
       });
-    }, [tenant, hasPermission]);
+    }, [tenant, userProfile, hasPermission]);
 
     return (
         <SidebarMenu>
@@ -84,7 +91,8 @@ const SidebarItems = () => {
                 const visibleSubItems = item.subItems ? item.subItems.filter(sub => {
                     const hasPerm = !sub.permissionId || hasPermission(sub.permissionId);
                     const isTenantEnabled = !tenant?.enabledMenus || tenant.enabledMenus.includes(sub.href);
-                    return hasPerm && isTenantEnabled;
+                    const isUserVisible = !userProfile?.accessOverrides?.hiddenMenus?.includes(sub.href);
+                    return hasPerm && isTenantEnabled && isUserVisible;
                 }) : [];
 
                 let content;
