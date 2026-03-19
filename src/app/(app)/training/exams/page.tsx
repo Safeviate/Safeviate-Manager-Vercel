@@ -183,16 +183,14 @@ export default function ExamsPage() {
             <DialogTitle>{editingExam ? 'Edit Exam Template' : 'Create New Exam'}</DialogTitle>
             <DialogDescription>Define multiple-choice questions and set the passing criteria.</DialogDescription>
           </DialogHeader>
-          <ScrollArea className="flex-1">
-            <div className="p-6">
-              <ExamForm 
-                initialValues={editingExam || undefined}
-                onSubmit={handleCreateOrUpdate}
-                onCancel={() => setIsFormOpen(false)}
-                isSubmitting={isSubmitting}
-              />
-            </div>
-          </ScrollArea>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ExamForm 
+              initialValues={editingExam || undefined}
+              onSubmit={handleCreateOrUpdate}
+              onCancel={() => setIsFormOpen(false)}
+              isSubmitting={isSubmitting}
+            />
+          </div>
         </DialogContent>
       </Dialog>
     </div>

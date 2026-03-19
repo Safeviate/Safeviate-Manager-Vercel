@@ -22,6 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const optionSchema = z.object({
   id: z.string(),
@@ -81,98 +82,102 @@ export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting }: Ex
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="title"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Exam Title</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., PPL Air Law & Operational Procedures" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="subject"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Subject Area</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., Theoretical Knowledge" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="passingScore"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Passing Score (%)</FormLabel>
-                <FormControl>
-                  <Input type="number" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Optional details about the exam format or scope..." {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col overflow-hidden">
+        <ScrollArea className="flex-1">
+          <div className="space-y-8 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Exam Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., PPL Air Law & Operational Procedures" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="subject"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subject Area</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Theoretical Knowledge" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="passingScore"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Passing Score (%)</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Optional details about the exam format or scope..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-        <Separator />
+            <Separator />
 
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-bold">Questions</h3>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                appendQuestion({
-                  id: uuidv4(),
-                  text: '',
-                  options: [
-                    { id: uuidv4(), text: '' },
-                    { id: uuidv4(), text: '' },
-                  ],
-                  correctOptionId: '',
-                })
-              }
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Question
-            </Button>
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-bold">Questions</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    appendQuestion({
+                      id: uuidv4(),
+                      text: '',
+                      options: [
+                        { id: uuidv4(), text: '' },
+                        { id: uuidv4(), text: '' },
+                      ],
+                      correctOptionId: '',
+                    })
+                  }
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Question
+                </Button>
+              </div>
+
+              {questionFields.map((question, qIndex) => (
+                <QuestionItem
+                  key={question.id}
+                  questionIndex={qIndex}
+                  onRemove={() => removeQuestion(qIndex)}
+                />
+              ))}
+            </div>
           </div>
+        </ScrollArea>
 
-          {questionFields.map((question, qIndex) => (
-            <QuestionItem
-              key={question.id}
-              questionIndex={qIndex}
-              onRemove={() => removeQuestion(qIndex)}
-            />
-          ))}
-        </div>
-
-        <div className="flex justify-end gap-4 pt-6 border-t sticky bottom-0 bg-background py-4 z-10">
+        <div className="shrink-0 flex justify-end gap-4 p-6 border-t bg-muted/5">
           <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
             Cancel
           </Button>
