@@ -9,11 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileSpreadsheet, Calculator, Receipt, Landmark } from 'lucide-react';
+import { FileSpreadsheet, Calculator, Receipt, Landmark, Eye, Printer, X } from 'lucide-react';
 import { BillingTable } from './billing-table';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/types/aircraft';
 import type { Personnel, PilotProfile } from '@/app/(app)/users/personnel/page';
@@ -45,6 +47,7 @@ export default function AccountingPage() {
   // --- State ---
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState('unbilled');
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   // --- Client-Side Processing ---
   const enrichedData = useMemo(() => {
@@ -74,34 +77,48 @@ export default function AccountingPage() {
     else setSelectedIds(new Set(ids));
   };
 
+  const previewData = useMemo(() => {
+    if (selectedIds.size === 0) return [];
+    const selectedBookings = enrichedData.unbilled.filter(b => selectedIds.has(b.id));
+    const aircraftMap = new Map(aircrafts?.map(a => [a.id, a]));
+    const userMap = new Map(allUsers.map(u => [u.id, u]));
+
+    return selectedBookings.map(b => {
+      const ac = aircraftMap.get(b.aircraftId);
+      const user = userMap.get(b.studentId || '');
+      const duration = (b.postFlightData?.hobbs || 0) - (b.preFlightData?.hobbs || 0);
+      const rate = ac?.hourlyRate || 0;
+      
+      return {
+        reference: b.bookingNumber,
+        date: b.date,
+        customerId: user?.userNumber || "CASH",
+        customerName: user ? `${user.firstName} ${user.lastName}` : "CASH_CLIENT",
+        description: `Flight: ${ac?.tailNumber || b.aircraftId} (${b.type})`,
+        duration: duration.toFixed(1),
+        rate: rate.toFixed(2),
+        total: (duration * rate).toFixed(2),
+        nominalCode: "4000"
+      };
+    });
+  }, [selectedIds, enrichedData.unbilled, aircrafts, allUsers]);
+
   const handleSageExport = async () => {
     if (selectedIds.size === 0 || !firestore) return;
 
     try {
-      const selectedBookings = enrichedData.unbilled.filter(b => selectedIds.has(b.id));
-      const aircraftMap = new Map(aircrafts?.map(a => [a.id, a]));
-      const userMap = new Map(allUsers.map(u => [u.id, u]));
-
-      // 1. Prepare Sage CSV Data
       const headers = ["Reference", "Date", "Customer ID", "Customer Name", "Description", "Duration", "Rate", "Total", "Nominal Code"];
-      const rows = selectedBookings.map(b => {
-        const ac = aircraftMap.get(b.aircraftId);
-        const user = userMap.get(b.studentId || '');
-        const duration = (b.postFlightData?.hobbs || 0) - (b.preFlightData?.hobbs || 0);
-        const rate = ac?.hourlyRate || 0;
-        
-        return [
-          b.bookingNumber,
-          b.date,
-          user?.userNumber || "CASH",
-          user ? `${user.firstName} ${user.lastName}` : "CASH_CLIENT",
-          `Flight: ${ac?.tailNumber || b.aircraftId} (${b.type})`,
-          duration.toFixed(1),
-          rate.toFixed(2),
-          (duration * rate).toFixed(2),
-          "4000"
-        ].join(",");
-      });
+      const rows = previewData.map(d => [
+        d.reference,
+        d.date,
+        d.customerId,
+        d.customerName,
+        d.description,
+        d.duration,
+        d.rate,
+        d.total,
+        d.nominalCode
+      ].join(","));
 
       const csvContent = [headers.join(","), ...rows].join("\n");
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -116,6 +133,7 @@ export default function AccountingPage() {
 
       // 2. Update Firestore Status
       const batch = writeBatch(firestore);
+      const selectedBookings = enrichedData.unbilled.filter(b => selectedIds.has(b.id));
       selectedBookings.forEach(b => {
         const ref = doc(firestore, `tenants/${tenantId}/bookings`, b.id);
         batch.update(ref, { accountingStatus: 'Exported' });
@@ -124,6 +142,7 @@ export default function AccountingPage() {
 
       toast({ title: 'Export Successful', description: `${selectedIds.size} records prepared for Sage.` });
       setSelectedIds(new Set());
+      setIsPreviewOpen(false);
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Export Failed', description: e.message });
     }
@@ -166,24 +185,24 @@ export default function AccountingPage() {
 
             <Separator orientation="vertical" className="h-10 hidden md:block" />
 
-            <div className="text-right hidden lg:block">
-              <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Synced History</p>
-              <div className="flex items-center gap-2 justify-end">
-                <span className="text-2xl font-black text-green-600">
-                  {enrichedData.exported.length}
-                </span>
-                <Badge variant="outline" className="h-5 text-[9px] font-bold uppercase">Records</Badge>
-              </div>
+            <div className="flex items-center gap-2">
+                <Button 
+                    variant="outline"
+                    className="gap-2 font-bold h-12 px-6" 
+                    onClick={() => setIsPreviewOpen(true)} 
+                    disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
+                >
+                    <Eye className="h-4 w-4" /> Preview ({selectedIds.size})
+                </Button>
+                <Button 
+                    size="lg"
+                    className="gap-2 font-bold shadow-md h-12 px-6" 
+                    onClick={handleSageExport} 
+                    disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
+                >
+                    <FileSpreadsheet className="h-5 w-5" /> Export to Sage
+                </Button>
             </div>
-
-            <Button 
-              size="lg"
-              className="gap-2 font-bold shadow-md h-12 px-6" 
-              onClick={handleSageExport} 
-              disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
-            >
-              <FileSpreadsheet className="h-5 w-5" /> Export to Sage ({selectedIds.size})
-            </Button>
           </div>
         </CardHeader>
 
@@ -230,6 +249,71 @@ export default function AccountingPage() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* --- Sage Export Preview Dialog --- */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
+            <DialogHeader className="shrink-0 flex flex-row items-center justify-between border-b pb-4">
+                <div>
+                    <DialogTitle className="text-xl flex items-center gap-2">
+                        <FileSpreadsheet className="h-5 w-5 text-primary" />
+                        Sage Export Preview
+                    </DialogTitle>
+                    <DialogDescription>Review the raw data structure generated for Sage Accounting.</DialogDescription>
+                </div>
+                <div className="flex items-center gap-2 no-print">
+                    <Button variant="outline" size="sm" onClick={() => window.print()}>
+                        <Printer className="mr-2 h-4 w-4" /> Print Preview
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setIsPreviewOpen(false)}>
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
+            </DialogHeader>
+            
+            <ScrollArea className="flex-1">
+                <div className="p-1">
+                    <Table>
+                        <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                            <TableRow>
+                                <TableHead className="text-[10px] uppercase font-black">Reference</TableHead>
+                                <TableHead className="text-[10px] uppercase font-black">Date</TableHead>
+                                <TableHead className="text-[10px] uppercase font-black">Cust ID</TableHead>
+                                <TableHead className="text-[10px] uppercase font-black">Customer Name</TableHead>
+                                <TableHead className="text-[10px] uppercase font-black">Description</TableHead>
+                                <TableHead className="text-[10px] uppercase font-black text-right">Hrs</TableHead>
+                                <TableHead className="text-[10px] uppercase font-black text-right">Rate</TableHead>
+                                <TableHead className="text-[10px] uppercase font-black text-right">Total</TableHead>
+                                <TableHead className="text-[10px] uppercase font-black text-center">Nominal</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {previewData.map((row, idx) => (
+                                <TableRow key={idx}>
+                                    <TableCell className="font-mono text-[11px]">{row.reference}</TableCell>
+                                    <TableCell className="text-[11px] whitespace-nowrap">{row.date}</TableCell>
+                                    <TableCell className="font-bold text-[11px] text-primary">{row.customerId}</TableCell>
+                                    <TableCell className="text-[11px] truncate max-w-[120px]">{row.customerName}</TableCell>
+                                    <TableCell className="text-[11px] truncate max-w-[200px]">{row.description}</TableCell>
+                                    <TableCell className="text-right font-mono text-[11px]">{row.duration}</TableCell>
+                                    <TableCell className="text-right font-mono text-[11px]">{row.rate}</TableCell>
+                                    <TableCell className="text-right font-mono text-[11px] font-bold">${row.total}</TableCell>
+                                    <TableCell className="text-center font-mono text-[11px] text-muted-foreground">{row.nominalCode}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </ScrollArea>
+
+            <DialogFooter className="shrink-0 border-t pt-4 no-print">
+                <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
+                <Button onClick={handleSageExport} className="gap-2">
+                    <FileSpreadsheet className="h-4 w-4" /> Download CSV & Update Status
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
