@@ -1,15 +1,16 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { collection, query, doc, writeBatch } from 'firebase/firestore';
+import { collection, doc, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, FileSpreadsheet, RefreshCw, Calculator, Receipt } from 'lucide-react';
+import { FileSpreadsheet, Calculator, Receipt } from 'lucide-react';
 import { BillingTable } from './billing-table';
+import { format } from 'date-fns';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/types/aircraft';
 import type { Personnel, PilotProfile } from '../users/personnel/page';
@@ -19,7 +20,7 @@ export default function AccountingPage() {
   const { toast } = useToast();
   const tenantId = 'safeviate';
 
-  // --- Data Fetching (Simple queries to avoid Security Rule/Index errors) ---
+  // --- Data Fetching: SIMPLE QUERIES ONLY to avoid security/index errors ---
   const bookingsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/bookings`) : null), [firestore, tenantId]);
   const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
   const personnelQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
@@ -42,11 +43,11 @@ export default function AccountingPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState('unbilled');
 
-  // --- Client-Side Data Processing (Bypassing complex Firestore queries) ---
+  // --- Client-Side Processing: Avoids Firestore 'where' and 'orderBy' complexities ---
   const enrichedData = useMemo(() => {
     if (!bookings) return { unbilled: [], exported: [] };
 
-    // 1. Filter for completed flights only
+    // 1. Filter for completed flights with tech logs
     const completed = bookings.filter(b => b.status === 'Completed' && b.postFlightData && b.preFlightData);
 
     // 2. Sort by date (latest first)
