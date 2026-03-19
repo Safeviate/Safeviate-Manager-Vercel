@@ -7,7 +7,7 @@ import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, MapPin, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid, Layers, Info } from 'lucide-react';
+import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -29,7 +29,6 @@ import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { usePermissions } from '@/hooks/use-permissions';
 import { menuConfig } from '@/lib/menu-config';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
 type UserProfile = Personnel | PilotProfile;
@@ -41,17 +40,6 @@ interface ViewPersonnelDetailsProps {
 }
 
 type Document = NonNullable<UserProfile['documents']>[0];
-
-const PAGE_OPTIONS = [
-  { id: 'audits', label: 'Quality Audits' },
-  { id: 'safety-reports', label: 'Safety Reports' },
-  { id: 'risk-register', label: 'Risk Register' },
-  { id: 'safety-indicators', label: 'Safety Indicators' },
-  { id: 'moc', label: 'Management of Change' },
-  { id: 'task-tracker', label: 'Task Tracker' },
-  { id: 'coherence-matrix', label: 'Coherence Matrix' },
-  { id: 'aircraft', label: 'Aircraft Management' },
-];
 
 const DetailItem = ({ label, value, children }: { label: string; value?: string | null, children?: React.ReactNode }) => (
     <div>
@@ -183,31 +171,16 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     let newHidden: string[];
 
     if (hidden) {
-      // Add parent and potentially all children to hidden list
       const toHide = [href, ...(subHrefs || [])];
       newHidden = Array.from(new Set([...currentHidden, ...toHide]));
     } else {
-      // Remove from hidden list
       newHidden = currentHidden.filter(h => h !== href);
-      // If it's a child being shown, we don't necessarily show the parent here, 
-      // but usually the logic implies showing the parent too if any child is visible.
     }
     
     const collectionName = isPilotProfile(user) ? (user.userType === 'Student' ? 'students' : user.userType === 'Instructor' ? 'instructors' : 'private-pilots') : 'personnel';
     const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
     updateDocumentNonBlocking(userRef, { 'accessOverrides.hiddenMenus': newHidden });
     toast({ title: hidden ? "Access Restricted" : "Access Restored" });
-  };
-
-  const handleToggleTabOverride = (pageId: string, hidden: boolean) => {
-    if (!firestore || !tenantId || !canEdit) return;
-    const currentHidden = user.accessOverrides?.hiddenTabs || [];
-    const newHidden = hidden ? [...currentHidden, pageId] : currentHidden.filter(h => h !== pageId);
-    
-    const collectionName = isPilotProfile(user) ? (user.userType === 'Student' ? 'students' : user.userType === 'Instructor' ? 'instructors' : 'private-pilots') : 'personnel';
-    const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
-    updateDocumentNonBlocking(userRef, { 'accessOverrides.hiddenTabs': newHidden });
-    toast({ title: hidden ? "Tabs Hidden" : "Tabs Shown" });
   };
 
   const handlePermissionToggle = (permissionId: string, checked: boolean) => {
@@ -234,7 +207,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
         <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 shrink-0 border-b-0 overflow-x-auto no-scrollbar justify-start">
             <TabsTrigger value="overview" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Overview</TabsTrigger>
             <TabsTrigger value="documents" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Documents</TabsTrigger>
-            <TabsTrigger value="access" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Access & Tabs</TabsTrigger>
+            <TabsTrigger value="access" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Module Access</TabsTrigger>
             <TabsTrigger value="permissions" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Granular Permissions</TabsTrigger>
             {isStudent && <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Training Records</TabsTrigger>}
             {isAnyPilot && <TabsTrigger value="logbook" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Logbook</TabsTrigger>}
@@ -387,109 +360,59 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
         <TabsContent value="access" className="mt-0 flex-1 min-h-0 overflow-hidden">
             <Card className="flex flex-col h-full overflow-hidden shadow-none border">
                 <CardHeader className="shrink-0 border-b bg-muted/5">
-                    <CardTitle>User Access Overrides</CardTitle>
-                    <CardDescription>Specifically control what this individual can see, overriding global and role defaults.</CardDescription>
+                    <CardTitle>Module Access Control</CardTitle>
+                    <CardDescription>Specifically control which functional modules are enabled for this specific user's navigation.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-1 p-0 overflow-hidden">
                     <ScrollArea className="h-full">
-                        <div className="p-6 space-y-10">
-                            {/* SECTION 1: SIDEBAR MODULES (Hierarchical Checklist) */}
-                            <section className="space-y-6">
-                                <div className="space-y-1">
-                                    <h3 className="text-xl font-bold flex items-center gap-2">
-                                        <LayoutGrid className="h-5 w-5 text-primary" />
-                                        Module Access Control
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground">Select which functional modules are enabled for this specific user's navigation.</p>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {menuConfig.map((menu) => {
-                                        if (menu.label === 'Admin' || menu.label === 'Development') return null;
-                                        
-                                        const subHrefs = menu.subItems?.map(s => s.href) || [];
-                                        const isHidden = user.accessOverrides?.hiddenMenus?.includes(menu.href);
-                                        const isVisible = !isHidden;
-                                        
-                                        return (
-                                            <div key={menu.href} className="p-4 border rounded-xl bg-muted/10 space-y-3">
-                                                <div className="flex items-center space-x-2">
-                                                    <Checkbox 
-                                                        id={`user-mod-${menu.href}`} 
-                                                        checked={isVisible}
-                                                        onCheckedChange={(val) => handleToggleMenuOverride(menu.href, !val, subHrefs)}
-                                                        disabled={!canEdit}
-                                                    />
-                                                    <Label htmlFor={`user-mod-${menu.href}`} className="font-bold flex items-center gap-2 cursor-pointer">
-                                                        <menu.icon className="h-4 w-4 text-primary" />
-                                                        {menu.label}
-                                                    </Label>
-                                                </div>
-                                                {menu.subItems && (
-                                                    <div className="pl-6 space-y-2 border-l ml-2">
-                                                        {menu.subItems.map((sub) => {
-                                                            const isSubHidden = user.accessOverrides?.hiddenMenus?.includes(sub.href);
-                                                            const isSubVisible = !isSubHidden;
-                                                            return (
-                                                                <div key={sub.href} className="flex items-center space-x-2">
-                                                                    <Checkbox 
-                                                                        id={`user-submod-${sub.href}`} 
-                                                                        checked={isSubVisible}
-                                                                        onCheckedChange={(val) => handleToggleMenuOverride(sub.href, !val)}
-                                                                        disabled={!canEdit}
-                                                                    />
-                                                                    <Label htmlFor={`user-submod-${sub.href}`} className="text-xs text-muted-foreground cursor-pointer">
-                                                                        {sub.label}
-                                                                    </Label>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </section>
-
-                            <Separator />
-
-                            {/* SECTION 2: PAGE TABS */}
-                            <section className="space-y-6">
-                                <div className="space-y-1">
-                                    <h3 className="text-xl font-bold flex items-center gap-2">
-                                        <Layers className="h-5 w-5 text-primary" />
-                                        Page Tab Contexts
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground">Enable or disable the organization switcher tabs for this specific user on these pages.</p>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {PAGE_OPTIONS.map((page) => {
-                                        const isHidden = user.accessOverrides?.hiddenTabs?.includes(page.id);
-                                        return (
-                                            <div key={page.id} className="flex items-center justify-between p-4 border rounded-xl bg-muted/10">
-                                                <div className="space-y-0.5">
-                                                    <Label className="text-sm font-bold">{page.label}</Label>
-                                                    <p className="text-xs text-muted-foreground italic">Show company context tabs on this page.</p>
-                                                </div>
-                                                <Switch 
-                                                    checked={!isHidden} 
-                                                    onCheckedChange={(val) => handleToggleTabOverride(page.id, !val)}
+                        <div className="p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {menuConfig.map((menu) => {
+                                    if (menu.label === 'Admin' || menu.label === 'Development') return null;
+                                    
+                                    const subHrefs = menu.subItems?.map(s => s.href) || [];
+                                    const isHidden = user.accessOverrides?.hiddenMenus?.includes(menu.href);
+                                    const isVisible = !isHidden;
+                                    
+                                    return (
+                                        <div key={menu.href} className="p-4 border rounded-xl bg-muted/10 space-y-3">
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox 
+                                                    id={`user-mod-${menu.href}`} 
+                                                    checked={isVisible}
+                                                    onCheckedChange={(val) => handleToggleMenuOverride(menu.href, !val, subHrefs)}
                                                     disabled={!canEdit}
                                                 />
+                                                <Label htmlFor={`user-mod-${menu.href}`} className="font-bold flex items-center gap-2 cursor-pointer">
+                                                    <menu.icon className="h-4 w-4 text-primary" />
+                                                    {menu.label}
+                                                </Label>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-
-                                <div className="p-4 rounded-lg bg-blue-50 border border-blue-100 flex items-start gap-3">
-                                    <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                                    <p className="text-xs text-blue-800 leading-relaxed">
-                                        <strong>Note:</strong> User-level overrides will take precedence over the global organization settings defined in the Page Format hub.
-                                    </p>
-                                </div>
-                            </section>
+                                            {menu.subItems && (
+                                                <div className="pl-6 space-y-2 border-l ml-2">
+                                                    {menu.subItems.map((sub) => {
+                                                        const isSubHidden = user.accessOverrides?.hiddenMenus?.includes(sub.href);
+                                                        const isSubVisible = !isSubHidden;
+                                                        return (
+                                                            <div key={sub.href} className="flex items-center space-x-2">
+                                                                <Checkbox 
+                                                                    id={`user-submod-${sub.href}`} 
+                                                                    checked={isSubVisible}
+                                                                    onCheckedChange={(val) => handleToggleMenuOverride(sub.href, !val)}
+                                                                    disabled={!canEdit}
+                                                                />
+                                                                <Label htmlFor={`user-submod-${sub.href}`} className="text-xs text-muted-foreground cursor-pointer">
+                                                                    {sub.label}
+                                                                </Label>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </ScrollArea>
                 </CardContent>
@@ -505,7 +428,6 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                 <CardContent className="flex-1 p-0 overflow-hidden">
                     <ScrollArea className="h-full">
                         <div className="p-6">
-                            <SectionHeader title="Effective Access Control" icon={ShieldCheck} />
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {permissionsConfig.map((resource) => (
                                     <div key={resource.id} className='space-y-3 bg-background/50 p-4 rounded-xl border border-card-border/50'>
