@@ -44,10 +44,14 @@ export function DatabaseForm() {
       subHrefs?.forEach(sh => newEnabled.delete(sh));
     } else {
       newEnabled.add(href);
-      subHrefs?.forEach(sh => newEnabled.add(sh));
+      subHrefs?.forEach(sh => addHrefs(sh, newEnabled));
     }
     setEnabledHrefs(newEnabled);
   };
+
+  const addHrefs = (href: string, set: Set<string>) => {
+      set.add(href);
+  }
 
   const toggleSubMenu = (parentHref: string, href: string) => {
     const newEnabled = new Set(enabledHrefs);

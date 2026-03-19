@@ -13,6 +13,7 @@ import {
   CalendarDays,
   ShieldAlert,
   Calculator,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 export type SubMenuItem = {

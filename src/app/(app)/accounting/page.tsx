@@ -136,7 +136,7 @@ export default function AccountingPage() {
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full pb-10">
       <div className="px-1 shrink-0">
-        <h1 className="text-3xl font-bold tracking-tight">Flight Billing</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Flight Billing</h1>
         <p className="text-muted-foreground">Manage revenue from completed flights and export to Sage Accounting.</p>
       </div>
 
