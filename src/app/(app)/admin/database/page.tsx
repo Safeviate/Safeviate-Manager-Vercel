@@ -1,9 +1,5 @@
-import { DatabaseForm } from './database-form';
+import { redirect } from 'next/navigation';
 
 export default function DatabasePage() {
-  return (
-    <div className="container mx-auto py-10">
-      <DatabaseForm />
-    </div>
-  );
+  redirect('/admin/page-format');
 }

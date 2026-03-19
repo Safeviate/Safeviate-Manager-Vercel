@@ -1,11 +1,5 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { ColorThemeForm } from '../../settings/color-theme-form';
-
-export default function AdminAppearancePage() {
-  return (
-    <div className="h-full overflow-hidden">
-      <ColorThemeForm />
-    </div>
-  );
+export default function AppearancePage() {
+  redirect('/admin/page-format');
 }

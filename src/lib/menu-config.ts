@@ -15,6 +15,8 @@ import {
   Calculator,
   FileSpreadsheet,
   FileText,
+  Eye,
+  Settings2,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -202,6 +204,12 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'users-view',
     subItems: [
       {
+        href: '/users/access-overview',
+        label: 'Access Overview',
+        description: 'View a matrix of what users and roles can access.',
+        permissionId: 'admin-permissions-view',
+      },
+      {
         href: '/users/external',
         label: 'External',
         permissionId: 'users-view',
@@ -235,22 +243,22 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'admin-view',
     subItems: [
       {
+        href: '/admin/page-format',
+        label: 'Page Format',
+        description: 'Control app branding, module access, and tab visibility.',
+        permissionId: 'admin-settings-manage',
+      },
+      {
         href: '/admin/accounting',
         label: 'Accounting & Billing',
         description: 'Review and export completed flights to Sage.',
         permissionId: 'accounting-manage',
       },
       {
-        href: '/admin/appearance',
-        label: 'Appearance',
-        description: 'Customize application branding and theme colors.',
-        permissionId: 'admin-settings-manage',
-      },
-      {
-        href: '/admin/database',
-        label: 'Permission Select',
-        description: 'Manage organization branding and functional module access.',
-        permissionId: 'admin-database-manage',
+        href: '/admin/roles',
+        label: 'Roles',
+        description: 'Create and manage user roles.',
+        permissionId: 'admin-roles-manage',
       },
       {
         href: '/admin/department',
@@ -259,21 +267,15 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'admin-departments-manage',
       },
       {
-        href: '/admin/document-dates',
-        label: 'Document Expiration',
-        description: 'Manage document expiration and inspection warnings.',
-        permissionId: 'admin-settings-manage',
-      },
-      {
         href: '/admin/external',
         label: 'External Companies',
-        description: 'Manage external companies for auditing and scoping.',
+        description: 'Manage third-party organizations.',
         permissionId: 'admin-external-orgs-manage',
       },
       {
-        href: '/admin/features',
-        label: 'Features',
-        description: 'Enable or disable application features.',
+        href: '/admin/document-dates',
+        label: 'Thresholds & Expiry',
+        description: 'Manage document expiration and inspection warnings.',
         permissionId: 'admin-settings-manage',
       },
       {
@@ -285,20 +287,14 @@ export const menuConfig: MenuItem[] = [
       {
         href: '/admin/overdue',
         label: 'Overdue Alerts',
-        description: 'Manage settings for the overdue aircraft safety monitor.',
+        description: 'Manage settings for the overdue aircraft monitor.',
         permissionId: 'admin-settings-manage',
       },
       {
         href: '/admin/permissions',
-        label: 'Permissions',
+        label: 'Permissions List',
         description: 'View all available application permissions.',
         permissionId: 'admin-permissions-view',
-      },
-      {
-        href: '/admin/roles',
-        label: 'Roles',
-        description: 'Create and manage user roles.',
-        permissionId: 'admin-roles-manage',
       },
     ],
   },
