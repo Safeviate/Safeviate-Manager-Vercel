@@ -47,7 +47,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-resize logic for the diary entry textarea
+  // Auto-resize logic for the diary entry textarea (starts at 1 line)
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';

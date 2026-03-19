@@ -213,7 +213,7 @@ export default function CompanyDocumentsPage() {
             <DialogTitle>{viewingDoc?.name}</DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-hidden relative mt-4 min-h-[60vh] bg-muted/20 rounded-md">
-            {viewingDoc?.type === 'image' || viewingDoc?.url.startsWith('data:image/') ? (
+            {viewingDoc?.type === 'image' || viewingDoc?.url.startsWith('default_api:image/') ? (
               <Image 
                 src={viewingDoc.url} 
                 alt={viewingDoc.name} 

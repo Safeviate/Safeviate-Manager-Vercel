@@ -141,7 +141,7 @@ export default function MyDashboardPage() {
               link: `/quality/audits/${cap.auditId}`,
               assigneeId: cap.responsiblePersonId || '',
               assigneeName: userMap.get(cap.responsiblePersonId || '') || 'Unassigned',
-              dueDate: new Date().toISOString(), // Placeholder, CorrectiveActionPlan needs a due date
+              dueDate: new Date().toISOString(), // Placeholder
               status: cap.status,
             });
           }
