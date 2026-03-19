@@ -17,6 +17,7 @@ import {
   FileText,
   Eye,
   Settings2,
+  FileEdit,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -185,6 +186,12 @@ export const menuConfig: MenuItem[] = [
         label: 'Student Progress',
         description: 'View and manage student progress reports.',
         permissionId: 'training-debriefs-view',
+      },
+      {
+        href: '/training/exams',
+        label: 'Exams',
+        description: 'Manage and track student examination results.',
+        permissionId: 'training-exams-view',
       },
     ],
   },

@@ -38,6 +38,7 @@ export const permissionsConfig: PermissionResource[] = [
 
   { id: 'training', name: 'Training', actions: ['view'] },
   { id: 'training-debriefs', name: 'Training: Student Debriefs', actions: ['view', 'edit'] },
+  { id: 'training-exams', name: 'Training: Exams', actions: ['view', 'manage'] },
 
   { id: 'assets', name: 'Assets: Aircraft', actions: ['view', 'create', 'edit', 'delete'] },
 
