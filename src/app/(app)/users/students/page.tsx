@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent } from '@/components/ui/card';
 import type { PilotProfile } from '../personnel/page';
@@ -13,7 +13,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 
 export default function StudentsPage() {
   const firestore = useFirestore();
-  const { hasPermission } = hasPermission();
+  const { hasPermission } = usePermissions();
   const tenantId = 'safeviate'; // Hardcoded for now
   const canCreateUsers = hasPermission('users-create');
 
