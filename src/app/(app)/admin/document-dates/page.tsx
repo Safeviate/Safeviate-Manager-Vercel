@@ -15,7 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { useDebounce } from '@/hooks/use-debounce';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { StudentMilestoneSettings } from '@/types/training';
-import type { AircraftInspectionWarningSettings, HourWarning } from '@/types/inspection';
+import type { Aircraft inspectionWarningSettings, HourWarning } from '@/types/inspection';
 
 export type WarningPeriod = {
   period: number;
@@ -154,18 +154,18 @@ export default function DocumentDatesPage() {
   const handleAddPeriod = () => {
     const period = parseInt(newPeriod, 10);
     if (isNaN(period) || period <= 0) {
-      toast({ variant: 'destructive', title: 'Invalid Number', description: 'Please enter a positive number of days.' });
+      setTimeout(() => toast({ variant: 'destructive', title: 'Invalid Number', description: 'Please enter a positive number of days.' }), 0);
       return;
     }
     if (!expirySettingsRef) return;
     const currentPeriods = expirySettings?.warningPeriods || [];
     if (currentPeriods.some((p) => p.period === period)) {
-      toast({ variant: 'destructive', title: 'Duplicate Period', description: `The warning period for ${period} days already exists.` });
+      setTimeout(() => toast({ variant: 'destructive', title: 'Duplicate Period', description: `The warning period for ${period} days already exists.` }), 0);
       return;
     }
     const updatedWarningPeriods = [...currentPeriods, { period, color: newPeriodColor }].sort((a, b) => a.period - b.period);
     setDocumentNonBlocking(expirySettingsRef, { warningPeriods: updatedWarningPeriods }, { merge: true });
-    toast({ title: 'Warning Period Added', description: `${period} days has been added.` });
+    setTimeout(() => toast({ title: 'Warning Period Added', description: `${period} days has been added.` }), 0);
     setNewPeriod('');
     setNewPeriodColor(defaultPeriodColor);
   };
@@ -174,7 +174,7 @@ export default function DocumentDatesPage() {
     if (!expirySettingsRef) return;
     const newPeriods = (expirySettings?.warningPeriods || []).filter((p) => p.period !== periodToRemove);
     setDocumentNonBlocking(expirySettingsRef, { warningPeriods: newPeriods }, { merge: true });
-    toast({ title: 'Warning Period Removed', description: `${periodToRemove} days has been removed.` });
+    setTimeout(() => toast({ title: 'Warning Period Removed', description: `${periodToRemove} days has been removed.` }), 0);
   };
   
   const handleMilestoneWarningChange = (milestoneValue: number, warningHours: string) => {
@@ -194,21 +194,21 @@ export default function DocumentDatesPage() {
     const hours = parseInt(hoursStr, 10);
 
     if (isNaN(hours) || hours <= 0) {
-        toast({ variant: 'destructive', title: 'Invalid Number', description: 'Please enter a positive number of hours.' });
+        setTimeout(() => toast({ variant: 'destructive', title: 'Invalid Number', description: 'Please enter a positive number of hours.' }), 0);
         return;
     }
 
     const fieldKey = is50hr ? 'fiftyHourWarnings' : 'oneHundredHourWarnings';
-    const currentWarnings = inspectionSettings?.[fieldKey] || [];
-    if (currentWarnings.some((w) => w.hours === hours)) {
-        toast({ variant: 'destructive', title: 'Duplicate Warning', description: `A warning for ${hours} hours already exists.` });
+    const currentWarnings = (inspectionSettings as any)?.[fieldKey] || [];
+    if (currentWarnings.some((w: any) => w.hours === hours)) {
+        setTimeout(() => toast({ variant: 'destructive', title: 'Duplicate Warning', description: `A warning for ${hours} hours already exists.` }), 0);
         return;
     }
 
     const updatedWarnings = [...currentWarnings, { hours, color: newBgColor, foregroundColor: newFgColor }].sort((a, b) => b.hours - a.hours);
     setDocumentNonBlocking(inspectionSettingsRef, { [fieldKey]: updatedWarnings }, { merge: true });
 
-    toast({ title: 'Inspection Warning Added' });
+    setTimeout(() => toast({ title: 'Inspection Warning Added' }), 0);
 
     if (is50hr) {
         setNewFiftyHour('');
@@ -224,9 +224,9 @@ export default function DocumentDatesPage() {
   const handleRemoveInspectionWarning = (type: '50hr' | '100hr', hoursToRemove: number) => {
     if (!inspectionSettingsRef) return;
     const fieldKey = type === '50hr' ? 'fiftyHourWarnings' : 'oneHundredHourWarnings';
-    const newWarnings = (inspectionSettings?.[fieldKey] || []).filter((w) => w.hours !== hoursToRemove);
+    const newWarnings = ((inspectionSettings as any)?.[fieldKey] || []).filter((w: any) => w.hours !== hoursToRemove);
     setDocumentNonBlocking(inspectionSettingsRef, { [fieldKey]: newWarnings }, { merge: true });
-    toast({ title: 'Inspection Warning Removed' });
+    setTimeout(() => toast({ title: 'Inspection Warning Removed' }), 0);
   };
 
 
@@ -399,7 +399,7 @@ export default function DocumentDatesPage() {
                         <Input id="hundred-hour-warning" type="number" value={newHundredHour} onChange={(e) => setNewHundredHour(e.target.value)} placeholder="e.g., 20 (hours remaining)" className="w-48" onKeyDown={(e) => e.key === 'Enter' && handleAddInspectionWarning('100hr')} />
                         <Input title="Background Color" id="hundred-hour-color" type="color" value={newHundredHourColor} onChange={(e) => setNewHundredHourColor(e.target.value)} className="p-1 h-10 w-12" />
                         <Input title="Foreground Color" id="hundred-hour-fg-color" type="color" value={newHundredHourFgColor} onChange={(e) => setNewHundredHourFgColor(e.target.value)} className="p-1 h-10 w-12" />
-                        <Button onClick={handleAddInspectionWarning('100hr')} className="flex-grow">Add Warning</Button>
+                        <Button onClick={() => handleAddInspectionWarning('100hr')} className="flex-grow">Add Warning</Button>
                     </div>
                 </div>
                 <div>

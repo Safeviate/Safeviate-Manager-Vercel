@@ -2,8 +2,8 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Universal recursive match for development: Allow all operations for authenticated users.
-    // This ensures Barry and others have seamless access to all tenant data and sub-collections.
+    // Definitive recursive match: Allow all operations for authenticated users.
+    // This ensures Barry and all other personnel have seamless access to tenant data and bookings.
     match /{document=**} {
       allow read, write: if request.auth != null;
     }
