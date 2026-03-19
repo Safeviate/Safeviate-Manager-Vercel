@@ -15,7 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { useDebounce } from '@/hooks/use-debounce';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { StudentMilestoneSettings } from '@/types/training';
-import type { Aircraft inspectionWarningSettings, HourWarning } from '@/types/inspection';
+import type { AircraftInspectionWarningSettings, HourWarning } from '@/types/inspection';
 
 export type WarningPeriod = {
   period: number;
