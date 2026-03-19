@@ -17,15 +17,15 @@ export default function EmergencyResponsePage() {
   const { tenantId } = useUserProfile();
 
   return (
-    <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
+    <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-2 sm:px-4">
       <div className="px-1">
-        <h1 className="text-3xl font-bold tracking-tight">Emergency Response Plan</h1>
-        <p className="text-muted-foreground">Standardized protocols and real-time response management for aviation emergencies.</p>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Emergency Response Plan</h1>
+        <p className="text-sm text-muted-foreground">Standardized protocols and real-time response management for aviation emergencies.</p>
       </div>
 
-      <Tabs defaultValue="diary" className="w-full flex-1 flex flex-col min-h-0">
-        <div className="px-1 shrink-0">
-          <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
+      <Tabs defaultValue="diary" className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="px-1 shrink-0 overflow-x-auto no-scrollbar pb-2">
+          <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start w-full flex min-w-max">
             <TabsTrigger value="diary" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2">
               <ScrollText className="h-4 w-4" /> Live Diary
             </TabsTrigger>
@@ -50,7 +50,7 @@ export default function EmergencyResponsePage() {
           </TabsList>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pb-10">
+        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pb-10 mt-2">
           <TabsContent value="diary" className="m-0 h-full">
             <DiaryTab tenantId={tenantId || 'safeviate'} />
           </TabsContent>

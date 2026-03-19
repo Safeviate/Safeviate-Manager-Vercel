@@ -161,7 +161,7 @@ export default function AccountingPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden gap-4">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-4 md:p-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Landmark className="h-5 w-5 text-primary" />
@@ -170,11 +170,11 @@ export default function AccountingPage() {
             <CardDescription>Manage revenue and Sage Accounting exports.</CardDescription>
           </div>
 
-          <div className="flex flex-wrap items-center gap-6">
-            <div className="text-right">
+          <div className="flex flex-wrap items-center gap-4 md:gap-8 w-full xl:w-auto justify-between xl:justify-end">
+            <div className="text-left xl:text-right min-w-fit">
               <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Pending Revenue</p>
-              <div className="flex items-center gap-2 justify-end">
-                <span className="text-2xl font-black text-primary">
+              <div className="flex items-center gap-2 justify-start xl:justify-end">
+                <span className="text-xl md:text-2xl font-black text-primary">
                   ${totalBillable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
                 <Badge variant="outline" className="h-5 text-[9px] font-bold">
@@ -183,24 +183,23 @@ export default function AccountingPage() {
               </div>
             </div>
 
-            <Separator orientation="vertical" className="h-10 hidden md:block" />
+            <Separator orientation="vertical" className="h-10 hidden xl:block" />
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                 <Button 
                     variant="outline"
-                    className="gap-2 font-bold h-12 px-6" 
+                    className="flex-1 md:flex-none gap-2 font-bold h-10 md:h-12 px-4 md:px-6 text-xs md:text-sm" 
                     onClick={() => setIsPreviewOpen(true)} 
                     disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
                 >
                     <Eye className="h-4 w-4" /> Preview ({selectedIds.size})
                 </Button>
                 <Button 
-                    size="lg"
-                    className="gap-2 font-bold shadow-md h-12 px-6" 
+                    className="flex-1 md:flex-none gap-2 font-bold shadow-md h-10 md:h-12 px-4 md:px-6 text-xs md:text-sm" 
                     onClick={handleSageExport} 
                     disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
                 >
-                    <FileSpreadsheet className="h-5 w-5" /> Export to Sage
+                    <FileSpreadsheet className="h-4 w-4 md:h-5 md:w-5" /> Export to Sage
                 </Button>
             </div>
           </div>
@@ -208,8 +207,8 @@ export default function AccountingPage() {
 
         <CardContent className="flex-1 p-0 overflow-hidden flex flex-col bg-muted/5">
           <Tabs defaultValue="unbilled" onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0">
-            <div className="px-6 py-4 border-b bg-background/50">
-              <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
+            <div className="px-4 md:px-6 py-4 border-b bg-background/50 overflow-x-auto no-scrollbar">
+              <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start w-full flex min-w-max">
                 <TabsTrigger value="unbilled" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-xs font-bold uppercase tracking-tight">
                   Unbilled Flights ({enrichedData.unbilled.length})
                 </TabsTrigger>
@@ -221,7 +220,7 @@ export default function AccountingPage() {
 
             <div className="flex-1 min-h-0 overflow-hidden relative">
               <ScrollArea className="h-full">
-                <div className="p-6 pb-20">
+                <div className="p-4 md:p-6 pb-20">
                   <TabsContent value="unbilled" className="mt-0">
                     <BillingTable 
                       bookings={enrichedData.unbilled} 
@@ -252,28 +251,28 @@ export default function AccountingPage() {
 
       {/* --- Sage Export Preview Dialog --- */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
-            <DialogHeader className="shrink-0 flex flex-row items-center justify-between border-b pb-4">
-                <div>
-                    <DialogTitle className="text-xl flex items-center gap-2">
+        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0 md:p-6 overflow-hidden">
+            <DialogHeader className="shrink-0 flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-4 px-6 pt-6 md:px-0 md:pt-0">
+                <div className="space-y-1">
+                    <DialogTitle className="text-lg md:text-xl flex items-center gap-2">
                         <FileSpreadsheet className="h-5 w-5 text-primary" />
                         Sage Export Preview
                     </DialogTitle>
-                    <DialogDescription>Review the raw data structure generated for Sage Accounting.</DialogDescription>
+                    <DialogDescription className="text-xs">Review the raw data structure generated for Sage Accounting.</DialogDescription>
                 </div>
-                <div className="flex items-center gap-2 no-print">
-                    <Button variant="outline" size="sm" onClick={() => window.print()}>
+                <div className="flex items-center gap-2 no-print mt-4 md:mt-0">
+                    <Button variant="outline" size="sm" onClick={() => window.print()} className="text-xs">
                         <Printer className="mr-2 h-4 w-4" /> Print Preview
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setIsPreviewOpen(false)}>
+                    <Button variant="ghost" size="icon" onClick={() => setIsPreviewOpen(false)} className="hidden md:flex">
                         <X className="h-4 w-4" />
                     </Button>
                 </div>
             </DialogHeader>
             
             <ScrollArea className="flex-1">
-                <div className="p-1">
-                    <Table>
+                <div className="p-4 md:p-1 overflow-x-auto">
+                    <Table className="min-w-[800px]">
                         <TableHeader className="bg-muted/50 sticky top-0 z-10">
                             <TableRow>
                                 <TableHead className="text-[10px] uppercase font-black">Reference</TableHead>
@@ -306,9 +305,9 @@ export default function AccountingPage() {
                 </div>
             </ScrollArea>
 
-            <DialogFooter className="shrink-0 border-t pt-4 no-print">
-                <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
-                <Button onClick={handleSageExport} className="gap-2">
+            <DialogFooter className="shrink-0 border-t p-4 md:p-0 md:pt-4 no-print flex flex-col md:flex-row gap-2">
+                <DialogClose asChild><Button variant="outline" className="w-full md:w-auto">Close</Button></DialogClose>
+                <Button onClick={handleSageExport} className="gap-2 w-full md:w-auto">
                     <FileSpreadsheet className="h-4 w-4" /> Download CSV & Update Status
                 </Button>
             </DialogFooter>
