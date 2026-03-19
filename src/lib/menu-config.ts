@@ -233,7 +233,7 @@ export const menuConfig: MenuItem[] = [
       },
       {
         href: '/admin/database',
-        label: 'Branding & Menus',
+        label: 'Permission Select',
         description: 'Manage organization branding and functional module access.',
         permissionId: 'admin-database-manage',
       },

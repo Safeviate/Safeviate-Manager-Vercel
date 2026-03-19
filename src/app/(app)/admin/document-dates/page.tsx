@@ -399,7 +399,7 @@ export default function DocumentDatesPage() {
                         <Input id="hundred-hour-warning" type="number" value={newHundredHour} onChange={(e) => setNewHundredHour(e.target.value)} placeholder="e.g., 20 (hours remaining)" className="w-48" onKeyDown={(e) => e.key === 'Enter' && handleAddInspectionWarning('100hr')} />
                         <Input title="Background Color" id="hundred-hour-color" type="color" value={newHundredHourColor} onChange={(e) => setNewHundredHourColor(e.target.value)} className="p-1 h-10 w-12" />
                         <Input title="Foreground Color" id="hundred-hour-fg-color" type="color" value={newHundredHourFgColor} onChange={(e) => setNewHundredHourFgColor(e.target.value)} className="p-1 h-10 w-12" />
-                        <Button onClick={() => handleAddInspectionWarning('100hr')} className="flex-grow">Add Warning</Button>
+                        <Button onClick={handleAddInspectionWarning('100hr')} className="flex-grow">Add Warning</Button>
                     </div>
                 </div>
                 <div>

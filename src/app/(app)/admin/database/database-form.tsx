@@ -101,7 +101,7 @@ export function DatabaseForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Branding & Menus</CardTitle>
+        <CardTitle>Permission Select</CardTitle>
         <CardDescription>
           Manage the primary organization profile and control which functional modules are enabled for your portal.
         </CardDescription>
@@ -154,7 +154,7 @@ export function DatabaseForm() {
         <Separator />
         
         <div className="flex justify-end">
-            <Button onClick={handleCreateTenant} size="lg">Save Branding & Menus</Button>
+            <Button onClick={handleCreateTenant} size="lg">Save Permission Selections</Button>
         </div>
       </CardContent>
     </Card>
