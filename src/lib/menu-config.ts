@@ -46,6 +46,11 @@ export const menuConfig: MenuItem[] = [
     label: 'My Dashboard',
     icon: LayoutDashboard,
     permissionId: 'my-dashboard-view',
+    subItems: [
+      { href: '/my-dashboard/tasks', label: 'Tasks' },
+      { href: '/my-dashboard/messages', label: 'Messages' },
+      { href: '/my-dashboard/logbook', label: 'My Logbook' },
+    ]
   },
   {
     href: '/bookings',

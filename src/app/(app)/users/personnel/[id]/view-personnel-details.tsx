@@ -7,7 +7,7 @@ import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid } from 'lucide-react';
+import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid, ChevronsUpDown } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -30,6 +30,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { usePermissions } from '@/hooks/use-permissions';
 import { menuConfig } from '@/lib/menu-config';
 import { Label } from '@/components/ui/label';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -174,7 +175,8 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
       const toHide = [href, ...(subHrefs || [])];
       newHidden = Array.from(new Set([...currentHidden, ...toHide]));
     } else {
-      newHidden = currentHidden.filter(h => h !== href);
+      const toShow = [href, ...(subHrefs || [])];
+      newHidden = currentHidden.filter(h => !toShow.includes(h));
     }
     
     const collectionName = isPilotProfile(user) ? (user.userType === 'Student' ? 'students' : user.userType === 'Instructor' ? 'instructors' : 'private-pilots') : 'personnel';
