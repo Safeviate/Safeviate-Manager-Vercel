@@ -1,4 +1,3 @@
-
 export interface AircraftComponent {
     id: string;
     manufacturer: string;
@@ -31,6 +30,7 @@ export interface Aircraft {
     tachoAtNext100Inspection?: number;
     maintenanceLogs?: string[];
     organizationId?: string | null; // Associated external company ID
+    hourlyRate?: number; // Added for accounting
     documents?: {
         name: string;
         url: string;

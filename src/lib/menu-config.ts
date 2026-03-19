@@ -12,6 +12,7 @@ import {
   CheckSquare,
   CalendarDays,
   ShieldAlert,
+  Calculator,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -59,6 +60,20 @@ export const menuConfig: MenuItem[] = [
         label: 'History',
         description: 'View past bookings and logs.',
         permissionId: 'bookings-history-view',
+      },
+    ],
+  },
+  {
+    href: '/accounting',
+    label: 'Accounting',
+    icon: Calculator,
+    permissionId: 'accounting-view',
+    subItems: [
+      {
+        href: '/accounting',
+        label: 'Flight Billing',
+        description: 'Review and export completed flights to Sage.',
+        permissionId: 'accounting-manage',
       },
     ],
   },

@@ -105,5 +105,9 @@ export interface Booking {
   navlog?: Navlog;
   organizationId?: string | null; // Associated external company ID
   overrides?: OverrideLog[];
-  landingConfirmed?: boolean; // New safety tracking field
+  landingConfirmed?: boolean;
+  // Accounting fields
+  accountingStatus?: 'Unbilled' | 'Exported' | 'Paid';
+  invoiceReference?: string;
+  totalCost?: number;
 }

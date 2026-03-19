@@ -32,39 +32,7 @@
       "properties": {
         "id": { "type": "string" },
         "title": { "type": "string" },
-        "status": { "type": "string", "enum": ["Mock", "Active", "Closed"] },
-        "startedAt": { "type": "string", "format": "date-time" },
-        "endedAt": { "type": "string", "format": "date-time" },
-        "completedTasks": {
-          "type": "array",
-          "items": { "type": "string" }
-        },
-        "collectedDocuments": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" },
-              "name": { "type": "string" },
-              "securedAt": { "type": "string", "format": "date-time" },
-              "securedBy": { "type": "string" },
-              "status": { "type": "string", "enum": ["Pending", "Secured", "Not Available"] }
-            }
-          }
-        },
-        "log": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" },
-              "timestamp": { "type": "string", "format": "date-time" },
-              "description": { "type": "string" },
-              "userName": { "type": "string" },
-              "isMilestone": { "type": "boolean" }
-            }
-          }
-        }
+        "status": { "type": "string", "enum": ["Mock", "Active", "Closed"] }
       }
     },
     "Booking": {
@@ -74,9 +42,18 @@
         "id": { "type": "string" },
         "bookingNumber": { "type": "string" },
         "aircraftId": { "type": "string" },
-        "end": { "type": "string", "format": "date-time" },
         "status": { "type": "string" },
-        "landingConfirmed": { "type": "boolean", "description": "Safety flag to track if aircraft arrival is confirmed." }
+        "accountingStatus": { "type": "string", "enum": ["Unbilled", "Exported", "Paid"] },
+        "totalCost": { "type": "number" }
+      }
+    },
+    "Aircraft": {
+      "title": "Aircraft",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tailNumber": { "type": "string" },
+        "hourlyRate": { "type": "number" }
       }
     }
   },
@@ -96,21 +73,14 @@
         "path": "tenants/{tenantId}/erp-contacts/{contactId}",
         "definition": {
           "schema": { "$ref": "#/backend/entities/ERPContact" },
-          "description": "Emergency contacts for ERP."
-        }
-      },
-      {
-        "path": "tenants/{tenantId}/erp-events/{eventId}",
-        "definition": {
-          "schema": { "$ref": "#/backend/entities/ERPEvent" },
-          "description": "Real-time ERP response logs."
+          "description": "Emergency contacts."
         }
       },
       {
         "path": "tenants/{tenantId}/bookings/{bookingId}",
         "definition": {
           "schema": { "$ref": "#/backend/entities/Booking" },
-          "description": "Aircraft bookings and safety status."
+          "description": "Flight bookings."
         }
       }
     ]

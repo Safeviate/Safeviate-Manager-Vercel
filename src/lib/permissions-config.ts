@@ -1,4 +1,4 @@
-export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'manage-templates' | 'calculate-booking' | 'schedule-view' | 'schedule-manage' | 'history-view' | 'preflight-manage' | 'postflight-manage' | 'view-all' | 'approve' | 'approve-override' | 'techlog-override' | 'manage-definitions' | 'admin';
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'manage-templates' | 'calculate-booking' | 'schedule-view' | 'schedule-manage' | 'history-view' | 'preflight-manage' | 'postflight-manage' | 'view-all' | 'approve' | 'approve-override' | 'techlog-override' | 'manage-definitions' | 'admin' | 'export';
 
 export type PermissionResource = {
   id: string;
@@ -8,19 +8,18 @@ export type PermissionResource = {
 
 /**
  * Defines all the granular permissions available in the application.
- * This is the single source of truth for what actions can be performed.
  */
 export const permissionsConfig: PermissionResource[] = [
-  // --- General Sections ---
   { id: 'dashboard', name: 'Dashboard', actions: ['view'] },
   { id: 'my-dashboard', name: 'My Dashboard', actions: ['view'] },
   
-  // --- Core Features ---
   { id: 'operations', name: 'Operations', actions: ['view'] },
   { id: 'operations-alerts', name: 'Operations Alerts', actions: ['view', 'create', 'edit', 'delete'] },
   { id: 'operations-erp', name: 'Emergency Response Plan', actions: ['view', 'manage', 'admin'] },
   
   { id: 'bookings', name: 'Bookings', actions: ['view', 'schedule-view', 'schedule-manage', 'history-view', 'preflight-manage', 'postflight-manage', 'delete', 'approve', 'approve-override', 'techlog-override'] },
+
+  { id: 'accounting', name: 'Accounting', actions: ['view', 'manage', 'export'] },
 
   { id: 'safety', name: 'Safety', actions: ['view'] },
   { id: 'safety-reports', name: 'Safety Reports', actions: ['manage'] },
@@ -43,7 +42,6 @@ export const permissionsConfig: PermissionResource[] = [
 
   { id: 'users', name: 'Users', actions: ['view', 'create', 'edit', 'delete'] },
 
-  // --- Admin Section ---
   { id: 'admin', name: 'Admin', actions: ['view'] },
   { id: 'admin-roles', name: 'Admin: Roles', actions: ['manage'] },
   { id: 'admin-permissions', name: 'Admin: Permissions', actions: ['view', 'manage'] },
@@ -52,9 +50,6 @@ export const permissionsConfig: PermissionResource[] = [
   { id: 'admin-settings', name: 'Admin: General Settings', actions: ['manage'] },
   { id: 'admin-database', name: 'Admin: Database Management', actions: ['manage'] },
 
-  // --- Settings Section ---
   { id: 'settings', name: 'Settings', actions: ['manage'] },
-
-  // --- Development Section ---
   { id: 'development', name: 'Development Tools', actions: ['view'] },
 ];
