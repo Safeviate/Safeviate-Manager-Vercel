@@ -84,8 +84,8 @@ export function DatabaseForm() {
       );
 
       toast({
-        title: 'Database Action Initiated',
-        description: 'The "Safeviate" tenant document is being created or updated with menu configuration.',
+        title: 'Setup Updated',
+        description: 'Organization branding and menu configurations have been saved.',
       });
     } catch (e: any) {
       console.error(e);
@@ -101,34 +101,36 @@ export function DatabaseForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Database Setup</CardTitle>
+        <CardTitle>Branding & Menus</CardTitle>
         <CardDescription>
-          Create or update the "Safeviate" tenant document. You can also configure which features are enabled for this master tenant.
+          Manage the primary organization profile and control which functional modules are enabled for your portal.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
-            <h3 className="text-lg font-medium">Menu Visibility</h3>
+            <h3 className="text-lg font-medium font-headline">Module Access Control</h3>
+            <p className="text-sm text-muted-foreground">Select the sections of the application that should be visible to your organization members.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {menuConfig.map((menu) => {
                     const subHrefs = menu.subItems?.map(s => s.href) || [];
                     const isEnabled = enabledHrefs.has(menu.href);
                     
                     return (
-                        <div key={menu.href} className="space-y-2 p-3 border rounded-md">
+                        <div key={menu.href} className="space-y-2 p-3 border rounded-md bg-muted/5">
                             <div className="flex items-center space-x-2">
                                 <Checkbox 
                                     id={`safe-menu-${menu.href}`} 
                                     checked={isEnabled}
                                     onCheckedChange={() => toggleMenu(menu.href, subHrefs)}
                                 />
-                                <Label htmlFor={`safe-menu-${menu.href}`} className="font-bold cursor-pointer">
+                                <Label htmlFor={`safe-menu-${menu.href}`} className="font-bold cursor-pointer flex items-center gap-2">
+                                    <menu.icon className="h-4 w-4 text-primary" />
                                     {menu.label}
                                 </Label>
                             </div>
                             
                             {menu.subItems && (
-                                <div className="pl-6 space-y-1">
+                                <div className="pl-6 space-y-1 pt-1 border-l ml-2">
                                     {menu.subItems.map((sub) => (
                                         <div key={sub.href} className="flex items-center space-x-2">
                                             <Checkbox 
@@ -151,7 +153,9 @@ export function DatabaseForm() {
         
         <Separator />
         
-        <Button onClick={handleCreateTenant}>Save "Safeviate" Configuration</Button>
+        <div className="flex justify-end">
+            <Button onClick={handleCreateTenant} size="lg">Save Branding & Menus</Button>
+        </div>
       </CardContent>
     </Card>
   );

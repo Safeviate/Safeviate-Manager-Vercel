@@ -78,7 +78,6 @@ const SidebarItems = () => {
     return (
         <SidebarMenu>
             {filteredItems.map((item, index) => {
-                const isLast = index === filteredItems.length - 1;
                 const Icon = item.icon;
                 const isParentActive = pathname.startsWith(item.href);
 
@@ -141,7 +140,7 @@ const SidebarItems = () => {
                 return (
                     <React.Fragment key={item.href}>
                         <SidebarMenuItem>{content}</SidebarMenuItem>
-                        {!isLast && <SidebarSeparator />}
+                        {index < filteredItems.length - 1 && <SidebarSeparator className="my-0 opacity-50" />}
                     </React.Fragment>
                 );
             })}

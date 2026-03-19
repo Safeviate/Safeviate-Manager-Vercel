@@ -233,8 +233,8 @@ export const menuConfig: MenuItem[] = [
       },
       {
         href: '/admin/database',
-        label: 'Database',
-        description: 'Manage database seeding and setup.',
+        label: 'Branding & Menus',
+        description: 'Manage organization branding and functional module access.',
         permissionId: 'admin-database-manage',
       },
       {
@@ -295,8 +295,8 @@ export const menuConfig: MenuItem[] = [
     subItems: [
       {
         href: '/development/database',
-        label: 'Database Seeder',
-        description: 'Manage database seeding and setup.',
+        label: 'Tenant Setup',
+        description: 'Manage master tenant configuration and seeder logic.',
         permissionId: 'development-view',
       },
       {
