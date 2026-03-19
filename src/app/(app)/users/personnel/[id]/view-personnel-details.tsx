@@ -7,7 +7,7 @@ import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, MapPin, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid, Layers } from 'lucide-react';
+import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, MapPin, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid, Layers, Info } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -30,7 +30,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { usePermissions } from '@/hooks/use-permissions';
 import { menuConfig } from '@/lib/menu-config';
 import { Switch } from '@/components/ui/switch';
-import { Label as UILabel } from '@/components/ui/label';
+import { Label } from '@/components/ui/label';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -176,15 +176,27 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
     });
   }, [role, user.documents]);
 
-  const handleToggleMenuOverride = (href: string, hidden: boolean) => {
+  const handleToggleMenuOverride = (href: string, hidden: boolean, subHrefs?: string[]) => {
     if (!firestore || !tenantId || !canEdit) return;
+    
     const currentHidden = user.accessOverrides?.hiddenMenus || [];
-    const newHidden = hidden ? [...currentHidden, href] : currentHidden.filter(h => h !== href);
+    let newHidden: string[];
+
+    if (hidden) {
+      // Add parent and potentially all children to hidden list
+      const toHide = [href, ...(subHrefs || [])];
+      newHidden = Array.from(new Set([...currentHidden, ...toHide]));
+    } else {
+      // Remove from hidden list
+      newHidden = currentHidden.filter(h => h !== href);
+      // If it's a child being shown, we don't necessarily show the parent here, 
+      // but usually the logic implies showing the parent too if any child is visible.
+    }
     
     const collectionName = isPilotProfile(user) ? (user.userType === 'Student' ? 'students' : user.userType === 'Instructor' ? 'instructors' : 'private-pilots') : 'personnel';
     const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
     updateDocumentNonBlocking(userRef, { 'accessOverrides.hiddenMenus': newHidden });
-    toast({ title: hidden ? "Menu Hidden" : "Menu Shown" });
+    toast({ title: hidden ? "Access Restricted" : "Access Restored" });
   };
 
   const handleToggleTabOverride = (pageId: string, hidden: boolean) => {
@@ -381,23 +393,59 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                 <CardContent className="flex-1 p-0 overflow-hidden">
                     <ScrollArea className="h-full">
                         <div className="p-6 space-y-10">
-                            <section>
-                                <SectionHeader title="Sidebar Module Visibility" icon={LayoutGrid} />
+                            {/* SECTION 1: SIDEBAR MODULES (Hierarchical Checklist) */}
+                            <section className="space-y-6">
+                                <div className="space-y-1">
+                                    <h3 className="text-xl font-bold flex items-center gap-2">
+                                        <LayoutGrid className="h-5 w-5 text-primary" />
+                                        Module Access Control
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">Select which functional modules are enabled for this specific user's navigation.</p>
+                                </div>
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {menuConfig.map((menu) => {
                                         if (menu.label === 'Admin' || menu.label === 'Development') return null;
+                                        
+                                        const subHrefs = menu.subItems?.map(s => s.href) || [];
                                         const isHidden = user.accessOverrides?.hiddenMenus?.includes(menu.href);
+                                        const isVisible = !isHidden;
+                                        
                                         return (
-                                            <div key={menu.href} className="flex items-center justify-between p-4 border rounded-xl bg-muted/10">
-                                                <div className="flex items-center gap-3">
-                                                    <menu.icon className="h-4 w-4 text-primary" />
-                                                    <span className="text-sm font-bold">{menu.label}</span>
+                                            <div key={menu.href} className="p-4 border rounded-xl bg-muted/10 space-y-3">
+                                                <div className="flex items-center space-x-2">
+                                                    <Checkbox 
+                                                        id={`user-mod-${menu.href}`} 
+                                                        checked={isVisible}
+                                                        onCheckedChange={(val) => handleToggleMenuOverride(menu.href, !val, subHrefs)}
+                                                        disabled={!canEdit}
+                                                    />
+                                                    <Label htmlFor={`user-mod-${menu.href}`} className="font-bold flex items-center gap-2 cursor-pointer">
+                                                        <menu.icon className="h-4 w-4 text-primary" />
+                                                        {menu.label}
+                                                    </Label>
                                                 </div>
-                                                <Switch 
-                                                    checked={!isHidden} 
-                                                    onCheckedChange={(val) => handleToggleMenuOverride(menu.href, !val)}
-                                                    disabled={!canEdit}
-                                                />
+                                                {menu.subItems && (
+                                                    <div className="pl-6 space-y-2 border-l ml-2">
+                                                        {menu.subItems.map((sub) => {
+                                                            const isSubHidden = user.accessOverrides?.hiddenMenus?.includes(sub.href);
+                                                            const isSubVisible = !isSubHidden;
+                                                            return (
+                                                                <div key={sub.href} className="flex items-center space-x-2">
+                                                                    <Checkbox 
+                                                                        id={`user-submod-${sub.href}`} 
+                                                                        checked={isSubVisible}
+                                                                        onCheckedChange={(val) => handleToggleMenuOverride(sub.href, !val)}
+                                                                        disabled={!canEdit}
+                                                                    />
+                                                                    <Label htmlFor={`user-submod-${sub.href}`} className="text-xs text-muted-foreground cursor-pointer">
+                                                                        {sub.label}
+                                                                    </Label>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })}
@@ -406,15 +454,25 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
 
                             <Separator />
 
-                            <section>
-                                <SectionHeader title="Page Tab Contexts" icon={Layers} />
-                                <p className="text-xs text-muted-foreground mb-4">Enable or disable Internal/External switcher tabs for this specific user.</p>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {/* SECTION 2: PAGE TABS */}
+                            <section className="space-y-6">
+                                <div className="space-y-1">
+                                    <h3 className="text-xl font-bold flex items-center gap-2">
+                                        <Layers className="h-5 w-5 text-primary" />
+                                        Page Tab Contexts
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">Enable or disable the organization switcher tabs for this specific user on these pages.</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {PAGE_OPTIONS.map((page) => {
                                         const isHidden = user.accessOverrides?.hiddenTabs?.includes(page.id);
                                         return (
                                             <div key={page.id} className="flex items-center justify-between p-4 border rounded-xl bg-muted/10">
-                                                <span className="text-sm font-bold">{page.label}</span>
+                                                <div className="space-y-0.5">
+                                                    <Label className="text-sm font-bold">{page.label}</Label>
+                                                    <p className="text-xs text-muted-foreground italic">Show company context tabs on this page.</p>
+                                                </div>
                                                 <Switch 
                                                     checked={!isHidden} 
                                                     onCheckedChange={(val) => handleToggleTabOverride(page.id, !val)}
@@ -423,6 +481,13 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                                             </div>
                                         );
                                     })}
+                                </div>
+
+                                <div className="p-4 rounded-lg bg-blue-50 border border-blue-100 flex items-start gap-3">
+                                    <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                                    <p className="text-xs text-blue-800 leading-relaxed">
+                                        <strong>Note:</strong> User-level overrides will take precedence over the global organization settings defined in the Page Format hub.
+                                    </p>
                                 </div>
                             </section>
                         </div>
