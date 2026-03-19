@@ -17,7 +17,7 @@ export default function EmergencyResponsePage() {
   const { tenantId } = useUserProfile();
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
+    <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <div className="px-1">
         <h1 className="text-3xl font-bold tracking-tight">Emergency Response Plan</h1>
         <p className="text-muted-foreground">Standardized protocols and real-time response management for aviation emergencies.</p>
