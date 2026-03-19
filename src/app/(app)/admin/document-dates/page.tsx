@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Clock, CalendarClock, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { useDebounce } from '@/hooks/use-debounce';
@@ -235,200 +235,241 @@ export default function DocumentDatesPage() {
 
   if (isLoading) {
     return (
-      <div className="w-full max-w-2xl mx-auto space-y-6">
-        <Skeleton className="h-80 w-full" />
-        <Skeleton className="h-64 w-full" />
-        <Skeleton className="h-80 w-full" />
+      <div className="flex flex-col gap-6 h-full">
+        <Skeleton className="h-[600px] w-full" />
       </div>
     );
   }
 
   if (error) {
-    return <p className="text-destructive">Error loading settings: {error.message}</p>;
+    return <p className="text-destructive p-8">Error loading settings: {error.message}</p>;
   }
   
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Document Expiry Warnings</CardTitle>
+    <div className="flex flex-col h-full overflow-hidden gap-4">
+      <Card className="flex flex-col h-full overflow-hidden shadow-none border">
+        <CardHeader className="shrink-0 border-b bg-muted/5">
+          <div className="flex items-center gap-2">
+            <CalendarClock className="h-5 w-5 text-primary" />
+            <CardTitle>Threshold & Warning Configurations</CardTitle>
+          </div>
           <CardDescription>
-            Configure automatic warnings for documents that are approaching their expiration date.
-            Notifications will be triggered based on these periods and their assigned colors.
+            Manage automatic notifications for document expiry, student milestones, and aircraft maintenance.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-              <div className="space-y-2">
-                  <Label>Default Safe Color</Label>
-                  <div className='flex items-center gap-4 p-2 border rounded-lg'>
-                    <div className="relative h-8 w-8 rounded-full border cursor-pointer" style={{ backgroundColor: defaultColorState }}>
-                        <Input type="color" value={defaultColorState} onChange={(e) => setDefaultColorState(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0" />
-                      </div>
-                      <p className="text-sm text-muted-foreground">Color for documents not within any warning period.</p>
+
+        <CardContent className="flex-1 p-0 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="p-6 space-y-10 pb-24">
+              
+              {/* --- Section 1: Documents & Milestones --- */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                {/* Document Expiry Warnings */}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4 text-primary" />
+                    <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Document Expiry Warnings</h3>
                   </div>
-              </div>
-              <div className="space-y-2">
-                  <Label>Expired Color</Label>
-                  <div className='flex items-center gap-4 p-2 border rounded-lg'>
-                    <div className="relative h-8 w-8 rounded-full border cursor-pointer" style={{ backgroundColor: expiredColorState }}>
-                        <Input type="color" value={expiredColorState} onChange={(e) => setExpiredColorState(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0" />
-                      </div>
-                      <p className="text-sm text-muted-foreground">Color for documents that have passed their expiration date.</p>
-                  </div>
-              </div>
-          </div>
-          <Separator />
-          <div className="space-y-2">
-            <Label htmlFor="warning-period">New Warning Period</Label>
-            <div className="flex gap-2">
-              <Input id="warning-period" type="number" value={newPeriod} onChange={(e) => setNewPeriod(e.target.value)} placeholder="e.g., 30 (days)" className="w-48" onKeyDown={(e) => e.key === 'Enter' && handleAddPeriod()} />
-              <Input id="warning-color" type="color" value={newPeriodColor} onChange={(e) => setNewPeriodColor(e.target.value)} className="p-1 h-10 w-12" />
-              <Button onClick={handleAddPeriod} className="flex-grow">Add Period</Button>
-            </div>
-          </div>
-          <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">
-              Current Warning Periods (Closest to expiry takes precedence)
-            </h4>
-            <ScrollArea className="h-64 border rounded-lg bg-muted/5">
-              <div className="flex flex-col gap-2 p-4">
-                {(expirySettings?.warningPeriods || []).length > 0 ? (
-                  (expirySettings?.warningPeriods || []).map(({ period, color }) => (
-                    <div key={period} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
-                        <div className="flex items-center gap-3">
-                            <div className="relative h-6 w-6 rounded-full border cursor-pointer" style={{ backgroundColor: periodColors[period] || color }}>
-                              <Input type="color" value={periodColors[period] || color} onChange={(e) => setPeriodColors(prev => ({...prev, [period]: e.target.value}))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0" />
-                            </div>
-                            <Badge variant="secondary" className="flex items-center gap-2 text-base py-1">{period} days</Badge>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">Default Safe Color</Label>
+                      <div className='flex items-center gap-3 p-2 border rounded-lg bg-background'>
+                        <div className="relative h-6 w-6 rounded-full border cursor-pointer" style={{ backgroundColor: defaultColorState }}>
+                          <Input type="color" value={defaultColorState} onChange={(e) => setDefaultColorState(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0" />
                         </div>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-destructive/20" onClick={() => handleRemovePeriod(period)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                            <span className="sr-only">Remove {period} days</span>
-                        </Button>
+                        <span className="text-[10px] font-medium truncate">Safe status</span>
+                      </div>
                     </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground w-full text-center py-8">No warning periods configured.</p>
-                )}
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">Expired Color</Label>
+                      <div className='flex items-center gap-3 p-2 border rounded-lg bg-background'>
+                        <div className="relative h-6 w-6 rounded-full border cursor-pointer" style={{ backgroundColor: expiredColorState }}>
+                          <Input type="color" value={expiredColorState} onChange={(e) => setExpiredColorState(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0" />
+                        </div>
+                        <span className="text-[10px] font-medium truncate">Expired status</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-3">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">New Warning Period</Label>
+                    <div className="flex gap-2">
+                      <Input type="number" value={newPeriod} onChange={(e) => setNewPeriod(e.target.value)} placeholder="Days..." className="h-9" onKeyDown={(e) => e.key === 'Enter' && handleAddPeriod()} />
+                      <Input type="color" value={newPeriodColor} onChange={(e) => setNewPeriodColor(e.target.value)} className="p-1 h-9 w-12 shrink-0" />
+                      <Button onClick={handleAddPeriod} size="sm" className="h-9 px-4">Add</Button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border bg-muted/5 p-4">
+                    <h4 className="text-[10px] font-bold uppercase text-muted-foreground mb-3">Active Warning Periods</h4>
+                    <div className="space-y-2">
+                      {(expirySettings?.warningPeriods || []).length > 0 ? (
+                        (expirySettings?.warningPeriods || []).map(({ period, color }) => (
+                          <div key={period} className="flex items-center justify-between p-2 rounded-lg bg-background border shadow-sm group">
+                            <div className="flex items-center gap-3">
+                              <div className="relative h-5 w-5 rounded-full border" style={{ backgroundColor: periodColors[period] || color }}>
+                                <Input type="color" value={periodColors[period] || color} onChange={(e) => setPeriodColors(prev => ({...prev, [period]: e.target.value}))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0" />
+                              </div>
+                              <span className="text-xs font-bold">{period} days before expiry</span>
+                            </div>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemovePeriod(period)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-[10px] text-muted-foreground text-center py-4 italic">No warning periods defined.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Student Hour Milestones */}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Student Hour Milestones</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 gap-3">
+                    {milestoneState.map(({ milestone, warningHours }) => (
+                      <div key={milestone} className="flex items-center justify-between p-4 border rounded-xl bg-background shadow-sm">
+                        <div>
+                          <p className="text-sm font-bold">{milestone} Hour Goal</p>
+                          <p className="text-[10px] text-muted-foreground">Primary training milestone</p>
+                        </div>
+                        <div className="flex items-center gap-3 bg-muted/20 p-2 rounded-lg border">
+                          <Label className="text-[10px] font-bold uppercase">Warn at:</Label>
+                          <div className="flex items-center gap-1.5">
+                            <Input
+                              type="number"
+                              value={warningHours}
+                              onChange={(e) => handleMilestoneWarningChange(milestone, e.target.value)}
+                              className="w-16 h-7 text-xs font-bold text-center px-1"
+                            />
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase">hrs</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/50">
+                    <p className="text-[10px] leading-relaxed text-blue-800">
+                      <strong>Note:</strong> Warning hours determine when the milestone progress bar changes color in the student profile view to indicate a target is approaching.
+                    </p>
+                  </div>
+                </div>
               </div>
-            </ScrollArea>
-          </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Student Hour Milestones</CardTitle>
-          <CardDescription>Set the warning threshold (in hours) for student flight time milestones.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-            {milestoneState.map(({ milestone, warningHours }) => (
-                <div key={milestone} className="flex items-center justify-between p-3 border rounded-lg">
-                    <Label htmlFor={`milestone-${milestone}`} className="font-semibold text-base">{milestone} Hour Milestone</Label>
-                    <div className="flex items-center gap-2">
-                        <Label htmlFor={`milestone-${milestone}`} className="text-sm text-muted-foreground">Warn at</Label>
-                        <Input
-                            id={`milestone-${milestone}`}
-                            type="number"
-                            value={warningHours}
-                            onChange={(e) => handleMilestoneWarningChange(milestone, e.target.value)}
-                            className="w-24"
-                        />
-                         <Label className="text-sm text-muted-foreground">hours</Label>
-                    </div>
-                </div>
-            ))}
-        </CardContent>
-      </Card>
+              <Separator />
 
-      <Card>
-        <CardHeader>
-            <CardTitle>Aircraft Inspection Warnings</CardTitle>
-            <CardDescription>
-                Configure warnings for upcoming 50-hour and 100-hour inspections based on hours remaining.
-            </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-            {/* 50 Hour Section */}
-            <div className="space-y-4 rounded-lg border p-4">
-                <h4 className="font-semibold">50 Hour Inspection</h4>
-                <div className="space-y-2">
-                    <Label htmlFor="fifty-hour-warning">New Warning</Label>
-                    <div className="flex gap-2">
-                        <Input id="fifty-hour-warning" type="number" value={newFiftyHour} onChange={(e) => setNewFiftyHour(e.target.value)} placeholder="e.g., 10 (hours remaining)" className="w-48" onKeyDown={(e) => e.key === 'Enter' && handleAddInspectionWarning('50hr')} />
-                        <Input title="Background Color" id="fifty-hour-color" type="color" value={newFiftyHourColor} onChange={(e) => setNewFiftyHourColor(e.target.value)} className="p-1 h-10 w-12" />
-                        <Input title="Foreground Color" id="fifty-hour-fg-color" type="color" value={newFiftyHourFgColor} onChange={(e) => setNewFiftyHourFgColor(e.target.value)} className="p-1 h-10 w-12" />
-                        <Button onClick={() => handleAddInspectionWarning('50hr')} className="flex-grow">Add Warning</Button>
-                    </div>
+              {/* --- Section 2: Aircraft Inspection Warnings --- */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-primary" />
+                  <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Aircraft Inspection Warnings</h3>
                 </div>
-                <div>
-                    <h5 className="text-sm font-medium text-muted-foreground mb-2">
-                        Current Warnings (Highest hours takes precedence)
-                    </h5>
-                    <ScrollArea className="h-48 border rounded-lg bg-muted/5 mt-2">
-                      <div className="flex flex-col gap-2 p-4">
-                          {fiftyHourWarnings.length > 0 ? fiftyHourWarnings.map(({ hours, color, foregroundColor }) => (
-                              <div key={hours} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
-                                  <div className="flex items-center gap-3">
-                                      <Badge style={{ backgroundColor: color, color: foregroundColor }} className="border-transparent flex items-center gap-2 text-base py-1">{hours} hrs remaining</Badge>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                      <Input type="color" value={color} onChange={(e) => { const newWarnings = fiftyHourWarnings.map(w => w.hours === hours ? { ...w, color: e.target.value } : w); setDocumentNonBlocking(inspectionSettingsRef!, { fiftyHourWarnings: newWarnings }, { merge: true }); }} className="p-0 h-8 w-8" />
-                                      <Input type="color" value={foregroundColor} onChange={(e) => { const newWarnings = fiftyHourWarnings.map(w => w.hours === hours ? { ...w, foregroundColor: e.target.value } : w); setDocumentNonBlocking(inspectionSettingsRef!, { fiftyHourWarnings: newWarnings }, { merge: true }); }} className="p-0 h-8 w-8" />
-                                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-destructive/20" onClick={() => handleRemoveInspectionWarning('50hr', hours)}>
-                                          <Trash2 className="h-4 w-4 text-destructive" />
-                                          <span className="sr-only">Remove {hours} hours</span>
-                                      </Button>
-                                  </div>
-                              </div>
-                          )) : (
-                            <p className="text-sm text-muted-foreground w-full text-center py-8">No 50-hour warnings configured.</p>
-                          )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* 50 Hour Inspection */}
+                  <div className="space-y-4 p-5 border rounded-2xl bg-muted/5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-3 bg-primary/10 rounded-bl-2xl">
+                      <span className="text-[10px] font-black uppercase tracking-tighter text-primary">50h Intervals</span>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">New Warning Threshold</Label>
+                      <div className="flex gap-2">
+                        <Input value={newFiftyHour} onChange={(e) => setNewFiftyHour(e.target.value)} placeholder="Hours remaining..." className="h-9 bg-background" />
+                        <div className="flex gap-1 bg-background border rounded-md p-1 px-2">
+                          <Label className="text-[8px] uppercase font-bold pt-2">BG</Label>
+                          <Input type="color" value={newFiftyHourColor} onChange={(e) => setNewFiftyHourColor(e.target.value)} className="p-0 h-7 w-7 border-none" />
+                          <Separator orientation="vertical" className="h-4 mt-1.5" />
+                          <Label className="text-[8px] uppercase font-bold pt-2">FG</Label>
+                          <Input type="color" value={newFiftyHourFgColor} onChange={(e) => setNewFiftyHourFgColor(e.target.value)} className="p-0 h-7 w-7 border-none" />
+                        </div>
+                        <Button onClick={() => handleAddInspectionWarning('50hr')} size="sm" className="h-9 px-4">Add</Button>
                       </div>
-                    </ScrollArea>
-                </div>
-            </div>
-
-            {/* 100 Hour Section */}
-            <div className="space-y-4 rounded-lg border p-4">
-                <h4 className="font-semibold">100 Hour Inspection</h4>
-                 <div className="space-y-2">
-                    <Label htmlFor="hundred-hour-warning">New Warning</Label>
-                    <div className="flex gap-2">
-                        <Input id="hundred-hour-warning" type="number" value={newHundredHour} onChange={(e) => setNewHundredHour(e.target.value)} placeholder="e.g., 20 (hours remaining)" className="w-48" onKeyDown={(e) => e.key === 'Enter' && handleAddInspectionWarning('100hr')} />
-                        <Input title="Background Color" id="hundred-hour-color" type="color" value={newHundredHourColor} onChange={(e) => setNewHundredHourColor(e.target.value)} className="p-1 h-10 w-12" />
-                        <Input title="Foreground Color" id="hundred-hour-fg-color" type="color" value={newHundredHourFgColor} onChange={(e) => setNewHundredHourFgColor(e.target.value)} className="p-1 h-10 w-12" />
-                        <Button onClick={() => handleAddInspectionWarning('100hr')} className="flex-grow">Add Warning</Button>
                     </div>
-                </div>
-                <div>
-                    <h5 className="text-sm font-medium text-muted-foreground mb-2">
-                        Current Warnings (Highest hours takes precedence)
-                    </h5>
-                    <ScrollArea className="h-48 border rounded-lg bg-muted/5 mt-2">
-                      <div className="flex flex-col gap-2 p-4">
-                          {hundredHourWarnings.length > 0 ? hundredHourWarnings.map(({ hours, color, foregroundColor }) => (
-                               <div key={hours} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
-                                  <div className="flex items-center gap-3">
-                                      <Badge style={{ backgroundColor: color, color: foregroundColor }} className="border-transparent flex items-center gap-2 text-base py-1">{hours} hrs remaining</Badge>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                       <Input type="color" value={color} onChange={(e) => { const newWarnings = hundredHourWarnings.map(w => w.hours === hours ? { ...w, color: e.target.value } : w); setDocumentNonBlocking(inspectionSettingsRef!, { oneHundredHourWarnings: newWarnings }, { merge: true }); }} className="p-0 h-8 w-8" />
-                                       <Input type="color" value={foregroundColor} onChange={(e) => { const newWarnings = hundredHourWarnings.map(w => w.hours === hours ? { ...w, foregroundColor: e.target.value } : w); setDocumentNonBlocking(inspectionSettingsRef!, { oneHundredHourWarnings: newWarnings }, { merge: true }); }} className="p-0 h-8 w-8" />
-                                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-destructive/20" onClick={() => handleRemoveInspectionWarning('100hr', hours)}>
-                                          <Trash2 className="h-4 w-4 text-destructive" />
-                                          <span className="sr-only">Remove {hours} hours</span>
-                                      </Button>
-                                  </div>
-                              </div>
-                          )) : (
-                            <p className="text-sm text-muted-foreground w-full text-center py-8">No 100-hour warnings configured.</p>
-                          )}
+
+                    <div className="grid grid-cols-1 gap-2 mt-4">
+                      {fiftyHourWarnings.length > 0 ? fiftyHourWarnings.map(({ hours, color, foregroundColor }) => (
+                        <div key={hours} className="flex items-center justify-between p-3 rounded-xl bg-background border shadow-sm group">
+                          <Badge style={{ backgroundColor: color, color: foregroundColor }} className="border-none font-black text-[10px] px-3 py-1">
+                            {hours} HRS REMAINING
+                          </Badge>
+                          <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex gap-1.5">
+                              <Input type="color" value={color} onChange={(e) => { const newWarnings = fiftyHourWarnings.map(w => w.hours === hours ? { ...w, color: e.target.value } : w); setDocumentNonBlocking(inspectionSettingsRef!, { fiftyHourWarnings: newWarnings }, { merge: true }); }} className="p-0 h-5 w-5 rounded-full border-none shadow-none" />
+                              <Input type="color" value={foregroundColor} onChange={(e) => { const newWarnings = fiftyHourWarnings.map(w => w.hours === hours ? { ...w, foregroundColor: e.target.value } : w); setDocumentNonBlocking(inspectionSettingsRef!, { fiftyHourWarnings: newWarnings }, { merge: true }); }} className="p-0 h-5 w-5 rounded-full border-none shadow-none" />
+                            </div>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleRemoveInspectionWarning('50hr', hours)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="h-24 border-2 border-dashed rounded-xl flex items-center justify-center text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
+                          No thresholds defined
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 100 Hour Inspection */}
+                  <div className="space-y-4 p-5 border rounded-2xl bg-muted/5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-3 bg-primary/10 rounded-bl-2xl">
+                      <span className="text-[10px] font-black uppercase tracking-tighter text-primary">100h Intervals</span>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">New Warning Threshold</Label>
+                      <div className="flex gap-2">
+                        <Input value={newHundredHour} onChange={(e) => setNewHundredHour(e.target.value)} placeholder="Hours remaining..." className="h-9 bg-background" />
+                        <div className="flex gap-1 bg-background border rounded-md p-1 px-2">
+                          <Label className="text-[8px] uppercase font-bold pt-2">BG</Label>
+                          <Input type="color" value={newHundredHourColor} onChange={(e) => setNewHundredHourColor(e.target.value)} className="p-0 h-7 w-7 border-none" />
+                          <Separator orientation="vertical" className="h-4 mt-1.5" />
+                          <Label className="text-[8px] uppercase font-bold pt-2">FG</Label>
+                          <Input type="color" value={newHundredHourFgColor} onChange={(e) => setNewHundredHourFgColor(e.target.value)} className="p-0 h-7 w-7 border-none" />
+                        </div>
+                        <Button onClick={() => handleAddInspectionWarning('100hr')} size="sm" className="h-9 px-4">Add</Button>
                       </div>
-                    </ScrollArea>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2 mt-4">
+                      {hundredHourWarnings.length > 0 ? hundredHourWarnings.map(({ hours, color, foregroundColor }) => (
+                        <div key={hours} className="flex items-center justify-between p-3 rounded-xl bg-background border shadow-sm group">
+                          <Badge style={{ backgroundColor: color, color: foregroundColor }} className="border-none font-black text-[10px] px-3 py-1">
+                            {hours} HRS REMAINING
+                          </Badge>
+                          <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex gap-1.5">
+                              <Input type="color" value={color} onChange={(e) => { const newWarnings = hundredHourWarnings.map(w => w.hours === hours ? { ...w, color: e.target.value } : w); setDocumentNonBlocking(inspectionSettingsRef!, { oneHundredHourWarnings: newWarnings }, { merge: true }); }} className="p-0 h-5 w-5 rounded-full border-none shadow-none" />
+                              <Input type="color" value={foregroundColor} onChange={(e) => { const newWarnings = hundredHourWarnings.map(w => w.hours === hours ? { ...w, foregroundColor: e.target.value } : w); setDocumentNonBlocking(inspectionSettingsRef!, { oneHundredHourWarnings: newWarnings }, { merge: true }); }} className="p-0 h-5 w-5 rounded-full border-none shadow-none" />
+                            </div>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleRemoveInspectionWarning('100hr', hours)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="h-24 border-2 border-dashed rounded-xl flex items-center justify-center text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
+                          No thresholds defined
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
+              </div>
+
             </div>
+          </ScrollArea>
         </CardContent>
       </Card>
     </div>
