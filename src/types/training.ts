@@ -29,3 +29,25 @@ export interface StudentMilestoneSettings {
     id: string;
     milestones: MilestoneWarning[];
 }
+
+export interface ExamOption {
+    id: string;
+    text: string;
+}
+
+export interface ExamQuestion {
+    id: string;
+    text: string;
+    options: ExamOption[];
+    correctOptionId: string;
+}
+
+export interface ExamTemplate {
+    id: string;
+    title: string;
+    description: string;
+    subject: string;
+    passingScore: number; // percentage
+    questions: ExamQuestion[];
+    createdAt: string;
+}
