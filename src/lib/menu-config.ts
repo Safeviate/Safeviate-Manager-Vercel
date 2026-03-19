@@ -65,20 +65,6 @@ export const menuConfig: MenuItem[] = [
     ],
   },
   {
-    href: '/accounting',
-    label: 'Accounting',
-    icon: Calculator,
-    permissionId: 'accounting-view',
-    subItems: [
-      {
-        href: '/accounting',
-        label: 'Flight Billing',
-        description: 'Review and export completed flights to Sage.',
-        permissionId: 'accounting-manage',
-      },
-    ],
-  },
-  {
     href: '/operations',
     label: 'Operations',
     icon: PlaneTakeoff,
@@ -241,6 +227,12 @@ export const menuConfig: MenuItem[] = [
     icon: UserCog,
     permissionId: 'admin-view',
     subItems: [
+      {
+        href: '/admin/accounting',
+        label: 'Accounting & Billing',
+        description: 'Review and export completed flights to Sage.',
+        permissionId: 'accounting-manage',
+      },
       {
         href: '/admin/appearance',
         label: 'Appearance',
