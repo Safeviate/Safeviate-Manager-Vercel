@@ -7,7 +7,7 @@ import { doc, collection, query, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import type { QualityAudit, QualityAuditChecklistTemplate, CorrectiveActionPlan } from '@/types/quality';
@@ -17,18 +17,11 @@ import { Progress } from '@/components/ui/progress';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
+import { Badge } from '@/components/ui/badge';
 
 interface AuditDetailPageProps {
-  params: { auditId: string };
+  params: Promise<{ auditId: string }>;
 }
-
-const DetailItem = ({ label, value, children }: { label: string; value?: string | null; children?: React.ReactNode }) => (
-    <div>
-        <p className="text-sm font-medium text-muted-foreground">{label}</p>
-        {children ? <div className="text-lg font-semibold">{children}</div> : <p className="text-lg font-semibold">{value || 'N/A'}</p>}
-    </div>
-);
-
 
 export default function AuditDetailPage({ params }: AuditDetailPageProps) {
   const resolvedParams = use(params);
@@ -74,7 +67,6 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
         const canViewAll = hasPermission('quality-audits-view-all');
         const userOrgId = userProfile.organizationId;
         
-        // If external user, they MUST belong to the organization tied to this audit
         if (!canViewAll && userOrgId && audit.organizationId !== userOrgId) {
             router.push('/quality/audits');
         }
@@ -93,36 +85,19 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
     return (
       <div className="space-y-6 max-w-[1200px] mx-auto w-full">
         <Skeleton className="h-10 w-48" />
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-8 w-1/2" />
-            <Skeleton className="h-4 w-3/4 mt-2" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-48 w-full" />
-          </CardContent>
-        </Card>
+        <Skeleton className="h-[600px] w-full" />
       </div>
     );
   }
 
-  if (auditError) {
+  if (auditError || !audit || !enrichedAudit) {
     return (
       <div className="max-w-[1200px] mx-auto w-full text-center py-10">
-        <p className="text-destructive">Error loading audit: {auditError.message}</p>
-        <Button asChild variant="link">
-          <Link href="/quality/audits">Return to list</Link>
-        </Button>
-      </div>
-    );
-  }
-
-  if (!audit || !enrichedAudit) {
-    return (
-      <div className="max-w-[1200px] mx-auto w-full text-center py-10">
-        <p className="text-muted-foreground">Audit not found or template is missing.</p>
-        <Button asChild variant="link">
-          <Link href="/quality/audits">Return to list</Link>
+        <p className="text-destructive mb-4">{auditError ? `Error: ${auditError.message}` : "Audit record not found."}</p>
+        <Button asChild variant="outline">
+          <Link href="/quality/audits">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Return to list
+          </Link>
         </Button>
       </div>
     );
@@ -134,40 +109,50 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
     ? "bg-yellow-500"
     : "bg-red-500";
 
-
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-4 md:gap-6 min-h-full pb-8">
-       <Button asChild variant="outline" className="w-fit">
-          <Link href="/quality/audits">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to All Audits
-          </Link>
-        </Button>
-      <Card>
-        <CardHeader className="py-4 md:py-6">
-          <CardTitle className="text-xl md:text-2xl">Audit {audit.auditNumber}: {audit.title}</CardTitle>
-          <CardDescription>
-            Performed on {format(new Date(audit.auditDate), 'PPP')}
-          </CardDescription>
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 pb-8">
+       <div className="shrink-0 no-print px-1">
+          <Button asChild variant="ghost" size="sm" className="mb-2">
+            <Link href="/quality/audits">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to All Audits
+            </Link>
+          </Button>
+       </div>
+
+      <Card className="flex flex-col h-full overflow-hidden shadow-none border">
+        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-primary" />
+              <CardTitle>Audit {audit.auditNumber}: {audit.title}</CardTitle>
+            </div>
+            <CardDescription>
+              Performed on {format(new Date(audit.auditDate), 'PPP')} • Status: <Badge variant="outline" className="text-[10px] h-5 py-0 uppercase font-black">{audit.status}</Badge>
+            </CardDescription>
+          </div>
+
+          {typeof audit.complianceScore === 'number' && (
+            <div className="text-left md:text-right min-w-[200px]">
+              <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest mb-1">Compliance Score</p>
+              <div className="flex items-center gap-3 justify-start md:justify-end">
+                <span className="text-3xl font-black text-primary">{audit.complianceScore}%</span>
+                <Progress value={audit.complianceScore} className="w-24 h-2" indicatorClassName={scoreColor} />
+              </div>
+            </div>
+          )}
         </CardHeader>
-        {typeof audit.complianceScore === 'number' && (
-            <CardContent className="pb-4">
-                <DetailItem label="Compliance Score">
-                    <div className="flex items-center gap-4 mt-1">
-                        <Progress value={audit.complianceScore} className="w-1/3 h-2" indicatorClassName={scoreColor} />
-                        <span className="text-xl font-bold">{audit.complianceScore}%</span>
-                    </div>
-                </DetailItem>
-            </CardContent>
-        )}
+
+        <CardContent className="flex-1 p-0 overflow-hidden bg-background">
+          <AuditChecklist 
+              audit={enrichedAudit} 
+              tenantId={tenantId!}
+              findingLevels={findingLevelsSettings?.levels || []}
+              caps={caps || []}
+              personnel={personnel || []}
+          />
+        </CardContent>
       </Card>
-      <AuditChecklist 
-          audit={enrichedAudit} 
-          tenantId={tenantId!}
-          findingLevels={findingLevelsSettings?.levels || []}
-          caps={caps || []}
-          personnel={personnel || []}
-      />
     </div>
   );
 }

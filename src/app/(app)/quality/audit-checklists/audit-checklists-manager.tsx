@@ -7,6 +7,9 @@ import { NewChecklistDialog } from './new-checklist-dialog';
 import { ChecklistTemplateCard } from './checklist-template-card';
 import { Accordion } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { CheckSquare } from 'lucide-react';
 import type { QualityAuditChecklistTemplate } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
 import type { Personnel } from '../../users/personnel/page';
@@ -51,40 +54,52 @@ export default function AuditChecklistsManager() {
     return (
       <div className="max-w-[1200px] mx-auto w-full space-y-4 px-1">
         <Skeleton className="h-10 w-48 self-end" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-[500px] w-full" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full space-y-6">
-      <div className="flex justify-end px-1">
-        <NewChecklistDialog
-          tenantId={tenantId}
-          departments={departments || []}
-        />
-      </div>
-      <div className="px-1">
-        {Object.keys(groupedTemplates).length > 0 ? (
-            <Accordion type="multiple" defaultValue={Object.keys(groupedTemplates)} className="w-full space-y-4">
-            {Object.entries(groupedTemplates).map(([deptName, templates]) => (
-                <ChecklistTemplateCard 
-                    key={deptName}
-                    departmentName={deptName}
-                    templates={templates}
-                    tenantId={tenantId}
-                    departments={departments || []}
-                    personnel={personnel || []}
-                />
-            ))}
-            </Accordion>
-        ) : (
-            <div className="border rounded-lg p-8 text-center">
-                <p className="text-muted-foreground">No checklist templates found. Create one to get started.</p>
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
+      <Card className="flex flex-col h-full overflow-hidden shadow-none border">
+        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <CheckSquare className="h-5 w-5 text-primary" />
+              <CardTitle>Audit Checklist Templates</CardTitle>
             </div>
-        )}
-      </div>
+            <CardDescription>Manage master checklists and start new audits across departments.</CardDescription>
+          </div>
+          <NewChecklistDialog
+            tenantId={tenantId}
+            departments={departments || []}
+          />
+        </CardHeader>
+        <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5">
+          <ScrollArea className="h-full">
+            <div className="p-6 pb-20">
+              {Object.keys(groupedTemplates).length > 0 ? (
+                  <Accordion type="multiple" defaultValue={Object.keys(groupedTemplates)} className="w-full space-y-4">
+                  {Object.entries(groupedTemplates).map(([deptName, templates]) => (
+                      <ChecklistTemplateCard 
+                          key={deptName}
+                          departmentName={deptName}
+                          templates={templates}
+                          tenantId={tenantId}
+                          departments={departments || []}
+                          personnel={personnel || []}
+                      />
+                  ))}
+                  </Accordion>
+              ) : (
+                  <div className="border-2 border-dashed rounded-xl p-12 text-center bg-background">
+                      <p className="text-muted-foreground font-medium">No checklist templates found. Create one to get started.</p>
+                  </div>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
     </div>
   );
 }

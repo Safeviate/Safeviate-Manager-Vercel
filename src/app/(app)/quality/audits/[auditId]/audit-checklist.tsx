@@ -12,9 +12,9 @@ import { Input } from '@/components/ui/input';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc, writeBatch, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import type { QualityAudit, QualityAuditChecklistTemplate, QualityFinding, AuditChecklistItem, CorrectiveActionPlan } from '@/types/quality';
+import type { QualityAudit, QualityAuditChecklistTemplate, AuditChecklistItem, CorrectiveActionPlan } from '@/types/quality';
 import { DocumentUploader } from '../../../users/personnel/[id]/document-uploader';
-import { FileUp, Camera, Trash2, ZoomIn, Edit } from 'lucide-react';
+import { FileUp, Camera, Trash2, ZoomIn, Edit, Save, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useState } from 'react';
@@ -102,13 +102,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
         },
     });
 
-    const { fields } = useFieldArray({
-        control: form.control,
-        name: 'findings',
-        keyName: 'formId'
-    });
-
-     const handleOpenCapDialog = (findingId: string, findingDescription: string) => {
+    const handleOpenCapDialog = (findingId: string, findingDescription: string) => {
         const capForFinding = caps.find(c => c.findingId === findingId);
         if (capForFinding) {
             setSelectedCap({
@@ -139,7 +133,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
         });
 
         updateDocumentNonBlocking(auditRef, { findings: filledFindings });
-        toast({ title: "Findings Saved", description: "Your audit findings have been saved." });
+        toast({ title: "Findings Saved", description: "Your audit progress has been recorded." });
     };
 
     const handleFinalizeAudit = async () => {
@@ -159,7 +153,6 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
         try {
             const batch = writeBatch(firestore);
 
-            // 1. Update the audit document
             const auditUpdateData = {
                 findings: values.findings,
                 status: 'Finalized' as const,
@@ -167,7 +160,6 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
             };
             batch.update(auditRef, auditUpdateData);
 
-            // 2. Create CAPs for non-compliant findings
             const capsCollectionRef = collection(firestore, `tenants/${tenantId}/corrective-action-plans`);
             nonCompliantFindings.forEach(finding => {
                 const newCapRef = doc(capsCollectionRef);
@@ -185,14 +177,14 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
 
             toast({
                 title: "Audit Finalized",
-                description: `Score: ${complianceScore}%. ${nonCompliantFindings.length} corrective action plans created.`
+                description: `Score: ${complianceScore}%. ${nonCompliantFindings.length} CAPs created.`
             });
 
         } catch(error: any) {
              toast({
                 variant: "destructive",
                 title: "Finalization Failed",
-                description: "An error occurred while finalizing the audit and creating CAPs."
+                description: error.message
             });
         }
     };
@@ -215,10 +207,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
         if (itemIndex === -1) return null;
 
         const findingType = form.watch(`findings.${itemIndex}.finding`);
-        const { fields: evidenceFields, remove: removeEvidence } = useFieldArray({
-            control: form.control,
-            name: `findings.${itemIndex}.evidence`
-        });
+        const evidence = form.watch(`findings.${itemIndex}.evidence`) || [];
         
         const selectedLevelName = form.watch(`findings.${itemIndex}.level`);
         const selectedLevel = findingLevels.find(l => l.name === selectedLevelName);
@@ -229,12 +218,13 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
         const openActionsCount = cap?.actions?.filter(a => a.status === 'Open' || a.status === 'In Progress').length || 0;
 
         return (
-            <Card key={item.id} className="mb-4">
-                <CardHeader className="py-2 px-4">
-                    <CardTitle className="text-sm">{item.text}</CardTitle>
+            <Card key={item.id} className="mb-4 shadow-sm border-muted transition-colors hover:border-primary/20">
+                <CardHeader className="py-3 px-4 flex flex-row items-start justify-between gap-4">
+                    <CardTitle className="text-sm font-medium leading-relaxed">{item.text}</CardTitle>
+                    {item.regulationReference && <Badge variant="outline" className="text-[9px] h-5 py-0 shrink-0 font-mono">{item.regulationReference}</Badge>}
                 </CardHeader>
-                <CardContent className="space-y-3 px-4 pb-3">
-                     <div className='flex flex-wrap justify-between items-center gap-2'>
+                <CardContent className="space-y-4 px-4 pb-4">
+                     <div className='flex flex-wrap justify-between items-center gap-4'>
                         <FormField
                             control={form.control}
                             name={`findings.${itemIndex}.finding`}
@@ -247,18 +237,17 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                                             form.setValue(`findings.${itemIndex}.level`, '');
                                         }}
                                         defaultValue={field.value}
-                                        className="flex flex-wrap gap-3"
+                                        className="flex flex-wrap gap-4"
                                         disabled={isReadOnly}
                                         >
                                             {(['Compliant', 'Non Compliant', 'Not Applicable'] as const).map(value => (
-                                                <FormItem key={value} className="flex items-center space-x-1.5 space-y-0">
-                                                    <FormControl><RadioGroupItem value={value} className="h-3.5 w-3.5" /></FormControl>
-                                                    <FormLabel className="font-normal text-xs">{value}</FormLabel>
+                                                <FormItem key={value} className="flex items-center space-x-2 space-y-0">
+                                                    <FormControl><RadioGroupItem value={value} /></FormControl>
+                                                    <FormLabel className="font-normal text-xs cursor-pointer">{value}</FormLabel>
                                                 </FormItem>
                                             ))}
                                         </RadioGroup>
                                     </FormControl>
-                                    <FormMessage />
                                 </FormItem>
                             )}
                         />
@@ -266,40 +255,38 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                             <div className='flex items-center gap-2'>
                                 {cap ? (
                                     <Badge variant={openActionsCount > 0 ? 'destructive' : 'default'} className="text-[9px] h-5">
-                                        {openActionsCount} Open CAP
+                                        {openActionsCount} Open Actions
                                     </Badge>
                                 ) : (
                                     <Badge variant="outline" className="text-[9px] h-5">CAP Pending</Badge>
                                 )}
-                                 <Button variant="secondary" size="sm" onClick={() => handleOpenCapDialog(item.id, item.text)} className="h-6 text-[9px] px-2">
-                                    <Edit className="mr-1 h-2.5 w-2.5" />
-                                    CAP
+                                 <Button variant="secondary" size="sm" onClick={() => handleOpenCapDialog(item.id, item.text)} className="h-7 text-[10px] px-3 gap-1.5">
+                                    <Edit className="h-3 w-3" />
+                                    Manage CAP
                                 </Button>
                             </div>
                         )}
                      </div>
                     
-                    <Separator />
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                         <FormField control={form.control} name={`findings.${itemIndex}.comment`} render={({ field }) => (<FormItem className="space-y-1"><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Comment</FormLabel><FormControl><Textarea placeholder="..." {...field} disabled={isReadOnly} className="min-h-[40px] text-xs py-1" /></FormControl></FormItem>)} />
-                         <FormField control={form.control} name={`findings.${itemIndex}.suggestedImprovements`} render={({ field }) => (<FormItem className="space-y-1"><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Improvements</FormLabel><FormControl><Textarea placeholder="..." {...field} disabled={isReadOnly} className="min-h-[40px] text-xs py-1" /></FormControl></FormItem>)} />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
+                         <FormField control={form.control} name={`findings.${itemIndex}.comment`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Notes / Observations</FormLabel><FormControl><Textarea placeholder="Details about current compliance status..." {...field} disabled={isReadOnly} className="min-h-[60px] text-xs" /></FormControl></FormItem>)} />
+                         <FormField control={form.control} name={`findings.${itemIndex}.suggestedImprovements`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Suggested Improvements</FormLabel><FormControl><Textarea placeholder="Recommendations for performance enhancement..." {...field} disabled={isReadOnly} className="min-h-[60px] text-xs" /></FormControl></FormItem>)} />
                     </div>
 
                     {(findingType === 'Compliant' || findingType === 'Non Compliant') && (
-                        <div className="pt-2 border-t space-y-3">
-                            <div className="grid grid-cols-1 md:grid-cols-[1fr_200px] gap-4 items-start">
+                        <div className="pt-2 border-t space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-[1fr_220px] gap-6 items-start">
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center">
-                                        <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Evidence</FormLabel>
+                                        <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Supporting Evidence</FormLabel>
                                         {!isReadOnly && (
                                             <div className="flex gap-2">
                                                 <DocumentUploader
                                                     restrictedMode="file"
                                                     onDocumentUploaded={(docDetails) => handleEvidenceUploaded(item.id, docDetails)}
                                                     trigger={(openDialog) => (
-                                                        <Button type="button" variant="outline" size="sm" className="h-6 text-[9px]" onClick={() => openDialog('file')}>
-                                                            <FileUp className="mr-1 h-3 w-3" /> Add Document
+                                                        <Button type="button" variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => openDialog('file')}>
+                                                            <FileUp className="mr-1.5 h-3.5 w-3.5" /> File
                                                         </Button>
                                                     )}
                                                 />
@@ -307,8 +294,8 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                                                     restrictedMode="camera"
                                                     onDocumentUploaded={(docDetails) => handleEvidenceUploaded(item.id, docDetails)}
                                                     trigger={(openDialog) => (
-                                                        <Button type="button" variant="outline" size="sm" className="h-6 text-[9px]" onClick={() => openDialog('camera')}>
-                                                            <Camera className="mr-1 h-3 w-3" /> Add Photo
+                                                        <Button type="button" variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => openDialog('camera')}>
+                                                            <Camera className="mr-1.5 h-3.5 w-3.5" /> Photo
                                                         </Button>
                                                     )}
                                                 />
@@ -316,21 +303,35 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                                         )}
                                     </div>
                                     <div className="flex flex-wrap gap-2 pt-1">
-                                        {evidenceFields.map((evidence, evidenceIndex) => (
-                                            <div key={evidence.id} className="flex items-center gap-2 p-1.5 border rounded bg-background/50">
-                                                <div className="relative group flex-shrink-0">
-                                                    <Image src={evidence.url} alt="Evidence" width={32} height={32} className="rounded aspect-square object-cover" />
-                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded" onClick={() => handleViewImage(evidence.url)}>
-                                                        <ZoomIn className="h-3 w-3 text-white" />
+                                        {evidence.map((ev, evidenceIndex) => (
+                                            <div key={evidenceIndex} className="flex items-center gap-3 p-2 border rounded-lg bg-muted/20 group">
+                                                <div className="relative h-10 w-10 flex-shrink-0">
+                                                    <Image src={ev.url} alt="Evidence" fill className="rounded object-cover" />
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded" onClick={() => handleViewImage(ev.url)}>
+                                                        <ZoomIn className="h-4 w-4 text-white" />
                                                     </div>
                                                 </div>
-                                                <div className="flex-1 min-w-[80px]">
-                                                    <FormField control={form.control} name={`findings.${itemIndex}.evidence.${evidenceIndex}.description`} render={({ field }) => ( <FormItem className="space-y-0"><FormControl><Input placeholder="Desc..." {...field} disabled={isReadOnly} className="h-6 text-[10px] border-none shadow-none p-0 focus-visible:ring-0" /></FormControl></FormItem> )}/>
+                                                <div className="flex-1 min-w-[100px] text-[10px] font-medium truncate">
+                                                    {ev.description}
                                                 </div>
-                                                {!isReadOnly && <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeEvidence(evidenceIndex)}><Trash2 className="h-3 w-3" /></Button>}
+                                                {!isReadOnly && (
+                                                    <Button 
+                                                        type="button" 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100" 
+                                                        onClick={() => {
+                                                            const newEvidence = [...evidence];
+                                                            newEvidence.splice(evidenceIndex, 1);
+                                                            form.setValue(`findings.${itemIndex}.evidence`, newEvidence);
+                                                        }}
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                )}
                                             </div>
                                         ))}
-                                        {evidenceFields.length === 0 && <p className="text-[10px] text-muted-foreground italic">No evidence attached.</p>}
+                                        {evidence.length === 0 && <p className="text-[10px] text-muted-foreground italic py-2">No evidence attached.</p>}
                                     </div>
                                 </div>
 
@@ -339,7 +340,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                                     name={`findings.${itemIndex}.level`}
                                     render={({ field }) => (
                                         <FormItem className="space-y-1">
-                                            <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Finding Level</FormLabel>
+                                            <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Finding Classification</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
                                                 <FormControl>
                                                     <SelectTrigger
@@ -347,9 +348,9 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                                                             backgroundColor: field.value ? selectedLevel?.color : undefined,
                                                             color: field.value ? selectedLevel?.foregroundColor : undefined,
                                                         }}
-                                                        className={cn("h-7 text-[10px]", !field.value && 'text-muted-foreground')}
+                                                        className={cn("h-8 text-xs font-bold", !field.value && 'text-muted-foreground')}
                                                     >
-                                                        <SelectValue placeholder="Select level" />
+                                                        <SelectValue placeholder="Select level..." />
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
@@ -363,7 +364,6 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                                                     ))}
                                                 </SelectContent>
                                             </Select>
-                                            <FormMessage />
                                         </FormItem>
                                     )}
                                 />
@@ -376,58 +376,68 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
     }
 
     return (
-        <Card className="flex flex-col h-[calc(100vh-300px)] overflow-hidden shadow-none border">
-            <CardHeader className="border-b bg-muted/5 shrink-0">
-                <CardTitle>Audit Checklist Items</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
-                        <ScrollArea className="flex-1 p-6">
-                            <div className="space-y-8">
-                                {audit.template.sections.map((section) => (
-                                    <div key={section.id}>
-                                        <h2 className="text-base font-bold mb-4 bg-muted/50 px-3 py-1 rounded border-l-4 border-primary sticky top-0 z-10">{section.title}</h2>
-                                        <div className="space-y-2">
-                                            {section.items.map(item => renderChecklistItem(item))}
-                                        </div>
+        <div className="h-full flex flex-col overflow-hidden">
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
+                    <ScrollArea className="flex-1">
+                        <div className="p-6 space-y-10">
+                            {audit.template.sections.map((section) => (
+                                <div key={section.id}>
+                                    <h2 className="text-sm font-black uppercase tracking-widest text-primary border-b border-primary/20 pb-2 mb-6 sticky top-0 z-10 bg-background/95 backdrop-blur py-2">
+                                        {section.title}
+                                    </h2>
+                                    <div className="space-y-4">
+                                        {section.items.map(item => renderChecklistItem(item))}
                                     </div>
-                                ))}
+                                </div>
+                            ))}
+                        </div>
+                    </ScrollArea>
+                    
+                    {!isReadOnly && (
+                        <div className="shrink-0 flex items-center justify-between p-4 border-t bg-muted/10 no-print">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <ShieldCheck className="h-4 w-4" />
+                                <span>Draft progress is periodically auto-saved to local cache.</span>
                             </div>
-                        </ScrollArea>
-                        {!isReadOnly && (
-                            <div className="shrink-0 flex justify-end py-3 bg-muted/10 px-6 gap-2 border-t">
-                                <Button type="submit" variant="outline" size="sm" className="h-8 px-4 text-xs">Save Progress</Button>
+                            <div className="flex gap-2">
+                                <Button type="submit" variant="outline" size="sm" className="h-9 px-6 gap-2">
+                                    <Save className="h-4 w-4" /> Save Progress
+                                </Button>
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <Button variant="default" size="sm" className="h-8 px-4 text-xs">Finalize Audit</Button>
+                                        <Button variant="default" size="sm" className="h-9 px-6 shadow-md">Finalize Audit</Button>
                                     </AlertDialogTrigger>
                                     <AlertDialogContent>
                                         <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you sure you want to finalize?</AlertDialogTitle>
+                                            <AlertDialogTitle>Finalize Record?</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                This will calculate the compliance score and lock the audit from further edits.
+                                                This will lock all checklist responses, calculate the final compliance score, and generate corrective action plans for any non-compliant items.
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleFinalizeAudit}>
-                                                Finalize Audit
-                                            </AlertDialogAction>
+                                            <AlertDialogAction onClick={handleFinalizeAudit}>Finalize Audit</AlertDialogAction>
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
                             </div>
-                        )}
-                    </form>
-                </Form>
-            </CardContent>
+                        </div>
+                    )}
+                </form>
+            </Form>
+
             <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh]">
-                    <DialogHeader><DialogTitle>Evidence Viewer</DialogTitle></DialogHeader>
-                    {viewingImageUrl && <div className="relative h-[80vh]"><Image src={viewingImageUrl} alt="Evidence" fill className="object-contain"/></div>}
+                <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+                    <DialogHeader className="shrink-0 border-b pb-4"><DialogTitle>Evidence Detail</DialogTitle></DialogHeader>
+                    {viewingImageUrl && (
+                        <div className="flex-1 relative min-h-[60vh] mt-4">
+                            <Image src={viewingImageUrl} alt="Evidence" fill className="object-contain"/>
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
+
             {selectedCap && (
                 <ManageCapDialog
                     isOpen={isCapDialogOpen}
@@ -437,6 +447,6 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                     personnel={personnel}
                 />
             )}
-        </Card>
+        </div>
     );
 }
