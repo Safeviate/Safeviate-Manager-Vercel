@@ -15,6 +15,7 @@ export const permissionsConfig: PermissionResource[] = [
   
   { id: 'operations', name: 'Operations', actions: ['view'] },
   { id: 'operations-alerts', name: 'Operations Alerts', actions: ['view', 'create', 'edit', 'delete'] },
+  { id: 'operations-documents', name: 'Company Documents', actions: ['view', 'manage'] },
   { id: 'operations-erp', name: 'Emergency Response Plan', actions: ['view', 'manage', 'admin'] },
   
   { id: 'bookings', name: 'Bookings', actions: ['view', 'schedule-view', 'schedule-manage', 'history-view', 'preflight-manage', 'postflight-manage', 'delete', 'approve', 'approve-override', 'techlog-override'] },

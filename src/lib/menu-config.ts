@@ -14,6 +14,7 @@ import {
   ShieldAlert,
   Calculator,
   FileSpreadsheet,
+  FileText,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -75,6 +76,12 @@ export const menuConfig: MenuItem[] = [
         label: 'Alerts',
         description: 'View and manage critical system alerts.',
         permissionId: 'operations-alerts-view',
+      },
+      {
+        href: '/operations/company-documents',
+        label: 'Company Documents',
+        description: 'Access controlled manuals and reference materials.',
+        permissionId: 'operations-documents-view',
       },
       {
         href: '/operations/emergency-response',
