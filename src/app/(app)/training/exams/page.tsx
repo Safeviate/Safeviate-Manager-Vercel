@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { FileEdit, Search, PlusCircle, Pencil, Trash2, GraduationCap, ClipboardCheck } from 'lucide-react';
+import { FileEdit, Search, PlusCircle, Pencil, Trash2, GraduationCap, ClipboardCheck, PlayCircle, History, CheckCircle2, XCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,8 +14,11 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ExamForm, type ExamFormValues } from './exam-form';
 import { useToast } from '@/hooks/use-toast';
-import type { ExamTemplate } from '@/types/training';
+import type { ExamTemplate, ExamResult } from '@/types/training';
 import { format } from 'date-fns';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TakeExamDialog } from './take-exam-dialog';
+import type { Personnel, PilotProfile } from '../../users/personnel/page';
 
 export default function ExamsPage() {
   const firestore = useFirestore();
@@ -27,6 +30,9 @@ export default function ExamsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingExam, setEditingExam] = useState<ExamTemplate | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Take Exam State
+  const [takingExam, setTakingExam] = useState<ExamTemplate | null>(null);
 
   const canManage = hasPermission('training-exams-manage');
 
@@ -35,7 +41,29 @@ export default function ExamsPage() {
     [firestore, tenantId]
   );
 
-  const { data: templates, isLoading } = useCollection<ExamTemplate>(templatesQuery);
+  const resultsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/student-exam-results`), orderBy('date', 'desc')) : null),
+    [firestore, tenantId]
+  );
+
+  const personnelQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
+    [firestore, tenantId]
+  );
+  const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
+
+  const { data: templates, isLoading: isLoadingTemplates } = useCollection<ExamTemplate>(templatesQuery);
+  const { data: results, isLoading: isLoadingResults } = useCollection<ExamResult>(resultsQuery);
+  const { data: personnel } = useCollection<Personnel>(personnelQuery);
+  const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
+  const { data: students } = useCollection<PilotProfile>(studentsQuery);
+
+  const allPeople = useMemo(() => [
+    ...(personnel || []),
+    ...(instructors || []),
+    ...(students || [])
+  ], [personnel, instructors, students]);
 
   const filteredTemplates = useMemo(() => {
     if (!templates) return [];
@@ -83,12 +111,14 @@ export default function ExamsPage() {
     }
   };
 
+  const isLoading = isLoadingTemplates || isLoadingResults;
+
   return (
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <div className="px-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Examinations</h1>
-          <p className="text-muted-foreground">Manage multiple-choice exam templates and track subject-specific requirements.</p>
+          <p className="text-muted-foreground">Manage multiple-choice exam templates and track student results.</p>
         </div>
         {canManage && (
           <Button onClick={() => { setEditingExam(null); setIsFormOpen(true); }} className="gap-2 shadow-md">
@@ -97,85 +127,160 @@ export default function ExamsPage() {
         )}
       </div>
 
-      <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search by title or subject..." 
-              className="pl-9 bg-background" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <Badge variant="outline" className="font-mono text-[10px]">
-            {filteredTemplates.length} TEMPLATES DEFINED
-          </Badge>
-        </CardHeader>
-        <CardContent className="flex-1 p-0 overflow-hidden bg-background">
-          <ScrollArea className="h-full">
-            {isLoading ? (
-              <div className="p-8 space-y-4">
-                {[1, 2, 3].map(i => <div key={i} className="h-12 w-full bg-muted animate-pulse rounded-md" />)}
+      <Tabs defaultValue="templates" className="flex-1 flex flex-col overflow-hidden">
+        <div className="px-1 shrink-0">
+          <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
+            <TabsTrigger value="templates" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2">
+              <GraduationCap className="h-4 w-4" /> Exam Templates ({templates?.length || 0})
+            </TabsTrigger>
+            <TabsTrigger value="history" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2">
+              <History className="h-4 w-4" /> Result History ({results?.length || 0})
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="templates" className="flex-1 min-h-0">
+          <Card className="h-full flex flex-col overflow-hidden shadow-none border">
+            <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="relative w-full sm:w-96">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search by title or subject..." 
+                  className="pl-9 bg-background" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
-            ) : filteredTemplates.length > 0 ? (
-              <Table>
-                <TableHeader className="bg-muted/30 sticky top-0 z-10">
-                  <TableRow>
-                    <TableHead>Exam Title</TableHead>
-                    <TableHead>Subject</TableHead>
-                    <TableHead className="text-center">Questions</TableHead>
-                    <TableHead className="text-center">Pass Mark</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTemplates.map((template) => (
-                    <TableRow key={template.id} className="group">
-                      <TableCell className="font-bold">{template.title}</TableCell>
-                      <TableCell>{template.subject}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="secondary" className="font-mono">{template.questions.length}</Badge>
-                      </TableCell>
-                      <TableCell className="text-center font-bold text-primary">{template.passingScore}%</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          {canManage && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => { setEditingExam(template); setIsFormOpen(true); }}
+              <Badge variant="outline" className="font-mono text-[10px]">
+                {filteredTemplates.length} TEMPLATES DEFINED
+              </Badge>
+            </CardHeader>
+            <CardContent className="flex-1 p-0 overflow-hidden bg-background">
+              <ScrollArea className="h-full">
+                {isLoadingTemplates ? (
+                  <div className="p-8 space-y-4">
+                    {[1, 2, 3].map(i => <div key={i} className="h-12 w-full bg-muted animate-pulse rounded-md" />)}
+                  </div>
+                ) : filteredTemplates.length > 0 ? (
+                  <Table>
+                    <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                      <TableRow>
+                        <TableHead>Exam Title</TableHead>
+                        <TableHead>Subject</TableHead>
+                        <TableHead className="text-center">Questions</TableHead>
+                        <TableHead className="text-center">Pass Mark</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredTemplates.map((template) => (
+                        <TableRow key={template.id} className="group">
+                          <TableCell className="font-bold">{template.title}</TableCell>
+                          <TableCell>{template.subject}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="secondary" className="font-mono">{template.questions.length}</Badge>
+                          </TableCell>
+                          <TableCell className="text-center font-bold text-primary">{template.passingScore}%</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-8 gap-2 bg-primary/5 hover:bg-primary/10 border-primary/20"
+                                onClick={() => setTakingExam(template)}
                               >
-                                <Pencil className="h-4 w-4" />
+                                <PlayCircle className="h-4 w-4" /> Take Exam
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => handleDelete(template.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
+                              {canManage && (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => { setEditingExam(template); setIsFormOpen(true); }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => handleDelete(template.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-24 opacity-40">
+                    <ClipboardCheck className="h-16 w-16 mx-auto mb-4" />
+                    <p className="text-lg font-medium">No exam templates found.</p>
+                    <p className="text-sm">Create templates to begin conducting student assessments.</p>
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="history" className="flex-1 min-h-0">
+          <Card className="h-full flex flex-col overflow-hidden shadow-none border">
+            <CardHeader className="shrink-0 border-b bg-muted/5">
+                <CardTitle>Official Records</CardTitle>
+                <CardDescription>Verified results for examinations taken across the organization.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1 p-0 overflow-hidden">
+                <ScrollArea className="h-full">
+                    {isLoadingResults ? (
+                        <div className="p-8 space-y-4">
+                            {[1, 2, 3].map(i => <div key={i} className="h-12 w-full bg-muted animate-pulse rounded-md" />)}
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-24 opacity-40">
-                <ClipboardCheck className="h-16 w-16 mx-auto mb-4" />
-                <p className="text-lg font-medium">No exam templates found.</p>
-                <p className="text-sm">Create templates to begin conducting student assessments.</p>
-              </div>
-            )}
-          </ScrollArea>
-        </CardContent>
-      </Card>
+                    ) : results && results.length > 0 ? (
+                        <Table>
+                            <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                                <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Student</TableHead>
+                                    <TableHead>Exam</TableHead>
+                                    <TableHead className="text-center">Score</TableHead>
+                                    <TableHead className="text-center">Status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {results.map(res => (
+                                    <TableRow key={res.id}>
+                                        <TableCell className="text-xs font-mono">{format(new Date(res.date), 'dd MMM yy HH:mm')}</TableCell>
+                                        <TableCell className="font-semibold">{res.studentName}</TableCell>
+                                        <TableCell className="text-sm">{res.templateTitle}</TableCell>
+                                        <TableCell className="text-center font-bold">{res.score}%</TableCell>
+                                        <TableCell className="text-center">
+                                            <Badge variant={res.passed ? "default" : "destructive"} className="h-5 text-[10px] gap-1">
+                                                {res.passed ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                                                {res.passed ? 'PASSED' : 'FAILED'}
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    ) : (
+                        <div className="text-center py-24 opacity-40">
+                            <History className="h-16 w-16 mx-auto mb-4" />
+                            <p className="text-lg font-medium">No records found.</p>
+                            <p className="text-sm">Completed exams (non-mock) will appear here.</p>
+                        </div>
+                    )}
+                </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={isFormOpen} onOpenChange={(open) => { if (!open) { setIsFormOpen(false); setEditingExam(null); } }}>
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
@@ -193,6 +298,16 @@ export default function ExamsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {takingExam && (
+          <TakeExamDialog
+            template={takingExam}
+            isOpen={!!takingExam}
+            onOpenChange={(open) => !open && setTakingExam(null)}
+            personnel={allPeople}
+            tenantId={tenantId}
+          />
+      )}
     </div>
   );
 }

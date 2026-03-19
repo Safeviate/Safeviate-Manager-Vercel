@@ -51,3 +51,16 @@ export interface ExamTemplate {
     questions: ExamQuestion[];
     createdAt: string;
 }
+
+export interface ExamResult {
+    id: string;
+    templateId: string;
+    templateTitle: string;
+    studentId: string;
+    studentName: string;
+    date: string; // ISO String
+    score: number;
+    passingScore: number;
+    passed: boolean;
+    isMock: boolean;
+}
