@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { collection, query, orderBy, doc, arrayUnion } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -44,6 +44,16 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
   const [isMilestone, setIsMilestone] = useState(false);
   const [closingSummary, setClosingSummary] = useState('');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize logic for the diary entry textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [newLogEntry]);
 
   // --- Data Fetching ---
   const triggersQuery = useMemoFirebase(
@@ -416,10 +426,11 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
               <CardFooter className="border-t p-4 bg-muted/10 gap-3">
                 <div className="flex-1 space-y-3">
                   <Textarea 
+                    ref={textareaRef}
                     placeholder="Manual diary entry..." 
                     value={newLogEntry}
                     onChange={(e) => setNewLogEntry(e.target.value)}
-                    className="min-h-[80px] bg-background"
+                    className="min-h-[40px] h-auto bg-background resize-none overflow-hidden py-2"
                   />
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
