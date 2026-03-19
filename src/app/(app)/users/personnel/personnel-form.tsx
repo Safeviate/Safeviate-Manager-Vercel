@@ -61,6 +61,7 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
 
   // Form state
   const [userType, setUserType] = useState<UserType | ''>('');
+  const [userNumber, setUserNumber] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -104,6 +105,7 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
         let profileData: Partial<UserProfile> = {
             id: authUser.uid,
             userType,
+            userNumber: userNumber.trim() || undefined,
             firstName,
             lastName,
             email,
@@ -140,6 +142,7 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
 
   const resetForm = () => {
     setUserType('');
+    setUserNumber('');
     setFirstName('');
     setLastName('');
     setEmail('');
@@ -168,11 +171,7 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
         </DialogHeader>
         <div className="flex flex-col gap-6 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label htmlFor="firstName">First Name</Label><Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
-                <div className="space-y-2"><Label htmlFor="lastName">Last Name</Label><Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
-                <div className="space-y-2 col-span-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-                <div className="space-y-2 col-span-2"><Label htmlFor="password">Password</Label><Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
-                
+                <div className="space-y-2"><Label htmlFor="userNumber">User Number (Billing)</Label><Input id="userNumber" value={userNumber} onChange={(e) => setUserNumber(e.target.value)} placeholder="e.g., ACC-001" /></div>
                 <div className="space-y-2">
                     <Label htmlFor="role">Role</Label>
                     <Select onValueChange={handleRoleChange} value={selectedRole?.id}>
@@ -180,7 +179,11 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
                         <SelectContent>{roles.map(role => (<SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>))}</SelectContent>
                     </Select>
                 </div>
-
+                <div className="space-y-2"><Label htmlFor="firstName">First Name</Label><Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
+                <div className="space-y-2"><Label htmlFor="lastName">Last Name</Label><Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
+                <div className="space-y-2 col-span-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+                <div className="space-y-2 col-span-2"><Label htmlFor="password">Password</Label><Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+                
                 <div className="space-y-2">
                     <Label htmlFor="organization">Organization</Label>
                     <Select onValueChange={setSelectedOrganization} value={selectedOrganization || ''}>

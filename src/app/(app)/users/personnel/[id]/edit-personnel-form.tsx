@@ -157,6 +157,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                 </CollapsibleTrigger>
                 <CollapsibleContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="space-y-2"><Label>User Type</Label><Select onValueChange={(value) => handleInputChange('userType', value)} value={formData.userType} disabled><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{userTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
+                  <div className="space-y-2"><Label>User Number (Billing)</Label><Input value={formData.userNumber || ''} onChange={(e) => handleInputChange('userNumber', e.target.value)} placeholder="e.g., ACC-001" /></div>
                   <div className="space-y-2"><Label>First Name</Label><Input value={formData.firstName || ''} onChange={(e) => handleInputChange('firstName', e.target.value)} /></div>
                   <div className="space-y-2"><Label>Last Name</Label><Input value={formData.lastName || ''} onChange={(e) => handleInputChange('lastName', e.target.value)} /></div>
                   <div className="space-y-2"><Label>Email</Label><Input type="email" value={formData.email || ''} onChange={(e) => handleInputChange('email', e.target.value)} /></div>

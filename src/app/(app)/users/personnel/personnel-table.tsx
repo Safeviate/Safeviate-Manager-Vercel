@@ -35,6 +35,7 @@ export function PersonnelTable({ data, rolesMap, departmentsMap, tenantId }: Per
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>User #</TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Department</TableHead>
@@ -45,6 +46,7 @@ export function PersonnelTable({ data, rolesMap, departmentsMap, tenantId }: Per
         <TableBody>
           {data.map((person) => (
             <TableRow key={person.id}>
+              <TableCell className="font-mono text-xs font-bold text-primary">{person.userNumber || '-'}</TableCell>
               <TableCell className="font-medium">
                 <div className="flex items-center gap-2">
                   {person.firstName} {person.lastName}

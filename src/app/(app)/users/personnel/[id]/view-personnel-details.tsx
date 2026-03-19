@@ -249,6 +249,7 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
                             <section>
                                 <SectionHeader title="Contact & Role" icon={Contact} />
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <DetailItem label="User Number" value={user.userNumber} />
                                     <DetailItem label="First Name" value={user.firstName} />
                                     <DetailItem label="Last Name" value={user.lastName} />
                                     <DetailItem label="Email" value={user.email} />

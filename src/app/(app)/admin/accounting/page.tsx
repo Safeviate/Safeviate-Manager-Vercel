@@ -80,18 +80,21 @@ export default function AccountingPage() {
     try {
       const selectedBookings = enrichedData.unbilled.filter(b => selectedIds.has(b.id));
       const aircraftMap = new Map(aircrafts?.map(a => [a.id, a]));
-      const userMap = new Map(allUsers.map(u => [u.id, `${u.firstName} ${u.lastName}`]));
+      const userMap = new Map(allUsers.map(u => [u.id, u]));
 
       // 1. Prepare Sage CSV Data
-      const headers = ["Reference", "Date", "Customer", "Description", "Duration", "Rate", "Total", "Nominal Code"];
+      const headers = ["Reference", "Date", "Customer ID", "Customer Name", "Description", "Duration", "Rate", "Total", "Nominal Code"];
       const rows = selectedBookings.map(b => {
         const ac = aircraftMap.get(b.aircraftId);
+        const user = userMap.get(b.studentId || '');
         const duration = (b.postFlightData?.hobbs || 0) - (b.preFlightData?.hobbs || 0);
         const rate = ac?.hourlyRate || 0;
+        
         return [
           b.bookingNumber,
           b.date,
-          userMap.get(b.studentId || '') || "CASH_CLIENT",
+          user?.userNumber || "CASH",
+          user ? `${user.firstName} ${user.lastName}` : "CASH_CLIENT",
           `Flight: ${ac?.tailNumber || b.aircraftId} (${b.type})`,
           duration.toFixed(1),
           rate.toFixed(2),

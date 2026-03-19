@@ -32,6 +32,7 @@ export function PrivatePilotsTable({ data, tenantId }: PrivatePilotsTableProps) 
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>User #</TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>License No.</TableHead>
@@ -41,6 +42,7 @@ export function PrivatePilotsTable({ data, tenantId }: PrivatePilotsTableProps) 
         <TableBody>
           {data.map((pilot) => (
             <TableRow key={pilot.id}>
+              <TableCell className="font-mono text-xs font-bold text-primary">{pilot.userNumber || '-'}</TableCell>
               <TableCell className="font-medium">
                 <div className="flex items-center gap-2">
                   {pilot.firstName} {pilot.lastName}

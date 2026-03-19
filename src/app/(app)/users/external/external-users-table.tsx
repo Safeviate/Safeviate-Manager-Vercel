@@ -37,6 +37,7 @@ export function ExternalUsersTable({ data, orgMap, rolesMap, tenantId }: Externa
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>User #</TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Organization</TableHead>
@@ -48,6 +49,7 @@ export function ExternalUsersTable({ data, orgMap, rolesMap, tenantId }: Externa
         <TableBody>
           {data.map((user) => (
             <TableRow key={user.id}>
+              <TableCell className="font-mono text-xs font-bold text-primary">{user.userNumber || '-'}</TableCell>
               <TableCell className="font-medium">
                 <div className="flex items-center gap-2">
                   {user.firstName} {user.lastName}

@@ -15,6 +15,7 @@ import { PlusCircle } from 'lucide-react';
 export type PilotProfile = {
   id: string;
   userType: 'Student' | 'Private Pilot' | 'Instructor';
+  userNumber?: string; // For billing/Sage identification
   firstName: string;
   lastName: string;
   email: string;
@@ -56,6 +57,7 @@ export type PilotProfile = {
 export type Personnel = {
   id: string;
   userType: 'Personnel' | 'External';
+  userNumber?: string; // For billing/Sage identification
   firstName: string;
   lastName: string;
   email: string;
