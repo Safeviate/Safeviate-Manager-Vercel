@@ -20,6 +20,8 @@ import { PlusCircle, Trash2, CheckCircle2, GripVertical } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 
 const optionSchema = z.object({
   id: z.string(),
