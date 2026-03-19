@@ -18,6 +18,7 @@ import { DocumentUploader } from '@/components/document-uploader';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
