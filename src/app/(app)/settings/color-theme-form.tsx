@@ -188,9 +188,9 @@ export function ColorThemeForm() {
           <div className="p-6 space-y-8 pb-24">
             <div>
                 <h3 className="text-lg font-medium mb-2">UI Scaling</h3>
-                <p className='text-sm text-muted-foreground mb-4'>Adjust the overall size of the application interface.</p>
+                <p className='text-sm text-muted-foreground mb-4'>Adjust the overall size of the application interface. Supports scaling down to 50% for high-density mobile views.</p>
                 <div className='flex items-center gap-4'>
-                    <Slider value={[scale]} onValueChange={(value) => setScale(value[0])} min={75} max={150} step={5} />
+                    <Slider value={[scale]} onValueChange={(value) => setScale(value[0])} min={50} max={150} step={5} />
                     <span className='text-sm font-medium text-muted-foreground w-16 text-center'>{scale}%</span>
                 </div>
             </div>
