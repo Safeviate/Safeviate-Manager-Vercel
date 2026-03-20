@@ -15,6 +15,7 @@ const optionSchema = z.object({
 const questionSchema = z.object({
   id: z.string(),
   text: z.string().describe("The text of the question."),
+  topic: z.string().describe("The specific aviation topic this question belongs to (e.g., 'Meteorology', 'Navigation', 'Air Law')."),
   options: z.array(optionSchema).describe("An array of at least 2-4 multiple choice options."),
   correctOptionId: z.string().describe("The ID of the correct option from the options array."),
 });
@@ -43,6 +44,20 @@ const prompt = ai.definePrompt({
     output: { schema: GenerateExamOutputSchema },
     prompt: `You are an expert aviation instructor and examiner. Your task is to analyze the provided document content (text or image) and create a structured multiple-choice examination.
 
+**TOPIC IDENTIFICATION**
+For every question, you MUST identify the most appropriate aviation topic. Common topics include:
+- Air Law
+- Meteorology
+- Navigation
+- Principles of Flight
+- Aircraft General Knowledge
+- Flight Performance & Planning
+- Human Performance
+- Operational Procedures
+- Communications
+
+If the document contains mixed subjects, categorize each question individually.
+
 If the document is a past exam paper, extract the questions and options exactly as they appear. 
 If the document is a manual, regulation, or procedure, generate relevant questions that test critical safety knowledge and comprehension of the material.
 
@@ -50,10 +65,11 @@ If the document is a manual, regulation, or procedure, generate relevant questio
 For every question, you MUST determine which option is factually correct based on the provided material. Set the 'correctOptionId' to match the 'id' of that correct option. If multiple options could be correct, select the most precise one.
 
 For each question:
-1. Provide the question text clearly.
-2. Provide at least 4 multiple-choice options that are plausible but distinct.
-3. Identify which option is correct based on the source material.
-4. Generate a unique ID string for every question and every option so you can cross-reference them.
+1. Identify the specific 'topic'.
+2. Provide the question text clearly.
+3. Provide at least 4 multiple-choice options that are plausible but distinct.
+4. Identify which option is correct based on the source material.
+5. Generate a unique ID string for every question and every option so you can cross-reference them.
 
 Analyze the following document and generate the exam questions:
 

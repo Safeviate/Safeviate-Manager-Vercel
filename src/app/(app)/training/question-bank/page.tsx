@@ -57,11 +57,11 @@ export default function QuestionBankPage() {
     });
   }, [poolItems, searchQuery, selectedTopic]);
 
-  const handleAiGenerated = async (questions: ExamQuestion[]) => {
+  const handleAiGenerated = async (questions: any[]) => {
     if (!firestore) return;
     
-    // Default generated questions to the currently filtered topic or the first one
-    const targetTopic = selectedTopic === 'All' ? AVIATION_TOPICS[0] : selectedTopic;
+    // Fallback if AI didn't provide a topic
+    const defaultTopic = selectedTopic === 'All' ? AVIATION_TOPICS[0] : selectedTopic;
     
     const batch = writeBatch(firestore);
     const poolCol = collection(firestore, `tenants/${tenantId}/question-pool`);
@@ -70,19 +70,23 @@ export default function QuestionBankPage() {
         const docRef = doc(poolCol);
         batch.set(docRef, {
             ...q,
-            topic: targetTopic,
+            topic: q.topic || defaultTopic,
             createdAt: new Date().toISOString()
         });
     });
 
     await batch.commit();
-    toast({ title: 'Import Successful', description: `${questions.length} questions added to ${targetTopic}.` });
+    toast({ title: 'Import Successful', description: `${questions.length} questions added and categorized.` });
   };
 
   const handleDelete = async (id: string) => {
     if (!firestore || !window.confirm('Delete this question from the bank?')) return;
-    await deleteDoc(doc(firestore, `tenants/${tenantId}/question-pool`, id));
-    toast({ title: 'Question Deleted' });
+    try {
+      await deleteDoc(doc(firestore, `tenants/${tenantId}/question-pool`, id));
+      toast({ title: 'Question Deleted' });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Delete Failed', description: error.message });
+    }
   };
 
   return (
