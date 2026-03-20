@@ -1,3 +1,4 @@
+
 export type PerformanceRating = 1 | 2 | 3 | 4;
 
 export interface StudentProgressEntry {
@@ -40,6 +41,11 @@ export interface ExamQuestion {
     text: string;
     options: ExamOption[];
     correctOptionId: string;
+}
+
+export interface QuestionBankItem extends ExamQuestion {
+    topic: string;
+    createdAt: string;
 }
 
 export interface ExamTemplate {

@@ -1,3 +1,4 @@
+
 import {
   LayoutDashboard,
   Users,
@@ -18,6 +19,7 @@ import {
   Eye,
   Settings2,
   FileEdit,
+  Library,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -192,6 +194,12 @@ export const menuConfig: MenuItem[] = [
         label: 'Exams',
         description: 'Manage and track student examination results.',
         permissionId: 'training-exams-view',
+      },
+      {
+        href: '/training/question-bank',
+        label: 'Question Bank',
+        description: 'Central database of aviation questions by topic.',
+        permissionId: 'training-exams-manage',
       },
     ],
   },
