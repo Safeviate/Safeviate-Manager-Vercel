@@ -16,7 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, CheckCircle2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -82,7 +82,10 @@ export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting }: Ex
   });
 
   const handleGeneratedQuestions = (questions: ExamFormValues['questions']) => {
-      form.setValue('questions', [...form.getValues('questions'), ...questions], { shouldValidate: true });
+      // Filter out initial empty question if present
+      const currentQuestions = form.getValues('questions');
+      const filteredCurrent = currentQuestions.filter(q => q.text.trim() !== '' || q.options.some(o => o.text.trim() !== ''));
+      form.setValue('questions', [...filteredCurrent, ...questions], { shouldValidate: true });
   };
 
   return (
@@ -211,7 +214,7 @@ function QuestionItem({ questionIndex, onRemove }: { questionIndex: number; onRe
     <Card className="bg-muted/10 border-muted">
       <CardHeader className="py-4 flex flex-row items-start justify-between space-y-0">
         <div className="flex items-center gap-3 flex-1 mr-4">
-          <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center shrink-0">
+          <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center shrink-0 border-primary text-primary font-bold">
             {questionIndex + 1}
           </Badge>
           <FormField
@@ -234,7 +237,10 @@ function QuestionItem({ questionIndex, onRemove }: { questionIndex: number; onRe
       <CardContent className="space-y-4 pt-0">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Options (Select Correct)</Label>
+            <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest flex items-center gap-2">
+                Options (Select Correct)
+                {correctOptionId && <Badge variant="outline" className="h-4 text-[8px] bg-green-50 text-green-700 border-green-200 uppercase">Correct Marked</Badge>}
+            </Label>
             <Button
               type="button"
               variant="ghost"
@@ -254,24 +260,29 @@ function QuestionItem({ questionIndex, onRemove }: { questionIndex: number; onRe
             {optionFields.map((option, oIndex) => (
               <div key={option.id} className="flex items-center gap-3 group">
                 <RadioGroupItem value={option.id} id={`q${questionIndex}-o${oIndex}`} className="shrink-0" />
-                <FormField
-                  control={control}
-                  name={`questions.${questionIndex}.options.${oIndex}.text`}
-                  render={({ field }) => (
-                    <FormItem className="flex-1 space-y-0">
-                      <FormControl>
-                        <Input
-                          placeholder={`Option ${oIndex + 1}`}
-                          {...field}
-                          className={cn(
-                            "h-9 text-sm bg-background transition-all",
-                            correctOptionId === option.id && "border-green-500 ring-1 ring-green-500"
-                          )}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                <div className="flex-1 relative">
+                    <FormField
+                    control={control}
+                    name={`questions.${questionIndex}.options.${oIndex}.text`}
+                    render={({ field }) => (
+                        <FormItem className="space-y-0">
+                        <FormControl>
+                            <Input
+                            placeholder={`Option ${oIndex + 1}`}
+                            {...field}
+                            className={cn(
+                                "h-9 text-sm bg-background transition-all pr-10",
+                                correctOptionId === option.id && "border-green-500 ring-1 ring-green-500 bg-green-50/30"
+                            )}
+                            />
+                        </FormControl>
+                        </FormItem>
+                    )}
+                    />
+                    {correctOptionId === option.id && (
+                        <CheckCircle2 className="h-4 w-4 text-green-600 absolute right-3 top-1/2 -translate-y-1/2" />
+                    )}
+                </div>
                 <Button
                   type="button"
                   variant="ghost"

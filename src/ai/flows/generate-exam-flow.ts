@@ -43,14 +43,17 @@ const prompt = ai.definePrompt({
     output: { schema: GenerateExamOutputSchema },
     prompt: `You are an expert aviation instructor and examiner. Your task is to analyze the provided document content (text or image) and create a structured multiple-choice examination.
 
-If the document is a past exam paper, extract the questions exactly as they appear. 
+If the document is a past exam paper, extract the questions and options exactly as they appear. 
 If the document is a manual, regulation, or procedure, generate relevant questions that test critical safety knowledge and comprehension of the material.
+
+**CRITICAL INSTRUCTION: MARKING CORRECT ANSWERS**
+For every question, you MUST determine which option is factually correct based on the provided material. Set the 'correctOptionId' to match the 'id' of that correct option. If multiple options could be correct, select the most precise one.
 
 For each question:
 1. Provide the question text clearly.
 2. Provide at least 4 multiple-choice options that are plausible but distinct.
 3. Identify which option is correct based on the source material.
-4. Generate a unique UUID for every question and every option.
+4. Generate a unique ID string for every question and every option so you can cross-reference them.
 
 Analyze the following document and generate the exam questions:
 
@@ -79,19 +82,22 @@ const generateExamFlow = ai.defineFlow(
       return { questions: [] };
     }
 
-    // Ensure all items have a UUID if AI missed any and validate correct option pointer
+    // Ensure all items have a UUID and the correctOptionId is correctly mapped if we regenerate IDs
     const questionsWithIds = output.questions.map(q => {
-      const qId = q.id || uuidv4();
-      const optionsWithIds = q.options.map(opt => ({
-        ...opt,
-        id: opt.id || uuidv4()
-      }));
+      const qId = uuidv4();
       
-      // Ensure correctOptionId points to one of the options
-      let correctId = q.correctOptionId;
-      if (!optionsWithIds.find(o => o.id === correctId)) {
-          correctId = optionsWithIds[0].id;
-      }
+      const idMap: Record<string, string> = {};
+      const optionsWithIds = q.options.map(opt => {
+        const newId = uuidv4();
+        idMap[opt.id] = newId;
+        return {
+          ...opt,
+          id: newId
+        };
+      });
+      
+      // Map the AI's chosen correct ID to our new UUID
+      const correctId = idMap[q.correctOptionId] || optionsWithIds[0].id;
 
       return {
         ...q,
