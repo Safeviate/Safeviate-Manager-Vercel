@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Search, PlusCircle, Pencil, Trash2, GraduationCap, ClipboardCheck, PlayCircle, ShieldCheck, Microscope } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -11,8 +11,6 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { usePermissions } from '@/hooks/use-permissions';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { ExamForm, type ExamFormValues } from './exam-form';
 import { useToast } from '@/hooks/use-toast';
 import type { ExamTemplate, ExamResult } from '@/types/training';
 import { format } from 'date-fns';
@@ -20,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TakeExamDialog } from './take-exam-dialog';
 import type { Personnel, PilotProfile } from '../../users/personnel/page';
 import { Separator } from '@/components/ui/separator';
+import Link from 'next/link';
 
 export default function ExamsPage() {
   const firestore = useFirestore();
@@ -28,11 +27,8 @@ export default function ExamsPage() {
   const tenantId = 'safeviate';
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingExam, setEditingExam] = useState<ExamTemplate | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Take Exam State
+  // Take Exam State (Dialog remains for interactive assessment)
   const [takingExam, setTakingExam] = useState<{ template: ExamTemplate; isMock: boolean } | null>(null);
 
   const canManage = hasPermission('training-exams-manage');
@@ -74,34 +70,6 @@ export default function ExamsPage() {
     );
   }, [templates, searchQuery]);
 
-  const handleCreateOrUpdate = async (values: ExamFormValues) => {
-    if (!firestore) return;
-    setIsSubmitting(true);
-
-    try {
-      const data = {
-        ...values,
-        createdAt: editingExam?.createdAt || new Date().toISOString(),
-      };
-
-      if (editingExam) {
-        const docRef = doc(firestore, `tenants/${tenantId}/exam-templates`, editingExam.id);
-        updateDocumentNonBlocking(docRef, data);
-        toast({ title: 'Exam Updated', description: `"${values.title}" has been updated.` });
-      } else {
-        const colRef = collection(firestore, `tenants/${tenantId}/exam-templates`);
-        addDocumentNonBlocking(colRef, data);
-        toast({ title: 'Exam Created', description: `"${values.title}" template is now available.` });
-      }
-      setIsFormOpen(false);
-      setEditingExam(null);
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleDelete = async (id: string) => {
     if (!firestore || !window.confirm('Are you sure you want to delete this exam template?')) return;
     try {
@@ -120,8 +88,10 @@ export default function ExamsPage() {
           <p className="text-muted-foreground">Manage official assessments and temporary student practice runs.</p>
         </div>
         {canManage && (
-          <Button onClick={() => { setEditingExam(null); setIsFormOpen(true); }} className="gap-2 shadow-md">
-            <PlusCircle className="h-4 w-4" /> Create Exam Template
+          <Button asChild className="gap-2 shadow-md">
+            <Link href="/training/exams/new">
+              <PlusCircle className="h-4 w-4" /> Create Exam Template
+            </Link>
           </Button>
         )}
       </div>
@@ -197,8 +167,10 @@ export default function ExamsPage() {
                                   </Button>
                                   {canManage && (
                                     <>
-                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingExam(template); setIsFormOpen(true); }}>
-                                        <Pencil className="h-3.5 w-3.5" />
+                                      <Button asChild variant="ghost" size="icon" className="h-7 w-7">
+                                        <Link href={`/training/exams/${template.id}/edit`}>
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </Link>
                                       </Button>
                                       <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(template.id)}>
                                         <Trash2 className="h-3.5 w-3.5" />
@@ -329,23 +301,6 @@ export default function ExamsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-
-      <Dialog open={isFormOpen} onOpenChange={(open) => { if (!open) { setIsFormOpen(false); setEditingExam(null); } }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-          <DialogHeader className="p-6 border-b bg-muted/5 shrink-0">
-            <DialogTitle>{editingExam ? 'Edit Exam Template' : 'Create New Exam'}</DialogTitle>
-            <DialogDescription>Define multiple-choice questions or use AI to generate them from training material.</DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <ExamForm 
-              initialValues={editingExam || undefined}
-              onSubmit={handleCreateOrUpdate}
-              onCancel={() => setIsFormOpen(false)}
-              isSubmitting={isSubmitting}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {takingExam && (
           <TakeExamDialog
