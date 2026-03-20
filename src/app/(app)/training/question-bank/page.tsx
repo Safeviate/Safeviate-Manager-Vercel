@@ -2,13 +2,13 @@
 
 import { useState, useMemo } from 'react';
 import { collection, query, orderBy, doc, deleteDoc, writeBatch } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Search, Trash2, Library, Wand2, Filter } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Library, Wand2, Filter, Pencil, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +39,7 @@ export default function QuestionBankPage() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<string | 'All'>('All');
+  const [editingItem, setEditingItem] = useState<QuestionBankItem | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   const poolQuery = useMemoFirebase(
@@ -152,9 +153,14 @@ export default function QuestionBankPage() {
                         {item.options.length}
                     </TableCell>
                     <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(item.id)}>
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingItem(item)}>
+                                <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(item.id)}>
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -172,28 +178,60 @@ export default function QuestionBankPage() {
         </CardContent>
       </Card>
 
-      <AddQuestionDialog 
-        isOpen={isAddOpen} 
-        onOpenChange={setIsAddOpen} 
+      <UpsertQuestionDialog 
+        isOpen={isAddOpen || !!editingItem} 
+        onOpenChange={(open) => {
+            if (!open) {
+                setIsAddOpen(false);
+                setEditingItem(null);
+            }
+        }} 
         tenantId={tenantId} 
         topics={AVIATION_TOPICS}
         defaultTopic={selectedTopic === 'All' ? undefined : selectedTopic}
+        editingItem={editingItem}
       />
     </div>
   );
 }
 
-function AddQuestionDialog({ isOpen, onOpenChange, tenantId, topics, defaultTopic }: { isOpen: boolean, onOpenChange: (open: boolean) => void, tenantId: string, topics: string[], defaultTopic?: string }) {
+interface UpsertQuestionDialogProps {
+    isOpen: boolean;
+    onOpenChange: (open: boolean) => void;
+    tenantId: string;
+    topics: string[];
+    defaultTopic?: string;
+    editingItem?: QuestionBankItem | null;
+}
+
+function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topics, defaultTopic, editingItem }: UpsertQuestionDialogProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
     
-    const [topic, setTopic] = useState(defaultTopic || topics[0]);
-    const [text, setText] = useState('');
-    const [options, setOptions] = useState<{ id: string; text: string }[]>([
-        { id: uuidv4(), text: '' },
-        { id: uuidv4(), text: '' }
-    ]);
-    const [correctId, setCorrectId] = useState('');
+    const [topic, setTopic] = useState(editingItem?.topic || defaultTopic || topics[0]);
+    const [text, setText] = useState(editingItem?.text || '');
+    const [options, setOptions] = useState<{ id: string; text: string }[]>(
+        editingItem?.options || [
+            { id: uuidv4(), text: '' },
+            { id: uuidv4(), text: '' }
+        ]
+    );
+    const [correctId, setCorrectId] = useState(editingItem?.correctOptionId || '');
+
+    // Sync state when editingItem changes
+    useMemo(() => {
+        if (editingItem) {
+            setTopic(editingItem.topic);
+            setText(editingItem.text);
+            setOptions(editingItem.options);
+            setCorrectId(editingItem.correctOptionId);
+        } else {
+            setTopic(defaultTopic || topics[0]);
+            setText('');
+            setOptions([{ id: uuidv4(), text: '' }, { id: uuidv4(), text: '' }]);
+            setCorrectId('');
+        }
+    }, [editingItem, defaultTopic, topics]);
 
     const handleSave = async () => {
         if (!text.trim() || !correctId || options.some(o => !o.text.trim())) {
@@ -201,19 +239,26 @@ function AddQuestionDialog({ isOpen, onOpenChange, tenantId, topics, defaultTopi
             return;
         }
 
-        const poolCol = collection(firestore!, `tenants/${tenantId}/question-pool`);
-        await addDocumentNonBlocking(poolCol, {
+        if (!firestore) return;
+
+        const data = {
             topic,
             text,
             options,
             correctOptionId: correctId,
-            createdAt: new Date().toISOString()
-        });
+            createdAt: editingItem?.createdAt || new Date().toISOString()
+        };
 
-        toast({ title: 'Question Added' });
-        setText('');
-        setCorrectId('');
-        setOptions([{ id: uuidv4(), text: '' }, { id: uuidv4(), text: '' }]);
+        if (editingItem) {
+            const docRef = doc(firestore, `tenants/${tenantId}/question-pool`, editingItem.id);
+            updateDocumentNonBlocking(docRef, data);
+            toast({ title: 'Question Updated' });
+        } else {
+            const poolCol = collection(firestore, `tenants/${tenantId}/question-pool`);
+            await addDocumentNonBlocking(poolCol, data);
+            toast({ title: 'Question Added' });
+        }
+
         onOpenChange(false);
     };
 
@@ -221,54 +266,59 @@ function AddQuestionDialog({ isOpen, onOpenChange, tenantId, topics, defaultTopi
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>Add Question to Pool</DialogTitle>
-                    <DialogDescription>Define a single multiple-choice question for the centralized bank.</DialogDescription>
+                    <DialogTitle>{editingItem ? 'Edit Question' : 'Add Question to Pool'}</DialogTitle>
+                    <DialogDescription>
+                        {editingItem ? 'Update the details of this bank question.' : 'Define a single multiple-choice question for the centralized bank.'}
+                    </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                        <Label>Aviation Topic</Label>
-                        <Select onValueChange={setTopic} value={topic}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>{topics.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                        </Select>
+                <ScrollArea className="max-h-[70vh] pr-4">
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Aviation Topic</Label>
+                            <Select onValueChange={setTopic} value={topic}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>{topics.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Question Text</Label>
+                            <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Enter the technical question..." className="min-h-[100px]" />
+                        </div>
+                        <div className="space-y-3">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Options (Select Correct)</Label>
+                            {options.map((opt, idx) => (
+                                <div key={opt.id} className="flex gap-2 items-center">
+                                    <input 
+                                        type="radio" 
+                                        name="correct" 
+                                        checked={correctId === opt.id} 
+                                        onChange={() => setCorrectId(opt.id)} 
+                                        className="accent-primary"
+                                    />
+                                    <Input 
+                                        value={opt.text} 
+                                        onChange={(e) => {
+                                            const next = [...options];
+                                            next[idx].text = e.target.value;
+                                            setOptions(next);
+                                        }}
+                                        placeholder={`Option ${idx + 1}`}
+                                        className={cn(correctId === opt.id && "border-green-500 ring-1 ring-green-500")}
+                                    />
+                                    <Button variant="ghost" size="icon" onClick={() => setOptions(options.filter(o => o.id !== opt.id))} disabled={options.length <= 2}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                            <Button variant="ghost" size="sm" onClick={() => setOptions([...options, { id: uuidv4(), text: '' }])} className="mt-2">
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Option
+                            </Button>
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <Label>Question Text</Label>
-                        <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Enter the technical question..." />
-                    </div>
-                    <div className="space-y-3">
-                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">Options (Select Correct)</Label>
-                        {options.map((opt, idx) => (
-                            <div key={opt.id} className="flex gap-2 items-center">
-                                <input 
-                                    type="radio" 
-                                    name="correct" 
-                                    checked={correctId === opt.id} 
-                                    onChange={() => setCorrectId(opt.id)} 
-                                />
-                                <Input 
-                                    value={opt.text} 
-                                    onChange={(e) => {
-                                        const next = [...options];
-                                        next[idx].text = e.target.value;
-                                        setOptions(next);
-                                    }}
-                                    placeholder={`Option ${idx + 1}`}
-                                    className={cn(correctId === opt.id && "border-green-500")}
-                                />
-                                <Button variant="ghost" size="icon" onClick={() => setOptions(options.filter(o => o.id !== opt.id))} disabled={options.length <= 2}>
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        ))}
-                        <Button variant="ghost" size="sm" onClick={() => setOptions([...options, { id: uuidv4(), text: '' }])}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Option
-                        </Button>
-                    </div>
-                </div>
-                <DialogFooter>
+                </ScrollArea>
+                <DialogFooter className="border-t pt-4">
                     <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                    <Button onClick={handleSave}>Save to Bank</Button>
+                    <Button onClick={handleSave}>{editingItem ? 'Update Question' : 'Save to Bank'}</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
