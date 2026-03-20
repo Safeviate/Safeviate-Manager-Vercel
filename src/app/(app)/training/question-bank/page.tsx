@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { collection, query, orderBy, doc, deleteDoc, writeBatch } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Search, Trash2, Library, Filter, Pencil, Database, Loader2 } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Library, Pencil, Database } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -85,18 +85,21 @@ export default function QuestionBankPage() {
     });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!firestore || !window.confirm('Delete this question from the bank?')) return;
-    try {
-      await deleteDoc(doc(firestore, `tenants/${tenantId}/question-pool`, id));
-      toast({ title: 'Question Deleted' });
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Delete Failed', description: error.message });
-    }
+    
+    const docRef = doc(firestore, `tenants/${tenantId}/question-pool`, id);
+    deleteDocumentNonBlocking(docRef);
+    toast({ title: 'Question Deleted' });
   };
 
   if (isLoadingTopics) {
-    return <div className="p-8 space-y-6"><Skeleton className="h-10 w-48" /><Skeleton className="h-[400px] w-full" /></div>;
+    return (
+      <div className="p-8 space-y-6">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-[400px] w-full" />
+      </div>
+    );
   }
 
   return (
