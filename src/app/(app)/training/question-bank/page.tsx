@@ -12,6 +12,7 @@ import { PlusCircle, Search, Trash2, Library, Filter, Pencil, Database, Loader2 
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { QuestionBankItem } from '@/types/training';
 import { AiExamGenerator } from '../exams/ai-exam-generator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
