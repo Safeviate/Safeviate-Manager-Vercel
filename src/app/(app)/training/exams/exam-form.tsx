@@ -16,13 +16,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, CheckCircle2, GripVertical } from 'lucide-react';
+import { PlusCircle, Trash2, CheckCircle2, GripVertical, Sparkles } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AiExamGenerator } from './ai-exam-generator';
 
 const optionSchema = z.object({
   id: z.string(),
@@ -79,6 +80,10 @@ export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting }: Ex
     control: form.control,
     name: 'questions',
   });
+
+  const handleGeneratedQuestions = (questions: ExamFormValues['questions']) => {
+      form.setValue('questions', [...form.getValues('questions'), ...questions], { shouldValidate: true });
+  };
 
   return (
     <Form {...form}>
@@ -145,25 +150,28 @@ export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting }: Ex
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-bold">Questions</h3>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    appendQuestion({
-                      id: uuidv4(),
-                      text: '',
-                      options: [
-                        { id: uuidv4(), text: '' },
-                        { id: uuidv4(), text: '' },
-                      ],
-                      correctOptionId: '',
-                    })
-                  }
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Question
-                </Button>
+                <div className="flex items-center gap-2">
+                    <AiExamGenerator onGenerated={handleGeneratedQuestions} />
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                            appendQuestion({
+                            id: uuidv4(),
+                            text: '',
+                            options: [
+                                { id: uuidv4(), text: '' },
+                                { id: uuidv4(), text: '' },
+                            ],
+                            correctOptionId: '',
+                            })
+                        }
+                    >
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Question
+                    </Button>
+                </div>
               </div>
 
               {questionFields.map((question, qIndex) => (

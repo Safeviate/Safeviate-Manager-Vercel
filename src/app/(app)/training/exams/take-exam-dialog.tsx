@@ -25,7 +25,7 @@ import {
     PlayCircle,
     ChevronRight,
     Trophy,
-    History
+    ShieldAlert
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useFirestore, addDocumentNonBlocking } from '@/firebase';
@@ -43,17 +43,17 @@ interface TakeExamDialogProps {
   onOpenChange: (open: boolean) => void;
   personnel: (Personnel | PilotProfile)[];
   tenantId: string;
+  isMockOnly?: boolean;
 }
 
 type ExamState = 'setup' | 'taking' | 'finished';
 
-export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tenantId }: TakeExamDialogProps) {
+export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tenantId, isMockOnly = false }: TakeExamDialogProps) {
   const firestore = useFirestore();
   const { userProfile } = useUserProfile();
   const { toast } = useToast();
 
   const [state, setState] = useState<ExamState>('setup');
-  const [isMock, setIsMock] = useState(true);
   const [selectedStudentId, setSelectedStudentId] = useState<string>(userProfile?.id || '');
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [result, setResult] = useState<ExamResult | null>(null);
@@ -67,13 +67,12 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
     setState('setup');
     setAnswers({});
     setResult(null);
-    setIsMock(true);
     setSelectedStudentId(userProfile?.id || '');
   };
 
   const handleStart = () => {
-    if (!selectedStudentId && !isMock) {
-        toast({ variant: 'destructive', title: 'Selection Required', description: 'Please select a student for record keeping, or use Mock Mode.' });
+    if (!selectedStudentId && !isMockOnly) {
+        toast({ variant: 'destructive', title: 'Selection Required', description: 'Please select a student for official record keeping.' });
         return;
     }
     setState('taking');
@@ -103,18 +102,19 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
       score,
       passingScore: template.passingScore,
       passed,
-      isMock,
+      isMock: isMockOnly,
     };
 
-    if (firestore) {
+    // ONLY save to Firestore if it is NOT a mock exam
+    if (!isMockOnly && firestore) {
       const resultsCol = collection(firestore, `tenants/${tenantId}/student-exam-results`);
       addDocumentNonBlocking(resultsCol, examResult);
       toast({ 
-        title: isMock ? 'Practice Attempt Logged' : 'Official Result Recorded', 
-        description: isMock 
-            ? 'This session has been saved to the Mock Exams log.' 
-            : 'This result has been added to the student training file.' 
+        title: 'Official Result Recorded', 
+        description: 'This result has been added to the student training file.' 
       });
+    } else {
+      toast({ title: 'Practice Run Complete' });
     }
 
     setResult(examResult);
@@ -149,17 +149,17 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
           {state === 'setup' && (
             <div className="p-10 space-y-8 max-w-md mx-auto">
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-xl bg-primary/5 border-primary/20">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="mock-mode" className="text-base font-bold">Practice (Mock) Mode</Label>
-                    <p className="text-xs text-muted-foreground italic">Provide score only, do not save to permanent record.</p>
-                  </div>
-                  <Switch id="mock-mode" checked={isMock} onCheckedChange={setIsMock} />
-                </div>
-
-                {!isMock && (
+                {isMockOnly ? (
+                    <div className="p-4 border rounded-xl bg-primary/5 border-primary/20 flex items-start gap-3">
+                        <ShieldAlert className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                            <p className="font-bold text-sm">Practice Mode Enabled</p>
+                            <p className="text-xs text-muted-foreground italic">Your score will be shown at the end, but no permanent record will be created.</p>
+                        </div>
+                    </div>
+                ) : (
                   <div className="space-y-2 pt-2">
-                    <Label>Assign Result To Student</Label>
+                    <Label>Assign Official Result To Student</Label>
                     <Select onValueChange={setSelectedStudentId} value={selectedStudentId}>
                       <SelectTrigger className="h-12">
                         <SelectValue placeholder="Select student..." />
@@ -177,12 +177,12 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
               <div className="p-4 rounded-lg bg-muted/30 border border-dashed text-center">
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   This exam contains <span className="font-bold text-foreground">{template.questions.length} questions</span>. 
-                  Ensure you have a stable connection before beginning.
+                  Once submitted, the {isMockOnly ? 'results will not be saved' : 'record will be finalized'}.
                 </p>
               </div>
 
               <Button onClick={handleStart} className="w-full h-14 text-lg gap-2 shadow-lg" size="lg">
-                <PlayCircle className="h-5 w-5" /> Start Examination
+                <PlayCircle className="h-5 w-5" /> {isMockOnly ? 'Start Practice Run' : 'Start Official Exam'}
               </Button>
             </div>
           )}
@@ -241,8 +241,8 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
                 </div>
                 <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Type</span>
-                    <Badge variant={result.isMock ? "secondary" : "default"} className="h-5 py-0 text-[10px]">
-                        {result.isMock ? 'MOCK EXAM' : 'OFFICIAL RECORD'}
+                    <Badge variant={result.isMock ? "secondary" : "default"} className="h-5 py-0 text-[10px] font-black">
+                        {result.isMock ? 'PRACTICE / MOCK' : 'OFFICIAL RECORD'}
                     </Badge>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -253,8 +253,8 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
 
               {result.isMock && (
                 <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg flex items-center gap-2 text-[10px] text-amber-800">
-                    <ShieldCheck className="h-3 w-3" />
-                    <span>Practice run recorded. You can review this attempt in the Mock Exams tab.</span>
+                    <ShieldAlert className="h-3 w-3" />
+                    <span>This practice session is not saved. Once you close this window, the result will be discarded.</span>
                 </div>
               )}
             </div>
@@ -271,7 +271,7 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
               Submit Examination
             </Button>
           ) : state === 'finished' ? (
-            <Button onClick={() => onOpenChange(false)} className="w-full md:w-auto px-10">Close Result</Button>
+            <Button onClick={() => onOpenChange(false)} className="w-full md:w-auto px-10">Close and Return</Button>
           ) : (
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
           )}
