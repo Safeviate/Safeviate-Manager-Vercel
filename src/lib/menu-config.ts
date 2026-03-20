@@ -1,4 +1,3 @@
-
 import {
   LayoutDashboard,
   Users,
@@ -20,6 +19,7 @@ import {
   Settings2,
   FileEdit,
   Library,
+  BookOpen,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -291,6 +291,12 @@ export const menuConfig: MenuItem[] = [
         label: 'External Companies',
         description: 'Manage third-party organizations.',
         permissionId: 'admin-external-orgs-manage',
+      },
+      {
+        href: '/admin/exam-topics',
+        label: 'Exam Topics',
+        description: 'Manage categories for the question bank.',
+        permissionId: 'admin-settings-manage',
       },
       {
         href: '/admin/document-dates',

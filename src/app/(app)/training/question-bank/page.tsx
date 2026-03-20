@@ -2,13 +2,13 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { collection, query, orderBy, doc, deleteDoc, writeBatch } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Search, Trash2, Library, Filter, Pencil, Database } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Library, Filter, Pencil, Database, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -19,18 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
-
-const AVIATION_TOPICS = [
-    'Air Law',
-    'Aircraft General Knowledge',
-    'Flight Performance & Planning',
-    'Human Performance',
-    'Meteorology',
-    'Navigation',
-    'Operational Procedures',
-    'Principles of Flight',
-    'Communications'
-];
+import type { ExamTopicsSettings } from '../../admin/exam-topics/page';
 
 export default function QuestionBankPage() {
   const firestore = useFirestore();
@@ -38,9 +27,22 @@ export default function QuestionBankPage() {
   const tenantId = 'safeviate';
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTopic, setSelectedTopic] = useState<string>(AVIATION_TOPICS[0]);
+  const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [editingItem, setEditingItem] = useState<QuestionBankItem | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
+
+  // Fetch dynamic topics from settings
+  const topicsRef = useMemoFirebase(
+    () => (firestore ? doc(firestore, `tenants/${tenantId}/settings`, 'exam-topics') : null),
+    [firestore, tenantId]
+  );
+  const { data: topicsData, isLoading: isLoadingTopics } = useDoc<ExamTopicsSettings>(topicsRef);
+
+  useEffect(() => {
+    if (topicsData?.topics?.length && !selectedTopic) {
+        setSelectedTopic(topicsData.topics[0]);
+    }
+  }, [topicsData, selectedTopic]);
 
   const poolQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/question-pool`), orderBy('createdAt', 'desc')) : null),
@@ -92,6 +94,10 @@ export default function QuestionBankPage() {
     }
   };
 
+  if (isLoadingTopics) {
+    return <div className="p-8 space-y-6"><Skeleton className="h-10 w-48" /><Skeleton className="h-[400px] w-full" /></div>;
+  }
+
   return (
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <div className="px-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -101,7 +107,7 @@ export default function QuestionBankPage() {
         </div>
         <div className="flex gap-2">
             <AiExamGenerator onGenerated={handleAiGenerated} />
-            <Button onClick={() => setIsAddOpen(true)}>
+            <Button onClick={() => setIsAddOpen(true)} disabled={!selectedTopic}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Question
             </Button>
         </div>
@@ -118,7 +124,7 @@ export default function QuestionBankPage() {
                         <SelectValue placeholder="Select Topic Bank..." />
                     </SelectTrigger>
                     <SelectContent>
-                        {AVIATION_TOPICS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        {(topicsData?.topics || []).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                     </SelectContent>
                 </Select>
             </div>
@@ -180,7 +186,7 @@ export default function QuestionBankPage() {
                                 <Library className="h-16 w-16" />
                                 <div className="space-y-1">
                                     <p className="text-lg font-bold uppercase tracking-tighter">Empty Topic Database</p>
-                                    <p className="text-sm">No questions found in {selectedTopic}.</p>
+                                    <p className="text-sm">No questions found in {selectedTopic || 'this topic'}.</p>
                                 </div>
                             </div>
                         </TableCell>

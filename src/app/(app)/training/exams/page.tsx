@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Search, PlusCircle, Pencil, Trash2, GraduationCap, ClipboardCheck, PlayCircle, ShieldCheck, Microscope, Library, ChevronRight } from 'lucide-react';
+import { Search, PlusCircle, Pencil, Trash2, GraduationCap, ClipboardCheck, PlayCircle, ShieldCheck, Microscope, Library, ChevronRight, Database } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,7 @@ import type { Personnel, PilotProfile } from '../../users/personnel/page';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
+import type { ExamTopicsSettings } from '../../admin/exam-topics/page';
 
 export default function ExamsPage() {
   const firestore = useFirestore();
@@ -51,6 +52,11 @@ export default function ExamsPage() {
     [firestore, tenantId]
   );
 
+  const topicsRef = useMemoFirebase(
+    () => (firestore ? doc(firestore, `tenants/${tenantId}/settings`, 'exam-topics') : null),
+    [firestore, tenantId]
+  );
+
   const personnelQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
     [firestore, tenantId]
@@ -61,20 +67,22 @@ export default function ExamsPage() {
   const { data: templates, isLoading: isLoadingTemplates } = useCollection<ExamTemplate>(templatesQuery);
   const { data: results, isLoading: isLoadingResults } = useCollection<ExamResult>(resultsQuery);
   const { data: poolItems } = useCollection<QuestionBankItem>(poolQuery);
+  const { data: topicsData } = useDoc<ExamTopicsSettings>(topicsRef);
   const { data: personnel } = useCollection<Personnel>(personnelQuery);
   const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
   const { data: students } = useCollection<PilotProfile>(studentsQuery);
+
+  useEffect(() => {
+    if (topicsData?.topics?.length && !selectedTopic) {
+        setSelectedTopic(topicsData.topics[0]);
+    }
+  }, [topicsData, selectedTopic]);
 
   const allPeople = useMemo(() => [
     ...(personnel || []),
     ...(instructors || []),
     ...(students || [])
   ], [personnel, instructors, students]);
-
-  const topics = useMemo(() => {
-    if (!poolItems) return [];
-    return Array.from(new Set(poolItems.map(item => item.topic))).sort();
-  }, [poolItems]);
 
   const filteredTemplates = useMemo(() => {
     if (!templates) return [];
@@ -313,11 +321,11 @@ export default function ExamsPage() {
                                     <Label className="text-[10px] uppercase font-bold text-muted-foreground">Aviation Topic</Label>
                                     <Select onValueChange={setSelectedTopic} value={selectedTopic}>
                                         <SelectTrigger className="h-12">
-                                            <Library className="h-4 w-4 mr-2 text-primary" />
+                                            <Database className="h-4 w-4 mr-2 text-primary" />
                                             <SelectValue placeholder="Select Topic..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {topics.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                            {(topicsData?.topics || []).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
