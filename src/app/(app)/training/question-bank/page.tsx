@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { collection, query, orderBy, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -8,11 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Search, Trash2, Library, Wand2, Filter, Pencil, CheckCircle2 } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Library, Filter, Pencil, Database } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import type { QuestionBankItem, ExamQuestion } from '@/types/training';
+import type { QuestionBankItem } from '@/types/training';
 import { AiExamGenerator } from '../exams/ai-exam-generator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -38,7 +38,7 @@ export default function QuestionBankPage() {
   const tenantId = 'safeviate';
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTopic, setSelectedTopic] = useState<string | 'All'>('All');
+  const [selectedTopic, setSelectedTopic] = useState<string>(AVIATION_TOPICS[0]);
   const [editingItem, setEditingItem] = useState<QuestionBankItem | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
@@ -52,7 +52,7 @@ export default function QuestionBankPage() {
     if (!poolItems) return [];
     return poolItems.filter(item => {
       const matchesSearch = item.text.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesTopic = selectedTopic === 'All' || item.topic === selectedTopic;
+      const matchesTopic = item.topic === selectedTopic;
       return matchesSearch && matchesTopic;
     });
   }, [poolItems, searchQuery, selectedTopic]);
@@ -60,8 +60,8 @@ export default function QuestionBankPage() {
   const handleAiGenerated = async (questions: any[]) => {
     if (!firestore) return;
     
-    // Fallback if AI didn't provide a topic
-    const defaultTopic = selectedTopic === 'All' ? AVIATION_TOPICS[0] : selectedTopic;
+    // Force all generated questions into the CURRENTLY SELECTED database topic
+    const targetTopic = selectedTopic;
     
     const batch = writeBatch(firestore);
     const poolCol = collection(firestore, `tenants/${tenantId}/question-pool`);
@@ -70,13 +70,16 @@ export default function QuestionBankPage() {
         const docRef = doc(poolCol);
         batch.set(docRef, {
             ...q,
-            topic: q.topic || defaultTopic,
+            topic: targetTopic, // Override AI guess with user's selected bank
             createdAt: new Date().toISOString()
         });
     });
 
     await batch.commit();
-    toast({ title: 'Import Successful', description: `${questions.length} questions added and categorized.` });
+    toast({ 
+        title: 'Bank Populated', 
+        description: `${questions.length} questions added to the ${targetTopic} database.` 
+    });
   };
 
   const handleDelete = async (id: string) => {
@@ -93,8 +96,8 @@ export default function QuestionBankPage() {
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <div className="px-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Aviation Question Bank</h1>
-          <p className="text-muted-foreground">Centralized repository of validated multiple-choice questions for training assessments.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Question Bank Manager</h1>
+          <p className="text-muted-foreground">Manage partitioned question databases for official and mock assessments.</p>
         </div>
         <div className="flex gap-2">
             <AiExamGenerator onGenerated={handleAiGenerated} />
@@ -107,36 +110,43 @@ export default function QuestionBankPage() {
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4 flex-1">
-            <div className="relative w-full sm:w-96">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                    placeholder="Search keywords..." 
-                    className="pl-9 bg-background" 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
+            <div className="space-y-1">
+                <Label className="text-[10px] uppercase font-black text-primary tracking-widest">Active Database</Label>
+                <Select onValueChange={setSelectedTopic} value={selectedTopic}>
+                    <SelectTrigger className="w-[300px] h-10 bg-background border-primary/30 font-bold">
+                        <Database className="h-3.5 w-3.5 mr-2 text-primary" />
+                        <SelectValue placeholder="Select Topic Bank..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {AVIATION_TOPICS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                </Select>
             </div>
-            <Select onValueChange={setSelectedTopic} value={selectedTopic}>
-                <SelectTrigger className="w-[200px] h-10 bg-background">
-                    <Filter className="h-3.5 w-3.5 mr-2 opacity-50" />
-                    <SelectValue placeholder="All Topics" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="All">All Topics</SelectItem>
-                    {AVIATION_TOPICS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                </SelectContent>
-            </Select>
+            <div className="space-y-1 flex-1 max-w-sm">
+                <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Search {selectedTopic}</Label>
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        placeholder="Keywords..." 
+                        className="pl-9 bg-background h-10" 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+            </div>
           </div>
-          <Badge variant="outline" className="font-mono text-[10px] py-1 px-3">
-            {filteredItems.length} QUESTIONS
-          </Badge>
+          <div className="text-right">
+            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Database Size</p>
+            <Badge variant="outline" className="font-mono text-sm py-0 px-3 border-primary/30">
+                {filteredItems.length}
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
           <ScrollArea className="h-full">
             <Table>
               <TableHeader className="bg-muted/30 sticky top-0 z-10">
                 <TableRow>
-                  <TableHead className="w-32 text-[10px] uppercase font-bold">Topic</TableHead>
                   <TableHead className="text-[10px] uppercase font-bold">Question Text</TableHead>
                   <TableHead className="w-24 text-center text-[10px] uppercase font-bold">Options</TableHead>
                   <TableHead className="w-20 text-right text-[10px] uppercase font-bold">Actions</TableHead>
@@ -144,12 +154,7 @@ export default function QuestionBankPage() {
               </TableHeader>
               <TableBody>
                 {filteredItems.map((item) => (
-                  <TableRow key={item.id} className="group">
-                    <TableCell>
-                        <Badge variant="secondary" className="text-[9px] font-black uppercase tracking-tight">
-                            {item.topic}
-                        </Badge>
-                    </TableCell>
+                  <TableRow key={item.id} className="group hover:bg-muted/10 transition-colors">
                     <TableCell className="font-medium text-sm py-4">
                         <p className="line-clamp-2">{item.text}</p>
                     </TableCell>
@@ -170,9 +175,14 @@ export default function QuestionBankPage() {
                 ))}
                 {filteredItems.length === 0 && !isLoading && (
                     <TableRow>
-                        <TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic">
-                            <Library className="h-12 w-12 mx-auto mb-4 opacity-10" />
-                            No questions found in the selected topic.
+                        <TableCell colSpan={3} className="h-64 text-center text-muted-foreground italic">
+                            <div className="flex flex-col items-center justify-center gap-4 opacity-20">
+                                <Library className="h-16 w-16" />
+                                <div className="space-y-1">
+                                    <p className="text-lg font-bold uppercase tracking-tighter">Empty Topic Database</p>
+                                    <p className="text-sm">No questions found in {selectedTopic}.</p>
+                                </div>
+                            </div>
                         </TableCell>
                     </TableRow>
                 )}
@@ -191,8 +201,7 @@ export default function QuestionBankPage() {
             }
         }} 
         tenantId={tenantId} 
-        topics={AVIATION_TOPICS}
-        defaultTopic={selectedTopic === 'All' ? undefined : selectedTopic}
+        topic={selectedTopic}
         editingItem={editingItem}
       />
     </div>
@@ -203,39 +212,34 @@ interface UpsertQuestionDialogProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     tenantId: string;
-    topics: string[];
-    defaultTopic?: string;
+    topic: string;
     editingItem?: QuestionBankItem | null;
 }
 
-function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topics, defaultTopic, editingItem }: UpsertQuestionDialogProps) {
+function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingItem }: UpsertQuestionDialogProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
     
-    const [topic, setTopic] = useState(editingItem?.topic || defaultTopic || topics[0]);
-    const [text, setText] = useState(editingItem?.text || '');
-    const [options, setOptions] = useState<{ id: string; text: string }[]>(
-        editingItem?.options || [
-            { id: uuidv4(), text: '' },
-            { id: uuidv4(), text: '' }
-        ]
-    );
-    const [correctId, setCorrectId] = useState(editingItem?.correctOptionId || '');
+    const [text, setText] = useState('');
+    const [options, setOptions] = useState<{ id: string; text: string }[]>([]);
+    const [correctId, setCorrectId] = useState('');
 
-    // Sync state when editingItem changes
-    useMemo(() => {
-        if (editingItem) {
-            setTopic(editingItem.topic);
-            setText(editingItem.text);
-            setOptions(editingItem.options);
-            setCorrectId(editingItem.correctOptionId);
-        } else {
-            setTopic(defaultTopic || topics[0]);
-            setText('');
-            setOptions([{ id: uuidv4(), text: '' }, { id: uuidv4(), text: '' }]);
-            setCorrectId('');
+    useEffect(() => {
+        if (isOpen) {
+            if (editingItem) {
+                setText(editingItem.text);
+                setOptions(editingItem.options);
+                setCorrectId(editingItem.correctOptionId);
+            } else {
+                setText('');
+                setOptions([
+                    { id: uuidv4(), text: '' },
+                    { id: uuidv4(), text: '' }
+                ]);
+                setCorrectId('');
+            }
         }
-    }, [editingItem, defaultTopic, topics]);
+    }, [isOpen, editingItem]);
 
     const handleSave = async () => {
         if (!text.trim() || !correctId || options.some(o => !o.text.trim())) {
@@ -246,7 +250,7 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topics, defaultT
         if (!firestore) return;
 
         const data = {
-            topic,
+            topic, // Always use the active bank topic
             text,
             options,
             correctOptionId: correctId,
@@ -270,26 +274,24 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topics, defaultT
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>{editingItem ? 'Edit Question' : 'Add Question to Pool'}</DialogTitle>
+                    <DialogTitle>{editingItem ? 'Edit Question' : 'Add Question'}</DialogTitle>
                     <DialogDescription>
-                        {editingItem ? 'Update the details of this bank question.' : 'Define a single multiple-choice question for the centralized bank.'}
+                        Adding to the <span className="font-bold text-primary">{topic}</span> database.
                     </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="max-h-[70vh] pr-4">
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <Label>Aviation Topic</Label>
-                            <Select onValueChange={setTopic} value={topic}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>{topics.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
                             <Label>Question Text</Label>
-                            <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Enter the technical question..." className="min-h-[100px]" />
+                            <Textarea 
+                                value={text} 
+                                onChange={(e) => setText(e.target.value)} 
+                                placeholder="Enter the technical question..." 
+                                className="min-h-[100px]" 
+                            />
                         </div>
                         <div className="space-y-3">
-                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Options (Select Correct)</Label>
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Options (Select Correct)</Label>
                             {options.map((opt, idx) => (
                                 <div key={opt.id} className="flex gap-2 items-center">
                                     <input 
@@ -297,7 +299,7 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topics, defaultT
                                         name="correct" 
                                         checked={correctId === opt.id} 
                                         onChange={() => setCorrectId(opt.id)} 
-                                        className="accent-primary"
+                                        className="accent-primary h-4 w-4"
                                     />
                                     <Input 
                                         value={opt.text} 
@@ -307,14 +309,25 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topics, defaultT
                                             setOptions(next);
                                         }}
                                         placeholder={`Option ${idx + 1}`}
-                                        className={cn(correctId === opt.id && "border-green-500 ring-1 ring-green-500")}
+                                        className={cn(correctId === opt.id && "border-green-500 ring-1 ring-green-500 bg-green-50/30")}
                                     />
-                                    <Button variant="ghost" size="icon" onClick={() => setOptions(options.filter(o => o.id !== opt.id))} disabled={options.length <= 2}>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        onClick={() => setOptions(options.filter(o => o.id !== opt.id))} 
+                                        disabled={options.length <= 2}
+                                        className="text-muted-foreground"
+                                    >
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </div>
                             ))}
-                            <Button variant="ghost" size="sm" onClick={() => setOptions([...options, { id: uuidv4(), text: '' }])} className="mt-2">
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setOptions([...options, { id: uuidv4(), text: '' }])} 
+                                className="mt-2"
+                            >
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Option
                             </Button>
                         </div>
@@ -322,7 +335,7 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topics, defaultT
                 </ScrollArea>
                 <DialogFooter className="border-t pt-4">
                     <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                    <Button onClick={handleSave}>{editingItem ? 'Update Question' : 'Save to Bank'}</Button>
+                    <Button onClick={handleSave}>{editingItem ? 'Update Question' : 'Save to Database'}</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
