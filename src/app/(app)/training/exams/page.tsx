@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Search, PlusCircle, Pencil, Trash2, GraduationCap, ClipboardCheck, PlayCircle, ShieldCheck, Microscope } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -27,8 +27,6 @@ export default function ExamsPage() {
   const tenantId = 'safeviate';
 
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Take Exam State (Dialog remains for interactive assessment)
   const [takingExam, setTakingExam] = useState<{ template: ExamTemplate; isMock: boolean } | null>(null);
 
   const canManage = hasPermission('training-exams-manage');
@@ -85,7 +83,7 @@ export default function ExamsPage() {
       <div className="px-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Examinations</h1>
-          <p className="text-muted-foreground">Manage official assessments and temporary student practice runs.</p>
+          <p className="text-muted-foreground">Manage official assessments and zero-persistence student practice runs.</p>
         </div>
         {canManage && (
           <Button asChild className="gap-2 shadow-md">
@@ -100,10 +98,10 @@ export default function ExamsPage() {
         <div className="px-1 shrink-0">
           <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
             <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2">
-              <ShieldCheck className="h-4 w-4" /> Internal Exams (Persistent)
+              <ShieldCheck className="h-4 w-4" /> Internal Exams (Official)
             </TabsTrigger>
             <TabsTrigger value="mock" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2">
-              <Microscope className="h-4 w-4" /> Mock Exams (Non-Persistent)
+              <Microscope className="h-4 w-4" /> Mock Exams (Practice)
             </TabsTrigger>
           </TabsList>
         </div>
@@ -113,15 +111,14 @@ export default function ExamsPage() {
             <ScrollArea className="h-full">
               <div className="flex flex-col gap-10 p-6 pb-20">
                 
-                {/* --- Template Management Section --- */}
                 <section className="space-y-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
                       <h3 className="text-lg font-bold flex items-center gap-2 font-headline">
                         <ClipboardCheck className="h-5 w-5 text-primary" />
-                        Official Exam Templates
+                        Available Exam Templates
                       </h3>
-                      <p className="text-xs text-muted-foreground">Conduct a certified examination. Results will be saved to the student profile.</p>
+                      <p className="text-xs text-muted-foreground">Conduct a certified examination. Results are permanently recorded.</p>
                     </div>
                     <div className="relative w-full sm:w-72">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -185,8 +182,7 @@ export default function ExamsPage() {
                       </Table>
                     ) : (
                       <div className="text-center py-12 opacity-40">
-                        <ClipboardCheck className="h-10 w-10 mx-auto mb-2" />
-                        <p className="text-sm font-medium">No templates available.</p>
+                        <p className="text-sm font-medium italic">No templates available.</p>
                       </div>
                     )}
                   </div>
@@ -194,7 +190,6 @@ export default function ExamsPage() {
 
                 <Separator />
 
-                {/* --- Official Records Section --- */}
                 <section className="space-y-4">
                   <div className="space-y-1">
                     <h3 className="text-lg font-bold flex items-center gap-2 font-headline">

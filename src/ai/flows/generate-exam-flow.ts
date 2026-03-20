@@ -43,12 +43,13 @@ const prompt = ai.definePrompt({
     output: { schema: GenerateExamOutputSchema },
     prompt: `You are an expert aviation instructor and examiner. Your task is to analyze the provided document content (text or image) and create a structured multiple-choice examination.
 
-If the document is a past exam paper, extract the questions exactly. If the document is a manual or regulation, generate relevant questions that test comprehension of the material.
+If the document is a past exam paper, extract the questions exactly as they appear. 
+If the document is a manual, regulation, or procedure, generate relevant questions that test critical safety knowledge and comprehension of the material.
 
 For each question:
-1. Provide the question text.
-2. Provide at least 4 multiple-choice options.
-3. Identify which option is correct.
+1. Provide the question text clearly.
+2. Provide at least 4 multiple-choice options that are plausible but distinct.
+3. Identify which option is correct based on the source material.
 4. Generate a unique UUID for every question and every option.
 
 Analyze the following document and generate the exam questions:
@@ -78,7 +79,7 @@ const generateExamFlow = ai.defineFlow(
       return { questions: [] };
     }
 
-    // Ensure all items have a UUID if AI missed any
+    // Ensure all items have a UUID if AI missed any and validate correct option pointer
     const questionsWithIds = output.questions.map(q => {
       const qId = q.id || uuidv4();
       const optionsWithIds = q.options.map(opt => ({
