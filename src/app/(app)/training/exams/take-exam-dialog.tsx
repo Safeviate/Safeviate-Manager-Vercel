@@ -94,7 +94,7 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
     const selectedStudent = personnel.find(p => p.id === selectedStudentId);
 
     const examResult: ExamResult = {
-      id: '', // Will be set by Firestore or ignored if mock
+      id: '', // Will be set by Firestore
       templateId: template.id,
       templateTitle: template.title,
       studentId: selectedStudentId,
@@ -106,10 +106,15 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
       isMock,
     };
 
-    if (!isMock && firestore) {
+    if (firestore) {
       const resultsCol = collection(firestore, `tenants/${tenantId}/student-exam-results`);
       addDocumentNonBlocking(resultsCol, examResult);
-      toast({ title: 'Result Recorded', description: 'This exam has been added to the student record.' });
+      toast({ 
+        title: isMock ? 'Practice Attempt Logged' : 'Official Result Recorded', 
+        description: isMock 
+            ? 'This session has been saved to the Mock Exams log.' 
+            : 'This result has been added to the student training file.' 
+      });
     }
 
     setResult(examResult);
@@ -248,8 +253,8 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
 
               {result.isMock && (
                 <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg flex items-center gap-2 text-[10px] text-amber-800">
-                    <AlertTriangle className="h-3 w-3" />
-                    <span>Practice mode active: This result has not been stored in the database.</span>
+                    <ShieldCheck className="h-3 w-3" />
+                    <span>Practice run recorded. You can review this attempt in the Mock Exams tab.</span>
                 </div>
               )}
             </div>
