@@ -27,8 +27,7 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { SafetyReport } from '@/types/safety-report';
-import type { ExternalOrganization } from '@/types/quality';
-import type { TabVisibilitySettings } from '../../admin/external/page';
+import type { ExternalOrganization, TabVisibilitySettings } from '@/types/quality';
 import { EditReportDialog } from './edit-report-dialog';
 
 const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
@@ -202,8 +201,8 @@ export default function SafetyReportsPage() {
     );
   }
 
-  const isTabEnabled = visibilitySettings?.visibilities?.['safety-reports'] ?? true;
-  const showTabs = isTabEnabled && canManageAll;
+  const isTabEnabled = true; // Restrictions disabled
+  const showTabs = canManageAll;
 
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">

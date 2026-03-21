@@ -46,11 +46,8 @@ const SidebarItems = () => {
     const { setOpenMobile } = useSidebar();
   
     const filteredItems = useMemo(() => {
-      // All restrictions disabled: return the full menu config
-      return menuConfig.filter(
-        (item) =>
-          item.label !== 'Development' || process.env.NODE_ENV === 'development'
-      );
+      // All restrictions disabled: return the full menu config regardless of environment
+      return menuConfig;
     }, []);
 
     return (

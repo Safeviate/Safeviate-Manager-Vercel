@@ -17,9 +17,8 @@ import { usePermissions } from '@/hooks/use-permissions';
 
 import type { ManagementOfChange } from '@/types/moc';
 import type { SafetyReport } from '@/types/safety-report';
-import type { CorrectiveActionPlan, QualityAudit, ExternalOrganization } from '@/types/quality';
+import type { CorrectiveActionPlan, QualityAudit, ExternalOrganization, TabVisibilitySettings } from '@/types/quality';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import type { TabVisibilitySettings } from '../../admin/external/page';
 
 type UnifiedTask = {
   id: string;
@@ -222,8 +221,8 @@ export default function TaskTrackerPage() {
     );
   }
 
-  const isTabEnabled = visibilitySettings?.visibilities?.['task-tracker'] ?? true;
-  const showTabs = isTabEnabled && canViewAll;
+  const isTabEnabled = true; // Restrictions disabled
+  const showTabs = canViewAll;
 
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">

@@ -363,15 +363,13 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
             <Card className="flex flex-col h-full overflow-hidden shadow-none border">
                 <CardHeader className="shrink-0 border-b bg-muted/5">
                     <CardTitle>Module Access Control</CardTitle>
-                    <CardDescription>Specifically control which functional modules are enabled for this specific user's navigation.</CardDescription>
+                    <CardDescription>Specifically control which functional modules are enabled for this specific user's navigation. Includes Admin and Development menus.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-1 p-0 overflow-hidden">
                     <ScrollArea className="h-full">
                         <div className="p-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {menuConfig.map((menu) => {
-                                    if (menu.label === 'Admin' || menu.label === 'Development') return null;
-                                    
                                     const subHrefs = menu.subItems?.map(s => s.href) || [];
                                     const isHidden = user.accessOverrides?.hiddenMenus?.includes(menu.href);
                                     const isVisible = !isHidden;

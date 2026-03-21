@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { seedComplianceData } from '@/lib/seed-data/part-141';
 
-import type { ComplianceRequirement, QualityAudit, ExternalOrganization } from '@/types/quality';
+import type { ComplianceRequirement, QualityAudit, ExternalOrganization, TabVisibilitySettings } from '@/types/quality';
 import type { Personnel } from '../../users/personnel/page';
 import { ComplianceItemForm } from './item-form';
 import { summarizeDocument, SummarizeDocumentInput } from '@/ai/flows/summarize-document-flow';
@@ -26,7 +26,6 @@ import Image from 'next/image';
 import { Switch } from '@/components/ui/switch';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
-import type { TabVisibilitySettings } from '../../admin/external/page';
 
 
 function UploadRegulationsDialog({ tenantId, organizationId }: { tenantId: string, organizationId: string | null }) {
@@ -398,8 +397,8 @@ export default function CoherenceMatrixPage() {
     );
   }
 
-  const isTabEnabled = visibilitySettings?.visibilities?.['coherence-matrix'] ?? true;
-  const showTabs = isTabEnabled && canManageAll;
+  const isTabEnabled = true; // Restrictions disabled
+  const showTabs = canManageAll;
 
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">

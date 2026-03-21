@@ -1,13 +1,8 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
-<<<<<<< HEAD
-import { useCollection, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
-=======
 import { useCollection, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
->>>>>>> c4f7ef24 (disable all page /module access restritions there are some pages that ar)
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,10 +43,9 @@ export default function QuestionBankPage() {
   const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [editingItem, setEditingItem] = useState<QuestionBankItem | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const topicsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'exam-topics') : null),
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'exam-topics') : null),
     [firestore, tenantId]
   );
   const { data: topicsData, isLoading: isLoadingTopics } = useDoc<ExamTopicsSettings>(topicsRef);
@@ -93,30 +87,11 @@ export default function QuestionBankPage() {
         });
     });
 
-    try {
-        await batch.commit();
-        toast({ 
-            title: 'Bank Populated', 
-            description: `${questions.length} questions added to the ${targetTopic} database.` 
-        });
-    } catch (e: any) {
-        toast({ variant: 'destructive', title: 'Error', description: e.message });
-    }
-  };
-
-  const handleDelete = async (item: QuestionBankItem) => {
-    if (!firestore || !tenantId) return;
-    
-    setIsDeleting(item.id);
-    try {
-        const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', item.id);
-        await deleteDocumentNonBlocking(docRef);
-        toast({ title: 'Question Removed' });
-    } catch (e: any) {
-        toast({ variant: 'destructive', title: 'Error', description: e.message });
-    } finally {
-        setIsDeleting(null);
-    }
+    await batch.commit();
+    toast({ 
+        title: 'Bank Populated', 
+        description: `${questions.length} questions added to the ${targetTopic} database.` 
+    });
   };
 
   if (isLoadingTopics || (isLoading && !poolItems)) {
@@ -203,33 +178,10 @@ export default function QuestionBankPage() {
                                 <Pencil className="h-3.5 w-3.5" />
                             </Button>
                             
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" size="icon" className="h-8 w-8 shadow-sm" disabled={isDeleting === item.id}>
-                                        {isDeleting === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Delete Question?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This will permanently remove this question from the <strong>{selectedTopic}</strong> database.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction 
-                                            onClick={() => handleDelete(item)}
-                                            className="bg-destructive hover:bg-destructive/90"
-                                        >
-                                            Delete Permanently
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
+                            <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} />
                         </div>
                     </TableCell>
-                </TableRow>
+                  </TableRow>
                 ))}
                 {filteredItems.length === 0 && !isLoading && (
                     <TableRow>
@@ -266,6 +218,54 @@ export default function QuestionBankPage() {
   );
 }
 
+function DeleteQuestionButton({ item, tenantId, selectedTopic }: { item: QuestionBankItem, tenantId: string, selectedTopic: string }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDelete = async () => {
+        if (!firestore || !tenantId) return;
+        setIsDeleting(true);
+        try {
+            const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', item.id);
+            await deleteDocumentNonBlocking(docRef);
+            toast({ title: 'Question Deleted', description: `Removed from ${selectedTopic} bank.` });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    return (
+        <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="icon" className="h-8 w-8 shadow-sm">
+                    <Trash2 className="h-4 w-4" />
+                </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Question?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently remove this question from the <strong>{selectedTopic}</strong> database. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                        onClick={handleDelete}
+                        disabled={isDeleting}
+                        className="bg-destructive hover:bg-destructive/90"
+                    >
+                        {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete Permanently'}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
+
 interface UpsertQuestionDialogProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
@@ -281,6 +281,7 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
     const [text, setText] = useState('');
     const [options, setOptions] = useState<{ id: string; text: string }[]>([]);
     const [correctId, setCorrectId] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -309,21 +310,22 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
             return;
         }
         if (!correctId) {
-            toast({ variant: 'destructive', title: 'Selection Missing', description: 'Please select which option is the correct answer.' });
+            toast({ variant: 'destructive', title: 'Invalid Form', description: 'Please select which option is the correct answer using the radio buttons.' });
             return;
         }
 
         if (!firestore || !tenantId) return;
-
-        const data = {
-            topic,
-            text,
-            options,
-            correctOptionId: correctId,
-            createdAt: editingItem?.createdAt || new Date().toISOString()
-        };
+        setIsSaving(true);
 
         try {
+            const data = {
+                topic,
+                text,
+                options,
+                correctOptionId: correctId,
+                createdAt: editingItem?.createdAt || new Date().toISOString()
+            };
+
             if (editingItem) {
                 const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', editingItem.id);
                 updateDocumentNonBlocking(docRef, data);
@@ -334,8 +336,10 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
                 toast({ title: 'Question Added' });
             }
             onOpenChange(false);
-        } catch (e: any) {
-            toast({ variant: 'destructive', title: 'Save Failed', description: e.message });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Save Failed', description: error.message });
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -436,8 +440,10 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
                         <AlertCircle className="h-4 w-4" />
                         <span className="text-[10px] font-medium italic">All technical questions require at least two options and one correct answer.</span>
                     </div>
-                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                    <Button onClick={handleSave}>{editingItem ? 'Update Question' : 'Save to Database'}</Button>
+                    <DialogClose asChild><Button variant="outline" disabled={isSaving}>Cancel</Button></DialogClose>
+                    <Button onClick={handleSave} disabled={isSaving}>
+                        {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : (editingItem ? 'Update Question' : 'Save to Database')}
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

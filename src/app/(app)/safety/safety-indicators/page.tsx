@@ -14,10 +14,9 @@ import { PlusCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { SpiConfig, SpiConfigurations } from '@/types/spi';
-import type { ExternalOrganization } from '@/types/quality';
+import type { ExternalOrganization, TabVisibilitySettings } from '@/types/quality';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
-import type { TabVisibilitySettings } from '../../admin/external/page';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const initialSpiConfig: SpiConfig[] = [
@@ -202,8 +201,8 @@ export default function SafetyIndicatorsPage() {
     return <div className="space-y-6 max-w-[1200px] mx-auto w-full"><Skeleton className="h-10 w-[400px] rounded-full" /><Skeleton className="h-[200px] w-full" /></div>;
   }
 
-  const isTabEnabled = visibilitySettings?.visibilities?.['safety-indicators'] ?? true;
-  const showTabs = isTabEnabled && canViewAll;
+  const isTabEnabled = true; // Restrictions disabled
+  const showTabs = canViewAll;
 
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4">

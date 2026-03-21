@@ -13,11 +13,10 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { ManagementOfChange } from '@/types/moc';
-import type { ExternalOrganization } from '@/types/quality';
+import type { ExternalOrganization, TabVisibilitySettings } from '@/types/quality';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { MocActions } from './moc-actions';
-import type { TabVisibilitySettings } from '../../admin/external/page';
 
 export default function ManagementOfChangePage() {
     const firestore = useFirestore();
@@ -122,8 +121,8 @@ export default function ManagementOfChangePage() {
         return <div className="max-w-[1200px] mx-auto w-full text-center py-10 text-destructive"><p>Error loading records: {error.message}</p></div>;
     }
 
-    const isTabEnabled = visibilitySettings?.visibilities?.['moc'] ?? true;
-    const showTabs = isTabEnabled && canViewAll;
+    const isTabEnabled = true; // Restrictions disabled
+    const showTabs = canViewAll;
 
     return (
         <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
