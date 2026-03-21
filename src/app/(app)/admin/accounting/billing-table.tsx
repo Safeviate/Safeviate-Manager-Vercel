@@ -18,6 +18,7 @@ import type { Personnel, PilotProfile } from '@/app/(app)/users/personnel/page';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Clock, User, Plane } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface BillingTableProps {
   bookings: Booking[];
