@@ -12,7 +12,7 @@ import type { RiskMatrixSettings } from '@/types/risk';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Pencil, Check, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Pencil, Check, AlertTriangle, ShieldCheck, Printer, LayoutGrid } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
@@ -110,8 +110,7 @@ export default function RiskMatrixPage() {
       queueSave({ severityDefinitions: newSeverities });
   };
 
-  const handleRightClick = (e: React.MouseEvent, cellId: string) => {
-      e.preventDefault();
+  const handleCellInteraction = (cellId: string) => {
       if (!canManage) return;
       setActiveCell(cellId);
       if (colorInputRef.current) {
@@ -130,95 +129,101 @@ export default function RiskMatrixPage() {
 
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 px-1 pb-4">
-      {/* --- CONSOLIDATED STICKY HEADER CARD --- */}
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 p-6">
-          <div className="flex justify-between items-start">
-            <div className="space-y-1">
+        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <LayoutGrid className="h-5 w-5 text-primary" />
               <CardTitle className="text-2xl font-headline">Risk Matrix Configuration</CardTitle>
-              <CardDescription className="max-w-2xl">
-                This matrix determines the level of risk for identified hazards based on standard ICAO taxonomy. 
-                {canManage && <span className="block mt-1 text-primary font-medium">Right-click a cell to customize colors.</span>}
-              </CardDescription>
             </div>
+            <CardDescription className="max-w-2xl">
+              Defining the organizational risk tolerance using ICAO taxonomy. 
+              {canManage && <span className="block mt-1 text-primary font-medium">Click a cell to customize its visual classification.</span>}
+            </CardDescription>
+          </div>
+          
+          <div className="flex flex-col gap-1.5 xl:items-end w-full sm:w-auto">
+            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Reporting Tools</p>
             <div className="flex gap-2 no-print">
-                <Button variant="outline" size="sm" onClick={() => window.print()}>
+                <Button variant="outline" size="sm" onClick={() => window.print()} className="h-9 px-4 text-xs font-bold gap-2">
+                    <Printer className="h-4 w-4" />
                     Export PDF
                 </Button>
             </div>
           </div>
         </CardHeader>
         
-        <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5">
+        <CardContent className="flex-1 p-0 overflow-hidden bg-background">
           <ScrollArea className="h-full">
-            <div className="p-6 space-y-10 pb-24">
+            <div className="p-6 space-y-12 pb-24">
               
-              {/* --- THE MATRIX (Optimized for Horizontal Scroll on Mobile) --- */}
-              <div className="w-full overflow-x-auto pb-6 px-1 custom-scrollbar">
-                <div className="inline-block min-w-full align-middle">
-                    <div className="border rounded-2xl overflow-hidden shadow-md bg-card mx-auto w-fit">
-                        <table className="table-fixed border-separate" style={{ borderSpacing: 0 }}>
-                            <thead>
-                                <tr className="h-20">
-                                    <th className="w-32 border-b border-r border-slate-200 dark:border-slate-700 bg-muted/30"></th>
-                                    {severities.map(s => (
-                                        <th key={s.value} className="w-28 border-r border-b border-slate-200 dark:border-slate-700 p-2 text-center align-middle font-bold text-[10px] uppercase tracking-wider bg-muted/30">
-                                            <div className="flex flex-col items-center gap-0.5">
-                                                <span className="truncate w-full">{s.name}</span>
-                                                <span className="text-primary font-black text-xs">({s.value})</span>
-                                            </div>
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {likelihoods.map(l => (
-                                    <tr key={l.value} className="h-20">
-                                        <th className="border-r border-b border-slate-200 dark:border-slate-700 p-2 text-right align-middle font-bold text-[10px] uppercase tracking-wider bg-muted/10 leading-tight">
-                                            {l.name}
-                                            <span className="block text-[9px] text-muted-foreground font-black mt-1">({l.value})</span>
-                                        </th>
-                                        {severities.map(s => {
-                                            const cellId = `${l.value}${s.value}`;
-                                            return (
-                                            <td
-                                                key={cellId}
-                                                onContextMenu={(e) => handleRightClick(e, cellId)}
-                                                style={{ backgroundColor: colors[cellId] }}
-                                                className={cn(
-                                                    "border-b border-r border-slate-200 dark:border-slate-700 p-1 text-center align-middle font-black text-sm text-black transition-all",
-                                                    canManage && "cursor-pointer hover:brightness-90 active:scale-95"
-                                                )}
-                                            >
-                                                <span className="drop-shadow-sm">{cellId}</span>
-                                            </td>
-                                            )
-                                        })}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                        <Input 
-                            type="color" 
-                            ref={colorInputRef} 
-                            className="hidden" 
-                            onChange={(e) => activeCell && handleColorChange(activeCell, e.target.value)}
-                        />
+              {/* --- MODERN GRID MATRIX --- */}
+              <div className="w-full overflow-x-auto pb-4 custom-scrollbar">
+                <div className="min-w-[700px] p-1">
+                    <div className="grid grid-cols-[140px_repeat(5,1fr)] gap-2">
+                        {/* Header Row */}
+                        <div />
+                        {severities.map(s => (
+                            <div key={s.value} className="flex flex-col items-center justify-center p-3 bg-muted/20 rounded-xl border border-border/50 text-center">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{s.name}</span>
+                                <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center font-black text-xs border-primary text-primary">
+                                    {s.value}
+                                </Badge>
+                            </div>
+                        ))}
+
+                        {/* Data Rows */}
+                        {likelihoods.map(l => (
+                            <React.Fragment key={l.value}>
+                                {/* Row Header */}
+                                <div className="flex items-center justify-end pr-4 text-right">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-tight leading-tight">{l.name}</p>
+                                        <p className="text-[10px] font-mono font-bold text-muted-foreground">({l.value})</p>
+                                    </div>
+                                </div>
+                                {/* Cells */}
+                                {severities.map(s => {
+                                    const cellId = `${l.value}${s.value}`;
+                                    const color = colors[cellId];
+                                    
+                                    return (
+                                        <button
+                                            key={cellId}
+                                            onClick={() => handleCellInteraction(cellId)}
+                                            style={{ backgroundColor: color }}
+                                            className={cn(
+                                                "h-16 rounded-xl shadow-sm flex items-center justify-center font-black text-lg text-black transition-all border-2 border-white/10",
+                                                canManage ? "hover:scale-[1.02] hover:shadow-md cursor-pointer active:scale-95" : "cursor-default"
+                                            )}
+                                        >
+                                            <span className="drop-shadow-sm opacity-80">{cellId}</span>
+                                        </button>
+                                    )
+                                })}
+                            </React.Fragment>
+                        ))}
                     </div>
                 </div>
+                <Input 
+                    type="color" 
+                    ref={colorInputRef} 
+                    className="hidden" 
+                    onChange={(e) => activeCell && handleColorChange(activeCell, e.target.value)}
+                />
               </div>
 
               <Separator />
 
               {/* --- DEFINITIONS SECTION --- */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
                 
                 {/* Severity Definitions */}
                 <div className="space-y-6">
                   <div className="flex items-center justify-between border-b border-primary/20 pb-2">
                     <h3 className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
                         <ShieldCheck className="h-4 w-4" />
-                        Severity Definitions
+                        Severity Scale (Impact)
                     </h3>
                     {canManage && (
                         <Button 
@@ -227,37 +232,38 @@ export default function RiskMatrixPage() {
                             className="h-7 px-3 text-[10px] uppercase font-bold"
                             onClick={() => setIsEditingSeverity(!isEditingSeverity)}
                         >
-                            {isEditingSeverity ? <><Check className="mr-1 h-3 w-3" /> Save</> : <><Pencil className="mr-1 h-3 w-3" /> Edit</>}
+                            {isEditingSeverity ? <><Check className="mr-1 h-3 w-3" /> Save Definitions</> : <><Pencil className="mr-1 h-3 w-3" /> Edit Descriptions</>}
                         </Button>
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-3">
                     {severities.map((s, index) => (
-                        <div key={s.value} className="p-4 bg-background rounded-xl border border-border shadow-sm flex flex-col gap-3 group transition-all hover:border-primary/30">
-                            <div className="flex items-center gap-3">
-                                <Badge variant="outline" className="h-8 w-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 border-primary text-primary">{s.value}</Badge>
-                                {isEditingSeverity ? (
-                                    <Input 
-                                        value={s.name} 
-                                        onChange={(e) => handleSeverityChange(index, 'name', e.target.value)}
-                                        className="h-8 text-xs font-bold bg-muted/5 uppercase"
-                                        placeholder="Category Name"
-                                    />
-                                ) : (
-                                    <span className="text-xs font-black uppercase tracking-tight">{s.name}</span>
-                                )}
+                        <div key={s.value} className="p-4 bg-muted/10 rounded-xl border border-border/50 group transition-all hover:border-primary/30 hover:bg-muted/20">
+                            <div className="flex items-start gap-4">
+                                <Badge variant="outline" className="h-10 w-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 border-primary bg-primary/5 text-primary shadow-sm">{s.value}</Badge>
+                                <div className="flex-1 space-y-2">
+                                    {isEditingSeverity ? (
+                                        <div className="space-y-2">
+                                            <Input 
+                                                value={s.name} 
+                                                onChange={(e) => handleSeverityChange(index, 'name', e.target.value)}
+                                                className="h-8 text-xs font-bold bg-background uppercase"
+                                            />
+                                            <Textarea 
+                                                value={s.description} 
+                                                onChange={(e) => handleSeverityChange(index, 'description', e.target.value)}
+                                                className="text-xs min-h-[60px] py-2 bg-background resize-none"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <p className="text-xs font-black uppercase tracking-tight text-foreground/80">{s.name}</p>
+                                            <p className="text-[11px] text-muted-foreground leading-relaxed font-medium">{s.description}</p>
+                                        </>
+                                    )}
+                                </div>
                             </div>
-                            {isEditingSeverity ? (
-                                <Textarea 
-                                    value={s.description} 
-                                    onChange={(e) => handleSeverityChange(index, 'description', e.target.value)}
-                                    className="text-xs min-h-[80px] py-2 bg-muted/5 resize-none"
-                                    placeholder="Impact description..."
-                                />
-                            ) : (
-                                <p className="text-[11px] text-muted-foreground leading-relaxed font-medium pl-11">{s.description}</p>
-                            )}
                         </div>
                     ))}
                   </div>
@@ -268,7 +274,7 @@ export default function RiskMatrixPage() {
                   <div className="flex items-center justify-between border-b border-primary/20 pb-2">
                     <h3 className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
                         <AlertTriangle className="h-4 w-4" />
-                        Likelihood Definitions
+                        Likelihood Scale (Probability)
                     </h3>
                     {canManage && (
                         <Button 
@@ -277,37 +283,38 @@ export default function RiskMatrixPage() {
                             className="h-7 px-3 text-[10px] uppercase font-bold"
                             onClick={() => setIsEditingLikelihood(!isEditingLikelihood)}
                         >
-                            {isEditingLikelihood ? <><Check className="mr-1 h-3 w-3" /> Save</> : <><Pencil className="mr-1 h-3 w-3" /> Edit</>}
+                            {isEditingLikelihood ? <><Check className="mr-1 h-3 w-3" /> Save Definitions</> : <><Pencil className="mr-1 h-3 w-3" /> Edit Descriptions</>}
                         </Button>
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-3">
                     {likelihoods.map((l, index) => (
-                        <div key={l.value} className="p-4 bg-background rounded-xl border border-border shadow-sm flex flex-col gap-3 group transition-all hover:border-primary/30">
-                            <div className="flex items-center gap-3">
-                                <Badge variant="outline" className="h-8 w-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 border-primary text-primary">{l.value}</Badge>
-                                {isEditingLikelihood ? (
-                                    <Input 
-                                        value={l.name} 
-                                        onChange={(e) => handleLikelihoodChange(index, 'name', e.target.value)}
-                                        className="h-8 text-xs font-bold bg-muted/5 uppercase"
-                                        placeholder="Category Name"
-                                    />
-                                ) : (
-                                    <span className="text-xs font-black uppercase tracking-tight">{l.name}</span>
-                                )}
+                        <div key={l.value} className="p-4 bg-muted/10 rounded-xl border border-border/50 group transition-all hover:border-primary/30 hover:bg-muted/20">
+                            <div className="flex items-start gap-4">
+                                <Badge variant="outline" className="h-10 w-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 border-primary bg-primary/5 text-primary shadow-sm">{l.value}</Badge>
+                                <div className="flex-1 space-y-2">
+                                    {isEditingLikelihood ? (
+                                        <div className="space-y-2">
+                                            <Input 
+                                                value={l.name} 
+                                                onChange={(e) => handleLikelihoodChange(index, 'name', e.target.value)}
+                                                className="h-8 text-xs font-bold bg-background uppercase"
+                                            />
+                                            <Textarea 
+                                                value={l.description} 
+                                                onChange={(e) => handleLikelihoodChange(index, 'description', e.target.value)}
+                                                className="text-xs min-h-[60px] py-2 bg-background resize-none"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <p className="text-xs font-black uppercase tracking-tight text-foreground/80">{l.name}</p>
+                                            <p className="text-[11px] text-muted-foreground leading-relaxed font-medium">{l.description}</p>
+                                        </>
+                                    )}
+                                </div>
                             </div>
-                            {isEditingLikelihood ? (
-                                <Textarea 
-                                    value={l.description} 
-                                    onChange={(e) => handleLikelihoodChange(index, 'description', e.target.value)}
-                                    className="text-xs min-h-[80px] py-2 bg-muted/5 resize-none"
-                                    placeholder="Probability description..."
-                                />
-                            ) : (
-                                <p className="text-[11px] text-muted-foreground leading-relaxed font-medium pl-11">{l.description}</p>
-                            )}
                         </div>
                     ))}
                   </div>
