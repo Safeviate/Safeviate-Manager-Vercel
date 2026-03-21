@@ -15,6 +15,7 @@ import { Pencil, Check, ShieldCheck, Printer, LayoutGrid, AlertTriangle } from '
 import { usePermissions } from '@/hooks/use-permissions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const defaultLikelihoods = [
     { name: 'Frequent', description: 'Likely to occur many times.', value: 5 },
@@ -149,150 +150,150 @@ export default function RiskMatrixPage() {
           </div>
         </CardHeader>
         
-        <CardContent className="flex-1 p-0 overflow-y-auto bg-background custom-scrollbar">
-            <div className="p-6 space-y-10 pb-24">
-              
-              <div 
-                className="w-full overflow-x-auto overflow-y-hidden border rounded-xl bg-muted/5 shadow-sm"
-                style={{ scrollbarWidth: 'thin' }}
-              >
-                <div className="min-w-[600px] p-6 mx-auto max-w-2xl">
-                    <div className="grid grid-cols-[120px_repeat(5,1fr)] gap-2">
-                        <div className="flex items-center justify-center p-2 bg-muted/50 rounded-lg border border-dashed text-center">
-                            <span className="text-[8px] font-black uppercase text-muted-foreground tracking-tighter">Impact</span>
-                        </div>
-                        {severities.map(s => (
-                            <div key={s.value} className="flex flex-col items-center justify-center p-1.5 bg-background rounded-lg border border-border/50 text-center">
-                                <span className="text-[8px] font-black uppercase tracking-tight text-muted-foreground mb-0.5 leading-tight">{s.name}</span>
-                                <Badge variant="outline" className="h-5 w-5 rounded-full p-0 flex items-center justify-center font-black text-[9px] border-primary/50 text-primary bg-background shadow-sm">
-                                    {s.value}
-                                </Badge>
+        <CardContent className="flex-1 p-0 overflow-hidden bg-background">
+            <ScrollArea className="h-full">
+                <div className="p-6 space-y-10 pb-24">
+                  
+                  {/* Matrix Container with Horizontal Scroll */}
+                  <div className="w-full overflow-x-auto border rounded-xl bg-muted/5 shadow-sm p-6 overflow-y-hidden">
+                    <div className="min-w-[600px] mx-auto max-w-2xl">
+                        <div className="grid grid-cols-[120px_repeat(5,1fr)] gap-2">
+                            <div className="flex items-center justify-center p-2 bg-muted/50 rounded-lg border border-dashed text-center">
+                                <span className="text-[8px] font-black uppercase text-muted-foreground tracking-tighter">Impact</span>
                             </div>
-                        ))}
+                            {severities.map(s => (
+                                <div key={s.value} className="flex flex-col items-center justify-center p-1.5 bg-background rounded-lg border border-border/50 text-center">
+                                    <span className="text-[8px] font-black uppercase tracking-tight text-muted-foreground mb-0.5 leading-tight">{s.name}</span>
+                                    <Badge variant="outline" className="h-5 w-5 rounded-full p-0 flex items-center justify-center font-black text-[9px] border-primary/50 text-primary bg-background shadow-sm">
+                                        {s.value}
+                                    </Badge>
+                                </div>
+                            ))}
 
-                        {likelihoods.map(l => (
-                            <React.Fragment key={l.value}>
-                                <div className="flex items-center justify-end pr-4 text-right border-r border-dashed mr-1">
-                                    <div className="space-y-0.5">
-                                        <p className="text-[9px] font-black uppercase tracking-tighter text-foreground line-clamp-1">{l.name}</p>
-                                        <Badge variant="secondary" className="text-[8px] font-mono font-bold h-3.5 px-1.5 bg-primary/10 text-primary border-none">LVL {l.value}</Badge>
+                            {likelihoods.map(l => (
+                                <React.Fragment key={l.value}>
+                                    <div className="flex items-center justify-end pr-4 text-right border-r border-dashed mr-1">
+                                        <div className="space-y-0.5">
+                                            <p className="text-[9px] font-black uppercase tracking-tighter text-foreground line-clamp-1">{l.name}</p>
+                                            <Badge variant="secondary" className="text-[8px] font-mono font-bold h-3.5 px-1.5 bg-primary/10 text-primary border-none">LVL {l.value}</Badge>
+                                        </div>
+                                    </div>
+                                    {severities.map(s => {
+                                        const cellId = `${l.value}${s.value}`;
+                                        const color = colors[cellId];
+                                        return (
+                                            <button
+                                                key={cellId}
+                                                onClick={() => handleCellInteraction(cellId)}
+                                                style={{ backgroundColor: color }}
+                                                className={cn(
+                                                    "h-12 rounded-lg shadow-sm flex items-center justify-center font-black text-[10px] text-black transition-all border-2 border-white/20",
+                                                    canManage ? "hover:scale-[1.03] cursor-pointer" : "cursor-default"
+                                                )}
+                                            >
+                                                <span className="drop-shadow-sm opacity-90">{cellId}</span>
+                                            </button>
+                                        )
+                                    })}
+                                </React.Fragment>
+                            ))}
+                        </div>
+                    </div>
+                    <Input 
+                        type="color" 
+                        ref={colorInputRef} 
+                        className="hidden" 
+                        onChange={(e) => activeCell && handleColorChange(activeCell, e.target.value)}
+                    />
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-primary/20 pb-2">
+                        <h3 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            Severity Scale
+                        </h3>
+                        {canManage && (
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 px-2 text-[9px] uppercase font-bold"
+                                onClick={() => setIsEditingSeverity(!isEditingSeverity)}
+                            >
+                                {isEditingSeverity ? <><Check className="mr-1 h-3 w-3" /> Save</> : <><Pencil className="mr-1 h-3 w-3" /> Edit</>}
+                            </Button>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        {severities.map((s, index) => (
+                            <div key={s.value} className="p-3 bg-muted/10 rounded-lg border border-border/50">
+                                <div className="flex items-start gap-3">
+                                    <Badge variant="outline" className="h-8 w-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0">{s.value}</Badge>
+                                    <div className="flex-1 space-y-1">
+                                        {isEditingSeverity ? (
+                                            <div className="space-y-1.5">
+                                                <Input value={s.name} onChange={(e) => handleSeverityChange(index, 'name', e.target.value)} className="h-7 text-[10px] font-bold" />
+                                                <Textarea value={s.description} onChange={(e) => handleSeverityChange(index, 'description', e.target.value)} className="text-[10px] min-h-[50px] py-1.5 bg-background resize-none" />
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <p className="text-[10px] font-black uppercase tracking-tight text-foreground/80">{s.name}</p>
+                                                <p className="text-[10px] text-muted-foreground leading-snug font-medium">{s.description}</p>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
-                                {severities.map(s => {
-                                    const cellId = `${l.value}${s.value}`;
-                                    const color = colors[cellId];
-                                    return (
-                                        <button
-                                            key={cellId}
-                                            onClick={() => handleCellInteraction(cellId)}
-                                            style={{ backgroundColor: color }}
-                                            className={cn(
-                                                "h-12 rounded-lg shadow-sm flex items-center justify-center font-black text-[10px] text-black transition-all border-2 border-white/20",
-                                                canManage ? "hover:scale-[1.03] cursor-pointer" : "cursor-default"
-                                            )}
-                                        >
-                                            <span className="drop-shadow-sm opacity-90">{cellId}</span>
-                                        </button>
-                                    )
-                                })}
-                            </React.Fragment>
+                            </div>
                         ))}
+                      </div>
                     </div>
-                </div>
-                <Input 
-                    type="color" 
-                    ref={colorInputRef} 
-                    className="hidden" 
-                    onChange={(e) => activeCell && handleColorChange(activeCell, e.target.value)}
-                />
-              </div>
 
-              <Separator />
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b border-primary/20 pb-2">
-                    <h3 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                        <ShieldCheck className="h-3.5 w-3.5" />
-                        Severity Scale
-                    </h3>
-                    {canManage && (
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-6 px-2 text-[9px] uppercase font-bold"
-                            onClick={() => setIsEditingSeverity(!isEditingSeverity)}
-                        >
-                            {isEditingSeverity ? <><Check className="mr-1 h-3 w-3" /> Save</> : <><Pencil className="mr-1 h-3 w-3" /> Edit</>}
-                        </Button>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    {severities.map((s, index) => (
-                        <div key={s.value} className="p-3 bg-muted/10 rounded-lg border border-border/50">
-                            <div className="flex items-start gap-3">
-                                <Badge variant="outline" className="h-8 w-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0">{s.value}</Badge>
-                                <div className="flex-1 space-y-1">
-                                    {isEditingSeverity ? (
-                                        <div className="space-y-1.5">
-                                            <Input value={s.name} onChange={(e) => handleSeverityChange(index, 'name', e.target.value)} className="h-7 text-[10px] font-bold" />
-                                            <Textarea value={s.description} onChange={(e) => handleSeverityChange(index, 'description', e.target.value)} className="text-[10px] min-h-[50px] py-1.5 bg-background resize-none" />
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <p className="text-[10px] font-black uppercase tracking-tight text-foreground/80">{s.name}</p>
-                                            <p className="text-[10px] text-muted-foreground leading-snug font-medium">{s.description}</p>
-                                        </>
-                                    )}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-primary/20 pb-2">
+                        <h3 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                            Likelihood Scale
+                        </h3>
+                        {canManage && (
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 px-2 text-[9px] uppercase font-bold"
+                                onClick={() => setIsEditingLikelihood(!isEditingLikelihood)}
+                            >
+                                {isEditingLikelihood ? <><Check className="mr-1 h-3 w-3" /> Save</> : <><Pencil className="mr-1 h-3 w-3" /> Edit</>}
+                            </Button>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        {likelihoods.map((l, index) => (
+                            <div key={l.value} className="p-3 bg-muted/10 rounded-lg border border-border/50">
+                                <div className="flex items-start gap-3">
+                                    <Badge variant="outline" className="h-8 w-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0">{l.value}</Badge>
+                                    <div className="flex-1 space-y-1">
+                                        {isEditingLikelihood ? (
+                                            <div className="space-y-1.5">
+                                                <Input value={l.name} onChange={(e) => handleLikelihoodChange(index, 'name', e.target.value)} className="h-7 text-[10px] font-bold" />
+                                                <Textarea value={l.description} onChange={(e) => handleLikelihoodChange(index, 'description', e.target.value)} className="text-[10px] min-h-[50px] py-1.5 bg-background resize-none" />
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <p className="text-[10px] font-black uppercase tracking-tight text-foreground/80">{l.name}</p>
+                                                <p className="text-[10px] text-muted-foreground leading-snug font-medium">{l.description}</p>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b border-primary/20 pb-2">
-                    <h3 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                        <AlertTriangle className="h-3.5 w-3.5" />
-                        Likelihood Scale
-                    </h3>
-                    {canManage && (
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-6 px-2 text-[9px] uppercase font-bold"
-                            onClick={() => setIsEditingLikelihood(!isEditingLikelihood)}
-                        >
-                            {isEditingLikelihood ? <><Check className="mr-1 h-3 w-3" /> Save</> : <><Pencil className="mr-1 h-3 w-3" /> Edit</>}
-                        </Button>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    {likelihoods.map((l, index) => (
-                        <div key={l.value} className="p-3 bg-muted/10 rounded-lg border border-border/50">
-                            <div className="flex items-start gap-3">
-                                <Badge variant="outline" className="h-8 w-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0">{l.value}</Badge>
-                                <div className="flex-1 space-y-1">
-                                    {isEditingLikelihood ? (
-                                        <div className="space-y-1.5">
-                                            <Input value={l.name} onChange={(e) => handleLikelihoodChange(index, 'name', e.target.value)} className="h-7 text-[10px] font-bold" />
-                                            <Textarea value={l.description} onChange={(e) => handleLikelihoodChange(index, 'description', e.target.value)} className="text-[10px] min-h-[50px] py-1.5 bg-background resize-none" />
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <p className="text-[10px] font-black uppercase tracking-tight text-foreground/80">{l.name}</p>
-                                            <p className="text-[10px] text-muted-foreground leading-snug font-medium">{l.description}</p>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+            </ScrollArea>
         </CardContent>
       </Card>
     </div>
