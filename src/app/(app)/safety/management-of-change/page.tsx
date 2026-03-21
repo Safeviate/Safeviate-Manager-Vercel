@@ -17,6 +17,7 @@ import type { ExternalOrganization, TabVisibilitySettings } from '@/types/qualit
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { MocActions } from './moc-actions';
+import { Separator } from '@/components/ui/separator';
 
 export default function ManagementOfChangePage() {
     const firestore = useFirestore();
@@ -54,21 +55,22 @@ export default function ManagementOfChangePage() {
 
         return (
             <Card className="min-h-[400px] flex flex-col shadow-none border">
-                <CardHeader className="bg-muted/10 border-b">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <CardTitle>{orgId === 'internal' ? 'Internal Management of Change' : organizations?.find(o => o.id === orgId)?.name}</CardTitle>
-                            <CardDescription>Formal change management process for this organization.</CardDescription>
-                        </div>
-                        {canViewAll && (
-                            <Button asChild size="sm">
+                <CardHeader className="bg-muted/10 border-b flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-6">
+                    <div>
+                        <CardTitle className="text-2xl font-headline">{orgId === 'internal' ? 'Internal Management of Change' : organizations?.find(o => o.id === orgId)?.name}</CardTitle>
+                        <CardDescription>Formal change management process for this organization.</CardDescription>
+                    </div>
+                    {canViewAll && (
+                        <div className="flex flex-col gap-1.5 xl:items-end w-full md:w-auto">
+                            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Change Control</p>
+                            <Button asChild size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
                                 <Link href={`/safety/management-of-change/new?orgId=${orgId}`}>
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     Propose Change
                                 </Link>
                             </Button>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>

@@ -185,22 +185,25 @@ export default function AccountingPage() {
 
             <Separator orientation="vertical" className="h-10 hidden xl:block" />
 
-            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                <Button 
-                    variant="outline"
-                    className="flex-1 md:flex-none gap-2 font-bold h-10 md:h-12 px-4 md:px-6 text-xs md:text-sm" 
-                    onClick={() => setIsPreviewOpen(true)} 
-                    disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
-                >
-                    <Eye className="h-4 w-4" /> Preview ({selectedIds.size})
-                </Button>
-                <Button 
-                    className="flex-1 md:flex-none gap-2 font-bold shadow-md h-10 md:h-12 px-4 md:px-6 text-xs md:text-sm" 
-                    onClick={handleSageExport} 
-                    disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
-                >
-                    <FileSpreadsheet className="h-4 w-4 md:h-5 md:w-5" /> Export to Sage
-                </Button>
+            <div className="flex flex-col gap-1.5 xl:items-end w-full md:w-auto">
+                <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Sage Integration</p>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button 
+                        variant="outline"
+                        className="flex-1 md:flex-none gap-2 font-bold h-9 px-4 text-xs" 
+                        onClick={() => setIsPreviewOpen(true)} 
+                        disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
+                    >
+                        <Eye className="h-3.5 w-3.5" /> Preview ({selectedIds.size})
+                    </Button>
+                    <Button 
+                        className="flex-1 md:flex-none gap-2 font-black shadow-md h-9 px-4 text-xs uppercase tracking-tight" 
+                        onClick={handleSageExport} 
+                        disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
+                    >
+                        <FileSpreadsheet className="h-4 w-4" /> Export to Sage
+                    </Button>
+                </div>
             </div>
           </div>
         </CardHeader>

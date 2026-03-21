@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Search, Trash2, Library, Pencil, Database, CheckCircle2, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Library, Pencil, Database, CheckCircle2, AlertCircle, Loader2, WandSparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +33,7 @@ import type { QuestionBankItem } from '@/types/training';
 import type { ExamTopicsSettings } from '../../admin/exam-topics/page';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { AiExamGenerator } from '../exams/ai-exam-generator';
+import { Separator } from '@/components/ui/separator';
 
 export default function QuestionBankPage() {
   const firestore = useFirestore();
@@ -110,11 +111,14 @@ export default function QuestionBankPage() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Question Bank Manager</h1>
           <p className="text-muted-foreground">Central database of aviation questions by topic.</p>
         </div>
-        <div className="flex gap-2">
-            <AiExamGenerator onGenerated={handleAiGenerated} />
-            <Button onClick={() => setIsAddOpen(true)} disabled={!selectedTopic}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Question
-            </Button>
+        <div className="flex flex-col gap-1.5 md:items-end">
+            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Database Actions</p>
+            <div className="flex gap-2">
+                <AiExamGenerator onGenerated={handleAiGenerated} />
+                <Button size="sm" className="h-9 px-4 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2" onClick={() => setIsAddOpen(true)} disabled={!selectedTopic}>
+                    <PlusCircle className="h-4 w-4" /> Add Question
+                </Button>
+            </div>
         </div>
       </div>
 

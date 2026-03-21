@@ -5,7 +5,7 @@ import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase
 import { collection, query, writeBatch, doc, deleteDoc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste, BookOpen } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -26,6 +26,7 @@ import Image from 'next/image';
 import { Switch } from '@/components/ui/switch';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
+import { Separator } from '@/components/ui/separator';
 
 
 function UploadRegulationsDialog({ tenantId, organizationId }: { tenantId: string, organizationId: string | null }) {
@@ -148,7 +149,10 @@ function UploadRegulationsDialog({ tenantId, organizationId }: { tenantId: strin
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline"><WandSparkles className="mr-2 h-4 w-4" /> AI Populate</Button>
+                <Button variant="outline" size="sm" className="h-8 text-xs font-bold gap-2">
+                    <WandSparkles className="h-3.5 w-3.5 text-primary" /> 
+                    AI Populate
+                </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
@@ -333,17 +337,26 @@ export default function CoherenceMatrixPage() {
 
     return (
         <Card className="min-h-[500px] flex flex-col shadow-none border">
-            <CardHeader className="bg-muted/10 border-b">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <CardTitle>{orgId === 'internal' ? 'Internal Coherence Matrix' : organizations?.find(o => o.id === orgId)?.name}</CardTitle>
-                        <CardDescription>Mapping external regulations to internal company processes.</CardDescription>
+            <CardHeader className="bg-muted/10 border-b flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-6">
+                <div>
+                    <CardTitle className="text-2xl font-headline">{orgId === 'internal' ? 'Internal Coherence Matrix' : organizations?.find(o => o.id === orgId)?.name}</CardTitle>
+                    <CardDescription>Mapping external regulations to internal company processes.</CardDescription>
+                </div>
+                <div className="flex flex-wrap items-center gap-4 md:gap-8 w-full xl:w-auto justify-start xl:justify-end">
+                    <div className="flex flex-col gap-1.5 xl:items-end">
+                        <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Regulatory Assets</p>
+                        <div className="flex gap-2">
+                            <UploadRegulationsDialog tenantId={tenantId!} organizationId={contextOrgId} />
+                            <Button variant="outline" size="sm" className="h-8 text-xs font-bold gap-2" onClick={() => handleSeedData(contextOrgId)}>
+                                <BookOpen className="h-3.5 w-3.5" /> Seed Part 141
+                            </Button>
+                        </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                        <UploadRegulationsDialog tenantId={tenantId!} organizationId={contextOrgId} />
-                        <Button variant="outline" onClick={() => handleSeedData(contextOrgId)}>Seed Part 141</Button>
-                        <Button onClick={() => handleOpenForm()}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+                    <Separator orientation="vertical" className="h-10 hidden xl:block" />
+                    <div className="flex flex-col gap-1.5 xl:items-end">
+                        <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Compliance Management</p>
+                        <Button size="sm" className="h-8 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm gap-2" onClick={() => handleOpenForm()}>
+                            <PlusCircle className="h-4 w-4" /> Add Item
                         </Button>
                     </div>
                 </div>
@@ -400,7 +413,7 @@ export default function CoherenceMatrixPage() {
   const showTabs = true;
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
         <div className="px-1">
             <h1 className="text-3xl font-bold tracking-tight">Coherence Matrix</h1>
             <p className="text-muted-foreground">Manage and track regulatory compliance across organizations.</p>

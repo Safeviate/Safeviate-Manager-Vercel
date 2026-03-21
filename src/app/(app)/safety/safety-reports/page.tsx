@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +31,7 @@ import type { ExternalOrganization, TabVisibilitySettings } from '@/types/qualit
 import { EditReportDialog } from './edit-report-dialog';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
@@ -226,16 +227,17 @@ export default function SafetyReportsPage() {
 
     return (
         <Card className="min-h-[400px] flex flex-col shadow-none border">
-            <CardHeader className="bg-muted/10 border-b">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <CardTitle>{orgId === 'internal' ? 'Internal Safety Reports' : organizations?.find(o => o.id === orgId)?.name}</CardTitle>
-                        <CardDescription>Review occurrences and safety concerns reported within this context.</CardDescription>
-                    </div>
-                    <Button asChild size="sm">
+            <CardHeader className="bg-muted/10 border-b flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-6">
+                <div>
+                    <CardTitle className="text-2xl font-headline">{orgId === 'internal' ? 'Internal Safety Reports' : organizations?.find(o => o.id === orgId)?.name}</CardTitle>
+                    <CardDescription>Review occurrences and safety concerns reported within this context.</CardDescription>
+                </div>
+                <div className="flex flex-col gap-1.5 xl:items-end w-full md:w-auto">
+                    <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Reporting Control</p>
+                    <Button asChild size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
                         <Link href={`/safety/new-report?orgId=${orgId}`}>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            File Report
+                            <PlusCircle className="h-4 w-4" />
+                            File New Report
                         </Link>
                     </Button>
                 </div>
