@@ -108,9 +108,7 @@ export function VisibilityManager() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {menuConfig.map((menu) => {
-            // Only hide Development tools from the organization visibility manager
-            if (menu.label === 'Development') return null;
-            
+            // RESTRICTIONS REMOVED: Development menu is now manageable here
             const subHrefs = menu.subItems?.map(s => s.href) || [];
             const isEnabled = enabledHrefs.has(menu.href);
             
