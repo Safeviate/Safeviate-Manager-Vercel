@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
 import type { ExamTopicsSettings } from '../../admin/exam-topics/page';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { writeBatch } from 'firebase/firestore';
 
 export default function QuestionBankPage() {
   const firestore = useFirestore();
