@@ -168,8 +168,8 @@ export default function ExamsPage() {
               <div className="flex flex-col gap-10 p-6 pb-20">
                 <section className="space-y-6">
                   <div className="flex flex-col gap-1">
-                    <h3 className="text-lg font-bold flex items-center gap-2 font-headline">
-                      <ClipboardCheck className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-bold flex items-center gap-2 font-headline text-emerald-800">
+                      <ClipboardCheck className="h-5 w-5" />
                       Available Exam Templates
                     </h3>
                     <p className="text-xs text-muted-foreground font-medium">Conduct a certified examination. Results are permanently recorded in the student profile.</p>
@@ -187,59 +187,63 @@ export default function ExamsPage() {
                     </div>
 
                     <div className="rounded-lg border bg-background overflow-hidden">
-                      {isLoadingTemplates ? (
-                        <div className="p-8 space-y-4">
-                          {[1, 2, 3].map(i => <div key={i} className="h-10 w-full bg-muted animate-pulse rounded-md" />)}
-                        </div>
-                      ) : filteredTemplates.length > 0 ? (
-                        <Table>
-                          <TableHeader className="bg-muted/30">
-                            <TableRow>
-                              <TableHead className="text-[10px] uppercase font-black px-4 py-3">Exam Title</TableHead>
-                              <TableHead className="text-[10px] uppercase font-black">Subject</TableHead>
-                              <TableHead className="text-center text-[10px] uppercase font-black">Pass Mark</TableHead>
-                              <TableHead className="text-right text-[10px] uppercase font-black px-4">Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {filteredTemplates.map((template) => (
-                              <TableRow key={template.id} className="group hover:bg-muted/5">
-                                <TableCell className="font-bold text-sm px-4">{template.title}</TableCell>
-                                <TableCell className="text-xs font-medium text-muted-foreground">{template.subject}</TableCell>
-                                <TableCell className="text-center font-black text-primary text-sm">{template.passingScore}%</TableCell>
-                                <TableCell className="text-right px-4">
-                                  <div className="flex justify-end gap-2">
-                                    <Button 
-                                      variant="default" 
-                                      size="sm" 
-                                      className="h-8 px-4 text-[10px] gap-2 font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm"
-                                      onClick={() => setTakingExam({ template, isMock: false })}
-                                    >
-                                      <PlayCircle className="h-4 w-4" /> Start Official Exam
-                                    </Button>
-                                    {canManage && (
-                                      <>
-                                        <Button asChild variant="outline" size="icon" className="h-8 w-8">
-                                          <Link href={`/training/exams/${template.id}/edit`}>
-                                            <Pencil className="h-3.5 w-3.5" />
-                                          </Link>
+                      <div className="overflow-x-auto scrollbar-thin">
+                        <div className="min-w-[650px]">
+                          {isLoadingTemplates ? (
+                            <div className="p-8 space-y-4">
+                              {[1, 2, 3].map(i => <div key={i} className="h-10 w-full bg-muted animate-pulse rounded-md" />)}
+                            </div>
+                          ) : filteredTemplates.length > 0 ? (
+                            <Table>
+                              <TableHeader className="bg-muted/30">
+                                <TableRow>
+                                  <TableHead className="text-[10px] uppercase font-black px-4 py-3">Exam Title</TableHead>
+                                  <TableHead className="text-[10px] uppercase font-black">Subject</TableHead>
+                                  <TableHead className="text-center text-[10px] uppercase font-black">Pass Mark</TableHead>
+                                  <TableHead className="text-right text-[10px] uppercase font-black px-4">Actions</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {filteredTemplates.map((template) => (
+                                  <TableRow key={template.id} className="group hover:bg-muted/5">
+                                    <TableCell className="font-bold text-sm px-4 whitespace-nowrap">{template.title}</TableCell>
+                                    <TableCell className="text-xs font-medium text-muted-foreground whitespace-nowrap">{template.subject}</TableCell>
+                                    <TableCell className="text-center font-black text-primary text-sm whitespace-nowrap">{template.passingScore}%</TableCell>
+                                    <TableCell className="text-right px-4 whitespace-nowrap">
+                                      <div className="flex justify-end gap-2">
+                                        <Button 
+                                          variant="default" 
+                                          size="sm" 
+                                          className="h-8 px-4 text-[10px] gap-2 font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm"
+                                          onClick={() => setTakingExam({ template, isMock: false })}
+                                        >
+                                          <PlayCircle className="h-4 w-4" /> Start Official Exam
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(template.id)}>
-                                          <Trash2 className="h-3.5 w-3.5" />
-                                        </Button>
-                                      </>
-                                    )}
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      ) : (
-                        <div className="text-center py-12 opacity-40">
-                          <p className="text-sm font-medium italic">No templates available.</p>
+                                        {canManage && (
+                                          <>
+                                            <Button asChild variant="outline" size="icon" className="h-8 w-8">
+                                              <Link href={`/training/exams/${template.id}/edit`}>
+                                                <Pencil className="h-3.5 w-3.5" />
+                                              </Link>
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(template.id)}>
+                                              <Trash2 className="h-3.5 w-3.5" />
+                                            </Button>
+                                          </>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          ) : (
+                            <div className="text-center py-12 opacity-40">
+                              <p className="text-sm font-medium italic">No templates available.</p>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -261,32 +265,36 @@ export default function ExamsPage() {
                         {[1, 2, 3].map(i => <div key={i} className="h-10 w-full bg-muted animate-pulse rounded-md" />)}
                       </div>
                     ) : results?.filter(r => !r.isMock).length ? (
-                      <Table>
-                        <TableHeader className="bg-muted/30">
-                          <TableRow>
-                            <TableHead className="text-[10px] uppercase font-black px-4">Date</TableHead>
-                            <TableHead className="text-[10px] uppercase font-black">Student</TableHead>
-                            <TableHead className="text-[10px] uppercase font-black">Exam</TableHead>
-                            <TableHead className="text-center text-[10px] uppercase font-black">Score</TableHead>
-                            <TableHead className="text-center text-[10px] uppercase font-black">Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {results.filter(r => !r.isMock).map(res => (
-                            <TableRow key={res.id}>
-                              <TableCell className="text-[10px] font-mono whitespace-nowrap px-4">{format(new Date(res.date), 'dd MMM yy HH:mm')}</TableCell>
-                              <TableCell className="font-semibold text-xs">{res.studentName}</TableCell>
-                              <TableCell className="text-xs max-w-[200px] truncate">{res.templateTitle}</TableCell>
-                              <TableCell className="text-center font-bold text-xs">{res.score}%</TableCell>
-                              <TableCell className="text-center">
-                                <Badge variant={res.passed ? "default" : "destructive"} className="h-5 text-[9px] gap-1 font-black uppercase">
-                                  {res.passed ? 'PASSED' : 'FAILED'}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                      <div className="overflow-x-auto">
+                        <div className="min-w-[650px]">
+                          <Table>
+                            <TableHeader className="bg-muted/30">
+                              <TableRow>
+                                <TableHead className="text-[10px] uppercase font-black px-4 py-3">Date</TableHead>
+                                <TableHead className="text-[10px] uppercase font-black">Student</TableHead>
+                                <TableHead className="text-[10px] uppercase font-black">Exam</TableHead>
+                                <TableHead className="text-center text-[10px] uppercase font-black">Score</TableHead>
+                                <TableHead className="text-center text-[10px] uppercase font-black">Status</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {results.filter(r => !r.isMock).map(res => (
+                                <TableRow key={res.id}>
+                                  <TableCell className="text-[10px] font-mono whitespace-nowrap px-4">{format(new Date(res.date), 'dd MMM yy HH:mm')}</TableCell>
+                                  <TableCell className="font-semibold text-xs whitespace-nowrap">{res.studentName}</TableCell>
+                                  <TableCell className="text-xs max-w-[200px] truncate">{res.templateTitle}</TableCell>
+                                  <TableCell className="text-center font-bold text-xs whitespace-nowrap">{res.score}%</TableCell>
+                                  <TableCell className="text-center whitespace-nowrap">
+                                    <Badge variant={res.passed ? "default" : "destructive"} className="h-5 text-[9px] gap-1 font-black uppercase">
+                                      {res.passed ? 'PASSED' : 'FAILED'}
+                                    </Badge>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
                     ) : (
                       <div className="text-center py-12 opacity-40">
                         <p className="text-sm font-medium italic">No official records found.</p>
@@ -342,26 +350,30 @@ export default function ExamsPage() {
                         <div className="space-y-4">
                             <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2"><GraduationCap className="h-4 w-4" />Fixed Exam Templates (Practice)</h3>
                             <div className="rounded-md border bg-card overflow-hidden">
-                                <Table>
-                                    <TableHeader className="bg-muted/30">
-                                    <TableRow>
-                                        <TableHead className="text-[10px] uppercase font-black px-4 py-3">Exam Title</TableHead>
-                                        <TableHead className="text-[10px] uppercase font-black">Subject</TableHead>
-                                        <TableHead className="text-right text-[10px] uppercase font-black px-4">Actions</TableHead>
-                                    </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                    {templates?.map((template) => (
-                                        <TableRow key={template.id} className="group">
-                                        <TableCell className="font-bold text-sm px-4">{template.title}</TableCell>
-                                        <TableCell className="text-xs font-medium text-muted-foreground">{template.subject}</TableCell>
-                                        <TableCell className="text-right px-4">
-                                            <Button variant="outline" size="sm" className="h-8 text-[10px] gap-2 bg-primary/5 hover:bg-primary/10 border-primary/20 font-black uppercase tracking-tight" onClick={() => setTakingExam({ template, isMock: true })}><PlayCircle className="h-4 w-4" /> Start Practice Run</Button>
-                                        </TableCell>
+                                <div className="overflow-x-auto">
+                                  <div className="min-w-[650px]">
+                                    <Table>
+                                        <TableHeader className="bg-muted/30">
+                                        <TableRow>
+                                            <TableHead className="text-[10px] uppercase font-black px-4 py-3">Exam Title</TableHead>
+                                            <TableHead className="text-[10px] uppercase font-black">Subject</TableHead>
+                                            <TableHead className="text-right text-[10px] uppercase font-black px-4">Actions</TableHead>
                                         </TableRow>
-                                    ))}
-                                    </TableBody>
-                                </Table>
+                                        </TableHeader>
+                                        <TableBody>
+                                        {templates?.map((template) => (
+                                            <TableRow key={template.id} className="group">
+                                            <TableCell className="font-bold text-sm px-4 whitespace-nowrap">{template.title}</TableCell>
+                                            <TableCell className="text-xs font-medium text-muted-foreground whitespace-nowrap">{template.subject}</TableCell>
+                                            <TableCell className="text-right px-4 whitespace-nowrap">
+                                                <Button variant="outline" size="sm" className="h-8 text-[10px] gap-2 bg-primary/5 hover:bg-primary/10 border-primary/20 font-black uppercase tracking-tight" onClick={() => setTakingExam({ template, isMock: true })}><PlayCircle className="h-4 w-4" /> Start Practice Run</Button>
+                                            </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        </TableBody>
+                                    </Table>
+                                  </div>
+                                </div>
                             </div>
                         </div>
                     </div>
