@@ -108,7 +108,7 @@ export default function QuestionBankPage() {
       <div className="px-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Question Bank Manager</h1>
-          <p className="text-muted-foreground">central database of aviation questions by topic.</p>
+          <p className="text-muted-foreground">Central database of aviation questions by topic.</p>
         </div>
         <div className="flex gap-2">
             <AiExamGenerator onGenerated={handleAiGenerated} />

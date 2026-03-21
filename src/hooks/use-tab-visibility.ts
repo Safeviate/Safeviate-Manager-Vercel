@@ -7,6 +7,7 @@ import type { TabVisibilitySettings } from '@/types/quality';
 
 /**
  * A custom hook to determine if specific UI tabs should be visible.
+ * RESTORED: Now strictly checks settings in Firestore.
  */
 export function useTabVisibility(pageId: string, canViewAll: boolean): boolean {
   const firestore = useFirestore();
