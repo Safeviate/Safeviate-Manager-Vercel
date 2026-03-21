@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Search, PlusCircle, Pencil, Trash2, GraduationCap, ClipboardCheck, PlayCircle, ShieldCheck, Microscope, Database } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -138,7 +138,7 @@ export default function ExamsPage() {
       <div className="px-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Examinations</h1>
-          <p className="text-muted-foreground">Manage official assessments and zero-persistence student practice runs.</p>
+          <p className="text-muted-foreground">Manage official assessments and student practice runs.</p>
         </div>
         {canManage && (
           <div className="flex flex-col gap-1.5 md:items-end w-full md:w-auto">
@@ -404,6 +404,7 @@ export default function ExamsPage() {
                     </div>
                 </ScrollArea>
             </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
