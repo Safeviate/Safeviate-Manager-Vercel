@@ -114,12 +114,10 @@ export default function ExamsPage() {
         return;
     }
 
-    // Shuffle and pick
     const shuffled = [...availableQuestions].sort(() => 0.5 - Math.random());
     const count = Math.min(Number(questionCount), shuffled.length);
     const selectedQuestions = shuffled.slice(0, count);
 
-    // Create transient template
     const transientTemplate: ExamTemplate = {
         id: `transient-${Date.now()}`,
         title: `Random Practice: ${selectedTopic}`,
@@ -168,7 +166,6 @@ export default function ExamsPage() {
           <Card className="h-full flex flex-col overflow-hidden shadow-none border">
             <ScrollArea className="h-full">
               <div className="flex flex-col gap-10 p-6 pb-20">
-                
                 <section className="space-y-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
@@ -312,32 +309,23 @@ export default function ExamsPage() {
             <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5">
                 <ScrollArea className="h-full">
                     <div className="p-6 space-y-8">
-                        {/* --- TOPIC SELECTOR --- */}
                         <div className="max-w-2xl mx-auto space-y-6 bg-card border rounded-2xl p-8 shadow-sm">
                             <div className="space-y-2 text-center">
                                 <h3 className="text-lg font-black uppercase tracking-tight text-primary">Dynamic Practice Run</h3>
                                 <p className="text-xs text-muted-foreground">Select a topic to generate a randomized mock exam from the database.</p>
                             </div>
-                            
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                                 <div className="space-y-2">
                                     <Label className="text-[10px] uppercase font-bold text-muted-foreground">Aviation Topic</Label>
                                     <Select onValueChange={setSelectedTopic} value={selectedTopic}>
-                                        <SelectTrigger className="h-12">
-                                            <Database className="h-4 w-4 mr-2 text-primary" />
-                                            <SelectValue placeholder="Select Topic..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {(topicsData?.topics || []).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                                        </SelectContent>
+                                        <SelectTrigger className="h-12"><Database className="h-4 w-4 mr-2 text-primary" /><SelectValue placeholder="Select Topic..." /></SelectTrigger>
+                                        <SelectContent>{(topicsData?.topics || []).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-[10px] uppercase font-bold text-muted-foreground">Quantity</Label>
                                     <Select onValueChange={setQuestionCount} value={questionCount}>
-                                        <SelectTrigger className="h-12">
-                                            <SelectValue />
-                                        </SelectTrigger>
+                                        <SelectTrigger className="h-12"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="5">5 Questions</SelectItem>
                                             <SelectItem value="10">10 Questions</SelectItem>
@@ -347,23 +335,11 @@ export default function ExamsPage() {
                                     </Select>
                                 </div>
                             </div>
-
-                            <Button 
-                                onClick={handleStartTopicExam} 
-                                disabled={!selectedTopic}
-                                className="w-full h-14 text-lg font-black shadow-lg gap-3"
-                            >
-                                <PlayCircle className="h-6 w-6" /> START RANDOMIZED MOCK
-                            </Button>
+                            <Button onClick={handleStartTopicExam} disabled={!selectedTopic} className="w-full h-14 text-lg font-black shadow-lg gap-3"><PlayCircle className="h-6 w-6" /> START RANDOMIZED MOCK</Button>
                         </div>
-
                         <Separator />
-
                         <div className="space-y-4">
-                            <h3 className="text-sm font-bold flex items-center gap-2">
-                                <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                                Fixed Exam Templates (Practice)
-                            </h3>
+                            <h3 className="text-sm font-bold flex items-center gap-2"><GraduationCap className="h-4 w-4 text-muted-foreground" />Fixed Exam Templates (Practice)</h3>
                             <div className="rounded-md border bg-card overflow-hidden">
                                 <Table>
                                     <TableHeader className="bg-muted/30">
@@ -379,24 +355,10 @@ export default function ExamsPage() {
                                         <TableCell className="font-bold text-sm">{template.title}</TableCell>
                                         <TableCell className="text-xs">{template.subject}</TableCell>
                                         <TableCell className="text-right">
-                                            <Button 
-                                                variant="outline" 
-                                                size="sm" 
-                                                className="h-7 text-[10px] gap-1.5 bg-primary/5 hover:bg-primary/10 border-primary/20 font-bold"
-                                                onClick={() => setTakingExam({ template, isMock: true })}
-                                            >
-                                                <PlayCircle className="h-3.5 w-3.5" /> Start Practice Run
-                                            </Button>
+                                            <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1.5 bg-primary/5 hover:bg-primary/10 border-primary/20 font-bold" onClick={() => setTakingExam({ template, isMock: true })}><PlayCircle className="h-3.5 w-3.5" /> Start Practice Run</Button>
                                         </TableCell>
                                         </TableRow>
                                     ))}
-                                    {(!templates || templates.length === 0) && (
-                                        <TableRow>
-                                            <TableCell colSpan={3} className="h-32 text-center text-muted-foreground italic">
-                                                No fixed templates available for practice.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
                                     </TableBody>
                                 </Table>
                             </div>

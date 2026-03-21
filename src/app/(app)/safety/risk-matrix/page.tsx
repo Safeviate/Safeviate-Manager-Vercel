@@ -10,7 +10,6 @@ import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@
 import { doc } from 'firebase/firestore';
 import type { RiskMatrixSettings } from '@/types/risk';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Pencil, Check, AlertTriangle, ShieldCheck, Printer, LayoutGrid } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -153,33 +152,34 @@ export default function RiskMatrixPage() {
           </div>
         </CardHeader>
         
-        <CardContent className="flex-1 p-0 overflow-hidden bg-background">
-          <ScrollArea className="h-full">
+        <CardContent className="flex-1 p-0 overflow-y-auto bg-background custom-scrollbar">
             <div className="p-6 space-y-12 pb-24">
               
-              {/* --- MODERN GRID MATRIX WITH HORIZONTAL SCROLL --- */}
-              <div className="w-full overflow-x-auto pb-6 custom-scrollbar border rounded-xl">
-                <div className="min-w-[900px] p-6">
-                    <div className="grid grid-cols-[180px_repeat(5,1fr)] gap-3">
-                        {/* Header Row */}
-                        <div />
+              {/* --- MATRIX CONTAINER WITH ROBUST HORIZONTAL SCROLL --- */}
+              <div className="w-full overflow-x-auto custom-scrollbar border rounded-xl bg-card shadow-sm">
+                <div className="min-w-[1000px] p-8">
+                    <div className="grid grid-cols-[200px_repeat(5,1fr)] gap-4">
+                        {/* Header Row (Severities) */}
+                        <div className="flex items-center justify-center p-4 bg-muted/50 rounded-xl border border-dashed text-center">
+                            <span className="text-[10px] font-black uppercase text-muted-foreground">Safety Matrix</span>
+                        </div>
                         {severities.map(s => (
                             <div key={s.value} className="flex flex-col items-center justify-center p-4 bg-muted/30 rounded-xl border border-border/50 text-center">
                                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1 leading-tight">{s.name}</span>
-                                <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center font-black text-xs border-primary text-primary bg-background">
+                                <Badge variant="outline" className="h-7 w-7 rounded-full p-0 flex items-center justify-center font-black text-xs border-primary text-primary bg-background shadow-sm">
                                     {s.value}
                                 </Badge>
                             </div>
                         ))}
 
-                        {/* Data Rows */}
+                        {/* Data Rows (Likelihoods) */}
                         {likelihoods.map(l => (
                             <React.Fragment key={l.value}>
                                 {/* Row Header */}
-                                <div className="flex items-center justify-end pr-6 text-right">
+                                <div className="flex items-center justify-end pr-8 text-right border-r border-dashed mr-2">
                                     <div className="space-y-0.5">
-                                        <p className="text-[10px] font-black uppercase tracking-tighter leading-none">{l.name}</p>
-                                        <p className="text-[10px] font-mono font-bold text-muted-foreground">({l.value})</p>
+                                        <p className="text-[11px] font-black uppercase tracking-tight text-foreground">{l.name}</p>
+                                        <Badge variant="secondary" className="text-[10px] font-mono font-bold h-5 px-2 bg-primary/10 text-primary border-none">LVL {l.value}</Badge>
                                     </div>
                                 </div>
                                 {/* Cells */}
@@ -193,17 +193,21 @@ export default function RiskMatrixPage() {
                                             onClick={() => handleCellInteraction(cellId)}
                                             style={{ backgroundColor: color }}
                                             className={cn(
-                                                "h-20 rounded-xl shadow-sm flex items-center justify-center font-black text-xl text-black transition-all border-2 border-white/10",
-                                                canManage ? "hover:scale-[1.02] hover:shadow-md cursor-pointer active:scale-95" : "cursor-default"
+                                                "h-24 rounded-2xl shadow-sm flex items-center justify-center font-black text-2xl text-black transition-all border-4 border-white/20",
+                                                canManage ? "hover:scale-[1.05] hover:rotate-1 hover:shadow-xl cursor-pointer active:scale-95" : "cursor-default"
                                             )}
                                         >
-                                            <span className="drop-shadow-sm opacity-80">{cellId}</span>
+                                            <span className="drop-shadow-md opacity-90">{cellId}</span>
                                         </button>
                                     )
                                 })}
                             </React.Fragment>
                         ))}
                     </div>
+                </div>
+                {/* Visual affordance for horizontal scroll on mobile */}
+                <div className="md:hidden text-center py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest animate-pulse border-t bg-muted/5">
+                    ← Swipe horizontally to view full matrix →
                 </div>
                 <Input 
                     type="color" 
@@ -322,7 +326,6 @@ export default function RiskMatrixPage() {
 
               </div>
             </div>
-          </ScrollArea>
         </CardContent>
       </Card>
     </div>

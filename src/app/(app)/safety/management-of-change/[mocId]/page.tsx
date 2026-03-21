@@ -98,7 +98,6 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
 
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 pb-4">
-      {/* --- STICKY HEADER SECTION --- */}
       <div className="shrink-0 space-y-4 px-1 bg-background z-20 pb-2 border-b no-print">
         <div className="flex justify-between items-center">
           <Button asChild variant="outline" size="sm" className="h-8">
@@ -141,7 +140,6 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
         </Tabs>
       </div>
 
-      {/* --- SCROLLABLE CONTENT SECTION --- */}
       <div className="flex-1 min-h-0 overflow-hidden px-1">
         <Tabs value={activeTab} className="h-full flex flex-col m-0">
           <TabsContent value="implementation" className="m-0 h-full flex-1 overflow-hidden">
@@ -166,7 +164,6 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
         </Tabs>
       </div>
 
-      {/* --- PRINT ONLY LAYOUT --- */}
       <div className="hidden print:block space-y-8">
         <div className="border-b pb-4 mb-6">
           <h1 className="text-3xl font-bold">Management of Change Proposal</h1>

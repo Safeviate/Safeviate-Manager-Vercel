@@ -27,7 +27,6 @@ export default function AccessOverviewPage() {
 
   const isLoading = isLoadingTenant || isLoadingRoles;
 
-  // Filter out admin and dev menus for the overview
   const coreModules = useMemo(() => {
     return menuConfig.filter(m => m.label !== 'Admin' && m.label !== 'Development');
   }, []);
@@ -44,7 +43,6 @@ export default function AccessOverviewPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 flex-1 min-h-0">
-        {/* ACCESS MATRIX */}
         <Card className="flex flex-col h-full overflow-hidden shadow-none border">
           <CardHeader className="shrink-0 border-b bg-muted/5">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -78,7 +76,6 @@ export default function AccessOverviewPage() {
                           {!isEnabled && <Badge variant="outline" className="text-[8px] h-4 py-0 ml-1">Disabled</Badge>}
                         </TableCell>
                         {(roles || []).map(role => {
-                          // Standard permission mapping: ID-view
                           const permissionId = module.permissionId;
                           const hasAccess = role.permissions?.includes(permissionId || '');
                           
@@ -101,7 +98,6 @@ export default function AccessOverviewPage() {
           </CardContent>
         </Card>
 
-        {/* SUMMARY STATS */}
         <div className="space-y-6">
           <Card className="shadow-none border">
             <CardHeader className="bg-muted/10">
