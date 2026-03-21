@@ -151,10 +151,10 @@ export default function PersonnelPage() {
       <div className="px-1 shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Personnel</h1>
-            <p className="text-muted-foreground">Manage all non-flying staff in your organization.</p>
+            <p className="text-muted-foreground text-sm">Manage all non-flying staff in your organization.</p>
         </div>
         <div className="flex flex-col gap-1.5 sm:items-end w-full sm:w-auto">
-            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Account Controls</p>
+            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Account Controls</p>
             <div className="flex gap-2">
                 <PersonnelForm 
                     tenantId={tenantId} 
