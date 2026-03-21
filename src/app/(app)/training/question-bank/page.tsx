@@ -88,6 +88,7 @@ export default function QuestionBankPage() {
 
   const handleDelete = (id: string) => {
     if (!firestore || !tenantId || !id) return;
+    
     if (!window.confirm('Are you sure you want to permanently delete this question from the bank?')) return;
     
     const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', id);
@@ -178,7 +179,7 @@ export default function QuestionBankPage() {
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingItem(item)}>
                                 <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(item.id)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(item.id)}>
                                 <Trash2 className="h-4 w-4" />
                             </Button>
                         </div>
