@@ -26,7 +26,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useMemo } from 'react';
 import {
   menuConfig,
-  MenuItem as MenuItemType,
 } from '@/lib/menu-config';
 import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -41,46 +40,18 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SheetHeader, SheetTitle } from './ui/sheet';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { usePermissions } from '@/hooks/use-permissions';
-import { useTenantConfig } from '@/hooks/use-tenant-config';
 
 const SidebarItems = () => {
     const pathname = usePathname();
     const { setOpenMobile } = useSidebar();
-    const { hasPermission } = usePermissions();
-    const { userProfile } = useUserProfile();
-    const { tenant } = useTenantConfig();
   
     const filteredItems = useMemo(() => {
-      const config = menuConfig.filter(
+      // All restrictions disabled: return the full menu config
+      return menuConfig.filter(
         (item) =>
           item.label !== 'Development' || process.env.NODE_ENV === 'development'
       );
-
-      return config.filter(item => {
-        // 1. Check Individual User Override (explicit hide)
-        if (userProfile?.accessOverrides?.hiddenMenus?.includes(item.href)) {
-          return false;
-        }
-
-        // 2. Check Tenant-Level Visibility
-        if (tenant?.enabledMenus && !tenant.enabledMenus.includes(item.href)) {
-          return false;
-        }
-
-        // 3. Check Permission-Level Visibility
-        const canAccessParent = !item.permissionId || hasPermission(item.permissionId);
-        
-        const visibleSubItems = item.subItems ? item.subItems.filter(sub => {
-          const hasPerm = !sub.permissionId || hasPermission(sub.permissionId);
-          const isTenantEnabled = !tenant?.enabledMenus || tenant.enabledMenus.includes(sub.href);
-          const isUserVisible = !userProfile?.accessOverrides?.hiddenMenus?.includes(sub.href);
-          return hasPerm && isTenantEnabled && isUserVisible;
-        }) : [];
-        
-        return canAccessParent || visibleSubItems.length > 0;
-      });
-    }, [tenant, userProfile, hasPermission]);
+    }, []);
 
     return (
         <SidebarMenu>
@@ -88,20 +59,15 @@ const SidebarItems = () => {
                 const Icon = item.icon;
                 const isParentActive = pathname.startsWith(item.href);
 
-                const visibleSubItems = item.subItems ? item.subItems.filter(sub => {
-                    const hasPerm = !sub.permissionId || hasPermission(sub.permissionId);
-                    const isTenantEnabled = !tenant?.enabledMenus || tenant.enabledMenus.includes(sub.href);
-                    const isUserVisible = !userProfile?.accessOverrides?.hiddenMenus?.includes(sub.href);
-                    return hasPerm && isTenantEnabled && isUserVisible;
-                }) : [];
+                const subItems = item.subItems || [];
 
                 let content;
-                if (item.subItems && visibleSubItems.length > 0) {
+                if (subItems.length > 0) {
                     content = (
                         <SidebarCollapsible defaultOpen={isParentActive}>
                             <SidebarCollapsibleTrigger asChild>
                                 <SidebarMenuButton
-                                    isActive={isParentActive && !visibleSubItems.some(sub => pathname === sub.href)}
+                                    isActive={isParentActive && !subItems.some(sub => pathname === sub.href)}
                                     tooltip={item.label}
                                     className="justify-between"
                                 >
@@ -114,7 +80,7 @@ const SidebarItems = () => {
                             </SidebarCollapsibleTrigger>
                             <SidebarCollapsibleContent>
                                 <SidebarMenuSub>
-                                    {visibleSubItems.map((subItem) => (
+                                    {subItems.map((subItem) => (
                                         <SidebarMenuSubItem key={subItem.href}>
                                             <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
                                                 <Link 

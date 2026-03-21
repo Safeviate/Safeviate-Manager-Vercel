@@ -1,4 +1,3 @@
-
 import type { CorrectiveAction } from './safety-report';
 
 
@@ -91,6 +90,11 @@ export interface ExternalOrganization {
     name: string;
     contactEmail?: string;
     address?: string;
+}
+
+export interface TabVisibilitySettings {
+  id: string;
+  visibilities: Record<string, boolean>;
 }
 
 export interface Tenant {

@@ -3,7 +3,11 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
+<<<<<<< HEAD
 import { useCollection, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+=======
+import { useCollection, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+>>>>>>> c4f7ef24 (disable all page /module access restritions there are some pages that ar)
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
