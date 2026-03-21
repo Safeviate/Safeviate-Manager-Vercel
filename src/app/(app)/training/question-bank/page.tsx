@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Search, Trash2, Library, Pencil, Database } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Library, Pencil, Database, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -92,22 +92,6 @@ export default function QuestionBankPage() {
     toast({ 
         title: 'Bank Populated', 
         description: `${questions.length} questions added to the ${targetTopic} database.` 
-    });
-  };
-
-  const handleDelete = (id: string) => {
-    if (!firestore || !tenantId || !id) return;
-
-    // Direct Firestore reference using segmented paths for maximum accuracy
-    const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', id);
-    
-    // Initiate non-blocking deletion. Any failures (like security rules) 
-    // will be caught by the architectural error listener.
-    deleteDocumentNonBlocking(docRef);
-    
-    toast({ 
-        title: 'Question Removed', 
-        description: 'The database is being updated.' 
     });
   };
 
@@ -211,7 +195,12 @@ export default function QuestionBankPage() {
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                                         <AlertDialogAction 
-                                            onClick={() => handleDelete(item.id)}
+                                            onClick={() => {
+                                                if (!firestore || !tenantId) return;
+                                                const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', item.id);
+                                                deleteDocumentNonBlocking(docRef);
+                                                toast({ title: 'Deleting...', description: 'Removing question from database.' });
+                                            }}
                                             className="bg-destructive hover:bg-destructive/90"
                                         >
                                             Delete Permanently
@@ -292,8 +281,16 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
     }, [isOpen, editingItem]);
 
     const handleSave = async () => {
-        if (!text.trim() || !correctId || options.some(o => !o.text.trim())) {
-            toast({ variant: 'destructive', title: 'Invalid Form', description: 'Ensure all fields are completed.' });
+        if (!text.trim()) {
+            toast({ variant: 'destructive', title: 'Invalid Form', description: 'Please enter the question text.' });
+            return;
+        }
+        if (options.some(o => !o.text.trim())) {
+            toast({ variant: 'destructive', title: 'Invalid Form', description: 'Ensure all options have text filled in.' });
+            return;
+        }
+        if (!correctId) {
+            toast({ variant: 'destructive', title: 'Invalid Form', description: 'Please select which option is the correct answer using the radio buttons.' });
             return;
         }
 
@@ -313,7 +310,7 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
             toast({ title: 'Question Updated' });
         } else {
             const poolCol = collection(firestore, 'tenants', tenantId, 'question-pool');
-            await addDocumentNonBlocking(poolCol, data);
+            addDocumentNonBlocking(poolCol, data);
             toast({ title: 'Question Added' });
         }
 
@@ -330,60 +327,93 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
                     </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="max-h-[70vh] pr-4">
-                    <div className="space-y-4 py-4">
+                    <div className="space-y-6 py-4">
                         <div className="space-y-2">
-                            <Label>Question Text</Label>
+                            <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Question Text</Label>
                             <Textarea 
                                 value={text} 
                                 onChange={(e) => setText(e.target.value)} 
                                 placeholder="Enter the technical question..." 
-                                className="min-h-[100px]" 
+                                className="min-h-[120px] bg-muted/5 font-medium" 
                             />
                         </div>
-                        <div className="space-y-3">
-                            <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Options (Select Correct)</Label>
-                            {options.map((opt, idx) => (
-                                <div key={opt.id} className="flex gap-2 items-center">
-                                    <input 
-                                        type="radio" 
-                                        name="correct" 
-                                        checked={correctId === opt.id} 
-                                        onChange={() => setCorrectId(opt.id)} 
-                                        className="accent-primary h-4 w-4"
-                                    />
-                                    <Input 
-                                        value={opt.text} 
-                                        onChange={(e) => {
-                                            const next = [...options];
-                                            next[idx].text = e.target.value;
-                                            setOptions(next);
-                                        }}
-                                        placeholder={`Option ${idx + 1}`}
-                                        className={cn(correctId === opt.id && "border-green-500 ring-1 ring-green-500 bg-green-50/30")}
-                                    />
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        onClick={() => setOptions(options.filter(o => o.id !== opt.id))} 
-                                        disabled={options.length <= 2}
-                                        className="text-muted-foreground"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            ))}
+                        
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Options (Select One Correct Answer)</Label>
+                                {!correctId && <Badge variant="destructive" className="h-5 text-[8px] animate-pulse">SELECTION REQUIRED</Badge>}
+                            </div>
+                            
+                            <div className="space-y-3">
+                                {options.map((opt, idx) => (
+                                    <div key={opt.id} className={cn(
+                                        "flex gap-3 items-center p-2 rounded-lg border transition-all",
+                                        correctId === opt.id ? "bg-green-50 border-green-500 ring-1 ring-green-500" : "bg-muted/5 border-border"
+                                    )}>
+                                        <div className="flex items-center justify-center w-8 h-8 shrink-0">
+                                            <input 
+                                                type="radio" 
+                                                name="correct" 
+                                                id={`radio-${opt.id}`}
+                                                checked={correctId === opt.id} 
+                                                onChange={() => setCorrectId(opt.id)} 
+                                                className="accent-green-600 h-5 w-5 cursor-pointer"
+                                            />
+                                        </div>
+                                        <div className="flex-1 space-y-1">
+                                            <div className="flex items-center justify-between">
+                                                <Label htmlFor={`radio-${opt.id}`} className="text-[9px] uppercase font-bold text-muted-foreground cursor-pointer">
+                                                    Option {idx + 1}
+                                                </Label>
+                                                {correctId === opt.id && (
+                                                    <Badge className="h-4 text-[8px] bg-green-600 text-white border-none gap-1">
+                                                        <CheckCircle2 className="h-2 w-2" /> CORRECT ANSWER
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            <Input 
+                                                value={opt.text} 
+                                                onChange={(e) => {
+                                                    const next = [...options];
+                                                    next[idx].text = e.target.value;
+                                                    setOptions(next);
+                                                }}
+                                                placeholder={`Option ${idx + 1} text...`}
+                                                className="border-none bg-transparent shadow-none focus-visible:ring-0 h-8 p-0 text-sm font-medium"
+                                            />
+                                        </div>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            onClick={() => {
+                                                if (correctId === opt.id) setCorrectId('');
+                                                setOptions(options.filter(o => o.id !== opt.id));
+                                            }} 
+                                            disabled={options.length <= 2}
+                                            className="text-muted-foreground hover:text-destructive h-8 w-8"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                            
                             <Button 
                                 variant="outline" 
                                 size="sm" 
                                 onClick={() => setOptions([...options, { id: uuidv4(), text: '' }])} 
-                                className="mt-2"
+                                className="w-full h-10 border-dashed border-2 hover:bg-muted/10 text-xs font-bold"
                             >
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Option
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Another Option
                             </Button>
                         </div>
                     </div>
                 </ScrollArea>
-                <DialogFooter className="border-t pt-4">
+                <DialogFooter className="border-t pt-4 bg-muted/5 -mx-6 px-6">
+                    <div className="flex items-center gap-2 mr-auto text-muted-foreground">
+                        <AlertCircle className="h-4 w-4" />
+                        <span className="text-[10px] font-medium italic">All technical questions require at least two options and one correct answer.</span>
+                    </div>
                     <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
                     <Button onClick={handleSave}>{editingItem ? 'Update Question' : 'Save to Database'}</Button>
                 </DialogFooter>
