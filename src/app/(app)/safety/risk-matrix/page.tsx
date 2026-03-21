@@ -121,7 +121,7 @@ export default function RiskMatrixPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full px-1 overflow-hidden">
+      <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 px-1 pb-4">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="flex-1 w-full" />
       </div>
@@ -153,56 +153,58 @@ export default function RiskMatrixPage() {
           <ScrollArea className="h-full">
             <div className="p-6 space-y-10 pb-24">
               
-              {/* --- THE MATRIX --- */}
-              <div className="flex flex-col items-center">
-                <div className="inline-block overflow-x-auto border rounded-2xl overflow-hidden shadow-md bg-card mx-auto max-w-full">
-                    <table className="table-fixed border-separate" style={{ borderSpacing: 0 }}>
-                        <thead>
-                            <tr className="h-20">
-                                <th className="w-32 border-b border-r border-slate-200 dark:border-slate-700 bg-muted/30"></th>
-                                {severities.map(s => (
-                                    <th key={s.value} className="w-28 border-r border-b border-slate-200 dark:border-slate-700 p-2 text-center align-middle font-bold text-[10px] uppercase tracking-wider bg-muted/30">
-                                        <div className="flex flex-col items-center gap-0.5">
-                                            <span className="truncate w-full">{s.name}</span>
-                                            <span className="text-primary font-black text-xs">({s.value})</span>
-                                        </div>
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {likelihoods.map(l => (
-                                <tr key={l.value} className="h-20">
-                                    <th className="border-r border-b border-slate-200 dark:border-slate-700 p-2 text-right align-middle font-bold text-[10px] uppercase tracking-wider bg-muted/10 leading-tight">
-                                        {l.name}
-                                        <span className="block text-[9px] text-muted-foreground font-black mt-1">({l.value})</span>
-                                    </th>
-                                    {severities.map(s => {
-                                        const cellId = `${l.value}${s.value}`;
-                                        return (
-                                        <td
-                                            key={cellId}
-                                            onContextMenu={(e) => handleRightClick(e, cellId)}
-                                            style={{ backgroundColor: colors[cellId] }}
-                                            className={cn(
-                                                "border-b border-r border-slate-200 dark:border-slate-700 p-1 text-center align-middle font-black text-sm text-black transition-all",
-                                                canManage && "cursor-pointer hover:brightness-90 active:scale-95"
-                                            )}
-                                        >
-                                            <span className="drop-shadow-sm">{cellId}</span>
-                                        </td>
-                                        )
-                                    })}
+              {/* --- THE MATRIX (Optimized for Horizontal Scroll on Mobile) --- */}
+              <div className="w-full overflow-x-auto pb-6 px-1 custom-scrollbar">
+                <div className="inline-block min-w-full align-middle">
+                    <div className="border rounded-2xl overflow-hidden shadow-md bg-card mx-auto w-fit">
+                        <table className="table-fixed border-separate" style={{ borderSpacing: 0 }}>
+                            <thead>
+                                <tr className="h-20">
+                                    <th className="w-32 border-b border-r border-slate-200 dark:border-slate-700 bg-muted/30"></th>
+                                    {severities.map(s => (
+                                        <th key={s.value} className="w-28 border-r border-b border-slate-200 dark:border-slate-700 p-2 text-center align-middle font-bold text-[10px] uppercase tracking-wider bg-muted/30">
+                                            <div className="flex flex-col items-center gap-0.5">
+                                                <span className="truncate w-full">{s.name}</span>
+                                                <span className="text-primary font-black text-xs">({s.value})</span>
+                                            </div>
+                                        </th>
+                                    ))}
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    <Input 
-                        type="color" 
-                        ref={colorInputRef} 
-                        className="hidden" 
-                        onChange={(e) => activeCell && handleColorChange(activeCell, e.target.value)}
-                    />
+                            </thead>
+                            <tbody>
+                                {likelihoods.map(l => (
+                                    <tr key={l.value} className="h-20">
+                                        <th className="border-r border-b border-slate-200 dark:border-slate-700 p-2 text-right align-middle font-bold text-[10px] uppercase tracking-wider bg-muted/10 leading-tight">
+                                            {l.name}
+                                            <span className="block text-[9px] text-muted-foreground font-black mt-1">({l.value})</span>
+                                        </th>
+                                        {severities.map(s => {
+                                            const cellId = `${l.value}${s.value}`;
+                                            return (
+                                            <td
+                                                key={cellId}
+                                                onContextMenu={(e) => handleRightClick(e, cellId)}
+                                                style={{ backgroundColor: colors[cellId] }}
+                                                className={cn(
+                                                    "border-b border-r border-slate-200 dark:border-slate-700 p-1 text-center align-middle font-black text-sm text-black transition-all",
+                                                    canManage && "cursor-pointer hover:brightness-90 active:scale-95"
+                                                )}
+                                            >
+                                                <span className="drop-shadow-sm">{cellId}</span>
+                                            </td>
+                                            )
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        <Input 
+                            type="color" 
+                            ref={colorInputRef} 
+                            className="hidden" 
+                            onChange={(e) => activeCell && handleColorChange(activeCell, e.target.value)}
+                        />
+                    </div>
                 </div>
               </div>
 
