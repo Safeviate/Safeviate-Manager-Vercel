@@ -158,15 +158,15 @@ export default function RiskMatrixPage() {
             <div className="p-6 space-y-12 pb-24">
               
               {/* --- MODERN GRID MATRIX WITH HORIZONTAL SCROLL --- */}
-              <div className="w-full overflow-x-auto pb-6 custom-scrollbar">
-                <div className="min-w-[800px] p-1">
-                    <div className="grid grid-cols-[140px_repeat(5,1fr)] gap-2">
+              <div className="w-full overflow-x-auto pb-6 custom-scrollbar border rounded-xl">
+                <div className="min-w-[900px] p-6">
+                    <div className="grid grid-cols-[180px_repeat(5,1fr)] gap-3">
                         {/* Header Row */}
                         <div />
                         {severities.map(s => (
-                            <div key={s.value} className="flex flex-col items-center justify-center p-3 bg-muted/20 rounded-xl border border-border/50 text-center">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{s.name}</span>
-                                <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center font-black text-xs border-primary text-primary">
+                            <div key={s.value} className="flex flex-col items-center justify-center p-4 bg-muted/30 rounded-xl border border-border/50 text-center">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1 leading-tight">{s.name}</span>
+                                <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center font-black text-xs border-primary text-primary bg-background">
                                     {s.value}
                                 </Badge>
                             </div>
@@ -176,9 +176,9 @@ export default function RiskMatrixPage() {
                         {likelihoods.map(l => (
                             <React.Fragment key={l.value}>
                                 {/* Row Header */}
-                                <div className="flex items-center justify-end pr-4 text-right">
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-tight leading-tight">{l.name}</p>
+                                <div className="flex items-center justify-end pr-6 text-right">
+                                    <div className="space-y-0.5">
+                                        <p className="text-[10px] font-black uppercase tracking-tighter leading-none">{l.name}</p>
                                         <p className="text-[10px] font-mono font-bold text-muted-foreground">({l.value})</p>
                                     </div>
                                 </div>
@@ -193,7 +193,7 @@ export default function RiskMatrixPage() {
                                             onClick={() => handleCellInteraction(cellId)}
                                             style={{ backgroundColor: color }}
                                             className={cn(
-                                                "h-16 rounded-xl shadow-sm flex items-center justify-center font-black text-lg text-black transition-all border-2 border-white/10",
+                                                "h-20 rounded-xl shadow-sm flex items-center justify-center font-black text-xl text-black transition-all border-2 border-white/10",
                                                 canManage ? "hover:scale-[1.02] hover:shadow-md cursor-pointer active:scale-95" : "cursor-default"
                                             )}
                                         >
