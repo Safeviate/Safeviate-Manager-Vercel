@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -85,22 +85,31 @@ export default function QuestionBankPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (!firestore || !tenantId || !id) return;
+    if (!firestore || !tenantId) return;
     
-    if (!window.confirm('Are you sure you want to permanently delete this question from the bank?')) return;
+    if (!id) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Question ID is missing.' });
+        return;
+    }
+
+    if (!window.confirm('Are you sure you want to permanently delete this question from the bank?')) {
+        return;
+    }
     
-    const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', id);
+    // Construct reference using the partitioned path
+    const docRef = doc(firestore, `tenants/${tenantId}/question-pool`, id);
     
+    // Use the non-blocking utility to ensure errors are caught by the global listener
     deleteDocumentNonBlocking(docRef)
       .then(() => {
         toast({ title: 'Question Deleted' });
       })
-      .catch(() => {
-        // Error is emitted to global listener for contextual debugging
+      .catch((err) => {
+        console.error("Deletion failed:", err);
       });
   };
 
-  if (isLoadingTopics || isLoading) {
+  if (isLoadingTopics || (isLoading && !poolItems)) {
     return (
       <div className="p-8 space-y-6">
         <Skeleton className="h-10 w-48" />
@@ -280,11 +289,11 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
         };
 
         if (editingItem) {
-            const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', editingItem.id);
+            const docRef = doc(firestore, `tenants/${tenantId}/question-pool`, editingItem.id);
             updateDocumentNonBlocking(docRef, data);
             toast({ title: 'Question Updated' });
         } else {
-            const poolCol = collection(firestore, 'tenants', tenantId, 'question-pool');
+            const poolCol = collection(firestore, `tenants/${tenantId}/question-pool`);
             await addDocumentNonBlocking(poolCol, data);
             toast({ title: 'Question Added' });
         }
