@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { doc } from 'firebase/firestore';
 import { useFirestore, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,7 +43,7 @@ export function VisibilityManager() {
   // --- Module Access Logic ---
   const [enabledHrefs, setEnabledHrefs] = useState<Set<string>>(new Set());
 
-  useMemo(() => {
+  useEffect(() => {
     if (tenant?.enabledMenus) {
       setEnabledHrefs(new Set(tenant.enabledMenus));
     }
@@ -108,7 +108,9 @@ export function VisibilityManager() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {menuConfig.map((menu) => {
-            if (menu.label === 'Admin' || menu.label === 'Development') return null;
+            // Only hide Development tools from the organization visibility manager
+            if (menu.label === 'Development') return null;
+            
             const subHrefs = menu.subItems?.map(s => s.href) || [];
             const isEnabled = enabledHrefs.has(menu.href);
             
