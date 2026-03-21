@@ -99,11 +99,10 @@ export default function QuestionBankPage() {
     if (!firestore || !tenantId) return;
     
     setIsDeleting(item.id);
-    toast({ title: 'Deleting...', description: 'Removing item from database.' });
     try {
         const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', item.id);
         await deleteDocumentNonBlocking(docRef);
-        toast({ title: 'Question Removed', description: 'The item has been deleted from the database.' });
+        toast({ title: 'Question Removed' });
     } catch (e: any) {
         toast({ variant: 'destructive', title: 'Error', description: e.message });
     } finally {
@@ -221,7 +220,7 @@ export default function QuestionBankPage() {
                             </AlertDialog>
                         </div>
                     </TableCell>
-                  </TableRow>
+                </TableRow>
                 ))}
                 {filteredItems.length === 0 && !isLoading && (
                     <TableRow>
@@ -301,7 +300,7 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
             return;
         }
         if (!correctId) {
-            toast({ variant: 'destructive', title: 'Invalid Form', description: 'Please select which option is the correct answer using the radio buttons.' });
+            toast({ variant: 'destructive', title: 'Selection Missing', description: 'Please select which option is the correct answer using the radio buttons.' });
             return;
         }
 
