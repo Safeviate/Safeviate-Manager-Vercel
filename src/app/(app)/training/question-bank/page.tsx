@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Search, Trash2, Library, Pencil, Database, CheckCircle2, AlertCircle } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Library, Pencil, Database, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +33,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
 import type { ExamTopicsSettings } from '../../admin/exam-topics/page';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { writeBatch } from 'firebase/firestore';
 
 export default function QuestionBankPage() {
   const firestore = useFirestore();
@@ -43,6 +44,7 @@ export default function QuestionBankPage() {
   const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [editingItem, setEditingItem] = useState<QuestionBankItem | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   // Fetch dynamic topics from settings
   const topicsRef = useMemoFirebase(
@@ -93,6 +95,21 @@ export default function QuestionBankPage() {
         title: 'Bank Populated', 
         description: `${questions.length} questions added to the ${targetTopic} database.` 
     });
+  };
+
+  const handleDelete = async (item: QuestionBankItem) => {
+    if (!firestore || !tenantId) return;
+    
+    setIsDeleting(item.id);
+    try {
+        const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', item.id);
+        await deleteDocumentNonBlocking(docRef);
+        toast({ title: 'Question Removed', description: 'The item has been deleted from the database.' });
+    } catch (e: any) {
+        toast({ variant: 'destructive', title: 'Error', description: e.message });
+    } finally {
+        setIsDeleting(null);
+    }
   };
 
   if (isLoadingTopics || (isLoading && !poolItems)) {
@@ -181,8 +198,8 @@ export default function QuestionBankPage() {
                             
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" size="icon" className="h-8 w-8 shadow-sm">
-                                        <Trash2 className="h-4 w-4" />
+                                    <Button variant="destructive" size="icon" className="h-8 w-8 shadow-sm" disabled={isDeleting === item.id}>
+                                        {isDeleting === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                     </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
@@ -195,12 +212,7 @@ export default function QuestionBankPage() {
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                                         <AlertDialogAction 
-                                            onClick={() => {
-                                                if (!firestore || !tenantId) return;
-                                                const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', item.id);
-                                                deleteDocumentNonBlocking(docRef);
-                                                toast({ title: 'Deleting...', description: 'Removing question from database.' });
-                                            }}
+                                            onClick={() => handleDelete(item)}
                                             className="bg-destructive hover:bg-destructive/90"
                                         >
                                             Delete Permanently
@@ -304,17 +316,20 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
             createdAt: editingItem?.createdAt || new Date().toISOString()
         };
 
-        if (editingItem) {
-            const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', editingItem.id);
-            updateDocumentNonBlocking(docRef, data);
-            toast({ title: 'Question Updated' });
-        } else {
-            const poolCol = collection(firestore, 'tenants', tenantId, 'question-pool');
-            addDocumentNonBlocking(poolCol, data);
-            toast({ title: 'Question Added' });
+        try {
+            if (editingItem) {
+                const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', editingItem.id);
+                updateDocumentNonBlocking(docRef, data);
+                toast({ title: 'Question Updated' });
+            } else {
+                const poolCol = collection(firestore, 'tenants', tenantId, 'question-pool');
+                addDocumentNonBlocking(poolCol, data);
+                toast({ title: 'Question Added' });
+            }
+            onOpenChange(false);
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: 'Save Failed', description: e.message });
         }
-
-        onOpenChange(false);
     };
 
     return (
