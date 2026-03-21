@@ -32,7 +32,15 @@ export default function AccessOverviewPage() {
   }, []);
 
   if (isLoading) {
-    return <div className="space-y-6"><Skeleton className="h-10 w-48" /><Skeleton className="h-[500px] w-full" /></div>;
+    return (
+      <div className="space-y-6 max-w-[1200px] mx-auto w-full px-1">
+        <Skeleton className="h-10 w-48" />
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 h-[500px]">
+          <Skeleton className="h-full w-full" />
+          <Skeleton className="h-full w-full" />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -52,13 +60,13 @@ export default function AccessOverviewPage() {
             <CardDescription>Permissions required to see core modules.</CardDescription>
           </CardHeader>
           <CardContent className="flex-1 p-0 overflow-hidden">
-            <ScrollArea className="h-full">
-              <Table>
+            <div className="overflow-x-auto w-full h-full custom-scrollbar">
+              <Table className="min-w-[800px]">
                 <TableHeader className="bg-muted/30 sticky top-0 z-10">
                   <TableRow>
-                    <TableHead className="w-48 text-[10px] uppercase font-black">Module</TableHead>
+                    <TableHead className="w-48 text-[10px] uppercase font-black bg-muted/30">Module</TableHead>
                     {(roles || []).map(role => (
-                      <TableHead key={role.id} className="text-center text-[10px] uppercase font-black">
+                      <TableHead key={role.id} className="text-center text-[10px] uppercase font-black bg-muted/30">
                         {role.name}
                       </TableHead>
                     ))}
@@ -94,7 +102,7 @@ export default function AccessOverviewPage() {
                   })}
                 </TableBody>
               </Table>
-            </ScrollArea>
+            </div>
           </CardContent>
         </Card>
 

@@ -17,18 +17,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 
 const defaultLikelihoods = [
-    { name: 'Frequent', description: 'Likely to occur many times (has happened frequently).', value: 5 },
-    { name: 'Occasional', description: 'Likely to occur some times (has happened infrequently).', value: 4 },
-    { name: 'Remote', description: 'Unlikely, but possible to occur (has happened rarely).', value: 3 },
-    { name: 'Improbable', description: 'Very unlikely to occur (not known to have happened).', value: 2 },
-    { name: 'Extremely Improbable', description: 'Almost inconceivable that the event will occur.', value: 1 },
+    { name: 'Frequent', description: 'Likely to occur many times.', value: 5 },
+    { name: 'Occasional', description: 'Likely to occur some times.', value: 4 },
+    { name: 'Remote', description: 'Unlikely, but possible to occur.', value: 3 },
+    { name: 'Improbable', description: 'Very unlikely to occur.', value: 2 },
+    { name: 'Extremely Improbable', description: 'Almost inconceivable.', value: 1 },
 ];
 
 const defaultSeverities = [
     { name: 'Catastrophic', description: 'Equipment destroyed, multiple deaths.', value: 'A' },
-    { name: 'Hazardous', description: 'Large reduction in safety margins, serious injury, major equipment damage.', value: 'B' },
-    { name: 'Major', description: 'Significant reduction in safety margins, serious incident, injury to persons.', value: 'C' },
-    { name: 'Minor', description: 'Nuisance, operating limitations, minor incident.', value: 'D' },
+    { name: 'Hazardous', description: 'Large reduction in safety margins.', value: 'B' },
+    { name: 'Major', description: 'Significant reduction in safety margins.', value: 'C' },
+    { name: 'Minor', description: 'Nuisance, operating limitations.', value: 'D' },
     { name: 'Negligible', description: 'Little or no effect on safety.', value: 'E' },
 ];
 
@@ -133,11 +133,10 @@ export default function RiskMatrixPage() {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <LayoutGrid className="h-5 w-5 text-primary" />
-              <CardTitle className="text-2xl font-headline">Risk Matrix Configuration</CardTitle>
+              <CardTitle className="text-2xl font-headline">Risk Matrix</CardTitle>
             </div>
-            <CardDescription className="max-w-2xl">
+            <CardDescription className="max-w-2xl text-xs">
               Defining organizational risk tolerance using ICAO taxonomy.
-              {canManage && <span className="block mt-1 text-primary font-medium">Click a cell to customize visuals.</span>}
             </CardDescription>
           </div>
           
@@ -155,14 +154,11 @@ export default function RiskMatrixPage() {
         <CardContent className="flex-1 p-0 overflow-y-auto bg-background custom-scrollbar">
             <div className="p-6 space-y-10 pb-24">
               
-              {/* --- COMPACT MATRIX CONTAINER --- */}
               <div 
                 className="w-full overflow-x-auto overflow-y-hidden border rounded-xl bg-card shadow-sm custom-scrollbar"
-                style={{ WebkitOverflowScrolling: 'touch' }}
               >
-                <div className="min-w-[600px] p-6 mx-auto max-w-4xl">
+                <div className="min-w-[600px] p-6 mx-auto max-w-2xl">
                     <div className="grid grid-cols-[120px_repeat(5,1fr)] gap-2">
-                        {/* Header Row (Severities) */}
                         <div className="flex items-center justify-center p-2 bg-muted/50 rounded-lg border border-dashed text-center">
                             <span className="text-[8px] font-black uppercase text-muted-foreground tracking-tighter">Impact</span>
                         </div>
@@ -175,29 +171,25 @@ export default function RiskMatrixPage() {
                             </div>
                         ))}
 
-                        {/* Data Rows (Likelihoods) */}
                         {likelihoods.map(l => (
                             <React.Fragment key={l.value}>
-                                {/* Row Header */}
                                 <div className="flex items-center justify-end pr-4 text-right border-r border-dashed mr-1">
                                     <div className="space-y-0.5">
                                         <p className="text-[9px] font-black uppercase tracking-tighter text-foreground line-clamp-1">{l.name}</p>
                                         <Badge variant="secondary" className="text-[8px] font-mono font-bold h-3.5 px-1.5 bg-primary/10 text-primary border-none">LVL {l.value}</Badge>
                                     </div>
                                 </div>
-                                {/* Cells */}
                                 {severities.map(s => {
                                     const cellId = `${l.value}${s.value}`;
                                     const color = colors[cellId];
-                                    
                                     return (
                                         <button
                                             key={cellId}
                                             onClick={() => handleCellInteraction(cellId)}
                                             style={{ backgroundColor: color }}
                                             className={cn(
-                                                "h-12 rounded-lg shadow-sm flex items-center justify-center font-black text-base text-black transition-all border-2 border-white/20",
-                                                canManage ? "hover:scale-[1.03] hover:rotate-1 hover:shadow-md cursor-pointer active:scale-95" : "cursor-default"
+                                                "h-12 rounded-lg shadow-sm flex items-center justify-center font-black text-[10px] text-black transition-all border-2 border-white/20",
+                                                canManage ? "hover:scale-[1.03] cursor-pointer" : "cursor-default"
                                             )}
                                         >
                                             <span className="drop-shadow-sm opacity-90">{cellId}</span>
@@ -207,9 +199,6 @@ export default function RiskMatrixPage() {
                             </React.Fragment>
                         ))}
                     </div>
-                </div>
-                <div className="md:hidden text-center py-1.5 text-[9px] font-bold text-muted-foreground uppercase tracking-widest animate-pulse border-t bg-muted/5">
-                    ← Swipe horizontally to view full matrix →
                 </div>
                 <Input 
                     type="color" 
@@ -221,15 +210,12 @@ export default function RiskMatrixPage() {
 
               <Separator />
 
-              {/* --- DEFINITIONS SECTION --- */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                
-                {/* Severity Definitions */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between border-b border-primary/20 pb-2">
                     <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
                         <ShieldCheck className="h-3.5 w-3.5" />
-                        Severity Scale (Impact)
+                        Severity Scale
                     </h3>
                     {canManage && (
                         <Button 
@@ -242,25 +228,16 @@ export default function RiskMatrixPage() {
                         </Button>
                     )}
                   </div>
-                  
                   <div className="space-y-2">
                     {severities.map((s, index) => (
-                        <div key={s.value} className="p-3 bg-muted/10 rounded-lg border border-border/50 transition-all hover:border-primary/30">
+                        <div key={s.value} className="p-3 bg-muted/10 rounded-lg border border-border/50">
                             <div className="flex items-start gap-3">
-                                <Badge variant="outline" className="h-8 w-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0 border-primary/30 bg-primary/5 text-primary shadow-sm">{s.value}</Badge>
+                                <Badge variant="outline" className="h-8 w-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0">{s.value}</Badge>
                                 <div className="flex-1 space-y-1">
                                     {isEditingSeverity ? (
                                         <div className="space-y-1.5">
-                                            <Input 
-                                                value={s.name} 
-                                                onChange={(e) => handleSeverityChange(index, 'name', e.target.value)}
-                                                className="h-7 text-[10px] font-bold bg-background uppercase"
-                                            />
-                                            <Textarea 
-                                                value={s.description} 
-                                                onChange={(e) => handleSeverityChange(index, 'description', e.target.value)}
-                                                className="text-[10px] min-h-[50px] py-1.5 bg-background resize-none"
-                                            />
+                                            <Input value={s.name} onChange={(e) => handleSeverityChange(index, 'name', e.target.value)} className="h-7 text-[10px] font-bold" />
+                                            <Textarea value={s.description} onChange={(e) => handleSeverityChange(index, 'description', e.target.value)} className="text-[10px] min-h-[50px] py-1.5 bg-background resize-none" />
                                         </div>
                                     ) : (
                                         <>
@@ -275,12 +252,11 @@ export default function RiskMatrixPage() {
                   </div>
                 </div>
 
-                {/* Likelihood Definitions */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between border-b border-primary/20 pb-2">
                     <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
                         <AlertTriangle className="h-3.5 w-3.5" />
-                        Likelihood Scale (Probability)
+                        Likelihood Scale
                     </h3>
                     {canManage && (
                         <Button 
@@ -293,25 +269,16 @@ export default function RiskMatrixPage() {
                         </Button>
                     )}
                   </div>
-                  
                   <div className="space-y-2">
                     {likelihoods.map((l, index) => (
-                        <div key={l.value} className="p-3 bg-muted/10 rounded-lg border border-border/50 transition-all hover:border-primary/30">
+                        <div key={l.value} className="p-3 bg-muted/10 rounded-lg border border-border/50">
                             <div className="flex items-start gap-3">
-                                <Badge variant="outline" className="h-8 w-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0 border-primary/30 bg-primary/5 text-primary shadow-sm">{l.value}</Badge>
+                                <Badge variant="outline" className="h-8 w-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0">{l.value}</Badge>
                                 <div className="flex-1 space-y-1">
                                     {isEditingLikelihood ? (
                                         <div className="space-y-1.5">
-                                            <Input 
-                                                value={l.name} 
-                                                onChange={(e) => handleLikelihoodChange(index, 'name', e.target.value)}
-                                                className="h-7 text-[10px] font-bold bg-background uppercase"
-                                            />
-                                            <Textarea 
-                                                value={l.description} 
-                                                onChange={(e) => handleLikelihoodChange(index, 'description', e.target.value)}
-                                                className="text-[10px] min-h-[50px] py-1.5 bg-background resize-none"
-                                            />
+                                            <Input value={l.name} onChange={(e) => handleLikelihoodChange(index, 'name', e.target.value)} className="h-7 text-[10px] font-bold" />
+                                            <Textarea value={l.description} onChange={(e) => handleLikelihoodChange(index, 'description', e.target.value)} className="text-[10px] min-h-[50px] py-1.5 bg-background resize-none" />
                                         </div>
                                     ) : (
                                         <>
@@ -325,7 +292,6 @@ export default function RiskMatrixPage() {
                     ))}
                   </div>
                 </div>
-
               </div>
             </div>
         </CardContent>
