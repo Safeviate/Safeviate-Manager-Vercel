@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,8 +13,6 @@ import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { QuestionBankItem } from '@/types/training';
-import { AiExamGenerator } from '../exams/ai-exam-generator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import {
     AlertDialog,
@@ -31,9 +29,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
+import type { QuestionBankItem } from '@/types/training';
 import type { ExamTopicsSettings } from '../../admin/exam-topics/page';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { AiExamGenerator } from '../exams/ai-exam-generator';
 
 export default function QuestionBankPage() {
   const firestore = useFirestore();
@@ -46,7 +45,7 @@ export default function QuestionBankPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   const topicsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'exam-topics') : null),
+    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'exam-topics') : null),
     [firestore, tenantId]
   );
   const { data: topicsData, isLoading: isLoadingTopics } = useDoc<ExamTopicsSettings>(topicsRef);

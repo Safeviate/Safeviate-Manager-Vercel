@@ -1,12 +1,10 @@
 import type { CorrectiveAction } from './safety-report';
 
-
 export type AuditChecklistItemType = 'Checkbox' | 'Textbox' | 'Number' | 'Date';
 export type AuditFinding = 'Compliant' | 'Non Compliant' | 'Not Applicable';
 export type AuditStatus = 'Scheduled' | 'In Progress' | 'Finalized' | 'Closed' | 'Archived';
 export type CorrectiveActionStatus = 'Open' | 'In Progress' | 'Closed' | 'Cancelled';
 export type AuditScheduleStatus = 'Scheduled' | 'Completed' | 'Pending' | 'Not Scheduled';
-
 
 export interface AuditScheduleItem {
     id: string;
@@ -83,6 +81,7 @@ export interface CorrectiveActionPlan {
     rootCauseAnalysis: string;
     status: CorrectiveActionStatus;
     actions?: CorrectiveAction[];
+    responsiblePersonId?: string;
 }
 
 export interface ExternalOrganization {
@@ -115,9 +114,4 @@ export interface Tenant {
         swimlane?: Record<string, string>;
     };
     enabledMenus?: string[];
-}
-
-export interface TabVisibilitySettings {
-  id: string;
-  visibilities: Record<string, boolean>;
 }

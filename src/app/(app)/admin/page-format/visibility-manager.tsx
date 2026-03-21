@@ -18,7 +18,6 @@ export function VisibilityManager() {
   const { tenant, isLoading: isLoadingTenant } = useTenantConfig();
   const tenantId = 'safeviate';
 
-  // --- Module Access Logic ---
   const [enabledHrefs, setEnabledHrefs] = useState<Set<string>>(new Set());
 
   useEffect(() => {
