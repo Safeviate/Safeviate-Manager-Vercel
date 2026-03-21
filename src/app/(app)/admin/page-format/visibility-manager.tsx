@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -14,7 +15,7 @@ import { menuConfig } from '@/lib/menu-config';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ShieldCheck, LayoutGrid, Info } from 'lucide-react';
-import type { TabVisibilitySettings } from '../external/page';
+import type { TabVisibilitySettings } from '@/types/quality';
 
 const PAGE_OPTIONS = [
   { id: 'audits', label: 'Quality Audits' },

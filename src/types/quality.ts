@@ -112,3 +112,8 @@ export interface Tenant {
     };
     enabledMenus?: string[];
 }
+
+export interface TabVisibilitySettings {
+  id: string;
+  visibilities: Record<string, boolean>;
+}
