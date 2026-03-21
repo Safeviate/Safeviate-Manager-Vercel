@@ -84,14 +84,9 @@ export default function QuestionBankPage() {
     });
   };
 
-  const handleDelete = (id: string) => {
-    if (!firestore || !tenantId) {
-        toast({ variant: 'destructive', title: 'System Error', description: 'Database connection not ready.' });
-        return;
-    }
-    
-    if (!id) {
-        toast({ variant: 'destructive', title: 'Selection Error', description: 'Invalid question ID.' });
+  const handleDelete = async (id: string) => {
+    if (!firestore || !tenantId || !id) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Missing required identifiers for deletion.' });
         return;
     }
 
@@ -99,21 +94,22 @@ export default function QuestionBankPage() {
         return;
     }
     
-    // Construct reference using explicit path segments for maximum reliability
-    const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', id);
-    
-    // Provide immediate feedback
-    toast({ title: 'Processing...', description: 'Deleting question from database.' });
+    try {
+        // Construct reference using explicit path segments for absolute accuracy
+        const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', id);
+        
+        toast({ title: 'Processing...', description: 'Removing question from pool.' });
 
-    // Use the non-blocking utility to ensure errors are caught by the global architectural listener
-    deleteDocumentNonBlocking(docRef)
-      .then(() => {
+        // Use the non-blocking utility to ensure errors are caught by the global architectural listener
+        // We await here solely to catch errors and show local feedback, though the non-blocking utility
+        // also handles the global architectural error propagation.
+        await deleteDocumentNonBlocking(docRef);
+        
         toast({ title: 'Question Deleted' });
-      })
-      .catch((err) => {
-        // Detailed error is handled by the global listener, but we provide local feedback too
-        toast({ variant: 'destructive', title: 'Deletion Failed', description: 'Verify your permissions and try again.' });
-      });
+    } catch (err: any) {
+        console.error('Deletion error:', err);
+        toast({ variant: 'destructive', title: 'Deletion Failed', description: err.message || 'Verify your permissions.' });
+    }
   };
 
   if (isLoadingTopics || (isLoading && !poolItems)) {
@@ -182,7 +178,7 @@ export default function QuestionBankPage() {
                 <TableRow>
                   <TableHead className="text-[10px] uppercase font-bold">Question Text</TableHead>
                   <TableHead className="w-24 text-center text-[10px] uppercase font-bold">Options</TableHead>
-                  <TableHead className="w-20 text-right text-[10px] uppercase font-bold">Actions</TableHead>
+                  <TableHead className="w-24 text-right text-[10px] uppercase font-bold px-6">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -194,15 +190,15 @@ export default function QuestionBankPage() {
                     <TableCell className="text-center font-mono text-xs opacity-50">
                         {item.options.length}
                     </TableCell>
-                    <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => setEditingItem(item)}>
+                    <TableCell className="text-right px-6">
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" size="icon" className="h-8 w-8 text-primary border-primary/20 hover:bg-primary/5" onClick={() => setEditingItem(item)}>
                                 <Pencil className="h-3.5 w-3.5" />
                             </Button>
                             <Button 
-                                variant="ghost" 
+                                variant="destructive" 
                                 size="icon" 
-                                className="h-8 w-8 text-destructive" 
+                                className="h-8 w-8" 
                                 onClick={() => handleDelete(item.id)}
                             >
                                 <Trash2 className="h-4 w-4" />
