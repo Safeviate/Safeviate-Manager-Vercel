@@ -12,6 +12,7 @@ import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Role } from '../../admin/roles/page';
+import Link from 'next/link';
 
 export default function AccessOverviewPage() {
   const firestore = useFirestore();
@@ -38,7 +39,7 @@ export default function AccessOverviewPage() {
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <div className="px-1">
-        <h1 className="text-3xl font-bold tracking-tight">Access Overview</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Access Overview</h1>
         <p className="text-muted-foreground">Verify module availability and role-based permissions at a glance.</p>
       </div>
 
