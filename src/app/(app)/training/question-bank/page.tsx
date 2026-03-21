@@ -3,12 +3,12 @@
 import { useState, useMemo, useEffect } from 'react';
 import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Search, Trash2, Library, Pencil, Database, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Library, Pencil, Database, CheckCircle2, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -155,49 +155,71 @@ export default function QuestionBankPage() {
         </CardHeader>
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
           <ScrollArea className="h-full">
-            <Table>
-              <TableHeader className="bg-muted/30 sticky top-0 z-10">
-                <TableRow>
-                  <TableHead className="text-[10px] uppercase font-bold">Question Text</TableHead>
-                  <TableHead className="w-24 text-center text-[10px] uppercase font-bold">Options</TableHead>
-                  <TableHead className="w-24 text-right text-[10px] uppercase font-bold px-6">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredItems.map((item) => (
-                  <TableRow key={item.id} className="hover:bg-muted/10 transition-colors">
-                    <TableCell className="font-medium text-sm py-4">
-                        <p className="line-clamp-2">{item.text}</p>
-                    </TableCell>
-                    <TableCell className="text-center font-mono text-xs opacity-50">
-                        {item.options.length}
-                    </TableCell>
-                    <TableCell className="text-right px-6">
-                        <div className="flex justify-end gap-2">
-                            <Button variant="outline" size="icon" className="h-8 w-8 text-primary border-primary/20 hover:bg-primary/5" onClick={() => setEditingItem(item)}>
-                                <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            
-                            <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} />
-                        </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+            <div className="p-0">
+                {/* --- DESKTOP TABLE VIEW --- */}
+                <div className="hidden lg:block">
+                    <Table>
+                        <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                            <TableRow>
+                            <TableHead className="text-[10px] uppercase font-bold">Question Text</TableHead>
+                            <TableHead className="w-24 text-center text-[10px] uppercase font-bold">Options</TableHead>
+                            <TableHead className="w-24 text-right text-[10px] uppercase font-bold px-6">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredItems.map((item) => (
+                            <TableRow key={item.id} className="hover:bg-muted/10 transition-colors">
+                                <TableCell className="font-medium text-sm py-4">
+                                    <p className="line-clamp-2">{item.text}</p>
+                                </TableCell>
+                                <TableCell className="text-center font-mono text-xs opacity-50">
+                                    {item.options.length}
+                                </TableCell>
+                                <TableCell className="text-right px-6">
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="outline" size="icon" className="h-8 w-8 text-primary border-primary/20 hover:bg-primary/5" onClick={() => setEditingItem(item)}>
+                                            <Pencil className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} />
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                {/* --- MOBILE CARD VIEW --- */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden p-4">
+                    {filteredItems.map((item) => (
+                        <Card key={item.id} className="shadow-none border-slate-200 overflow-hidden">
+                            <CardHeader className="p-4 pb-2 border-b bg-muted/5 flex flex-row items-center justify-between space-y-0">
+                                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{selectedTopic}</span>
+                                <Badge variant="outline" className="text-[9px] font-mono">{item.options.length} OPTIONS</Badge>
+                            </CardHeader>
+                            <CardContent className="p-4 py-3">
+                                <p className="text-sm font-semibold line-clamp-3 leading-relaxed">&quot;{item.text}&quot;</p>
+                            </CardContent>
+                            <CardFooter className="p-2 border-t bg-muted/5 flex gap-2">
+                                <Button variant="outline" size="sm" className="flex-1 text-xs h-8" onClick={() => setEditingItem(item)}>
+                                    <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
+                                </Button>
+                                <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} />
+                            </CardFooter>
+                        </Card>
+                    ))}
+                </div>
+
                 {filteredItems.length === 0 && !isLoading && (
-                    <TableRow>
-                        <TableCell colSpan={3} className="h-64 text-center text-muted-foreground italic">
-                            <div className="flex flex-col items-center justify-center gap-4 opacity-20">
-                                <Library className="h-16 w-16" />
-                                <div className="space-y-1">
-                                    <p className="text-lg font-bold uppercase tracking-tighter">Empty Topic Database</p>
-                                    <p className="text-sm">No questions found in {selectedTopic || 'this topic'}.</p>
-                                </div>
-                            </div>
-                        </TableCell>
-                    </TableRow>
+                    <div className="h-64 text-center text-muted-foreground italic flex flex-col items-center justify-center gap-4 opacity-20">
+                        <Library className="h-16 w-16" />
+                        <div className="space-y-1">
+                            <p className="text-lg font-bold uppercase tracking-tighter">Empty Topic Database</p>
+                            <p className="text-sm">No questions found in {selectedTopic || 'this topic'}.</p>
+                        </div>
+                    </div>
                 )}
-              </TableBody>
-            </Table>
+            </div>
           </ScrollArea>
         </CardContent>
       </Card>

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Eye, Trash2 } from 'lucide-react';
+import { Eye, Trash2, Calendar, ClipboardCheck, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,6 +33,7 @@ import { deleteDocumentNonBlocking } from '@/firebase';
 import type { QualityAudit, ExternalOrganization } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
 import type { Personnel } from '../../users/personnel/page';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type EnrichedAudit = QualityAudit & {
     auditeeName?: string;
@@ -76,7 +77,7 @@ function AuditActions({ audit, tenantId }: AuditActionsProps) {
 
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm" className="h-8 px-3 text-xs">
+                    <Button variant="destructive" size="icon" className="h-8 px-3 text-xs">
                         <Trash2 className="mr-1.5 h-3.5 w-3.5" />
                         Delete
                     </Button>
@@ -112,47 +113,101 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
     }
 
     return (
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead className="text-xs uppercase font-bold">Audit ID</TableHead>
-                    <TableHead className="text-xs uppercase font-bold">Date</TableHead>
-                    <TableHead className="text-xs uppercase font-bold">Title</TableHead>
-                    <TableHead className="text-xs uppercase font-bold">Auditee</TableHead>
-                    <TableHead className="text-xs uppercase font-bold text-center">Score</TableHead>
-                    <TableHead className="text-xs uppercase font-bold">Status</TableHead>
-                    <TableHead className="text-right text-xs uppercase font-bold">Actions</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
+        <div className="flex flex-col gap-4">
+            {/* --- DESKTOP VIEW --- */}
+            <div className="hidden lg:block">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="text-xs uppercase font-bold">Audit ID</TableHead>
+                            <TableHead className="text-xs uppercase font-bold">Date</TableHead>
+                            <TableHead className="text-xs uppercase font-bold">Title</TableHead>
+                            <TableHead className="text-xs uppercase font-bold">Auditee</TableHead>
+                            <TableHead className="text-xs uppercase font-bold text-center">Score</TableHead>
+                            <TableHead className="text-xs uppercase font-bold">Status</TableHead>
+                            <TableHead className="text-right text-xs uppercase font-bold">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {audits.map(audit => (
+                            <TableRow key={audit.id}>
+                                <TableCell className="font-medium text-xs">
+                                    <Link href={`/quality/audits/${audit.id}`} className="hover:underline">{audit.auditNumber}</Link>
+                                </TableCell>
+                                <TableCell className="whitespace-nowrap text-xs">{format(new Date(audit.auditDate), 'dd MMM yy')}</TableCell>
+                                <TableCell className="text-xs max-w-[200px] truncate">{audit.title}</TableCell>
+                                <TableCell className="text-xs">{audit.auditeeName || audit.auditeeId}</TableCell>
+                                <TableCell className="text-center">
+                                    {audit.complianceScore !== undefined ? (
+                                        <Badge variant="outline" className={cn(
+                                            "font-mono text-[10px]",
+                                            audit.complianceScore >= 80 ? "text-green-600 border-green-600 bg-green-50" : 
+                                            audit.complianceScore >= 60 ? "text-yellow-600 border-yellow-600 bg-yellow-50" : 
+                                            "text-red-600 border-red-600 bg-red-50"
+                                        )}>
+                                            {audit.complianceScore}%
+                                        </Badge>
+                                    ) : '-'}
+                                </TableCell>
+                                <TableCell><Badge variant={getStatusBadgeVariant(audit.status)} className="text-[10px] py-0">{audit.status}</Badge></TableCell>
+                                <TableCell className="text-right">
+                                <AuditActions audit={audit} tenantId={tenantId} />
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+
+            {/* --- MOBILE CARD VIEW --- */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden">
                 {audits.map(audit => (
-                    <TableRow key={audit.id}>
-                        <TableCell className="font-medium text-xs">
-                            <Link href={`/quality/audits/${audit.id}`} className="hover:underline">{audit.auditNumber}</Link>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-xs">{format(new Date(audit.auditDate), 'dd MMM yy')}</TableCell>
-                        <TableCell className="text-xs max-w-[200px] truncate">{audit.title}</TableCell>
-                        <TableCell className="text-xs">{audit.auditeeName || audit.auditeeId}</TableCell>
-                        <TableCell className="text-center">
-                            {audit.complianceScore ? (
-                                <Badge variant="outline" className={cn(
-                                    "font-mono text-[10px]",
-                                    audit.complianceScore >= 80 ? "text-green-600 border-green-600 bg-green-50" : 
-                                    audit.complianceScore >= 60 ? "text-yellow-600 border-yellow-600 bg-yellow-50" : 
-                                    "text-red-600 border-red-600 bg-red-50"
-                                )}>
-                                    {audit.complianceScore}%
-                                </Badge>
-                            ) : '-'}
-                        </TableCell>
-                        <TableCell><Badge variant={getStatusBadgeVariant(audit.status)} className="text-[10px] py-0">{audit.status}</Badge></TableCell>
-                        <TableCell className="text-right">
-                           <AuditActions audit={audit} tenantId={tenantId} />
-                        </TableCell>
-                    </TableRow>
+                    <Card key={audit.id} className="shadow-none border-slate-200 overflow-hidden">
+                        <CardHeader className="p-4 pb-2 border-b bg-muted/5 flex flex-row items-center justify-between space-y-0">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-primary uppercase tracking-widest">{audit.auditNumber}</span>
+                                <span className="text-sm font-black mt-1 line-clamp-1">{audit.title}</span>
+                            </div>
+                            <Badge variant={getStatusBadgeVariant(audit.status)} className="h-5 text-[9px] font-black uppercase">
+                                {audit.status}
+                            </Badge>
+                        </CardHeader>
+                        <CardContent className="p-4 py-3 space-y-3">
+                            <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <Calendar className="h-3.5 w-3.5" />
+                                    {format(new Date(audit.auditDate), 'dd MMM yyyy')}
+                                </div>
+                                {audit.complianceScore !== undefined && (
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Score:</span>
+                                        <span className={cn(
+                                            "font-black text-sm",
+                                            audit.complianceScore >= 80 ? "text-green-600" : 
+                                            audit.complianceScore >= 60 ? "text-yellow-600" : 
+                                            "text-red-600"
+                                        )}>{audit.complianceScore}%</span>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs font-semibold">
+                                <ClipboardCheck className="h-3.5 w-3.5 text-muted-foreground" />
+                                Auditee: {audit.auditeeName || audit.auditeeId}
+                            </div>
+                            <p className="text-[10px] uppercase font-bold text-muted-foreground">Scope: <span className="text-foreground normal-case font-medium">{audit.scope}</span></p>
+                        </CardContent>
+                        <CardFooter className="p-2 border-t bg-muted/5">
+                            <Button asChild variant="ghost" size="sm" className="w-full justify-between text-xs font-bold h-8 px-4">
+                                <Link href={`/quality/audits/${audit.id}`}>
+                                    Review Findings & CAPs
+                                    <ArrowRight className="h-3.5 w-3.5 ml-2" />
+                                </Link>
+                            </Button>
+                        </CardFooter>
+                    </Card>
                 ))}
-            </TableBody>
-        </Table>
+            </div>
+        </div>
     );
 }
 
@@ -224,7 +279,7 @@ export default function AuditsPage() {
                             <TabsTrigger value="archived" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs shrink-0">Archived ({archivedAudits.length})</TabsTrigger>
                         </TabsList>
                     </div>
-                    <CardContent className="p-0 flex-1">
+                    <CardContent className="p-0 flex-1 lg:p-6">
                         <TabsContent value="active" className="m-0">
                             <AuditsTable audits={activeAudits} tenantId={tenantId || 'safeviate'} />
                         </TabsContent>
@@ -275,15 +330,17 @@ export default function AuditsPage() {
                         </TabsList>
                     </div>
 
-                    <TabsContent value="internal" className="mt-0">
-                        {renderOrgContext('internal')}
-                    </TabsContent>
-                    
-                    {(organizations || []).map(org => (
-                        <TabsContent key={org.id} value={org.id} className="mt-0">
-                            {renderOrgContext(org.id)}
+                    <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+                        <TabsContent value="internal" className="mt-0">
+                            {renderOrgContext('internal')}
                         </TabsContent>
-                    ))}
+                        
+                        {(organizations || []).map(org => (
+                            <TabsContent key={org.id} value={org.id} className="mt-0">
+                                {renderOrgContext(org.id)}
+                            </TabsContent>
+                        ))}
+                    </div>
                 </Tabs>
             )}
         </div>
