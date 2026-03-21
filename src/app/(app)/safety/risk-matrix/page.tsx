@@ -136,8 +136,8 @@ export default function RiskMatrixPage() {
               <CardTitle className="text-2xl font-headline">Risk Matrix Configuration</CardTitle>
             </div>
             <CardDescription className="max-w-2xl">
-              Defining the organizational risk tolerance using ICAO taxonomy. 
-              {canManage && <span className="block mt-1 text-primary font-medium">Click a cell to customize its visual classification.</span>}
+              Defining organizational risk tolerance using ICAO taxonomy.
+              {canManage && <span className="block mt-1 text-primary font-medium">Click a cell to customize visuals.</span>}
             </CardDescription>
           </div>
           
@@ -160,16 +160,16 @@ export default function RiskMatrixPage() {
                 className="w-full overflow-x-auto overflow-y-hidden border rounded-xl bg-card shadow-sm custom-scrollbar"
                 style={{ WebkitOverflowScrolling: 'touch' }}
               >
-                <div className="min-w-[800px] p-6">
-                    <div className="grid grid-cols-[150px_repeat(5,1fr)] gap-3">
+                <div className="min-w-[600px] p-6 mx-auto max-w-4xl">
+                    <div className="grid grid-cols-[120px_repeat(5,1fr)] gap-2">
                         {/* Header Row (Severities) */}
-                        <div className="flex items-center justify-center p-3 bg-muted/50 rounded-lg border border-dashed text-center">
-                            <span className="text-[9px] font-black uppercase text-muted-foreground tracking-tighter">Safety Matrix</span>
+                        <div className="flex items-center justify-center p-2 bg-muted/50 rounded-lg border border-dashed text-center">
+                            <span className="text-[8px] font-black uppercase text-muted-foreground tracking-tighter">Impact</span>
                         </div>
                         {severities.map(s => (
-                            <div key={s.value} className="flex flex-col items-center justify-center p-2 bg-muted/30 rounded-lg border border-border/50 text-center">
-                                <span className="text-[9px] font-black uppercase tracking-tight text-muted-foreground mb-1 leading-tight">{s.name}</span>
-                                <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center font-black text-[10px] border-primary/50 text-primary bg-background shadow-sm">
+                            <div key={s.value} className="flex flex-col items-center justify-center p-1.5 bg-muted/30 rounded-lg border border-border/50 text-center">
+                                <span className="text-[8px] font-black uppercase tracking-tight text-muted-foreground mb-0.5 leading-tight">{s.name}</span>
+                                <Badge variant="outline" className="h-5 w-5 rounded-full p-0 flex items-center justify-center font-black text-[9px] border-primary/50 text-primary bg-background shadow-sm">
                                     {s.value}
                                 </Badge>
                             </div>
@@ -179,10 +179,10 @@ export default function RiskMatrixPage() {
                         {likelihoods.map(l => (
                             <React.Fragment key={l.value}>
                                 {/* Row Header */}
-                                <div className="flex items-center justify-end pr-6 text-right border-r border-dashed mr-1">
+                                <div className="flex items-center justify-end pr-4 text-right border-r border-dashed mr-1">
                                     <div className="space-y-0.5">
-                                        <p className="text-[10px] font-black uppercase tracking-tighter text-foreground line-clamp-1">{l.name}</p>
-                                        <Badge variant="secondary" className="text-[9px] font-mono font-bold h-4 px-1.5 bg-primary/10 text-primary border-none">LVL {l.value}</Badge>
+                                        <p className="text-[9px] font-black uppercase tracking-tighter text-foreground line-clamp-1">{l.name}</p>
+                                        <Badge variant="secondary" className="text-[8px] font-mono font-bold h-3.5 px-1.5 bg-primary/10 text-primary border-none">LVL {l.value}</Badge>
                                     </div>
                                 </div>
                                 {/* Cells */}
@@ -196,7 +196,7 @@ export default function RiskMatrixPage() {
                                             onClick={() => handleCellInteraction(cellId)}
                                             style={{ backgroundColor: color }}
                                             className={cn(
-                                                "h-14 rounded-xl shadow-sm flex items-center justify-center font-black text-lg text-black transition-all border-2 border-white/20",
+                                                "h-12 rounded-lg shadow-sm flex items-center justify-center font-black text-base text-black transition-all border-2 border-white/20",
                                                 canManage ? "hover:scale-[1.03] hover:rotate-1 hover:shadow-md cursor-pointer active:scale-95" : "cursor-default"
                                             )}
                                         >
