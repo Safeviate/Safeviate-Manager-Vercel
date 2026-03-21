@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { QuestionBankItem } from '@/types/training';
 import { AiExamGenerator } from '../exams/ai-exam-generator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { v4 as uuidv4 } from 'uuid';
@@ -84,32 +95,20 @@ export default function QuestionBankPage() {
     });
   };
 
-  const handleDelete = async (id: string) => {
-    if (!firestore || !tenantId || !id) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Missing required identifiers for deletion.' });
-        return;
-    }
+  const handleDelete = (id: string) => {
+    if (!firestore || !tenantId || !id) return;
 
-    if (!window.confirm('PERMANENT DELETION: Are you sure you want to remove this question from the database?')) {
-        return;
-    }
+    // Direct Firestore reference using segmented paths for maximum accuracy
+    const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', id);
     
-    try {
-        // Construct reference using explicit path segments for absolute accuracy
-        const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', id);
-        
-        toast({ title: 'Processing...', description: 'Removing question from pool.' });
-
-        // Use the non-blocking utility to ensure errors are caught by the global architectural listener
-        // We await here solely to catch errors and show local feedback, though the non-blocking utility
-        // also handles the global architectural error propagation.
-        await deleteDocumentNonBlocking(docRef);
-        
-        toast({ title: 'Question Deleted' });
-    } catch (err: any) {
-        console.error('Deletion error:', err);
-        toast({ variant: 'destructive', title: 'Deletion Failed', description: err.message || 'Verify your permissions.' });
-    }
+    // Initiate non-blocking deletion. Any failures (like security rules) 
+    // will be caught by the architectural error listener.
+    deleteDocumentNonBlocking(docRef);
+    
+    toast({ 
+        title: 'Question Removed', 
+        description: 'The database is being updated.' 
+    });
   };
 
   if (isLoadingTopics || (isLoading && !poolItems)) {
@@ -195,14 +194,31 @@ export default function QuestionBankPage() {
                             <Button variant="outline" size="icon" className="h-8 w-8 text-primary border-primary/20 hover:bg-primary/5" onClick={() => setEditingItem(item)}>
                                 <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button 
-                                variant="destructive" 
-                                size="icon" 
-                                className="h-8 w-8" 
-                                onClick={() => handleDelete(item.id)}
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
+                            
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="icon" className="h-8 w-8 shadow-sm">
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete Question?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This will permanently remove this question from the <strong>{selectedTopic}</strong> database. This action cannot be undone.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction 
+                                            onClick={() => handleDelete(item.id)}
+                                            className="bg-destructive hover:bg-destructive/90"
+                                        >
+                                            Delete Permanently
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         </div>
                     </TableCell>
                   </TableRow>
