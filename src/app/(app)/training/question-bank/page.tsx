@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { collection, query, orderBy, doc, writeBatch, deleteDoc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,9 +64,7 @@ export default function QuestionBankPage() {
   const handleAiGenerated = async (questions: any[]) => {
     if (!firestore || !tenantId) return;
     
-    // Force all generated questions into the CURRENTLY SELECTED database topic
     const targetTopic = selectedTopic;
-    
     const batch = writeBatch(firestore);
     const poolCol = collection(firestore, `tenants/${tenantId}/question-pool`);
 
@@ -86,15 +84,27 @@ export default function QuestionBankPage() {
     });
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = useCallback((id: string) => {
     if (!firestore || !tenantId || !id) return;
     
     if (!window.confirm('Are you sure you want to permanently delete this question from the bank?')) return;
     
     const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', id);
-    deleteDocumentNonBlocking(docRef);
-    toast({ title: 'Question Deleted' });
-  };
+    
+    // Using direct deleteDoc for critical persistence confirmation
+    deleteDoc(docRef)
+      .then(() => {
+        toast({ title: 'Question Deleted' });
+      })
+      .catch((error) => {
+        console.error("Delete error:", error);
+        toast({ 
+          variant: 'destructive', 
+          title: 'Delete Failed', 
+          description: 'You may not have permission to delete this record.' 
+        });
+      });
+  }, [firestore, tenantId, toast]);
 
   if (isLoadingTopics || isLoading) {
     return (
@@ -179,7 +189,12 @@ export default function QuestionBankPage() {
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingItem(item)}>
                                 <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(item.id)}>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-destructive" 
+                                onClick={() => handleDelete(item.id)}
+                            >
                                 <Trash2 className="h-4 w-4" />
                             </Button>
                         </div>
