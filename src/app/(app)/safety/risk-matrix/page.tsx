@@ -129,7 +129,7 @@ export default function RiskMatrixPage() {
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 px-1 pb-4">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-6">
+        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-4 md:p-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <LayoutGrid className="h-5 w-5 text-primary" />
@@ -153,23 +153,23 @@ export default function RiskMatrixPage() {
         </CardHeader>
         
         <CardContent className="flex-1 p-0 overflow-y-auto bg-background custom-scrollbar">
-            <div className="p-6 space-y-12 pb-24">
+            <div className="p-6 space-y-10 pb-24">
               
-              {/* --- MATRIX CONTAINER WITH EXPLICIT HORIZONTAL SCROLL --- */}
+              {/* --- COMPACT MATRIX CONTAINER --- */}
               <div 
-                className="w-full overflow-x-auto overflow-y-hidden custom-scrollbar border rounded-xl bg-card shadow-sm"
+                className="w-full overflow-x-auto overflow-y-hidden border rounded-xl bg-card shadow-sm custom-scrollbar"
                 style={{ WebkitOverflowScrolling: 'touch' }}
               >
-                <div className="min-w-[1000px] p-8">
-                    <div className="grid grid-cols-[200px_repeat(5,1fr)] gap-4">
+                <div className="min-w-[800px] p-6">
+                    <div className="grid grid-cols-[150px_repeat(5,1fr)] gap-3">
                         {/* Header Row (Severities) */}
-                        <div className="flex items-center justify-center p-4 bg-muted/50 rounded-xl border border-dashed text-center">
-                            <span className="text-[10px] font-black uppercase text-muted-foreground">Safety Matrix</span>
+                        <div className="flex items-center justify-center p-3 bg-muted/50 rounded-lg border border-dashed text-center">
+                            <span className="text-[9px] font-black uppercase text-muted-foreground tracking-tighter">Safety Matrix</span>
                         </div>
                         {severities.map(s => (
-                            <div key={s.value} className="flex flex-col items-center justify-center p-4 bg-muted/30 rounded-xl border border-border/50 text-center">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1 leading-tight">{s.name}</span>
-                                <Badge variant="outline" className="h-7 w-7 rounded-full p-0 flex items-center justify-center font-black text-xs border-primary text-primary bg-background shadow-sm">
+                            <div key={s.value} className="flex flex-col items-center justify-center p-2 bg-muted/30 rounded-lg border border-border/50 text-center">
+                                <span className="text-[9px] font-black uppercase tracking-tight text-muted-foreground mb-1 leading-tight">{s.name}</span>
+                                <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center font-black text-[10px] border-primary/50 text-primary bg-background shadow-sm">
                                     {s.value}
                                 </Badge>
                             </div>
@@ -179,10 +179,10 @@ export default function RiskMatrixPage() {
                         {likelihoods.map(l => (
                             <React.Fragment key={l.value}>
                                 {/* Row Header */}
-                                <div className="flex items-center justify-end pr-8 text-right border-r border-dashed mr-2">
+                                <div className="flex items-center justify-end pr-6 text-right border-r border-dashed mr-1">
                                     <div className="space-y-0.5">
-                                        <p className="text-[11px] font-black uppercase tracking-tight text-foreground">{l.name}</p>
-                                        <Badge variant="secondary" className="text-[10px] font-mono font-bold h-5 px-2 bg-primary/10 text-primary border-none">LVL {l.value}</Badge>
+                                        <p className="text-[10px] font-black uppercase tracking-tighter text-foreground line-clamp-1">{l.name}</p>
+                                        <Badge variant="secondary" className="text-[9px] font-mono font-bold h-4 px-1.5 bg-primary/10 text-primary border-none">LVL {l.value}</Badge>
                                     </div>
                                 </div>
                                 {/* Cells */}
@@ -196,11 +196,11 @@ export default function RiskMatrixPage() {
                                             onClick={() => handleCellInteraction(cellId)}
                                             style={{ backgroundColor: color }}
                                             className={cn(
-                                                "h-24 rounded-2xl shadow-sm flex items-center justify-center font-black text-2xl text-black transition-all border-4 border-white/20",
-                                                canManage ? "hover:scale-[1.05] hover:rotate-1 hover:shadow-xl cursor-pointer active:scale-95" : "cursor-default"
+                                                "h-14 rounded-xl shadow-sm flex items-center justify-center font-black text-lg text-black transition-all border-2 border-white/20",
+                                                canManage ? "hover:scale-[1.03] hover:rotate-1 hover:shadow-md cursor-pointer active:scale-95" : "cursor-default"
                                             )}
                                         >
-                                            <span className="drop-shadow-md opacity-90">{cellId}</span>
+                                            <span className="drop-shadow-sm opacity-90">{cellId}</span>
                                         </button>
                                     )
                                 })}
@@ -208,8 +208,7 @@ export default function RiskMatrixPage() {
                         ))}
                     </div>
                 </div>
-                {/* Visual affordance for horizontal scroll on mobile */}
-                <div className="md:hidden text-center py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest animate-pulse border-t bg-muted/5">
+                <div className="md:hidden text-center py-1.5 text-[9px] font-bold text-muted-foreground uppercase tracking-widest animate-pulse border-t bg-muted/5">
                     ← Swipe horizontally to view full matrix →
                 </div>
                 <Input 
@@ -223,50 +222,50 @@ export default function RiskMatrixPage() {
               <Separator />
 
               {/* --- DEFINITIONS SECTION --- */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                 
                 {/* Severity Definitions */}
-                <div className="space-y-6">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between border-b border-primary/20 pb-2">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                        <ShieldCheck className="h-4 w-4" />
+                    <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                        <ShieldCheck className="h-3.5 w-3.5" />
                         Severity Scale (Impact)
                     </h3>
                     {canManage && (
                         <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="h-7 px-3 text-[10px] uppercase font-bold"
+                            className="h-6 px-2 text-[9px] uppercase font-bold"
                             onClick={() => setIsEditingSeverity(!isEditingSeverity)}
                         >
-                            {isEditingSeverity ? <><Check className="mr-1 h-3 w-3" /> Save Definitions</> : <><Pencil className="mr-1 h-3 w-3" /> Edit Descriptions</>}
+                            {isEditingSeverity ? <><Check className="mr-1 h-3 w-3" /> Save</> : <><Pencil className="mr-1 h-3 w-3" /> Edit</>}
                         </Button>
                     )}
                   </div>
                   
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {severities.map((s, index) => (
-                        <div key={s.value} className="p-4 bg-muted/10 rounded-xl border border-border/50 group transition-all hover:border-primary/30 hover:bg-muted/20">
-                            <div className="flex items-start gap-4">
-                                <Badge variant="outline" className="h-10 w-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 border-primary bg-primary/5 text-primary shadow-sm">{s.value}</Badge>
-                                <div className="flex-1 space-y-2">
+                        <div key={s.value} className="p-3 bg-muted/10 rounded-lg border border-border/50 transition-all hover:border-primary/30">
+                            <div className="flex items-start gap-3">
+                                <Badge variant="outline" className="h-8 w-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0 border-primary/30 bg-primary/5 text-primary shadow-sm">{s.value}</Badge>
+                                <div className="flex-1 space-y-1">
                                     {isEditingSeverity ? (
-                                        <div className="space-y-2">
+                                        <div className="space-y-1.5">
                                             <Input 
                                                 value={s.name} 
                                                 onChange={(e) => handleSeverityChange(index, 'name', e.target.value)}
-                                                className="h-8 text-xs font-bold bg-background uppercase"
+                                                className="h-7 text-[10px] font-bold bg-background uppercase"
                                             />
                                             <Textarea 
                                                 value={s.description} 
                                                 onChange={(e) => handleSeverityChange(index, 'description', e.target.value)}
-                                                className="text-xs min-h-[60px] py-2 bg-background resize-none"
+                                                className="text-[10px] min-h-[50px] py-1.5 bg-background resize-none"
                                             />
                                         </div>
                                     ) : (
                                         <>
-                                            <p className="text-xs font-black uppercase tracking-tight text-foreground/80">{s.name}</p>
-                                            <p className="text-[11px] text-muted-foreground leading-relaxed font-medium">{s.description}</p>
+                                            <p className="text-[10px] font-black uppercase tracking-tight text-foreground/80">{s.name}</p>
+                                            <p className="text-[10px] text-muted-foreground leading-snug font-medium">{s.description}</p>
                                         </>
                                     )}
                                 </div>
@@ -277,47 +276,47 @@ export default function RiskMatrixPage() {
                 </div>
 
                 {/* Likelihood Definitions */}
-                <div className="space-y-6">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between border-b border-primary/20 pb-2">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4" />
+                    <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                        <AlertTriangle className="h-3.5 w-3.5" />
                         Likelihood Scale (Probability)
                     </h3>
                     {canManage && (
                         <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="h-7 px-3 text-[10px] uppercase font-bold"
+                            className="h-6 px-2 text-[9px] uppercase font-bold"
                             onClick={() => setIsEditingLikelihood(!isEditingLikelihood)}
                         >
-                            {isEditingLikelihood ? <><Check className="mr-1 h-3 w-3" /> Save Definitions</> : <><Pencil className="mr-1 h-3 w-3" /> Edit Descriptions</>}
+                            {isEditingLikelihood ? <><Check className="mr-1 h-3 w-3" /> Save</> : <><Pencil className="mr-1 h-3 w-3" /> Edit</>}
                         </Button>
                     )}
                   </div>
                   
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {likelihoods.map((l, index) => (
-                        <div key={l.value} className="p-4 bg-muted/10 rounded-xl border border-border/50 group transition-all hover:border-primary/30 hover:bg-muted/20">
-                            <div className="flex items-start gap-4">
-                                <Badge variant="outline" className="h-10 w-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 border-primary bg-primary/5 text-primary shadow-sm">{l.value}</Badge>
-                                <div className="flex-1 space-y-2">
+                        <div key={l.value} className="p-3 bg-muted/10 rounded-lg border border-border/50 transition-all hover:border-primary/30">
+                            <div className="flex items-start gap-3">
+                                <Badge variant="outline" className="h-8 w-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0 border-primary/30 bg-primary/5 text-primary shadow-sm">{l.value}</Badge>
+                                <div className="flex-1 space-y-1">
                                     {isEditingLikelihood ? (
-                                        <div className="space-y-2">
+                                        <div className="space-y-1.5">
                                             <Input 
                                                 value={l.name} 
                                                 onChange={(e) => handleLikelihoodChange(index, 'name', e.target.value)}
-                                                className="h-8 text-xs font-bold bg-background uppercase"
+                                                className="h-7 text-[10px] font-bold bg-background uppercase"
                                             />
                                             <Textarea 
                                                 value={l.description} 
                                                 onChange={(e) => handleLikelihoodChange(index, 'description', e.target.value)}
-                                                className="text-xs min-h-[60px] py-2 bg-background resize-none"
+                                                className="text-[10px] min-h-[50px] py-1.5 bg-background resize-none"
                                             />
                                         </div>
                                     ) : (
                                         <>
-                                            <p className="text-xs font-black uppercase tracking-tight text-foreground/80">{l.name}</p>
-                                            <p className="text-[11px] text-muted-foreground leading-relaxed font-medium">{l.description}</p>
+                                            <p className="text-[10px] font-black uppercase tracking-tight text-foreground/80">{l.name}</p>
+                                            <p className="text-[10px] text-muted-foreground leading-snug font-medium">{l.description}</p>
                                         </>
                                     )}
                                 </div>
