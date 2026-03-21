@@ -64,7 +64,7 @@ function DeleteReportButton({ reportId, reportNumber, tenantId }: { reportId: st
     return (
         <AlertDialog>
             <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="icon" className="h-8 w-8">
+                <Button variant="destructive" size="icon" className="h-8 w-8 shadow-sm">
                     <Trash2 className="h-4 w-4" />
                     <span className="sr-only">Delete Report</span>
                 </Button>
@@ -236,7 +236,7 @@ export default function SafetyReportsPage() {
                     <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Reporting Control</p>
                     <Button asChild size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
                         <Link href={`/safety/new-report?orgId=${orgId}`}>
-                            <PlusCircle className="h-4 w-4" />
+                            <PlusCircle className="mr-2 h-4 w-4" />
                             File New Report
                         </Link>
                     </Button>
@@ -262,8 +262,8 @@ export default function SafetyReportsPage() {
 
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
-        <div className="px-1">
-            <h1 className="text-3xl font-bold tracking-tight">Safety Reports</h1>
+        <div className="px-1 shrink-0">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Safety Reports</h1>
             <p className="text-muted-foreground">Manage and track organizational safety occurrences.</p>
         </div>
 
@@ -273,9 +273,9 @@ export default function SafetyReportsPage() {
             <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
                 <div className="px-1 shrink-0">
                     <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
-                        <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Internal</TabsTrigger>
+                        <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-xs font-bold uppercase">Internal</TabsTrigger>
                         {(organizations || []).map(org => (
-                            <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
+                            <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-xs font-bold uppercase">
                                 {org.name}
                             </TabsTrigger>
                         ))}

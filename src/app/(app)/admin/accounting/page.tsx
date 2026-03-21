@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileSpreadsheet, Calculator, Receipt, Landmark, Eye, Printer, X } from 'lucide-react';
+import { FileSpreadsheet, Landmark, Eye, Printer, X } from 'lucide-react';
 import { BillingTable } from './billing-table';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -197,7 +197,7 @@ export default function AccountingPage() {
                         <Eye className="h-3.5 w-3.5" /> Preview ({selectedIds.size})
                     </Button>
                     <Button 
-                        className="flex-1 md:flex-none gap-2 font-black shadow-md h-9 px-4 text-xs uppercase tracking-tight" 
+                        className="flex-1 md:flex-none gap-2 font-black shadow-md h-9 px-4 text-xs uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white" 
                         onClick={handleSageExport} 
                         disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
                     >
@@ -310,7 +310,7 @@ export default function AccountingPage() {
 
             <DialogFooter className="shrink-0 border-t p-4 md:p-0 md:pt-4 no-print flex flex-col md:flex-row gap-2">
                 <DialogClose asChild><Button variant="outline" className="w-full md:w-auto">Close</Button></DialogClose>
-                <Button onClick={handleSageExport} className="gap-2 w-full md:w-auto">
+                <Button onClick={handleSageExport} className="gap-2 w-full md:w-auto bg-emerald-700 hover:bg-emerald-800 text-white">
                     <FileSpreadsheet className="h-4 w-4" /> Download CSV & Update Status
                 </Button>
             </DialogFooter>

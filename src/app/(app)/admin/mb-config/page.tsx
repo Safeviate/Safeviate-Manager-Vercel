@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot, Cell } from 'recharts';
 import { doc, setDoc, collection } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
@@ -378,170 +378,135 @@ const WBCalculator = () => {
 
   return (
     <div className="flex flex-col h-full overflow-hidden gap-4">
-      {/* MAIN CARD CONTAINER */}
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        
-        {/* STICKY HEADER */}
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle>W&B Configurator</CardTitle>
-            {loadedAircraft && (
+        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-4 md:p-6">
+          <div className="space-y-1">
+            <CardTitle>M&B Configurator</CardTitle>
+            {loadedAircraft ? (
                 <CardDescription>
                     Loaded: <span className="font-semibold text-primary">{loadedAircraft.tailNumber}</span> ({loadedAircraft.model})
                 </CardDescription>
+            ) : (
+                <CardDescription>Build reusable weight and balance profiles.</CardDescription>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={handleReset} variant="destructive" size="sm" className="gap-2"><RotateCcw size={14} /> Reset</Button>
-            
-            <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2"><Save size={14} /> Save as Template</Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Save M&B Template</DialogTitle>
-                        <DialogDescription>Give this configuration a unique name to save it as a reusable template.</DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
-                        <Input 
-                          placeholder="e.g., PA-28-180 Standard"
-                          value={templateName}
-                          onChange={(e) => setTemplateName(e.target.value)}
-                        />
-                    </div>
-                    <DialogFooter>
-                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                        <DialogClose asChild>
-                            <Button onClick={saveAsTemplate} disabled={!templateName.trim()}>Save Template</Button>
-                        </DialogClose>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
 
-            <Dialog open={isLoadTemplateDialogOpen} onOpenChange={setIsLoadTemplateDialogOpen}>
-                <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2"><Library size={14} /> Load Template</Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Load M&B Template</DialogTitle>
-                        <DialogDescription>Select a saved template to load its configuration into the calculator.</DialogDescription>
-                    </DialogHeader>
-                    <ScrollArea className="max-h-60">
-                        <div className="space-y-2 p-1">
-                            {isLoadingTemplates ? (<p>Loading templates...</p>) 
-                              : (savedTemplates || []).map(template => (
-                                  <div key={template.id} className="flex items-center justify-between">
-                                    <Button variant="ghost" className="w-full justify-start" onClick={() => handleLoadTemplate(template)}>
-                                        {template.profileName}
-                                    </Button>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteTemplate(template.id)}>
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                              ))
-                            }
-                            {(!savedTemplates || savedTemplates.length === 0) && !isLoadingTemplates && (
-                                <p className="text-muted-foreground text-sm text-center py-4">No templates saved yet.</p>
-                            )}
-                        </div>
-                    </ScrollArea>
-                     <DialogFooter>
-                          <DialogClose asChild>
-                              <Button variant="outline">Cancel</Button>
-                          </DialogClose>
-                      </DialogFooter>
-                </DialogContent>
-            </Dialog>
-             
-             <Dialog open={isLoadAircraftDialogOpen} onOpenChange={setIsLoadAircraftDialogOpen}>
-                <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2"><Upload size={14} /> Load from Aircraft</Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Load W&B from Aircraft</DialogTitle>
-                        <DialogDescription>
-                            Select an aircraft to load its saved Mass &amp; Balance configuration into the calculator.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <ScrollArea className="max-h-60">
-                        <div className="space-y-2 p-1">
-                            {isLoadingAircrafts ? (
-                                <p>Loading aircraft...</p>
-                            ) : (aircrafts || []).map(ac => (
-                                <Button
-                                    key={ac.id}
-                                    variant="ghost"
-                                    className="w-full justify-start"
-                                    onClick={() => handleLoadFromAircraft(ac)}
-                                    disabled={!ac.emptyWeight || !ac.cgEnvelope}
-                                    title={!ac.emptyWeight || !ac.cgEnvelope ? 'No M&B profile saved' : ''}
-                                >
-                                  {ac.tailNumber} ({ac.model})
-                                </Button>
-                            ))}
-                            {(!aircrafts || aircrafts.length === 0) && !isLoadingAircrafts && (
-                                <p className="text-muted-foreground text-sm text-center py-4">No aircraft found.</p>
-                            )}
-                        </div>
-                    </ScrollArea>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="outline">Cancel</Button>
-                        </DialogClose>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+          <div className="flex flex-wrap items-center gap-4 md:gap-8 w-full xl:w-auto justify-start xl:justify-end">
+            <div className="flex flex-col gap-1.5 xl:items-end w-full sm:w-auto">
+                <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Library Actions</p>
+                <div className="flex gap-2">
+                    <Dialog open={isLoadTemplateDialogOpen} onOpenChange={setIsLoadTemplateDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-9 px-4 text-xs font-bold gap-2"><Library size={14} /> Load Template</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Load M&B Template</DialogTitle>
+                                <DialogDescription>Select a saved template to load its configuration.</DialogDescription>
+                            </DialogHeader>
+                            <ScrollArea className="max-h-60">
+                                <div className="space-y-2 p-1">
+                                    {(savedTemplates || []).map(template => (
+                                        <div key={template.id} className="flex items-center justify-between border-b pb-1 last:border-0">
+                                            <Button variant="ghost" className="w-full justify-start text-xs h-8" onClick={() => handleLoadTemplate(template)}>
+                                                {template.profileName}
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteTemplate(template.id)}>
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    {(!savedTemplates || savedTemplates.length === 0) && !isLoadingTemplates && (
+                                        <p className="text-muted-foreground text-xs text-center py-4 italic">No templates saved.</p>
+                                    )}
+                                </div>
+                            </ScrollArea>
+                        </DialogContent>
+                    </Dialog>
 
-             <Dialog open={isSaveAircraftDialogOpen} onOpenChange={setIsSaveAircraftDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="gap-2"><Plane size={14} /> Save to Aircraft</Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Save Configuration to Aircraft</DialogTitle>
-                        <DialogDescription>
-                            Select an aircraft to apply this Mass &amp; Balance configuration.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <ScrollArea className="max-h-60">
-                        <div className="space-y-2 p-1">
-                            {isLoadingAircrafts ? (
-                                <p>Loading aircraft...</p>
-                            ) : (aircrafts || []).map(ac => (
-                                <Button
-                                    key={ac.id}
-                                    variant="ghost"
-                                    className="w-full justify-start"
-                                    onClick={() => handleSaveToAircraft(ac.id)}
-                                >
-                                  {ac.tailNumber} ({ac.model})
-                                </Button>
-                            ))}
-                            {(!aircrafts || aircrafts.length === 0) && !isLoadingAircrafts && (
-                                <p className="text-muted-foreground text-sm text-center py-4">No aircraft found.</p>
-                            )}
-                        </div>
-                    </ScrollArea>
-                     <DialogFooter>
-                          <DialogClose asChild>
-                              <Button variant="outline">Cancel</Button>
-                          </DialogClose>
-                      </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    <Dialog open={isLoadAircraftDialogOpen} onOpenChange={setIsLoadAircraftDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-9 px-4 text-xs font-bold gap-2"><Upload size={14} /> Load from AC</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Load W&B from Aircraft</DialogTitle>
+                                <DialogDescription>Select an aircraft to load its saved configuration.</DialogDescription>
+                            </DialogHeader>
+                            <ScrollArea className="max-h-60">
+                                <div className="space-y-2 p-1">
+                                    {(aircrafts || []).map(ac => (
+                                        <Button
+                                            key={ac.id}
+                                            variant="ghost"
+                                            className="w-full justify-start text-xs h-8"
+                                            onClick={() => handleLoadFromAircraft(ac)}
+                                            disabled={!ac.emptyWeight || !ac.cgEnvelope}
+                                        >
+                                        {ac.tailNumber} ({ac.model})
+                                        </Button>
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </div>
+
+            <Separator orientation="vertical" className="h-10 hidden xl:block" />
+
+            <div className="flex flex-col gap-1.5 xl:items-end w-full sm:w-auto">
+                <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Commit Actions</p>
+                <div className="flex gap-2">
+                    <Dialog>
+                        <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 px-4 text-xs font-bold gap-2"><Save size={14} /> Save Template</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Save M&B Template</DialogTitle>
+                                <DialogDescription>Give this configuration a name.</DialogDescription>
+                            </DialogHeader>
+                            <div className="py-4">
+                                <Input placeholder="e.g., PA-28-180 Standard" value={templateName} onChange={(e) => setTemplateName(e.target.value)} />
+                            </div>
+                            <DialogFooter>
+                                <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                                <Button onClick={saveAsTemplate} disabled={!templateName.trim()}>Save</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    <Dialog open={isSaveAircraftDialogOpen} onOpenChange={setIsSaveAircraftDialogOpen}>
+                        <DialogTrigger asChild>
+                        <Button size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2"><Plane size={14} /> Save to Aircraft</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Commit to Aircraft Profile</DialogTitle>
+                                <DialogDescription>Select target aircraft to apply these limits.</DialogDescription>
+                            </DialogHeader>
+                            <ScrollArea className="max-h-60">
+                                <div className="space-y-2 p-1">
+                                    {(aircrafts || []).map(ac => (
+                                        <Button key={ac.id} variant="ghost" className="w-full justify-start text-xs h-8" onClick={() => handleSaveToAircraft(ac.id)}>
+                                        {ac.tailNumber} ({ac.model})
+                                        </Button>
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </div>
           </div>
         </CardHeader>
 
-        {/* SCROLLABLE CONTENT */}
         <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5">
           <ScrollArea className="h-full">
             <div className="p-6 space-y-6 pb-24">
               
-              {/* GRAPH AREA */}
-              <div className="bg-card border border-border rounded-xl p-4 relative min-h-[500px] flex flex-col justify-center items-center overflow-hidden shadow-none">
+              <div className="bg-card border border-border rounded-xl p-4 relative min-h-[500px] flex flex-col justify-center items-center overflow-hidden shadow-sm">
                   {offScreenStatus && (
                   <OffScreenWarning direction={offScreenStatus.dir} value={offScreenStatus.val} label={offScreenStatus.axis === 'x' ? 'CG' : 'Weight'} />
                   )}
@@ -568,7 +533,7 @@ const WBCalculator = () => {
                   </ScatterChart>
                   </ResponsiveContainer>
                   
-                  <p className="absolute bottom-20 left-1/2 transform -translate-x-1/2 text-red-600 font-extrabold text-sm md:text-base uppercase tracking-widest pointer-events-none whitespace-nowrap drop-shadow-md">
+                  <p className="absolute bottom-20 left-1/2 transform -translate-x-1/2 text-red-600 font-extrabold text-sm md:text-base uppercase tracking-widest pointer-events-none whitespace-nowrap drop-shadow-md opacity-20">
                   CONSULT AIRCRAFT POH BEFORE FLIGHT
                   </p>
 
@@ -578,10 +543,7 @@ const WBCalculator = () => {
                   </div>
               </div>
 
-              {/* INPUTS GRID */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                {/* 1. BASIC EMPTY WEIGHT */}
                 <div className="bg-card p-5 rounded-xl border border-border shadow-none space-y-4">
                    <h3 className="text-primary font-bold text-[10px] uppercase tracking-widest flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-primary"></span>
@@ -606,7 +568,6 @@ const WBCalculator = () => {
                    </div>
                 </div>
 
-                {/* 2. LOADING STATIONS */}
                 <div className="bg-card p-5 rounded-xl border border-border shadow-none space-y-4">
                    <div className="flex justify-between items-center">
                     <h3 className="text-primary font-bold text-[10px] uppercase tracking-widest flex items-center gap-2">
@@ -620,19 +581,10 @@ const WBCalculator = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-2 text-[9px] uppercase text-muted-foreground font-bold px-1 mb-1 tracking-wider border-b pb-1">
-                     <div className="col-span-5">Station</div>
-                     <div className="col-span-3 text-right">Weight</div>
-                     <div className="col-span-3 text-right">Arm</div>
-                     <div className="col-span-1"></div>
-                  </div>
-
                   <div className="space-y-1">
                     {stations.map((s) => (
                       <div key={s.id} className="group relative border-b border-border/50 last:border-0 pb-2 mb-1">
-
                         {s.type === 'fuel' ? (
-                           // FUEL ROW
                            <div className="pt-1">
                               <div className="grid grid-cols-12 gap-2 items-center mb-1">
                                   <div className="col-span-5 flex items-center gap-2">
@@ -649,24 +601,11 @@ const WBCalculator = () => {
                                       <button onClick={() => removeStation(s.id)} className="text-muted-foreground hover:text-destructive transition opacity-0 group-hover:opacity-100"><Trash2 size={12}/></button>
                                   </div>
                               </div>
-                              <div className="grid grid-cols-2 gap-2 mt-1">
-                                  <div className="flex items-center bg-muted/50 border border-border rounded px-2 py-0.5 shadow-inner">
-                                      <Input type="number" value={s.gallons || ''} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
-                                          className="w-10 bg-transparent text-[10px] font-bold text-right text-yellow-600 border-none shadow-none focus-visible:ring-0 p-0 h-auto" placeholder="0" />
-                                      <span className="text-[9px] text-muted-foreground ml-1 font-semibold uppercase">gal</span>
-                                  </div>
-                                   <div className="flex items-center bg-muted/50 border border-border rounded px-2 py-0.5 shadow-inner">
-                                      <Input type="number" value={s.maxGallons || ''} onChange={(e) => updateStation(s.id, 'maxGallons', e.target.value)}
-                                          className="w-10 bg-transparent text-[10px] font-bold text-right border-none shadow-none focus-visible:ring-0 p-0 h-auto" placeholder="0" />
-                                      <span className="text-[9px] text-muted-foreground ml-1 font-semibold uppercase">max</span>
-                                  </div>
-                              </div>
                               <input type="range" min="0" max={s.maxGallons || 50} value={s.gallons || 0}
                                       onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
                                       className="w-full h-1 bg-muted-foreground/20 rounded-lg appearance-none cursor-pointer accent-yellow-500 block mt-2" />
                            </div>
                         ) : (
-                          // STANDARD ROW
                           <div className="grid grid-cols-12 gap-2 items-center py-1">
                               <div className="col-span-5">
                                   <Input value={s.name || ''} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="bg-transparent text-xs font-medium border-none h-7 p-0 focus-visible:ring-0 shadow-none w-full" placeholder="Item Name" />
@@ -687,7 +626,6 @@ const WBCalculator = () => {
                   </div>
                 </div>
 
-                {/* 3. CONFIG CARD */}
                 <div className="bg-card p-5 rounded-xl border border-border shadow-none space-y-4">
                   <div className="flex justify-between items-center">
                      <h3 className="text-primary font-bold text-[10px] uppercase tracking-widest flex items-center gap-2">
@@ -722,7 +660,6 @@ const WBCalculator = () => {
                      </div>
                   </div>
                 </div>
-
               </div>
             </div>
           </ScrollArea>

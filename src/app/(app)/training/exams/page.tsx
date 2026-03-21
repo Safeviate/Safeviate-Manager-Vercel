@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Search, PlusCircle, Pencil, Trash2, GraduationCap, ClipboardCheck, PlayCircle, ShieldCheck, Microscope, Library, ChevronRight, Database } from 'lucide-react';
+import { Search, PlusCircle, Pencil, Trash2, GraduationCap, ClipboardCheck, PlayCircle, ShieldCheck, Microscope, Database } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -141,11 +141,14 @@ export default function ExamsPage() {
           <p className="text-muted-foreground">Manage official assessments and zero-persistence student practice runs.</p>
         </div>
         {canManage && (
-          <Button asChild className="gap-2 shadow-md">
-            <Link href="/training/exams/new">
-              <PlusCircle className="h-4 w-4" /> Create Exam Template
-            </Link>
-          </Button>
+          <div className="flex flex-col gap-1.5 md:items-end w-full md:w-auto">
+            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Training Assets</p>
+            <Button asChild size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
+                <Link href="/training/exams/new">
+                <PlusCircle className="h-4 w-4" /> Create Exam
+                </Link>
+            </Button>
+          </div>
         )}
       </div>
 
@@ -358,7 +361,7 @@ export default function ExamsPage() {
 
                         <div className="space-y-4">
                             <h3 className="text-sm font-bold flex items-center gap-2">
-                                <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
+                                <GraduationCap className="h-4 w-4 text-muted-foreground" />
                                 Fixed Exam Templates (Practice)
                             </h3>
                             <div className="rounded-md border bg-card overflow-hidden">
@@ -401,7 +404,6 @@ export default function ExamsPage() {
                     </div>
                 </ScrollArea>
             </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
 

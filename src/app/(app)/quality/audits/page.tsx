@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -19,7 +19,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Eye, Trash2, Calendar, ClipboardCheck, ArrowRight } from 'lucide-react';
+import { Eye, Trash2, Calendar, ClipboardCheck, ArrowRight, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -78,8 +78,7 @@ function AuditActions({ audit, tenantId }: AuditActionsProps) {
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogTrigger asChild>
                     <Button variant="destructive" size="icon" className="h-8 px-3 text-xs">
-                        <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                        Delete
+                        <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -310,9 +309,21 @@ export default function AuditsPage() {
 
     return (
         <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
-            <div className="px-1">
-                <h1 className="text-3xl font-bold tracking-tight">Quality Audits</h1>
-                <p className="text-muted-foreground">Manage internal and external quality assurance activities.</p>
+            <div className="px-1 shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Quality Audits</h1>
+                    <p className="text-muted-foreground">Manage internal and external quality assurance activities.</p>
+                </div>
+                <div className="flex flex-col gap-1.5 sm:items-end w-full sm:w-auto">
+                    <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Oversight Controls</p>
+                    <div className="flex gap-2">
+                        <Button asChild variant="outline" size="sm" className="h-9 px-4 text-xs font-bold gap-2">
+                            <Link href="/quality/audit-checklists">
+                                <ShieldCheck className="h-4 w-4" /> Templates
+                            </Link>
+                        </Button>
+                    </div>
+                </div>
             </div>
 
             {!showTabs ? (

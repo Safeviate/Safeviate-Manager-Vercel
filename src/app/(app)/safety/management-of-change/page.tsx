@@ -126,9 +126,9 @@ export default function ManagementOfChangePage() {
     const showTabs = canViewAll;
 
     return (
-        <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
+        <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
             <div className="px-1">
-                <h1 className="text-3xl font-bold tracking-tight">Management of Change</h1>
+                <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Management of Change</h1>
                 <p className="text-muted-foreground">Formally manage and identify risks associated with significant organizational changes.</p>
             </div>
 
@@ -147,15 +147,17 @@ export default function ManagementOfChangePage() {
                         </TabsList>
                     </div>
 
-                    <TabsContent value="internal" className="mt-0">
-                        {renderOrgContext('internal')}
-                    </TabsContent>
-                    
-                    {(organizations || []).map(org => (
-                        <TabsContent key={org.id} value={org.id} className="mt-0">
-                            {renderOrgContext(org.id)}
+                    <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+                        <TabsContent value="internal" className="mt-0">
+                            {renderOrgContext('internal')}
                         </TabsContent>
-                    ))}
+                        
+                        {(organizations || []).map(org => (
+                            <TabsContent key={org.id} value={org.id} className="mt-0">
+                                {renderOrgContext(org.id)}
+                            </TabsContent>
+                        ))}
+                    </div>
                 </Tabs>
             )}
         </div>

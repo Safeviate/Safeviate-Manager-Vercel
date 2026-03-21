@@ -9,7 +9,6 @@ import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, Clipboard
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { seedComplianceData } from '@/lib/seed-data/part-141';
 
@@ -248,18 +247,14 @@ export default function CoherenceMatrixPage() {
   const [editingItem, setEditingItem] = useState<ComplianceRequirement | null>(null);
 
   const complianceQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/compliance-matrix`)) : null), [firestore, tenantId]);
-  const auditsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/quality-audits`)) : null), [firestore, tenantId]);
   const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
   const orgsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null), [firestore, tenantId]);
-  const visibilitySettingsRef = useMemoFirebase(() => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'tab-visibility') : null), [firestore, tenantId]);
 
   const { data: complianceItems, isLoading: isLoadingItems } = useCollection<ComplianceRequirement>(complianceQuery);
-  const { data: audits, isLoading: isLoadingAudits } = useCollection<QualityAudit>(auditsQuery);
   const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
   const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
-  const { data: visibilitySettings, isLoading: isLoadingVisibility } = useDoc<TabVisibilitySettings>(visibilitySettingsRef);
 
-  const isLoading = isLoadingItems || isLoadingAudits || isLoadingPersonnel || isLoadingOrgs || isLoadingVisibility;
+  const isLoading = isLoadingItems || isLoadingPersonnel || isLoadingOrgs;
 
   const naturalSort = (a: string, b: string) => {
     const re = /(\d+)/g;
@@ -410,8 +405,6 @@ export default function CoherenceMatrixPage() {
     );
   }
 
-  const showTabs = true;
-
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
         <div className="px-1">
@@ -419,26 +412,22 @@ export default function CoherenceMatrixPage() {
             <p className="text-muted-foreground">Manage and track regulatory compliance across organizations.</p>
         </div>
 
-        {!showTabs ? (
-            renderOrgContext(userOrgId || 'internal')
-        ) : (
-            <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
-                <div className="px-1 shrink-0">
-                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
-                        <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Internal</TabsTrigger>
-                        {(organizations || []).map(org => (
-                            <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
-                                {org.name}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
-                </div>
-                <TabsContent value="internal" className="mt-0">{renderOrgContext('internal')}</TabsContent>
-                {(organizations || []).map(org => (
-                    <TabsContent key={org.id} value={org.id} className="mt-0">{renderOrgContext(org.id)}</TabsContent>
-                ))}
-            </Tabs>
-        )}
+        <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
+            <div className="px-1 shrink-0">
+                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
+                    <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Internal</TabsTrigger>
+                    {(organizations || []).map(org => (
+                        <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
+                            {org.name}
+                        </TabsTrigger>
+                    ))}
+                </TabsList>
+            </div>
+            <TabsContent value="internal" className="mt-0">{renderOrgContext('internal')}</TabsContent>
+            {(organizations || []).map(org => (
+                <TabsContent key={org.id} value={org.id} className="mt-0">{renderOrgContext(org.id)}</TabsContent>
+            ))}
+        </Tabs>
 
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogContent>

@@ -9,8 +9,6 @@ import { Accordion } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CheckSquare } from 'lucide-center';
-import { Separator } from '@/components/ui/separator';
 import { CheckSquare as CheckIcon } from 'lucide-react';
 import type { QualityAuditChecklistTemplate } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
