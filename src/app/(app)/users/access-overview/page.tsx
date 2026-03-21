@@ -46,12 +46,12 @@ export default function AccessOverviewPage() {
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <div className="px-1">
         <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Access Overview</h1>
-        <p className="text-muted-foreground">Verify module availability and role-based permissions at a glance.</p>
+        <p className="text-muted-foreground text-sm">Verify module availability and role-based permissions at a glance.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 flex-1 min-h-0">
         <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-          <CardHeader className="shrink-0 border-b bg-muted/5">
+          <CardHeader className="shrink-0 border-b bg-muted/5 p-6">
             <CardTitle className="text-lg flex items-center gap-2 font-bold">
               <Shield className="h-5 w-5 text-primary" />
               Role Access Matrix
@@ -77,7 +77,7 @@ export default function AccessOverviewPage() {
                     
                     return (
                       <TableRow key={module.href} className={!isEnabled ? "opacity-40 grayscale" : ""}>
-                        <TableCell className="font-bold text-xs flex items-center gap-2">
+                        <TableCell className="font-bold text-xs flex items-center gap-2 py-4">
                           <module.icon className="h-3.5 w-3.5 text-primary" />
                           {module.label}
                           {!isEnabled && <Badge variant="outline" className="text-[8px] h-4 py-0 ml-1">Disabled</Badge>}

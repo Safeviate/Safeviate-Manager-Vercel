@@ -109,13 +109,13 @@ export default function QuestionBankPage() {
       <div className="px-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Question Bank Manager</h1>
-          <p className="text-muted-foreground">Central database of aviation questions by topic.</p>
+          <p className="text-muted-foreground text-sm">Central database of aviation questions by topic.</p>
         </div>
         <div className="flex flex-col gap-1.5 md:items-end">
             <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Database Actions</p>
             <div className="flex gap-2">
                 <AiExamGenerator onGenerated={handleAiGenerated} />
-                <Button size="sm" className="h-9 px-4 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2" onClick={() => setIsAddOpen(true)} disabled={!selectedTopic}>
+                <Button size="sm" className="h-9 px-6 text-[11px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2" onClick={() => setIsAddOpen(true)} disabled={!selectedTopic}>
                     <PlusCircle className="h-4 w-4" /> Add Question
                 </Button>
             </div>
@@ -123,13 +123,13 @@ export default function QuestionBankPage() {
       </div>
 
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4 flex-1">
-            <div className="space-y-1">
-                <Label className="text-[10px] uppercase font-black text-primary tracking-widest">Active Database</Label>
+        <CardHeader className="shrink-0 border-b bg-muted/5 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_120px] gap-8 items-start">
+            <div className="space-y-2">
+                <Label className="text-[11px] font-black uppercase text-primary tracking-widest">Active Database</Label>
                 <Select onValueChange={setSelectedTopic} value={selectedTopic}>
-                    <SelectTrigger className="w-[300px] h-10 bg-background border-primary/30 font-bold">
-                        <Database className="h-3.5 w-3.5 mr-2 text-primary" />
+                    <SelectTrigger className="h-11 bg-background border-primary/30 font-bold">
+                        <Database className="h-4 w-4 mr-2 text-primary" />
                         <SelectValue placeholder="Select Topic Bank..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -137,26 +137,31 @@ export default function QuestionBankPage() {
                     </SelectContent>
                 </Select>
             </div>
-            <div className="space-y-1 flex-1 max-w-sm">
-                <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Search {selectedTopic}</Label>
+            
+            <div className="space-y-2">
+                <Label className="text-[11px] font-black uppercase text-muted-foreground tracking-widest">Search {selectedTopic || 'Database'}</Label>
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                         placeholder="Keywords..." 
-                        className="pl-9 bg-background h-10" 
+                        className="pl-9 bg-background h-11" 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
             </div>
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Database Size</p>
-            <Badge variant="outline" className="font-mono text-sm py-0 px-3 border-primary/30">
-                {filteredItems.length}
-            </Badge>
+
+            <div className="space-y-2">
+                <Label className="text-[11px] font-black uppercase text-muted-foreground tracking-widest">Database Size</Label>
+                <div className="h-11 flex items-center justify-center">
+                    <Badge variant="outline" className="font-black text-sm h-8 px-4 rounded-full border-primary/30 bg-background shadow-sm">
+                        {filteredItems.length}
+                    </Badge>
+                </div>
+            </div>
           </div>
         </CardHeader>
+        
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
           <ScrollArea className="h-full">
             <div className="p-0">
@@ -165,7 +170,7 @@ export default function QuestionBankPage() {
                     <Table>
                         <TableHeader className="bg-muted/30 sticky top-0 z-10">
                             <TableRow>
-                            <TableHead className="text-[10px] uppercase font-bold">Question Text</TableHead>
+                            <TableHead className="text-[10px] uppercase font-bold px-6 py-3">Question Text</TableHead>
                             <TableHead className="w-24 text-center text-[10px] uppercase font-bold">Options</TableHead>
                             <TableHead className="w-24 text-right text-[10px] uppercase font-bold px-6">Actions</TableHead>
                             </TableRow>
@@ -173,8 +178,8 @@ export default function QuestionBankPage() {
                         <TableBody>
                             {filteredItems.map((item) => (
                             <TableRow key={item.id} className="hover:bg-muted/10 transition-colors">
-                                <TableCell className="font-medium text-sm py-4">
-                                    <p className="line-clamp-2">{item.text}</p>
+                                <TableCell className="font-medium text-sm py-4 px-6">
+                                    <p className="line-clamp-2 leading-relaxed">{item.text}</p>
                                 </TableCell>
                                 <TableCell className="text-center font-mono text-xs opacity-50">
                                     {item.options.length}
