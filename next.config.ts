@@ -3,9 +3,11 @@ import type {NextConfig} from 'next';
 const nextConfig: NextConfig = {
   /* config options here */
   typescript: {
+    // Ignore build errors to allow the project to deploy even with minor type mismatches
     ignoreBuildErrors: true,
   },
   eslint: {
+    // Ignore linting errors during build
     ignoreDuringBuilds: true,
   },
   images: {

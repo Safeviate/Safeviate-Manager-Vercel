@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,7 +47,7 @@ export default function QuestionBankPage() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const topicsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'exam-topics') : null),
+    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'exam-topics') : null),
     [firestore, tenantId]
   );
   const { data: topicsData, isLoading: isLoadingTopics } = useDoc<ExamTopicsSettings>(topicsRef);
@@ -88,11 +89,15 @@ export default function QuestionBankPage() {
         });
     });
 
-    await batch.commit();
-    toast({ 
-        title: 'Bank Populated', 
-        description: `${questions.length} questions added to the ${targetTopic} database.` 
-    });
+    try {
+        await batch.commit();
+        toast({ 
+            title: 'Bank Populated', 
+            description: `${questions.length} questions added to the ${targetTopic} database.` 
+        });
+    } catch (e: any) {
+        toast({ variant: 'destructive', title: 'Error', description: e.message });
+    }
   };
 
   const handleDelete = async (item: QuestionBankItem) => {
@@ -300,7 +305,7 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
             return;
         }
         if (!correctId) {
-            toast({ variant: 'destructive', title: 'Selection Missing', description: 'Please select which option is the correct answer using the radio buttons.' });
+            toast({ variant: 'destructive', title: 'Selection Missing', description: 'Please select which option is the correct answer.' });
             return;
         }
 
