@@ -157,9 +157,9 @@ export default function RiskMatrixPage() {
           <ScrollArea className="h-full">
             <div className="p-6 space-y-12 pb-24">
               
-              {/* --- MODERN GRID MATRIX --- */}
-              <div className="w-full overflow-x-auto pb-4 custom-scrollbar">
-                <div className="min-w-[700px] p-1">
+              {/* --- MODERN GRID MATRIX WITH HORIZONTAL SCROLL --- */}
+              <div className="w-full overflow-x-auto pb-6 custom-scrollbar">
+                <div className="min-w-[800px] p-1">
                     <div className="grid grid-cols-[140px_repeat(5,1fr)] gap-2">
                         {/* Header Row */}
                         <div />
