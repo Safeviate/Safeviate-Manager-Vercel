@@ -11,7 +11,7 @@ import { doc } from 'firebase/firestore';
 import type { RiskMatrixSettings } from '@/types/risk';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Pencil, Check, AlertTriangle, ShieldCheck, Printer, LayoutGrid } from 'lucide-react';
+import { Pencil, Check, ShieldCheck, Printer, LayoutGrid, AlertTriangle } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
@@ -133,11 +133,9 @@ export default function RiskMatrixPage() {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <LayoutGrid className="h-5 w-5 text-primary" />
-              <CardTitle className="text-2xl font-headline">Risk Matrix</CardTitle>
+              <CardTitle className="text-2xl font-bold tracking-tight">Risk Matrix</CardTitle>
             </div>
-            <CardDescription className="max-w-2xl text-xs">
-              Defining organizational risk tolerance using ICAO taxonomy.
-            </CardDescription>
+            <CardDescription className="text-xs text-muted-foreground font-medium">Defining organizational risk tolerance using ICAO taxonomy.</CardDescription>
           </div>
           
           <div className="flex flex-col gap-1.5 xl:items-end w-full sm:w-auto">
@@ -155,7 +153,8 @@ export default function RiskMatrixPage() {
             <div className="p-6 space-y-10 pb-24">
               
               <div 
-                className="w-full overflow-x-auto overflow-y-hidden border rounded-xl bg-card shadow-sm custom-scrollbar"
+                className="w-full overflow-x-auto overflow-y-hidden border rounded-xl bg-muted/5 shadow-sm"
+                style={{ scrollbarWidth: 'thin' }}
               >
                 <div className="min-w-[600px] p-6 mx-auto max-w-2xl">
                     <div className="grid grid-cols-[120px_repeat(5,1fr)] gap-2">
@@ -163,7 +162,7 @@ export default function RiskMatrixPage() {
                             <span className="text-[8px] font-black uppercase text-muted-foreground tracking-tighter">Impact</span>
                         </div>
                         {severities.map(s => (
-                            <div key={s.value} className="flex flex-col items-center justify-center p-1.5 bg-muted/30 rounded-lg border border-border/50 text-center">
+                            <div key={s.value} className="flex flex-col items-center justify-center p-1.5 bg-background rounded-lg border border-border/50 text-center">
                                 <span className="text-[8px] font-black uppercase tracking-tight text-muted-foreground mb-0.5 leading-tight">{s.name}</span>
                                 <Badge variant="outline" className="h-5 w-5 rounded-full p-0 flex items-center justify-center font-black text-[9px] border-primary/50 text-primary bg-background shadow-sm">
                                     {s.value}
@@ -213,7 +212,7 @@ export default function RiskMatrixPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between border-b border-primary/20 pb-2">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                    <h3 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                         <ShieldCheck className="h-3.5 w-3.5" />
                         Severity Scale
                     </h3>
@@ -254,7 +253,7 @@ export default function RiskMatrixPage() {
 
                 <div className="space-y-4">
                   <div className="flex items-center justify-between border-b border-primary/20 pb-2">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                    <h3 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                         <AlertTriangle className="h-3.5 w-3.5" />
                         Likelihood Scale
                     </h3>

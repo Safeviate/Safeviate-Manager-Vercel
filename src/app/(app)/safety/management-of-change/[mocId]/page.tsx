@@ -114,8 +114,8 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
 
         <Card className="shadow-none border-primary/20 bg-muted/5">
           <CardHeader className="py-4">
-            <CardTitle className="text-2xl font-headline">MOC {moc.mocNumber}: {moc.title}</CardTitle>
-            <CardDescription>Proposed on {format(new Date(moc.proposalDate), 'PPP')}</CardDescription>
+            <CardTitle className="text-2xl font-bold tracking-tight">MOC {moc.mocNumber}: {moc.title}</CardTitle>
+            <CardDescription className="text-xs font-medium">Proposed on {format(new Date(moc.proposalDate), 'PPP')}</CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 py-0 pb-4">
             <DetailItem label="Detailed Description" value={moc.description} />
@@ -164,15 +164,15 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
         </Tabs>
       </div>
 
-      <div className="hidden print:block space-y-8">
+      <div className="hidden print:block space-y-8 max-w-[1200px] mx-auto w-full">
         <div className="border-b pb-4 mb-6">
           <h1 className="text-3xl font-bold">Management of Change Proposal</h1>
-          <p className="text-muted-foreground">Document ID: {moc.mocNumber}</p>
+          <p className="text-muted-foreground text-xs font-bold uppercase">Document ID: {moc.mocNumber}</p>
         </div>
         <Card className="border-none shadow-none">
           <CardHeader className="p-0 pb-4">
-            <CardTitle>{moc.title}</CardTitle>
-            <CardDescription>Proposed on {format(new Date(moc.proposalDate), 'PPP')}</CardDescription>
+            <CardTitle className="text-2xl font-bold">{moc.title}</CardTitle>
+            <CardDescription className="text-xs">Proposed on {format(new Date(moc.proposalDate), 'PPP')}</CardDescription>
           </CardHeader>
           <CardContent className="p-0 grid grid-cols-1 gap-6">
             <DetailItem label="Description" value={moc.description} />
