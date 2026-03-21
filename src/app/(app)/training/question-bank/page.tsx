@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
 import type { ExamTopicsSettings } from '../../admin/exam-topics/page';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function QuestionBankPage() {
   const firestore = useFirestore();

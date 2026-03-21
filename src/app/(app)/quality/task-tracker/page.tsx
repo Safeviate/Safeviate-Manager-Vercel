@@ -221,7 +221,7 @@ export default function TaskTrackerPage() {
     );
   }
 
-  const showTabs = canManageAll;
+  const showTabs = true;
 
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
