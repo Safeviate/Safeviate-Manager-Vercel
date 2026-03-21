@@ -3,8 +3,8 @@
 import { useMemo } from 'react';
 import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { RoleForm } from './role-form';
-import { RoleActions } from './role-actions';
+import { RoleForm } from '../../admin/roles/role-form';
+import { RoleActions } from '../../admin/roles/role-actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table,
