@@ -21,11 +21,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
 import type { ExamTopicsSettings } from '../../admin/exam-topics/page';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function QuestionBankPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<string>('');
@@ -34,7 +35,7 @@ export default function QuestionBankPage() {
 
   // Fetch dynamic topics from settings
   const topicsRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, `tenants/${tenantId}/settings`, 'exam-topics') : null),
+    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'exam-topics') : null),
     [firestore, tenantId]
   );
   const { data: topicsData, isLoading: isLoadingTopics } = useDoc<ExamTopicsSettings>(topicsRef);
@@ -46,7 +47,7 @@ export default function QuestionBankPage() {
   }, [topicsData, selectedTopic]);
 
   const poolQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/question-pool`), orderBy('createdAt', 'desc')) : null),
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/question-pool`), orderBy('createdAt', 'desc')) : null),
     [firestore, tenantId]
   );
   const { data: poolItems, isLoading } = useCollection<QuestionBankItem>(poolQuery);
@@ -61,7 +62,7 @@ export default function QuestionBankPage() {
   }, [poolItems, searchQuery, selectedTopic]);
 
   const handleAiGenerated = async (questions: any[]) => {
-    if (!firestore) return;
+    if (!firestore || !tenantId) return;
     
     // Force all generated questions into the CURRENTLY SELECTED database topic
     const targetTopic = selectedTopic;
@@ -73,7 +74,7 @@ export default function QuestionBankPage() {
         const docRef = doc(poolCol);
         batch.set(docRef, {
             ...q,
-            topic: targetTopic, // Override AI guess with user's selected bank
+            topic: targetTopic,
             createdAt: new Date().toISOString()
         });
     });
@@ -86,14 +87,15 @@ export default function QuestionBankPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (!firestore || !window.confirm('Delete this question from the bank?')) return;
+    if (!firestore || !tenantId || !id) return;
+    if (!window.confirm('Are you sure you want to permanently delete this question from the bank?')) return;
     
-    const docRef = doc(firestore, `tenants/${tenantId}/question-pool`, id);
+    const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', id);
     deleteDocumentNonBlocking(docRef);
     toast({ title: 'Question Deleted' });
   };
 
-  if (isLoadingTopics) {
+  if (isLoadingTopics || isLoading) {
     return (
       <div className="p-8 space-y-6">
         <Skeleton className="h-10 w-48" />
@@ -210,7 +212,7 @@ export default function QuestionBankPage() {
                 setEditingItem(null);
             }
         }} 
-        tenantId={tenantId} 
+        tenantId={tenantId!} 
         topic={selectedTopic}
         editingItem={editingItem}
       />
@@ -257,10 +259,10 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
             return;
         }
 
-        if (!firestore) return;
+        if (!firestore || !tenantId) return;
 
         const data = {
-            topic, // Always use the active bank topic
+            topic,
             text,
             options,
             correctOptionId: correctId,
@@ -268,11 +270,11 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
         };
 
         if (editingItem) {
-            const docRef = doc(firestore, `tenants/${tenantId}/question-pool`, editingItem.id);
+            const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', editingItem.id);
             updateDocumentNonBlocking(docRef, data);
             toast({ title: 'Question Updated' });
         } else {
-            const poolCol = collection(firestore, `tenants/${tenantId}/question-pool`);
+            const poolCol = collection(firestore, 'tenants', tenantId, 'question-pool');
             await addDocumentNonBlocking(poolCol, data);
             toast({ title: 'Question Added' });
         }
