@@ -155,8 +155,11 @@ export default function RiskMatrixPage() {
         <CardContent className="flex-1 p-0 overflow-y-auto bg-background custom-scrollbar">
             <div className="p-6 space-y-12 pb-24">
               
-              {/* --- MATRIX CONTAINER WITH ROBUST HORIZONTAL SCROLL --- */}
-              <div className="w-full overflow-x-auto custom-scrollbar border rounded-xl bg-card shadow-sm">
+              {/* --- MATRIX CONTAINER WITH EXPLICIT HORIZONTAL SCROLL --- */}
+              <div 
+                className="w-full overflow-x-auto overflow-y-hidden custom-scrollbar border rounded-xl bg-card shadow-sm"
+                style={{ WebkitOverflowScrolling: 'touch' }}
+              >
                 <div className="min-w-[1000px] p-8">
                     <div className="grid grid-cols-[200px_repeat(5,1fr)] gap-4">
                         {/* Header Row (Severities) */}
