@@ -45,7 +45,6 @@ export default function QuestionBankPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
-  // Fetch dynamic topics from settings
   const topicsRef = useMemoFirebase(
     () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'exam-topics') : null),
     [firestore, tenantId]
@@ -100,6 +99,7 @@ export default function QuestionBankPage() {
     if (!firestore || !tenantId) return;
     
     setIsDeleting(item.id);
+    toast({ title: 'Deleting...', description: 'Removing item from database.' });
     try {
         const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', item.id);
         await deleteDocumentNonBlocking(docRef);
@@ -205,7 +205,7 @@ export default function QuestionBankPage() {
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Delete Question?</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            This will permanently remove this question from the <strong>{selectedTopic}</strong> database. This action cannot be undone.
+                                            This will permanently remove this question from the <strong>{selectedTopic}</strong> database.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
