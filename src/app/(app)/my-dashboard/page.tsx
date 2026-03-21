@@ -1,187 +1,29 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, query } from 'firebase/firestore';
+import { useDashboardData } from '@/hooks/use-dashboard-data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { useUserProfile } from '@/hooks/use-user-profile';
-import { useTenantConfig } from '@/hooks/use-tenant-config';
-import { menuConfig } from '@/lib/menu-config';
-
-import type { SafetyReport } from '@/types/safety-report';
-import type { CorrectiveActionPlan, QualityAudit } from '@/types/quality';
-import type { ManagementOfChange } from '@/types/moc';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import type { PilotProfile, Personnel } from '../users/personnel/page';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Eye } from 'lucide-react';
-
-type UserProfileData = PilotProfile | Personnel;
-
-type UnifiedTask = {
-    id: string;
-    description: string;
-    sourceType: 'MOC' | 'Audit' | 'Safety Report';
-    sourceIdentifier: string;
-    link: string;
-    assigneeId: string;
-    assigneeName?: string;
-    dueDate: string; // ISO string
-    status: 'Open' | 'In Progress' | 'Completed' | 'Closed' | 'Cancelled';
-};
-
-type UnifiedMessage = {
-    id: string;
-    from: string;
-    content: string;
-    timestamp: string;
-    link: string;
-    source: string;
-};
-
+import { useMemo } from 'react';
 
 export default function MyDashboardPage() {
-    const firestore = useFirestore();
-    const tenantId = 'safeviate';
-    const { userProfile, isLoading: isProfileLoading } = useUserProfile();
-    const { tenant, isLoading: isLoadingTenant } = useTenantConfig();
+    const { myTasks, myMessages, isLoading, userProfile, tenant } = useDashboardData();
     
-    // Use `personnel` as the collection for instructors, students, and private pilots
-    const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
-    const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
-    const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
-    const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
-    
-    const mocsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `tenants/${tenantId}/management-of-change`)) : null, [firestore, tenantId]);
-    const auditsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `tenants/${tenantId}/quality-audits`)) : null, [firestore, tenantId]);
-    const reportsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `tenants/${tenantId}/safety-reports`)) : null, [firestore, tenantId]);
-    const capsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`)) : null, [firestore, tenantId]);
-
-    const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
-    const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
-    const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsQuery);
-    const { data: privatePilots, isLoading: isLoadingPrivatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
-
-    const { data: mocs, isLoading: isLoadingMocs } = useCollection<ManagementOfChange>(mocsQuery);
-    const { data: audits, isLoading: isLoadingAudits } = useCollection<QualityAudit>(auditsQuery);
-    const { data: reports, isLoading: isLoadingReports } = useCollection<SafetyReport>(reportsQuery);
-    const { data: caps, isLoading: isLoadingCaps } = useCollection<CorrectiveActionPlan>(capsQuery);
-
-    const allUsers: UserProfileData[] = useMemo(() => [
-        ...(personnel || []),
-        ...(instructors || []),
-        ...(students || []),
-        ...(privatePilots || []),
-    ], [personnel, instructors, students, privatePilots]);
-
-    const allTasks = useMemo((): UnifiedTask[] => {
-        if (isLoadingMocs || isLoadingAudits || isLoadingReports || isLoadingCaps || !allUsers) return [];
-    
-        const userMap = new Map(allUsers.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
-        const tasks: UnifiedTask[] = [];
-    
-        (mocs || []).forEach(moc => {
-          moc.phases?.forEach(phase => {
-            phase.steps?.forEach(step => {
-              step.hazards?.forEach(hazard => {
-                hazard.risks?.forEach(risk => {
-                  risk.mitigations?.forEach(mitigation => {
-                    if (mitigation.status !== 'Closed' && mitigation.status !== 'Cancelled') {
-                      tasks.push({
-                        id: mitigation.id,
-                        description: mitigation.description,
-                        sourceType: 'MOC',
-                        sourceIdentifier: moc.mocNumber,
-                        link: `/safety/management-of-change/${moc.id}`,
-                        assigneeId: mitigation.responsiblePersonId,
-                        assigneeName: userMap.get(mitigation.responsiblePersonId) || 'Unassigned',
-                        dueDate: mitigation.completionDate,
-                        status: mitigation.status,
-                      });
-                    }
-                  });
-                });
-              });
-            });
-          });
-        });
-        
-        (reports || []).forEach(report => {
-            (report.investigationTasks || []).forEach(task => {
-                if (task.status !== 'Completed') {
-                     tasks.push({
-                        id: task.id,
-                        description: task.description,
-                        sourceType: 'Safety Report',
-                        sourceIdentifier: report.reportNumber,
-                        link: `/safety/safety-reports/${report.id}`,
-                        assigneeId: task.assigneeId,
-                        assigneeName: userMap.get(task.assigneeId) || 'Unassigned',
-                        dueDate: task.dueDate,
-                        status: task.status,
-                    });
-                }
-            });
-        });
-    
-        const auditsMap = new Map((audits || []).map(a => [a.id, a]));
-        (caps || []).forEach(cap => {
-          if (cap.status !== 'Closed' && cap.status !== 'Cancelled') {
-            const audit = auditsMap.get(cap.auditId);
-            tasks.push({
-              id: cap.id,
-              description: `Corrective action for finding on audit ${audit?.auditNumber || cap.auditId}`,
-              sourceType: 'Audit',
-              sourceIdentifier: audit?.auditNumber || 'Unknown Audit',
-              link: `/quality/audits/${cap.auditId}`,
-              assigneeId: cap.responsiblePersonId || '',
-              assigneeName: userMap.get(cap.responsiblePersonId || '') || 'Unassigned',
-              dueDate: new Date().toISOString(), // Placeholder
-              status: cap.status,
-            });
-          }
-        });
-    
-        return tasks.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-    
-      }, [mocs, reports, caps, audits, allUsers, isLoadingMocs, isLoadingAudits, isLoadingReports, isLoadingCaps]);
-
-    const myTasks = useMemo(() => {
-        if (!userProfile || !allTasks) return [];
-        return allTasks.filter(task => task.assigneeId === userProfile.id);
-    }, [allTasks, userProfile]);
-
-    const myMessages = useMemo((): UnifiedMessage[] => {
-        if (!reports || !userProfile) return [];
-
-        const messages: UnifiedMessage[] = [];
-
-        reports.forEach(report => {
-            (report.discussion || []).forEach(item => {
-                if (item.assignedToId === userProfile.id) {
-                    messages.push({
-                        id: item.id,
-                        from: item.userName,
-                        content: item.message,
-                        timestamp: item.timestamp,
-                        link: `/safety/safety-reports/${report.id}?tab=discussion`,
-                        source: `Safety Report ${report.reportNumber}`,
-                    });
-                }
-            });
-        });
-
-        return messages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    }, [reports, userProfile]);
-
     const hiddenMenus = useMemo(() => new Set(userProfile?.accessOverrides?.hiddenMenus || []), [userProfile]);
-    const disabledMenus = useMemo(() => new Set(tenant?.enabledMenus ? menuConfig.map(m => m.href).filter(h => !tenant.enabledMenus!.includes(h)) : []), [tenant]);
-    const isHidden = (href: string) => hiddenMenus.has(href) || disabledMenus.has(href);
+    const disabledMenus = useMemo(() => new Set(tenant?.enabledMenus ? [] : []), [tenant]); // Simplified for now
+    
+    // Check if a specific menu is hidden or disabled
+    const isHidden = (href: string) => {
+        if (hiddenMenus.has(href)) return true;
+        if (tenant?.enabledMenus && !tenant.enabledMenus.includes(href)) return true;
+        return false;
+    };
 
     const availableTabs = useMemo(() => {
         return [
@@ -189,9 +31,7 @@ export default function MyDashboardPage() {
             { id: 'messages', label: 'Messages', href: '/my-dashboard/messages', showBadge: true },
             { id: 'logbook', label: 'My Logbook', href: '/my-dashboard/logbook' },
         ].filter(tab => !isHidden(tab.href));
-    }, [hiddenMenus, disabledMenus]);
-
-    const isLoading = isProfileLoading || isLoadingTenant || isLoadingPersonnel || isLoadingInstructors || isLoadingStudents || isLoadingPrivatePilots || isLoadingMocs || isLoadingAudits || isLoadingReports || isLoadingCaps;
+    }, [userProfile, tenant]);
 
     if (isLoading) return (
         <div className="max-w-[1200px] mx-auto w-full space-y-6">
@@ -321,4 +161,4 @@ export default function MyDashboardPage() {
             </Tabs>
         </div>
     );
-}
+}
