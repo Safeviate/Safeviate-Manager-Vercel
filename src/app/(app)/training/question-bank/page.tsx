@@ -35,7 +35,7 @@ export default function QuestionBankPage() {
 
   // Fetch dynamic topics from settings
   const topicsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'exam-topics') : null),
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'exam-topics') : null),
     [firestore, tenantId]
   );
   const { data: topicsData, isLoading: isLoadingTopics } = useDoc<ExamTopicsSettings>(topicsRef);
@@ -47,7 +47,7 @@ export default function QuestionBankPage() {
   }, [topicsData, selectedTopic]);
 
   const poolQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/question-pool`), orderBy('createdAt', 'desc')) : null),
+    () => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'question-pool'), orderBy('createdAt', 'desc')) : null),
     [firestore, tenantId]
   );
   const { data: poolItems, isLoading } = useCollection<QuestionBankItem>(poolQuery);
@@ -66,7 +66,7 @@ export default function QuestionBankPage() {
     
     const targetTopic = selectedTopic;
     const batch = writeBatch(firestore);
-    const poolCol = collection(firestore, `tenants/${tenantId}/question-pool`);
+    const poolCol = collection(firestore, 'tenants', tenantId, 'question-pool');
 
     questions.forEach(q => {
         const docRef = doc(poolCol);
@@ -85,27 +85,34 @@ export default function QuestionBankPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (!firestore || !tenantId) return;
+    if (!firestore || !tenantId) {
+        toast({ variant: 'destructive', title: 'System Error', description: 'Database connection not ready.' });
+        return;
+    }
     
     if (!id) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Question ID is missing.' });
+        toast({ variant: 'destructive', title: 'Selection Error', description: 'Invalid question ID.' });
         return;
     }
 
-    if (!window.confirm('Are you sure you want to permanently delete this question from the bank?')) {
+    if (!window.confirm('PERMANENT DELETION: Are you sure you want to remove this question from the database?')) {
         return;
     }
     
-    // Construct reference using the partitioned path
-    const docRef = doc(firestore, `tenants/${tenantId}/question-pool`, id);
+    // Construct reference using explicit path segments for maximum reliability
+    const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', id);
     
-    // Use the non-blocking utility to ensure errors are caught by the global listener
+    // Provide immediate feedback
+    toast({ title: 'Processing...', description: 'Deleting question from database.' });
+
+    // Use the non-blocking utility to ensure errors are caught by the global architectural listener
     deleteDocumentNonBlocking(docRef)
       .then(() => {
         toast({ title: 'Question Deleted' });
       })
       .catch((err) => {
-        console.error("Deletion failed:", err);
+        // Detailed error is handled by the global listener, but we provide local feedback too
+        toast({ variant: 'destructive', title: 'Deletion Failed', description: 'Verify your permissions and try again.' });
       });
   };
 
@@ -180,7 +187,7 @@ export default function QuestionBankPage() {
               </TableHeader>
               <TableBody>
                 {filteredItems.map((item) => (
-                  <TableRow key={item.id} className="group hover:bg-muted/10 transition-colors">
+                  <TableRow key={item.id} className="hover:bg-muted/10 transition-colors">
                     <TableCell className="font-medium text-sm py-4">
                         <p className="line-clamp-2">{item.text}</p>
                     </TableCell>
@@ -189,7 +196,7 @@ export default function QuestionBankPage() {
                     </TableCell>
                     <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingItem(item)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => setEditingItem(item)}>
                                 <Pencil className="h-3.5 w-3.5" />
                             </Button>
                             <Button 
@@ -289,11 +296,11 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
         };
 
         if (editingItem) {
-            const docRef = doc(firestore, `tenants/${tenantId}/question-pool`, editingItem.id);
+            const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', editingItem.id);
             updateDocumentNonBlocking(docRef, data);
             toast({ title: 'Question Updated' });
         } else {
-            const poolCol = collection(firestore, `tenants/${tenantId}/question-pool`);
+            const poolCol = collection(firestore, 'tenants', tenantId, 'question-pool');
             await addDocumentNonBlocking(poolCol, data);
             toast({ title: 'Question Added' });
         }
