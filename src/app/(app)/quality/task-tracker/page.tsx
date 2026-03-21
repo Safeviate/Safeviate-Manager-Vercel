@@ -221,8 +221,7 @@ export default function TaskTrackerPage() {
     );
   }
 
-  const isTabEnabled = true; // Restrictions disabled
-  const showTabs = canViewAll;
+  const showTabs = canManageAll;
 
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">

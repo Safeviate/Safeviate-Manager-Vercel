@@ -121,7 +121,6 @@ export default function ManagementOfChangePage() {
         return <div className="max-w-[1200px] mx-auto w-full text-center py-10 text-destructive"><p>Error loading records: {error.message}</p></div>;
     }
 
-    const isTabEnabled = true; // Restrictions disabled
     const showTabs = canViewAll;
 
     return (

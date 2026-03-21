@@ -397,7 +397,6 @@ export default function CoherenceMatrixPage() {
     );
   }
 
-  const isTabEnabled = true; // Restrictions disabled
   const showTabs = canManageAll;
 
   return (

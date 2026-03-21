@@ -201,7 +201,6 @@ export default function SafetyIndicatorsPage() {
     return <div className="space-y-6 max-w-[1200px] mx-auto w-full"><Skeleton className="h-10 w-[400px] rounded-full" /><Skeleton className="h-[200px] w-full" /></div>;
   }
 
-  const isTabEnabled = true; // Restrictions disabled
   const showTabs = canViewAll;
 
   return (

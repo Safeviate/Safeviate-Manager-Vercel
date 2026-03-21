@@ -201,7 +201,6 @@ export default function SafetyReportsPage() {
     );
   }
 
-  const isTabEnabled = true; // Restrictions disabled
   const showTabs = canManageAll;
 
   return (
