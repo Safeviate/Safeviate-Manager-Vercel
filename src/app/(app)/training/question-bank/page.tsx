@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { collection, query, orderBy, doc, writeBatch, deleteDoc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -84,27 +84,21 @@ export default function QuestionBankPage() {
     });
   };
 
-  const handleDelete = useCallback((id: string) => {
+  const handleDelete = (id: string) => {
     if (!firestore || !tenantId || !id) return;
     
     if (!window.confirm('Are you sure you want to permanently delete this question from the bank?')) return;
     
     const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', id);
     
-    // Using direct deleteDoc for critical persistence confirmation
-    deleteDoc(docRef)
+    deleteDocumentNonBlocking(docRef)
       .then(() => {
         toast({ title: 'Question Deleted' });
       })
-      .catch((error) => {
-        console.error("Delete error:", error);
-        toast({ 
-          variant: 'destructive', 
-          title: 'Delete Failed', 
-          description: 'You may not have permission to delete this record.' 
-        });
+      .catch(() => {
+        // Error is emitted to global listener for contextual debugging
       });
-  }, [firestore, tenantId, toast]);
+  };
 
   if (isLoadingTopics || isLoading) {
     return (
