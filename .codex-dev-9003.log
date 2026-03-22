@@ -89,3 +89,29 @@
  GET /dashboard 200 in 84ms
  ✓ Compiled in 2.7s (2778 modules)
  GET /dashboard 200 in 306ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 2.1s (1505 modules)
+ GET /login 200 in 2502ms
+ GET /login 200 in 87ms
+ ✓ Compiled in 3.6s (2770 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 1770ms (1504 modules)
+ GET / 307 in 3243ms
+ GET /login 200 in 227ms
+ GET /dashboard 200 in 87ms
+ ○ Compiling /development/database ...
+ ✓ Compiled /development/database in 4.9s (2793 modules)
+ GET /development/database 200 in 5783ms
+ GET /development/database 200 in 218ms
+ ✓ Compiled in 5.8s (2701 modules)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /development/database 200 in 2083ms
+ GET /development/database 200 in 2049ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1292ms (1437 modules)
+ GET /favicon.ico 200 in 1671ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ✓ Compiled in 2.9s (2722 modules)
+ GET /development/database 200 in 2037ms
+ GET /development/database 200 in 3434ms
+ GET /favicon.ico 200 in 56ms

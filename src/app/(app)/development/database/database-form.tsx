@@ -19,7 +19,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { menuConfig } from '@/lib/menu-config';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Save } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { ArrowRightLeft, Building2, CheckCircle2, Pencil, PlusCircle, Save } from 'lucide-react';
 import type { Tenant } from '@/types/quality';
 
 const DEFAULT_MAIN = { background: '#ebf5fb', primary: '#7cc4f7', 'primary-foreground': '#1e293b', accent: '#63b2a7' };
@@ -29,10 +31,12 @@ const DEFAULT_POPOVER = { popover: '#ebf5fb', 'popover-foreground': '#1e293b', '
 const DEFAULT_SIDEBAR = { 'sidebar-background': '#dbeafb', 'sidebar-foreground': '#1e293b', 'sidebar-accent': '#f1f5f9', 'sidebar-accent-foreground': '#1e293b', 'sidebar-border': '#94a3b8' };
 const DEFAULT_HEADER = { 'header-background': '#ebf5fb', 'header-foreground': '#1e293b', 'header-border': '#e2e8f0' };
 const DEFAULT_SWIMLANE = { 'swimlane-header-background': '#f1f5f9', 'swimlane-header-foreground': '#475569' };
+const TENANT_OVERRIDE_STORAGE_KEY = 'safeviate:selected-tenant';
 
 export function DatabaseForm() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { tenantId: activeTenantId, userProfile } = useUserProfile();
   
   const tenantsQuery = useMemoFirebase(
     () => (firestore ? collection(firestore, 'tenants') : null),
@@ -54,6 +58,8 @@ export function DatabaseForm() {
   const [swimlaneTheme, setSwimlaneTheme] = useState(DEFAULT_SWIMLANE);
   
   const [enabledHrefs, setEnabledHrefs] = useState<Set<string>>(new Set());
+  const isDeveloperMode = userProfile?.role?.toLowerCase() === 'dev' || userProfile?.role?.toLowerCase() === 'developer' || userProfile?.id === 'DEVELOPER_MODE';
+  const sortedTenants = useMemo(() => [...(tenants || [])].sort((a, b) => a.name.localeCompare(b.name)), [tenants]);
 
   const handleLoadTenant = (tenantId: string) => {
     const t = tenants?.find(tenant => tenant.id === tenantId);
@@ -80,6 +86,18 @@ export function DatabaseForm() {
     setEnabledHrefs(new Set(t.enabledMenus || []));
 
     toast({ title: 'Tenant Loaded', description: `Configuration for "${t.name}" is ready for editing.` });
+  };
+
+  const handleSwitchTenant = (tenant: Tenant) => {
+    if (typeof window === 'undefined') return;
+
+    window.localStorage.setItem(TENANT_OVERRIDE_STORAGE_KEY, tenant.id);
+    window.dispatchEvent(new Event('safeviate-tenant-switch'));
+
+    toast({
+      title: 'Company Switched',
+      description: `"${tenant.name}" is now the active company for developer view.`,
+    });
   };
 
   const handleClearForm = () => {
@@ -225,6 +243,65 @@ export function DatabaseForm() {
               <div className="space-y-2 flex-[2]">
                   <Label htmlFor="tenant-name">Tenant Name</Label>
                   <Input id="tenant-name" placeholder="e.g., Safeviate Inc." value={tenantName} onChange={(e) => setTenantName(e.target.value)} />
+              </div>
+          </div>
+
+          <div className="mb-6 space-y-3 rounded-lg border bg-background p-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-wider text-primary">Companies</h3>
+                      <p className="text-sm text-muted-foreground">Every configured tenant appears here with a quick switch action for developer use.</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="gap-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Active Company: {(sortedTenants.find((tenant) => tenant.id === activeTenantId)?.name) || activeTenantId || 'None'}
+                      </Badge>
+                      {!isDeveloperMode && (
+                          <Badge variant="secondary">Switching is available in developer mode</Badge>
+                      )}
+                  </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                  {sortedTenants.length === 0 ? (
+                      <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
+                          No companies have been created yet. Create a tenant and it will appear here automatically.
+                      </div>
+                  ) : (
+                      sortedTenants.map((tenant) => {
+                          const isActiveTenant = tenant.id === activeTenantId;
+
+                          return (
+                              <div key={tenant.id} className="flex flex-col gap-3 rounded-lg border bg-muted/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                  <div className="space-y-1">
+                                      <div className="flex items-center gap-2">
+                                          <Building2 className="h-4 w-4 text-primary" />
+                                          <span className="font-semibold">{tenant.name}</span>
+                                          {isActiveTenant && <Badge className="bg-green-600 hover:bg-green-600">Active</Badge>}
+                                      </div>
+                                      <p className="text-xs text-muted-foreground">Tenant ID: {tenant.id}</p>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                      <Button type="button" variant="outline" size="sm" onClick={() => handleLoadTenant(tenant.id)}>
+                                          <Pencil className="mr-2 h-4 w-4" />
+                                          Edit
+                                      </Button>
+                                      <Button
+                                          type="button"
+                                          size="sm"
+                                          variant={isActiveTenant ? 'secondary' : 'default'}
+                                          onClick={() => handleSwitchTenant(tenant)}
+                                          disabled={!isDeveloperMode || isActiveTenant}
+                                      >
+                                          <ArrowRightLeft className="mr-2 h-4 w-4" />
+                                          {isActiveTenant ? 'Current Company' : 'Switch to Company'}
+                                      </Button>
+                                  </div>
+                              </div>
+                          );
+                      })
+                  )}
               </div>
           </div>
       </div>

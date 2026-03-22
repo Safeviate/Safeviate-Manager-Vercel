@@ -7,16 +7,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth, initiateAnonymousSignIn, initiateEmailSignIn } from '@/firebase';
+import { useAuth, initiateEmailSignIn } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { Separator } from '@/components/ui/separator';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isUserLoginLoading, setIsUserLoginLoading] = useState(false);
-  const [isDevLoginLoading, setIsDevLoginLoading] = useState(false);
   const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -63,29 +61,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleDeveloperLogin = async () => {
-    setIsDevLoginLoading(true);
-    try {
-      // Always sign out first to ensure a clean session.
-      await handleLogoutFirst();
-      await initiateAnonymousSignIn(auth);
-      toast({
-        title: 'Developer Login',
-        description: 'You are now logged in as a developer.',
-      });
-      router.push('/dashboard');
-    } catch (error: any) {
-      console.error('Developer login failed:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Developer Login Failed',
-        description: error.message || 'An unknown error occurred.',
-      });
-    } finally {
-      setIsDevLoginLoading(false);
-    }
-  };
-
   return (
     <div
       className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden p-4"
@@ -108,7 +83,7 @@ export default function LoginPage() {
               placeholder="user@safeviate.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={isUserLoginLoading || isDevLoginLoading}
+              disabled={isUserLoginLoading}
               className="bg-white/90"
             />
           </div>
@@ -119,25 +94,14 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              disabled={isUserLoginLoading || isDevLoginLoading}
+              disabled={isUserLoginLoading}
               className="bg-white/90"
             />
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-          <Button className="w-full" onClick={handleUserLogin} disabled={isUserLoginLoading || isDevLoginLoading}>
+          <Button className="w-full" onClick={handleUserLogin} disabled={isUserLoginLoading}>
             {isUserLoginLoading ? 'Logging in...' : 'Login as User'}
-          </Button>
-
-          <div className="relative w-full">
-            <Separator />
-            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white/90 px-2 text-xs text-muted-foreground">
-              OR
-            </span>
-          </div>
-
-          <Button variant="outline" className="w-full bg-white/80" onClick={handleDeveloperLogin} disabled={isUserLoginLoading || isDevLoginLoading}>
-            {isDevLoginLoading ? 'Logging in...' : 'Login as Developer'}
           </Button>
         </CardFooter>
       </Card>

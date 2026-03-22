@@ -8,6 +8,7 @@ import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 
 type UserProfile = PilotProfile | Personnel;
 type UserLink = { profilePath: string };
+const TENANT_OVERRIDE_STORAGE_KEY = 'safeviate:selected-tenant';
 
 interface UserProfileContextType {
     userProfile: UserProfile | null;
@@ -24,6 +25,18 @@ export const useUserProfile = () => {
         throw new Error('useUserProfile must be used within a UserProfileProvider');
     }
     return context;
+};
+
+const getTenantOverride = () => {
+    if (typeof window === 'undefined') return null;
+    return window.localStorage.getItem(TENANT_OVERRIDE_STORAGE_KEY);
+};
+
+const canOverrideTenant = (profile: UserProfile | null, isAnonymous: boolean) => {
+    if (isAnonymous) return true;
+
+    const role = (profile as Personnel | null)?.role?.toLowerCase();
+    return role === 'dev' || role === 'developer';
 };
 
 export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
@@ -85,7 +98,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
                 permissions: [],
             };
             setFinalUserProfile(devProfile);
-            setTenantId('safeviate');
+            setTenantId(getTenantOverride() || 'safeviate');
             return;
         }
 
@@ -93,17 +106,44 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
             setFinalUserProfile(userProfileData);
             // Extract tenant ID from path: tenants/{tenantId}/...
             const pathParts = userLink.profilePath.split('/');
-            if (pathParts[0] === 'tenants' && pathParts[1]) {
-                setTenantId(pathParts[1]);
-            } else {
-                setTenantId('safeviate');
-            }
+            const profileTenantId = pathParts[0] === 'tenants' && pathParts[1] ? pathParts[1] : 'safeviate';
+            const overrideTenantId = canOverrideTenant(userProfileData, false) ? getTenantOverride() : null;
+            setTenantId(overrideTenantId || profileTenantId);
         } else {
             setFinalUserProfile(null);
             setTenantId(null);
         }
 
     }, [isAuthLoading, isUserLinkLoading, isProfileDocLoading, userLinkError, profileError, authUser, userProfileData, userLink]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const syncTenantOverride = () => {
+            const overrideTenantId = getTenantOverride();
+
+            if (authUser?.isAnonymous) {
+                setTenantId(overrideTenantId || 'safeviate');
+                return;
+            }
+
+            if (!canOverrideTenant(finalUserProfile, false)) return;
+            if (!userLink?.profilePath) return;
+
+            const pathParts = userLink.profilePath.split('/');
+            const profileTenantId = pathParts[0] === 'tenants' && pathParts[1] ? pathParts[1] : 'safeviate';
+            setTenantId(overrideTenantId || profileTenantId);
+        };
+
+        syncTenantOverride();
+        window.addEventListener('storage', syncTenantOverride);
+        window.addEventListener('safeviate-tenant-switch', syncTenantOverride);
+
+        return () => {
+            window.removeEventListener('storage', syncTenantOverride);
+            window.removeEventListener('safeviate-tenant-switch', syncTenantOverride);
+        };
+    }, [authUser, finalUserProfile, userLink]);
 
     const value = useMemo(() => ({
         userProfile: finalUserProfile,
