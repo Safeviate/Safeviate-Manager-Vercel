@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { collection, doc, arrayUnion } from 'firebase/firestore';
+import { collection, doc, arrayUnion, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
@@ -165,13 +165,15 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         });
 
         const cg = totalWt > 0 ? (totalMom / totalWt) : 0;
+        const roundedCg = parseFloat(cg.toFixed(2));
+        const roundedWeight = parseFloat(totalWt.toFixed(1));
         const chartPoints = aircraft.cgEnvelope?.map(p => ({ weight: p.weight, cg: p.cg })) || [];
         const polygon = chartPoints.map(p => ({ x: p.cg, y: p.weight }));
-        const safe = polygon.length > 2 ? isPointInPolygon({ x: cg, y: totalWt }, polygon) : false;
+        const safe = polygon.length > 2 ? isPointInPolygon({ x: roundedCg, y: roundedWeight }, polygon) : false;
 
         setResults({
-            cg: parseFloat(cg.toFixed(2)),
-            weight: parseFloat(totalWt.toFixed(1)),
+            cg: roundedCg,
+            weight: roundedWeight,
             isSafe: safe
         });
     }, [stations, aircraft]);
@@ -645,16 +647,12 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                         </p>
                                                     </div>
 
-                                                    <p className="mt-3 px-2 text-center text-[10px] leading-tight text-red-600 font-extrabold uppercase tracking-[0.2em] pointer-events-none drop-shadow-md sm:text-sm md:absolute md:bottom-24 md:left-1/2 md:mt-0 md:-translate-x-1/2 md:text-base md:whitespace-nowrap">
-                                                        CONSULT AIRCRAFT POH BEFORE FLIGHT
-                                                    </p>
-
                                                     <div className={cn(
                                                         "mt-3 self-end px-4 py-2 text-sm rounded-full font-bold shadow-lg flex items-center gap-2 sm:px-6 md:absolute md:bottom-4 md:right-4 md:mt-0",
                                                         results.isSafe ? 'bg-green-600/90 text-white' : 'bg-red-600/90 text-white'
                                                     )}>
                                                         <div className={cn("w-2 h-2 rounded-full", 'bg-white')} />
-                                                        {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
+                                                        {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS - CONSULT AIRCRAFT POH"}
                                                     </div>
                                                 </div>
                                             </div>
@@ -918,24 +916,35 @@ function PostFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }:
             return;
         }
 
+        if (data.tacho < (booking.preFlightData?.tacho || 0)) {
+            toast({ variant: 'destructive', title: 'Invalid Reading', description: 'End Tacho cannot be less than Start Tacho.' });
+            return;
+        }
+
         setIsSaving(true);
         const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
         const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
 
-        updateDocumentNonBlocking(bookingRef, {
-            postFlight: true,
-            postFlightData: data,
-            status: 'Completed'
-        });
+        try {
+            const batch = writeBatch(firestore);
+            batch.update(bookingRef, {
+                postFlight: true,
+                postFlightData: data,
+                status: 'Completed'
+            });
+            batch.update(aircraftRef, {
+                currentHobbs: data.hobbs,
+                currentTacho: data.tacho,
+            });
+            await batch.commit();
 
-        updateDocumentNonBlocking(aircraftRef, {
-            currentHobbs: data.hobbs,
-            currentTacho: data.tacho,
-        });
-
-        toast({ title: 'Flight Finalized', description: 'Aircraft total hours have been updated.' });
-        onSuccess();
-        setIsSaving(false);
+            toast({ title: 'Flight Finalized', description: 'Aircraft total hours have been updated.' });
+            onSuccess();
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Finalization Failed', description: 'The booking and aircraft hours could not be saved together.' });
+        } finally {
+            setIsSaving(false);
+        }
     }
 
     return (

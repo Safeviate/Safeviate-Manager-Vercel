@@ -116,7 +116,7 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
     const totalFlightHours = useMemo(() => {
         if (!bookings) return 0;
         return bookings.reduce((total, booking) => {
-            if (booking.postFlightData?.hobbs && booking.preFlightData?.hobbs) {
+            if (booking.postFlightData?.hobbs !== undefined && booking.preFlightData?.hobbs !== undefined) {
                 return total + (booking.postFlightData.hobbs - booking.preFlightData.hobbs);
             }
             return total;

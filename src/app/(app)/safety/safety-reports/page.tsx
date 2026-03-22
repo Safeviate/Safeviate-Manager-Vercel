@@ -8,13 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Eye, Trash2, ShieldAlert, Clock, MapPin, User, ArrowRight } from 'lucide-react';
+import { PlusCircle, Eye, Trash2, ShieldAlert, Clock, MapPin, User, ArrowRight, Loader2, WandSparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useToast } from '@/hooks/use-toast';
+import { callAiFlow } from '@/lib/ai-client';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -32,6 +33,16 @@ import { EditReportDialog } from './edit-report-dialog';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import type { GenerateSafetyProtocolRecommendationsOutput } from '@/ai/flows/generate-safety-protocol-recommendations';
 
 const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
@@ -188,6 +199,86 @@ function ReportsTable({ reports, tenantId, canManage }: ReportsTableProps) {
     );
 }
 
+function SafetyRecommendationsDialog({ reports }: { reports: SafetyReport[] }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [recommendations, setRecommendations] = useState('');
+
+    const canAnalyze = reports.length > 0;
+
+    const handleAnalyze = async () => {
+        if (!canAnalyze) return;
+
+        setIsLoading(true);
+        try {
+            const incidentReports = reports
+                .map(report => {
+                    const hazards = (report.initialHazards || [])
+                        .map(hazard => `Hazard: ${hazard.description}`)
+                        .join('\n');
+
+                    return [
+                        `Report #: ${report.reportNumber}`,
+                        `Type: ${report.reportType}`,
+                        `Status: ${report.status}`,
+                        `Event Date: ${report.eventDate}`,
+                        `Location: ${report.location}`,
+                        `Description: ${report.description}`,
+                        hazards,
+                    ]
+                        .filter(Boolean)
+                        .join('\n');
+                })
+                .join('\n\n---\n\n');
+
+            const result = await callAiFlow<
+                { incidentReports: string },
+                GenerateSafetyProtocolRecommendationsOutput
+            >('generateSafetyProtocolRecommendations', { incidentReports });
+
+            setRecommendations(result.recommendations);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 px-4 text-xs font-bold gap-2" disabled={!canAnalyze}>
+                    <WandSparkles className="h-3.5 w-3.5 text-primary" />
+                    AI Recommendations
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Safety Protocol Recommendations</DialogTitle>
+                    <DialogDescription>
+                        Generate AI recommendations based on the reports visible in this tab.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="max-h-[60vh] overflow-auto rounded-md border bg-muted/20 p-4 text-sm whitespace-pre-wrap">
+                    {isLoading ? (
+                        <div className="flex items-center justify-center py-10 text-muted-foreground">
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Generating recommendations...
+                        </div>
+                    ) : recommendations ? (
+                        recommendations
+                    ) : (
+                        'No recommendations generated yet.'
+                    )}
+                </div>
+                <DialogFooter>
+                    <Button onClick={handleAnalyze} disabled={isLoading || !canAnalyze}>
+                        {isLoading ? 'Generating...' : 'Generate Recommendations'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export default function SafetyReportsPage() {
   const firestore = useFirestore();
   const { tenantId, userProfile } = useUserProfile();
@@ -232,14 +323,21 @@ export default function SafetyReportsPage() {
                     <CardTitle className="text-2xl font-headline">{orgId === 'internal' ? 'Internal Safety Reports' : organizations?.find(o => o.id === orgId)?.name}</CardTitle>
                     <CardDescription>Review occurrences and safety concerns reported within this context.</CardDescription>
                 </div>
-                <div className="flex flex-col gap-1.5 xl:items-end w-full md:w-auto">
-                    <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Reporting Control</p>
-                    <Button asChild size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
-                        <Link href={`/safety/new-report?orgId=${orgId}`}>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            File New Report
-                        </Link>
-                    </Button>
+                <div className="flex flex-wrap items-center gap-4 md:gap-8 w-full xl:w-auto justify-start xl:justify-end">
+                    <div className="flex flex-col gap-1.5 xl:items-end">
+                        <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Analysis</p>
+                        <SafetyRecommendationsDialog reports={filteredReports} />
+                    </div>
+                    <Separator orientation="vertical" className="h-10 hidden xl:block" />
+                    <div className="flex flex-col gap-1.5 xl:items-end w-full md:w-auto">
+                        <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Reporting Control</p>
+                        <Button asChild size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
+                            <Link href={`/safety/new-report?orgId=${orgId}`}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                File New Report
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="p-0 lg:p-6">

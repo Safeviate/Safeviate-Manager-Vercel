@@ -105,13 +105,15 @@ function WBCalculatorContent() {
     });
 
     const cg = totalWt > 0 ? (totalMom / totalWt) : 0;
+    const roundedCg = parseFloat(cg.toFixed(2));
+    const roundedWeight = parseFloat(totalWt.toFixed(1));
     const safe = graphConfig.envelope.length > 2
-        ? isPointInPolygon({ x: cg, y: totalWt }, graphConfig.envelope)
+        ? isPointInPolygon({ x: roundedCg, y: roundedWeight }, graphConfig.envelope)
         : false;
 
     setResults({
-      cg: parseFloat(cg.toFixed(2)),
-      weight: parseFloat(totalWt.toFixed(1)),
+      cg: roundedCg,
+      weight: roundedWeight,
       isSafe: safe
     });
   }, [stations, basicEmpty, graphConfig.envelope]);

@@ -23,6 +23,48 @@ import { Trash2, Lock, ShieldAlert, Eye } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { usePermissions } from '@/hooks/use-permissions';
 import Link from 'next/link';
+import { getFuelPreset } from '@/lib/fuel';
+
+const serializeBookingStation = (station: NonNullable<Aircraft['stations']>[number]) => {
+    const baseStation = {
+        id: Number(station.id) || 0,
+        name: station.name || '',
+        weight: Number(station.weight) || 0,
+        arm: Number(station.arm) || 0,
+        type: station.type || 'standard',
+    };
+
+    if (baseStation.type !== 'fuel') {
+        return baseStation;
+    }
+
+    const preset = getFuelPreset(station.fuelType);
+
+    return {
+        ...baseStation,
+        gallons: Number(station.gallons) || 0,
+        maxGallons: Number(station.maxGallons) || 0,
+        fuelType: station.fuelType || 'AVGAS',
+        densityLbPerGallon: Number(station.densityLbPerGallon) || preset.densityLbPerGallon,
+    };
+};
+
+const buildInitialMassAndBalance = (aircraft: Aircraft) => {
+    if (
+        aircraft.emptyWeight === undefined ||
+        aircraft.emptyWeightMoment === undefined ||
+        !aircraft.cgEnvelope?.length
+    ) {
+        return undefined;
+    }
+
+    return {
+        takeoffWeight: aircraft.emptyWeight,
+        takeoffCg: aircraft.emptyWeight > 0 ? aircraft.emptyWeightMoment / aircraft.emptyWeight : 0,
+        isWithinLimits: true,
+        stations: (aircraft.stations || []).map(serializeBookingStation),
+    };
+};
 
 const bookingFormSchema = z.object({
     type: z.string().min(1, 'Booking type is required.'),
@@ -167,6 +209,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             notes: data.notes || null,
             isOvernight: data.isOvernight,
         };
+        const initialMassAndBalance = buildInitialMassAndBalance(aircraft);
 
         if (data.isOvernight && data.overnightBookingDate) {
             bookingData.overnightBookingDate = format(data.overnightBookingDate, 'yyyy-MM-dd');
@@ -199,6 +242,9 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
 
         try {
             if (existingBooking) {
+                if (!existingBooking.massAndBalance && initialMassAndBalance) {
+                    bookingData.massAndBalance = initialMassAndBalance;
+                }
                 const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, existingBooking.id);
                 updateDocumentNonBlocking(bookingRef, bookingData);
                 toast({ title: 'Booking Updated' });
@@ -219,6 +265,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                         preFlight: false,
                         postFlight: false,
                         createdById: userProfile?.id || null,
+                        ...(initialMassAndBalance ? { massAndBalance: initialMassAndBalance } : {}),
                     });
                 });
                 toast({ title: 'Booking Created' });

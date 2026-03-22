@@ -73,13 +73,69 @@ const isPointOnSegment = (
     return true;
 };
 
+const dedupePolygonPoints = (polygon: { x: number, y: number }[], epsilon = 1e-9) => {
+    const unique: { x: number, y: number }[] = [];
+
+    polygon.forEach((point) => {
+        const exists = unique.some(
+            existing =>
+                Math.abs(existing.x - point.x) <= epsilon &&
+                Math.abs(existing.y - point.y) <= epsilon
+        );
+
+        if (!exists) {
+            unique.push(point);
+        }
+    });
+
+    return unique;
+};
+
+const cross = (
+    origin: { x: number, y: number },
+    a: { x: number, y: number },
+    b: { x: number, y: number }
+) => (a.x - origin.x) * (b.y - origin.y) - (a.y - origin.y) * (b.x - origin.x);
+
+const normalizePolygon = (polygon: { x: number, y: number }[]) => {
+    const unique = dedupePolygonPoints(polygon);
+    if (unique.length <= 3) return unique;
+
+    const sorted = [...unique].sort((a, b) => (a.x === b.x ? a.y - b.y : a.x - b.x));
+    const lower: { x: number, y: number }[] = [];
+
+    for (const point of sorted) {
+        while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], point) <= 0) {
+            lower.pop();
+        }
+        lower.push(point);
+    }
+
+    const upper: { x: number, y: number }[] = [];
+    for (let i = sorted.length - 1; i >= 0; i--) {
+        const point = sorted[i];
+        while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], point) <= 0) {
+            upper.pop();
+        }
+        upper.push(point);
+    }
+
+    lower.pop();
+    upper.pop();
+
+    const hull = [...lower, ...upper];
+    return hull.length >= 3 ? hull : unique;
+};
+
 // Returns true if the point is inside the polygon or on its boundary.
 export const isPointInPolygon = (point: {x: number, y: number}, polygon: {x: number, y: number}[]) => {
     if (!polygon || polygon.length === 0) return false;
+    const normalizedPolygon = normalizePolygon(polygon);
+    if (normalizedPolygon.length < 3) return false;
     let isInside = false;
-    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-        const xi = polygon[i].x, yi = polygon[i].y;
-        const xj = polygon[j].x, yj = polygon[j].y;
+    for (let i = 0, j = normalizedPolygon.length - 1; i < normalizedPolygon.length; j = i++) {
+        const xi = normalizedPolygon[i].x, yi = normalizedPolygon[i].y;
+        const xj = normalizedPolygon[j].x, yj = normalizedPolygon[j].y;
 
         if (isPointOnSegment(point, { x: xi, y: yi }, { x: xj, y: yj })) {
             return true;

@@ -67,6 +67,30 @@ const normalizeFuelStation = (station: any) => {
   };
 };
 
+const serializeStation = (station: any) => {
+  const baseStation = {
+    id: Number(station.id) || 0,
+    name: station.name || '',
+    weight: parseFloat(String(station.weight)) || 0,
+    arm: parseFloat(String(station.arm)) || 0,
+    type: station.type || 'standard',
+  };
+
+  if (baseStation.type !== 'fuel') {
+    return baseStation;
+  }
+
+  const preset = getFuelPreset(station.fuelType);
+
+  return {
+    ...baseStation,
+    gallons: parseFloat(String(station.gallons)) || 0,
+    maxGallons: parseFloat(String(station.maxGallons)) || 0,
+    fuelType: station.fuelType || 'AVGAS',
+    densityLbPerGallon: parseFloat(String(station.densityLbPerGallon)) || preset.densityLbPerGallon,
+  };
+};
+
 // --- HELPER 2: Visual Warning Component ---
 const OffScreenWarning = ({ direction, value, label }: { direction: string, value: number, label: string }) => (
   <div className={`absolute top-1/2 ${direction === 'left' ? 'left-4' : 'right-4'} transform -translate-y-1/2 bg-red-900/90 border border-red-500 text-white p-3 rounded shadow-xl z-10 flex flex-col items-center animate-pulse`}>
@@ -147,13 +171,15 @@ const WBCalculator = () => {
     });
 
     const cg = totalWt > 0 ? (totalMom / totalWt) : 0;
+    const roundedCg = parseFloat(cg.toFixed(2));
+    const roundedWeight = parseFloat(totalWt.toFixed(1));
     const safe = graphConfig.envelope.length > 2
-        ? isPointInPolygon({ x: cg, y: totalWt }, graphConfig.envelope)
+        ? isPointInPolygon({ x: roundedCg, y: roundedWeight }, graphConfig.envelope)
         : false;
 
     setResults({
-      cg: parseFloat(cg.toFixed(2)),
-      weight: parseFloat(totalWt.toFixed(1)),
+      cg: roundedCg,
+      weight: roundedWeight,
       isSafe: safe
     });
   }, [stations, basicEmpty, graphConfig.envelope]);
@@ -299,7 +325,7 @@ const WBCalculator = () => {
             yMin: Number(graphConfig.yMin) || 0,
             yMax: Number(graphConfig.yMax) || 0,
             cgEnvelope: graphConfig.envelope,
-            stations
+            stations: stations.map(serializeStation)
         };
 
         await setDoc(doc(firestore, "tenants/safeviate/massAndBalance", templateId), dataToSave);
@@ -323,17 +349,7 @@ const WBCalculator = () => {
         maxTakeoffWeight: graphConfig.yMax,
         maxLandingWeight: graphConfig.yMax,
         cgEnvelope: graphConfig.envelope.map(p => ({ weight: p.y, cg: p.x })),
-        stations: stations.map(s => ({
-            id: s.id,
-            name: s.name,
-            weight: parseFloat(String(s.weight)) || 0,
-            arm: parseFloat(String(s.arm)) || 0,
-            type: s.type,
-            gallons: parseFloat(String(s.gallons)) || 0,
-            maxGallons: parseFloat(String(s.maxGallons)) || 0,
-            fuelType: s.fuelType,
-            densityLbPerGallon: parseFloat(String(s.densityLbPerGallon)) || 0,
-        })),
+        stations: stations.map(serializeStation),
     };
 
     updateDocumentNonBlocking(aircraftRef, mbDataToSave);
@@ -628,13 +644,9 @@ const WBCalculator = () => {
                   </div>
                   </div>
                   
-                  <p className="mt-3 px-2 text-center text-[10px] leading-tight text-red-600 font-extrabold uppercase tracking-[0.2em] pointer-events-none drop-shadow-md sm:text-sm md:absolute md:bottom-24 md:left-1/2 md:mt-0 md:-translate-x-1/2 md:text-base md:whitespace-nowrap">
-                  CONSULT AIRCRAFT POH BEFORE FLIGHT
-                  </p>
-
                   <div className={cn("mt-3 self-end px-4 py-2 text-sm rounded-full font-bold shadow-lg flex items-center gap-2 sm:px-6 md:absolute md:bottom-4 md:right-4 md:mt-0", results.isSafe ? 'bg-green-600/90 text-white' : 'bg-red-600/90 text-white')}>
                   <div className={cn("w-2 h-2 rounded-full", results.isSafe ? 'bg-white' : 'bg-white animate-pulse')}></div>
-                  {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
+                  {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS - CONSULT AIRCRAFT POH"}
                   </div>
               </div>
 

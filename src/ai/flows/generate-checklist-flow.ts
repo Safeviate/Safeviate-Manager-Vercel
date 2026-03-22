@@ -20,7 +20,7 @@ const sectionSchema = z.object({
     items: z.array(checklistItemSchema).describe('An array of checklist items within this section.'),
 });
 
-const GenerateChecklistInputSchema = z.object({
+export const GenerateChecklistInputSchema = z.object({
   document: z.object({
     text: z.string().optional().describe('The full text content of the checklist document.'),
     image: z.string().optional().describe("A photo of the checklist document, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
@@ -28,7 +28,7 @@ const GenerateChecklistInputSchema = z.object({
 });
 export type GenerateChecklistInput = z.infer<typeof GenerateChecklistInputSchema>;
 
-const GenerateChecklistOutputSchema = z.object({
+export const GenerateChecklistOutputSchema = z.object({
   sections: z.array(sectionSchema).describe('An array of structured checklist sections with their items.'),
 });
 export type GenerateChecklistOutput = z.infer<typeof GenerateChecklistOutputSchema>;

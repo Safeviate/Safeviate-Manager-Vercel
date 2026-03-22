@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Loader2, ClipboardPaste, Wand2, Table, Trash2, PlusCircle, Save, X, GripVertical } from 'lucide-react';
-import { parseLogbook, type LogbookColumn } from '@/ai/flows/parse-logbook-flow';
+import { callAiFlow } from '@/lib/ai-client';
+import type { ParseLogbookOutput, LogbookColumn } from '@/ai/flows/parse-logbook-flow';
 import Image from 'next/image';
 import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
@@ -233,7 +234,10 @@ export default function LogbookParserPage() {
     setParsedStructure(null);
 
     try {
-      const result = await parseLogbook({ image: pastedImage });
+      const result = await callAiFlow<{ image: string }, ParseLogbookOutput>(
+        'parseLogbook',
+        { image: pastedImage }
+      );
       if (!result.columns || result.columns.length === 0) {
         toast({ variant: 'destructive', title: 'Parsing Failed', description: 'The AI could not identify a table structure.' });
       } else {

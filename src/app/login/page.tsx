@@ -87,15 +87,21 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Welcome to Safeviate</CardTitle>
-          <CardDescription>Enter your credentials to access your account.</CardDescription>
+    <div
+      className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden p-4"
+      style={{ backgroundImage: "url('/safeviate-background.png')", backgroundSize: 'cover', backgroundPosition: 'center' }}
+    >
+      <div className="absolute inset-0 bg-slate-950/45" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(15,118,110,0.22),transparent_28%)]" />
+
+      <Card className="relative w-full max-w-md border-white/20 bg-white/10 shadow-2xl backdrop-blur-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-white">Welcome to Safeviate</CardTitle>
+          <CardDescription className="text-center text-white/85">Enter your credentials to access your account.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="block text-center text-white">Email</Label>
             <Input
               id="email"
               type="email"
@@ -103,16 +109,18 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isUserLoginLoading || isDevLoginLoading}
+              className="bg-white/90"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="block text-center text-white">Password</Label>
             <Input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isUserLoginLoading || isDevLoginLoading}
+              className="bg-white/90"
             />
           </div>
         </CardContent>
@@ -123,12 +131,12 @@ export default function LoginPage() {
 
           <div className="relative w-full">
             <Separator />
-            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white/90 px-2 text-xs text-muted-foreground">
               OR
             </span>
           </div>
 
-          <Button variant="outline" className="w-full" onClick={handleDeveloperLogin} disabled={isUserLoginLoading || isDevLoginLoading}>
+          <Button variant="outline" className="w-full bg-white/80" onClick={handleDeveloperLogin} disabled={isUserLoginLoading || isDevLoginLoading}>
             {isDevLoginLoading ? 'Logging in...' : 'Login as Developer'}
           </Button>
         </CardFooter>

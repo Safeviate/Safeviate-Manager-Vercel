@@ -22,7 +22,12 @@ export function PilotLogbook({ userId, tenantId, role }: PilotLogbookProps) {
     const bookingsQuery = useMemoFirebase(
         () => {
             if (!firestore) return null;
-            // For instructors, we query by instructorId. For others, studentId.
+            if (role === 'private') {
+                return query(
+                    collection(firestore, `tenants/${tenantId}/bookings`),
+                    where('status', '==', 'Completed')
+                );
+            }
             const field = role === 'instructor' ? 'instructorId' : 'studentId';
             return query(
                 collection(firestore, `tenants/${tenantId}/bookings`),
@@ -48,13 +53,16 @@ export function PilotLogbook({ userId, tenantId, role }: PilotLogbookProps) {
 
     const sortedBookings = useMemo(() => {
         if (!rawBookings) return [];
+        const relevantBookings = role === 'private'
+            ? rawBookings.filter(booking => booking.createdById === userId || booking.studentId === userId)
+            : rawBookings;
         // Sort by date descending (latest first)
-        return [...rawBookings].sort((a, b) => {
+        return [...relevantBookings].sort((a, b) => {
             const dateA = a.date || '';
             const dateB = b.date || '';
             return dateB.localeCompare(dateA);
         });
-    }, [rawBookings]);
+    }, [rawBookings, role, userId]);
 
     if (isLoadingBookings || isLoadingAircrafts) {
         return <Skeleton className="h-64 w-full" />;

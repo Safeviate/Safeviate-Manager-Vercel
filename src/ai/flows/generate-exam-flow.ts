@@ -20,7 +20,7 @@ const questionSchema = z.object({
   correctOptionId: z.string().describe("The ID of the correct option from the options array."),
 });
 
-const GenerateExamInputSchema = z.object({
+export const GenerateExamInputSchema = z.object({
   document: z.object({
     text: z.string().optional().describe('The full text content of the source document.'),
     image: z.string().optional().describe("A photo of an exam or manual, as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
@@ -28,7 +28,7 @@ const GenerateExamInputSchema = z.object({
 });
 export type GenerateExamInput = z.infer<typeof GenerateExamInputSchema>;
 
-const GenerateExamOutputSchema = z.object({
+export const GenerateExamOutputSchema = z.object({
   questions: z.array(questionSchema).describe('An array of structured multiple-choice questions extracted or generated from the source.'),
 });
 export type GenerateExamOutput = z.infer<typeof GenerateExamOutputSchema>;

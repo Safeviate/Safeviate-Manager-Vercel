@@ -96,12 +96,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         });
 
         const cg = totalWt > 0 ? (totalMom / totalWt) : 0;
+        const roundedCg = parseFloat(cg.toFixed(2));
+        const roundedWeight = parseFloat(totalWt.toFixed(1));
         const envelope = aircraft.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
-        const safe = envelope.length > 2 ? isPointInPolygon({ x: cg, y: totalWt }, envelope) : false;
+        const safe = envelope.length > 2 ? isPointInPolygon({ x: roundedCg, y: roundedWeight }, envelope) : false;
 
         setResults({
-            cg: parseFloat(cg.toFixed(2)),
-            weight: parseFloat(totalWt.toFixed(1)),
+            cg: roundedCg,
+            weight: roundedWeight,
             isSafe: safe
         });
     }, [stations, aircraft]);

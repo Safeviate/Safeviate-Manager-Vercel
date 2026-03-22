@@ -10,7 +10,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-const GenerateSafetyProtocolRecommendationsInputSchema = z.object({
+export const GenerateSafetyProtocolRecommendationsInputSchema = z.object({
   incidentReports: z
     .string()
     .describe(
@@ -21,7 +21,7 @@ export type GenerateSafetyProtocolRecommendationsInput = z.infer<
   typeof GenerateSafetyProtocolRecommendationsInputSchema
 >;
 
-const GenerateSafetyProtocolRecommendationsOutputSchema = z.object({
+export const GenerateSafetyProtocolRecommendationsOutputSchema = z.object({
   recommendations: z
     .string()
     .describe(

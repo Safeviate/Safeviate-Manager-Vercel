@@ -24,7 +24,8 @@ import { format } from 'date-fns';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import React, { useState, useEffect, useMemo } from 'react';
-import { analyzeMoc, type AnalyzeMocInput } from '@/ai/flows/analyze-moc-flow';
+import { callAiFlow } from '@/lib/ai-client';
+import type { AnalyzeMocInput, AnalyzeMocOutput } from '@/ai/flows/analyze-moc-flow';
 import type { RiskMatrixSettings } from '@/types/risk';
 
 // --- Zod Schemas ---
@@ -447,7 +448,10 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
             reason: moc.reason,
             scope: moc.scope,
         };
-        const result = await analyzeMoc(mocData);
+        const result = await callAiFlow<AnalyzeMocInput, AnalyzeMocOutput>(
+            'analyzeMoc',
+            mocData
+        );
 
         const phasesWithDateObjects = mapDatesToObjects(result.phases);
         form.reset({ phases: phasesWithDateObjects });

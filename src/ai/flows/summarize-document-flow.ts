@@ -15,7 +15,7 @@ const RegulationSchema = z.object({
     parentRegulationCode: z.string().optional().describe("The code of the parent regulation if this is a sub-regulation (e.g., '141.01.18' would be the parent of '141.01.18.1'). Leave empty for top-level regulations."),
 });
 
-const SummarizeDocumentInputSchema = z.object({
+export const SummarizeDocumentInputSchema = z.object({
   document: z.object({
     text: z.string().optional().describe('The full text content of the regulations document.'),
     images: z.array(z.string()).optional().describe("A sequence of photos of the regulations document, as data URIs. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
@@ -24,7 +24,7 @@ const SummarizeDocumentInputSchema = z.object({
 });
 export type SummarizeDocumentInput = z.infer<typeof SummarizeDocumentInputSchema>;
 
-const SummarizeDocumentOutputSchema = z.object({
+export const SummarizeDocumentOutputSchema = z.object({
   requirements: z.array(RegulationSchema).describe('An array of structured compliance requirements extracted from the document.'),
 });
 export type SummarizeDocumentOutput = z.infer<typeof SummarizeDocumentOutputSchema>;

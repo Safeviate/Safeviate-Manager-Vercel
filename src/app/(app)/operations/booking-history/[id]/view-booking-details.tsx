@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { collection, doc, arrayUnion } from 'firebase/firestore';
+import { collection, doc, arrayUnion, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
@@ -519,24 +519,35 @@ function PostFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }:
             return;
         }
 
+        if (data.tacho < (booking.preFlightData?.tacho || 0)) {
+            toast({ variant: 'destructive', title: 'Invalid Reading', description: 'End Tacho cannot be less than Start Tacho.' });
+            return;
+        }
+
         setIsSaving(true);
         const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
         const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
 
-        updateDocumentNonBlocking(bookingRef, {
-            postFlight: true,
-            postFlightData: data,
-            status: 'Completed'
-        });
+        try {
+            const batch = writeBatch(firestore);
+            batch.update(bookingRef, {
+                postFlight: true,
+                postFlightData: data,
+                status: 'Completed'
+            });
+            batch.update(aircraftRef, {
+                currentHobbs: data.hobbs,
+                currentTacho: data.tacho,
+            });
+            await batch.commit();
 
-        updateDocumentNonBlocking(aircraftRef, {
-            currentHobbs: data.hobbs,
-            currentTacho: data.tacho,
-        });
-
-        toast({ title: 'Flight Finalized', description: 'Aircraft hours updated.' });
-        onSuccess();
-        setIsSaving(false);
+            toast({ title: 'Flight Finalized', description: 'Aircraft hours updated.' });
+            onSuccess();
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Finalization Failed', description: 'The booking and aircraft hours could not be saved together.' });
+        } finally {
+            setIsSaving(false);
+        }
     }
 
     return (

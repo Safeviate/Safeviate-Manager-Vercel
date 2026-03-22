@@ -21,12 +21,12 @@ export interface LogbookColumn {
   subColumns?: LogbookColumn[];
 }
 
-const ParseLogbookInputSchema = z.object({
+export const ParseLogbookInputSchema = z.object({
   image: z.string().describe("A photo of the logbook table, as a data URI."),
 });
 export type ParseLogbookInput = z.infer<typeof ParseLogbookInputSchema>;
 
-const ParseLogbookOutputSchema = z.object({
+export const ParseLogbookOutputSchema = z.object({
   columns: z.array(LogbookColumnSchema).describe('An array representing the structured columns of the logbook table.'),
 });
 export type ParseLogbookOutput = z.infer<typeof ParseLogbookOutputSchema>;

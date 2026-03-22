@@ -1,384 +1,100 @@
    ▲ Next.js 15.5.9
    - Local:        http://localhost:9003
-   - Network:      http://172.20.184.2:9003
+   - Network:      http://172.20.184.85:9003
 
  ✓ Starting...
- ✓ Ready in 3.7s
- ○ Compiling /login ...
- ✓ Compiled /login in 16.9s (882 modules)
- GET /login 200 in 14513ms
+ ✓ Ready in 2.5s
  ○ Compiling / ...
- ✓ Compiled /favicon.ico in 18.7s (912 modules)
- GET /favicon.ico 200 in 12191ms
- GET / 307 in 16443ms
- GET /login 200 in 521ms
- GET / 307 in 220ms
- GET /login 200 in 165ms
+ ✓ Compiled / in 3.3s (868 modules)
+ GET / 307 in 4008ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 2.5s (881 modules)
+ GET /login 200 in 2302ms
+ GET / 307 in 287ms
+ GET /login 200 in 109ms
+ ✓ Compiled /favicon.ico in 305ms (606 modules)
+ GET /favicon.ico 200 in 483ms
  ○ Compiling /dashboard ...
- ✓ Compiled /dashboard in 7.3s (2569 modules)
- GET /dashboard 200 in 8011ms
- ○ Compiling /quality/audit-schedule ...
- ✓ Compiled /quality/audit-schedule in 2.6s (2618 modules)
- GET /quality/audit-schedule 200 in 2937ms
- ✓ Compiled in 2.5s (2603 modules)
- GET /quality/audit-schedule 200 in 443ms
- ✓ Compiled in 2.8s (2603 modules)
- GET /quality/audit-schedule 200 in 786ms
- ✓ Compiled in 3s (2603 modules)
- GET /quality/audit-schedule 200 in 721ms
- ✓ Compiled in 5.1s (2603 modules)
- GET /quality/audit-schedule 200 in 841ms
- GET /quality/audit-schedule 200 in 1455ms
- ○ Compiling /favicon.ico ...
- ✓ Compiled /favicon.ico in 2.8s (1480 modules)
- GET /favicon.ico 200 in 3303ms
- ✓ Compiled in 4.3s (2589 modules)
- ✓ Compiled in 1969ms (2603 modules)
- GET /quality/audit-schedule 200 in 2291ms
- ○ Compiling /favicon.ico ...
- ✓ Compiled /favicon.ico in 671ms (1480 modules)
- GET /favicon.ico 200 in 1235ms
- GET /favicon.ico 200 in 70ms
- ✓ Compiled in 4.7s (2603 modules)
- GET /quality/audit-schedule 200 in 977ms
- ✓ Compiled in 3.6s (2603 modules)
- GET /quality/audit-schedule 200 in 821ms
- GET /quality/audit-schedule 200 in 1794ms
- ○ Compiling /favicon.ico ...
- ✓ Compiled /favicon.ico in 985ms (1480 modules)
- GET /favicon.ico 200 in 1515ms
- ✓ Compiled in 3.6s (2603 modules)
- GET /quality/audit-schedule 200 in 755ms
- GET /quality/audit-schedule 200 in 2508ms
- ○ Compiling /favicon.ico ...
- ✓ Compiled /favicon.ico in 868ms (1480 modules)
- GET /favicon.ico 200 in 1296ms
- ✓ Compiled in 4.5s (2603 modules)
- GET /quality/audit-schedule 200 in 885ms
- ○ Compiling /bookings/schedule ...
- ✓ Compiled /bookings/schedule in 10.9s (2784 modules)
- GET /bookings/schedule 200 in 12036ms
- GET /bookings/schedule 200 in 311ms
- ○ Compiling /operations/emergency-response ...
- ✓ Compiled /operations/emergency-response in 8.3s (2887 modules)
- GET /operations/emergency-response 200 in 8992ms
- ○ Compiling /bookings/history ...
- ✓ Compiled /bookings/history in 3.6s (2900 modules)
- GET /bookings/history 200 in 4249ms
- GET /bookings/schedule 200 in 151ms
- GET /bookings/history 200 in 95ms
- ○ Compiling /bookings/history/[id] ...
- ✓ Compiled /bookings/history/[id] in 3.6s (2940 modules)
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 6188ms
- ○ Compiling /admin/page-format ...
- ✓ Compiled /admin/page-format in 9s (2890 modules)
- GET /admin/page-format 200 in 9729ms
- GET /bookings/history 200 in 264ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1114ms
- ✓ Compiled in 5.5s (2897 modules)
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 2074ms
- GET /bookings/schedule 200 in 530ms
- ✓ Compiled in 985ms (1325 modules)
- GET /bookings/schedule 200 in 242ms
- ○ Compiling /quality/audit-schedule ...
- ✓ Compiled /quality/audit-schedule in 1707ms (1579 modules)
- GET /quality/audit-schedule 200 in 2118ms
- ✓ Compiled in 833ms (1325 modules)
- GET /quality/audit-schedule 200 in 311ms
- GET /bookings/history 200 in 161ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1191ms
- ✓ Compiled in 4.8s (2873 modules)
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 2045ms
- ✓ Compiled in 1216ms (1325 modules)
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1410ms
- ✓ Compiled in 928ms (1325 modules)
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1315ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 3418ms
- ○ Compiling /favicon.ico ...
- ✓ Compiled /favicon.ico in 5.5s (1565 modules)
- GET /favicon.ico 200 in 6294ms
- GET /admin/page-format 200 in 227ms
- GET /bookings/history 200 in 328ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1076ms
- ✓ Compiled in 12.1s (2873 modules)
- ✓ Compiled in 1136ms (1325 modules)
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 5062ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 3680ms
- GET /bookings/history 200 in 163ms
- GET /admin/page-format 200 in 141ms
- ✓ Compiled in 9.8s (2873 modules)
- GET /bookings/history 200 in 4151ms
- GET /bookings/history 200 in 254ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1115ms
- GET /bookings/history 200 in 189ms
- GET /admin/page-format 200 in 155ms
- GET /bookings/history 200 in 109ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1160ms
- GET /admin/page-format 200 in 188ms
+ ✓ Compiled /dashboard in 3.8s (2571 modules)
+ GET /dashboard 200 in 4171ms
  ○ Compiling /admin/mb-config ...
- ✓ Compiled /admin/mb-config in 14.8s (2878 modules)
- GET /admin/mb-config 200 in 16040ms
- GET /admin/mb-config 200 in 1056ms
+ ✓ Compiled /admin/mb-config in 2s (2620 modules)
+ GET /admin/mb-config 200 in 2227ms
+ ✓ Compiled in 1423ms (2605 modules)
+ GET /admin/mb-config 200 in 757ms
+ GET /admin/mb-config 200 in 1406ms
+ ✓ Compiled /favicon.ico in 346ms (1481 modules)
+ GET /favicon.ico 200 in 557ms
+ GET /admin/mb-config 200 in 1007ms
+ GET /favicon.ico 200 in 66ms
+ GET /admin/mb-config 200 in 113ms
+ GET /favicon.ico 200 in 56ms
+ ✓ Compiled / in 493ms (1493 modules)
+ GET / 307 in 1300ms
+ GET /login 200 in 122ms
+ GET /dashboard 200 in 91ms
+ GET /admin/mb-config 200 in 76ms
+ ○ Compiling /admin/page-format ...
+ ✓ Compiled /admin/page-format in 2.1s (2626 modules)
+ GET /admin/page-format 200 in 2550ms
+ GET /admin/mb-config 200 in 81ms
+ ✓ Compiled in 1082ms (2626 modules)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /admin/mb-config 200 in 1011ms
+ ✓ Compiled /favicon.ico in 465ms (1500 modules)
+ GET /favicon.ico 200 in 736ms
+ ✓ Compiled in 1468ms (2640 modules)
+ GET /admin/mb-config 200 in 285ms
+ ✓ Compiled in 1029ms (2640 modules)
+ GET /admin/mb-config 200 in 205ms
+ ○ Compiling /bookings/history ...
+ ✓ Compiled /bookings/history in 2.9s (2749 modules)
+ GET /bookings/history 200 in 3175ms
+ ○ Compiling /bookings/history/[id] ...
+ ✓ Compiled /bookings/history/[id] in 1563ms (2836 modules)
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 3173ms
+ GET /admin/mb-config 200 in 92ms
+ GET /bookings/history 200 in 58ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 793ms
+ ○ Compiling /bookings/schedule ...
+ ✓ Compiled /bookings/schedule in 1564ms (2904 modules)
+ GET /bookings/schedule 200 in 1732ms
+ GET /bookings/history/kIDO7vBSvi6OyKwGo3Z5 200 in 843ms
+ GET /admin/mb-config 200 in 906ms
+ GET /bookings/history 200 in 95ms
+ GET /bookings/history/kIDO7vBSvi6OyKwGo3Z5 200 in 774ms
+ ✓ Compiled in 499ms (1294 modules)
+ GET /bookings/history/kIDO7vBSvi6OyKwGo3Z5 200 in 808ms
+ GET /bookings/history/kIDO7vBSvi6OyKwGo3Z5 200 in 867ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 709ms (1562 modules)
+ GET /favicon.ico 200 in 938ms
+ GET /bookings/history 200 in 250ms
+ ○ Compiling / ...
+ ✓ Compiled / in 535ms (1574 modules)
+ GET / 307 in 1149ms
+ ✓ Compiled /login in 424ms (1579 modules)
+ GET /login 200 in 771ms
+ ✓ Compiled /dashboard in 319ms (1646 modules)
+ GET /dashboard 200 in 452ms
+ ○ Compiling /admin/mb-config ...
+ ✓ Compiled /admin/mb-config in 570ms (1639 modules)
+ GET /admin/mb-config 200 in 694ms
+ GET /bookings/history 200 in 56ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 839ms
+ GET /bookings/history 200 in 31ms
+ GET /bookings/schedule 200 in 53ms
+ GET /bookings/history/oiuV1OjnpFvOqrBfuU4t 200 in 811ms
+ GET /login 200 in 84ms
+ GET /login 200 in 57ms
+ GET /login 200 in 391ms
+ GET /favicon.ico 200 in 74ms
+ ✓ Compiled in 1654ms (2825 modules)
+ GET /login 200 in 546ms
+ ✓ Compiled in 958ms (2825 modules)
+ GET /login 200 in 147ms
  ○ Compiling /dashboard ...
- ✓ Compiled /dashboard in 6.5s (2892 modules)
- ✓ Compiled (2971 modules)
- GET /dashboard 200 in 8590ms
- GET /dashboard 200 in 157ms
- GET /admin/mb-config 200 in 121ms
- GET /bookings/history 200 in 161ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1296ms
- GET /admin/page-format 200 in 133ms
- GET /bookings/history 200 in 99ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1255ms
- GET /admin/page-format 200 in 166ms
- GET /bookings/history 200 in 113ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1119ms
- ✓ Compiled in 7.5s (2919 modules)
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1747ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 3746ms
- ○ Compiling /favicon.ico ...
- ✓ Compiled /favicon.ico in 4.2s (1603 modules)
- GET /favicon.ico 200 in 5207ms
- GET /admin/page-format 200 in 227ms
- GET /bookings/history 200 in 141ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 985ms
- GET /admin/mb-config 200 in 143ms
- ✓ Compiled in 4.9s (2919 modules)
- GET /admin/mb-config 200 in 628ms
- GET /bookings/history 200 in 112ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1187ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 4642ms
- ○ Compiling /favicon.ico ...
- ✓ Compiled /favicon.ico in 1121ms (1603 modules)
- GET /favicon.ico 200 in 1649ms
- ✓ Compiled in 5.3s (2919 modules)
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1908ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 4957ms
- ○ Compiling /favicon.ico ...
- ✓ Compiled /favicon.ico in 1253ms (1603 modules)
- GET /favicon.ico 200 in 1715ms
- ✓ Compiled in 5s (2919 modules)
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1606ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 2369ms
- ○ Compiling /favicon.ico ...
- ✓ Compiled /favicon.ico in 1102ms (1603 modules)
- GET /favicon.ico 200 in 1598ms
- ✓ Compiled in 4.3s (2919 modules)
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1490ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 2490ms
- ○ Compiling /favicon.ico ...
- ✓ Compiled /favicon.ico in 1711ms (1603 modules)
- GET /favicon.ico 200 in 2106ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 3375ms
- GET /favicon.ico 200 in 88ms
- ✓ Compiled in 7.2s (2919 modules)
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 2007ms
- ✓ Compiled in 5.2s (2919 modules)
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1722ms
- GET /admin/page-format 200 in 180ms
- GET /bookings/history 200 in 206ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1185ms
- GET /bookings/history 200 in 213ms
- ✓ Compiled in 12.5s (2919 modules)
- GET /bookings/history 200 in 3363ms
- GET /bookings/history 200 in 4289ms
- ○ Compiling /favicon.ico ...
- ✓ Compiled /favicon.ico in 3.3s (1603 modules)
- GET /favicon.ico 200 in 3947ms
- ✓ Compiled in 3.7s (2919 modules)
- GET /bookings/history 200 in 532ms
- GET /bookings/history 200 in 115ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1171ms
- ⨯ ./src/app/(app)/admin/mb-config/page.tsx
-Error:   [31mx[0m Expression expected
-     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:437:1]
- [2m434[0m |   return (
- [2m435[0m |     <div className="flex flex-col h-full overflow-hidden gap-4">
- [2m436[0m |       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
- [2m437[0m | <<<<<<< HEAD
-     : [35;1m ^^[0m
- [2m438[0m |         
- [2m439[0m |         {/* STICKY HEADER */}
- [2m439[0m |         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
-     `----
-  [31mx[0m Expression expected
-     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:437:1]
- [2m434[0m |   return (
- [2m435[0m |     <div className="flex flex-col h-full overflow-hidden gap-4">
- [2m436[0m |       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
- [2m437[0m | <<<<<<< HEAD
-     : [35;1m   ^^[0m
- [2m438[0m |         
- [2m439[0m |         {/* STICKY HEADER */}
- [2m439[0m |         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
-     `----
-  [31mx[0m Expression expected
-     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:437:1]
- [2m434[0m |   return (
- [2m435[0m |     <div className="flex flex-col h-full overflow-hidden gap-4">
- [2m436[0m |       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
- [2m437[0m | <<<<<<< HEAD
-     : [35;1m     ^^[0m
- [2m438[0m |         
- [2m439[0m |         {/* STICKY HEADER */}
- [2m439[0m |         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
-     `----
-  [31mx[0m Merge conflict marker encountered.
-     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:444:1]
- [2m441[0m |           <div className="min-w-0">
- [2m442[0m |             <CardTitle className="text-2xl leading-none sm:text-3xl md:text-2xl">W&B Configurator</CardTitle>
- [2m443[0m |             {loadedAircraft && (
- [2m444[0m | =======
-     : [35;1m^^^^^^^[0m
- [2m445[0m |         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-4 md:p-6">
- [2m446[0m |           <div className="space-y-1">
- [2m446[0m |             <CardTitle>M&B Configurator</CardTitle>
-     `----
-  [31mx[0m Merge conflict marker encountered.
-     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:449:1]
- [2m446[0m |           <div className="space-y-1">
- [2m447[0m |             <CardTitle>M&B Configurator</CardTitle>
- [2m448[0m |             {loadedAircraft ? (
- [2m449[0m | >>>>>>> 7be267ee72828ef6aa5f54104b1458941a08cb4f
-     : [35;1m^^^^^^^[0m
- [2m450[0m |                 <CardDescription>
- [2m451[0m |                     Loaded: <span className="font-semibold text-primary">{loadedAircraft.tailNumber}</span> ({loadedAircraft.model})
- [2m451[0m |                 </CardDescription>
-     `----
-  [31mx[0m Expression expected
-     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:457:1]
- [2m454[0m |                 <CardDescription>Build reusable weight and balance profiles.</CardDescription>
- [2m455[0m |             )}
- [2m456[0m |           </div>
- [2m457[0m | <<<<<<< HEAD
-     : [35;1m ^^[0m
- [2m458[0m |           <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
- [2m459[0m |             <Button onClick={handleReset} variant="destructive" size="sm" className="gap-2 text-xs sm:text-sm"><RotateCcw size={14} /> Reset</Button>
- [2m459[0m |             
-     `----
-  [31mx[0m Expression expected
-     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:457:1]
- [2m454[0m |                 <CardDescription>Build reusable weight and balance profiles.</CardDescription>
- [2m455[0m |             )}
- [2m456[0m |           </div>
- [2m457[0m | <<<<<<< HEAD
-     : [35;1m   ^^[0m
- [2m458[0m |           <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
- [2m459[0m |             <Button onClick={handleReset} variant="destructive" size="sm" className="gap-2 text-xs sm:text-sm"><RotateCcw size={14} /> Reset</Button>
- [2m459[0m |             
-     `----
-  [31mx[0m Expression expected
-     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:457:1]
- [2m454[0m |                 <CardDescription>Build reusable weight and balance profiles.</CardDescription>
- [2m455[0m |             )}
- [2m456[0m |           </div>
- [2m457[0m | <<<<<<< HEAD
-     : [35;1m     ^^[0m
- [2m458[0m |           <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
- [2m459[0m |             <Button onClick={handleReset} variant="destructive" size="sm" className="gap-2 text-xs sm:text-sm"><RotateCcw size={14} /> Reset</Button>
- [2m459[0m |             
-     `----
-
-Caused by:
-    Syntax Error
-
-Import trace for requested module:
-./src/app/(app)/admin/mb-config/page.tsx
- ✓ Compiled in 7.4s (2919 modules)
- ⨯ ./src/app/(app)/admin/mb-config/page.tsx
-Error:   [31mx[0m Expression expected
-     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:437:1]
- [2m434[0m |   return (
- [2m435[0m |     <div className="flex flex-col h-full overflow-hidden gap-4">
- [2m436[0m |       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
- [2m437[0m | <<<<<<< HEAD
-     : [35;1m ^^[0m
- [2m438[0m |         
- [2m439[0m |         {/* STICKY HEADER */}
- [2m439[0m |         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
-     `----
-  [31mx[0m Expression expected
-     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:437:1]
- [2m434[0m |   return (
- [2m435[0m |     <div className="flex flex-col h-full overflow-hidden gap-4">
- [2m436[0m |       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
- [2m437[0m | <<<<<<< HEAD
-     : [35;1m   ^^[0m
- [2m438[0m |         
- [2m439[0m |         {/* STICKY HEADER */}
- [2m439[0m |         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
-     `----
-  [31mx[0m Expression expected
-     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:437:1]
- [2m434[0m |   return (
- [2m435[0m |     <div className="flex flex-col h-full overflow-hidden gap-4">
- [2m436[0m |       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
- [2m437[0m | <<<<<<< HEAD
-     : [35;1m     ^^[0m
- [2m438[0m |         
- [2m439[0m |         {/* STICKY HEADER */}
- [2m439[0m |         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
-     `----
-  [31mx[0m Merge conflict marker encountered.
-     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:444:1]
- [2m441[0m |           <div className="min-w-0">
- [2m442[0m |             <CardTitle className="text-2xl leading-none sm:text-3xl md:text-2xl">W&B Configurator</CardTitle>
- [2m443[0m |             {loadedAircraft && (
- [2m444[0m | =======
-     : [35;1m^^^^^^^[0m
- [2m445[0m |         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-4 md:p-6">
- [2m446[0m |           <div className="space-y-1">
- [2m446[0m |             <CardTitle>M&B Configurator</CardTitle>
-     `----
-  [31mx[0m Merge conflict marker encountered.
-     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:449:1]
- [2m446[0m |           <div className="space-y-1">
- [2m447[0m |             <CardTitle>M&B Configurator</CardTitle>
- [2m448[0m |             {loadedAircraft ? (
- [2m449[0m | >>>>>>> 7be267ee72828ef6aa5f54104b1458941a08cb4f
-     : [35;1m^^^^^^^[0m
- [2m450[0m |                 <CardDescription>
- [2m451[0m |                     Loaded: <span className="font-semibold text-primary">{loadedAircraft.tailNumber}</span> ({loadedAircraft.model})
- [2m451[0m |                 </CardDescription>
-     `----
-  [31mx[0m Expression expected
-     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:457:1]
- [2m454[0m |                 <CardDescription>Build reusable weight and balance profiles.</CardDescription>
- [2m455[0m |             )}
- [2m456[0m |           </div>
- [2m457[0m | <<<<<<< HEAD
-     : [35;1m ^^[0m
- [2m458[0m |           <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
- [2m459[0m |             <Button onClick={handleReset} variant="destructive" size="sm" className="gap-2 text-xs sm:text-sm"><RotateCcw size={14} /> Reset</Button>
- [2m459[0m |             
-     `----
-  [31mx[0m Expression expected
-     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:457:1]
- [2m454[0m |                 <CardDescription>Build reusable weight and balance profiles.</CardDescription>
- [2m455[0m |             )}
- [2m456[0m |           </div>
- [2m457[0m | <<<<<<< HEAD
-     : [35;1m   ^^[0m
- [2m458[0m |           <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
- [2m459[0m |             <Button onClick={handleReset} variant="destructive" size="sm" className="gap-2 text-xs sm:text-sm"><RotateCcw size={14} /> Reset</Button>
- [2m459[0m |             
-     `----
-  [31mx[0m Expression expected
-     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:457:1]
- [2m454[0m |                 <CardDescription>Build reusable weight and balance profiles.</CardDescription>
- [2m455[0m |             )}
- [2m456[0m |           </div>
- [2m457[0m | <<<<<<< HEAD
-     : [35;1m     ^^[0m
- [2m458[0m |           <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
- [2m459[0m |             <Button onClick={handleReset} variant="destructive" size="sm" className="gap-2 text-xs sm:text-sm"><RotateCcw size={14} /> Reset</Button>
- [2m459[0m |             
-     `----
-
-Caused by:
-    Syntax Error
-
-Import trace for requested module:
-./src/app/(app)/admin/mb-config/page.tsx
- ✓ Compiled in 2.9s (1325 modules)
- ✓ Compiled in 3.9s (2919 modules)
+ ✓ Compiled /dashboard in 510ms (1610 modules)
+ GET /dashboard 200 in 768ms
+ GET /login 200 in 54ms
+ GET /login 200 in 30ms

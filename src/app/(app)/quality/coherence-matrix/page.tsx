@@ -11,11 +11,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { seedComplianceData } from '@/lib/seed-data/part-141';
+import { callAiFlow } from '@/lib/ai-client';
 
 import type { ComplianceRequirement, QualityAudit, ExternalOrganization, TabVisibilitySettings } from '@/types/quality';
 import type { Personnel } from '../../users/personnel/page';
 import { ComplianceItemForm } from './item-form';
-import { summarizeDocument, SummarizeDocumentInput } from '@/ai/flows/summarize-document-flow';
+import type { SummarizeDocumentInput, SummarizeDocumentOutput } from '@/ai/flows/summarize-document-flow';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -85,7 +86,10 @@ function UploadRegulationsDialog({ tenantId, organizationId }: { tenantId: strin
 
         setIsProcessing(true);
         try {
-            const { requirements } = await summarizeDocument(input);
+            const { requirements } = await callAiFlow<
+                SummarizeDocumentInput,
+                SummarizeDocumentOutput
+            >('summarizeDocument', input);
 
             if (!requirements || requirements.length === 0) {
                 toast({ variant: 'destructive', title: 'No Regulations Found', description: 'The AI could not identify any regulations in the provided content.' });

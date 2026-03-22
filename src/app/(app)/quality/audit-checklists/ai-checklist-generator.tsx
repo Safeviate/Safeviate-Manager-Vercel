@@ -18,7 +18,8 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, ClipboardPaste, Wand2 } from 'lucide-react';
-import { generateChecklist } from '@/ai/flows/generate-checklist-flow';
+import { callAiFlow } from '@/lib/ai-client';
+import type { GenerateChecklistOutput } from '@/ai/flows/generate-checklist-flow';
 import type { ChecklistSection } from '@/types/quality';
 
 interface AiChecklistGeneratorProps {
@@ -69,7 +70,10 @@ export function AiChecklistGenerator({ onGenerated }: AiChecklistGeneratorProps)
   const processAndSave = async (input: { text?: string; image?: string }) => {
     setIsProcessing(true);
     try {
-      const { sections } = await generateChecklist({ document: input });
+      const { sections } = await callAiFlow<
+        { document: { text?: string; image?: string } },
+        GenerateChecklistOutput
+      >('generateChecklist', { document: input });
 
       if (!sections || sections.length === 0) {
         toast({ variant: 'destructive', title: 'No Checklist Found', description: 'The AI could not identify a checklist in the document.' });

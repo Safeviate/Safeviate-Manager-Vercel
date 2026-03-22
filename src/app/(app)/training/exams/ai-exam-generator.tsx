@@ -18,7 +18,8 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, ClipboardPaste, Wand2 } from 'lucide-react';
-import { generateExam } from '@/ai/flows/generate-exam-flow';
+import { callAiFlow } from '@/lib/ai-client';
+import type { GenerateExamOutput } from '@/ai/flows/generate-exam-flow';
 import type { ExamTemplate } from '@/types/training';
 
 interface AiExamGeneratorProps {
@@ -69,7 +70,10 @@ export function AiExamGenerator({ onGenerated }: AiExamGeneratorProps) {
   const processAndSave = async (input: { text?: string; image?: string }) => {
     setIsProcessing(true);
     try {
-      const { questions } = await generateExam({ document: input });
+      const { questions } = await callAiFlow<
+        { document: { text?: string; image?: string } },
+        GenerateExamOutput
+      >('generateExam', { document: input });
 
       if (!questions || questions.length === 0) {
         toast({ variant: 'destructive', title: 'No Questions Found', description: 'The AI could not identify any questions in the document.' });
