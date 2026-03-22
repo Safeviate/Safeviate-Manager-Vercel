@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useMemo } from 'react';
+import { use, useMemo, useState } from 'react';
 import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Printer } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import type { ManagementOfChange } from '@/types/moc';
@@ -16,24 +17,26 @@ import { ApprovalForm } from './approval-form';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import type { Department } from '@/app/(app)/admin/department/page';
 import type { RiskMatrixSettings } from '@/types/risk';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface MocDetailPageProps {
-  params: { mocId: string };
+  params: Promise<{ mocId: string }>;
 }
 
-const DetailItem = ({ label, value, children }: { label: string; value?: string | null; children?: React.ReactNode }) => (
-    <div>
-        <p className="text-sm font-medium text-muted-foreground">{label}</p>
-        {children ? children : <p className="text-base">{value || 'N/A'}</p>}
+const DetailItem = ({ label, value }: { label: string; value?: string | null }) => (
+    <div className="space-y-0.5">
+        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{label}</p>
+        <p className="text-sm font-medium">{value || 'N/A'}</p>
     </div>
 );
-
 
 export default function MocDetailPage({ params }: MocDetailPageProps) {
   const resolvedParams = use(params);
   const firestore = useFirestore();
   const tenantId = 'safeviate';
   const mocId = resolvedParams.mocId;
+
+  const [activeTab, setActiveTab] = useState('implementation');
 
   const mocRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'tenants', tenantId, 'management-of-change', mocId) : null),
@@ -59,7 +62,6 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
   const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
   const { data: riskMatrixSettings, isLoading: isLoadingRiskMatrix } = useDoc<RiskMatrixSettings>(riskMatrixSettingsRef);
 
-
   const isLoading = isLoadingMoc || isLoadingPersonnel || isLoadingDepts || isLoadingRiskMatrix;
 
   const personnelMap = useMemo(() => {
@@ -80,98 +82,112 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
     return (
       <div className="max-w-[1200px] mx-auto w-full space-y-6">
         <Skeleton className="h-10 w-48" />
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-8 w-1/2" />
-            <Skeleton className="h-4 w-3/4 mt-2" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-48 w-full" />
-          </CardContent>
-        </Card>
+        <Card><CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader><CardContent><Skeleton className="h-48 w-full" /></CardContent></Card>
       </div>
     );
   }
 
-  if (error) {
+  if (error || !moc) {
     return (
       <div className="max-w-[1200px] mx-auto w-full text-center py-10">
-        <p className="text-destructive">Error loading MOC: {error.message}</p>
-        <Button asChild variant="link">
-          <Link href="/safety/management-of-change">Return to list</Link>
-        </Button>
-      </div>
-    );
-  }
-
-  if (!moc) {
-    return (
-      <div className="max-w-[1200px] mx-auto w-full text-center py-10">
-        <p className="text-muted-foreground">MOC not found.</p>
-        <Button asChild variant="link">
-          <Link href="/safety/management-of-change">Return to list</Link>
-        </Button>
+        <p className="text-destructive mb-4">{error ? `Error: ${error.message}` : "MOC not found."}</p>
+        <Button asChild variant="outline"><Link href="/safety/management-of-change"><ArrowLeft className="mr-2 h-4 w-4" /> Return to list</Link></Button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full space-y-6">
-       <div className="flex justify-between items-center no-print">
-          <Button asChild variant="outline" className="w-fit">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 pb-4">
+      <div className="shrink-0 space-y-4 px-1 bg-background z-20 pb-2 border-b no-print">
+        <div className="flex justify-between items-center">
+          <Button asChild variant="outline" size="sm" className="h-8">
             <Link href="/safety/management-of-change">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to All MOCs
             </Link>
           </Button>
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="mr-2 h-4 w-4" />
+          <Button variant="outline" size="sm" onClick={handlePrint} className="h-8 gap-2">
+            <Printer className="h-4 w-4" />
             Print MOC
           </Button>
-       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>MOC {moc.mocNumber}: {moc.title}</CardTitle>
-          <CardDescription>
-            Proposed on {format(new Date(moc.proposalDate), 'PPP')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-            <div className="md:col-span-2">
-                <p className="text-sm font-medium text-muted-foreground">Detailed Description</p>
-                <p className="text-base whitespace-pre-wrap">{moc.description}</p>
+        </div>
+
+        <Card className="shadow-none border-primary/20 bg-muted/5">
+          <CardHeader className="py-4">
+            <CardTitle className="text-2xl font-bold tracking-tight">MOC {moc.mocNumber}: {moc.title}</CardTitle>
+            <CardDescription className="text-xs font-medium">Proposed on {format(new Date(moc.proposalDate), 'PPP')}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 py-0 pb-4">
+            <DetailItem label="Detailed Description" value={moc.description} />
+            <DetailItem label="Reason for Change" value={moc.reason} />
+            <DetailItem label="Scope of Change" value={moc.scope} />
+            <div className="flex flex-wrap gap-8">
+              <DetailItem label="Proposing Department" value={departmentMap.get(moc.proposingDepartmentId)} />
+              <DetailItem label="Responsible Person" value={personnelMap.get(moc.responsiblePersonId)} />
             </div>
-             <div className="md:col-span-2">
-                <p className="text-sm font-medium text-muted-foreground">Reason for Change</p>
-                <p className="text-base whitespace-pre-wrap">{moc.reason}</p>
+          </CardContent>
+        </Card>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar">
+            <TabsTrigger value="implementation" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-xs font-bold uppercase tracking-tight">
+              Implementation & Analysis
+            </TabsTrigger>
+            <TabsTrigger value="approval" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-xs font-bold uppercase tracking-tight">
+              Approval & Sign-off
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-hidden px-1">
+        <Tabs value={activeTab} className="h-full flex flex-col m-0">
+          <TabsContent value="implementation" className="m-0 h-full flex-1 overflow-hidden">
+            <ScrollArea className="h-full pr-4">
+              <div className="pb-24">
+                <ImplementationForm
+                  key={moc.id}
+                  moc={moc}
+                  tenantId={tenantId}
+                  personnel={personnel || []}
+                />
+              </div>
+            </ScrollArea>
+          </TabsContent>
+          <TabsContent value="approval" className="m-0 h-full flex-1 overflow-hidden">
+            <ScrollArea className="h-full pr-4">
+              <div className="pb-24">
+                <ApprovalForm moc={moc} tenantId={tenantId} personnel={personnel || []} />
+              </div>
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      <div className="hidden print:block space-y-8 max-w-[1200px] mx-auto w-full">
+        <div className="border-b pb-4 mb-6">
+          <h1 className="text-3xl font-bold">Management of Change Proposal</h1>
+          <p className="text-muted-foreground text-xs font-bold uppercase">Document ID: {moc.mocNumber}</p>
+        </div>
+        <Card className="border-none shadow-none">
+          <CardHeader className="p-0 pb-4">
+            <CardTitle className="text-2xl font-bold">{moc.title}</CardTitle>
+            <CardDescription className="text-xs">Proposed on {format(new Date(moc.proposalDate), 'PPP')}</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0 grid grid-cols-1 gap-6">
+            <DetailItem label="Description" value={moc.description} />
+            <DetailItem label="Reason" value={moc.reason} />
+            <DetailItem label="Scope" value={moc.scope} />
+            <div className="flex gap-12">
+              <DetailItem label="Department" value={departmentMap.get(moc.proposingDepartmentId)} />
+              <DetailItem label="Responsible" value={personnelMap.get(moc.responsiblePersonId)} />
             </div>
-             <div className="md:col-span-2">
-                <p className="text-sm font-medium text-muted-foreground">Scope of Change</p>
-                <p className="text-base whitespace-pre-wrap">{moc.scope}</p>
-            </div>
-            <DetailItem label="Proposing Department" value={departmentMap.get(moc.proposingDepartmentId)} />
-            <DetailItem label="Responsible Person" value={personnelMap.get(moc.responsiblePersonId)} />
-        </CardContent>
-      </Card>
-      
-      <Tabs defaultValue="implementation" className="w-full">
-        <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar no-print">
-          <TabsTrigger value="implementation" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Implementation & Analysis</TabsTrigger>
-          <TabsTrigger value="approval" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Approval & Sign-off</TabsTrigger>
-        </TabsList>
-        <TabsContent value="implementation" className="m-0">
-          <ImplementationForm
-            key={moc.id}
-            moc={moc}
-            tenantId={tenantId}
-            personnel={personnel || []}
-            riskMatrixColors={riskMatrixSettings?.colors}
-          />
-        </TabsContent>
-        <TabsContent value="approval" className="m-0">
-          <ApprovalForm moc={moc} tenantId={tenantId} personnel={personnel || []} />
-        </TabsContent>
-      </Tabs>
+          </CardContent>
+        </Card>
+        <Separator />
+        <ImplementationForm moc={moc} tenantId={tenantId} personnel={personnel || []} />
+        <ApprovalForm moc={moc} tenantId={tenantId} personnel={personnel || []} />
+      </div>
     </div>
   );
 }

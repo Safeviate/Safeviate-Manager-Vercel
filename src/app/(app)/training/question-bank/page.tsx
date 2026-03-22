@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,6 +33,7 @@ import type { QuestionBankItem } from '@/types/training';
 import type { ExamTopicsSettings } from '../../admin/exam-topics/page';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { AiExamGenerator } from '../exams/ai-exam-generator';
+import { Separator } from '@/components/ui/separator';
 
 export default function QuestionBankPage() {
   const firestore = useFirestore();
@@ -108,24 +109,27 @@ export default function QuestionBankPage() {
       <div className="px-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Question Bank Manager</h1>
-          <p className="text-muted-foreground">Manage partitioned question databases for official and mock assessments.</p>
+          <p className="text-muted-foreground text-sm">Central database of aviation questions by topic.</p>
         </div>
-        <div className="flex gap-2">
-            <AiExamGenerator onGenerated={handleAiGenerated} />
-            <Button onClick={() => setIsAddOpen(true)} disabled={!selectedTopic}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Question
-            </Button>
+        <div className="flex flex-col gap-1.5 md:items-end">
+            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Database Actions</p>
+            <div className="flex gap-2">
+                <AiExamGenerator onGenerated={handleAiGenerated} />
+                <Button size="sm" className="h-9 px-6 text-[11px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2" onClick={() => setIsAddOpen(true)} disabled={!selectedTopic}>
+                    <PlusCircle className="h-4 w-4" /> Add Question
+                </Button>
+            </div>
         </div>
       </div>
 
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4 flex-1">
-            <div className="space-y-1">
-                <Label className="text-[10px] uppercase font-black text-primary tracking-widest">Active Database</Label>
+        <CardHeader className="shrink-0 border-b bg-muted/5 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_120px] gap-8 items-start">
+            <div className="space-y-2">
+                <Label className="text-[11px] font-black uppercase text-primary tracking-widest">Active Database</Label>
                 <Select onValueChange={setSelectedTopic} value={selectedTopic}>
-                    <SelectTrigger className="w-[300px] h-10 bg-background border-primary/30 font-bold">
-                        <Database className="h-3.5 w-3.5 mr-2 text-primary" />
+                    <SelectTrigger className="h-11 bg-background border-primary/30 font-bold">
+                        <Database className="h-4 w-4 mr-2 text-primary" />
                         <SelectValue placeholder="Select Topic Bank..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -133,71 +137,98 @@ export default function QuestionBankPage() {
                     </SelectContent>
                 </Select>
             </div>
-            <div className="space-y-1 flex-1 max-w-sm">
-                <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Search {selectedTopic}</Label>
+            
+            <div className="space-y-2">
+                <Label className="text-[11px] font-black uppercase text-muted-foreground tracking-widest">Search {selectedTopic || 'Database'}</Label>
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                         placeholder="Keywords..." 
-                        className="pl-9 bg-background h-10" 
+                        className="pl-9 bg-background h-11" 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
             </div>
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Database Size</p>
-            <Badge variant="outline" className="font-mono text-sm py-0 px-3 border-primary/30">
-                {filteredItems.length}
-            </Badge>
+
+            <div className="space-y-2">
+                <Label className="text-[11px] font-black uppercase text-muted-foreground tracking-widest">Database Size</Label>
+                <div className="h-11 flex items-center justify-center">
+                    <Badge variant="outline" className="font-black text-sm h-8 px-4 rounded-full border-primary/30 bg-background shadow-sm">
+                        {filteredItems.length}
+                    </Badge>
+                </div>
+            </div>
           </div>
         </CardHeader>
+        
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
           <ScrollArea className="h-full">
-            <Table>
-              <TableHeader className="bg-muted/30 sticky top-0 z-10">
-                <TableRow>
-                  <TableHead className="text-[10px] uppercase font-bold">Question Text</TableHead>
-                  <TableHead className="w-24 text-center text-[10px] uppercase font-bold">Options</TableHead>
-                  <TableHead className="w-24 text-right text-[10px] uppercase font-bold px-6">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredItems.map((item) => (
-                  <TableRow key={item.id} className="hover:bg-muted/10 transition-colors">
-                    <TableCell className="font-medium text-sm py-4">
-                        <p className="line-clamp-2">{item.text}</p>
-                    </TableCell>
-                    <TableCell className="text-center font-mono text-xs opacity-50">
-                        {item.options.length}
-                    </TableCell>
-                    <TableCell className="text-right px-6">
-                        <div className="flex justify-end gap-2">
-                            <Button variant="outline" size="icon" className="h-8 w-8 text-primary border-primary/20 hover:bg-primary/5" onClick={() => setEditingItem(item)}>
-                                <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            
-                            <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} />
-                        </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+            <div className="p-0">
+                {/* --- DESKTOP TABLE VIEW --- */}
+                <div className="hidden lg:block">
+                    <Table>
+                        <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                            <TableRow>
+                            <TableHead className="text-[10px] uppercase font-bold px-6 py-3">Question Text</TableHead>
+                            <TableHead className="w-24 text-center text-[10px] uppercase font-bold">Options</TableHead>
+                            <TableHead className="w-24 text-right text-[10px] uppercase font-bold px-6">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredItems.map((item) => (
+                            <TableRow key={item.id} className="hover:bg-muted/10 transition-colors">
+                                <TableCell className="font-medium text-sm py-4 px-6">
+                                    <p className="line-clamp-2 leading-relaxed">{item.text}</p>
+                                </TableCell>
+                                <TableCell className="text-center font-mono text-xs opacity-50">
+                                    {item.options.length}
+                                </TableCell>
+                                <TableCell className="text-right px-6">
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="outline" size="icon" className="h-8 w-8 text-primary border-primary/20 hover:bg-primary/5" onClick={() => setEditingItem(item)}>
+                                            <Pencil className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} />
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                {/* --- MOBILE CARD VIEW --- */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden p-4">
+                    {filteredItems.map((item) => (
+                        <Card key={item.id} className="shadow-none border-slate-200 overflow-hidden">
+                            <CardHeader className="p-4 pb-2 border-b bg-muted/5 flex flex-row items-center justify-between space-y-0">
+                                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{selectedTopic}</span>
+                                <Badge variant="outline" className="text-[9px] font-mono">{item.options.length} OPTIONS</Badge>
+                            </CardHeader>
+                            <CardContent className="p-4 py-3">
+                                <p className="text-sm font-semibold line-clamp-3 leading-relaxed">&quot;{item.text}&quot;</p>
+                            </CardContent>
+                            <CardFooter className="p-2 border-t bg-muted/5 flex gap-2">
+                                <Button variant="outline" size="sm" className="flex-1 text-xs h-8" onClick={() => setEditingItem(item)}>
+                                    <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
+                                </Button>
+                                <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} />
+                            </CardFooter>
+                        </Card>
+                    ))}
+                </div>
+
                 {filteredItems.length === 0 && !isLoading && (
-                    <TableRow>
-                        <TableCell colSpan={3} className="h-64 text-center text-muted-foreground italic">
-                            <div className="flex flex-col items-center justify-center gap-4 opacity-20">
-                                <Library className="h-16 w-16" />
-                                <div className="space-y-1">
-                                    <p className="text-lg font-bold uppercase tracking-tighter">Empty Topic Database</p>
-                                    <p className="text-sm">No questions found in {selectedTopic || 'this topic'}.</p>
-                                </div>
-                            </div>
-                        </TableCell>
-                    </TableRow>
+                    <div className="h-64 text-center text-muted-foreground italic flex flex-col items-center justify-center gap-4 opacity-20">
+                        <Library className="h-16 w-16" />
+                        <div className="space-y-1">
+                            <p className="text-lg font-bold uppercase tracking-tighter">Empty Topic Database</p>
+                            <p className="text-sm">No questions found in {selectedTopic || 'this topic'}.</p>
+                        </div>
+                    </div>
                 )}
-              </TableBody>
-            </Table>
+            </div>
           </ScrollArea>
         </CardContent>
       </Card>

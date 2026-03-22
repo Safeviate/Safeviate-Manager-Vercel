@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -141,9 +140,9 @@ export default function SchedulePage() {
   const { data: allBookings, isLoading: isLoadingAllBookings } = useCollection<Booking>(allBookingsQuery);
 
   const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/instructors`) || '') : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/students`) || '') : null), [firestore, tenantId]);
-  const privatePilotsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/private-pilots`) || '') : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
+  const privatePilotsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
 
   const { data: personnel } = useCollection<Personnel>(personnelQuery);
   const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
@@ -269,7 +268,7 @@ export default function SchedulePage() {
                     <div className="min-w-full w-fit">
                         
                         <div className="flex sticky top-0 z-50 bg-swimlane-header border-b border-white/10">
-                            <div className={cn(TIME_COL_WIDTH_CLASS, "flex-shrink-0 flex items-center justify-center font-bold text-[10px] text-swimlane-header-foreground uppercase tracking-wider h-12 bg-swimlane-header border-r")}>
+                            <div className={cn(TIME_COL_WIDTH_CLASS, "flex-shrink-0 flex items-center justify-center font-bold text-[10px] text-swimlane-header-foreground uppercase tracking-wider h-12 bg-swimlane-header border-r sticky left-0 z-50 shadow-[2px_0_5px_rgba(0,0,0,0.1)]")}>
                                 TIME
                             </div>
                             {(aircraft || []).map((ac) => (
@@ -290,11 +289,11 @@ export default function SchedulePage() {
 
                         <div className="flex relative">
                             
-                            <div className={cn(TIME_COL_WIDTH_CLASS, "flex-shrink-0 border-r bg-swimlane-header/5")}>
+                            <div className={cn(TIME_COL_WIDTH_CLASS, "flex-shrink-0 border-r bg-muted sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]")}>
                                 {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
                                     <div 
                                         key={hour} 
-                                        className="flex items-center justify-center border-b text-[10px] md:text-xs font-mono font-bold text-muted-foreground bg-muted/5"
+                                        className="flex items-center justify-center border-b text-[10px] md:text-xs font-mono font-bold text-muted-foreground bg-muted"
                                         style={{ height: `${HOUR_HEIGHT_PX}px` }}
                                     >
                                         {format(new Date(0, 0, 0, hour), 'HH:mm')}

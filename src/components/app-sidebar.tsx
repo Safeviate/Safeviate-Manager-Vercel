@@ -40,15 +40,32 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SheetHeader, SheetTitle } from './ui/sheet';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { useTenantConfig } from '@/hooks/use-tenant-config';
+import { usePermissions } from '@/hooks/use-permissions';
 
 const SidebarItems = () => {
     const pathname = usePathname();
     const { setOpenMobile } = useSidebar();
+    const { tenant } = useTenantConfig();
+    const { userProfile } = useUserProfile();
+    const { hasPermission } = usePermissions();
   
     const filteredItems = useMemo(() => {
-      // All restrictions disabled: return the full menu config regardless of environment
-      return menuConfig;
-    }, []);
+      return menuConfig.filter(item => {
+        // 1. Check Tenant-level module enablement
+        const isEnabledByTenant = !tenant?.enabledMenus || tenant.enabledMenus.includes(item.href);
+        if (!isEnabledByTenant) return false;
+
+        // 2. Check User-level override (hidden menus)
+        const isHiddenByUser = userProfile?.accessOverrides?.hiddenMenus?.includes(item.href);
+        if (isHiddenByUser) return false;
+
+        // 3. Check Role-level permissions
+        if (item.permissionId && !hasPermission(item.permissionId)) return false;
+
+        return true;
+      });
+    }, [tenant, userProfile, hasPermission]);
 
     return (
         <SidebarMenu>
@@ -56,7 +73,16 @@ const SidebarItems = () => {
                 const Icon = item.icon;
                 const isParentActive = pathname.startsWith(item.href);
 
-                const subItems = item.subItems || [];
+                const subItems = (item.subItems || []).filter(sub => {
+                    const isSubHidden = userProfile?.accessOverrides?.hiddenMenus?.includes(sub.href);
+                    if (isSubHidden) return false;
+                    
+                    const isSubEnabledByTenant = !tenant?.enabledMenus || tenant.enabledMenus.includes(sub.href);
+                    if (!isSubEnabledByTenant) return false;
+
+                    if (sub.permissionId && !hasPermission(sub.permissionId)) return false;
+                    return true;
+                });
 
                 let content;
                 if (subItems.length > 0) {

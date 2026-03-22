@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileSpreadsheet, Calculator, Receipt, Landmark, Eye, Printer, X } from 'lucide-react';
+import { FileSpreadsheet, Landmark, Eye, Printer, X } from 'lucide-react';
 import { BillingTable } from './billing-table';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -185,22 +185,25 @@ export default function AccountingPage() {
 
             <Separator orientation="vertical" className="h-10 hidden xl:block" />
 
-            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                <Button 
-                    variant="outline"
-                    className="flex-1 md:flex-none gap-2 font-bold h-10 md:h-12 px-4 md:px-6 text-xs md:text-sm" 
-                    onClick={() => setIsPreviewOpen(true)} 
-                    disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
-                >
-                    <Eye className="h-4 w-4" /> Preview ({selectedIds.size})
-                </Button>
-                <Button 
-                    className="flex-1 md:flex-none gap-2 font-bold shadow-md h-10 md:h-12 px-4 md:px-6 text-xs md:text-sm" 
-                    onClick={handleSageExport} 
-                    disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
-                >
-                    <FileSpreadsheet className="h-4 w-4 md:h-5 md:w-5" /> Export to Sage
-                </Button>
+            <div className="flex flex-col gap-1.5 xl:items-end w-full md:w-auto">
+                <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Sage Integration</p>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button 
+                        variant="outline"
+                        className="flex-1 md:flex-none gap-2 font-bold h-9 px-4 text-xs" 
+                        onClick={() => setIsPreviewOpen(true)} 
+                        disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
+                    >
+                        <Eye className="h-3.5 w-3.5" /> Preview ({selectedIds.size})
+                    </Button>
+                    <Button 
+                        className="flex-1 md:flex-none gap-2 font-black shadow-md h-9 px-4 text-xs uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white" 
+                        onClick={handleSageExport} 
+                        disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
+                    >
+                        <FileSpreadsheet className="h-4 w-4" /> Export to Sage
+                    </Button>
+                </div>
             </div>
           </div>
         </CardHeader>
@@ -307,7 +310,7 @@ export default function AccountingPage() {
 
             <DialogFooter className="shrink-0 border-t p-4 md:p-0 md:pt-4 no-print flex flex-col md:flex-row gap-2">
                 <DialogClose asChild><Button variant="outline" className="w-full md:w-auto">Close</Button></DialogClose>
-                <Button onClick={handleSageExport} className="gap-2 w-full md:w-auto">
+                <Button onClick={handleSageExport} className="gap-2 w-full md:w-auto bg-emerald-700 hover:bg-emerald-800 text-white">
                     <FileSpreadsheet className="h-4 w-4" /> Download CSV & Update Status
                 </Button>
             </DialogFooter>

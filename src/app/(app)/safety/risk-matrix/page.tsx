@@ -10,25 +10,26 @@ import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@
 import { doc } from 'firebase/firestore';
 import type { RiskMatrixSettings } from '@/types/risk';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Pencil, Check } from 'lucide-react';
+import { Pencil, Check, ShieldCheck, Printer, LayoutGrid, AlertTriangle } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const defaultLikelihoods = [
-    { name: 'Frequent', description: 'Likely to occur many times (has happened frequently).', value: 5 },
-    { name: 'Occasional', description: 'Likely to occur some times (has happened infrequently).', value: 4 },
-    { name: 'Remote', description: 'Unlikely, but possible to occur (has happened rarely).', value: 3 },
-    { name: 'Improbable', description: 'Very unlikely to occur (not known to have happened).', value: 2 },
-    { name: 'Extremely Improbable', description: 'Almost inconceivable that the event will occur.', value: 1 },
+    { name: 'Frequent', description: 'Likely to occur many times.', value: 5 },
+    { name: 'Occasional', description: 'Likely to occur some times.', value: 4 },
+    { name: 'Remote', description: 'Unlikely, but possible to occur.', value: 3 },
+    { name: 'Improbable', description: 'Very unlikely to occur.', value: 2 },
+    { name: 'Extremely Improbable', description: 'Almost inconceivable.', value: 1 },
 ];
 
 const defaultSeverities = [
     { name: 'Catastrophic', description: 'Equipment destroyed, multiple deaths.', value: 'A' },
-    { name: 'Hazardous', description: 'Large reduction in safety margins, serious injury, major equipment damage.', value: 'B' },
-    { name: 'Major', description: 'Significant reduction in safety margins, serious incident, injury to persons.', value: 'C' },
-    { name: 'Minor', description: 'Nuisance, operating limitations, minor incident.', value: 'D' },
+    { name: 'Hazardous', description: 'Large reduction in safety margins.', value: 'B' },
+    { name: 'Major', description: 'Significant reduction in safety margins.', value: 'C' },
+    { name: 'Minor', description: 'Nuisance, operating limitations.', value: 'D' },
     { name: 'Negligible', description: 'Little or no effect on safety.', value: 'E' },
 ];
 
@@ -109,8 +110,7 @@ export default function RiskMatrixPage() {
       queueSave({ severityDefinitions: newSeverities });
   };
 
-  const handleRightClick = (e: React.MouseEvent, cellId: string) => {
-      e.preventDefault();
+  const handleCellInteraction = (cellId: string) => {
       if (!canManage) return;
       setActiveCell(cellId);
       if (colorInputRef.current) {
@@ -119,166 +119,181 @@ export default function RiskMatrixPage() {
   };
 
   if (isLoading) {
-    return <div className="max-w-[1200px] mx-auto w-full px-1"><Skeleton className="h-[600px] w-full" /></div>;
+    return (
+      <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 px-1 pb-4">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="flex-1 w-full" />
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 px-1 pb-10">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 px-1 pb-4">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5">
-          <CardTitle>Risk Matrix Configuration</CardTitle>
-          <CardDescription>
-            This matrix determines the level of risk for identified hazards. {canManage ? 'Right-click a cell to customize colors.' : ''}
-          </CardDescription>
+        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-4 md:p-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <LayoutGrid className="h-5 w-5 text-primary" />
+              <CardTitle className="text-2xl font-bold tracking-tight">Risk Matrix</CardTitle>
+            </div>
+            <CardDescription className="text-xs text-muted-foreground font-medium">Defining organizational risk tolerance using ICAO taxonomy.</CardDescription>
+          </div>
+          
+          <div className="flex flex-col gap-1.5 xl:items-end w-full sm:w-auto">
+            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Reporting Tools</p>
+            <div className="flex gap-2 no-print">
+                <Button variant="outline" size="sm" onClick={() => window.print()} className="h-9 px-4 text-xs font-bold gap-2">
+                    <Printer className="h-4 w-4" />
+                    Export PDF
+                </Button>
+            </div>
+          </div>
         </CardHeader>
         
-        <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5">
-          <ScrollArea className="h-full custom-scrollbar">
-            <div className="p-6 space-y-10 pb-24 text-center">
-              
-              <div className="inline-block overflow-x-auto border rounded-xl overflow-hidden shadow-sm bg-card mx-auto">
-                <table className="table-fixed border-separate" style={{ borderSpacing: 0 }}>
-                    <thead>
-                        <tr className="h-16">
-                            <th className="w-32 border-b border-r border-slate-200 dark:border-slate-700 bg-muted/30"></th>
+        <CardContent className="flex-1 p-0 overflow-hidden bg-background">
+            <ScrollArea className="h-full">
+                <div className="p-6 space-y-10 pb-24">
+                  
+                  {/* Matrix Container with Horizontal Scroll */}
+                  <div className="w-full overflow-x-auto border rounded-xl bg-muted/5 shadow-sm p-6 overflow-y-hidden">
+                    <div className="min-w-[600px] mx-auto max-w-2xl">
+                        <div className="grid grid-cols-[120px_repeat(5,1fr)] gap-2">
+                            <div className="flex items-center justify-center p-2 bg-muted/50 rounded-lg border border-dashed text-center">
+                                <span className="text-[8px] font-black uppercase text-muted-foreground tracking-tighter">Impact</span>
+                            </div>
                             {severities.map(s => (
-                                <th key={s.value} className="w-24 border-r border-b border-slate-200 dark:border-slate-700 p-1 text-center align-middle font-bold text-[10px] uppercase tracking-wider bg-muted/30">
-                                    <div className="flex flex-col items-center gap-0.5">
-                                        <span className="truncate w-full">{s.name}</span>
-                                        <span className="text-primary font-black">({s.value})</span>
-                                    </div>
-                                </th>
+                                <div key={s.value} className="flex flex-col items-center justify-center p-1.5 bg-background rounded-lg border border-border/50 text-center">
+                                    <span className="text-[8px] font-black uppercase tracking-tight text-muted-foreground mb-0.5 leading-tight">{s.name}</span>
+                                    <Badge variant="outline" className="h-5 w-5 rounded-full p-0 flex items-center justify-center font-black text-[9px] border-primary/50 text-primary bg-background shadow-sm">
+                                        {s.value}
+                                    </Badge>
+                                </div>
                             ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {likelihoods.map(l => (
-                            <tr key={l.value} className="h-16">
-                                <th className="border-r border-b border-slate-200 dark:border-slate-700 p-1 text-right align-middle font-bold text-[10px] uppercase tracking-wider bg-muted/10">
-                                    {l.name}
-                                    <span className="block text-[8px] text-muted-foreground font-normal">({l.value})</span>
-                                </th>
-                                {severities.map(s => {
-                                    const cellId = `${l.value}${s.value}`;
-                                    return (
-                                    <td
-                                        key={cellId}
-                                        onContextMenu={(e) => handleRightClick(e, cellId)}
-                                        style={{ backgroundColor: colors[cellId] }}
-                                        className={cn(
-                                            "border-b border-r border-slate-200 dark:border-slate-700 p-1 text-center align-middle font-black text-[10px] text-black transition-all",
-                                            canManage && "cursor-pointer hover:scale-[0.98] active:scale-95"
+
+                            {likelihoods.map(l => (
+                                <React.Fragment key={l.value}>
+                                    <div className="flex items-center justify-end pr-4 text-right border-r border-dashed mr-1">
+                                        <div className="space-y-0.5">
+                                            <p className="text-[9px] font-black uppercase tracking-tighter text-foreground line-clamp-1">{l.name}</p>
+                                            <Badge variant="secondary" className="text-[8px] font-mono font-bold h-3.5 px-1.5 bg-primary/10 text-primary border-none">LVL {l.value}</Badge>
+                                        </div>
+                                    </div>
+                                    {severities.map(s => {
+                                        const cellId = `${l.value}${s.value}`;
+                                        const color = colors[cellId];
+                                        return (
+                                            <button
+                                                key={cellId}
+                                                onClick={() => handleCellInteraction(cellId)}
+                                                style={{ backgroundColor: color }}
+                                                className={cn(
+                                                    "h-12 rounded-lg shadow-sm flex items-center justify-center font-black text-[10px] text-black transition-all border-2 border-white/20",
+                                                    canManage ? "hover:scale-[1.03] cursor-pointer" : "cursor-default"
+                                                )}
+                                            >
+                                                <span className="drop-shadow-sm opacity-90">{cellId}</span>
+                                            </button>
+                                        )
+                                    })}
+                                </React.Fragment>
+                            ))}
+                        </div>
+                    </div>
+                    <Input 
+                        type="color" 
+                        ref={colorInputRef} 
+                        className="hidden" 
+                        onChange={(e) => activeCell && handleColorChange(activeCell, e.target.value)}
+                    />
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-primary/20 pb-2">
+                        <h3 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            Severity Scale
+                        </h3>
+                        {canManage && (
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 px-2 text-[9px] uppercase font-bold"
+                                onClick={() => setIsEditingSeverity(!isEditingSeverity)}
+                            >
+                                {isEditingSeverity ? <><Check className="mr-1 h-3 w-3" /> Save</> : <><Pencil className="mr-1 h-3 w-3" /> Edit</>}
+                            </Button>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        {severities.map((s, index) => (
+                            <div key={s.value} className="p-3 bg-muted/10 rounded-lg border border-border/50">
+                                <div className="flex items-start gap-3">
+                                    <Badge variant="outline" className="h-8 w-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0">{s.value}</Badge>
+                                    <div className="flex-1 space-y-1">
+                                        {isEditingSeverity ? (
+                                            <div className="space-y-1.5">
+                                                <Input value={s.name} onChange={(e) => handleSeverityChange(index, 'name', e.target.value)} className="h-7 text-[10px] font-bold" />
+                                                <Textarea value={s.description} onChange={(e) => handleSeverityChange(index, 'description', e.target.value)} className="text-[10px] min-h-[50px] py-1.5 bg-background resize-none" />
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <p className="text-[10px] font-black uppercase tracking-tight text-foreground/80">{s.name}</p>
+                                                <p className="text-[10px] text-muted-foreground leading-snug font-medium">{s.description}</p>
+                                            </>
                                         )}
-                                    >
-                                        {cellId}
-                                    </td>
-                                    )
-                                })}
-                            </tr>
+                                    </div>
+                                </div>
+                            </div>
                         ))}
-                    </tbody>
-                </table>
-                <Input 
-                    type="color" 
-                    ref={colorInputRef} 
-                    className="hidden" 
-                    onChange={(e) => activeCell && handleColorChange(activeCell, e.target.value)}
-                />
-              </div>
+                      </div>
+                    </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-                <Card className="shadow-none border flex flex-col overflow-hidden">
-                  <CardHeader className="py-3 border-b bg-muted/5 shrink-0 flex flex-row items-center justify-between space-y-0">
-                    <CardTitle className="text-[10px] uppercase font-black tracking-widest text-primary">Severity Definitions</CardTitle>
-                    {canManage && (
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-7 px-2 text-[10px] uppercase font-bold"
-                            onClick={() => setIsEditingSeverity(!isEditingSeverity)}
-                        >
-                            {isEditingSeverity ? <><Check className="mr-1 h-3 w-3" /> Done</> : <><Pencil className="mr-1 h-3 w-3" /> Edit</>}
-                        </Button>
-                    )}
-                  </CardHeader>
-                  <CardContent className="p-4 space-y-4 bg-background">
-                    {severities.map((s, index) => (
-                        <div key={s.value} className="p-3 bg-muted/5 rounded-lg border border-border shadow-sm space-y-2">
-                            <div className="flex items-center gap-3">
-                                <Badge variant="outline" className="h-7 w-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0">{s.value}</Badge>
-                                {isEditingSeverity ? (
-                                    <Input 
-                                        value={s.name} 
-                                        onChange={(e) => handleSeverityChange(index, 'name', e.target.value)}
-                                        className="h-8 text-xs font-bold bg-background"
-                                        placeholder="Name"
-                                    />
-                                ) : (
-                                    <span className="text-xs font-bold uppercase tracking-tight">{s.name}</span>
-                                )}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-primary/20 pb-2">
+                        <h3 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                            Likelihood Scale
+                        </h3>
+                        {canManage && (
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 px-2 text-[9px] uppercase font-bold"
+                                onClick={() => setIsEditingLikelihood(!isEditingLikelihood)}
+                            >
+                                {isEditingLikelihood ? <><Check className="mr-1 h-3 w-3" /> Save</> : <><Pencil className="mr-1 h-3 w-3" /> Edit</>}
+                            </Button>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        {likelihoods.map((l, index) => (
+                            <div key={l.value} className="p-3 bg-muted/10 rounded-lg border border-border/50">
+                                <div className="flex items-start gap-3">
+                                    <Badge variant="outline" className="h-8 w-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0">{l.value}</Badge>
+                                    <div className="flex-1 space-y-1">
+                                        {isEditingLikelihood ? (
+                                            <div className="space-y-1.5">
+                                                <Input value={l.name} onChange={(e) => handleLikelihoodChange(index, 'name', e.target.value)} className="h-7 text-[10px] font-bold" />
+                                                <Textarea value={l.description} onChange={(e) => handleLikelihoodChange(index, 'description', e.target.value)} className="text-[10px] min-h-[50px] py-1.5 bg-background resize-none" />
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <p className="text-[10px] font-black uppercase tracking-tight text-foreground/80">{l.name}</p>
+                                                <p className="text-[10px] text-muted-foreground leading-snug font-medium">{l.description}</p>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                            {isEditingSeverity ? (
-                                <Textarea 
-                                    value={s.description} 
-                                    onChange={(e) => handleSeverityChange(index, 'description', e.target.value)}
-                                    className="text-xs min-h-[60px] py-2 bg-background"
-                                    placeholder="Description"
-                                />
-                            ) : (
-                                <p className="text-[11px] text-muted-foreground leading-relaxed">{s.description}</p>
-                            )}
-                        </div>
-                    ))}
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-none border flex flex-col overflow-hidden">
-                  <CardHeader className="py-3 border-b bg-muted/5 shrink-0 flex flex-row items-center justify-between space-y-0">
-                    <CardTitle className="text-[10px] uppercase font-black tracking-widest text-primary">Likelihood Definitions</CardTitle>
-                    {canManage && (
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-7 px-2 text-[10px] uppercase font-bold"
-                            onClick={() => setIsEditingLikelihood(!isEditingLikelihood)}
-                        >
-                            {isEditingLikelihood ? <><Check className="mr-1 h-3 w-3" /> Done</> : <><Pencil className="mr-1 h-3 w-3" /> Edit</>}
-                        </Button>
-                    )}
-                  </CardHeader>
-                  <CardContent className="p-4 space-y-4 bg-background">
-                    {likelihoods.map((l, index) => (
-                        <div key={l.value} className="p-3 bg-muted/5 rounded-lg border border-border shadow-sm space-y-2">
-                            <div className="flex items-center gap-3">
-                                <Badge variant="outline" className="h-7 w-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0">{l.value}</Badge>
-                                {isEditingLikelihood ? (
-                                    <Input 
-                                        value={l.name} 
-                                        onChange={(e) => handleLikelihoodChange(index, 'name', e.target.value)}
-                                        className="h-8 text-xs font-bold bg-background"
-                                        placeholder="Name"
-                                    />
-                                ) : (
-                                    <span className="text-xs font-bold uppercase tracking-tight">{l.name}</span>
-                                )}
-                            </div>
-                            {isEditingLikelihood ? (
-                                <Textarea 
-                                    value={l.description} 
-                                    onChange={(e) => handleLikelihoodChange(index, 'description', e.target.value)}
-                                    className="text-xs min-h-[60px] py-2 bg-background"
-                                    placeholder="Description"
-                                />
-                            ) : (
-                                <p className="text-[11px] text-muted-foreground leading-relaxed">{l.description}</p>
-                            )}
-                        </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </ScrollArea>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            </ScrollArea>
         </CardContent>
       </Card>
     </div>

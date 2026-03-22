@@ -72,22 +72,22 @@ export default function OverdueSettingsPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <Card className="shadow-none border">
-        <CardHeader>
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="h-5 w-5 text-primary" />
-            <CardTitle>Overdue Aircraft Monitor</CardTitle>
+    <div className="max-w-2xl mx-auto space-y-6 px-1">
+      <Card className="shadow-none border border-amber-900/20">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3 mb-1">
+            <AlertTriangle className="h-6 w-6 text-emerald-800" />
+            <CardTitle className="text-2xl font-bold tracking-tight">Overdue Aircraft Monitor</CardTitle>
           </div>
-          <CardDescription>
+          <CardDescription className="text-xs text-muted-foreground font-medium leading-relaxed max-w-lg">
             Configure the safety alert that triggers when an aircraft fails to land within its scheduled window.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-8">
-          <div className="flex items-center justify-between space-x-2 rounded-lg border p-4 bg-muted/5">
-            <div className="space-y-0.5">
-              <Label htmlFor="monitor-toggle" className="text-base">Enable Safety Monitor</Label>
-              <p className="text-sm text-muted-foreground">
+        <CardContent className="space-y-8 pt-2">
+          <div className="flex items-center justify-between space-x-4 rounded-xl border border-primary/10 p-5 bg-primary/5">
+            <div className="space-y-1">
+              <Label htmlFor="monitor-toggle" className="text-sm font-bold text-foreground">Enable Safety Monitor</Label>
+              <p className="text-[10px] text-muted-foreground font-medium">
                 Activate the global alert for flights past their end time.
               </p>
             </div>
@@ -98,10 +98,10 @@ export default function OverdueSettingsPage() {
             />
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
+              <Label className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
+                <Clock className="h-3.5 w-3.5" />
                 Alert Threshold (Minutes)
               </Label>
               <Input
@@ -109,15 +109,16 @@ export default function OverdueSettingsPage() {
                 value={thresholdMinutes}
                 onChange={(e) => setThresholdMinutes(Number(e.target.value))}
                 placeholder="e.g., 5"
+                className="h-11 bg-background"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] text-muted-foreground font-medium italic">
                 The number of minutes to wait after the scheduled end time before showing the alert.
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
+              <Label className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
+                <Phone className="h-3.5 w-3.5" />
                 Operations Fallback Number
               </Label>
               <Input
@@ -125,15 +126,18 @@ export default function OverdueSettingsPage() {
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
                 placeholder="e.g., 555-0199"
+                className="h-11 bg-background"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] text-muted-foreground font-medium italic leading-relaxed">
                 This number is displayed only if no specific contact numbers are found in the instructor or student profiles.
               </p>
             </div>
           </div>
 
           <div className="pt-4 flex justify-end">
-            <Button onClick={handleSave}>Save Configuration</Button>
+            <Button onClick={handleSave} className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold h-10 px-8 shadow-sm">
+              Save Configuration
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -17,6 +17,7 @@ import type { ExternalOrganization, TabVisibilitySettings } from '@/types/qualit
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { MocActions } from './moc-actions';
+import { Separator } from '@/components/ui/separator';
 
 export default function ManagementOfChangePage() {
     const firestore = useFirestore();
@@ -54,21 +55,22 @@ export default function ManagementOfChangePage() {
 
         return (
             <Card className="min-h-[400px] flex flex-col shadow-none border">
-                <CardHeader className="bg-muted/10 border-b">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <CardTitle>{orgId === 'internal' ? 'Internal Management of Change' : organizations?.find(o => o.id === orgId)?.name}</CardTitle>
-                            <CardDescription>Formal change management process for this organization.</CardDescription>
-                        </div>
-                        {canViewAll && (
-                            <Button asChild size="sm">
+                <CardHeader className="bg-muted/10 border-b flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-6">
+                    <div>
+                        <CardTitle className="text-2xl font-headline">{orgId === 'internal' ? 'Internal Management of Change' : organizations?.find(o => o.id === orgId)?.name}</CardTitle>
+                        <CardDescription>Formal change management process for this organization.</CardDescription>
+                    </div>
+                    {canViewAll && (
+                        <div className="flex flex-col gap-1.5 xl:items-end w-full md:w-auto">
+                            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Change Control</p>
+                            <Button asChild size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
                                 <Link href={`/safety/management-of-change/new?orgId=${orgId}`}>
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     Propose Change
                                 </Link>
                             </Button>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>
@@ -124,9 +126,9 @@ export default function ManagementOfChangePage() {
     const showTabs = canViewAll;
 
     return (
-        <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
+        <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
             <div className="px-1">
-                <h1 className="text-3xl font-bold tracking-tight">Management of Change</h1>
+                <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Management of Change</h1>
                 <p className="text-muted-foreground">Formally manage and identify risks associated with significant organizational changes.</p>
             </div>
 
@@ -145,15 +147,17 @@ export default function ManagementOfChangePage() {
                         </TabsList>
                     </div>
 
-                    <TabsContent value="internal" className="mt-0">
-                        {renderOrgContext('internal')}
-                    </TabsContent>
-                    
-                    {(organizations || []).map(org => (
-                        <TabsContent key={org.id} value={org.id} className="mt-0">
-                            {renderOrgContext(org.id)}
+                    <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+                        <TabsContent value="internal" className="mt-0">
+                            {renderOrgContext('internal')}
                         </TabsContent>
-                    ))}
+                        
+                        {(organizations || []).map(org => (
+                            <TabsContent key={org.id} value={org.id} className="mt-0">
+                                {renderOrgContext(org.id)}
+                            </TabsContent>
+                        ))}
+                    </div>
                 </Tabs>
             )}
         </div>
