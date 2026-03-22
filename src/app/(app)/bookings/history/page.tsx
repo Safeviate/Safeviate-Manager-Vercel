@@ -6,7 +6,6 @@ import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, parse } from 'date-fns';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     AlertDialog,
@@ -118,65 +117,67 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
     }
     
     return (
-         <Table>
-            <TableHeader>
-              <TableRow>
-                  <TableHead>#</TableHead>
-                  <TableHead>Aircraft</TableHead>
-                  <TableHead>Creator</TableHead>
-                  <TableHead>Start Time</TableHead>
-                  <TableHead className="text-right">Flight Time</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className='text-right'>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-                {bookings.map(b => {
-                    const flightHours = (b.status === 'Completed' && b.postFlightData?.hobbs !== undefined && b.preFlightData?.hobbs !== undefined)
-                        ? (b.postFlightData.hobbs - b.preFlightData.hobbs).toFixed(1)
-                        : null;
+         <div className="w-full overflow-x-auto">
+            <Table className="min-w-[760px]">
+                <TableHeader>
+                  <TableRow>
+                      <TableHead>#</TableHead>
+                      <TableHead>Aircraft</TableHead>
+                      <TableHead>Creator</TableHead>
+                      <TableHead>Start Time</TableHead>
+                      <TableHead className="text-right">Flight Time</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className='text-right'>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {bookings.map(b => {
+                        const flightHours = (b.status === 'Completed' && b.postFlightData?.hobbs !== undefined && b.preFlightData?.hobbs !== undefined)
+                            ? (b.postFlightData.hobbs - b.preFlightData.hobbs).toFixed(1)
+                            : null;
 
-                    return (
-                        <TableRow key={b.id} className={cn((b.status === 'Cancelled' || b.status === 'Cancelled with Reason' || b.status === 'Completed') && 'text-muted-foreground')}>
-                            <TableCell className="font-medium">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
-                            <TableCell>{b.aircraftTailNumber}</TableCell>
-                            <TableCell>{b.creatorName}</TableCell>
-                            <TableCell>{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
-                            <TableCell className="text-right font-mono font-bold">
-                                {flightHours !== null ? (
-                                    <div className="flex items-center justify-end gap-1 text-primary">
-                                        <Clock className="h-3 w-3" />
-                                        {flightHours}h
-                                    </div>
-                                ) : '-'}
-                            </TableCell>
-                            <TableCell>
-                                <Badge variant={getStatusBadgeVariant(b.status)}>{b.status}</Badge>
-                            </TableCell>
-                            <TableCell className='text-right'>
-                                <div className="flex justify-end gap-2">
-                                    <Button asChild variant="outline" size="sm" className="h-8 gap-2">
-                                        <Link href={`/bookings/history/${b.id}`}>
-                                            <Eye className="h-4 w-4" />
-                                            View
-                                        </Link>
-                                    </Button>
-                                    {b.type === 'Training Flight' && b.status === 'Completed' && (
-                                        <Button asChild variant="secondary" size="icon" className="h-8 w-8">
-                                            <Link href={`/training/student-debriefs/new?bookingId=${b.id}`}>
-                                                <FilePlus className="h-4 w-4" />
-                                                <span className="sr-only">Debrief</span>
+                        return (
+                            <TableRow key={b.id} className={cn((b.status === 'Cancelled' || b.status === 'Cancelled with Reason' || b.status === 'Completed') && 'text-muted-foreground')}>
+                                <TableCell className="font-medium whitespace-nowrap">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
+                                <TableCell>{b.aircraftTailNumber}</TableCell>
+                                <TableCell>{b.creatorName}</TableCell>
+                                <TableCell>{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
+                                <TableCell className="text-right font-mono font-bold whitespace-nowrap">
+                                    {flightHours !== null ? (
+                                        <div className="flex items-center justify-end gap-1 text-primary">
+                                            <Clock className="h-3 w-3" />
+                                            {flightHours}h
+                                        </div>
+                                    ) : '-'}
+                                </TableCell>
+                                <TableCell className="whitespace-nowrap">
+                                    <Badge variant={getStatusBadgeVariant(b.status)}>{b.status}</Badge>
+                                </TableCell>
+                                <TableCell className='text-right whitespace-nowrap'>
+                                    <div className="flex justify-end gap-2">
+                                        <Button asChild variant="outline" size="sm" className="h-8 gap-2">
+                                            <Link href={`/bookings/history/${b.id}`}>
+                                                <Eye className="h-4 w-4" />
+                                                View
                                             </Link>
                                         </Button>
-                                    )}
-                                    <DeleteBookingButton booking={b} />
-                                </div>
-                            </TableCell>
-                        </TableRow>
-                    );
-                })}
-            </TableBody>
-        </Table>
+                                        {b.type === 'Training Flight' && b.status === 'Completed' && (
+                                            <Button asChild variant="secondary" size="icon" className="h-8 w-8">
+                                                <Link href={`/training/student-debriefs/new?bookingId=${b.id}`}>
+                                                    <FilePlus className="h-4 w-4" />
+                                                    <span className="sr-only">Debrief</span>
+                                                </Link>
+                                            </Button>
+                                        )}
+                                        <DeleteBookingButton booking={b} />
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        );
+                    })}
+                </TableBody>
+            </Table>
+         </div>
     )
 }
 
@@ -247,13 +248,13 @@ export default function BookingsHistoryPage() {
                 </TabsList>
             </div>
             <CardContent className='p-0'>
-                <ScrollArea className="h-[calc(100vh-21rem)]">
+                <div className="h-[calc(100vh-21rem)] overflow-auto">
                     <TabsContent value="all" className='m-0'><BookingsTable bookings={enrichedBookings} /></TabsContent>
                     <TabsContent value="training" className='m-0'><BookingsTable bookings={trainingBookings} /></TabsContent>
                     <TabsContent value="private" className='m-0'><BookingsTable bookings={privateBookings} /></TabsContent>
                     <TabsContent value="maintenance" className='m-0'><BookingsTable bookings={maintenanceBookings} /></TabsContent>
                     <TabsContent value="cancelled" className='m-0'><BookingsTable bookings={cancelledBookings} /></TabsContent>
-                </ScrollArea>
+                </div>
             </CardContent>
         </Tabs>
       </Card>

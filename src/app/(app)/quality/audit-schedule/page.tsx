@@ -46,6 +46,7 @@ import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, u
 import { collection, query, where, writeBatch, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { AuditScheduleItem, AuditScheduleStatus } from '@/types/quality';
 
 const INITIAL_AUDIT_AREAS = [
@@ -193,6 +194,7 @@ function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
 
 export default function AuditSchedulePage() {
   const firestore = useFirestore();
+  const isMobile = useIsMobile();
   const tenantId = 'safeviate';
   const currentYear = new Date().getFullYear();
   const currentMonthIdx = new Date().getMonth();
@@ -275,36 +277,48 @@ export default function AuditSchedulePage() {
   };
 
   const extraLanes = ['', ''];
+  const scheduleRowHeights = 'grid-rows-[40px_repeat(12,44px)]';
 
   if (isLoading) {
     return <Skeleton className="h-full w-full" />;
   }
 
   return (
-    <div className="flex flex-col gap-4 h-full w-full overflow-hidden">
-        <div className="flex justify-between items-center px-1 shrink-0">
-            <div>
+    <div className="flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden">
+        <div className="flex shrink-0 flex-col gap-3 px-1 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
                 <h1 className="text-2xl font-bold tracking-tight">Annual Audit Schedule</h1>
                 <p className="text-xs text-muted-foreground">
                     Planning and tracking oversight activities for {currentYear}.
                 </p>
             </div>
             <div className="flex items-center gap-2">
-                <Button size="sm" onClick={() => setIsAddAreaOpen(true)}>
+                <Button size="sm" onClick={() => setIsAddAreaOpen(true)} className="self-start sm:self-auto">
                     <PlusCircle className="mr-2 h-3 w-3" />
                     Add Area
                 </Button>
             </div>
         </div>
 
-        <Card className="flex-1 min-h-0 overflow-hidden flex flex-col shadow-none border">
-            <CardContent className="p-0 flex-1 overflow-hidden">
-                <div className="w-full h-full overflow-auto bg-card custom-scrollbar">
-                    <div className="flex min-w-full w-fit h-full relative">
+        <Card className={cn(
+            "w-full overflow-hidden border shadow-none",
+            isMobile ? "flex min-h-0 flex-1 flex-col" : "self-start"
+        )}>
+            <CardContent className={cn(
+                "p-0",
+                isMobile ? "flex min-h-0 flex-1 flex-col" : ""
+            )}>
+                <div className={cn(
+                    "overflow-x-auto overscroll-contain bg-card custom-scrollbar",
+                    isMobile
+                        ? "min-h-0 flex-1 overflow-y-auto touch-pan-x touch-pan-y"
+                        : "overflow-y-visible"
+                )}>
+                    <div className="relative flex h-fit min-w-full w-fit items-start">
                         
                         {/* Sticky Month Column */}
-                        <div className="w-20 flex-shrink-0 border-r sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)] bg-swimlane-header grid grid-rows-[40px_repeat(12,1fr)]">
-                            <div className="bg-swimlane-header border-b border-white/10 flex items-center justify-center font-bold text-[10px] text-white uppercase tracking-wider h-10">
+                        <div className={cn("sticky left-0 z-40 grid h-fit w-20 flex-shrink-0 self-start border-r bg-swimlane-header shadow-[2px_0_5px_rgba(0,0,0,0.05)] content-start", scheduleRowHeights)}>
+                            <div className="sticky top-0 left-0 z-50 bg-swimlane-header border-b border-white/10 flex h-10 items-center justify-center font-bold text-[10px] text-white uppercase tracking-wider">
                                 MONTH
                             </div>
                             {MONTHS.map((month, idx) => {
@@ -313,13 +327,13 @@ export default function AuditSchedulePage() {
                                     <div 
                                         key={month} 
                                         className={cn(
-                                            "flex flex-col items-center justify-center border-b text-[10px] font-mono font-bold uppercase tracking-wider",
+                                            "flex h-11 flex-col items-center justify-center border-b px-1 text-[10px] font-mono font-bold uppercase tracking-wider leading-none",
                                             isCurrentMonth ? "bg-white/10 text-white" : "text-white/60"
                                         )}
                                     >
                                         <span>{month}</span>
                                         {isCurrentMonth && (
-                                            <Badge variant="outline" className="mt-0.5 text-[7px] py-0 border-white/40 text-white font-bold h-2.5">
+                                            <Badge variant="outline" className="mt-1 h-3 min-h-0 border-white/40 px-1 py-0 text-[7px] font-bold text-white">
                                                 ACT
                                             </Badge>
                                         )}
@@ -328,9 +342,9 @@ export default function AuditSchedulePage() {
                             })}
                         </div>
 
-                        <div className="flex flex-1 relative h-full">
+                        <div className="relative flex flex-1 items-start">
                             {auditAreas.map((area) => (
-                                <div key={area} className="flex-1 min-w-[160px] border-r relative flex flex-col h-full grid grid-rows-[40px_repeat(12,1fr)]">
+                                <div key={area} className={cn("relative grid h-fit min-w-[160px] flex-1 self-start border-r content-start", scheduleRowHeights)}>
                                     <div className="sticky top-0 z-30 bg-swimlane-header text-white border-b border-white/10 flex items-center justify-between gap-1 px-3 text-center shrink-0 h-10">
                                         <span className="text-[9px] font-bold uppercase tracking-wider truncate">{area}</span>
                                         <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
@@ -344,7 +358,7 @@ export default function AuditSchedulePage() {
                                             <div 
                                                 key={month} 
                                                 className={cn(
-                                                    "border-b relative flex items-center justify-center p-1 group transition-colors",
+                                                    "relative flex h-11 items-center justify-center border-b p-1 group transition-colors",
                                                     isCurrentMonth ? "bg-muted/30" : "hover:bg-muted/10"
                                                 )}
                                             >
@@ -377,10 +391,10 @@ export default function AuditSchedulePage() {
                             ))}
 
                             {extraLanes.map((_, laneIdx) => (
-                                <div key={`extra-${laneIdx}`} className="flex-1 min-w-[160px] border-r bg-muted/5 opacity-50 h-full grid grid-rows-[40px_repeat(12,1fr)]">
+                                <div key={`extra-${laneIdx}`} className={cn("grid h-fit min-w-[160px] flex-1 self-start border-r bg-muted/5 opacity-50 content-start", scheduleRowHeights)}>
                                     <div className="sticky top-0 z-30 bg-swimlane-header border-b border-white/10 h-10" />
                                     {MONTHS.map((month) => (
-                                        <div key={month} className="border-b" />
+                                        <div key={month} className="h-11 border-b" />
                                     ))}
                                 </div>
                             ))}

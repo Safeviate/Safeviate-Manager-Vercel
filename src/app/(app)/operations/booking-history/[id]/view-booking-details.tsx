@@ -25,6 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NavlogBuilder } from '../../../bookings/navlog-builder';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ViewBookingDetailsProps {
     booking: Booking;
@@ -50,6 +51,7 @@ const formatDateSafe = (dateString: string | undefined, formatString: string): s
 
 export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const firestore = useFirestore();
+    const isMobile = useIsMobile();
     const { toast } = useToast();
     const { hasPermission } = usePermissions();
     const { tenantId, userProfile } = useUserProfile();
@@ -153,37 +155,40 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const isApprovableState = booking.status !== 'Approved' && booking.status !== 'Completed' && !booking.status.startsWith('Cancelled');
 
     return (
-        <div className="flex flex-col h-full gap-4 overflow-hidden">
-            <Tabs defaultValue="flight-details" className="w-full flex-1 flex flex-col min-h-0">
+        <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
+            <Tabs defaultValue="flight-details" className="flex w-full min-h-0 flex-1 flex-col">
                 <div className="shrink-0 px-1">
-                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-4 border-b-0 justify-start">
+                    <TabsList className="mb-4 h-auto flex-wrap justify-start gap-2 border-b-0 bg-transparent p-0">
                         <TabsTrigger 
                             value="flight-details" 
-                            className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground gap-2"
+                            className="gap-2 rounded-full border px-4 py-2 text-xs data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground sm:px-6 sm:text-sm"
                         >
                             <FileText className="h-4 w-4" /> Flight Details
                         </TabsTrigger>
                         <TabsTrigger 
                             value="navlog" 
-                            className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground gap-2"
+                            className="gap-2 rounded-full border px-4 py-2 text-xs data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground sm:px-6 sm:text-sm"
                         >
                             <NavIcon className="h-4 w-4" /> Navlog
                         </TabsTrigger>
                     </TabsList>
                 </div>
 
-                <div className="flex-1 min-h-0">
-                    <TabsContent value="flight-details" className="m-0 h-full">
-                        <Card className="shadow-none border flex flex-col h-[calc(100vh-240px)] overflow-hidden">
+                <div className="flex min-h-0 flex-1 flex-col">
+                    <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
+                        <Card className={cn(
+                            "flex min-h-0 flex-col overflow-hidden border shadow-none",
+                            isMobile ? "h-full flex-1" : "h-[calc(100vh-240px)]"
+                        )}>
                             <CardHeader className="border-b bg-muted/20 shrink-0">
-                                <div className="flex justify-between items-start">
-                                    <div className="space-y-1">
+                                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                                    <div className="min-w-0 space-y-1">
                                         <CardTitle>{booking.type}</CardTitle>
-                                        <CardDescription>
+                                        <CardDescription className="break-words">
                                             Booking Number: {booking.bookingNumber} • {aircraftLabel}
                                         </CardDescription>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex flex-wrap items-center gap-3 md:justify-end">
                                         {flightHours !== null && (
                                             <div className="text-right">
                                                 <p className="text-[10px] uppercase font-bold text-muted-foreground">Flight Time</p>
@@ -198,7 +203,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                 onClick={handleApprove} 
                                                 disabled={!booking.preFlight && !canOverride}
                                                 title={!booking.preFlight && !canOverride ? "Requires recorded Pre-Flight Checklist" : canOverride && !booking.preFlight ? "Overriding Checklist Requirement" : ""}
-                                                className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ml-4"
+                                                className="ml-0 gap-2 bg-green-600 text-white shadow-sm hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 md:ml-4"
                                             >
                                                 <CheckCircle2 className="h-4 w-4" /> 
                                                 {canOverride && !booking.preFlight ? "Approve (Override)" : "Approve Flight"}
@@ -207,7 +212,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     </div>
                                 </div>
                             </CardHeader>
-                            <ScrollArea className="flex-1">
+                            <ScrollArea className="min-h-0 flex-1">
                                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
                                     <DetailItem label="Status">
                                         <Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'}>{booking.status}</Badge>
@@ -362,7 +367,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         </Card>
                     </TabsContent>
 
-                    <TabsContent value="navlog" className="m-0 h-full">
+                    <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
                         <NavlogBuilder booking={booking} tenantId={tenantId!} />
                     </TabsContent>
                 </div>

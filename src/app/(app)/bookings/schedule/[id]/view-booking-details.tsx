@@ -22,6 +22,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NavlogBuilder } from '../../navlog-builder';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const FUEL_WEIGHT_PER_GALLON = 6;
 
@@ -49,6 +50,7 @@ const formatDateSafe = (dateString: string | undefined, formatString: string): s
 
 export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const firestore = useFirestore();
+    const isMobile = useIsMobile();
     const { toast } = useToast();
     const tenantId = 'safeviate';
 
@@ -164,40 +166,43 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const envelope = aircraft?.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
     
     return (
-        <div className="flex flex-col h-full gap-4 overflow-hidden">
-            <Tabs defaultValue="flight-details" className="w-full flex-1 flex flex-col min-h-0">
+        <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
+            <Tabs defaultValue="flight-details" className="flex w-full min-h-0 flex-1 flex-col">
                 <div className="shrink-0 px-1">
-                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-4 border-b-0 justify-start">
+                    <TabsList className="mb-4 h-auto flex-wrap justify-start gap-2 border-b-0 bg-transparent p-0">
                         <TabsTrigger 
                             value="flight-details" 
-                            className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground gap-2"
+                            className="gap-2 rounded-full border px-4 py-2 text-xs data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground sm:px-6 sm:text-sm"
                         >
                             <FileText className="h-4 w-4" /> Flight Details
                         </TabsTrigger>
                         <TabsTrigger 
                             value="navlog" 
-                            className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground gap-2"
+                            className="gap-2 rounded-full border px-4 py-2 text-xs data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground sm:px-6 sm:text-sm"
                         >
                             <NavIcon className="h-4 w-4" /> Navlog
                         </TabsTrigger>
                     </TabsList>
                 </div>
 
-                <div className="flex-1 min-h-0">
-                    <TabsContent value="flight-details" className="m-0 h-full">
-                        <Card className="flex flex-col h-[calc(100vh-240px)] overflow-hidden shadow-none border">
+                <div className="flex min-h-0 flex-1 flex-col">
+                    <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
+                        <Card className={cn(
+                            "flex min-h-0 flex-col overflow-hidden border shadow-none",
+                            isMobile ? "h-full flex-1" : "h-[calc(100vh-240px)]"
+                        )}>
                             <CardHeader className="border-b bg-muted/20 shrink-0">
-                                <div className="flex justify-between items-start">
-                                    <div className="space-y-1">
+                                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                                    <div className="min-w-0 space-y-1">
                                         <CardTitle>{booking.type}</CardTitle>
-                                        <CardDescription>
+                                        <CardDescription className="break-words">
                                             Booking Number: {booking.bookingNumber} • {aircraftLabel}
                                         </CardDescription>
                                     </div>
                                 </div>
                             </CardHeader>
                             
-                            <ScrollArea className="flex-1">
+                            <ScrollArea className="min-h-0 flex-1">
                                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
                                     <DetailItem label="Status">
                                         <Badge variant={getStatusBadgeVariant(booking.status)}>{booking.status}</Badge>
@@ -217,13 +222,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 <Separator className="my-2" />
 
                                 <CardHeader className="pb-2">
-                                    <div className="flex justify-between items-center">
+                                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                         <CardTitle className="text-xl flex items-center gap-2">
                                             <AlertTriangle className="h-5 w-5 text-primary" />
                                             Mass & Balance Calculator
                                         </CardTitle>
                                         {aircraft?.cgEnvelope && (
-                                            <Button size="sm" onClick={handleSaveToBooking} variant="outline" className="gap-2">
+                                            <Button size="sm" onClick={handleSaveToBooking} variant="outline" className="gap-2 self-start md:self-auto">
                                                 <Save className="h-4 w-4" /> Save to Booking
                                             </Button>
                                         )}
@@ -292,18 +297,20 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                                     <UILabel className="text-xs font-semibold">{s.name}</UILabel>
                                                                     <span className="text-[10px] text-muted-foreground">Arm: {s.arm}</span>
                                                                 </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="relative flex-1">
-                                                                        <Input 
-                                                                            type="number" 
-                                                                            value={s.weight} 
-                                                                            onChange={(e) => handleStationWeightChange(s.id, e.target.value)}
-                                                                            className="h-8 text-right pr-8 text-xs"
-                                                                        />
-                                                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-muted-foreground">LBS</span>
-                                                                    </div>
-                                                                    {s.type === 'fuel' && (
-                                                                        <div className="flex items-center gap-1 w-24">
+            <div className="flex items-center gap-3">
+                <div className="grid flex-1 grid-cols-[minmax(0,1fr)_60px] gap-2">
+                    <Input 
+                        type="number" 
+                        value={s.weight} 
+                        onChange={(e) => handleStationWeightChange(s.id, e.target.value)}
+                        className="h-8 text-right text-sm"
+                    />
+                    <div className="flex h-8 items-center justify-center rounded-md border border-input bg-muted/30 text-[11px] font-bold tracking-wide text-muted-foreground">
+                        LBS
+                    </div>
+                </div>
+                {s.type === 'fuel' && (
+                    <div className="flex items-center gap-1 w-24">
                                                                             <div className="relative">
                                                                                 <Input 
                                                                                     type="number" 
@@ -328,7 +335,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         </Card>
                     </TabsContent>
 
-                    <TabsContent value="navlog" className="m-0 h-full">
+                    <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
                         <NavlogBuilder booking={booking} tenantId={tenantId!} />
                     </TabsContent>
                 </div>

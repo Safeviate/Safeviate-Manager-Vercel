@@ -1,3 +1,5 @@
+import type { FuelType } from '@/lib/fuel';
+
 export interface ChecklistPhoto {
     url: string;
     description: string;
@@ -38,6 +40,8 @@ export interface MassAndBalance {
         type: string;
         gallons?: number;
         maxGallons?: number;
+        fuelType?: FuelType;
+        densityLbPerGallon?: number;
     }[];
 }
 

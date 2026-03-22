@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { ViewBookingDetails } from './view-booking-details';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface BookingDetailPageProps {
     params: Promise<{ id: string }>;
@@ -18,6 +19,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
     const resolvedParams = use(params);
     const firestore = useFirestore();
     const tenantId = 'safeviate';
+    const isMobile = useIsMobile();
 
     const bookingRef = useMemoFirebase(
         () => firestore ? doc(firestore, `tenants/${tenantId}/bookings`, resolvedParams.id) : null,
@@ -28,9 +30,9 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
 
     if (isLoading) {
         return (
-            <div className="max-w-[1200px] mx-auto w-full space-y-6">
+            <div className="mx-auto flex h-full w-full max-w-[1200px] min-h-0 flex-col gap-6">
                 <Skeleton className="h-10 w-48" />
-                <Skeleton className="h-64 w-full" />
+                <Skeleton className="min-h-0 flex-1 w-full" />
             </div>
         )
     }
@@ -52,16 +54,20 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
     }
 
     return (
-        <div className="max-w-[1200px] mx-auto w-full space-y-6">
+        <div className="mx-auto flex h-full w-full max-w-[1200px] min-h-0 flex-col gap-4 sm:gap-6">
+            <div className="shrink-0">
             <Button asChild variant="outline">
                 <Link href="/bookings/schedule">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Schedule
                 </Link>
             </Button>
+            </div>
+            <div className={isMobile ? "min-h-0 flex-1 overflow-hidden" : ""}>
             <ViewBookingDetails
                 booking={booking}
             />
+            </div>
         </div>
     );
 }

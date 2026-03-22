@@ -55,13 +55,35 @@ export function hexToHsl(hex: string): string {
   return `${h} ${s}% ${l}%`;
 }
 
-// Returns true if the point is inside the polygon
+const isPointOnSegment = (
+    point: { x: number, y: number },
+    start: { x: number, y: number },
+    end: { x: number, y: number },
+    epsilon = 1e-9
+) => {
+    const cross = (point.y - start.y) * (end.x - start.x) - (point.x - start.x) * (end.y - start.y);
+    if (Math.abs(cross) > epsilon) return false;
+
+    const dot = (point.x - start.x) * (end.x - start.x) + (point.y - start.y) * (end.y - start.y);
+    if (dot < -epsilon) return false;
+
+    const squaredLength = (end.x - start.x) ** 2 + (end.y - start.y) ** 2;
+    if (dot - squaredLength > epsilon) return false;
+
+    return true;
+};
+
+// Returns true if the point is inside the polygon or on its boundary.
 export const isPointInPolygon = (point: {x: number, y: number}, polygon: {x: number, y: number}[]) => {
     if (!polygon || polygon.length === 0) return false;
     let isInside = false;
     for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
         const xi = polygon[i].x, yi = polygon[i].y;
         const xj = polygon[j].x, yj = polygon[j].y;
+
+        if (isPointOnSegment(point, { x: xi, y: yi }, { x: xj, y: yj })) {
+            return true;
+        }
 
         const intersect = ((yi > point.y) !== (yj > point.y))
             && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);

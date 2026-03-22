@@ -10,7 +10,7 @@ import type { Booking, OverrideLog } from "@/types/booking";
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot } from 'recharts';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot, Cell } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
 import { Save, AlertTriangle, Clock, CheckCircle2, ClipboardCheck, FileClock, History, PencilLine, ShieldAlert, Lock, Edit2, ShieldCheck, UserCheck, Map as NavIcon, FileText } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -26,9 +26,58 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { NavlogBuilder } from '../../navlog-builder';
+import { calculateFuelGallonsFromWeight, calculateFuelWeight, gallonsToLitres, getFuelPreset, poundsToKilograms, type FuelType } from '@/lib/fuel';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-const FUEL_WEIGHT_PER_GALLON = 6;
+const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
+
+const generateNiceTicks = (min: number | string, max: number | string, stepCount = 6) => {
+    const start = Number(min);
+    const end = Number(max);
+    if (isNaN(start) || isNaN(end) || start >= end) return [];
+
+    const diff = end - start;
+    const roughStep = diff / (stepCount - 1);
+    const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
+    const normalizedStep = roughStep / magnitude;
+
+    let step;
+    if (normalizedStep < 1.5) step = 1 * magnitude;
+    else if (normalizedStep < 3) step = 2 * magnitude;
+    else if (normalizedStep < 7) step = 5 * magnitude;
+    else step = 10 * magnitude;
+
+    const ticks = [];
+    let current = Math.ceil(start / step) * step;
+    if (current > start) ticks.push(start);
+
+    while (current <= end) {
+        ticks.push(current);
+        current += step;
+    }
+
+    if (ticks[ticks.length - 1] < end && (end - ticks[ticks.length - 1]) < step * 0.1) {
+        ticks.push(end);
+    }
+
+    return ticks;
+};
+
+const formatLitres = (gallons: number) => gallonsToLitres(gallons).toFixed(1);
+const formatKilograms = (pounds: number) => poundsToKilograms(pounds).toFixed(1);
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+const normalizeFuelStation = (station: any) => {
+    if (station?.type !== 'fuel') return station;
+    const preset = getFuelPreset(station.fuelType);
+    return {
+        ...station,
+        fuelType: station.fuelType || 'AVGAS',
+        densityLbPerGallon: Number(station.densityLbPerGallon) || preset.densityLbPerGallon,
+        maxGallons: Number(station.maxGallons) || 50,
+    };
+};
 
 interface ViewBookingDetailsProps {
     booking: Booking;
@@ -54,6 +103,7 @@ const formatDateSafe = (dateString: string | undefined, formatString: string): s
 
 export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const firestore = useFirestore();
+    const isMobile = useIsMobile();
     const { toast } = useToast();
     const { hasPermission } = usePermissions();
     const { tenantId, userProfile } = useUserProfile();
@@ -94,9 +144,9 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     useEffect(() => {
         if (aircraft) {
             if (booking.massAndBalance?.stations && booking.massAndBalance.stations.length > 0) {
-                setStations(booking.massAndBalance.stations);
+                setStations(booking.massAndBalance.stations.map(normalizeFuelStation));
             } else if (aircraft.stations) {
-                setStations(aircraft.stations);
+                setStations(aircraft.stations.map(normalizeFuelStation));
             }
         }
     }, [aircraft, booking.massAndBalance?.stations]);
@@ -138,7 +188,15 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         setStations(prev => prev.map(s => {
             if (s.id !== id) return s;
             if (s.type === 'fuel') {
-                return { ...s, weight: val, gallons: parseFloat((val / FUEL_WEIGHT_PER_GALLON).toFixed(1)) };
+                const fuelStation = normalizeFuelStation(s);
+                const density = Number(fuelStation.densityLbPerGallon) || getFuelPreset(fuelStation.fuelType).densityLbPerGallon;
+                const maxGallons = Math.max(Number(fuelStation.maxGallons) || 0, 0);
+                const gallons = clamp(calculateFuelGallonsFromWeight(val, density), 0, maxGallons);
+                return {
+                    ...fuelStation,
+                    weight: parseFloat(calculateFuelWeight(gallons, density).toFixed(1)),
+                    gallons: parseFloat(gallons.toFixed(1))
+                };
             }
             return { ...s, weight: val };
         }));
@@ -147,8 +205,35 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const handleFuelGallonsChange = (id: number, gallons: string) => {
         const val = parseFloat(gallons) || 0;
         setStations(prev => prev.map(s => 
-            s.id === id ? { ...s, gallons: val, weight: val * FUEL_WEIGHT_PER_GALLON } : s
+            s.id === id
+                ? (() => {
+                    const fuelStation = normalizeFuelStation(s);
+                    const density = Number(fuelStation.densityLbPerGallon) || getFuelPreset(fuelStation.fuelType).densityLbPerGallon;
+                    const maxGallons = Math.max(Number(fuelStation.maxGallons) || 0, 0);
+                    const clampedGallons = clamp(val, 0, maxGallons);
+                    return {
+                        ...fuelStation,
+                        gallons: parseFloat(clampedGallons.toFixed(1)),
+                        weight: parseFloat(calculateFuelWeight(clampedGallons, density).toFixed(1))
+                    };
+                })()
+                : s
         ));
+    };
+
+    const handleFuelTypeChange = (id: number, fuelType: FuelType) => {
+        setStations(prev => prev.map(s => {
+            if (s.id !== id) return s;
+            const fuelStation = normalizeFuelStation(s);
+            const preset = getFuelPreset(fuelType);
+            const gallons = Number(fuelStation.gallons) || 0;
+            return {
+                ...fuelStation,
+                fuelType,
+                densityLbPerGallon: preset.densityLbPerGallon,
+                weight: parseFloat(calculateFuelWeight(gallons, preset.densityLbPerGallon).toFixed(1))
+            };
+        }));
     };
 
     const handleSaveToBooking = () => {
@@ -218,6 +303,16 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     }
 
     const envelope = aircraft?.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
+    const allX = [...envelope.map(p => p.x), results.cg].filter(n => !isNaN(n) && isFinite(n));
+    const allY = [...envelope.map(p => p.y), results.weight].filter(n => !isNaN(n) && isFinite(n));
+    const paddingX = allX.length > 1 ? (Math.max(...allX) - Math.min(...allX)) * 0.1 : 5;
+    const paddingY = allY.length > 1 ? (Math.max(...allY) - Math.min(...allY)) * 0.1 : 100;
+    const finalXMin = allX.length > 0 ? Math.min(...allX) - paddingX : 70;
+    const finalXMax = allX.length > 0 ? Math.max(...allX) + paddingX : 100;
+    const finalYMin = allY.length > 0 ? Math.min(...allY) - paddingY : 1000;
+    const finalYMax = allY.length > 0 ? Math.max(...allY) + paddingY : 3000;
+    const xAxisTicks = generateNiceTicks(finalXMin, finalXMax, 8);
+    const yAxisTicks = generateNiceTicks(finalYMin, finalYMax, 8);
     const canApprove = hasPermission('bookings-approve');
     const canOverride = hasPermission('bookings-approve-override');
     const canLogPre = hasPermission('bookings-preflight-manage');
@@ -229,40 +324,43 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const isCompleted = booking.status === 'Completed';
 
     return (
-        <div className="flex flex-col h-full gap-4 overflow-hidden">
-            <Tabs defaultValue="flight-details" className="w-full flex-1 flex flex-col min-h-0">
+        <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
+            <Tabs defaultValue="flight-details" className="flex w-full min-h-0 flex-1 flex-col">
                 <div className="shrink-0 px-1">
-                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-4 border-b-0 justify-start">
+                    <TabsList className="mb-4 h-auto flex-wrap justify-start gap-2 border-b-0 bg-transparent p-0">
                         <TabsTrigger 
                             value="flight-details" 
-                            className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground gap-2"
+                            className="gap-2 rounded-full border px-4 py-2 text-xs data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground sm:px-6 sm:text-sm"
                         >
                             <FileText className="h-4 w-4" /> Flight Details
                         </TabsTrigger>
                         <TabsTrigger 
                             value="navlog" 
-                            className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground gap-2"
+                            className="gap-2 rounded-full border px-4 py-2 text-xs data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground sm:px-6 sm:text-sm"
                         >
                             <NavIcon className="h-4 w-4" /> Navlog
                         </TabsTrigger>
                     </TabsList>
                 </div>
 
-                <div className="flex-1 min-h-0">
-                    <TabsContent value="flight-details" className="m-0 h-full">
-                        <Card className="shadow-none border flex flex-col h-[calc(100vh-240px)] overflow-hidden">
+                <div className="flex min-h-0 flex-1 flex-col">
+                    <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
+                        <Card className={cn(
+                            "flex min-h-0 flex-col overflow-hidden border shadow-none",
+                            isMobile ? "h-full flex-1" : "h-[calc(100vh-240px)]"
+                        )}>
                             <CardHeader className="border-b bg-muted/20 shrink-0">
-                                <div className="flex justify-between items-start">
-                                    <div className="space-y-1">
-                                        <CardTitle className="flex items-center gap-2">
+                                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                                    <div className="min-w-0 space-y-1">
+                                        <CardTitle className="flex flex-wrap items-center gap-2">
                                             {booking.type}
                                             <Badge variant={getStatusBadgeVariant(booking.status)}>{booking.status}</Badge>
                                         </CardTitle>
-                                        <CardDescription>
+                                        <CardDescription className="break-words">
                                             Booking Number: {booking.bookingNumber} • {aircraftLabel}
                                         </CardDescription>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex flex-wrap items-center gap-3 md:justify-end">
                                         {flightHours !== null && (
                                             <div className="text-right">
                                                 <p className="text-[10px] uppercase font-bold text-muted-foreground">Flight Time</p>
@@ -276,7 +374,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 </div>
                             </CardHeader>
                             
-                            <ScrollArea className="flex-1">
+                            <ScrollArea className="min-h-0 flex-1">
                                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
                                     <DetailItem label="Aircraft" value={aircraftLabel} />
                                     <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
@@ -476,30 +574,86 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                             This aircraft does not have a Mass & Balance profile configured.
                                         </div>
                                     ) : (
-                                        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
+                                        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8">
                                             <div className={cn("space-y-6", isCompleted && "opacity-70 pointer-events-none")}>
-                                                <div className="relative border rounded-xl p-4 bg-background overflow-hidden h-[600px]">
-                                                    <ResponsiveContainer width="100%" height="100%">
-                                                        <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
-                                                            <CartesianGrid strokeDasharray="3 3" />
-                                                            <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={['auto', 'auto']} allowDataOverflow>
-                                                                <Label value="CG (inches)" position="insideBottom" offset={-10} />
-                                                            </XAxis>
-                                                            <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={['auto', 'auto']} allowDataOverflow>
-                                                                <Label value="Weight (lbs)" angle={-90} position="insideLeft" />
-                                                            </YAxis>
-                                                            <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                                            <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} />
-                                                            <Scatter data={[{ x: results.cg, y: results.weight }]}>
-                                                                <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={2} />
-                                                            </Scatter>
-                                                        </ScatterChart>
-                                                    </ResponsiveContainer>
-                                                    
+                                                <div className="bg-card border border-border rounded-xl p-3 sm:p-4 md:p-5 relative min-h-[400px] sm:min-h-[500px] md:min-h-[580px] flex flex-col justify-center items-center overflow-hidden shadow-none">
+                                                    <div className="w-full max-w-5xl">
+                                                        <p className="mb-2 w-full pl-1 text-left text-[11px] font-semibold text-muted-foreground sm:pl-6 md:pl-8">
+                                                            Gross Weight (lbs)
+                                                        </p>
+                                                        <div className="h-[280px] sm:h-[430px] md:h-[520px]">
+                                                            <ResponsiveContainer width="100%" height="100%">
+                                                                <ScatterChart margin={{ top: 12, right: 8, bottom: 24, left: 0 }}>
+                                                                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                                                                    <XAxis
+                                                                        type="number"
+                                                                        dataKey="x"
+                                                                        name="CG"
+                                                                        unit=" in"
+                                                                        domain={[finalXMin, finalXMax]}
+                                                                        ticks={xAxisTicks}
+                                                                        allowDataOverflow
+                                                                        stroke="hsl(var(--muted-foreground))"
+                                                                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                                                                        dy={10}
+                                                                    />
+                                                                    <YAxis
+                                                                        type="number"
+                                                                        dataKey="y"
+                                                                        name="Weight"
+                                                                        unit=" lbs"
+                                                                        domain={[finalYMin, finalYMax]}
+                                                                        ticks={yAxisTicks}
+                                                                        allowDataOverflow
+                                                                        stroke="hsl(var(--muted-foreground))"
+                                                                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                                                                    />
+                                                                    <Tooltip
+                                                                        cursor={{ strokeDasharray: '3 3' }}
+                                                                        contentStyle={{
+                                                                            backgroundColor: 'hsl(var(--background))',
+                                                                            border: '1px solid hsl(var(--border))',
+                                                                            color: 'hsl(var(--foreground))'
+                                                                        }}
+                                                                    />
+                                                                    <Scatter
+                                                                        name="Envelope Line"
+                                                                        data={envelope}
+                                                                        fill="transparent"
+                                                                        line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }}
+                                                                        shape={() => null}
+                                                                        isAnimationActive={false}
+                                                                    />
+                                                                    <Scatter name="Envelope Points" data={envelope} isAnimationActive={false}>
+                                                                        {envelope.map((entry, index) => (
+                                                                            <Cell key={`history-envelope-${index}`} fill={POINT_COLORS[index % POINT_COLORS.length]} stroke="white" strokeWidth={1} />
+                                                                        ))}
+                                                                    </Scatter>
+                                                                    <Scatter
+                                                                        name="Current Load"
+                                                                        data={[{ x: results.cg, y: results.weight }]}
+                                                                        fill={results.isSafe ? "#10b981" : "#ef4444"}
+                                                                        isAnimationActive={false}
+                                                                    >
+                                                                        <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={2} />
+                                                                    </Scatter>
+                                                                </ScatterChart>
+                                                            </ResponsiveContainer>
+                                                        </div>
+                                                        <p className="mt-2 text-center text-xs text-muted-foreground sm:text-sm">
+                                                            CG (inches)
+                                                        </p>
+                                                    </div>
+
+                                                    <p className="mt-3 px-2 text-center text-[10px] leading-tight text-red-600 font-extrabold uppercase tracking-[0.2em] pointer-events-none drop-shadow-md sm:text-sm md:absolute md:bottom-24 md:left-1/2 md:mt-0 md:-translate-x-1/2 md:text-base md:whitespace-nowrap">
+                                                        CONSULT AIRCRAFT POH BEFORE FLIGHT
+                                                    </p>
+
                                                     <div className={cn(
-                                                        "absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 text-white",
-                                                        results.isSafe ? 'bg-green-600' : 'bg-red-600'
+                                                        "mt-3 self-end px-4 py-2 text-sm rounded-full font-bold shadow-lg flex items-center gap-2 sm:px-6 md:absolute md:bottom-4 md:right-4 md:mt-0",
+                                                        results.isSafe ? 'bg-green-600/90 text-white' : 'bg-red-600/90 text-white'
                                                     )}>
+                                                        <div className={cn("w-2 h-2 rounded-full", 'bg-white')} />
                                                         {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
                                                     </div>
                                                 </div>
@@ -520,46 +674,88 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                 </Card>
 
                                                 <div className={cn("space-y-4", isCompleted && "opacity-70 pointer-events-none")}>
-                                                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Loading Stations</h4>
-                                                    <div className="space-y-3">
-                                                        <div className="flex justify-between items-center text-sm border-b pb-2">
+                                                        <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Loading Stations</h4>
+                                                        <div className="space-y-3 text-sm">
+                                                            <div className="flex justify-between items-center text-sm border-b pb-2">
                                                             <span className="text-muted-foreground">Basic Empty Weight</span>
                                                             <span className="font-bold">{aircraft.emptyWeight} lbs</span>
                                                         </div>
                                                         {stations.map((s) => (
-                                                            <div key={s.id} className="space-y-1.5">
-                                                                <div className="flex justify-between items-center">
-                                                                    <UILabel className="text-xs font-semibold">{s.name}</UILabel>
-                                                                    <span className="text-[10px] text-muted-foreground">Arm: {s.arm}</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="relative flex-1">
-                                                                        <Input 
-                                                                            type="number" 
-                                                                            value={s.weight} 
-                                                                            onChange={(e) => handleStationWeightChange(s.id, e.target.value)}
-                                                                            className="h-8 text-right pr-8 text-xs"
-                                                                            disabled={isCompleted}
-                                                                        />
-                                                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-muted-foreground">LBS</span>
-                                                                    </div>
-                                                                    {s.type === 'fuel' && (
-                                                                        <div className="flex items-center gap-1 w-24">
-                                                                            <div className="relative">
-                                                                                <Input 
-                                                                                    type="number" 
-                                                                                    value={s.gallons} 
-                                                                                    onChange={(e) => handleFuelGallonsChange(s.id, e.target.value)}
-                                                                                    className="h-8 w-full p-1 text-right text-[10px] pr-8"
-                                                                                    disabled={isCompleted}
-                                                                                />
-                                                                                <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] font-bold text-muted-foreground">GAL</span>
+                                                                    <div key={s.id} className="space-y-2 text-sm">
+                                                                        <div className="flex justify-between items-center">
+                                                                            <UILabel className="text-sm font-semibold">{s.name}</UILabel>
+                <span className="text-sm text-muted-foreground">Arm: {s.arm}</span>
+                                                                        </div>
+
+                                                                        {s.type === 'fuel' ? (
+                                                                            <div className="space-y-2">
+                                                                                <Select value={(s.fuelType || 'AVGAS') as FuelType} onValueChange={(value) => handleFuelTypeChange(s.id, value as FuelType)} disabled={isCompleted}>
+                                                                                    <SelectTrigger className="h-8 text-sm">
+                                                                                        <SelectValue placeholder="Fuel type" />
+                                                                                    </SelectTrigger>
+                                                                                    <SelectContent>
+                                                                                <SelectItem value="AVGAS">Avgas (6.0 lb/gal)</SelectItem>
+                                                                                <SelectItem value="JET_A1">Jet A-1 (6.7 lb/gal)</SelectItem>
+                                                                                <SelectItem value="JET_A">Jet A (6.7 lb/gal)</SelectItem>
+                                                                                <SelectItem value="MOGAS">Mogas (6.0 lb/gal)</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                        <div className="grid grid-cols-2 gap-2">
+                                                                                        <div className="flex h-8 items-center justify-between gap-4 rounded border border-border bg-background px-3 shadow-inner">
+                                                                                            <Input
+                                                                                                type="number"
+                                                                                                value={s.gallons || ''}
+                                                                                                onChange={(e) => handleFuelGallonsChange(s.id, e.target.value)}
+                                className="h-auto w-16 border-none bg-transparent p-0 text-right text-sm font-bold shadow-none focus-visible:ring-0"
+                                                                                                disabled={isCompleted}
+                                                                                            />
+                            <span className="shrink-0 text-sm font-medium text-muted-foreground">
+                                                                                                {formatLitres(Number(s.gallons) || 0)} L
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <div className="flex h-8 items-center justify-between gap-4 rounded border border-border bg-background px-3 shadow-inner">
+                                                                                            <div className="flex items-center gap-2">
+                                                                                                <span className="text-sm font-bold text-foreground">
+                                                                                                    {Number(s.maxGallons) || 0}
+                                                                                                </span>
+                                <span className="text-sm font-semibold uppercase text-muted-foreground">max gal</span>
+                                                                                            </div>
+                            <span className="shrink-0 text-sm font-medium text-muted-foreground">
+                                                                                                {formatLitres(Number(s.maxGallons) || 0)} L
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <div className="col-span-2 rounded border border-border bg-muted/30 px-2 py-1 text-sm font-semibold text-muted-foreground text-right">
+                                                                                            <span className="text-foreground">{s.weight || 0} LB</span>
+                                                                                            <span className="mx-1 text-muted-foreground/60">/</span>
+                                                                                            <span>{formatKilograms(Number(s.weight) || 0)} KG</span>
                                                                             </div>
                                                                         </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        ))}
+                                                                        <input
+                                                                            type="range"
+                                                                            min="0"
+                                                                            max={s.maxGallons || 50}
+                                                                            value={s.gallons || 0}
+                                                                            onChange={(e) => handleFuelGallonsChange(s.id, e.target.value)}
+                                                                            className="w-full h-1 bg-muted-foreground/20 rounded-lg appearance-none cursor-pointer accent-yellow-500 block mt-1"
+                                                                            disabled={isCompleted}
+                                                                        />
+                                                                    </div>
+            ) : (
+                <div className="grid grid-cols-[minmax(0,1fr)_60px] gap-2">
+                    <Input 
+                        type="number" 
+                        value={s.weight} 
+                                                                                        onChange={(e) => handleStationWeightChange(s.id, e.target.value)}
+                                                                                        className="h-8 text-right text-base"
+                                                                                        disabled={isCompleted}
+                                                                                    />
+                                                                                    <div className="flex h-8 items-center justify-center rounded-md border border-input bg-muted/30 text-sm font-bold tracking-wide text-muted-foreground">
+                                                                                        LBS
+                                                                                    </div>
+                                                                                </div>
+            )}
+        </div>
+    ))}
                                                     </div>
                                                 </div>
                                             </div>
@@ -570,7 +766,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         </Card>
                     </TabsContent>
 
-                    <TabsContent value="navlog" className="m-0 h-full">
+                    <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
                         <NavlogBuilder booking={booking} tenantId={tenantId!} />
                     </TabsContent>
                 </div>

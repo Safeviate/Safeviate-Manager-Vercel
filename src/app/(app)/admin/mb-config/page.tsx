@@ -14,10 +14,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { calculateFuelGallonsFromWeight, calculateFuelWeight, gallonsToLitres, getFuelPreset, poundsToKilograms, type FuelType } from '@/lib/fuel';
 import type { Aircraft, AircraftModelProfile } from '@/types/aircraft';
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
-const FUEL_WEIGHT_PER_GALLON = 6;
 
 // --- HELPER 1: Generate "Nice" Ticks ---
 const generateNiceTicks = (min: number | string, max: number | string, stepCount = 6) => {
@@ -50,6 +51,20 @@ const generateNiceTicks = (min: number | string, max: number | string, stepCount
   }
 
   return ticks;
+};
+
+const formatLitres = (gallons: number) => gallonsToLitres(gallons).toFixed(1);
+const formatKilograms = (pounds: number) => poundsToKilograms(pounds).toFixed(1);
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+const normalizeFuelStation = (station: any) => {
+  if (station?.type !== 'fuel') return station;
+  const preset = getFuelPreset(station.fuelType);
+  return {
+    ...station,
+    fuelType: station.fuelType || 'AVGAS',
+    densityLbPerGallon: Number(station.densityLbPerGallon) || preset.densityLbPerGallon,
+    maxGallons: Number(station.maxGallons) || 50,
+  };
 };
 
 // --- HELPER 2: Visual Warning Component ---
@@ -106,7 +121,7 @@ const WBCalculator = () => {
   // 3. STATE: Stations
   const [stations, setStations] = useState<any[]>([
     { id: 2, name: "Pilot & Front Pax", weight: 340, arm: 85.5, type: 'standard' },
-    { id: 3, name: "Fuel", weight: 288, arm: 95.0, type: 'fuel', gallons: 48, maxGallons: 50 },
+    { id: 3, name: "Fuel", weight: 288, arm: 95.0, type: 'fuel', gallons: 48, maxGallons: 50, fuelType: 'AVGAS', densityLbPerGallon: 6.0 },
     { id: 4, name: "Rear Pax", weight: 0, arm: 118.1, type: 'standard' },
     { id: 5, name: "Baggage", weight: 0, arm: 142.8, type: 'standard' },
   ]);
@@ -162,9 +177,47 @@ const WBCalculator = () => {
     const val = parseFloat(value) || 0;
     setStations(stations.map(s => {
       if (s.id !== id) return s;
-      if (field === 'gallons') return { ...s, gallons: val, weight: val * FUEL_WEIGHT_PER_GALLON };
-      if (field === 'weight') return { ...s, weight: val, gallons: parseFloat((val / FUEL_WEIGHT_PER_GALLON).toFixed(1)) };
+      const fuelStation = normalizeFuelStation(s);
+      const density = Number(fuelStation.densityLbPerGallon) || getFuelPreset(fuelStation.fuelType).densityLbPerGallon;
+      const maxGallons = Math.max(Number(fuelStation.maxGallons) || 0, 0);
+      if (field === 'gallons') {
+        const gallons = clamp(val, 0, maxGallons);
+        return { ...fuelStation, gallons, weight: parseFloat(calculateFuelWeight(gallons, density).toFixed(1)) };
+      }
+      if (field === 'weight') {
+        const gallons = clamp(calculateFuelGallonsFromWeight(val, density), 0, maxGallons);
+        return {
+          ...fuelStation,
+          weight: parseFloat(calculateFuelWeight(gallons, density).toFixed(1)),
+          gallons: parseFloat(gallons.toFixed(1))
+        };
+      }
+      if (field === 'maxGallons') {
+        const maxGallonsValue = Math.max(val, 0);
+        const gallons = clamp(Number(fuelStation.gallons) || 0, 0, maxGallonsValue);
+        return {
+          ...fuelStation,
+          maxGallons: maxGallonsValue,
+          gallons: parseFloat(gallons.toFixed(1)),
+          weight: parseFloat(calculateFuelWeight(gallons, density).toFixed(1))
+        };
+      }
       return { ...s, [field]: val };
+    }));
+  };
+
+  const handleFuelTypeChange = (id: number, fuelType: FuelType) => {
+    setStations(stations.map(s => {
+      if (s.id !== id) return s;
+      const preset = getFuelPreset(fuelType);
+      const fuelStation = normalizeFuelStation(s);
+      const gallons = Number(fuelStation.gallons) || 0;
+      return {
+        ...fuelStation,
+        fuelType,
+        densityLbPerGallon: preset.densityLbPerGallon,
+        weight: parseFloat(calculateFuelWeight(gallons, preset.densityLbPerGallon).toFixed(1))
+      };
     }));
   };
 
@@ -185,7 +238,7 @@ const WBCalculator = () => {
         weight: 0,
         arm: 0,
         type: type,
-        ...(type === 'fuel' ? { gallons: 0, maxGallons: 50 } : {})
+        ...(type === 'fuel' ? { gallons: 0, maxGallons: 50, fuelType: 'AVGAS', densityLbPerGallon: 6.0 } : {})
     };
     setStations([...stations, newStation]);
   };
@@ -217,7 +270,7 @@ const WBCalculator = () => {
       setBasicEmpty({ weight: 1416, moment: 120360, arm: 85.0 });
       setStations([
         { id: 2, name: "Pilot & Front Pax", weight: 340, arm: 85.5, type: 'standard' },
-        { id: 3, name: "Fuel", weight: 288, arm: 95.0, type: 'fuel', gallons: 48, maxGallons: 50 },
+        { id: 3, name: "Fuel", weight: 288, arm: 95.0, type: 'fuel', gallons: 48, maxGallons: 50, fuelType: 'AVGAS', densityLbPerGallon: 6.0 },
         { id: 4, name: "Rear Pax", weight: 0, arm: 118.1, type: 'standard' },
         { id: 5, name: "Baggage", weight: 0, arm: 142.8, type: 'standard' },
       ]);
@@ -278,6 +331,8 @@ const WBCalculator = () => {
             type: s.type,
             gallons: parseFloat(String(s.gallons)) || 0,
             maxGallons: parseFloat(String(s.maxGallons)) || 0,
+            fuelType: s.fuelType,
+            densityLbPerGallon: parseFloat(String(s.densityLbPerGallon)) || 0,
         })),
     };
 
@@ -316,7 +371,7 @@ const WBCalculator = () => {
     });
 
     const newStations = aircraft.stations && aircraft.stations.length > 0 
-        ? aircraft.stations 
+        ? aircraft.stations.map(normalizeFuelStation)
         : [];
         
     setStations(newStations);
@@ -344,7 +399,7 @@ const WBCalculator = () => {
         arm: parseFloat(arm.toFixed(2)),
     });
 
-    setStations(template.stations || []);
+    setStations((template.stations || []).map(normalizeFuelStation));
     setLoadedAircraft(null);
 
     toast({ title: 'Template Loaded', description: `Template "${template.profileName}" has been loaded.` });
@@ -382,21 +437,21 @@ const WBCalculator = () => {
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
         
         {/* STICKY HEADER */}
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle>W&B Configurator</CardTitle>
+        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="min-w-0">
+            <CardTitle className="text-2xl leading-none sm:text-3xl md:text-2xl">W&B Configurator</CardTitle>
             {loadedAircraft && (
                 <CardDescription>
                     Loaded: <span className="font-semibold text-primary">{loadedAircraft.tailNumber}</span> ({loadedAircraft.model})
                 </CardDescription>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={handleReset} variant="destructive" size="sm" className="gap-2"><RotateCcw size={14} /> Reset</Button>
+          <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
+            <Button onClick={handleReset} variant="destructive" size="sm" className="gap-2 text-xs sm:text-sm"><RotateCcw size={14} /> Reset</Button>
             
             <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2"><Save size={14} /> Save as Template</Button>
+                  <Button variant="outline" size="sm" className="gap-2 text-xs sm:text-sm"><Save size={14} /> Save as Template</Button>
                 </DialogTrigger>
                 <DialogContent>
                     <DialogHeader>
@@ -421,7 +476,7 @@ const WBCalculator = () => {
 
             <Dialog open={isLoadTemplateDialogOpen} onOpenChange={setIsLoadTemplateDialogOpen}>
                 <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2"><Library size={14} /> Load Template</Button>
+                    <Button variant="outline" size="sm" className="gap-2 text-xs sm:text-sm"><Library size={14} /> Load Template</Button>
                 </DialogTrigger>
                 <DialogContent>
                     <DialogHeader>
@@ -457,7 +512,7 @@ const WBCalculator = () => {
              
              <Dialog open={isLoadAircraftDialogOpen} onOpenChange={setIsLoadAircraftDialogOpen}>
                 <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2"><Upload size={14} /> Load from Aircraft</Button>
+                    <Button variant="outline" size="sm" className="gap-2 text-xs sm:text-sm"><Upload size={14} /> Load from Aircraft</Button>
                 </DialogTrigger>
                 <DialogContent>
                     <DialogHeader>
@@ -497,7 +552,7 @@ const WBCalculator = () => {
 
              <Dialog open={isSaveAircraftDialogOpen} onOpenChange={setIsSaveAircraftDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button size="sm" className="gap-2"><Plane size={14} /> Save to Aircraft</Button>
+                  <Button size="sm" className="gap-2 text-xs sm:text-sm"><Plane size={14} /> Save to Aircraft</Button>
                 </DialogTrigger>
                 <DialogContent>
                     <DialogHeader>
@@ -538,23 +593,26 @@ const WBCalculator = () => {
         {/* SCROLLABLE CONTENT */}
         <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5">
           <ScrollArea className="h-full">
-            <div className="p-6 space-y-6 pb-24">
+            <div className="p-3 sm:p-6 space-y-6 pb-24">
               
               {/* GRAPH AREA */}
-              <div className="bg-card border border-border rounded-xl p-4 relative min-h-[500px] flex flex-col justify-center items-center overflow-hidden shadow-none">
+              <div className="bg-card border border-border rounded-xl p-3 sm:p-4 md:p-6 relative min-h-[450px] sm:min-h-[560px] md:min-h-[680px] flex flex-col justify-center items-center overflow-hidden shadow-none">
                   {offScreenStatus && (
                   <OffScreenWarning direction={offScreenStatus.dir} value={offScreenStatus.val} label={offScreenStatus.axis === 'x' ? 'CG' : 'Weight'} />
                   )}
 
-                  <ResponsiveContainer width="100%" height={500}>
-                  <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
+                  <div className="w-full max-w-6xl">
+                  <p className="mb-2 w-full pl-1 text-left text-[11px] font-semibold text-muted-foreground sm:pl-6 md:pl-8">
+                    Gross Weight (lbs)
+                  </p>
+                  <div className="h-[320px] sm:h-[500px] md:h-[620px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                  <ScatterChart margin={{ top: 12, right: 8, bottom: 24, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[finalXMin, finalXMax]} ticks={xAxisTicks} allowDataOverflow={true} stroke="hsl(var(--muted-foreground))" tick={{fill: 'hsl(var(--muted-foreground))'}} dy={10}>
                       <Label value="CG (inches)" offset={0} position="insideBottom" fill="hsl(var(--muted-foreground))" dy={10} />
                       </XAxis>
-                      <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[finalYMin, finalYMax]} ticks={yAxisTicks} allowDataOverflow={true} stroke="hsl(var(--muted-foreground))" tick={{fill: 'hsl(var(--muted-foreground))'}}>
-                      <Label value="Gross Weight (lbs)" angle={-90} position="insideLeft" fill="hsl(var(--muted-foreground))" />
-                      </YAxis>
+                      <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[finalYMin, finalYMax]} ticks={yAxisTicks} allowDataOverflow={true} stroke="hsl(var(--muted-foreground))" tick={{fill: 'hsl(var(--muted-foreground))'}} />
                       <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}/>
                       <Scatter name="Envelope Line" data={graphConfig.envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} isAnimationActive={false} />
                       <Scatter name="Envelope Points" data={graphConfig.envelope} isAnimationActive={false}>
@@ -567,12 +625,14 @@ const WBCalculator = () => {
                       </Scatter>
                   </ScatterChart>
                   </ResponsiveContainer>
+                  </div>
+                  </div>
                   
-                  <p className="absolute bottom-20 left-1/2 transform -translate-x-1/2 text-red-600 font-extrabold text-sm md:text-base uppercase tracking-widest pointer-events-none whitespace-nowrap drop-shadow-md">
+                  <p className="mt-3 px-2 text-center text-[10px] leading-tight text-red-600 font-extrabold uppercase tracking-[0.2em] pointer-events-none drop-shadow-md sm:text-sm md:absolute md:bottom-24 md:left-1/2 md:mt-0 md:-translate-x-1/2 md:text-base md:whitespace-nowrap">
                   CONSULT AIRCRAFT POH BEFORE FLIGHT
                   </p>
 
-                  <div className={cn("absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2", results.isSafe ? 'bg-green-600/90 text-white' : 'bg-red-600/90 text-white')}>
+                  <div className={cn("mt-3 self-end px-4 py-2 text-sm rounded-full font-bold shadow-lg flex items-center gap-2 sm:px-6 md:absolute md:bottom-4 md:right-4 md:mt-0", results.isSafe ? 'bg-green-600/90 text-white' : 'bg-red-600/90 text-white')}>
                   <div className={cn("w-2 h-2 rounded-full", results.isSafe ? 'bg-white' : 'bg-white animate-pulse')}></div>
                   {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
                   </div>
@@ -629,13 +689,14 @@ const WBCalculator = () => {
 
                   <div className="space-y-1">
                     {stations.map((s) => (
-                      <div key={s.id} className="group relative border-b border-border/50 last:border-0 pb-2 mb-1">
+                      <div key={s.id} className="group relative border-b border-border/50 last:border-0 pb-2 mb-1 pl-5">
 
                         {s.type === 'fuel' ? (
                            // FUEL ROW
                            <div className="pt-1">
+                              <button onClick={() => removeStation(s.id)} className="absolute left-0 top-2 text-muted-foreground hover:text-destructive transition opacity-0 group-hover:opacity-100"><Trash2 size={12}/></button>
                               <div className="grid grid-cols-12 gap-2 items-center mb-1">
-                                  <div className="col-span-5 flex items-center gap-2">
+                                  <div className="col-span-6 flex items-center gap-2 min-w-0">
                                       <Fuel size={12} className="text-yellow-500 shrink-0"/>
                                       <Input value={s.name || ''} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="bg-transparent text-xs font-bold border-none h-7 p-0 focus-visible:ring-0 shadow-none w-full" />
                                   </div>
@@ -645,30 +706,63 @@ const WBCalculator = () => {
                                   <div className="col-span-3">
                                       <Input type="number" value={s.arm || ''} onChange={(e) => handleFuelChange(s.id, 'arm', e.target.value)} className="w-full h-7 p-1 text-[10px] text-right" />
                                   </div>
-                                   <div className="col-span-1 flex justify-end">
-                                      <button onClick={() => removeStation(s.id)} className="text-muted-foreground hover:text-destructive transition opacity-0 group-hover:opacity-100"><Trash2 size={12}/></button>
-                                  </div>
                               </div>
-                              <div className="grid grid-cols-2 gap-2 mt-1">
-                                  <div className="flex items-center bg-muted/50 border border-border rounded px-2 py-0.5 shadow-inner">
-                                      <Input type="number" value={s.gallons || ''} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
-                                          className="w-10 bg-transparent text-[10px] font-bold text-right text-yellow-600 border-none shadow-none focus-visible:ring-0 p-0 h-auto" placeholder="0" />
-                                      <span className="text-[9px] text-muted-foreground ml-1 font-semibold uppercase">gal</span>
+                              <div className="mb-2">
+                                  <Select value={(s.fuelType || 'AVGAS') as FuelType} onValueChange={(value) => handleFuelTypeChange(s.id, value as FuelType)}>
+                                      <SelectTrigger className="h-7 text-[10px]">
+                                          <SelectValue placeholder="Fuel type" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                          <SelectItem value="AVGAS">Avgas (6.0 lb/gal)</SelectItem>
+                                          <SelectItem value="JET_A1">Jet A-1 (6.7 lb/gal)</SelectItem>
+                                          <SelectItem value="JET_A">Jet A (6.7 lb/gal)</SelectItem>
+                                          <SelectItem value="MOGAS">Mogas (6.0 lb/gal)</SelectItem>
+                                      </SelectContent>
+                                  </Select>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 mt-2">
+                                  <div className="flex h-7 items-center justify-between rounded border border-border bg-muted/50 px-2 shadow-inner">
+                                      <Input
+                                          type="number"
+                                          value={s.gallons || ''}
+                                          onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
+                                          className="h-auto w-12 border-none bg-transparent p-0 text-right text-[10px] font-bold shadow-none focus-visible:ring-0"
+                                          placeholder="0"
+                                      />
+                                      <span className="text-[9px] font-medium text-muted-foreground">
+                                          {formatLitres(Number(s.gallons) || 0)} L
+                                      </span>
                                   </div>
-                                   <div className="flex items-center bg-muted/50 border border-border rounded px-2 py-0.5 shadow-inner">
-                                      <Input type="number" value={s.maxGallons || ''} onChange={(e) => updateStation(s.id, 'maxGallons', e.target.value)}
-                                          className="w-10 bg-transparent text-[10px] font-bold text-right border-none shadow-none focus-visible:ring-0 p-0 h-auto" placeholder="0" />
-                                      <span className="text-[9px] text-muted-foreground ml-1 font-semibold uppercase">max</span>
+                                  <div className="flex h-7 items-center justify-between rounded border border-border bg-muted/50 px-2 shadow-inner">
+                                      <div className="flex items-center gap-1">
+                                          <Input
+                                              type="number"
+                                              value={s.maxGallons || ''}
+                                              onChange={(e) => updateStation(s.id, 'maxGallons', e.target.value)}
+                                              className="h-auto w-12 border-none bg-transparent p-0 text-right text-[10px] font-bold shadow-none focus-visible:ring-0"
+                                              placeholder="0"
+                                          />
+                                          <span className="text-[9px] font-semibold uppercase text-muted-foreground">max gal</span>
+                                      </div>
+                                      <span className="text-[9px] font-medium text-muted-foreground">
+                                          {formatLitres(Number(s.maxGallons) || 0)} L
+                                      </span>
+                                  </div>
+                                  <div className="col-span-2 rounded border border-border bg-muted/30 px-2 py-1 text-[10px] font-semibold text-muted-foreground text-right">
+                                      <span className="text-foreground">{s.weight || 0} LB</span>
+                                      <span className="mx-1 text-muted-foreground/60">/</span>
+                                      <span>{formatKilograms(Number(s.weight) || 0)} KG</span>
                                   </div>
                               </div>
                               <input type="range" min="0" max={s.maxGallons || 50} value={s.gallons || 0}
                                       onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)}
-                                      className="w-full h-1 bg-muted-foreground/20 rounded-lg appearance-none cursor-pointer accent-yellow-500 block mt-2" />
+                                      className="w-full h-1 bg-muted-foreground/20 rounded-lg appearance-none cursor-pointer accent-yellow-500 block mt-3" />
                            </div>
                         ) : (
                           // STANDARD ROW
                           <div className="grid grid-cols-12 gap-2 items-center py-1">
-                              <div className="col-span-5">
+                              <button onClick={() => removeStation(s.id)} className="absolute left-0 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive transition opacity-0 group-hover:opacity-100"><Trash2 size={12}/></button>
+                              <div className="col-span-6 min-w-0">
                                   <Input value={s.name || ''} onChange={(e) => updateStation(s.id, 'name', e.target.value)} className="bg-transparent text-xs font-medium border-none h-7 p-0 focus-visible:ring-0 shadow-none w-full" placeholder="Item Name" />
                               </div>
                               <div className="col-span-3">
@@ -676,9 +770,6 @@ const WBCalculator = () => {
                               </div>
                               <div className="col-span-3">
                                    <Input type="number" value={s.arm || ''} onChange={(e) => updateStation(s.id, 'arm', e.target.value)} className="w-full h-7 p-1 text-[10px] text-right" />
-                              </div>
-                              <div className="col-span-1 flex justify-end">
-                                  <button onClick={() => removeStation(s.id)} className="text-muted-foreground hover:text-destructive transition opacity-0 group-hover:opacity-100"><Trash2 size={12}/></button>
                               </div>
                           </div>
                         )}

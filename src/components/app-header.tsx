@@ -61,10 +61,10 @@ export function AppHeader() {
   const title = getTitle(pathname);
 
   return (
-    <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-header px-4 text-header-foreground sm:px-6 landscape:max-md:hidden">
-      <SidebarTrigger className={cn('md:hidden', !isMobile && 'hidden')} />
+    <header className="sticky top-0 z-10 flex h-14 min-w-0 items-center gap-3 border-b bg-header px-3 text-header-foreground sm:px-6">
+      <SidebarTrigger className={cn(isMobile ? '' : 'hidden')} />
       {title && (
-        <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
+        <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg">{title}</h1>
       )}
     </header>
   );

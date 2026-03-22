@@ -260,7 +260,7 @@ const SidebarMobileContent = React.forwardRef<
       ref={ref}
       side="left"
       className={cn(
-        "flex w-[--sidebar-width-mobile] flex-col bg-sidebar p-2 text-sidebar-foreground",
+        "flex w-[min(var(--sidebar-width-mobile),calc(100vw-1rem))] flex-col bg-sidebar p-2 text-sidebar-foreground",
         className
       )}
       style={

@@ -1,3 +1,5 @@
+import type { FuelType } from '@/lib/fuel';
+
 export interface AircraftComponent {
     id: string;
     manufacturer: string;
@@ -58,6 +60,8 @@ export interface Aircraft {
         type: string;
         gallons?: number;
         maxGallons?: number;
+        fuelType?: FuelType;
+        densityLbPerGallon?: number;
     }[];
     cgEnvelope?: {
         weight: number;

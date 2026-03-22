@@ -19,8 +19,8 @@ export default function AppLayout({
         {isMobile ? <AppSidebarMobile /> : <AppSidebar />}
         <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
             <AppHeader />
-            <SidebarInset className="p-4 lg:p-6 flex-1 overflow-hidden md:pb-4 min-h-0">
-            <div className="w-full max-w-[1400px] mx-auto h-full flex flex-col overflow-hidden">
+            <SidebarInset className="flex-1 min-h-0 overflow-hidden p-3 md:pb-4 md:p-4 lg:p-6">
+            <div className="mx-auto flex h-full w-full max-w-[1400px] min-w-0 flex-col overflow-hidden">
                 <OverdueBookingMonitor />
                 {children}
             </div>
