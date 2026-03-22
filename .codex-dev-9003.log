@@ -1,0 +1,191 @@
+   ▲ Next.js 15.5.9
+   - Local:        http://localhost:9003
+   - Network:      http://172.20.184.2:9003
+
+ ✓ Starting...
+ ✓ Ready in 3.7s
+ ○ Compiling /login ...
+ ✓ Compiled /login in 16.9s (882 modules)
+ GET /login 200 in 14513ms
+ ○ Compiling / ...
+ ✓ Compiled /favicon.ico in 18.7s (912 modules)
+ GET /favicon.ico 200 in 12191ms
+ GET / 307 in 16443ms
+ GET /login 200 in 521ms
+ GET / 307 in 220ms
+ GET /login 200 in 165ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 7.3s (2569 modules)
+ GET /dashboard 200 in 8011ms
+ ○ Compiling /quality/audit-schedule ...
+ ✓ Compiled /quality/audit-schedule in 2.6s (2618 modules)
+ GET /quality/audit-schedule 200 in 2937ms
+ ✓ Compiled in 2.5s (2603 modules)
+ GET /quality/audit-schedule 200 in 443ms
+ ✓ Compiled in 2.8s (2603 modules)
+ GET /quality/audit-schedule 200 in 786ms
+ ✓ Compiled in 3s (2603 modules)
+ GET /quality/audit-schedule 200 in 721ms
+ ✓ Compiled in 5.1s (2603 modules)
+ GET /quality/audit-schedule 200 in 841ms
+ GET /quality/audit-schedule 200 in 1455ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 2.8s (1480 modules)
+ GET /favicon.ico 200 in 3303ms
+ ✓ Compiled in 4.3s (2589 modules)
+ ✓ Compiled in 1969ms (2603 modules)
+ GET /quality/audit-schedule 200 in 2291ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 671ms (1480 modules)
+ GET /favicon.ico 200 in 1235ms
+ GET /favicon.ico 200 in 70ms
+ ✓ Compiled in 4.7s (2603 modules)
+ GET /quality/audit-schedule 200 in 977ms
+ ✓ Compiled in 3.6s (2603 modules)
+ GET /quality/audit-schedule 200 in 821ms
+ GET /quality/audit-schedule 200 in 1794ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 985ms (1480 modules)
+ GET /favicon.ico 200 in 1515ms
+ ✓ Compiled in 3.6s (2603 modules)
+ GET /quality/audit-schedule 200 in 755ms
+ GET /quality/audit-schedule 200 in 2508ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 868ms (1480 modules)
+ GET /favicon.ico 200 in 1296ms
+ ✓ Compiled in 4.5s (2603 modules)
+ GET /quality/audit-schedule 200 in 885ms
+ ○ Compiling /bookings/schedule ...
+ ✓ Compiled /bookings/schedule in 10.9s (2784 modules)
+ GET /bookings/schedule 200 in 12036ms
+ GET /bookings/schedule 200 in 311ms
+ ○ Compiling /operations/emergency-response ...
+ ✓ Compiled /operations/emergency-response in 8.3s (2887 modules)
+ GET /operations/emergency-response 200 in 8992ms
+ ○ Compiling /bookings/history ...
+ ✓ Compiled /bookings/history in 3.6s (2900 modules)
+ GET /bookings/history 200 in 4249ms
+ GET /bookings/schedule 200 in 151ms
+ GET /bookings/history 200 in 95ms
+ ○ Compiling /bookings/history/[id] ...
+ ✓ Compiled /bookings/history/[id] in 3.6s (2940 modules)
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 6188ms
+ ○ Compiling /admin/page-format ...
+ ✓ Compiled /admin/page-format in 9s (2890 modules)
+ GET /admin/page-format 200 in 9729ms
+ GET /bookings/history 200 in 264ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1114ms
+ ✓ Compiled in 5.5s (2897 modules)
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 2074ms
+ GET /bookings/schedule 200 in 530ms
+ ✓ Compiled in 985ms (1325 modules)
+ GET /bookings/schedule 200 in 242ms
+ ○ Compiling /quality/audit-schedule ...
+ ✓ Compiled /quality/audit-schedule in 1707ms (1579 modules)
+ GET /quality/audit-schedule 200 in 2118ms
+ ✓ Compiled in 833ms (1325 modules)
+ GET /quality/audit-schedule 200 in 311ms
+ GET /bookings/history 200 in 161ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1191ms
+ ✓ Compiled in 4.8s (2873 modules)
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 2045ms
+ ✓ Compiled in 1216ms (1325 modules)
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1410ms
+ ✓ Compiled in 928ms (1325 modules)
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1315ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 3418ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 5.5s (1565 modules)
+ GET /favicon.ico 200 in 6294ms
+ GET /admin/page-format 200 in 227ms
+ GET /bookings/history 200 in 328ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1076ms
+ ✓ Compiled in 12.1s (2873 modules)
+ ✓ Compiled in 1136ms (1325 modules)
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 5062ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 3680ms
+ GET /bookings/history 200 in 163ms
+ GET /admin/page-format 200 in 141ms
+ ✓ Compiled in 9.8s (2873 modules)
+ GET /bookings/history 200 in 4151ms
+ GET /bookings/history 200 in 254ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1115ms
+ GET /bookings/history 200 in 189ms
+ GET /admin/page-format 200 in 155ms
+ GET /bookings/history 200 in 109ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1160ms
+ GET /admin/page-format 200 in 188ms
+ ○ Compiling /admin/mb-config ...
+ ✓ Compiled /admin/mb-config in 14.8s (2878 modules)
+ GET /admin/mb-config 200 in 16040ms
+ GET /admin/mb-config 200 in 1056ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 6.5s (2892 modules)
+ ✓ Compiled (2971 modules)
+ GET /dashboard 200 in 8590ms
+ GET /dashboard 200 in 157ms
+ GET /admin/mb-config 200 in 121ms
+ GET /bookings/history 200 in 161ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1296ms
+ GET /admin/page-format 200 in 133ms
+ GET /bookings/history 200 in 99ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1255ms
+ GET /admin/page-format 200 in 166ms
+ GET /bookings/history 200 in 113ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1119ms
+ ✓ Compiled in 7.5s (2919 modules)
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1747ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 3746ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 4.2s (1603 modules)
+ GET /favicon.ico 200 in 5207ms
+ GET /admin/page-format 200 in 227ms
+ GET /bookings/history 200 in 141ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 985ms
+ GET /admin/mb-config 200 in 143ms
+ ✓ Compiled in 4.9s (2919 modules)
+ GET /admin/mb-config 200 in 628ms
+ GET /bookings/history 200 in 112ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1187ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 4642ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1121ms (1603 modules)
+ GET /favicon.ico 200 in 1649ms
+ ✓ Compiled in 5.3s (2919 modules)
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1908ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 4957ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1253ms (1603 modules)
+ GET /favicon.ico 200 in 1715ms
+ ✓ Compiled in 5s (2919 modules)
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1606ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 2369ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1102ms (1603 modules)
+ GET /favicon.ico 200 in 1598ms
+ ✓ Compiled in 4.3s (2919 modules)
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1490ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 2490ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1711ms (1603 modules)
+ GET /favicon.ico 200 in 2106ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 3375ms
+ GET /favicon.ico 200 in 88ms
+ ✓ Compiled in 7.2s (2919 modules)
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 2007ms
+ ✓ Compiled in 5.2s (2919 modules)
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1722ms
+ GET /admin/page-format 200 in 180ms
+ GET /bookings/history 200 in 206ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1185ms
+ GET /bookings/history 200 in 213ms
+ ✓ Compiled in 12.5s (2919 modules)
+ GET /bookings/history 200 in 3363ms
+ GET /bookings/history 200 in 4289ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 3.3s (1603 modules)
+ GET /favicon.ico 200 in 3947ms
+ ✓ Compiled in 3.7s (2919 modules)
+ GET /bookings/history 200 in 532ms
+ GET /bookings/history 200 in 115ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1171ms
