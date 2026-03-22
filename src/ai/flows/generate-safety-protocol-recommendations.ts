@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview This file defines a Genkit flow for generating safety protocol recommendations based on past incident reports.
  *

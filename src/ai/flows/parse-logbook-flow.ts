@@ -1,5 +1,3 @@
-
-'use server';
 /**
  * @fileOverview This file defines a Genkit flow for parsing the visual structure of a logbook table, including nested headers.
  */

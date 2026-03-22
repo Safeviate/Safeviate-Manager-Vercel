@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview This file defines a Genkit flow for parsing a document (text or image) and extracting checklist sections and items.
  */

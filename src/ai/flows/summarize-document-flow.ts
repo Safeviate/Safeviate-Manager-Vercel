@@ -1,5 +1,3 @@
-
-'use server';
 /**
  * @fileOverview This file defines a Genkit flow for parsing a document (text or image) and extracting compliance requirements, including hierarchical relationships.
  */

@@ -1,5 +1,3 @@
-'use server';
-
 /**
  * @fileOverview Summarizes recent aircraft maintenance logs using AI to identify recurring issues and prioritize tasks.
  *
