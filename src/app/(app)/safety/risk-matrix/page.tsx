@@ -15,7 +15,6 @@ import { Pencil, Check, ShieldCheck, Printer, LayoutGrid, AlertTriangle } from '
 import { usePermissions } from '@/hooks/use-permissions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 const defaultLikelihoods = [
     { name: 'Frequent', description: 'Likely to occur many times.', value: 5 },
@@ -49,6 +48,7 @@ export default function RiskMatrixPage() {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const canManage = hasPermission('risk-matrix-manage-definitions');
+  const canEditColors = hasPermission('risk-matrix-edit-colors');
 
   const settingsRef = useMemoFirebase(() => (
     firestore ? doc(firestore, 'tenants', tenantId, 'settings', settingsId) : null
@@ -111,7 +111,7 @@ export default function RiskMatrixPage() {
   };
 
   const handleCellInteraction = (cellId: string) => {
-      if (!canManage) return;
+      if (!canEditColors) return;
       setActiveCell(cellId);
       if (colorInputRef.current) {
           colorInputRef.current.click();
@@ -150,14 +150,14 @@ export default function RiskMatrixPage() {
           </div>
         </CardHeader>
         
-        <CardContent className="flex-1 p-0 overflow-hidden bg-background">
-            <ScrollArea className="h-full">
-                <div className="p-6 space-y-10 pb-24">
+        <CardContent className="flex-1 overflow-y-auto bg-background p-0">
+                <div className="space-y-10 p-4 pb-24 sm:p-6">
                   
                   {/* Matrix Container with Horizontal Scroll */}
-                  <div className="w-full overflow-x-auto border rounded-xl bg-muted/5 shadow-sm p-6 overflow-y-hidden">
-                    <div className="min-w-[600px] mx-auto max-w-2xl">
-                        <div className="grid grid-cols-[120px_repeat(5,1fr)] gap-2">
+                  <div className="overflow-hidden rounded-xl border bg-muted/5 shadow-sm">
+                    <div className="w-full overflow-x-auto overflow-y-hidden [scrollbar-gutter:stable] touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
+                    <div className="min-w-[760px] px-4 py-4 sm:px-6 sm:py-6">
+                        <div className="grid grid-cols-[140px_repeat(5,110px)] gap-2">
                             <div className="flex items-center justify-center p-2 bg-muted/50 rounded-lg border border-dashed text-center">
                                 <span className="text-[8px] font-black uppercase text-muted-foreground tracking-tighter">Impact</span>
                             </div>
@@ -188,7 +188,7 @@ export default function RiskMatrixPage() {
                                                 style={{ backgroundColor: color }}
                                                 className={cn(
                                                     "h-12 rounded-lg shadow-sm flex items-center justify-center font-black text-[10px] text-black transition-all border-2 border-white/20",
-                                                    canManage ? "hover:scale-[1.03] cursor-pointer" : "cursor-default"
+                                                    canEditColors ? "hover:scale-[1.03] cursor-pointer" : "cursor-default"
                                                 )}
                                             >
                                                 <span className="drop-shadow-sm opacity-90">{cellId}</span>
@@ -205,6 +205,7 @@ export default function RiskMatrixPage() {
                         className="hidden" 
                         onChange={(e) => activeCell && handleColorChange(activeCell, e.target.value)}
                     />
+                    </div>
                   </div>
 
                   <Separator />
@@ -293,7 +294,6 @@ export default function RiskMatrixPage() {
                     </div>
                   </div>
                 </div>
-            </ScrollArea>
         </CardContent>
       </Card>
     </div>

@@ -338,20 +338,23 @@ export default function DashboardPage() {
                     </Card>
                 </div>
 
-                <Card className="flex flex-col">
+                <Card className="flex flex-col overflow-hidden">
                     <CardHeader>
                         <CardTitle>Compliance Score Trend</CardTitle>
                         <CardDescription>Performance score over the last 6 audits.</CardDescription>
                     </CardHeader>
-                    <CardContent className="h-[350px]">
-                        <ChartContainer config={{ score: { label: 'Compliance %', color: 'hsl(var(--chart-2))' } }}>
+                    <CardContent className="h-[320px] overflow-hidden pt-2">
+                        <ChartContainer
+                            className="h-full w-full overflow-hidden aspect-auto"
+                            config={{ score: { label: 'Compliance %', color: 'hsl(var(--chart-2))' } }}
+                        >
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={stats.auditTrendData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                                <LineChart data={stats.auditTrendData} margin={{ top: 12, right: 12, left: 8, bottom: 8 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                     <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                                     <YAxis domain={[0, 100]} stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}%`} />
                                     <ChartTooltip content={<ChartTooltipContent />} />
-                                    <Line type="monotone" dataKey="score" stroke="var(--color-score)" strokeWidth={3} dot={{ r: 6, fill: 'var(--color-score)' }} activeDot={{ r: 8 }} />
+                                    <Line type="monotone" dataKey="score" stroke="var(--color-score)" strokeWidth={3} dot={{ r: 5, fill: 'var(--color-score)' }} activeDot={{ r: 7 }} />
                                 </LineChart>
                             </ResponsiveContainer>
                         </ChartContainer>

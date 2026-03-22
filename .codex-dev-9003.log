@@ -3,98 +3,89 @@
    - Network:      http://172.20.184.85:9003
 
  ✓ Starting...
- ✓ Ready in 2.5s
- ○ Compiling / ...
- ✓ Compiled / in 3.3s (868 modules)
- GET / 307 in 4008ms
+ ✓ Ready in 2.3s
  ○ Compiling /login ...
- ✓ Compiled /login in 2.5s (881 modules)
- GET /login 200 in 2302ms
- GET / 307 in 287ms
- GET /login 200 in 109ms
- ✓ Compiled /favicon.ico in 305ms (606 modules)
- GET /favicon.ico 200 in 483ms
- ○ Compiling /dashboard ...
- ✓ Compiled /dashboard in 3.8s (2571 modules)
- GET /dashboard 200 in 4171ms
- ○ Compiling /admin/mb-config ...
- ✓ Compiled /admin/mb-config in 2s (2620 modules)
- GET /admin/mb-config 200 in 2227ms
- ✓ Compiled in 1423ms (2605 modules)
- GET /admin/mb-config 200 in 757ms
- GET /admin/mb-config 200 in 1406ms
- ✓ Compiled /favicon.ico in 346ms (1481 modules)
- GET /favicon.ico 200 in 557ms
- GET /admin/mb-config 200 in 1007ms
- GET /favicon.ico 200 in 66ms
- GET /admin/mb-config 200 in 113ms
- GET /favicon.ico 200 in 56ms
- ✓ Compiled / in 493ms (1493 modules)
- GET / 307 in 1300ms
- GET /login 200 in 122ms
- GET /dashboard 200 in 91ms
- GET /admin/mb-config 200 in 76ms
- ○ Compiling /admin/page-format ...
- ✓ Compiled /admin/page-format in 2.1s (2626 modules)
- GET /admin/page-format 200 in 2550ms
- GET /admin/mb-config 200 in 81ms
- ✓ Compiled in 1082ms (2626 modules)
- ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
- GET /admin/mb-config 200 in 1011ms
- ✓ Compiled /favicon.ico in 465ms (1500 modules)
- GET /favicon.ico 200 in 736ms
- ✓ Compiled in 1468ms (2640 modules)
- GET /admin/mb-config 200 in 285ms
- ✓ Compiled in 1029ms (2640 modules)
- GET /admin/mb-config 200 in 205ms
- ○ Compiling /bookings/history ...
- ✓ Compiled /bookings/history in 2.9s (2749 modules)
- GET /bookings/history 200 in 3175ms
- ○ Compiling /bookings/history/[id] ...
- ✓ Compiled /bookings/history/[id] in 1563ms (2836 modules)
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 3173ms
- GET /admin/mb-config 200 in 92ms
- GET /bookings/history 200 in 58ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 793ms
- ○ Compiling /bookings/schedule ...
- ✓ Compiled /bookings/schedule in 1564ms (2904 modules)
- GET /bookings/schedule 200 in 1732ms
- GET /bookings/history/kIDO7vBSvi6OyKwGo3Z5 200 in 843ms
- GET /admin/mb-config 200 in 906ms
- GET /bookings/history 200 in 95ms
- GET /bookings/history/kIDO7vBSvi6OyKwGo3Z5 200 in 774ms
- ✓ Compiled in 499ms (1294 modules)
- GET /bookings/history/kIDO7vBSvi6OyKwGo3Z5 200 in 808ms
- GET /bookings/history/kIDO7vBSvi6OyKwGo3Z5 200 in 867ms
- ○ Compiling /favicon.ico ...
- ✓ Compiled /favicon.ico in 709ms (1562 modules)
- GET /favicon.ico 200 in 938ms
- GET /bookings/history 200 in 250ms
+ ✓ Compiled /login in 6.6s (891 modules)
+ GET /login 200 in 7335ms
+ ✓ Compiled in 815ms (305 modules)
  ○ Compiling / ...
- ✓ Compiled / in 535ms (1574 modules)
- GET / 307 in 1149ms
- ✓ Compiled /login in 424ms (1579 modules)
- GET /login 200 in 771ms
- ✓ Compiled /dashboard in 319ms (1646 modules)
- GET /dashboard 200 in 452ms
- ○ Compiling /admin/mb-config ...
- ✓ Compiled /admin/mb-config in 570ms (1639 modules)
- GET /admin/mb-config 200 in 694ms
- GET /bookings/history 200 in 56ms
- GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 839ms
- GET /bookings/history 200 in 31ms
- GET /bookings/schedule 200 in 53ms
- GET /bookings/history/oiuV1OjnpFvOqrBfuU4t 200 in 811ms
- GET /login 200 in 84ms
- GET /login 200 in 57ms
- GET /login 200 in 391ms
- GET /favicon.ico 200 in 74ms
- ✓ Compiled in 1654ms (2825 modules)
- GET /login 200 in 546ms
- ✓ Compiled in 958ms (2825 modules)
- GET /login 200 in 147ms
+ ✓ Compiled / in 960ms (881 modules)
+ GET / 307 in 1770ms
+ GET /login 200 in 171ms
  ○ Compiling /dashboard ...
- ✓ Compiled /dashboard in 510ms (1610 modules)
- GET /dashboard 200 in 768ms
- GET /login 200 in 54ms
- GET /login 200 in 30ms
+ ✓ Compiled /dashboard in 4.9s (2554 modules)
+ GET /dashboard 200 in 5229ms
+ ✓ Compiled /safety/risk-matrix in 466ms (2573 modules)
+ GET /safety/risk-matrix 200 in 578ms
+ ○ Compiling /users/personnel ...
+ ✓ Compiled /users/personnel in 1873ms (2636 modules)
+ GET /users/personnel 200 in 2170ms
+ ○ Compiling /users/personnel/[id] ...
+ ✓ Compiled /users/personnel/[id] in 1677ms (2721 modules)
+ GET /users/personnel/ZBvYrIngnOcjyBRgljHhTwiSuJU2?type=Personnel 200 in 3194ms
+ GET /users/personnel/ZBvYrIngnOcjyBRgljHhTwiSuJU2?type=Personnel 200 in 808ms
+ ✓ Compiled in 1339ms (2735 modules)
+ GET /users/personnel/ZBvYrIngnOcjyBRgljHhTwiSuJU2?type=Personnel 200 in 1076ms
+ GET /safety/risk-matrix 200 in 96ms
+ GET /safety/risk-matrix 200 in 1068ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1721ms (1549 modules)
+ GET /favicon.ico 200 in 2079ms
+ ✓ Compiled / in 1992ms (2752 modules)
+ ✓ Compiled (2764 modules)
+ GET / 307 in 1766ms
+ GET /login 200 in 90ms
+ GET /dashboard 200 in 54ms
+ GET /safety/risk-matrix 200 in 43ms
+ GET /users/personnel 200 in 116ms
+ GET /users/personnel/ZBvYrIngnOcjyBRgljHhTwiSuJU2?type=Personnel 200 in 1137ms
+ GET /safety/risk-matrix 200 in 54ms
+ ✓ Compiled in 1191ms (2735 modules)
+ GET /safety/risk-matrix 200 in 244ms
+ GET /safety/risk-matrix 200 in 483ms
+ ✓ Compiled /favicon.ico in 300ms (1549 modules)
+ GET /favicon.ico 200 in 434ms
+ ○ Compiling / ...
+ ✓ Compiled / in 536ms (1561 modules)
+ GET / 307 in 1080ms
+ GET /login 200 in 90ms
+ GET /dashboard 200 in 118ms
+ GET /safety/risk-matrix 200 in 78ms
+ ✓ Compiled in 1056ms (2735 modules)
+ GET /safety/risk-matrix 200 in 186ms
+ ○ Compiling /safety/risk-register ...
+ ✓ Compiled /safety/risk-register in 3.4s (2788 modules)
+ GET /safety/risk-register 200 in 3834ms
+ GET /safety/risk-register 200 in 70ms
+ ○ Compiling /admin/page-format ...
+ ✓ Compiled /admin/page-format in 1323ms (2808 modules)
+ GET /admin/page-format 200 in 1694ms
+ ○ Compiling /admin/external ...
+ ✓ Compiled /admin/external in 1075ms (2817 modules)
+ GET /admin/external 200 in 1299ms
+ ○ Compiling /training/student-progress ...
+ ✓ Compiled /training/student-progress in 942ms (2231 modules)
+ GET /training/student-progress 200 in 1114ms
+ ○ Compiling /training/student-progress/[reportId] ...
+ ✓ Compiled /training/student-progress/[reportId] in 881ms (2242 modules)
+ GET /training/student-progress/p30kFv0VZxSkAHrgBHo5cPKxo2D3 200 in 2351ms
+ GET /training/student-progress 200 in 95ms
+ GET /admin/page-format 200 in 74ms
+ ○ Compiling /admin/accounting ...
+ ✓ Compiled /admin/accounting in 917ms (2208 modules)
+ GET /admin/accounting 200 in 1134ms
+ ✓ Compiled /dashboard in 482ms (1508 modules)
+ GET /dashboard 200 in 688ms
+ ○ Compiling /admin/document-dates ...
+ ✓ Compiled /admin/document-dates in 871ms (2771 modules)
+ GET /admin/document-dates 200 in 1046ms
+ ○ Compiling /admin/mb-config ...
+ ✓ Compiled /admin/mb-config in 1121ms (2770 modules)
+ GET /admin/mb-config 200 in 1329ms
+ ○ Compiling /admin/page-format ...
+ ✓ Compiled /admin/page-format in 559ms (1516 modules)
+ GET /admin/page-format 200 in 775ms
+ GET /admin/mb-config 200 in 76ms
+ GET /dashboard 200 in 84ms
+ ✓ Compiled in 2.7s (2778 modules)
+ GET /dashboard 200 in 306ms
