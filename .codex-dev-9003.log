@@ -189,3 +189,196 @@
  GET /bookings/history 200 in 532ms
  GET /bookings/history 200 in 115ms
  GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1171ms
+ ⨯ ./src/app/(app)/admin/mb-config/page.tsx
+Error:   [31mx[0m Expression expected
+     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:437:1]
+ [2m434[0m |   return (
+ [2m435[0m |     <div className="flex flex-col h-full overflow-hidden gap-4">
+ [2m436[0m |       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
+ [2m437[0m | <<<<<<< HEAD
+     : [35;1m ^^[0m
+ [2m438[0m |         
+ [2m439[0m |         {/* STICKY HEADER */}
+ [2m439[0m |         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+     `----
+  [31mx[0m Expression expected
+     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:437:1]
+ [2m434[0m |   return (
+ [2m435[0m |     <div className="flex flex-col h-full overflow-hidden gap-4">
+ [2m436[0m |       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
+ [2m437[0m | <<<<<<< HEAD
+     : [35;1m   ^^[0m
+ [2m438[0m |         
+ [2m439[0m |         {/* STICKY HEADER */}
+ [2m439[0m |         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+     `----
+  [31mx[0m Expression expected
+     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:437:1]
+ [2m434[0m |   return (
+ [2m435[0m |     <div className="flex flex-col h-full overflow-hidden gap-4">
+ [2m436[0m |       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
+ [2m437[0m | <<<<<<< HEAD
+     : [35;1m     ^^[0m
+ [2m438[0m |         
+ [2m439[0m |         {/* STICKY HEADER */}
+ [2m439[0m |         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+     `----
+  [31mx[0m Merge conflict marker encountered.
+     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:444:1]
+ [2m441[0m |           <div className="min-w-0">
+ [2m442[0m |             <CardTitle className="text-2xl leading-none sm:text-3xl md:text-2xl">W&B Configurator</CardTitle>
+ [2m443[0m |             {loadedAircraft && (
+ [2m444[0m | =======
+     : [35;1m^^^^^^^[0m
+ [2m445[0m |         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-4 md:p-6">
+ [2m446[0m |           <div className="space-y-1">
+ [2m446[0m |             <CardTitle>M&B Configurator</CardTitle>
+     `----
+  [31mx[0m Merge conflict marker encountered.
+     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:449:1]
+ [2m446[0m |           <div className="space-y-1">
+ [2m447[0m |             <CardTitle>M&B Configurator</CardTitle>
+ [2m448[0m |             {loadedAircraft ? (
+ [2m449[0m | >>>>>>> 7be267ee72828ef6aa5f54104b1458941a08cb4f
+     : [35;1m^^^^^^^[0m
+ [2m450[0m |                 <CardDescription>
+ [2m451[0m |                     Loaded: <span className="font-semibold text-primary">{loadedAircraft.tailNumber}</span> ({loadedAircraft.model})
+ [2m451[0m |                 </CardDescription>
+     `----
+  [31mx[0m Expression expected
+     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:457:1]
+ [2m454[0m |                 <CardDescription>Build reusable weight and balance profiles.</CardDescription>
+ [2m455[0m |             )}
+ [2m456[0m |           </div>
+ [2m457[0m | <<<<<<< HEAD
+     : [35;1m ^^[0m
+ [2m458[0m |           <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
+ [2m459[0m |             <Button onClick={handleReset} variant="destructive" size="sm" className="gap-2 text-xs sm:text-sm"><RotateCcw size={14} /> Reset</Button>
+ [2m459[0m |             
+     `----
+  [31mx[0m Expression expected
+     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:457:1]
+ [2m454[0m |                 <CardDescription>Build reusable weight and balance profiles.</CardDescription>
+ [2m455[0m |             )}
+ [2m456[0m |           </div>
+ [2m457[0m | <<<<<<< HEAD
+     : [35;1m   ^^[0m
+ [2m458[0m |           <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
+ [2m459[0m |             <Button onClick={handleReset} variant="destructive" size="sm" className="gap-2 text-xs sm:text-sm"><RotateCcw size={14} /> Reset</Button>
+ [2m459[0m |             
+     `----
+  [31mx[0m Expression expected
+     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:457:1]
+ [2m454[0m |                 <CardDescription>Build reusable weight and balance profiles.</CardDescription>
+ [2m455[0m |             )}
+ [2m456[0m |           </div>
+ [2m457[0m | <<<<<<< HEAD
+     : [35;1m     ^^[0m
+ [2m458[0m |           <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
+ [2m459[0m |             <Button onClick={handleReset} variant="destructive" size="sm" className="gap-2 text-xs sm:text-sm"><RotateCcw size={14} /> Reset</Button>
+ [2m459[0m |             
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/(app)/admin/mb-config/page.tsx
+ ✓ Compiled in 7.4s (2919 modules)
+ ⨯ ./src/app/(app)/admin/mb-config/page.tsx
+Error:   [31mx[0m Expression expected
+     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:437:1]
+ [2m434[0m |   return (
+ [2m435[0m |     <div className="flex flex-col h-full overflow-hidden gap-4">
+ [2m436[0m |       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
+ [2m437[0m | <<<<<<< HEAD
+     : [35;1m ^^[0m
+ [2m438[0m |         
+ [2m439[0m |         {/* STICKY HEADER */}
+ [2m439[0m |         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+     `----
+  [31mx[0m Expression expected
+     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:437:1]
+ [2m434[0m |   return (
+ [2m435[0m |     <div className="flex flex-col h-full overflow-hidden gap-4">
+ [2m436[0m |       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
+ [2m437[0m | <<<<<<< HEAD
+     : [35;1m   ^^[0m
+ [2m438[0m |         
+ [2m439[0m |         {/* STICKY HEADER */}
+ [2m439[0m |         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+     `----
+  [31mx[0m Expression expected
+     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:437:1]
+ [2m434[0m |   return (
+ [2m435[0m |     <div className="flex flex-col h-full overflow-hidden gap-4">
+ [2m436[0m |       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
+ [2m437[0m | <<<<<<< HEAD
+     : [35;1m     ^^[0m
+ [2m438[0m |         
+ [2m439[0m |         {/* STICKY HEADER */}
+ [2m439[0m |         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+     `----
+  [31mx[0m Merge conflict marker encountered.
+     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:444:1]
+ [2m441[0m |           <div className="min-w-0">
+ [2m442[0m |             <CardTitle className="text-2xl leading-none sm:text-3xl md:text-2xl">W&B Configurator</CardTitle>
+ [2m443[0m |             {loadedAircraft && (
+ [2m444[0m | =======
+     : [35;1m^^^^^^^[0m
+ [2m445[0m |         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-4 md:p-6">
+ [2m446[0m |           <div className="space-y-1">
+ [2m446[0m |             <CardTitle>M&B Configurator</CardTitle>
+     `----
+  [31mx[0m Merge conflict marker encountered.
+     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:449:1]
+ [2m446[0m |           <div className="space-y-1">
+ [2m447[0m |             <CardTitle>M&B Configurator</CardTitle>
+ [2m448[0m |             {loadedAircraft ? (
+ [2m449[0m | >>>>>>> 7be267ee72828ef6aa5f54104b1458941a08cb4f
+     : [35;1m^^^^^^^[0m
+ [2m450[0m |                 <CardDescription>
+ [2m451[0m |                     Loaded: <span className="font-semibold text-primary">{loadedAircraft.tailNumber}</span> ({loadedAircraft.model})
+ [2m451[0m |                 </CardDescription>
+     `----
+  [31mx[0m Expression expected
+     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:457:1]
+ [2m454[0m |                 <CardDescription>Build reusable weight and balance profiles.</CardDescription>
+ [2m455[0m |             )}
+ [2m456[0m |           </div>
+ [2m457[0m | <<<<<<< HEAD
+     : [35;1m ^^[0m
+ [2m458[0m |           <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
+ [2m459[0m |             <Button onClick={handleReset} variant="destructive" size="sm" className="gap-2 text-xs sm:text-sm"><RotateCcw size={14} /> Reset</Button>
+ [2m459[0m |             
+     `----
+  [31mx[0m Expression expected
+     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:457:1]
+ [2m454[0m |                 <CardDescription>Build reusable weight and balance profiles.</CardDescription>
+ [2m455[0m |             )}
+ [2m456[0m |           </div>
+ [2m457[0m | <<<<<<< HEAD
+     : [35;1m   ^^[0m
+ [2m458[0m |           <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
+ [2m459[0m |             <Button onClick={handleReset} variant="destructive" size="sm" className="gap-2 text-xs sm:text-sm"><RotateCcw size={14} /> Reset</Button>
+ [2m459[0m |             
+     `----
+  [31mx[0m Expression expected
+     ,-[[36;1;4mC:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\src\app\(app)\admin\mb-config\page.tsx[0m:457:1]
+ [2m454[0m |                 <CardDescription>Build reusable weight and balance profiles.</CardDescription>
+ [2m455[0m |             )}
+ [2m456[0m |           </div>
+ [2m457[0m | <<<<<<< HEAD
+     : [35;1m     ^^[0m
+ [2m458[0m |           <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
+ [2m459[0m |             <Button onClick={handleReset} variant="destructive" size="sm" className="gap-2 text-xs sm:text-sm"><RotateCcw size={14} /> Reset</Button>
+ [2m459[0m |             
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/(app)/admin/mb-config/page.tsx
+ ✓ Compiled in 2.9s (1325 modules)
+ ✓ Compiled in 3.9s (2919 modules)
