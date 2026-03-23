@@ -1,33 +1,33 @@
 
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Clock, Info, ShieldAlert } from 'lucide-react';
+import { Clock, Info, ShieldAlert } from 'lucide-react';
 
 export function PhasesTab() {
   return (
     <div className="space-y-6">
-      <div className="px-1">
-        <h2 className="text-xl font-bold">International SAR Phases</h2>
-        <p className="text-sm text-muted-foreground">Standardized ICAO terminology used for Search and Rescue (SAR) notification and external escalation.</p>
+      <div className="border-b px-6 py-6">
+        <h3 className="font-headline text-2xl font-semibold">Emergency Phases Guide</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Standardized ICAO terminology used for Search and Rescue notification and escalation.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        {/* INCERFA */}
-        <Card className="border-l-4 border-l-blue-500 shadow-none border">
-          <CardHeader className="pb-2">
+        <section className="border border-card-border border-l-4 border-l-blue-500 px-6 py-6">
+          <div className="pb-2">
             <div className="flex justify-between items-center">
-              <CardTitle className="text-blue-700 flex items-center gap-2">
+              <h4 className="flex items-center gap-2 text-2xl font-semibold text-blue-700">
                 <Info className="h-5 w-5" /> INCERFA (Uncertainty Phase)
-              </CardTitle>
+              </h4>
               <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">Phase 1</Badge>
             </div>
-            <CardDescription className="font-medium text-blue-900/70">
+            <p className="font-medium text-blue-900/70">
               Uncertainty exists as to the safety of an aircraft and its occupants.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </p>
+          </div>
+          <div className="space-y-4">
             <div className="space-y-2">
               <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Activation Criteria</p>
               <ul className="text-sm space-y-1.5 list-disc pl-5 text-muted-foreground">
@@ -41,23 +41,22 @@ export function PhasesTab() {
                 Initiate communication search. Verify flight plan details. Contact alternate airfields and known frequencies.
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        {/* ALERFA */}
-        <Card className="border-l-4 border-l-amber-500 shadow-none border">
-          <CardHeader className="pb-2">
+        <section className="border border-card-border border-l-4 border-l-amber-500 px-6 py-6">
+          <div className="pb-2">
             <div className="flex justify-between items-center">
-              <CardTitle className="text-amber-700 flex items-center gap-2">
+              <h4 className="flex items-center gap-2 text-2xl font-semibold text-amber-700">
                 <Clock className="h-5 w-5" /> ALERFA (Alert Phase)
-              </CardTitle>
+              </h4>
               <Badge variant="outline" className="border-amber-200 text-amber-700 bg-amber-50">Phase 2</Badge>
             </div>
-            <CardDescription className="font-medium text-amber-900/70">
+            <p className="font-medium text-amber-900/70">
               Apprehension exists as to the safety of an aircraft and its occupants.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </p>
+          </div>
+          <div className="space-y-4">
             <div className="space-y-2">
               <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Activation Criteria</p>
               <ul className="text-sm space-y-1.5 list-disc pl-5 text-muted-foreground">
@@ -72,23 +71,22 @@ export function PhasesTab() {
                 Notify Search and Rescue Coordination Center (RCC). Prepare ground support. Alert internal management and staff.
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        {/* DETRESFA */}
-        <Card className="border-l-4 border-l-red-500 shadow-none border">
-          <CardHeader className="pb-2">
+        <section className="border border-card-border border-l-4 border-l-red-500 px-6 py-6">
+          <div className="pb-2">
             <div className="flex justify-between items-center">
-              <CardTitle className="text-red-700 flex items-center gap-2">
+              <h4 className="flex items-center gap-2 text-2xl font-semibold text-red-700">
                 <ShieldAlert className="h-5 w-5" /> DETRESFA (Distress Phase)
-              </CardTitle>
+              </h4>
               <Badge variant="outline" className="border-red-200 text-red-700 bg-red-50">Phase 3</Badge>
             </div>
-            <CardDescription className="font-medium text-red-900/70">
+            <p className="font-medium text-red-900/70">
               Reasonable certainty exists that an aircraft and its occupants are threatened by grave and imminent danger and require immediate assistance.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </p>
+          </div>
+          <div className="space-y-4">
             <div className="space-y-2">
               <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Activation Criteria</p>
               <ul className="text-sm space-y-1.5 list-disc pl-5 text-muted-foreground">
@@ -103,8 +101,8 @@ export function PhasesTab() {
                 Activate full Emergency Response Plan. Dispatch resources. Finalize media holding statements. Contact next of kin.
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       </div>
     </div>
   );

@@ -26,6 +26,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { useTabVisibility } from '@/hooks/use-tab-visibility';
 import { cn } from '@/lib/utils';
 import { deleteDocumentNonBlocking } from '@/firebase';
@@ -210,13 +211,34 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
     );
 }
 
+function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
+    return (
+        <div className="border-y border-card-border bg-card px-6 py-4">
+            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex min-w-max">
+                <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
+                    Internal
+                </TabsTrigger>
+                {organizations.map((organization) => (
+                    <TabsTrigger
+                        key={organization.id}
+                        value={organization.id}
+                        className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0"
+                    >
+                        {organization.name}
+                    </TabsTrigger>
+                ))}
+            </TabsList>
+        </div>
+    );
+}
+
 export default function AuditsPage() {
     const firestore = useFirestore();
-    const { tenantId, userProfile } = useUserProfile();
+    const { tenantId } = useUserProfile();
     const { hasPermission } = usePermissions();
+    const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'quality-audits-view-all' });
 
     const canViewAll = hasPermission('quality-audits-view-all');
-    const userOrgId = userProfile?.organizationId;
 
     const auditsQuery = useMemoFirebase(
         () => {
@@ -244,7 +266,7 @@ export default function AuditsPage() {
     const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
     const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
 
-    const showTabs = useTabVisibility('audits', canViewAll);
+    const showTabs = useTabVisibility('audits', shouldShowOrganizationTabs);
 
     const isLoading = isLoadingAudits || isLoadingPersonnel || isLoadingDepts || isLoadingOrgs;
 
@@ -261,7 +283,7 @@ export default function AuditsPage() {
         }));
     }, [audits, personnel, departments, organizations]);
 
-    const renderOrgContext = (orgId: string | 'internal') => {
+    const renderOrgCard = (orgId: string | 'internal') => {
         const filteredByOrg = enrichedAudits.filter(a => 
             orgId === 'internal' ? !a.organizationId : a.organizationId === orgId
         );
@@ -271,6 +293,25 @@ export default function AuditsPage() {
 
         return (
             <Card className="min-h-[calc(100vh-15rem)] flex flex-col shadow-none border">
+                <CardHeader className="space-y-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-1">
+                            <CardTitle>Quality Audits</CardTitle>
+                            <CardDescription>Manage internal and external quality assurance activities.</CardDescription>
+                        </div>
+                        <div className="flex flex-col gap-1.5 sm:items-end w-full sm:w-auto">
+                            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Oversight Controls</p>
+                            <div className="flex gap-2">
+                                <Button asChild variant="outline" size="sm" className="h-9 px-4 text-xs font-bold gap-2">
+                                    <Link href="/quality/audit-checklists">
+                                        <ShieldCheck className="h-4 w-4" /> Templates
+                                    </Link>
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </CardHeader>
+                {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
                 <Tabs defaultValue="active" className="flex-1 flex flex-col">
                     <div className='px-6 pt-4 border-b bg-muted/10'>
                         <TabsList className="bg-transparent h-auto p-0 gap-2 mb-2 border-b-0 overflow-x-auto no-scrollbar w-full flex">
@@ -309,46 +350,18 @@ export default function AuditsPage() {
 
     return (
         <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
-            <div className="px-1 shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Quality Audits</h1>
-                    <p className="text-muted-foreground">Manage internal and external quality assurance activities.</p>
-                </div>
-                <div className="flex flex-col gap-1.5 sm:items-end w-full sm:w-auto">
-                    <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Oversight Controls</p>
-                    <div className="flex gap-2">
-                        <Button asChild variant="outline" size="sm" className="h-9 px-4 text-xs font-bold gap-2">
-                            <Link href="/quality/audit-checklists">
-                                <ShieldCheck className="h-4 w-4" /> Templates
-                            </Link>
-                        </Button>
-                    </div>
-                </div>
-            </div>
-
             {!showTabs ? (
-                renderOrgContext(userOrgId || 'internal')
+                renderOrgCard(scopedOrganizationId)
             ) : (
                 <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
-                    <div className="px-1 shrink-0">
-                        <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
-                            <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Internal</TabsTrigger>
-                            {(organizations || []).map(org => (
-                                <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
-                                    {org.name}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-                    </div>
-
                     <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
-                        <TabsContent value="internal" className="mt-0">
-                            {renderOrgContext('internal')}
+                        <TabsContent value="internal" className="m-0 p-0">
+                            {renderOrgCard('internal')}
                         </TabsContent>
                         
                         {(organizations || []).map(org => (
-                            <TabsContent key={org.id} value={org.id} className="mt-0">
-                                {renderOrgContext(org.id)}
+                            <TabsContent key={org.id} value={org.id} className="m-0 p-0">
+                                {renderOrgCard(org.id)}
                             </TabsContent>
                         ))}
                     </div>

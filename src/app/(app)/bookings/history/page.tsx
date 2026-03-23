@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, parse } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -29,6 +29,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type EnrichedBooking = Booking & {
   aircraftTailNumber?: string;
@@ -184,6 +185,7 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
 export default function BookingsHistoryPage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate';
+  const isMobile = useIsMobile();
 
   const bookingsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'bookings'), orderBy('bookingNumber', 'desc')) : null),
@@ -229,26 +231,24 @@ export default function BookingsHistoryPage() {
   const cancelledBookings = useMemo(() => enrichedBookings.filter(b => b.status === 'Cancelled' || b.status === 'Cancelled with Reason'), [enrichedBookings]);
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
-       <div className="flex justify-between items-center px-1">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Bookings History</h1>
-                <p className="text-muted-foreground">A complete log of all past and present bookings.</p>
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full min-h-0">
+      <Card className="flex-grow flex flex-col shadow-none border overflow-hidden">
+        <Tabs defaultValue="all" className="flex h-full min-h-0 flex-col">
+          <CardHeader className="shrink-0 border-b bg-card">
+            <div className="space-y-1">
+              <CardTitle>Bookings History</CardTitle>
+              <CardDescription>A complete log of all past and present bookings.</CardDescription>
             </div>
-        </div>
-      <Card className="flex-grow flex flex-col shadow-none border">
-        <Tabs defaultValue="all">
-            <div className='px-6 pt-4'>
-                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 overflow-x-auto no-scrollbar justify-start w-full flex">
-                    <TabsTrigger value="all" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">All</TabsTrigger>
-                    <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Training</TabsTrigger>
-                    <TabsTrigger value="private" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Private</TabsTrigger>
-                    <TabsTrigger value="maintenance" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Maintenance</TabsTrigger>
-                    <TabsTrigger value="cancelled" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Cancelled</TabsTrigger>
-                </TabsList>
-            </div>
-            <CardContent className='p-0'>
-                <div className="h-[calc(100vh-21rem)] overflow-auto">
+            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 overflow-x-auto no-scrollbar justify-start w-full flex">
+              <TabsTrigger value="all" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">All</TabsTrigger>
+              <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Training</TabsTrigger>
+              <TabsTrigger value="private" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Private</TabsTrigger>
+              <TabsTrigger value="maintenance" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Maintenance</TabsTrigger>
+              <TabsTrigger value="cancelled" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Cancelled</TabsTrigger>
+            </TabsList>
+          </CardHeader>
+          <CardContent className='p-0 flex-1 min-h-0'>
+                <div className={cn("overflow-auto", isMobile ? "h-full min-h-0" : "h-[calc(100vh-21rem)]")}>
                     <TabsContent value="all" className='m-0'><BookingsTable bookings={enrichedBookings} /></TabsContent>
                     <TabsContent value="training" className='m-0'><BookingsTable bookings={trainingBookings} /></TabsContent>
                     <TabsContent value="private" className='m-0'><BookingsTable bookings={privateBookings} /></TabsContent>

@@ -161,19 +161,19 @@ export default function AccountingPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden gap-4">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-4 md:p-6">
-          <div className="space-y-1">
+        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 p-4 md:p-6">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
             <div className="flex items-center gap-2">
               <Landmark className="h-5 w-5 text-primary" />
-              <CardTitle>Flight Billing</CardTitle>
+              <CardTitle className="text-xl md:text-2xl leading-none">Flight Billing</CardTitle>
             </div>
-            <CardDescription>Manage revenue and Sage Accounting exports.</CardDescription>
+            <CardDescription className="text-xs md:text-sm sm:pt-0.5">Manage revenue and Sage Accounting exports.</CardDescription>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 md:gap-8 w-full xl:w-auto justify-between xl:justify-end">
-            <div className="text-left xl:text-right min-w-fit">
+          <div className="flex flex-wrap items-center gap-4 md:gap-8 w-full sm:w-auto justify-between sm:justify-end">
+            <div className="text-left sm:text-right min-w-fit">
               <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Pending Revenue</p>
-              <div className="flex items-center gap-2 justify-start xl:justify-end">
+              <div className="flex items-center gap-2 justify-start sm:justify-end">
                 <span className="text-xl md:text-2xl font-black text-primary">
                   ${totalBillable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
@@ -183,42 +183,43 @@ export default function AccountingPage() {
               </div>
             </div>
 
-            <Separator orientation="vertical" className="h-10 hidden xl:block" />
-
-            <div className="flex flex-col gap-1.5 xl:items-end w-full md:w-auto">
-                <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Sage Integration</p>
-                <div className="flex flex-wrap items-center gap-2">
-                    <Button 
-                        variant="outline"
-                        className="flex-1 md:flex-none gap-2 font-bold h-9 px-4 text-xs" 
-                        onClick={() => setIsPreviewOpen(true)} 
-                        disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
-                    >
-                        <Eye className="h-3.5 w-3.5" /> Preview ({selectedIds.size})
-                    </Button>
-                    <Button 
-                        className="flex-1 md:flex-none gap-2 font-black shadow-md h-9 px-4 text-xs uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white" 
-                        onClick={handleSageExport} 
-                        disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
-                    >
-                        <FileSpreadsheet className="h-4 w-4" /> Export to Sage
-                    </Button>
-                </div>
-            </div>
+            <Separator orientation="vertical" className="h-10 hidden sm:block" />
           </div>
         </CardHeader>
 
         <CardContent className="flex-1 p-0 overflow-hidden flex flex-col bg-muted/5">
           <Tabs defaultValue="unbilled" onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0">
-            <div className="px-4 md:px-6 py-4 border-b bg-background/50 overflow-x-auto no-scrollbar">
-              <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start w-full flex min-w-max">
-                <TabsTrigger value="unbilled" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-xs font-bold uppercase tracking-tight">
-                  Unbilled Flights ({enrichedData.unbilled.length})
-                </TabsTrigger>
-                <TabsTrigger value="exported" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-xs font-bold uppercase tracking-tight">
-                  Export History ({enrichedData.exported.length})
-                </TabsTrigger>
-              </TabsList>
+            <div className="px-4 md:px-6 py-4 border-b bg-background/50">
+              <div className="flex items-center justify-between gap-3 overflow-x-auto no-scrollbar">
+                <div className="shrink-0">
+                  <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex min-w-max">
+                    <TabsTrigger value="unbilled" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-xs font-bold uppercase tracking-tight">
+                      Unbilled Flights ({enrichedData.unbilled.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="exported" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-xs font-bold uppercase tracking-tight">
+                      Export History ({enrichedData.exported.length})
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button 
+                      variant="outline"
+                      className="gap-2 font-bold h-9 px-4 text-xs shrink-0" 
+                      onClick={() => setIsPreviewOpen(true)} 
+                      disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
+                  >
+                      <Eye className="h-3.5 w-3.5" /> Preview ({selectedIds.size})
+                  </Button>
+                  <Button 
+                      className="gap-2 font-black shadow-md h-9 px-4 text-xs uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shrink-0" 
+                      onClick={handleSageExport} 
+                      disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
+                  >
+                      <FileSpreadsheet className="h-4 w-4" /> Export to Sage
+                  </Button>
+                </div>
+              </div>
             </div>
 
             <div className="flex-1 min-h-0 overflow-hidden relative">
@@ -276,7 +277,7 @@ export default function AccountingPage() {
             <ScrollArea className="flex-1">
                 <div className="p-4 md:p-1 overflow-x-auto">
                     <Table className="min-w-[800px]">
-                        <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                        <TableHeader className="bg-muted/50">
                             <TableRow>
                                 <TableHead className="text-[10px] uppercase font-black">Reference</TableHead>
                                 <TableHead className="text-[10px] uppercase font-black">Date</TableHead>

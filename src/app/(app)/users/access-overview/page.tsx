@@ -61,7 +61,7 @@ export default function AccessOverviewPage() {
           <CardContent className="flex-1 p-0 overflow-hidden">
             <div className="overflow-x-auto w-full h-full custom-scrollbar" style={{ scrollbarWidth: 'thin' }}>
               <Table className="min-w-[800px]">
-                <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                <TableHeader className="bg-muted/30">
                   <TableRow>
                     <TableHead className="w-48 text-[10px] uppercase font-black bg-muted/30">Module</TableHead>
                     {(roles || []).map(role => (

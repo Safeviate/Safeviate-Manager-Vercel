@@ -35,6 +35,7 @@ export const permissionsConfig: PermissionResource[] = [
   { id: 'quality-caps', name: 'Quality CAPs', actions: ['view'] },
   { id: 'quality-tasks', name: 'Quality Tasks', actions: ['view'] },
   { id: 'quality-matrix', name: 'Quality Coherence Matrix', actions: ['manage'] },
+  { id: 'quality-risk-plan', name: 'Quality Risk Plan', actions: ['view', 'manage'] },
 
   { id: 'training', name: 'Training', actions: ['view'] },
   { id: 'training-debriefs', name: 'Training: Student Debriefs', actions: ['view', 'edit'] },

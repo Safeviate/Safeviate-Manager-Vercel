@@ -84,6 +84,24 @@ export interface CorrectiveActionPlan {
     responsiblePersonId?: string;
 }
 
+export interface QualityRiskPlanSignoff {
+    signedById?: string;
+    signedAt?: string;
+    notes?: string;
+}
+
+export interface QualityRiskPlanEntry {
+    id: string;
+    activity: string;
+    hazardOrThreat: string;
+    changeTriggeredRisk?: string;
+    mitigationPlan: string;
+    ownerId: string;
+    reviewDate: string;
+    managementReviewSignoff?: QualityRiskPlanSignoff;
+    organizationId?: string | null;
+}
+
 export interface ExternalOrganization {
     id: string;
     name: string;

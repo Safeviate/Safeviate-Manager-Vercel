@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { collection, query, doc, deleteDoc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import type { ERPTrigger } from '@/types/erp';
@@ -58,11 +57,14 @@ export function TriggersTab({ tenantId }: TriggersTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center px-1">
-        <div>
-          <h2 className="text-xl font-bold font-headline">Internal Activation Triggers</h2>
-          <p className="text-sm text-muted-foreground">Internal company policies that dictate when the ERP must be initiated.</p>
-        </div>
+      <div className="border-b px-6 py-6">
+        <h3 className="font-headline text-2xl font-semibold">Response Triggers</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Internal company policies that dictate when the ERP must be initiated.
+        </p>
+      </div>
+
+      <div className="flex justify-end px-6">
         {canAdmin && (
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
@@ -86,17 +88,22 @@ export function TriggersTab({ tenantId }: TriggersTabProps) {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-0 md:grid-cols-2">
+        <div className="md:col-span-2 border-y px-6 py-5">
+          <h4 className="font-headline text-lg font-semibold">Internal Activation Triggers</h4>
+        </div>
         {(triggers || []).map(trigger => (
-          <Card key={trigger.id} className="shadow-none border border-amber-200 bg-amber-50/30">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <div className="flex items-center gap-2">
-                <ShieldAlert className="h-5 w-5 text-amber-600" />
-                <CardTitle className="text-lg">{trigger.eventType}</CardTitle>
+          <section key={trigger.id} className="border-b px-6 py-6 md:border-r odd:md:border-r md:[&:nth-child(odd)]:border-r-0">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="h-5 w-5 text-amber-600" />
+                  <h5 className="text-lg font-semibold">{trigger.eventType}</h5>
+                </div>
               </div>
               {canAdmin && <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(trigger.id)}><Trash2 className="h-4 w-4" /></Button>}
-            </CardHeader>
-            <CardContent className="space-y-4">
+            </div>
+            <div className="mt-4 space-y-4">
               <p className="text-sm font-medium leading-relaxed">{trigger.criteria}</p>
               <div className="space-y-2">
                 <p className="text-[10px] uppercase font-bold text-muted-foreground">Immediate Actions</p>
@@ -109,11 +116,11 @@ export function TriggersTab({ tenantId }: TriggersTabProps) {
                   ))}
                 </ul>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </section>
         ))}
         {(!triggers || triggers.length === 0) && (
-          <div className="col-span-2 h-48 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
+          <div className="col-span-2 flex h-48 items-center justify-center border-b border-dashed text-muted-foreground">
             No internal triggers defined yet.
           </div>
         )}

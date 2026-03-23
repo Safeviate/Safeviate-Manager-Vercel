@@ -25,6 +25,8 @@ export type {
   ComplianceRequirement,
   AuditScheduleItem,
   AuditScheduleStatus,
+  QualityRiskPlanEntry,
+  QualityRiskPlanSignoff,
 } from './quality';
 export type { Risk, RiskItem, Mitigation, RiskMatrixSettings } from './risk';
 export type {

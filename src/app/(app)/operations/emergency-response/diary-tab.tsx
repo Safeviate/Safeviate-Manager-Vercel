@@ -291,9 +291,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
               <span className="flex items-center gap-2">
                 <History className="h-5 w-5 text-muted-foreground" /> Session Archive
               </span>
-            ) : (
-              'Response History'
-            )}
+            ) : null}
           </h2>
           {viewingEvent && (
             <Button variant="ghost" size="sm" onClick={() => setSelectedEventId(null)} className="h-8 gap-2">
@@ -303,47 +301,6 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          {!activeEvent && !viewingEvent && canManage && (
-            <Dialog open={isStartOpen} onOpenChange={setIsStartOpen}>
-              <DialogTrigger asChild>
-                <Button variant="destructive" className="animate-bounce shadow-lg"><Play className="mr-2 h-4 w-4" /> Start ERP Session</Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Activate Emergency Response</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleStartERP} className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <Label>Activation Trigger (Internal)</Label>
-                    <Select name="triggerId" onValueChange={setSelectedTriggerId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select internal trigger..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(triggers || []).map(t => (
-                          <SelectItem key={t.id} value={t.id}>{t.eventType}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Session Title / Context</Label>
-                    <Input name="title" placeholder="e.g., ZS-ABC Overdue - Flight 123" required />
-                  </div>
-                  <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10">
-                    <Switch name="isMock" id="mock-mode" defaultChecked={true} />
-                    <Label htmlFor="mock-mode" className="cursor-pointer">Simulation / Mock Exercise</Label>
-                  </div>
-                  <p className="text-xs text-muted-foreground italic">Initiating based on an internal trigger provides immediate response context.</p>
-                  <DialogFooter>
-                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                    <Button type="submit" variant="destructive">Activate Protocol</Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-          )}
-
           {activeEvent && canManage && (
             <Dialog open={isCloseOpen} onOpenChange={setIsCloseOpen}>
               <DialogTrigger asChild>
@@ -505,27 +462,82 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
           </div>
         </div>
       ) : (
-        <Card className="shadow-none border">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 font-headline"><Clock className="h-5 w-5" /> Past Sessions</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="space-y-4 p-6">
-              {(events || []).filter(e => e.status === 'Closed').map(event => (
-                <div key={event.id} onClick={() => setSelectedEventId(event.id)} className="p-4 border rounded-lg hover:bg-muted/10 transition-colors flex justify-between items-center group cursor-pointer">
-                  <div className="space-y-1">
-                    <p className="font-bold">{event.title}</p>
-                    <p className="text-xs text-muted-foreground">Started: {format(new Date(event.startedAt), 'PPP p')}</p>
-                  </div>
-                  <Badge variant="outline" className="text-[10px]">Closed</Badge>
-                </div>
-              ))}
-              {(!events || events.filter(e => e.status === 'Closed').length === 0) && (
-                <p className="text-center text-muted-foreground italic py-10">No archived sessions.</p>
+        <div className="space-y-0 overflow-hidden">
+          <div className="border-b px-6 py-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-1">
+                <h3 className="font-headline text-2xl font-semibold">Response History</h3>
+                <p className="text-sm text-muted-foreground">Review archived ERP sessions and reopen them in read-only mode.</p>
+              </div>
+              {canManage && (
+                <Dialog open={isStartOpen} onOpenChange={setIsStartOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="destructive" className="shadow-lg sm:self-start">
+                      <Play className="mr-2 h-4 w-4" /> Start ERP Session
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>Activate Emergency Response</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleStartERP} className="space-y-4 pt-4">
+                      <div className="space-y-2">
+                        <Label>Activation Trigger (Internal)</Label>
+                        <Select name="triggerId" onValueChange={setSelectedTriggerId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select internal trigger..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(triggers || []).map(t => (
+                              <SelectItem key={t.id} value={t.id}>{t.eventType}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Session Title / Context</Label>
+                        <Input name="title" placeholder="e.g., ZS-ABC Overdue - Flight 123" required />
+                      </div>
+                      <div className="flex items-center space-x-2 rounded-lg border bg-muted/10 p-3">
+                        <Switch name="isMock" id="mock-mode-empty" defaultChecked={true} />
+                        <Label htmlFor="mock-mode-empty" className="cursor-pointer">Simulation / Mock Exercise</Label>
+                      </div>
+                      <p className="text-xs italic text-muted-foreground">Initiating based on an internal trigger provides immediate response context.</p>
+                      <DialogFooter>
+                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                        <Button type="submit" variant="destructive">Activate Protocol</Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="border-b px-6 py-4">
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+              <h4 className="font-headline text-xl font-semibold">Past Sessions</h4>
+            </div>
+          </div>
+          <div className="space-y-4 p-6">
+            {(events || []).filter(e => e.status === 'Closed').map(event => (
+              <div
+                key={event.id}
+                onClick={() => setSelectedEventId(event.id)}
+                className="group flex cursor-pointer items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/10"
+              >
+                <div className="space-y-1">
+                  <p className="font-bold">{event.title}</p>
+                  <p className="text-xs text-muted-foreground">Started: {format(new Date(event.startedAt), 'PPP p')}</p>
+                </div>
+                <Badge variant="outline" className="text-[10px]">Closed</Badge>
+              </div>
+            ))}
+            {(!events || events.filter(e => e.status === 'Closed').length === 0) && (
+              <p className="py-10 text-center italic text-muted-foreground">No archived sessions.</p>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

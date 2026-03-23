@@ -4,7 +4,6 @@
 import { useMemo } from 'react';
 import { collection, query, orderBy, doc, arrayUnion } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -91,32 +90,25 @@ export function DocumentsTab({ tenantId }: DocumentsTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="px-1">
-        <h2 className="text-xl font-bold flex items-center gap-2 font-headline">
-          {activeEvent ? (
-            <span className="flex items-center gap-2 text-red-600">
-              <ShieldAlert className="h-5 w-5" /> Document Collection Tracker
-            </span>
-          ) : 'Standard Evidence List'}
-        </h2>
-        {activeEvent ? (
-          <p className="text-sm text-muted-foreground mt-1">
-            Tracking evidence collection for: <span className="font-bold text-foreground">{activeEvent.title}</span>
-          </p>
-        ) : (
-          <p className="text-sm text-muted-foreground mt-1">
-            A guide of critical documents that must be secured immediately following an incident.
-          </p>
-        )}
+      <div className="px-6 py-6">
+        <div className="flex items-center gap-2">
+          {activeEvent ? <ShieldAlert className="h-5 w-5 text-destructive" /> : <FileCheck className="h-5 w-5 text-primary" />}
+          <h3 className="font-headline text-2xl font-semibold">
+            {activeEvent ? 'Document Collection Tracker' : 'Evidence & Docs'}
+          </h3>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {activeEvent
+            ? `Tracking evidence collection for ${activeEvent.title}.`
+            : 'A guide to the critical documents that should be secured immediately following an incident.'}
+        </p>
       </div>
 
-      <Card className="shadow-none border">
-        <CardHeader className="bg-muted/10 border-b">
-          <CardTitle className="text-sm font-headline flex items-center gap-2">
-            <FileCheck className="h-4 w-4 text-primary" /> Required Evidence & Documentation
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
+      <section className="overflow-hidden border-y border-card-border">
+        <div className="border-b px-6 py-5">
+          <h4 className="font-headline text-lg font-semibold">Required Evidence & Documentation</h4>
+        </div>
+        <div className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
@@ -175,19 +167,17 @@ export function DocumentsTab({ tenantId }: DocumentsTabProps) {
               })}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {!activeEvent && (
-        <Card className="bg-primary/5 border-primary/20 border shadow-none">
-          <CardHeader>
-            <CardTitle className="text-sm">Why is document collection critical?</CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs space-y-2 text-muted-foreground leading-relaxed">
+        <section className="border border-primary/20 bg-primary/5 px-6 py-5">
+          <h4 className="text-base font-semibold">Why is document collection critical?</h4>
+          <div className="mt-4 space-y-2 text-xs leading-relaxed text-muted-foreground">
             <p>Following an aviation incident, investigators (CAA/TSB) will require immediate access to original records to determine operating margins, crew currency, and aircraft airworthiness at the time of the event.</p>
             <p><span className="font-bold text-foreground">Action:</span> Ensure all physical logbooks are removed from the aircraft and secured in a fire-proof safe. Digital records should be exported or frozen to prevent post-incident modification.</p>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       )}
     </div>
   );

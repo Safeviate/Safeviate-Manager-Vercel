@@ -26,6 +26,7 @@ import Image from 'next/image';
 import { Switch } from '@/components/ui/switch';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { Separator } from '@/components/ui/separator';
 
 
@@ -237,15 +238,36 @@ function UploadRegulationsDialog({ tenantId, organizationId }: { tenantId: strin
     )
 }
 
+function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
+    return (
+        <div className="border-b px-6 py-4">
+            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex min-w-max">
+                <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
+                    Internal
+                </TabsTrigger>
+                {organizations.map((organization) => (
+                    <TabsTrigger
+                        key={organization.id}
+                        value={organization.id}
+                        className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0"
+                    >
+                        {organization.name}
+                    </TabsTrigger>
+                ))}
+            </TabsList>
+        </div>
+    );
+}
+
 
 export default function CoherenceMatrixPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const { tenantId, userProfile } = useUserProfile();
+  const { tenantId } = useUserProfile();
   const { hasPermission } = usePermissions();
+  const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'quality-matrix-manage' });
 
   const canManageAll = hasPermission('quality-matrix-manage');
-  const userOrgId = userProfile?.organizationId;
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ComplianceRequirement | null>(null);
@@ -333,12 +355,13 @@ export default function CoherenceMatrixPage() {
         return acc;
     }, {} as Record<string, ComplianceRequirement[]>);
     const topLevelItems = sortedItems.filter(item => !item.parentRegulationCode);
+    const sectionTitle = orgId === 'internal' ? 'Internal Coherence Matrix' : organizations?.find((o) => o.id === orgId)?.name;
 
     return (
         <Card className="min-h-[500px] flex flex-col shadow-none border">
             <CardHeader className="bg-muted/10 border-b flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-6">
                 <div>
-                    <CardTitle className="text-2xl font-headline">{orgId === 'internal' ? 'Internal Coherence Matrix' : organizations?.find(o => o.id === orgId)?.name}</CardTitle>
+                    <CardTitle className="text-2xl font-headline">{sectionTitle}</CardTitle>
                     <CardDescription>Mapping external regulations to internal company processes.</CardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-4 md:gap-8 w-full xl:w-auto justify-start xl:justify-end">
@@ -360,6 +383,7 @@ export default function CoherenceMatrixPage() {
                     </div>
                 </div>
             </CardHeader>
+            {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
             <CardContent className="p-6">
                 <div className="space-y-4">
                     {topLevelItems.map(parentItem => (
@@ -411,27 +435,22 @@ export default function CoherenceMatrixPage() {
 
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
-        <div className="px-1">
-            <h1 className="text-3xl font-bold tracking-tight">Coherence Matrix</h1>
-            <p className="text-muted-foreground">Manage and track regulatory compliance across organizations.</p>
-        </div>
-
-        <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
-            <div className="px-1 shrink-0">
-                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
-                    <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Internal</TabsTrigger>
-                    {(organizations || []).map(org => (
-                        <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
-                            {org.name}
-                        </TabsTrigger>
+        {!shouldShowOrganizationTabs ? (
+            renderOrgContext(scopedOrganizationId)
+        ) : (
+            <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
+                <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+                    <TabsContent value="internal" className="m-0 p-0">
+                        {renderOrgContext('internal')}
+                    </TabsContent>
+                    {(organizations || []).map((org) => (
+                        <TabsContent key={org.id} value={org.id} className="m-0 p-0">
+                            {renderOrgContext(org.id)}
+                        </TabsContent>
                     ))}
-                </TabsList>
-            </div>
-            <TabsContent value="internal" className="mt-0">{renderOrgContext('internal')}</TabsContent>
-            {(organizations || []).map(org => (
-                <TabsContent key={org.id} value={org.id} className="mt-0">{renderOrgContext(org.id)}</TabsContent>
-            ))}
-        </Tabs>
+                </div>
+            </Tabs>
+        )}
 
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogContent>

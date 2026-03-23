@@ -383,7 +383,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                         <div className="p-6 space-y-10">
                             {audit.template.sections.map((section) => (
                                 <div key={section.id}>
-                                    <h2 className="text-sm font-black uppercase tracking-widest text-primary border-b border-primary/20 pb-2 mb-6 sticky top-0 z-10 bg-background/95 backdrop-blur py-2">
+                                    <h2 className="mb-6 border-b border-primary/20 py-2 pb-2 text-sm font-black uppercase tracking-widest text-primary">
                                         {section.title}
                                     </h2>
                                     <div className="space-y-4">

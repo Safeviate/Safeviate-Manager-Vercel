@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import { collection, query, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2, Megaphone, Copy, Database, Printer, Pencil } from 'lucide-react';
 import type { ERPMediaTemplate } from '@/types/erp';
@@ -149,11 +148,14 @@ export function MediaTab({ tenantId }: MediaTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center px-1">
-        <div>
-          <h2 className="text-xl font-bold font-headline">Media Release Templates</h2>
-          <p className="text-sm text-muted-foreground">Standardized statements for managing public information during a crisis.</p>
-        </div>
+      <div className="border-b px-6 py-6">
+        <h3 className="font-headline text-2xl font-semibold">Media Release</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Standardized statements for managing public information during a crisis.
+        </p>
+      </div>
+
+      <div className="flex justify-end px-6">
         {canAdmin && (
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleSeedStandardTemplates}>
@@ -198,12 +200,15 @@ export function MediaTab({ tenantId }: MediaTabProps) {
       </div>
 
       <div className="space-y-4">
+        <div className="border-y px-6 py-5">
+          <h4 className="font-headline text-lg font-semibold">Media Release Templates</h4>
+        </div>
         {sortedTemplates.map(template => (
-          <Card key={template.id} className="shadow-none border">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-lg">{template.title}</CardTitle>
-                <CardDescription>Type: {template.type}</CardDescription>
+          <section key={template.id} className="border-b px-6 py-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <h5 className="text-lg font-semibold">{template.title}</h5>
+                <p className="text-sm text-muted-foreground">Type: {template.type}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => handlePrint(template)}><Printer className="h-4 w-4 mr-2" /> Print</Button>
@@ -215,16 +220,16 @@ export function MediaTab({ tenantId }: MediaTabProps) {
                   </>
                 )}
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="p-4 bg-muted/30 rounded-md border border-dashed font-serif text-sm leading-relaxed whitespace-pre-wrap italic">
+            </div>
+            <div className="mt-6">
+              <div className="rounded-md border border-dashed bg-muted/30 p-4 font-serif text-sm italic leading-relaxed whitespace-pre-wrap">
                 {template.content}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </section>
         ))}
         {(!templates || templates.length === 0) && (
-          <div className="h-48 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground gap-4">
+          <div className="flex h-48 flex-col items-center justify-center gap-4 border-b border-dashed text-muted-foreground">
             <Megaphone className="h-10 w-10 opacity-20" />
             <p className="text-sm">No media templates found.</p>
           </div>

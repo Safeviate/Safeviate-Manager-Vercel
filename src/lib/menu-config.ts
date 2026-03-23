@@ -170,6 +170,12 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'quality-matrix-manage',
       },
       {
+        href: '/quality/risk-plan',
+        label: 'Quality Risk Plan',
+        description: 'Manage the organizational risk profile and quality risk plan.',
+        permissionId: 'quality-risk-plan-view',
+      },
+      {
         href: '/quality/task-tracker',
         label: 'Task Tracker',
         description: 'Track all quality-related tasks.',

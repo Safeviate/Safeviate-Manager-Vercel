@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -82,8 +81,14 @@ export function ContactsTab({ tenantId }: ContactsTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center px-1">
-        <h2 className="text-xl font-bold font-headline">Emergency Call List</h2>
+      <div className="border-b px-6 py-6">
+        <h3 className="font-headline text-2xl font-semibold">Emergency Contacts</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Priority contact details for internal responders, authorities, and external support.
+        </p>
+      </div>
+
+      <div className="flex justify-end px-6">
         {canAdmin && (
           <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) setEditingContact(null); setIsDialogOpen(open); }}>
             <DialogTrigger asChild>
@@ -139,8 +144,11 @@ export function ContactsTab({ tenantId }: ContactsTabProps) {
         )}
       </div>
 
-      <Card className="shadow-none border">
-        <CardContent className="p-0">
+      <section className="overflow-hidden border-y border-card-border">
+        <div className="border-b px-6 py-5">
+          <h4 className="font-headline text-lg font-semibold">Emergency Call List</h4>
+        </div>
+        <div className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
@@ -189,8 +197,8 @@ export function ContactsTab({ tenantId }: ContactsTabProps) {
               )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </div>
   );
 }

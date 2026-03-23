@@ -90,38 +90,44 @@ export default function CompanyDocumentsPage() {
 
   return (
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
-      <div className="px-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Company Documents</h1>
-          <p className="text-muted-foreground">Controlled manuals, standard operating procedures, and reference materials.</p>
-        </div>
-        {canManage && (
-          <DocumentUploader
-            onDocumentUploaded={handleDocumentUploaded}
-            trigger={(open) => (
-              <Button onClick={() => open()} className="gap-2 shadow-md">
-                <PlusCircle className="h-4 w-4" /> Add Document
-              </Button>
-            )}
-          />
-        )}
-      </div>
-
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search documents..." 
-              className="pl-9 bg-background" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+        <CardHeader className="shrink-0 border-b bg-muted/5 space-y-4 p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <CardTitle>Company Documents</CardTitle>
+              <CardDescription>
+                Controlled manuals, standard operating procedures, and reference materials.
+              </CardDescription>
+            </div>
+            {canManage && (
+              <div className="flex flex-col gap-1.5 sm:items-end w-full sm:w-auto">
+                <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Document Control</p>
+                <DocumentUploader
+                  onDocumentUploaded={handleDocumentUploaded}
+                  trigger={(open) => (
+                    <Button onClick={() => open()} className="gap-2 sm:self-start">
+                      <PlusCircle className="h-4 w-4" /> Add Document
+                    </Button>
+                  )}
+                />
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="font-mono text-[10px]">
-              {filteredDocs.length} TOTAL
-            </Badge>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full sm:w-96">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search documents..."
+                className="pl-9 bg-background"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="font-mono text-[10px]">
+                {filteredDocs.length} TOTAL
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
@@ -132,7 +138,7 @@ export default function CompanyDocumentsPage() {
               </div>
             ) : filteredDocs.length > 0 ? (
               <Table>
-                <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                <TableHeader className="bg-muted/30">
                   <TableRow>
                     <TableHead className="w-10 text-center">Type</TableHead>
                     <TableHead>Document Name</TableHead>

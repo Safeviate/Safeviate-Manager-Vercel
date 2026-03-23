@@ -188,8 +188,8 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
           )}
 
           {state === 'taking' && (
-            <ScrollArea className="h-full">
-              <div className="p-6 space-y-10 pb-24">
+            <ScrollArea type="always" className="h-full">
+              <div className="p-6 pr-8 space-y-10 pb-24">
                 {template.questions.map((q, idx) => (
                   <div key={q.id} className="space-y-4">
                     <div className="flex gap-4">
@@ -280,3 +280,4 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
     </Dialog>
   );
 }
+

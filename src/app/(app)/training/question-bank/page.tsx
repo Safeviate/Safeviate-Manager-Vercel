@@ -168,7 +168,7 @@ export default function QuestionBankPage() {
                 {/* --- DESKTOP TABLE VIEW --- */}
                 <div className="hidden lg:block">
                     <Table>
-                        <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                        <TableHeader className="bg-muted/30">
                             <TableRow>
                             <TableHead className="text-[10px] uppercase font-bold px-6 py-3">Question Text</TableHead>
                             <TableHead className="w-24 text-center text-[10px] uppercase font-bold">Options</TableHead>

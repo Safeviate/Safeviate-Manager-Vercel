@@ -22,9 +22,31 @@ import { getRiskScoreStyle, getAlphanumericRisk } from './utils';
 import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import type { TabVisibilitySettings } from '../../admin/external/page';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+
+function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
+    return (
+        <div className="border-b px-6 py-4">
+            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex min-w-max">
+                <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
+                    Internal
+                </TabsTrigger>
+                {organizations.map((organization) => (
+                    <TabsTrigger
+                        key={organization.id}
+                        value={organization.id}
+                        className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0"
+                    >
+                        {organization.name}
+                    </TabsTrigger>
+                ))}
+            </TabsList>
+        </div>
+    );
+}
 
 const DEFAULT_HAZARD_AREAS = [
     'Flight Operations', 
@@ -114,15 +136,15 @@ function ManageAreasDialog({ tenantId, settings }: { tenantId: string, settings:
 
 export default function RiskRegisterPage() {
   const firestore = useFirestore();
-  const { tenantId, userProfile } = useUserProfile();
+  const { tenantId } = useUserProfile();
   const { hasPermission } = usePermissions();
+  const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'risk-register-view' });
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [editingRisk, setEditingRisk] = React.useState<Risk | null>(null);
 
   const canManageAll = hasPermission('risk-register-view');
   const canManageAreas = hasPermission('risk-register-manage-definitions');
-  const userOrgId = userProfile?.organizationId;
 
   const risksQuery = useMemoFirebase(
     () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/risks`)) : null),
@@ -171,20 +193,21 @@ export default function RiskRegisterPage() {
     setIsDialogOpen(true);
   };
 
-  const renderOrgContext = (orgId: string | 'internal') => {
+  const renderOrgCard = (orgId: string | 'internal') => {
     const orgRisks = (allRisks || []).filter(r => 
         orgId === 'internal' ? !r.organizationId : r.organizationId === orgId
     );
 
     const uncategorizedRisks = orgRisks.filter(r => !hazardAreas.includes(r.hazardArea) && r.status === 'Open');
     const displayAreas = uncategorizedRisks.length > 0 ? [...hazardAreas, 'Uncategorized'] : hazardAreas;
+    const sectionTitle = orgId === 'internal' ? 'Internal Risk Register' : organizations?.find((o) => o.id === orgId)?.name;
 
     return (
         <Card className="min-h-[500px] flex flex-col shadow-none border">
             <CardHeader className="bg-muted/10 border-b">
                 <div className="flex justify-between items-center">
                     <div>
-                        <CardTitle>{orgId === 'internal' ? 'Internal Risk Register' : organizations?.find(o => o.id === orgId)?.name}</CardTitle>
+                        <CardTitle>{sectionTitle}</CardTitle>
                         <CardDescription>Identified hazards and risk management status for this organization.</CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
@@ -198,6 +221,7 @@ export default function RiskRegisterPage() {
                     </div>
                 </div>
             </CardHeader>
+            {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
             <CardContent className="p-6">
                 <Tabs defaultValue={displayAreas[0]}>
                     <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
@@ -268,37 +292,21 @@ export default function RiskRegisterPage() {
   }
 
   const isTabEnabled = visibilitySettings?.visibilities?.['risk-register'] ?? true;
-  const showTabs = isTabEnabled && canManageAll;
+  const showTabs = isTabEnabled && shouldShowOrganizationTabs;
 
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
-      <div className="px-1">
-          <h1 className="text-3xl font-bold tracking-tight">Risk Register</h1>
-          <p className="text-muted-foreground">Proactive identification and management of safety hazards.</p>
-      </div>
-
       {!showTabs ? (
-          renderOrgContext(userOrgId || 'internal')
+          renderOrgCard(scopedOrganizationId)
       ) : (
           <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
-              <div className="px-1 shrink-0">
-                  <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
-                      <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Internal</TabsTrigger>
-                      {(organizations || []).map(org => (
-                          <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
-                              {org.name}
-                          </TabsTrigger>
-                      ))}
-                  </TabsList>
-              </div>
-
               <TabsContent value="internal" className="mt-0">
-                  {renderOrgContext('internal')}
+                  {renderOrgCard('internal')}
               </TabsContent>
               
               {(organizations || []).map(org => (
                   <TabsContent key={org.id} value={org.id} className="mt-0">
-                      {renderOrgContext(org.id)}
+                      {renderOrgCard(org.id)}
                   </TabsContent>
               ))}
           </Tabs>

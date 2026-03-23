@@ -1,72 +1,184 @@
 'use client';
 
-import { useMemo } from 'react';
+import Link from 'next/link';
+import { useMemo, type ComponentType } from 'react';
 import { collection, query } from 'firebase/firestore';
+import { format, isToday, isTomorrow, parseISO } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/types/aircraft';
 import type { QualityAudit, CorrectiveActionPlan } from '@/types/quality';
 import type { SafetyReport } from '@/types/safety-report';
 import type { Risk } from '@/types/risk';
-import { 
-  Plane, 
-  CalendarCheck, 
-  CalendarX, 
-  Clock, 
-  BarChart3,
+import {
+  ArrowRight,
+  CalendarClock,
+  CalendarRange,
   CheckSquare,
-  ShieldAlert,
   ClipboardCheck,
-  AlertTriangle,
+  DollarSign,
+  FileWarning,
+  Plane,
+  ShieldAlert,
+  Siren,
   TrendingUp,
-  FileWarning
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Bar, 
-  BarChart, 
-  XAxis, 
-  YAxis, 
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
   Cell,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
-  Line,
-  LineChart,
-  CartesianGrid
+  XAxis,
+  YAxis,
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
+
+type AttentionItemTone = 'danger' | 'warning' | 'neutral';
+
+function MetricCard({
+  title,
+  value,
+  hint,
+  icon: Icon,
+}: {
+  title: string;
+  value: string;
+  hint: string;
+  icon: ComponentType<{ className?: string }>;
+}) {
+  return (
+    <Card className="shadow-none border">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <Icon className="h-4 w-4 text-primary" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+        <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AttentionList({
+  title,
+  description,
+  items,
+}: {
+  title: string;
+  description: string;
+  items: { id: string; title: string; detail: string; tone?: AttentionItemTone }[];
+}) {
+  const toneClassMap: Record<AttentionItemTone, string> = {
+    danger: 'border-destructive/30 bg-destructive/5',
+    warning: 'border-amber-500/30 bg-amber-500/5',
+    neutral: 'border-card-border/60 bg-muted/10',
+  };
+
+  return (
+    <Card className="shadow-none border">
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {items.length > 0 ? (
+          items.map((item) => (
+            <div
+              key={item.id}
+              className={cn(
+                'rounded-lg border px-4 py-3',
+                toneClassMap[item.tone || 'neutral']
+              )}
+            >
+              <p className="text-sm font-semibold">{item.title}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
+            </div>
+          ))
+        ) : (
+          <div className="rounded-lg border border-dashed border-card-border/70 px-4 py-8 text-center">
+            <p className="text-sm text-muted-foreground">Nothing urgent right now.</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function QuickActions() {
+  const actions = [
+    { label: 'Daily Schedule', href: '/bookings/schedule' },
+    { label: 'Bookings History', href: '/bookings/history' },
+    { label: 'Quality Audits', href: '/quality/audits' },
+    { label: 'Safety Reports', href: '/safety/safety-reports' },
+    { label: 'Risk Register', href: '/safety/risk-register' },
+    { label: 'Accounting & Billing', href: '/admin/accounting' },
+  ];
+
+  return (
+    <Card className="shadow-none border">
+      <CardHeader>
+        <CardTitle>Quick Actions</CardTitle>
+        <CardDescription>Jump into the areas management checks most often.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-3 sm:grid-cols-2">
+        {actions.map((action) => (
+          <Button
+            key={action.href}
+            asChild
+            variant="outline"
+            className="justify-between h-11 font-semibold"
+          >
+            <Link href={action.href}>
+              {action.label}
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function DashboardPage() {
   const firestore = useFirestore();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
+  const activeTenantId = tenantId || 'safeviate';
 
-  // --- Data Fetching ---
   const bookingsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/bookings`)) : null),
-    [firestore, tenantId]
+    () => (firestore ? query(collection(firestore, `tenants/${activeTenantId}/bookings`)) : null),
+    [firestore, activeTenantId]
   );
   const aircraftQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
-    [firestore, tenantId]
+    () => (firestore ? query(collection(firestore, `tenants/${activeTenantId}/aircrafts`)) : null),
+    [firestore, activeTenantId]
   );
   const auditsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/quality-audits`)) : null),
-    [firestore, tenantId]
+    () => (firestore ? query(collection(firestore, `tenants/${activeTenantId}/quality-audits`)) : null),
+    [firestore, activeTenantId]
   );
   const capsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`)) : null),
-    [firestore, tenantId]
+    () => (firestore ? query(collection(firestore, `tenants/${activeTenantId}/corrective-action-plans`)) : null),
+    [firestore, activeTenantId]
   );
   const safetyReportsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/safety-reports`)) : null),
-    [firestore, tenantId]
+    () => (firestore ? query(collection(firestore, `tenants/${activeTenantId}/safety-reports`)) : null),
+    [firestore, activeTenantId]
   );
   const risksQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/risks`)) : null),
-    [firestore, tenantId]
+    () => (firestore ? query(collection(firestore, `tenants/${activeTenantId}/risks`)) : null),
+    [firestore, activeTenantId]
   );
 
   const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
@@ -76,96 +188,187 @@ export default function DashboardPage() {
   const { data: safetyReports, isLoading: isLoadingSafetyReports } = useCollection<SafetyReport>(safetyReportsQuery);
   const { data: risks, isLoading: isLoadingRisks } = useCollection<Risk>(risksQuery);
 
-  const isLoading = isLoadingBookings || isLoadingAircrafts || isLoadingAudits || isLoadingCaps || isLoadingSafetyReports || isLoadingRisks;
+  const isLoading =
+    isLoadingBookings ||
+    isLoadingAircrafts ||
+    isLoadingAudits ||
+    isLoadingCaps ||
+    isLoadingSafetyReports ||
+    isLoadingRisks;
 
-  // --- Calculations ---
   const stats = useMemo(() => {
     if (!bookings || !aircrafts || !audits || !caps || !safetyReports || !risks) return null;
 
-    // Flight Stats
-    const totalBookings = bookings.length;
-    const cancelledBookings = bookings.filter(b => b.status === 'Cancelled' || b.status === 'Cancelled with Reason').length;
-    const completedBookings = bookings.filter(b => b.status === 'Completed').length;
-    
+    const now = new Date();
+    const aircraftMap = new Map(aircrafts.map((aircraft) => [aircraft.id, aircraft.tailNumber]));
+
+    const completedBookings = bookings.filter((booking) => booking.status === 'Completed');
+    const cancelledBookings = bookings.filter(
+      (booking) => booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason'
+    );
+    const todayBookings = bookings.filter((booking) => booking.date && isToday(parseISO(`${booking.date}T00:00:00`)));
+    const tomorrowBookings = bookings.filter(
+      (booking) => booking.date && isTomorrow(parseISO(`${booking.date}T00:00:00`))
+    );
+    const approvedPending = bookings.filter(
+      (booking) => booking.status === 'Approved' || booking.status === 'Confirmed'
+    );
+    const overduePostFlight = approvedPending.filter((booking) => {
+      if (!booking.date || !booking.endTime) return false;
+      const bookingEnd = parseISO(`${booking.date}T${booking.endTime}:00`);
+      return bookingEnd < now && booking.status !== 'Completed';
+    });
+    const unbilledBookings = completedBookings.filter(
+      (booking) => !booking.accountingStatus || booking.accountingStatus === 'Unbilled'
+    );
+    const pendingRevenue = unbilledBookings.reduce((sum, booking) => sum + (booking.totalCost || 0), 0);
+
     let totalHours = 0;
     const hoursByAircraft: Record<string, number> = {};
-    const aircraftMap = new Map(aircrafts.map(a => [a.id, a.tailNumber]));
-    aircrafts.forEach(a => { hoursByAircraft[a.tailNumber] = 0; });
+    aircrafts.forEach((aircraft) => {
+      hoursByAircraft[aircraft.tailNumber] = 0;
+    });
 
-    bookings.forEach(b => {
-      if (b.status === 'Completed' && b.postFlightData?.hobbs !== undefined && b.preFlightData?.hobbs !== undefined) {
-        const duration = b.postFlightData.hobbs - b.preFlightData.hobbs;
-        const flightHours = Math.max(0, duration);
-        totalHours += flightHours;
-        const tailNumber = aircraftMap.get(b.aircraftId);
-        if (tailNumber) hoursByAircraft[tailNumber] = (hoursByAircraft[tailNumber] || 0) + flightHours;
+    completedBookings.forEach((booking) => {
+      if (
+        booking.postFlightData?.hobbs !== undefined &&
+        booking.preFlightData?.hobbs !== undefined
+      ) {
+        const duration = Math.max(0, booking.postFlightData.hobbs - booking.preFlightData.hobbs);
+        totalHours += duration;
+        const tailNumber = aircraftMap.get(booking.aircraftId);
+        if (tailNumber) {
+          hoursByAircraft[tailNumber] = (hoursByAircraft[tailNumber] || 0) + duration;
+        }
       }
     });
 
     const aircraftChartData = Object.entries(hoursByAircraft)
       .map(([name, hours]) => ({ name, hours: parseFloat(hours.toFixed(1)) }))
-      .sort((a, b) => b.hours - a.hours);
+      .sort((a, b) => b.hours - a.hours)
+      .slice(0, 6);
 
     const statusChartData = [
-      { name: 'Completed', value: completedBookings, fill: 'hsl(var(--chart-2))' },
-      { name: 'Cancelled', value: cancelledBookings, fill: 'hsl(var(--chart-1))' },
-      { name: 'Other', value: totalBookings - completedBookings - cancelledBookings, fill: 'hsl(var(--chart-3))' },
-    ].filter(d => d.value > 0);
+      { name: 'Completed', value: completedBookings.length, fill: 'hsl(var(--chart-2))' },
+      { name: 'Cancelled', value: cancelledBookings.length, fill: 'hsl(var(--chart-1))' },
+      {
+        name: 'Active',
+        value: Math.max(0, bookings.length - completedBookings.length - cancelledBookings.length),
+        fill: 'hsl(var(--chart-3))',
+      },
+    ].filter((item) => item.value > 0);
 
-    // Quality Stats
-    const totalAudits = audits.length;
-    const finalizedAudits = audits.filter(a => a.status === 'Finalized' || a.status === 'Closed');
-    const avgScore = finalizedAudits.length > 0 
-        ? Math.round(finalizedAudits.reduce((acc, a) => acc + (a.complianceScore || 0), 0) / finalizedAudits.length)
+    const finalizedAudits = audits.filter((audit) => audit.status === 'Finalized' || audit.status === 'Closed');
+    const averageComplianceScore =
+      finalizedAudits.length > 0
+        ? Math.round(
+            finalizedAudits.reduce((sum, audit) => sum + (audit.complianceScore || 0), 0) /
+              finalizedAudits.length
+          )
         : 0;
-    const openCaps = caps.filter(c => c.status === 'Open' || c.status === 'In Progress').length;
 
+    const upcomingAudits = audits
+      .filter((audit) => audit.status === 'Scheduled' || audit.status === 'In Progress')
+      .sort((a, b) => new Date(a.auditDate).getTime() - new Date(b.auditDate).getTime())
+      .slice(0, 4);
+
+    const openCaps = caps.filter((cap) => cap.status === 'Open' || cap.status === 'In Progress');
     const auditTrendData = finalizedAudits
-        .sort((a, b) => new Date(a.auditDate).getTime() - new Date(b.auditDate).getTime())
-        .map(a => ({ date: a.auditDate.substring(0, 10), score: a.complianceScore || 0 }))
-        .slice(-6);
+      .sort((a, b) => new Date(a.auditDate).getTime() - new Date(b.auditDate).getTime())
+      .map((audit) => ({
+        date: audit.auditDate.substring(0, 10),
+        score: audit.complianceScore || 0,
+      }))
+      .slice(-6);
 
-    // Safety Stats
-    const totalSafetyReports = safetyReports.length;
-    const openSafetyReports = safetyReports.filter(r => r.status !== 'Closed').length;
-    const totalHazards = risks.filter(r => r.status === 'Open').length;
-
-    const reportsByType = safetyReports.reduce((acc, r) => {
-        acc[r.reportType] = (acc[r.reportType] || 0) + 1;
-        return acc;
+    const openSafetyReports = safetyReports.filter((report) => report.status !== 'Closed');
+    const reportsByType = safetyReports.reduce((acc, report) => {
+      acc[report.reportType] = (acc[report.reportType] || 0) + 1;
+      return acc;
     }, {} as Record<string, number>);
-
     const reportsChartData = Object.entries(reportsByType).map(([name, value]) => ({ name, value }));
+
+    const openHazards = risks.filter((risk) => risk.status === 'Open');
+    const criticalRiskItems = openHazards.flatMap((risk) =>
+      (risk.risks || [])
+        .filter((item) => {
+          const level = item.initialRiskAssessment?.riskLevel;
+          return level === 'Critical' || level === 'High';
+        })
+        .map((item) => ({
+          id: `${risk.id}-${item.id}`,
+          title: risk.hazard,
+          detail: `${risk.hazardArea} • ${item.initialRiskAssessment?.riskLevel || 'Unrated'} risk`,
+          tone: (item.initialRiskAssessment?.riskLevel === 'Critical' ? 'danger' : 'warning') as AttentionItemTone,
+        }))
+    );
+
+    const todayOps = todayBookings
+      .slice(0, 5)
+      .map((booking) => ({
+        id: booking.id,
+        title: `${booking.bookingNumber} • ${aircraftMap.get(booking.aircraftId) || 'Unknown Aircraft'}`,
+        detail: `${booking.startTime} - ${booking.endTime} • ${booking.status}`,
+        tone: 'neutral' as AttentionItemTone,
+      }));
+
+    const attentionItems = [
+      ...overduePostFlight.slice(0, 3).map((booking) => ({
+        id: `postflight-${booking.id}`,
+        title: `${booking.bookingNumber} requires closure`,
+        detail: `${aircraftMap.get(booking.aircraftId) || 'Unknown Aircraft'} • Post-flight still incomplete`,
+        tone: 'danger' as AttentionItemTone,
+      })),
+      ...upcomingAudits.slice(0, 2).map((audit) => ({
+        id: `audit-${audit.id}`,
+        title: `${audit.auditNumber} scheduled`,
+        detail: `${audit.title} • ${format(new Date(audit.auditDate), 'dd MMM yyyy')}`,
+        tone: 'warning' as AttentionItemTone,
+      })),
+      ...criticalRiskItems.slice(0, 2),
+    ].slice(0, 6);
 
     return {
       totalHours: totalHours.toFixed(1),
-      totalBookings,
-      cancelledBookings,
-      completionRate: totalBookings > 0 ? ((completedBookings / totalBookings) * 100).toFixed(1) : '0',
       activeFleet: aircrafts.length,
+      totalBookings: bookings.length,
+      todayBookings: todayBookings.length,
+      tomorrowBookings: tomorrowBookings.length,
+      completionRate: bookings.length > 0 ? ((completedBookings.length / bookings.length) * 100).toFixed(1) : '0',
+      overduePostFlightCount: overduePostFlight.length,
+      unbilledCount: unbilledBookings.length,
+      pendingRevenue,
+      averageComplianceScore,
+      openCapsCount: openCaps.length,
+      openSafetyReportsCount: openSafetyReports.length,
+      openHazardsCount: openHazards.length,
       aircraftChartData,
       statusChartData,
-      totalAudits,
-      avgScore,
-      openCaps,
       auditTrendData,
-      totalSafetyReports,
-      openSafetyReports,
-      totalHazards,
-      reportsChartData
+      reportsChartData,
+      attentionItems,
+      todayOps,
+      upcomingAudits,
+      criticalRiskItems,
     };
   }, [bookings, aircrafts, audits, caps, safetyReports, risks]);
 
   if (isLoading) {
     return (
-      <div className="space-y-6 max-w-[1200px] mx-auto w-full">
-        <Skeleton className="h-10 w-[400px] rounded-full" />
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 w-full" />)}
+      <div className="mx-auto flex w-full max-w-[1350px] flex-col gap-6">
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+          {[1, 2, 3, 4].map((item) => (
+            <Skeleton key={item} className="h-28 w-full" />
+          ))}
         </div>
-        <div className="grid gap-6 md:grid-cols-2">
-          <Skeleton className="h-[400px] w-full" />
-          <Skeleton className="h-[400px] w-full" />
+        <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+          <Skeleton className="h-[320px] w-full" />
+          <Skeleton className="h-[320px] w-full" />
+        </div>
+        <div className="grid gap-6 xl:grid-cols-3">
+          {[1, 2, 3].map((item) => (
+            <Skeleton key={item} className="h-[280px] w-full" />
+          ))}
         </div>
       </div>
     );
@@ -174,265 +377,329 @@ export default function DashboardPage() {
   if (!stats) return null;
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
-      <Tabs defaultValue="flight-stats" className="w-full flex flex-col h-full">
-        <div className='px-1 shrink-0'>
-            <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start">
-                <TabsTrigger value="flight-stats" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Flight Stats</TabsTrigger>
-                <TabsTrigger value="quality" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Quality</TabsTrigger>
-                <TabsTrigger value="safety" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Safety</TabsTrigger>
-            </TabsList>
-        </div>
+    <div className="mx-auto flex h-full w-full max-w-[1350px] flex-col gap-6 overflow-y-auto pb-10">
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          title="Today's Flights"
+          value={String(stats.todayBookings)}
+          hint={`${stats.tomorrowBookings} scheduled for tomorrow`}
+          icon={CalendarRange}
+        />
+        <MetricCard
+          title="Attention Required"
+          value={String(stats.overduePostFlightCount)}
+          hint="Overdue post-flight or immediate oversight items"
+          icon={Siren}
+        />
+        <MetricCard
+          title="Compliance Score"
+          value={`${stats.averageComplianceScore}%`}
+          hint={`${stats.openCapsCount} open corrective actions`}
+          icon={ClipboardCheck}
+        />
+        <MetricCard
+          title="Pending Revenue"
+          value={`$${stats.pendingRevenue.toFixed(2)}`}
+          hint={`${stats.unbilledCount} completed flights still unbilled`}
+          icon={DollarSign}
+        />
+      </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pb-10">
-            {/* --- Flight Stats Content --- */}
-            <TabsContent value="flight-stats" className="m-0 space-y-6">
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Total Hours Flown</CardTitle>
-                            <Clock className="h-4 w-4 text-primary" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.totalHours}</div>
-                            <p className="text-xs text-muted-foreground mt-1">Accumulated fleet time</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Total Bookings</CardTitle>
-                            <CalendarCheck className="h-4 w-4 text-green-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.totalBookings}</div>
-                            <p className="text-xs text-muted-foreground mt-1">All records</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Cancelled Bookings</CardTitle>
-                            <CalendarX className="h-4 w-4 text-destructive" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.cancelledBookings}</div>
-                            <p className="text-xs text-muted-foreground mt-1">Operations loss</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Completion Rate</CardTitle>
-                            <BarChart3 className="h-4 w-4 text-accent" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.completionRate}%</div>
-                            <p className="text-xs text-muted-foreground mt-1">Efficiency percentage</p>
-                        </CardContent>
-                    </Card>
+      <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
+        <AttentionList
+          title="Management Attention"
+          description="The first items leadership should review today."
+          items={stats.attentionItems}
+        />
+        <Card className="shadow-none border">
+          <CardHeader>
+            <CardTitle>Operational Snapshot</CardTitle>
+            <CardDescription>What the operation looks like right now.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+            <div className="rounded-lg border border-card-border/70 bg-muted/10 p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Fleet</p>
+              <p className="mt-2 text-2xl font-bold">{stats.activeFleet}</p>
+              <p className="text-xs text-muted-foreground">Active aircraft in company records</p>
+            </div>
+            <div className="rounded-lg border border-card-border/70 bg-muted/10 p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Completion Rate</p>
+              <p className="mt-2 text-2xl font-bold">{stats.completionRate}%</p>
+              <p className="text-xs text-muted-foreground">Completed flights as a share of total bookings</p>
+            </div>
+            <div className="rounded-lg border border-card-border/70 bg-muted/10 p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Open Safety Reports</p>
+              <p className="mt-2 text-2xl font-bold">{stats.openSafetyReportsCount}</p>
+              <p className="text-xs text-muted-foreground">Reports still under review or action</p>
+            </div>
+            <div className="rounded-lg border border-card-border/70 bg-muted/10 p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Open Hazards</p>
+              <p className="mt-2 text-2xl font-bold">{stats.openHazardsCount}</p>
+              <p className="text-xs text-muted-foreground">Live items in the risk register</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-3">
+        <Card className="shadow-none border xl:col-span-2">
+          <CardHeader>
+            <CardTitle>Today&apos;s Operation</CardTitle>
+            <CardDescription>Current flying programme and high-level live activity.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {stats.todayOps.length > 0 ? (
+              stats.todayOps.map((item) => (
+                <div key={item.id} className="rounded-lg border border-card-border/70 px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">{item.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] font-bold uppercase">
+                      Today
+                    </Badge>
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className="rounded-lg border border-dashed border-card-border/70 px-4 py-8 text-center">
+                <p className="text-sm text-muted-foreground">No flights scheduled for today.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-                <div className="grid gap-6 md:grid-cols-2">
-                    <Card className="flex flex-col">
-                        <CardHeader>
-                            <CardTitle>Hours Flown per Aircraft</CardTitle>
-                            <CardDescription>Utilization breakdown by tail number.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex-1 pb-0 h-[300px]">
-                            <ChartContainer config={{ hours: { label: 'Hours', color: 'hsl(var(--primary))' } }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={stats.aircraftChartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                                <XAxis 
-                                    dataKey="name" 
-                                    stroke="hsl(var(--muted-foreground))" 
-                                    fontSize={12} 
-                                    tickLine={false} 
-                                    axisLine={false} 
-                                />
-                                <YAxis 
-                                    stroke="hsl(var(--muted-foreground))" 
-                                    fontSize={12} 
-                                    tickLine={false} 
-                                    axisLine={false} 
-                                    tickFormatter={(value) => `${value}h`} 
-                                />
-                                <ChartTooltip content={<ChartTooltipContent />} />
-                                <Bar dataKey="hours" fill="var(--color-hours)" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                            </ChartContainer>
-                        </CardContent>
-                    </Card>
+        <QuickActions />
+      </div>
 
-                    <Card className="flex flex-col">
-                        <CardHeader>
-                            <CardTitle>Booking Status Distribution</CardTitle>
-                            <CardDescription>Current schedule vs historical outcomes.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex-1 pb-0 h-[300px] flex flex-col justify-center">
-                            <ChartContainer config={{ 
-                            Completed: { label: 'Completed', color: 'hsl(var(--chart-2))' },
-                            Cancelled: { label: 'Cancelled', color: 'hsl(var(--chart-1))' },
-                            Other: { label: 'Other', color: 'hsl(var(--chart-3))' }
-                            }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                <Pie
-                                    data={stats.statusChartData}
-                                    dataKey="value"
-                                    nameKey="name"
-                                    innerRadius={60}
-                                    strokeWidth={5}
-                                >
-                                    {stats.statusChartData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                                    ))}
-                                </Pie>
-                                </PieChart>
-                            </ResponsiveContainer>
-                            </ChartContainer>
-                            <div className="flex flex-wrap justify-center gap-4 py-4 text-xs">
-                            {stats.statusChartData.map((item) => (
-                                <div key={item.name} className="flex items-center gap-2">
-                                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.fill }} />
-                                <span className="text-muted-foreground font-medium uppercase">{item.name}: {item.value}</span>
-                                </div>
-                            ))}
-                            </div>
-                        </CardContent>
-                    </Card>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card className="flex flex-col shadow-none border">
+          <CardHeader>
+            <CardTitle>Fleet Utilization</CardTitle>
+            <CardDescription>Top aircraft by logged Hobbs time.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[320px] pb-0">
+            <ChartContainer config={{ hours: { label: 'Hours', color: 'hsl(var(--primary))' } }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.aircraftChartData} margin={{ top: 16, right: 12, left: 0, bottom: 0 }}>
+                  <XAxis
+                    dataKey="name"
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `${value}h`}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="hours" fill="var(--color-hours)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="flex flex-col shadow-none border">
+          <CardHeader>
+            <CardTitle>Booking Status Mix</CardTitle>
+            <CardDescription>How bookings are resolving operationally.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex h-[320px] flex-col justify-center">
+            <ChartContainer
+              config={{
+                Completed: { label: 'Completed', color: 'hsl(var(--chart-2))' },
+                Cancelled: { label: 'Cancelled', color: 'hsl(var(--chart-1))' },
+                Active: { label: 'Active', color: 'hsl(var(--chart-3))' },
+              }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                  <Pie
+                    data={stats.statusChartData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={60}
+                    strokeWidth={5}
+                  >
+                    {stats.statusChartData.map((entry, index) => (
+                      <Cell key={`status-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+            <div className="flex flex-wrap justify-center gap-4 py-4 text-xs">
+              {stats.statusChartData.map((item) => (
+                <div key={item.name} className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.fill }} />
+                  <span className="font-medium uppercase text-muted-foreground">
+                    {item.name}: {item.value}
+                  </span>
                 </div>
-            </TabsContent>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-            {/* --- Quality Content --- */}
-            <TabsContent value="quality" className="m-0 space-y-6">
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Total Audits</CardTitle>
-                            <CheckSquare className="h-4 w-4 text-primary" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.totalAudits}</div>
-                            <p className="text-xs text-muted-foreground mt-1">Conducted oversight activities</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Avg Compliance Score</CardTitle>
-                            <TrendingUp className="h-4 w-4 text-green-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.avgScore}%</div>
-                            <p className="text-xs text-muted-foreground mt-1">Mean performance across finalized audits</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Open CAPs</CardTitle>
-                            <ClipboardCheck className="h-4 w-4 text-orange-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.openCaps}</div>
-                            <p className="text-xs text-muted-foreground mt-1">Pending corrective actions</p>
-                        </CardContent>
-                    </Card>
-                </div>
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr_1fr]">
+        <Card className="flex flex-col overflow-hidden shadow-none border">
+          <CardHeader>
+            <CardTitle>Compliance Trend</CardTitle>
+            <CardDescription>Latest finalized audit performance over time.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[320px] overflow-hidden pt-2">
+            <ChartContainer
+              className="h-full w-full overflow-hidden aspect-auto"
+              config={{ score: { label: 'Compliance %', color: 'hsl(var(--chart-2))' } }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={stats.auditTrendData} margin={{ top: 12, right: 12, left: 8, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `${value}%`}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Line
+                    type="monotone"
+                    dataKey="score"
+                    stroke="var(--color-score)"
+                    strokeWidth={3}
+                    dot={{ r: 5, fill: 'var(--color-score)' }}
+                    activeDot={{ r: 7 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
 
-                <Card className="flex flex-col overflow-hidden">
-                    <CardHeader>
-                        <CardTitle>Compliance Score Trend</CardTitle>
-                        <CardDescription>Performance score over the last 6 audits.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[320px] overflow-hidden pt-2">
-                        <ChartContainer
-                            className="h-full w-full overflow-hidden aspect-auto"
-                            config={{ score: { label: 'Compliance %', color: 'hsl(var(--chart-2))' } }}
-                        >
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={stats.auditTrendData} margin={{ top: 12, right: 12, left: 8, bottom: 8 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                                    <YAxis domain={[0, 100]} stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}%`} />
-                                    <ChartTooltip content={<ChartTooltipContent />} />
-                                    <Line type="monotone" dataKey="score" stroke="var(--color-score)" strokeWidth={3} dot={{ r: 5, fill: 'var(--color-score)' }} activeDot={{ r: 7 }} />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </ChartContainer>
-                    </CardContent>
-                </Card>
-            </TabsContent>
+        <AttentionList
+          title="Upcoming Audits"
+          description="Scheduled oversight already on the radar."
+          items={stats.upcomingAudits.map((audit) => ({
+            id: audit.id,
+            title: `${audit.auditNumber} • ${audit.title}`,
+            detail: `${format(new Date(audit.auditDate), 'dd MMM yyyy')} • ${audit.status}`,
+            tone: 'warning',
+          }))}
+        />
 
-            {/* --- Safety Content --- */}
-            <TabsContent value="safety" className="m-0 space-y-6">
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Safety Reports</CardTitle>
-                            <ShieldAlert className="h-4 w-4 text-primary" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.totalSafetyReports}</div>
-                            <p className="text-xs text-muted-foreground mt-1">Total filed occurrences</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Open Investigations</CardTitle>
-                            <FileWarning className="h-4 w-4 text-red-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.openSafetyReports}</div>
-                            <p className="text-xs text-muted-foreground mt-1">Ongoing safety reviews</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Active Hazards</CardTitle>
-                            <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.totalHazards}</div>
-                            <p className="text-xs text-muted-foreground mt-1">Identified in Risk Register</p>
-                        </CardContent>
-                    </Card>
-                </div>
+        <AttentionList
+          title="High Risks"
+          description="Open hazards with high or critical exposure."
+          items={stats.criticalRiskItems}
+        />
+      </div>
 
-                <div className="grid gap-6 md:grid-cols-2">
-                    <Card className="flex flex-col">
-                        <CardHeader>
-                            <CardTitle>Reports by Classification</CardTitle>
-                            <CardDescription>Occurrences categorized by type.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="h-[300px]">
-                            <ChartContainer config={{ value: { label: 'Reports', color: 'hsl(var(--chart-4))' } }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart layout="vertical" data={stats.reportsChartData} margin={{ left: 20 }}>
-                                        <XAxis type="number" hide />
-                                        <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={10} width={100} />
-                                        <ChartTooltip content={<ChartTooltipContent />} />
-                                        <Bar dataKey="value" fill="var(--color-value)" radius={[0, 4, 4, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </ChartContainer>
-                        </CardContent>
-                    </Card>
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card className="flex flex-col shadow-none border">
+          <CardHeader>
+            <CardTitle>Safety Reports by Type</CardTitle>
+            <CardDescription>Where most reporting volume is currently coming from.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ChartContainer config={{ value: { label: 'Reports', color: 'hsl(var(--chart-4))' } }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart layout="vertical" data={stats.reportsChartData} margin={{ left: 20, right: 8 }}>
+                  <XAxis type="number" hide />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={10}
+                    width={110}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="value" fill="var(--color-value)" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Safety Reporting Status</CardTitle>
-                            <CardDescription>Proactive vs Reactive indicators.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="h-[300px] flex items-center justify-center">
-                            <div className="text-center space-y-2">
-                                <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto opacity-20" />
-                                <p className="text-sm text-muted-foreground">Safety trends analysis visualization is currently processing.</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </TabsContent>
-        </div>
-      </Tabs>
+        <Card className="shadow-none border">
+          <CardHeader>
+            <CardTitle>Executive Snapshot</CardTitle>
+            <CardDescription>One-screen summary for company oversight.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-start gap-3 rounded-lg border border-card-border/70 bg-muted/10 p-4">
+              <Plane className="mt-0.5 h-4 w-4 text-primary" />
+              <div>
+                <p className="text-sm font-semibold">Operations</p>
+                <p className="text-xs text-muted-foreground">
+                  {stats.todayBookings} flights today, {stats.tomorrowBookings} tomorrow, {stats.totalBookings} total records.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-card-border/70 bg-muted/10 p-4">
+              <CheckSquare className="mt-0.5 h-4 w-4 text-primary" />
+              <div>
+                <p className="text-sm font-semibold">Compliance</p>
+                <p className="text-xs text-muted-foreground">
+                  {stats.averageComplianceScore}% average score with {stats.openCapsCount} open CAPs.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-card-border/70 bg-muted/10 p-4">
+              <ShieldAlert className="mt-0.5 h-4 w-4 text-primary" />
+              <div>
+                <p className="text-sm font-semibold">Safety</p>
+                <p className="text-xs text-muted-foreground">
+                  {stats.openSafetyReportsCount} open reports and {stats.openHazardsCount} open hazards need monitoring.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-card-border/70 bg-muted/10 p-4">
+              <TrendingUp className="mt-0.5 h-4 w-4 text-primary" />
+              <div>
+                <p className="text-sm font-semibold">Commercial</p>
+                <p className="text-xs text-muted-foreground">
+                  {stats.unbilledCount} completed flights still unbilled, worth ${stats.pendingRevenue.toFixed(2)}.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-card-border/70 bg-muted/10 p-4">
+              <CalendarClock className="mt-0.5 h-4 w-4 text-primary" />
+              <div>
+                <p className="text-sm font-semibold">Closeout Pressure</p>
+                <p className="text-xs text-muted-foreground">
+                  {stats.overduePostFlightCount} bookings appear overdue for post-flight completion.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-card-border/70 bg-muted/10 p-4">
+              <FileWarning className="mt-0.5 h-4 w-4 text-primary" />
+              <div>
+                <p className="text-sm font-semibold">Focus</p>
+                <p className="text-xs text-muted-foreground">
+                  Use this page for daily management awareness, then drill into schedule, audits, safety, and billing.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

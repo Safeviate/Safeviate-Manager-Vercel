@@ -16,23 +16,22 @@ interface AuthGuardProps {
 
 export function AuthGuard({ children }: AuthGuardProps) {
   const { user: authUser, isUserLoading: isAuthLoading } = useUser();
-  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
+  const { userProfile, tenantId, isLoading: isProfileLoading } = useUserProfile();
   const router = useRouter();
   const pathname = usePathname();
   const firestore = useFirestore();
-  const tenantId = 'safeviate';
 
   const [unreadAlerts, setUnreadAlerts] = useState<Alert[] | null>(null);
 
   const mandatoryAlertsQuery = useMemoFirebase(
-    () => (firestore && userProfile && userProfile.id !== 'DEVELOPER_MODE'
+    () => (firestore && tenantId && userProfile && userProfile.id !== 'DEVELOPER_MODE'
         ? query(
             collection(firestore, `tenants/${tenantId}/alerts`),
             where('status', '==', 'Active'),
             where('mustRead', '==', true)
           )
         : null),
-    [firestore, userProfile]
+    [firestore, tenantId, userProfile]
   );
 
   const { data: mandatoryAlerts, isLoading: isLoadingAlerts } = useCollection<Alert>(mandatoryAlertsQuery);

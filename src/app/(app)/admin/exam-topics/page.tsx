@@ -149,7 +149,7 @@ export default function ExamTopicsPage() {
 
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         {/* --- STICKY HEADER SECTION --- */}
-        <div className="sticky top-0 z-20 bg-background border-b shrink-0">
+        <div className="bg-background border-b shrink-0">
           <CardHeader className="bg-muted/5 border-b py-4 px-6">
             <CardTitle className="text-sm flex items-center gap-2">
               <PlusCircle className="h-4 w-4 text-primary" />

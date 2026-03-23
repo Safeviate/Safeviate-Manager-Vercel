@@ -36,7 +36,7 @@ export default function PermissionsPage() {
           <ScrollArea className="h-full">
             <div className="p-0">
               <Table>
-                  <TableHeader className="bg-muted/30 sticky top-0 z-10 backdrop-blur-sm">
+                  <TableHeader className="bg-muted/30">
                       <TableRow>
                           <TableHead className="text-[10px] uppercase font-black">Resource</TableHead>
                           <TableHead className="text-[10px] uppercase font-black">Action</TableHead>

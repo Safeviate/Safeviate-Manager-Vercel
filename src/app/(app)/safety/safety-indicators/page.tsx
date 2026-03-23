@@ -17,7 +17,29 @@ import type { SpiConfig, SpiConfigurations } from '@/types/spi';
 import type { ExternalOrganization, TabVisibilitySettings } from '@/types/quality';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
+    return (
+        <div className="border-y border-card-border bg-card px-6 py-4">
+            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex min-w-max">
+                <TabsTrigger value="internal" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs shrink-0">
+                    Internal
+                </TabsTrigger>
+                {organizations.map((organization) => (
+                    <TabsTrigger
+                        key={organization.id}
+                        value={organization.id}
+                        className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs shrink-0"
+                    >
+                        {organization.name}
+                    </TabsTrigger>
+                ))}
+            </TabsList>
+        </div>
+    );
+}
 
 const initialSpiConfig: SpiConfig[] = [
     {
@@ -94,11 +116,11 @@ export default function SafetyIndicatorsPage() {
   const [selectedSpi, setSelectedSpi] = useState<SpiConfig | null>(null);
 
   const firestore = useFirestore();
-  const { tenantId, userProfile } = useUserProfile();
+  const { tenantId } = useUserProfile();
   const { hasPermission } = usePermissions();
+  const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'safety-indicators-view' });
 
   const canViewAll = hasPermission('safety-indicators-view');
-  const userOrgId = userProfile?.organizationId;
 
   const reportsQuery = useMemoFirebase(
     () => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'safety-reports')) : null),
@@ -172,41 +194,10 @@ export default function SafetyIndicatorsPage() {
       saveConfigToFirestore(newConfig);
   };
 
-  const renderOrgContext = (orgId: string | 'internal') => {
+  const renderOrgCard = (orgId: string | 'internal') => {
     const contextOrgId = orgId === 'internal' ? null : orgId;
     return (
-        <div className="grid grid-cols-1 gap-6 pb-10 max-w-[1200px] mx-auto w-full">
-            {spiConfig.map(spi => (
-                <SPICard 
-                    key={spi.id} 
-                    spi={spi} 
-                    onEdit={handleEdit}
-                    onDelete={(id) => {
-                        if(window.confirm('Delete this SPI?')) {
-                            const nc = spiConfig.filter(s => s.id !== id);
-                            setSpiConfig(nc);
-                            saveConfigToFirestore(nc);
-                        }
-                    }}
-                    reports={reports?.filter(r => r.organizationId === contextOrgId) || []} 
-                    bookings={bookings?.filter(b => b.organizationId === contextOrgId) || []}
-                    onMonthDataSave={handleMonthDataSave}
-                />
-            ))}
-        </div>
-    );
-  };
-
-  if (isLoadingReports || isLoadingBookings || isLoadingOrgs || isLoadingSpiDocument || isLoadingVisibility) {
-    return <div className="space-y-6 max-w-[1200px] mx-auto w-full"><Skeleton className="h-10 w-[400px] rounded-full" /><Skeleton className="h-[200px] w-full" /></div>;
-  }
-
-  const showTabs = canViewAll;
-
-  return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
-      <Tabs defaultValue="internal" className="w-full flex-1 flex flex-col min-h-0">
-        <Card className="shrink-0 sticky top-0 z-20 border shadow-sm max-w-[1200px] mx-auto w-full">
+        <Card className="shrink-0 border shadow-sm max-w-[1200px] mx-auto w-full">
             <CardHeader className="py-4">
                 <div className="flex justify-between items-center">
                     <div>
@@ -231,37 +222,58 @@ export default function SafetyIndicatorsPage() {
                     </Button>
                 </div>
             </CardHeader>
-            {showTabs && (
-                <div className="px-6 pb-2">
-                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
-                        <TabsTrigger value="internal" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs shrink-0">Internal</TabsTrigger>
-                        {(organizations || []).map(org => (
-                            <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs shrink-0">
-                                {org.name}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
+            {showTabs && <CompanyTabsRow organizations={organizations || []} />}
+            <CardContent className="p-6">
+                <div className="grid grid-cols-1 gap-6 pb-4 max-w-[1200px] mx-auto w-full">
+                    {spiConfig.map(spi => (
+                        <SPICard 
+                            key={spi.id} 
+                            spi={spi} 
+                            onEdit={handleEdit}
+                            onDelete={(id) => {
+                                if(window.confirm('Delete this SPI?')) {
+                                    const nc = spiConfig.filter(s => s.id !== id);
+                                    setSpiConfig(nc);
+                                    saveConfigToFirestore(nc);
+                                }
+                            }}
+                            reports={reports?.filter(r => r.organizationId === contextOrgId) || []} 
+                            bookings={bookings?.filter(b => b.organizationId === contextOrgId) || []}
+                            onMonthDataSave={handleMonthDataSave}
+                        />
+                    ))}
                 </div>
-            )}
+            </CardContent>
         </Card>
+    );
+  };
 
+  if (isLoadingReports || isLoadingBookings || isLoadingOrgs || isLoadingSpiDocument || isLoadingVisibility) {
+    return <div className="space-y-6 max-w-[1200px] mx-auto w-full"><Skeleton className="h-10 w-[400px] rounded-full" /><Skeleton className="h-[200px] w-full" /></div>;
+  }
+
+  const showTabs = shouldShowOrganizationTabs;
+
+  return (
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
+      <Tabs defaultValue="internal" className="w-full flex-1 flex flex-col min-h-0">
         <div className="flex-1 min-h-0 overflow-hidden mt-4">
             {!showTabs ? (
                 <ScrollArea className="h-full custom-scrollbar pr-4">
-                    {renderOrgContext(userOrgId || 'internal')}
+                    {renderOrgCard(scopedOrganizationId)}
                 </ScrollArea>
             ) : (
                 <>
                     <TabsContent value="internal" className="m-0 h-full">
                         <ScrollArea className="h-full custom-scrollbar pr-4">
-                            {renderOrgContext('internal')}
+                            {renderOrgCard('internal')}
                         </ScrollArea>
                     </TabsContent>
                     
                     {(organizations || []).map(org => (
                         <TabsContent key={org.id} value={org.id} className="m-0 h-full">
                             <ScrollArea className="h-full custom-scrollbar pr-4">
-                                {renderOrgContext(org.id)}
+                                {renderOrgCard(org.id)}
                             </ScrollArea>
                         </TabsContent>
                     ))}

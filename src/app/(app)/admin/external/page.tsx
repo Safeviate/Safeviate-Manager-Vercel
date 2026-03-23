@@ -13,6 +13,7 @@ import { PlusCircle, Pencil, Trash2, Building2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import type { ExternalOrganization } from '@/types/quality';
 
 export default function ExternalCompaniesPage() {
@@ -75,51 +76,57 @@ export default function ExternalCompaniesPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 h-full max-w-[1200px] mx-auto w-full">
-      <div className="flex justify-between items-center px-1">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">External Companies</h1>
-          <p className="text-muted-foreground">Manage third-party organizations involved in quality audits and safety management.</p>
-        </div>
-        {canManage && (
-          <Button onClick={() => handleOpenForm()}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Company
-          </Button>
-        )}
-      </div>
-
-      <Card className="shadow-none border">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Company Name</TableHead>
-                <TableHead>Contact Email</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoadingOrgs ? (
-                <TableRow><TableCell colSpan={4} className="text-center p-8">Loading...</TableCell></TableRow>
-              ) : (organizations || []).map(org => (
-                <TableRow key={org.id}>
-                  <TableCell className="font-medium">{org.name}</TableCell>
-                  <TableCell>{org.contactEmail || 'N/A'}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">{org.address || 'N/A'}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenForm(org)}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(org.id)}><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {(!organizations || organizations.length === 0) && !isLoadingOrgs && (
-                <TableRow><TableCell colSpan={4} className="text-center h-24 text-muted-foreground">No external companies found.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
+    <div className="flex flex-col gap-6 h-full min-h-0 max-w-[1200px] mx-auto w-full">
+      <Card className="flex flex-col flex-1 min-h-0 overflow-hidden shadow-none border">
+        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6">
+          <div className="space-y-1">
+            <CardTitle>External Companies</CardTitle>
+            <CardDescription>Manage third-party organizations involved in quality audits and safety management.</CardDescription>
+          </div>
+          {canManage && (
+            <div className="flex flex-col gap-1.5 sm:items-end w-full sm:w-auto">
+              <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Company Control</p>
+              <Button onClick={() => handleOpenForm()}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Company
+              </Button>
+            </div>
+          )}
+        </CardHeader>
+        <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="p-6">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Company Name</TableHead>
+                    <TableHead>Contact Email</TableHead>
+                    <TableHead>Address</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoadingOrgs ? (
+                    <TableRow><TableCell colSpan={4} className="text-center p-8">Loading...</TableCell></TableRow>
+                  ) : (organizations || []).map(org => (
+                    <TableRow key={org.id}>
+                      <TableCell className="font-medium">{org.name}</TableCell>
+                      <TableCell>{org.contactEmail || 'N/A'}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{org.address || 'N/A'}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenForm(org)}><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(org.id)}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {(!organizations || organizations.length === 0) && !isLoadingOrgs && (
+                    <TableRow><TableCell colSpan={4} className="text-center h-24 text-muted-foreground">No external companies found.</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </ScrollArea>
         </CardContent>
       </Card>
 

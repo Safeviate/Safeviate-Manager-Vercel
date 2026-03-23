@@ -1,13 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { Calculator, Compass, Fuel, Mountain, AlertTriangle, Info } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Compass, Fuel, Mountain, AlertTriangle, Info } from 'lucide-react';
 
 export function EstimatorTab() {
   // Fuel State
@@ -63,23 +59,23 @@ export function EstimatorTab() {
 
   return (
     <div className="space-y-6">
-      <div className="px-1">
-        <h2 className="text-xl font-bold font-headline">Safety & Search Estimator</h2>
-        <p className="text-sm text-muted-foreground">Mathematical tools to assist in determining emergency phases and potential search areas.</p>
+      <div className="border-b px-6 py-6">
+        <h3 className="font-headline text-2xl font-semibold">Safety &amp; Search Estimator</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Mathematical tools to assist in determining emergency phases and potential search areas.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* --- Fuel & Endurance --- */}
-        <Card className="shadow-none border h-full">
-          <CardHeader className="bg-muted/10">
-            <CardTitle className="text-base flex items-center gap-2">
+      <div className="grid grid-cols-1 gap-0 lg:grid-cols-2">
+        <section className="border-b lg:border-r">
+          <div className="border-b px-6 py-5">
+            <div className="flex items-center gap-2">
               <Fuel className="h-4 w-4 text-primary" />
-              Fuel Endurance & Exhaustion
-            </CardTitle>
-            <CardDescription>Determine how much time remains before fuel exhaustion.</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-6">
+              <h4 className="text-lg font-semibold font-headline">Fuel Endurance & Exhaustion</h4>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">Determine how much time remains before fuel exhaustion.</p>
+          </div>
+          <div className="space-y-6 p-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="fuel-qty">Fuel on Board (Gal/L)</Label>
@@ -108,19 +104,18 @@ export function EstimatorTab() {
                 If fuel is considered exhausted, protocol dictates immediate escalation to <strong>DETRESFA</strong> (Distress).
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        {/* --- Search Area Estimator --- */}
-        <Card className="shadow-none border h-full">
-          <CardHeader className="bg-muted/10">
-            <CardTitle className="text-base flex items-center gap-2">
+        <section className="border-b">
+          <div className="border-b px-6 py-5">
+            <div className="flex items-center gap-2">
               <Compass className="h-4 w-4 text-primary" />
-              Potential Search Area
-            </CardTitle>
-            <CardDescription>Estimate the aircraft's travel distance since last contact.</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-6">
+              <h4 className="text-lg font-semibold font-headline">Potential Search Area</h4>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">Estimate the aircraft&apos;s travel distance since last contact.</p>
+          </div>
+          <div className="space-y-6 p-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="gs">Ground Speed (Knots)</Label>
@@ -149,19 +144,18 @@ export function EstimatorTab() {
                 The search radius is a circular area centered on the last known position. Use <strong>Max Radius</strong> to determine the absolute perimeter based on remaining fuel endurance.
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        {/* --- Glide Distance --- */}
-        <Card className="shadow-none border lg:col-span-2">
-          <CardHeader className="bg-muted/10">
-            <CardTitle className="text-base flex items-center gap-2">
+        <section className="overflow-hidden lg:col-span-2">
+          <div className="border-b px-6 py-5">
+            <div className="flex items-center gap-2">
               <Mountain className="h-4 w-4 text-primary" />
-              Forced Landing: Glide Range
-            </CardTitle>
-            <CardDescription>Estimated maximum distance the aircraft can glide from a specified altitude.</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
+              <h4 className="text-lg font-semibold font-headline">Forced Landing: Glide Range</h4>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">Estimated maximum distance the aircraft can glide from a specified altitude.</p>
+          </div>
+          <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -186,9 +180,8 @@ export function EstimatorTab() {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
+          </div>
+        </section>
       </div>
     </div>
   );

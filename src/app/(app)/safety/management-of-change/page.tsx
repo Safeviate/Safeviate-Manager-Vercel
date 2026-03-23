@@ -1,11 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,19 +12,19 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { ManagementOfChange } from '@/types/moc';
-import type { ExternalOrganization, TabVisibilitySettings } from '@/types/quality';
+import type { ExternalOrganization } from '@/types/quality';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { MocActions } from './moc-actions';
-import { Separator } from '@/components/ui/separator';
 
 export default function ManagementOfChangePage() {
     const firestore = useFirestore();
     const { hasPermission } = usePermissions();
-    const { tenantId, userProfile } = useUserProfile();
+    const { tenantId } = useUserProfile();
+    const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'moc-manage' });
 
     const canViewAll = hasPermission('moc-manage');
-    const userOrgId = userProfile?.organizationId;
 
     const mocsQuery = useMemoFirebase(
         () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/management-of-change`), orderBy('proposalDate', 'desc')) : null),
@@ -37,27 +36,24 @@ export default function ManagementOfChangePage() {
         [firestore, tenantId]
     );
 
-    const visibilitySettingsRef = useMemoFirebase(
-        () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'tab-visibility') : null),
-        [firestore, tenantId]
-    );
-
     const { data: mocs, isLoading: isLoadingMocs, error } = useCollection<ManagementOfChange>(mocsQuery);
     const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
-    const { data: visibilitySettings, isLoading: isLoadingVisibility } = useDoc<TabVisibilitySettings>(visibilitySettingsRef);
 
-    const isLoading = isLoadingMocs || isLoadingOrgs || isLoadingVisibility;
+    const isLoading = isLoadingMocs || isLoadingOrgs;
 
-    const renderOrgContext = (orgId: string | 'internal') => {
+    const renderOrgCard = (orgId: string | 'internal') => {
         const filteredMocs = (mocs || []).filter(moc => 
             orgId === 'internal' ? !moc.organizationId : moc.organizationId === orgId
         );
+        const companyName = orgId === 'internal'
+            ? 'Internal Management of Change'
+            : organizations?.find((o) => o.id === orgId)?.name;
 
         return (
-            <Card className="min-h-[400px] flex flex-col shadow-none border">
+            <Card className="shadow-none border">
                 <CardHeader className="bg-muted/10 border-b flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-6">
                     <div>
-                        <CardTitle className="text-2xl font-headline">{orgId === 'internal' ? 'Internal Management of Change' : organizations?.find(o => o.id === orgId)?.name}</CardTitle>
+                        <CardTitle className="text-2xl font-headline">{companyName}</CardTitle>
                         <CardDescription>Formal change management process for this organization.</CardDescription>
                     </div>
                     {canViewAll && (
@@ -72,6 +68,22 @@ export default function ManagementOfChangePage() {
                         </div>
                     )}
                 </CardHeader>
+                {shouldShowOrganizationTabs && (
+                    <div className="border-b px-6 py-4">
+                        <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex min-w-max">
+                            <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Internal</TabsTrigger>
+                            {(organizations || []).map((organization) => (
+                                <TabsTrigger
+                                    key={organization.id}
+                                    value={organization.id}
+                                    className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0"
+                                >
+                                    {organization.name}
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
+                    </div>
+                )}
                 <CardContent className="p-0">
                     <Table>
                         <TableHeader>
@@ -123,38 +135,22 @@ export default function ManagementOfChangePage() {
         return <div className="max-w-[1200px] mx-auto w-full text-center py-10 text-destructive"><p>Error loading records: {error.message}</p></div>;
     }
 
-    const showTabs = canViewAll;
+    const showTabs = shouldShowOrganizationTabs;
 
     return (
         <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
-            <div className="px-1">
-                <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Management of Change</h1>
-                <p className="text-muted-foreground">Formally manage and identify risks associated with significant organizational changes.</p>
-            </div>
-
             {!showTabs ? (
-                renderOrgContext(userOrgId || 'internal')
+                renderOrgCard(scopedOrganizationId)
             ) : (
                 <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
-                    <div className="px-1 shrink-0">
-                        <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
-                            <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Internal</TabsTrigger>
-                            {(organizations || []).map(org => (
-                                <TabsTrigger key={org.id} value={org.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
-                                    {org.name}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-                    </div>
-
                     <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
-                        <TabsContent value="internal" className="mt-0">
-                            {renderOrgContext('internal')}
+                        <TabsContent value="internal" className="m-0 p-0">
+                            {renderOrgCard('internal')}
                         </TabsContent>
                         
                         {(organizations || []).map(org => (
-                            <TabsContent key={org.id} value={org.id} className="mt-0">
-                                {renderOrgContext(org.id)}
+                            <TabsContent key={org.id} value={org.id} className="m-0 p-0">
+                                {renderOrgCard(org.id)}
                             </TabsContent>
                         ))}
                     </div>
