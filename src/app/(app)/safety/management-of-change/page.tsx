@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -51,13 +51,9 @@ export default function ManagementOfChangePage() {
 
         return (
             <Card className="shadow-none border">
-                <CardHeader className="bg-muted/10 border-b flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-6">
-                    <div>
-                        <CardTitle className="text-2xl font-headline">{companyName}</CardTitle>
-                        <CardDescription>Formal change management process for this organization.</CardDescription>
-                    </div>
+                <CardHeader className="bg-muted/10 border-b flex flex-col xl:flex-row items-start xl:items-center justify-end gap-3 p-4">
                     {canViewAll && (
-                        <div className="flex flex-col gap-1.5 xl:items-end w-full md:w-auto">
+                        <div className="flex flex-col gap-1 xl:items-end w-full md:w-auto">
                             <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Change Control</p>
                             <Button asChild size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
                                 <Link href={`/safety/management-of-change/new?orgId=${orgId}`}>
@@ -69,7 +65,7 @@ export default function ManagementOfChangePage() {
                     )}
                 </CardHeader>
                 {shouldShowOrganizationTabs && (
-                    <div className="border-b px-6 py-4">
+                    <div className="border-y border-card-border bg-card px-6 py-4">
                         <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex min-w-max">
                             <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Internal</TabsTrigger>
                             {(organizations || []).map((organization) => (

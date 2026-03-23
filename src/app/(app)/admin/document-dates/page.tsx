@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Clock, CalendarClock, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { Trash2, Clock, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { useDebounce } from '@/hooks/use-debounce';
@@ -248,15 +248,7 @@ export default function DocumentDatesPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden gap-4">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5">
-          <div className="flex items-center gap-2">
-            <CalendarClock className="h-5 w-5 text-primary" />
-            <CardTitle>Threshold & Warning Configurations</CardTitle>
-          </div>
-          <CardDescription>
-            Manage automatic notifications for document expiry, student milestones, and aircraft maintenance.
-          </CardDescription>
-        </CardHeader>
+        <CardHeader className="shrink-0 border-b bg-muted/5 p-4" />
 
         <CardContent className="flex-1 p-0 overflow-hidden">
           <ScrollArea className="h-full">

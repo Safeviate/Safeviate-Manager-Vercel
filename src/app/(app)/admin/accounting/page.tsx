@@ -3,17 +3,16 @@
 import { useState, useMemo } from 'react';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileSpreadsheet, Landmark, Eye, Printer, X } from 'lucide-react';
+import { FileSpreadsheet, Eye, Printer, X } from 'lucide-react';
 import { BillingTable } from './billing-table';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { Booking } from '@/types/booking';
@@ -161,20 +160,12 @@ export default function AccountingPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden gap-4">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 p-4 md:p-6">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
-            <div className="flex items-center gap-2">
-              <Landmark className="h-5 w-5 text-primary" />
-              <CardTitle className="text-xl md:text-2xl leading-none">Flight Billing</CardTitle>
-            </div>
-            <CardDescription className="text-xs md:text-sm sm:pt-0.5">Manage revenue and Sage Accounting exports.</CardDescription>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-4 md:gap-8 w-full sm:w-auto justify-between sm:justify-end">
-            <div className="text-left sm:text-right min-w-fit">
-              <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Pending Revenue</p>
-              <div className="flex items-center gap-2 justify-start sm:justify-end">
-                <span className="text-xl md:text-2xl font-black text-primary">
+        <CardHeader className="shrink-0 border-b bg-muted/5 flex items-center justify-end p-4">
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-fit">
+              <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider whitespace-nowrap">Pending Revenue</p>
+              <div className="flex items-center gap-2">
+                <span className="text-lg md:text-xl font-black text-primary leading-none">
                   ${totalBillable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
                 <Badge variant="outline" className="h-5 text-[9px] font-bold">
@@ -182,8 +173,6 @@ export default function AccountingPage() {
                 </Badge>
               </div>
             </div>
-
-            <Separator orientation="vertical" className="h-10 hidden sm:block" />
           </div>
         </CardHeader>
 

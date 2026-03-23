@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { FileText, Search, Trash2, CalendarIcon, Eye, PlusCircle, FileType, ImageIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -91,16 +91,10 @@ export default function CompanyDocumentsPage() {
   return (
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 space-y-4 p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
-              <CardTitle>Company Documents</CardTitle>
-              <CardDescription>
-                Controlled manuals, standard operating procedures, and reference materials.
-              </CardDescription>
-            </div>
+        <CardHeader className="shrink-0 border-b bg-muted/5 space-y-3 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
             {canManage && (
-              <div className="flex flex-col gap-1.5 sm:items-end w-full sm:w-auto">
+              <div className="flex flex-col gap-1 sm:items-end w-full sm:w-auto">
                 <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Document Control</p>
                 <DocumentUploader
                   onDocumentUploaded={handleDocumentUploaded}
@@ -113,7 +107,7 @@ export default function CompanyDocumentsPage() {
               </div>
             )}
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative w-full sm:w-96">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input

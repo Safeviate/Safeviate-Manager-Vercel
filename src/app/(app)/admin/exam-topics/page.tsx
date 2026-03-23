@@ -134,11 +134,6 @@ export default function ExamTopicsPage() {
 
   return (
     <div className="max-w-3xl mx-auto w-full flex flex-col gap-6 h-full pb-10 overflow-hidden">
-      <div className="px-1 shrink-0">
-        <h1 className="text-3xl font-bold tracking-tight font-headline">Exam Categories</h1>
-        <p className="text-muted-foreground">Manage the subjects used to organize the Question Bank and randomized Mock Exams.</p>
-      </div>
-
       <Alert className="bg-primary/5 border-primary/20 shrink-0">
         <AlertTriangle className="h-4 w-4 text-primary" />
         <AlertTitle>Important: Synchronization</AlertTitle>

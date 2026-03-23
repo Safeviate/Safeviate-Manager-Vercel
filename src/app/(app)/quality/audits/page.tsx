@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -293,13 +293,9 @@ export default function AuditsPage() {
 
         return (
             <Card className="min-h-[calc(100vh-15rem)] flex flex-col shadow-none border">
-                <CardHeader className="space-y-4">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="space-y-1">
-                            <CardTitle>Quality Audits</CardTitle>
-                            <CardDescription>Manage internal and external quality assurance activities.</CardDescription>
-                        </div>
-                        <div className="flex flex-col gap-1.5 sm:items-end w-full sm:w-auto">
+            <CardHeader className="space-y-3 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                        <div className="flex flex-col gap-1 sm:items-end w-full sm:w-auto">
                             <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Oversight Controls</p>
                             <div className="flex gap-2">
                                 <Button asChild variant="outline" size="sm" className="h-9 px-4 text-xs font-bold gap-2">

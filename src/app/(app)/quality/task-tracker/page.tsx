@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { collection, query, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,7 +36,7 @@ type UnifiedTask = {
 
 function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
   return (
-    <div className="border-b px-6 py-4">
+    <div className="border-y border-card-border bg-card px-6 py-4">
       <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex min-w-max">
         <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
           Internal
@@ -224,10 +224,7 @@ export default function TaskTrackerPage() {
 
     return (
       <Card className="min-h-[400px] flex flex-col shadow-none border">
-        <CardHeader className="bg-muted/10 border-b">
-          <CardTitle>{sectionTitle}</CardTitle>
-          <CardDescription>Consolidated view of all pending mitigations and corrective actions.</CardDescription>
-        </CardHeader>
+        <CardHeader className="bg-muted/10 border-b p-4" />
         {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
         <CardContent className="p-0">
           {renderTasksTable(filteredTasks)}

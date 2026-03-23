@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, writeBatch, doc, deleteDoc } from 'firebase/firestore';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste, BookOpen } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -240,7 +240,7 @@ function UploadRegulationsDialog({ tenantId, organizationId }: { tenantId: strin
 
 function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
     return (
-        <div className="border-b px-6 py-4">
+        <div className="border-y border-card-border bg-card px-6 py-4">
             <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex min-w-max">
                 <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
                     Internal
@@ -359,13 +359,9 @@ export default function CoherenceMatrixPage() {
 
     return (
         <Card className="min-h-[500px] flex flex-col shadow-none border">
-            <CardHeader className="bg-muted/10 border-b flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-6">
-                <div>
-                    <CardTitle className="text-2xl font-headline">{sectionTitle}</CardTitle>
-                    <CardDescription>Mapping external regulations to internal company processes.</CardDescription>
-                </div>
+            <CardHeader className="bg-muted/10 border-b flex flex-col xl:flex-row items-start xl:items-center justify-end gap-3 p-4">
                 <div className="flex flex-wrap items-center gap-4 md:gap-8 w-full xl:w-auto justify-start xl:justify-end">
-                    <div className="flex flex-col gap-1.5 xl:items-end">
+                    <div className="flex flex-col gap-1 xl:items-end">
                         <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Regulatory Assets</p>
                         <div className="flex gap-2">
                             <UploadRegulationsDialog tenantId={tenantId!} organizationId={contextOrgId} />
@@ -375,7 +371,7 @@ export default function CoherenceMatrixPage() {
                         </div>
                     </div>
                     <Separator orientation="vertical" className="h-10 hidden xl:block" />
-                    <div className="flex flex-col gap-1.5 xl:items-end">
+                    <div className="flex flex-col gap-1 xl:items-end">
                         <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Compliance Management</p>
                         <Button size="sm" className="h-8 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm gap-2" onClick={() => handleOpenForm()}>
                             <PlusCircle className="h-4 w-4" /> Add Item

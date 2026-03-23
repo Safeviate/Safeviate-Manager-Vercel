@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { calculateFuelGallonsFromWeight, calculateFuelWeight, gallonsToLitres, getFuelPreset, poundsToKilograms, type FuelType } from '@/lib/fuel';
@@ -453,13 +453,12 @@ const WBCalculator = () => {
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
         
         {/* STICKY HEADER */}
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col items-start gap-3 p-4 md:flex-row md:items-center md:justify-between">
           <div className="min-w-0">
-            <CardTitle className="text-2xl leading-none sm:text-3xl md:text-2xl">W&B Configurator</CardTitle>
             {loadedAircraft && (
-                <CardDescription>
+                <p className="text-xs text-muted-foreground">
                     Loaded: <span className="font-semibold text-primary">{loadedAircraft.tailNumber}</span> ({loadedAircraft.model})
-                </CardDescription>
+                </p>
             )}
           </div>
           <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">

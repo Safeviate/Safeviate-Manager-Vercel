@@ -7,9 +7,8 @@ import { NewChecklistDialog } from './new-checklist-dialog';
 import { ChecklistTemplateCard } from './checklist-template-card';
 import { Accordion } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CheckSquare as CheckIcon } from 'lucide-react';
 import type { QualityAuditChecklistTemplate } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
 import type { Personnel } from '../../users/personnel/page';
@@ -62,15 +61,8 @@ export default function AuditChecklistsManager() {
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <CheckIcon className="h-5 w-5 text-primary" />
-              <CardTitle>Audit Checklist Templates</CardTitle>
-            </div>
-            <CardDescription>Manage master checklists and start new audits across departments.</CardDescription>
-          </div>
-          <div className="flex flex-col gap-1.5 sm:items-end w-full sm:w-auto">
+        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 p-4">
+          <div className="flex flex-col gap-1 sm:items-end w-full sm:w-auto">
             <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Template Control</p>
             <NewChecklistDialog
                 tenantId={tenantId}

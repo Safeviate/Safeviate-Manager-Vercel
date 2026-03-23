@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { collection, query, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -78,13 +78,9 @@ export default function ExternalCompaniesPage() {
   return (
     <div className="flex flex-col gap-6 h-full min-h-0 max-w-[1200px] mx-auto w-full">
       <Card className="flex flex-col flex-1 min-h-0 overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6">
-          <div className="space-y-1">
-            <CardTitle>External Companies</CardTitle>
-            <CardDescription>Manage third-party organizations involved in quality audits and safety management.</CardDescription>
-          </div>
+        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 p-4">
           {canManage && (
-            <div className="flex flex-col gap-1.5 sm:items-end w-full sm:w-auto">
+            <div className="flex flex-col gap-1 sm:items-end w-full sm:w-auto">
               <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Company Control</p>
               <Button onClick={() => handleOpenForm()}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Company

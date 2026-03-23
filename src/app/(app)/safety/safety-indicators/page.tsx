@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { EditSpiForm } from './edit-spi-form';
 import { useCollection, useFirestore, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
@@ -198,12 +198,8 @@ export default function SafetyIndicatorsPage() {
     const contextOrgId = orgId === 'internal' ? null : orgId;
     return (
         <Card className="shrink-0 border shadow-sm max-w-[1200px] mx-auto w-full">
-            <CardHeader className="py-4">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <CardTitle className="text-2xl">Safety Indicators</CardTitle>
-                        <CardDescription>Monitoring Safety Performance Indicators (SPIs) across the fleet.</CardDescription>
-                    </div>
+            <CardHeader className="py-3 px-4">
+                <div className="flex justify-end items-center">
                     <Button onClick={() => {
                         setSelectedSpi({
                             id: 'new-spi',

@@ -796,3 +796,371 @@ Import trace for requested module:
  ○ Compiling /users/instructors ...
  ✓ Compiled /users/instructors in 3.3s (1145 modules)
  GET /users/instructors 200 in 3492ms
+ ✓ Compiled in 13.4s (1695 modules)
+ ✓ Compiled in 3.8s (1695 modules)
+ ✓ Compiled in 20.1s (1695 modules)
+ ✓ Compiled in 1560ms (1695 modules)
+ ○ Compiling /login ...
+ ✓ Compiled / in 7.8s (1131 modules)
+ ✓ Compiled (1141 modules)
+ GET / 307 in 7025ms
+ GET /login 200 in 2804ms
+ GET /login 200 in 189ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 13.5s (1745 modules)
+ GET /dashboard 200 in 14176ms
+ GET /dashboard 200 in 98ms
+ ○ Compiling /quality/audit-checklists ...
+ ✓ Compiled /quality/audit-checklists in 6.8s (1775 modules)
+ GET /quality/audit-checklists 200 in 7185ms
+ ○ Compiling /quality/audit-schedule ...
+ ✓ Compiled /quality/audit-schedule in 3.7s (1772 modules)
+ GET /quality/audit-schedule 200 in 3955ms
+ ○ Compiling /quality/audits ...
+ ✓ Compiled /quality/audits in 7.2s (1781 modules)
+ GET /quality/audits 200 in 7563ms
+ GET /quality/audits 200 in 94ms
+ GET /quality/audit-checklists 200 in 70ms
+ GET /quality/audits 200 in 38ms
+ ○ Compiling /quality/coherence-matrix ...
+ ✓ Compiled /quality/coherence-matrix in 6.5s (1764 modules)
+ GET /quality/coherence-matrix 200 in 7479ms
+ GET /quality/audit-checklists 200 in 134ms
+ GET /quality/audit-schedule 200 in 51ms
+ GET /quality/audits 200 in 51ms
+ GET /quality/audit-checklists 200 in 40ms
+ GET /quality/audit-schedule 200 in 37ms
+ GET /quality/audits 200 in 72ms
+ GET /quality/coherence-matrix 200 in 75ms
+ ○ Compiling /quality/task-tracker ...
+ ✓ Compiled /quality/task-tracker in 10.1s (1752 modules)
+ GET /quality/task-tracker 200 in 10475ms
+ ✓ Compiled in 15.9s (3444 modules)
+ GET /quality/coherence-matrix 200 in 13847ms
+ GET /quality/coherence-matrix 200 in 113ms
+ GET /quality/audit-checklists 200 in 81ms
+ GET /quality/audit-schedule 200 in 71ms
+ GET /quality/audits 200 in 96ms
+ ○ Compiling /admin/accounting ...
+ ✓ Compiled /admin/accounting in 7s (1159 modules)
+ GET /admin/accounting 200 in 7327ms
+ ○ Compiling /admin/roles ...
+ ✓ Compiled /admin/roles in 6.5s (1169 modules)
+ GET /admin/roles 200 in 6789ms
+ ○ Compiling /admin/department ...
+ ✓ Compiled /admin/department in 3.8s (1178 modules)
+ GET /admin/department 200 in 4068ms
+ ○ Compiling /admin/page-format ...
+ ✓ Compiled /admin/page-format in 7.1s (1195 modules)
+ GET /admin/page-format 200 in 10036ms
+ GET /admin/page-format 200 in 119ms
+ GET /admin/accounting 200 in 10451ms
+ ✓ Compiled in 15.5s (2798 modules)
+ GET /admin/accounting 200 in 404ms
+ ○ Compiling /operations/emergency-response ...
+ ✓ Compiled /operations/emergency-response in 22.2s (1165 modules)
+ GET /operations/emergency-response 200 in 22694ms
+ ○ Compiling /quality/audit-checklists ...
+ ✓ Compiled /quality/audit-checklists in 7.1s (1200 modules)
+ GET /quality/audit-checklists 200 in 7570ms
+ ○ Compiling /quality/audit-schedule ...
+ ✓ Compiled /quality/audit-schedule in 21.5s (2890 modules)
+ GET /quality/audit-schedule 200 in 13943ms
+ GET /quality/audit-schedule 200 in 101ms
+ ✓ Compiled in 2.2s (2890 modules)
+ GET /quality/audit-schedule 200 in 335ms
+ ○ Compiling /quality/audits ...
+ ✓ Compiled /quality/audits in 7.9s (1208 modules)
+ GET /quality/audits 200 in 8216ms
+ ○ Compiling /quality/coherence-matrix ...
+ ✓ Compiled /quality/coherence-matrix in 4.3s (1200 modules)
+ GET /quality/coherence-matrix 200 in 4621ms
+ ○ Compiling /quality/task-tracker ...
+ ✓ Compiled /quality/task-tracker in 7.7s (1189 modules)
+ GET /quality/task-tracker 200 in 8172ms
+ ○ Compiling /training/student-progress ...
+ ✓ Compiled /training/student-progress in 803ms (1156 modules)
+ GET /training/student-progress 200 in 1086ms
+ ○ Compiling /training/student-progress/[reportId] ...
+ ✓ Compiled /training/student-progress/[reportId] in 7.1s (1169 modules)
+ GET /training/student-progress/p30kFv0VZxSkAHrgBHo5cPKxo2D3 200 in 12165ms
+ GET /training/student-progress 200 in 97ms
+ ○ Compiling /training/exams ...
+ ✓ Compiled /training/exams in 20.7s (1140 modules)
+ ○ Compiling /login ...
+ ✓ Compiled /login in 999ms (1145 modules)
+ GET /login 200 in 4916ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 12.3s (1733 modules)
+ GET /dashboard 200 in 12848ms
+ ⚠ Server is approaching the used memory threshold, restarting...
+   ▲ Next.js 15.5.9
+   - Local:        http://localhost:9003
+   - Network:      http://172.20.184.28:9003
+
+ ✓ Starting...
+ ✓ Ready in 3.5s
+ ○ Compiling / ...
+[Error: ENOENT: no such file or directory, stat 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\cache\webpack\server-development\17.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\cache\\webpack\\server-development\\17.pack.gz'
+}
+ ⨯ unhandledRejection: [Error: ENOENT: no such file or directory, stat 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\cache\webpack\server-development\17.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\cache\\webpack\\server-development\\17.pack.gz'
+}
+ ⨯ unhandledRejection:  [Error: ENOENT: no such file or directory, stat 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\cache\webpack\server-development\17.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\cache\\webpack\\server-development\\17.pack.gz'
+}
+[Error: ENOENT: no such file or directory, stat 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\cache\webpack\server-development\39.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\cache\\webpack\\server-development\\39.pack.gz'
+}
+ ⨯ unhandledRejection: [Error: ENOENT: no such file or directory, stat 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\cache\webpack\server-development\39.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\cache\\webpack\\server-development\\39.pack.gz'
+}
+ ⨯ unhandledRejection:  [Error: ENOENT: no such file or directory, stat 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\cache\webpack\server-development\39.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\cache\\webpack\\server-development\\39.pack.gz'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, stat 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\cache\webpack\server-development\0.pack.gz'
+ ✓ Compiled / in 12s (877 modules)
+ ⨯ [Error: Cannot find module 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\server\middleware-manifest.json'
+Require stack:
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\dev\next-dev-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 3.2s (1193 modules)
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, stat 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\cache\webpack\client-development\14.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\cache\\webpack\\client-development\\14.pack.gz'
+}
+ ⨯ unhandledRejection: [Error: ENOENT: no such file or directory, stat 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\cache\webpack\client-development\14.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\cache\\webpack\\client-development\\14.pack.gz'
+}
+ ⨯ unhandledRejection:  [Error: ENOENT: no such file or directory, stat 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\cache\webpack\client-development\14.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\cache\\webpack\\client-development\\14.pack.gz'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, stat 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\cache\webpack\client-development\12.pack.gz'
+[Error: Cannot find module 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\server\middleware-manifest.json'
+Require stack:
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\dev\next-dev-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\routes-manifest.json'
+}
+ ⨯ [Error: Cannot find module 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\server\middleware-manifest.json'
+Require stack:
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\dev\next-dev-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\routes-manifest.json'
+}
+[Error: Cannot find module 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\server\middleware-manifest.json'
+Require stack:
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\dev\next-dev-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\routes-manifest.json'
+}
+ GET / 500 in 829ms
+ GET / 500 in 323ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 736ms (1216 modules)
+ ⨯ [Error: Cannot find module 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\server\middleware-manifest.json'
+Require stack:
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\dev\next-dev-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\server\\pages\\_document.js'
+}
+[Error: Cannot find module 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\server\middleware-manifest.json'
+Require stack:
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\dev\next-dev-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\server\\pages\\_document.js'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\routes-manifest.json'
+}
+ GET /login 500 in 902ms
+ GET /login 500 in 61ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 8.3s (2905 modules)
+ ⨯ [Error: Cannot find module 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\server\middleware-manifest.json'
+Require stack:
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\dev\next-dev-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\server\\pages\\_document.js'
+}
+[Error: Cannot find module 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\server\middleware-manifest.json'
+Require stack:
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\dev\next-dev-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\server\\pages\\_document.js'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\routes-manifest.json'
+}
+ GET /dashboard 500 in 8497ms
+ GET /dashboard 500 in 58ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 4.5s (1662 modules)
+ ⨯ [Error: Cannot find module 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\server\middleware-manifest.json'
+Require stack:
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\dev\next-dev-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ [Error: Cannot find module 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\server\middleware-manifest.json'
+Require stack:
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\dev\next-dev-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ GET /favicon.ico 500 in 4998ms
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\server\\pages\\_document.js'
+}
+[Error: Cannot find module 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\server\middleware-manifest.json'
+Require stack:
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\dev\next-dev-server.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\next.js
+- C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\server\\pages\\_document.js'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\barry\OneDrive\Documents\GitHub\Safeviate-Manager\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\barry\\OneDrive\\Documents\\GitHub\\Safeviate-Manager\\.next\\routes-manifest.json'
+}
+ GET /login 500 in 4271ms
+ GET /login 500 in 54ms

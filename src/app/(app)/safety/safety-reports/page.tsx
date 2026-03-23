@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -47,7 +47,7 @@ import type { GenerateSafetyProtocolRecommendationsOutput } from '@/ai/flows/gen
 
 function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
     return (
-        <div className="border-b px-6 py-4">
+        <div className="border-y border-card-border bg-card px-6 py-4">
             <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex min-w-max">
                 <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-xs font-bold uppercase">
                     Internal
@@ -341,18 +341,14 @@ export default function SafetyReportsPage() {
 
     return (
         <Card className="min-h-[400px] flex flex-col shadow-none border">
-            <CardHeader className="bg-muted/10 border-b flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 p-6">
-                <div>
-                    <CardTitle className="text-2xl font-headline">{sectionTitle}</CardTitle>
-                    <CardDescription>Review occurrences and safety concerns reported within this context.</CardDescription>
-                </div>
+            <CardHeader className="bg-muted/10 border-b flex flex-col xl:flex-row items-start xl:items-center justify-end gap-3 p-4">
                 <div className="flex flex-wrap items-center gap-4 md:gap-8 w-full xl:w-auto justify-start xl:justify-end">
-                    <div className="flex flex-col gap-1.5 xl:items-end">
+                    <div className="flex flex-col gap-1 xl:items-end">
                         <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Analysis</p>
                         <SafetyRecommendationsDialog reports={filteredReports} />
                     </div>
                     <Separator orientation="vertical" className="h-10 hidden xl:block" />
-                    <div className="flex flex-col gap-1.5 xl:items-end w-full md:w-auto">
+                    <div className="flex flex-col gap-1 xl:items-end w-full md:w-auto">
                         <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Reporting Control</p>
                         <Button asChild size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
                             <Link href={`/safety/new-report?orgId=${orgId}`}>

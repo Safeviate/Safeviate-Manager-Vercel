@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Alert } from '@/types/alert';
 import { AlertForm } from './alert-form';
@@ -42,16 +42,10 @@ export default function AlertsPage() {
       ) : (
         <Card className="w-full flex-1 flex flex-col min-h-0 overflow-hidden shadow-none border">
           <Tabs defaultValue="red-tags" className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
-            <CardHeader className="shrink-0 border-b bg-card p-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="space-y-1">
-                  <CardTitle>Alerts & Notices</CardTitle>
-                  <CardDescription>
-                    View and manage critical alerts and company-wide notices.
-                  </CardDescription>
-                </div>
+            <CardHeader className="shrink-0 border-b bg-card p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
                 {canCreateAlerts && (
-                  <div className="flex flex-col gap-1.5 sm:items-end w-full sm:w-auto">
+                  <div className="flex flex-col gap-1 sm:items-end w-full sm:w-auto">
                     <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Alert Control</p>
                     <AlertForm tenantId={tenantId} />
                   </div>

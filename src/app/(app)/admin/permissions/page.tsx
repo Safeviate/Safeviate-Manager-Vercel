@@ -3,8 +3,6 @@
 import {
   Card,
   CardHeader,
-  CardTitle,
-  CardDescription,
   CardContent,
 } from '@/components/ui/card';
 import {
@@ -24,14 +22,7 @@ export default function PermissionsPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden gap-4">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 p-6">
-          <div className="space-y-1">
-            <CardTitle className="text-2xl font-bold tracking-tight">Application Permissions</CardTitle>
-            <CardDescription className="text-xs text-muted-foreground font-medium">
-              A read-only review of all granular permissions available in the system, defined in the code.
-            </CardDescription>
-          </div>
-        </CardHeader>
+        <CardHeader className="shrink-0 border-b bg-muted/5 p-4" />
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
           <ScrollArea className="h-full">
             <div className="p-0">

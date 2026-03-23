@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { collection, query, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 
 function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
     return (
-        <div className="border-b px-6 py-4">
+        <div className="border-y border-card-border bg-card px-6 py-4">
             <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex min-w-max">
                 <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
                     Internal
@@ -204,12 +204,8 @@ export default function RiskRegisterPage() {
 
     return (
         <Card className="min-h-[500px] flex flex-col shadow-none border">
-            <CardHeader className="bg-muted/10 border-b">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <CardTitle>{sectionTitle}</CardTitle>
-                        <CardDescription>Identified hazards and risk management status for this organization.</CardDescription>
-                    </div>
+            <CardHeader className="bg-muted/10 border-b p-4">
+                <div className="flex justify-end items-center">
                     <div className="flex items-center gap-2">
                         {canManageAreas && <ManageAreasDialog tenantId={tenantId!} settings={registerSettings} />}
                         <Button asChild size="sm">

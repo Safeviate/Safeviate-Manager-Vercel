@@ -5,7 +5,7 @@ import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { RoleForm } from './role-form';
 import { RoleActions } from './role-actions';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -44,15 +44,9 @@ export default function RolesPage() {
   return (
     <div className="flex flex-col gap-6 h-full min-h-0">
       <Card className="flex flex-col flex-1 min-h-0 overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6">
-          <div className="space-y-1">
-            <CardTitle>System Roles</CardTitle>
-            <CardDescription>
-              Define and manage administrative and operational roles.
-            </CardDescription>
-          </div>
+        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 p-4">
           {canManage && (
-            <div className="flex flex-col gap-1.5 sm:items-end w-full sm:w-auto">
+            <div className="flex flex-col gap-1 sm:items-end w-full sm:w-auto">
               <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Role Control</p>
               <RoleForm tenantId={tenantId} />
             </div>

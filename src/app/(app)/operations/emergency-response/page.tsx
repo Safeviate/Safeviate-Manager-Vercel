@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Phone, AlertCircle, Megaphone, ScrollText, HelpCircle, FileSearch, Calculator } from 'lucide-react';
 import { ContactsTab } from './contacts-tab';
 import { TriggersTab } from './triggers-tab';
@@ -33,15 +33,6 @@ export default function EmergencyResponsePage() {
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-2 sm:px-4">
       <Card className="w-full flex-1 flex flex-col min-h-0 overflow-hidden shadow-none border">
         <Tabs defaultValue="diary" className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
-          <CardHeader className="shrink-0 bg-card space-y-1">
-            <div className="space-y-1">
-              <CardTitle>Emergency Response Plan</CardTitle>
-              <CardDescription>
-                Standardized protocols and real-time response management for aviation emergencies.
-              </CardDescription>
-            </div>
-          </CardHeader>
-
           {shouldShowOrganizationTabs && (
             <div className="border-y border-card-border bg-card px-6 py-4">
               <div className="overflow-x-auto no-scrollbar">

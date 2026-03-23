@@ -3,11 +3,10 @@
 
 import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AircraftList } from './aircraft-list';
 import type { Aircraft } from '@/types/aircraft';
-import { Plane } from 'lucide-react';
 
 export default function AircraftFleetPage() {
   const firestore = useFirestore();
@@ -32,12 +31,6 @@ export default function AircraftFleetPage() {
   return (
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5">
-          <div className="flex items-center gap-2">
-            <Plane className="h-5 w-5 text-primary" />
-            <CardTitle>Fleet Inventory</CardTitle>
-          </div>
-        </CardHeader>
         <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5">
           <AircraftList data={aircrafts || []} tenantId={tenantId} />
         </CardContent>
