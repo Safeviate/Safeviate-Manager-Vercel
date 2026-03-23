@@ -9,7 +9,7 @@ import { useSpiData } from './use-spi-data';
 import type { SafetyReport } from '@/types/safety-report';
 import type { Booking } from '@/types/booking';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -172,6 +172,9 @@ export function SPICard({ spi, onEdit, onDelete, reports, bookings, onMonthDataS
                 <DialogContent className="sm:max-w-xs">
                     <DialogHeader>
                         <DialogTitle>Edit Data for {selectedMonth?.label}</DialogTitle>
+                        <DialogDescription>
+                            Update the recorded SPI value for the selected month.
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
                         <Label htmlFor="month-value">Value</Label>

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Phone, Mail, Trash2, Pencil } from 'lucide-react';
 import type { ERPContact, ERPContactCategory } from '@/types/erp';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -97,6 +97,9 @@ export function ContactsTab({ tenantId }: ContactsTabProps) {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{editingContact ? 'Edit' : 'New'} Emergency Contact</DialogTitle>
+                <DialogDescription>
+                  Add or update a priority emergency contact for ERP response use.
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSaveContact} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">

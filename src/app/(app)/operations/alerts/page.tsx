@@ -10,7 +10,6 @@ import { AlertForm } from './alert-form';
 import { AlertCard } from './alert-card';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function AlertsPage() {
   const firestore = useFirestore();
@@ -64,45 +63,39 @@ export default function AlertsPage() {
                 <TabsTrigger value="company-notices" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Company Notices ({companyNotices.length})</TabsTrigger>
               </TabsList>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0 p-0">
-              <TabsContent value="red-tags" className="mt-0 flex-1 min-h-0 overflow-hidden">
-                <ScrollArea className="h-full pr-4">
-                  <div className="space-y-4 px-4 py-4 sm:px-6 sm:pb-6">
-                    {redTags.length > 0 ? (
-                      redTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
-                    ) : (
-                      <Card className="flex h-48 items-center justify-center shadow-none border">
-                        <p className="text-muted-foreground text-sm">No active red tags.</p>
-                      </Card>
-                    )}
-                  </div>
-                </ScrollArea>
+            <CardContent className="flex-1 min-h-0 overflow-hidden p-0">
+              <TabsContent value="red-tags" className="mt-0 h-full min-h-0 overflow-y-auto no-scrollbar">
+                <div className="space-y-4 px-4 py-4 sm:px-6 sm:pb-6">
+                  {redTags.length > 0 ? (
+                    redTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
+                  ) : (
+                    <Card className="flex h-48 items-center justify-center shadow-none border">
+                      <p className="text-muted-foreground text-sm">No active red tags.</p>
+                    </Card>
+                  )}
+                </div>
               </TabsContent>
-              <TabsContent value="yellow-tags" className="mt-0 flex-1 min-h-0 overflow-hidden">
-                <ScrollArea className="h-full pr-4">
-                  <div className="space-y-4 px-4 py-4 sm:px-6 sm:pb-6">
-                    {yellowTags.length > 0 ? (
-                      yellowTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
-                    ) : (
-                      <Card className="flex h-48 items-center justify-center shadow-none border">
-                        <p className="text-muted-foreground text-sm">No active yellow tags.</p>
-                      </Card>
-                    )}
-                  </div>
-                </ScrollArea>
+              <TabsContent value="yellow-tags" className="mt-0 h-full min-h-0 overflow-y-auto no-scrollbar">
+                <div className="space-y-4 px-4 py-4 sm:px-6 sm:pb-6">
+                  {yellowTags.length > 0 ? (
+                    yellowTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
+                  ) : (
+                    <Card className="flex h-48 items-center justify-center shadow-none border">
+                      <p className="text-muted-foreground text-sm">No active yellow tags.</p>
+                    </Card>
+                  )}
+                </div>
               </TabsContent>
-              <TabsContent value="company-notices" className="mt-0 flex-1 min-h-0 overflow-hidden">
-                <ScrollArea className="h-full pr-4">
-                  <div className="space-y-4 px-4 py-4 sm:px-6 sm:pb-6">
-                    {companyNotices.length > 0 ? (
-                      companyNotices.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
-                    ) : (
-                      <Card className="flex h-48 items-center justify-center shadow-none border">
-                        <p className="text-muted-foreground text-sm">No active company notices.</p>
-                      </Card>
-                    )}
-                  </div>
-                </ScrollArea>
+              <TabsContent value="company-notices" className="mt-0 h-full min-h-0 overflow-y-auto no-scrollbar">
+                <div className="space-y-4 px-4 py-4 sm:px-6 sm:pb-6">
+                  {companyNotices.length > 0 ? (
+                    companyNotices.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
+                  ) : (
+                    <Card className="flex h-48 items-center justify-center shadow-none border">
+                      <p className="text-muted-foreground text-sm">No active company notices.</p>
+                    </Card>
+                  )}
+                </div>
               </TabsContent>
             </CardContent>
           </Tabs>

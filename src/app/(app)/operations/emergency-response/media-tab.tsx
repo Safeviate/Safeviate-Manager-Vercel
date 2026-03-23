@@ -6,7 +6,7 @@ import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, u
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2, Megaphone, Copy, Database, Printer, Pencil } from 'lucide-react';
 import type { ERPMediaTemplate } from '@/types/erp';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -168,6 +168,9 @@ export function MediaTab({ tenantId }: MediaTabProps) {
               <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>New Media Statement Template</DialogTitle>
+                  <DialogDescription>
+                    Create a reusable media statement template for emergency communication.
+                  </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleAddTemplate} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -240,6 +243,9 @@ export function MediaTab({ tenantId }: MediaTabProps) {
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Media Statement Template</DialogTitle>
+            <DialogDescription>
+              Update the selected media statement template.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpdateTemplate} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">

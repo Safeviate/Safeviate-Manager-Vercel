@@ -598,3 +598,201 @@ Import trace for requested module:
  ✓ Compiled in 4.1s (2828 modules)
  GET /quality/coherence-matrix 200 in 412ms
  GET /operations/emergency-response 200 in 413ms
+ ✓ Compiled in 4.1s (1644 modules)
+ ✓ Compiled in 6s (2828 modules)
+ ✓ Compiled in 2.9s (1644 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 5s (1196 modules)
+ GET / 307 in 7020ms
+ ✓ Compiled /login in 549ms (1201 modules)
+ GET /login 200 in 1982ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 8.3s (1783 modules)
+ GET /dashboard 200 in 8601ms
+ GET /dashboard 200 in 74ms
+ ○ Compiling /operations/alerts ...
+ ✓ Compiled /operations/alerts in 9.5s (1785 modules)
+ GET /operations/alerts 200 in 9695ms
+ GET /operations/emergency-response 200 in 46ms
+ ○ Compiling /safety/management-of-change ...
+ ✓ Compiled /safety/management-of-change in 1797ms (1772 modules)
+ GET /safety/management-of-change 200 in 2103ms
+ ○ Compiling /safety/management-of-change/[mocId] ...
+ ✓ Compiled /safety/management-of-change/[mocId] in 12.9s (3433 modules)
+ GET /safety/management-of-change/GNeyEHKJA2WIdsvmGwxy 200 in 15265ms
+ GET /safety/management-of-change/GNeyEHKJA2WIdsvmGwxy 200 in 1088ms
+ GET /safety/management-of-change 200 in 63ms
+ ○ Compiling /safety/risk-matrix ...
+ ✓ Compiled /safety/risk-matrix in 5.6s (1779 modules)
+ GET /safety/risk-matrix 200 in 5768ms
+ ○ Compiling /safety/risk-register ...
+ ✓ Compiled /safety/risk-register in 5.1s (1743 modules)
+ GET /safety/risk-register 200 in 5240ms
+ ○ Compiling /safety/safety-indicators ...
+ ✓ Compiled /safety/safety-indicators in 10.8s (1195 modules)
+ GET /safety/safety-indicators 200 in 11123ms
+ GET /safety/management-of-change 200 in 82ms
+ ○ Compiling /safety/safety-reports ...
+ ✓ Compiled /safety/safety-reports in 4.3s (1199 modules)
+ GET /safety/safety-reports 200 in 4595ms
+ ○ Compiling /quality/audit-checklists ...
+ ✓ Compiled /quality/audit-checklists in 4s (1224 modules)
+ GET /quality/audit-checklists 200 in 4191ms
+ ○ Compiling /quality/audit-schedule ...
+ ✓ Compiled /quality/audit-schedule in 2.2s (1218 modules)
+ GET /quality/audit-schedule 200 in 2423ms
+ ○ Compiling /quality/audits ...
+ ✓ Compiled /quality/audits in 2.1s (1219 modules)
+ GET /quality/audits 200 in 2287ms
+ ○ Compiling /quality/coherence-matrix ...
+ ✓ Compiled /quality/coherence-matrix in 9.3s (1231 modules)
+ GET /quality/coherence-matrix 200 in 9554ms
+ GET /quality/coherence-matrix 200 in 69ms
+ ○ Compiling /quality/task-tracker ...
+ ✓ Compiled /quality/task-tracker in 8.2s (1159 modules)
+ GET /quality/task-tracker 200 in 8748ms
+ GET /quality/coherence-matrix 200 in 69ms
+ ○ Compiling /training/student-progress ...
+ ✓ Compiled /training/student-progress in 12s (2810 modules)
+ GET /training/student-progress 200 in 12339ms
+ GET /training/student-progress 200 in 98ms
+ ○ Compiling /training/student-progress/[reportId] ...
+ ✓ Compiled /training/student-progress/[reportId] in 4.4s (2786 modules)
+ GET /training/student-progress/p30kFv0VZxSkAHrgBHo5cPKxo2D3 200 in 6377ms
+ GET /training/student-progress/p30kFv0VZxSkAHrgBHo5cPKxo2D3 200 in 973ms
+ GET /training/student-progress 200 in 77ms
+ ○ Compiling /training/exams ...
+ ✓ Compiled /training/exams in 6.9s (1140 modules)
+ GET /training/exams 200 in 7331ms
+ ○ Compiling /training/question-bank ...
+ ✓ Compiled /training/question-bank in 6.2s (1158 modules)
+ GET /training/question-bank 200 in 6372ms
+ ○ Compiling /assets/aircraft ...
+ ✓ Compiled /assets/aircraft in 5.3s (1137 modules)
+ GET /assets/aircraft 200 in 5540ms
+ ○ Compiling /users/access-overview ...
+ ✓ Compiled /users/access-overview in 6.7s (2798 modules)
+ GET /users/access-overview 200 in 8483ms
+ GET /users/access-overview 200 in 123ms
+ ✓ Compiled in 1124ms (2792 modules)
+ GET /users/access-overview 200 in 120ms
+ ○ Compiling /users/external ...
+ ✓ Compiled /users/external in 9.5s (2811 modules)
+ GET /users/external 200 in 9601ms
+ GET /users/external 200 in 61ms
+ ○ Compiling /users/instructors ...
+ ✓ Compiled /users/instructors in 1677ms (2814 modules)
+ GET /users/instructors 200 in 1870ms
+ GET /users/instructors 200 in 96ms
+ ○ Compiling /users/personnel ...
+ ✓ Compiled /users/personnel in 532ms (1134 modules)
+ GET /users/personnel 200 in 736ms
+ ○ Compiling /users/private-pilots ...
+ ✓ Compiled /users/private-pilots in 1751ms (2775 modules)
+ GET /users/private-pilots 200 in 3573ms
+ GET /users/private-pilots 200 in 136ms
+ ○ Compiling /users/students ...
+ ✓ Compiled /users/students in 2.8s (2776 modules)
+ GET /users/students 200 in 2896ms
+ GET /users/students 200 in 67ms
+ GET /users/access-overview 200 in 71ms
+ ○ Compiling /admin/page-format ...
+ ✓ Compiled /admin/page-format in 4.8s (1120 modules)
+ GET /admin/page-format 200 in 4988ms
+ ○ Compiling /quality/audit-checklists ...
+ ✓ Compiled /admin/document-dates in 14.1s (1167 modules)
+ ✓ Compiled (1176 modules)
+ GET /admin/document-dates 200 in 8795ms
+ GET /quality/audit-checklists 200 in 20292ms
+ ○ Compiling /admin/exam-topics ...
+ ✓ Compiled /admin/exam-topics in 8.2s (1175 modules)
+ GET /admin/exam-topics 200 in 8582ms
+ GET /admin/page-format 200 in 70ms
+ GET /users/access-overview 200 in 63ms
+ ○ Compiling /my-dashboard/tasks ...
+ ✓ Compiled /my-dashboard/tasks in 7.9s (1115 modules)
+ GET /my-dashboard/tasks 200 in 8205ms
+ ○ Compiling /my-dashboard/messages ...
+ ✓ Compiled /my-dashboard/messages in 3.2s (1120 modules)
+ GET /my-dashboard/messages 200 in 3406ms
+ ○ Compiling /my-dashboard/logbook ...
+ ✓ Compiled /my-dashboard/logbook in 710ms (1102 modules)
+ GET /my-dashboard/logbook 200 in 979ms
+ ○ Compiling /bookings/schedule ...
+ ✓ Compiled /bookings/schedule in 3.3s (1176 modules)
+ GET /bookings/schedule 200 in 3624ms
+ ○ Compiling /bookings/history ...
+ ✓ Compiled /bookings/history in 3.1s (1170 modules)
+ GET /bookings/history 200 in 3366ms
+ ○ Compiling /operations/alerts ...
+ ✓ Compiled /operations/alerts in 11.3s (1169 modules)
+ GET /operations/alerts 200 in 11648ms
+ ○ Compiling /operations/company-documents ...
+ ✓ Compiled /operations/company-documents in 13.6s (1177 modules)
+ GET /operations/company-documents 200 in 13980ms
+ ○ Compiling /operations/emergency-response ...
+ ✓ Compiled /operations/emergency-response in 9.7s (1232 modules)
+ GET /operations/emergency-response 200 in 10043ms
+ ○ Compiling /safety/management-of-change ...
+ ✓ Compiled /safety/management-of-change in 7.1s (1234 modules)
+ GET /safety/management-of-change 200 in 7408ms
+ ○ Compiling /safety/management-of-change/[mocId] ...
+ ✓ Compiled /safety/management-of-change/[mocId] in 6.6s (1249 modules)
+ GET /safety/management-of-change/GNeyEHKJA2WIdsvmGwxy 200 in 9339ms
+ GET /safety/management-of-change 200 in 230ms
+ ○ Compiling /safety/risk-matrix ...
+ ✓ Compiled /safety/risk-matrix in 3.2s (1183 modules)
+ GET /safety/risk-matrix 200 in 3452ms
+ ○ Compiling /safety/risk-register ...
+ ✓ Compiled /safety/risk-register in 9.3s (1189 modules)
+ GET /safety/risk-register 200 in 9569ms
+ ○ Compiling /safety/safety-indicators ...
+ ✓ Compiled /safety/safety-indicators in 32.5s (2924 modules)
+ GET /safety/safety-indicators 200 in 22160ms
+ GET /safety/safety-indicators 200 in 106ms
+ ○ Compiling /safety/safety-reports ...
+ ✓ Compiled /safety/safety-reports in 13.4s (1199 modules)
+ GET /safety/safety-reports 200 in 13786ms
+ ○ Compiling /safety/safety-reports/[reportId] ...
+ ✓ Compiled /safety/safety-reports/[reportId] in 14.8s (2917 modules)
+ GET /safety/safety-reports/4OjQ1olN1glkYJuJPJQf 200 in 21156ms
+ GET /safety/safety-reports/4OjQ1olN1glkYJuJPJQf 200 in 5226ms
+ ○ Compiling /quality/audit-checklists ...
+ ✓ Compiled /quality/audit-checklists in 14.9s (1240 modules)
+ GET /quality/audit-checklists 200 in 15271ms
+ ○ Compiling /quality/audit-schedule ...
+ ✓ Compiled /quality/audit-schedule in 3.8s (1246 modules)
+ GET /quality/audit-schedule 200 in 4118ms
+ ○ Compiling /quality/audits ...
+ ✓ Compiled /quality/audits in 3.7s (1237 modules)
+ GET /quality/audits 200 in 3915ms
+ ○ Compiling /quality/coherence-matrix ...
+ ✓ Compiled /quality/coherence-matrix in 12.8s (1239 modules)
+ GET /quality/coherence-matrix 200 in 13183ms
+ ○ Compiling /quality/task-tracker ...
+ ✓ Compiled /quality/task-tracker in 3.3s (1159 modules)
+ GET /quality/task-tracker 200 in 3614ms
+ ○ Compiling /training/student-progress ...
+ ✓ Compiled /training/student-progress in 777ms (1157 modules)
+ GET /training/student-progress 200 in 1019ms
+ ○ Compiling /training/exams ...
+ ✓ Compiled /training/exams in 6.2s (1176 modules)
+ GET /training/exams 200 in 6485ms
+ GET /training/exams 200 in 89ms
+ ○ Compiling /training/question-bank ...
+ ✓ Compiled /training/question-bank in 6s (1156 modules)
+ GET /training/question-bank 200 in 6316ms
+ GET /training/exams 200 in 67ms
+ GET /training/question-bank 200 in 217ms
+ ○ Compiling /assets/aircraft ...
+ ✓ Compiled /assets/aircraft in 951ms (1159 modules)
+ GET /assets/aircraft 200 in 1219ms
+ ○ Compiling /users/access-overview ...
+ ✓ Compiled /users/access-overview in 789ms (1135 modules)
+ GET /users/access-overview 200 in 1060ms
+ ○ Compiling /users/external ...
+ ✓ Compiled /users/external in 6.6s (1143 modules)
+ GET /users/external 200 in 6883ms
+ ○ Compiling /users/instructors ...
+ ✓ Compiled /users/instructors in 3.3s (1145 modules)
+ GET /users/instructors 200 in 3492ms

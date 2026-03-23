@@ -17,7 +17,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { DocumentUploader } from '@/components/document-uploader';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -217,6 +217,9 @@ export default function CompanyDocumentsPage() {
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
           <DialogHeader className="shrink-0 border-b pb-4">
             <DialogTitle>{viewingDoc?.name}</DialogTitle>
+            <DialogDescription>
+              Preview the selected company document.
+            </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-hidden relative mt-4 min-h-[60vh] bg-muted/20 rounded-md">
             {viewingDoc?.type === 'image' || viewingDoc?.url.startsWith('default_api:image/') ? (

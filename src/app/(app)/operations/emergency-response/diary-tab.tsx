@@ -462,7 +462,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
           </div>
         </div>
       ) : (
-        <div className="space-y-0 overflow-hidden">
+        <div className="h-full min-h-0 overflow-y-auto no-scrollbar">
           <div className="border-b px-6 py-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-1">

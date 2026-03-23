@@ -6,7 +6,7 @@ import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking } 
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import type { ERPTrigger } from '@/types/erp';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -73,6 +73,9 @@ export function TriggersTab({ tenantId }: TriggersTabProps) {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Define Activation Trigger</DialogTitle>
+                <DialogDescription>
+                  Define the internal criteria and checklist that activate the ERP.
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleAddTrigger} className="space-y-4">
                 <div className="space-y-2"><Label>Event Type</Label><Input name="eventType" placeholder="e.g., Aircraft 30m Overdue" required /></div>

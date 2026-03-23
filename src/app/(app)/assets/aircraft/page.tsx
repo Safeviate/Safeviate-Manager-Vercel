@@ -31,11 +31,6 @@ export default function AircraftFleetPage() {
 
   return (
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
-      <div className="px-1 shrink-0">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Aircraft Fleet</h1>
-        <p className="text-muted-foreground">Manage and monitor your academy's fleet status and maintenance.</p>
-      </div>
-
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
         <CardHeader className="shrink-0 border-b bg-muted/5">
           <div className="flex items-center gap-2">
