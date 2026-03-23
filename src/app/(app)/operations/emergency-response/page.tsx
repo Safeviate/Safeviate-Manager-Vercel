@@ -34,7 +34,7 @@ export default function EmergencyResponsePage() {
       <Card className="w-full flex-1 flex flex-col min-h-0 overflow-hidden shadow-none border">
         <Tabs defaultValue="diary" className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
           {shouldShowOrganizationTabs && (
-            <div className="border-y border-card-border bg-card px-6 py-4">
+            <div className="border-b border-card-border bg-card px-6 py-2">
               <div className="overflow-x-auto no-scrollbar">
                 <div className="flex min-w-max gap-2">
                   <button
