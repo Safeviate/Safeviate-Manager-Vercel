@@ -227,7 +227,7 @@ export default function SafetyIndicatorsPage() {
                 {showTabs && <CompanyTabsRow organizations={organizations || []} />}
             </div>
             
-            <CardContent className="flex-1 p-6 overflow-y-auto bg-background min-h-0">
+            <CardContent className="flex-1 p-6 overflow-y-auto no-scrollbar bg-background min-h-0">
                 <div className="grid grid-cols-1 gap-6 pb-20 max-w-[1400px] mx-auto w-full">
                     {spiConfig.map(spi => (
                         <SPICard 

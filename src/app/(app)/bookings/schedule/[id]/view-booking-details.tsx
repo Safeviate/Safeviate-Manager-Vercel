@@ -30,6 +30,29 @@ interface ViewBookingDetailsProps {
     booking: Booking;
 }
 
+const generateNiceTicks = (min: number | string, max: number | string, stepCount = 6) => {
+    const start = Number(min);
+    const end = Number(max);
+    if (isNaN(start) || isNaN(end) || start >= end) return [];
+    const diff = end - start;
+    const roughStep = diff / (stepCount - 1);
+    const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
+    const normalizedStep = roughStep / magnitude;
+    let step;
+    if (normalizedStep < 1.5) step = 1 * magnitude;
+    else if (normalizedStep < 3) step = 2 * magnitude;
+    else if (normalizedStep < 7) step = 5 * magnitude;
+    else step = 10 * magnitude;
+    const ticks = [];
+    let current = Math.ceil(start / step) * step;
+    if (current > start) ticks.push(start);
+    while (current <= end) {
+        ticks.push(current);
+        current += step;
+    }
+    return ticks;
+};
+
 const DetailItem = ({ label, value, children }: { label: string, value?: string | undefined | null, children?: React.ReactNode }) => (
     <div>
         <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">{label}</p>
@@ -66,14 +89,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
     const aircraft = useMemo(() => aircrafts?.find(a => a.id === booking.aircraftId), [aircrafts, booking.aircraftId]);
 
-    // --- Calculator State ---
     const [stations, setStations] = useState<any[]>([]);
     const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
 
-    // Initialize stations from Booking (persisted data) or Aircraft (defaults)
     useEffect(() => {
         if (aircraft) {
-            // Prioritize saved data from the booking, otherwise use aircraft profile defaults
             if (booking.massAndBalance?.stations && booking.massAndBalance.stations.length > 0) {
                 setStations(booking.massAndBalance.stations);
             } else if (aircraft.stations) {
@@ -84,28 +104,20 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
     useEffect(() => {
         if (!aircraft || !aircraft.emptyWeight || !aircraft.emptyWeightMoment) return;
-
         let totalMom = aircraft.emptyWeightMoment;
         let totalWt = aircraft.emptyWeight;
-
         stations.forEach(st => {
             const wt = parseFloat(String(st.weight)) || 0;
             const arm = parseFloat(String(st.arm)) || 0;
             totalWt += wt;
             totalMom += (wt * arm);
         });
-
         const cg = totalWt > 0 ? (totalMom / totalWt) : 0;
         const roundedCg = parseFloat(cg.toFixed(2));
         const roundedWeight = parseFloat(totalWt.toFixed(1));
         const envelope = aircraft.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
         const safe = envelope.length > 2 ? isPointInPolygon({ x: roundedCg, y: roundedWeight }, envelope) : false;
-
-        setResults({
-            cg: roundedCg,
-            weight: roundedWeight,
-            isSafe: safe
-        });
+        setResults({ cg: roundedCg, weight: roundedWeight, isSafe: safe });
     }, [stations, aircraft]);
 
     const handleStationWeightChange = (id: number, weight: string) => {
@@ -119,240 +131,99 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }));
     };
 
-    const handleFuelGallonsChange = (id: number, gallons: string) => {
-        const val = parseFloat(gallons) || 0;
-        setStations(prev => prev.map(s => 
-            s.id === id ? { ...s, gallons: val, weight: val * FUEL_WEIGHT_PER_GALLON } : s
-        ));
-    };
-
     const handleSaveToBooking = () => {
         if (!firestore) return;
         const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
-        
-        updateDocumentNonBlocking(bookingRef, {
-            massAndBalance: {
-                takeoffWeight: results.weight,
-                takeoffCg: results.cg,
-                isWithinLimits: results.isSafe,
-                stations: stations
-            }
-        });
-
-        toast({
-            title: 'Mass & Balance Saved',
-            description: 'Calculations and loading configurations have been saved to this booking.'
-        });
+        updateDocumentNonBlocking(bookingRef, { massAndBalance: { takeoffWeight: results.weight, takeoffCg: results.cg, isWithinLimits: results.isSafe, stations } });
+        toast({ title: 'M&B Saved' });
     };
 
-    const aircraftLabel = useMemo(() => {
-        return aircraft ? `${aircraft.tailNumber} (${aircraft.model})` : booking.aircraftId;
-    }, [aircraft, booking.aircraftId]);
-
-    const instructorLabel = useMemo(() => {
-        if (!booking.instructorId) return 'N/A';
-        const ins = instructors?.find(i => i.id === booking.instructorId) || personnel?.find(p => p.id === booking.instructorId);
-        return ins ? `${ins.firstName} ${ins.lastName}` : booking.instructorId;
-    }, [instructors, personnel, booking.instructorId]);
-
-    const studentLabel = useMemo(() => {
-        if (!booking.studentId) return 'N/A';
-        const stu = students?.find(s => s.id === booking.studentId);
-        return stu ? `${stu.firstName} ${stu.lastName}` : booking.studentId;
-    }, [students, booking.studentId]);
-
-    if (loadingAc || loadingIns || loadingStu) {
-        return <Skeleton className="h-64 w-full" />;
-    }
+    if (loadingAc || loadingIns || loadingStu) return <Skeleton className="h-64 w-full" />;
 
     const envelope = aircraft?.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
-    
+    const allX = [...envelope.map(p => p.x), results.cg].filter(n => !isNaN(n) && isFinite(n));
+    const allY = [...envelope.map(p => p.y), results.weight].filter(n => !isNaN(n) && isFinite(n));
+    const padX = allX.length > 1 ? (Math.max(...allX) - Math.min(...allX)) * 0.1 : 5;
+    const padY = allY.length > 1 ? (Math.max(...allY) - Math.min(...allY)) * 0.1 : 100;
+    const fXMin = Math.min(...allX) - padX;
+    const fXMax = Math.max(...allX) + padX;
+    const fYMin = Math.min(...allY) - padY;
+    const fYMax = Math.max(...allY) + padY;
+
     return (
         <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
             <Tabs defaultValue="flight-details" className="flex w-full min-h-0 flex-1 flex-col">
                 <div className="shrink-0 px-1">
                     <TabsList className="mb-4 h-auto flex-wrap justify-start gap-2 border-b-0 bg-transparent p-0">
-                        <TabsTrigger 
-                            value="flight-details" 
-                            className="gap-2 rounded-full border px-4 py-2 text-xs data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground sm:px-6 sm:text-sm"
-                        >
-                            <FileText className="h-4 w-4" /> Flight Details
-                        </TabsTrigger>
-                        <TabsTrigger 
-                            value="navlog" 
-                            className="gap-2 rounded-full border px-4 py-2 text-xs data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground sm:px-6 sm:text-sm"
-                        >
-                            <NavIcon className="h-4 w-4" /> Navlog
-                        </TabsTrigger>
+                        <TabsTrigger value="flight-details" className="gap-2 rounded-full border px-4 py-2 text-xs data-[state=active]:bg-button-primary sm:px-6"><FileText className="h-4 w-4" /> Flight Details</TabsTrigger>
+                        <TabsTrigger value="navlog" className="gap-2 rounded-full border px-4 py-2 text-xs data-[state=active]:bg-button-primary sm:px-6"><NavIcon className="h-4 w-4" /> Navlog</TabsTrigger>
                     </TabsList>
                 </div>
-
                 <div className="flex min-h-0 flex-1 flex-col">
                     <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
-                        <Card className={cn(
-                            "flex min-h-0 flex-col overflow-hidden border shadow-none",
-                            isMobile ? "h-full flex-1" : "h-[calc(100vh-240px)]"
-                        )}>
+                        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border shadow-none">
                             <CardHeader className="border-b bg-muted/20 shrink-0">
-                                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                                    <div className="min-w-0 space-y-1">
-                                        <CardTitle>{booking.type}</CardTitle>
-                                        <CardDescription className="break-words">
-                                            Booking Number: {booking.bookingNumber} • {aircraftLabel}
-                                        </CardDescription>
-                                    </div>
-                                </div>
+                                <CardTitle>{booking.type}</CardTitle>
+                                <CardDescription>{booking.bookingNumber} • {aircraft ? aircraft.tailNumber : booking.aircraftId}</CardDescription>
                             </CardHeader>
-                            
                             <ScrollArea className="min-h-0 flex-1">
                                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
-                                    <DetailItem label="Status">
-                                        <Badge variant={getStatusBadgeVariant(booking.status)}>{booking.status}</Badge>
-                                    </DetailItem>
-                                    <DetailItem label="Aircraft" value={aircraftLabel} />
+                                    <DetailItem label="Status"><Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'}>{booking.status}</Badge></DetailItem>
+                                    <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
                                     <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
                                     <DetailItem label="Start Time" value={formatDateSafe(booking.start, 'p')} />
                                     <DetailItem label="End Time" value={formatDateSafe(booking.end, 'p')} />
-                                    <DetailItem label="Instructor" value={instructorLabel} />
-                                    <DetailItem label="Student" value={studentLabel} />
-                                    <div className="md:col-span-2 lg:col-span-3">
-                                        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Notes</p>
-                                        <p className="text-sm font-semibold whitespace-pre-wrap">{booking.notes || 'No notes provided.'}</p>
-                                    </div>
                                 </CardContent>
-
-                                <Separator className="my-2" />
-
-                                <CardHeader className="pb-2">
-                                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                                        <CardTitle className="text-xl flex items-center gap-2">
-                                            <AlertTriangle className="h-5 w-5 text-primary" />
-                                            Mass & Balance Calculator
-                                        </CardTitle>
-                                        {aircraft?.cgEnvelope && (
-                                            <Button size="sm" onClick={handleSaveToBooking} variant="outline" className="gap-2 self-start md:self-auto">
-                                                <Save className="h-4 w-4" /> Save to Booking
-                                            </Button>
-                                        )}
-                                    </div>
-                                </CardHeader>
-
-                                <CardContent className="pt-4 pb-10">
-                                    {!aircraft?.cgEnvelope ? (
-                                        <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                                            This aircraft does not have a Mass & Balance profile configured.
-                                        </div>
-                                    ) : (
-                                        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
-                                            <div className="space-y-6">
-                                                <div className="relative border rounded-xl p-4 bg-background overflow-hidden h-[600px]">
+                                <Separator />
+                                <CardHeader><CardTitle className="text-xl flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-primary" /> Mass & Balance</CardTitle></CardHeader>
+                                <CardContent className="pb-20">
+                                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
+                                        <div className="flex flex-col h-full min-h-[500px]">
+                                            <div className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar touch-pan-x bg-background rounded-xl border p-4">
+                                                <div className="min-w-[800px] h-full relative">
                                                     <ResponsiveContainer width="100%" height="100%">
-                                                        <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
+                                                        <ScatterChart margin={{ top: 20, right: 60, bottom: 60, left: 60 }}>
                                                             <CartesianGrid strokeDasharray="3 3" />
-                                                            <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={['auto', 'auto']} allowDataOverflow>
-                                                                <Label value="CG (inches)" position="insideBottom" offset={-10} />
-                                                            </XAxis>
-                                                            <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={['auto', 'auto']} allowDataOverflow>
-                                                                <Label value="Weight (lbs)" angle={-90} position="insideLeft" />
-                                                            </YAxis>
+                                                            <XAxis type="number" dataKey="x" name="CG" domain={[fXMin, fXMax]} ticks={generateNiceTicks(fXMin, fXMax, 8)} allowDataOverflow><Label value="CG (in)" offset={-20} position="insideBottom" /></XAxis>
+                                                            <YAxis type="number" dataKey="y" name="Weight" domain={[fYMin, fYMax]} ticks={generateNiceTicks(fYMin, fYMax, 8)} allowDataOverflow><Label value="Weight (lbs)" angle={-90} position="insideLeft" offset={-40} /></YAxis>
                                                             <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                                            <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => <g />} />
+                                                            <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} />
                                                             <Scatter data={[{ x: results.cg, y: results.weight }]}>
-                                                                <ReferenceDot x={results.cg} y={results.weight} r={8} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={2} />
+                                                                <ReferenceDot x={results.cg} y={results.weight} r={10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={3} />
                                                             </Scatter>
                                                         </ScatterChart>
                                                     </ResponsiveContainer>
-                                                    
-                                                    <div className={cn(
-                                                        "absolute bottom-4 right-4 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 text-white",
-                                                        results.isSafe ? 'bg-green-600' : 'bg-red-600'
-                                                    )}>
-                                                        {results.isSafe ? "WITHIN LIMITS" : "OUT OF LIMITS"}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-6">
-                                                <Card className="bg-muted/30 shadow-none border-none">
-                                                    <CardContent className="p-4 grid grid-cols-2 gap-4">
-                                                        <div>
-                                                            <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Weight</p>
-                                                            <p className="text-xl font-bold">{results.weight} <span className="text-xs font-normal">lbs</span></p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-[10px] uppercase font-bold text-muted-foreground">Center Gravity</p>
-                                                            <p className="text-xl font-bold">{results.cg} <span className="text-xs font-normal">in</span></p>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-
-                                                <div className="space-y-4">
-                                                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Loading Stations</h4>
-                                                    <div className="space-y-3">
-                                                        <div className="flex justify-between items-center text-sm border-b pb-2">
-                                                            <span className="text-muted-foreground">Basic Empty Weight</span>
-                                                            <span className="font-bold">{aircraft.emptyWeight} lbs</span>
-                                                        </div>
-                                                        {stations.map((s) => (
-                                                            <div key={s.id} className="space-y-1.5">
-                                                                <div className="flex justify-between items-center">
-                                                                    <UILabel className="text-xs font-semibold">{s.name}</UILabel>
-                                                                    <span className="text-[10px] text-muted-foreground">Arm: {s.arm}</span>
-                                                                </div>
-            <div className="flex items-center gap-3">
-                <div className="grid flex-1 grid-cols-[minmax(0,1fr)_60px] gap-2">
-                    <Input 
-                        type="number" 
-                        value={s.weight} 
-                        onChange={(e) => handleStationWeightChange(s.id, e.target.value)}
-                        className="h-8 text-right text-sm"
-                    />
-                    <div className="flex h-8 items-center justify-center rounded-md border border-input bg-muted/30 text-[11px] font-bold tracking-wide text-muted-foreground">
-                        LBS
-                    </div>
-                </div>
-                {s.type === 'fuel' && (
-                    <div className="flex items-center gap-1 w-24">
-                                                                            <div className="relative">
-                                                                                <Input 
-                                                                                    type="number" 
-                                                                                    value={s.gallons} 
-                                                                                    onChange={(e) => handleFuelGallonsChange(s.id, e.target.value)}
-                                                                                    className="h-8 w-full p-1 text-right text-[10px] pr-8"
-                                                                                />
-                                                                                <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] font-bold text-muted-foreground">GAL</span>
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    )}
+                                        <div className="space-y-6">
+                                            <div className="p-4 bg-muted/30 rounded-xl space-y-4">
+                                                <DetailItem label="Total Weight"><p className="text-2xl font-black">{results.weight} lbs</p></DetailItem>
+                                                <DetailItem label="Center Gravity"><p className="text-2xl font-black">{results.cg} in</p></DetailItem>
+                                                <Button size="sm" onClick={handleSaveToBooking} className="w-full h-10 uppercase text-xs font-black bg-emerald-700">Save Load config</Button>
+                                            </div>
+                                            <ScrollArea className="h-[400px] pr-4">
+                                                <div className="space-y-4">
+                                                    {stations.map(s => (
+                                                        <div key={s.id} className="space-y-1.5 p-3 border rounded-lg bg-background">
+                                                            <UILabel className="text-[10px] font-black uppercase text-muted-foreground">{s.name}</UILabel>
+                                                            <div className="flex items-center gap-2">
+                                                                <Input type="number" value={s.weight} onChange={(e) => handleStationWeightChange(s.id, e.target.value)} className="h-8 text-xs font-bold" />
+                                                                <div className="text-[10px] font-bold text-muted-foreground w-8">LBS</div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </ScrollArea>
+                                        </div>
+                                    </div>
                                 </CardContent>
                             </ScrollArea>
                         </Card>
                     </TabsContent>
-
-                    <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
-                        <NavlogBuilder booking={booking} tenantId={tenantId!} />
-                    </TabsContent>
+                    <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col"><NavlogBuilder booking={booking} tenantId={tenantId!} /></TabsContent>
                 </div>
             </Tabs>
         </div>
     );
-}
-
-function getStatusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
-    switch (status) {
-        case 'Approved': return 'default';
-        case 'Completed': return 'secondary';
-        case 'Cancelled':
-        case 'Cancelled with Reason': return 'destructive';
-        case 'Confirmed': return 'default';
-        default: return 'outline';
-    }
 }

@@ -7,11 +7,12 @@ import { NewChecklistDialog } from './new-checklist-dialog';
 import { ChecklistTemplateCard } from './checklist-template-card';
 import { Accordion } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { QualityAuditChecklistTemplate } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
 import type { Personnel } from '../../users/personnel/page';
+import { MainPageHeader } from '@/components/page-header';
 
 export default function AuditChecklistsManager() {
   const firestore = useFirestore();
@@ -51,30 +52,33 @@ export default function AuditChecklistsManager() {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1200px] mx-auto w-full space-y-4 px-1">
-        <Skeleton className="h-10 w-48 self-end" />
+      <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
+        <Skeleton className="h-20 w-full" />
         <Skeleton className="h-[500px] w-full" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
-      <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 p-4">
-          <div className="flex flex-col gap-1 sm:items-end w-full sm:w-auto">
-            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Template Control</p>
-            <NewChecklistDialog
-                tenantId={tenantId}
-                departments={departments || []}
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5">
-          <ScrollArea className="h-full">
-            <div className="p-6 pb-20">
+    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-2 px-1">
+      <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
+        <div className="sticky top-0 z-30 bg-card">
+          <MainPageHeader 
+            title="Audit Checklists"
+            description="Manage templates for regular quality, safety, and compliance audits."
+            actions={
+              <NewChecklistDialog
+                  tenantId={tenantId}
+                  departments={departments || []}
+              />
+            }
+          />
+        </div>
+        <CardContent className="flex-1 p-0 overflow-hidden bg-background">
+          <ScrollArea className="h-full custom-scrollbar pr-4">
+            <div className="p-6 pb-20 space-y-6">
               {Object.keys(groupedTemplates).length > 0 ? (
-                  <Accordion type="multiple" defaultValue={Object.keys(groupedTemplates)} className="w-full space-y-4">
+                  <Accordion type="multiple" defaultValue={Object.keys(groupedTemplates)} className="w-full space-y-6">
                   {Object.entries(groupedTemplates).map(([deptName, templates]) => (
                       <ChecklistTemplateCard 
                           key={deptName}
@@ -87,9 +91,10 @@ export default function AuditChecklistsManager() {
                   ))}
                   </Accordion>
               ) : (
-                  <div className="border-2 border-dashed rounded-xl p-12 text-center bg-background">
-                      <p className="text-muted-foreground font-medium">No checklist templates found. Create one to get started.</p>
-                  </div>
+                <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
+                    <p className="text-sm font-black uppercase tracking-widest">No checklist templates found.</p>
+                    <p className="text-xs font-medium">Create a new template to start conducting audits.</p>
+                </div>
               )}
             </div>
           </ScrollArea>
