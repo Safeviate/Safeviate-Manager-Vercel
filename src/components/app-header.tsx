@@ -71,6 +71,7 @@ export function AppHeader() {
     if (pathname.includes('/safety/safety-reports/')) return { text: 'Back to All Reports', href: '/safety/safety-reports' };
     if (pathname.includes('/assets/aircraft/')) return { text: 'Back to All Aircraft', href: '/assets/aircraft' };
     if (pathname.includes('/training/student-progress/')) return { text: 'Back to All Students', href: '/training/student-progress' };
+    if (pathname.includes('/quality/audits/')) return { text: 'Back to All Audits', href: '/quality/audits' };
     return { text: 'Back', href: null }; // Default behavior is router.back()
   };
 

@@ -3,9 +3,9 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, writeBatch, doc, deleteDoc } from 'firebase/firestore';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste, BookOpen } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste, BookOpen, Layers } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { seedComplianceData } from '@/lib/seed-data/part-141';
 import { callAiFlow } from '@/lib/ai-client';
 
-import type { ComplianceRequirement, QualityAudit, ExternalOrganization, TabVisibilitySettings } from '@/types/quality';
+import type { ComplianceRequirement, ExternalOrganization, TabVisibilitySettings } from '@/types/quality';
 import type { Personnel } from '../../users/personnel/page';
 import { ComplianceItemForm } from './item-form';
 import type { SummarizeDocumentInput, SummarizeDocumentOutput } from '@/ai/flows/summarize-document-flow';
@@ -27,7 +27,7 @@ import { Switch } from '@/components/ui/switch';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
-import { Separator } from '@/components/ui/separator';
+import { MainPageHeader } from '@/components/page-header';
 
 
 function UploadRegulationsDialog({ tenantId, organizationId }: { tenantId: string, organizationId: string | null }) {
@@ -153,7 +153,7 @@ function UploadRegulationsDialog({ tenantId, organizationId }: { tenantId: strin
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 text-xs font-bold gap-2">
+                <Button variant="outline" size="sm" className="h-9 px-4 text-xs font-black uppercase border-slate-300 gap-2">
                     <WandSparkles className="h-3.5 w-3.5 text-primary" /> 
                     AI Populate
                 </Button>
@@ -229,7 +229,7 @@ function UploadRegulationsDialog({ tenantId, organizationId }: { tenantId: strin
                 </Tabs>
                 <DialogFooter>
                     <DialogClose asChild><Button variant="outline" disabled={isProcessing}>Cancel</Button></DialogClose>
-                    <Button onClick={handleProcess} disabled={isProcessing || !canProcess}>
+                    <Button onClick={handleProcess} disabled={isProcessing || !canProcess} className="bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-xs">
                         {isProcessing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : 'Upload and Process'}
                     </Button>
                 </DialogFooter>
@@ -240,16 +240,19 @@ function UploadRegulationsDialog({ tenantId, organizationId }: { tenantId: strin
 
 function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
     return (
-        <div className="border-y border-card-border bg-card px-6 py-4">
-            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex min-w-max">
-                <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
+        <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
+            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
+                <TabsTrigger 
+                    value="internal" 
+                    className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
+                >
                     Internal
                 </TabsTrigger>
                 {organizations.map((organization) => (
                     <TabsTrigger
                         key={organization.id}
                         value={organization.id}
-                        className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0"
+                        className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
                     >
                         {organization.name}
                     </TabsTrigger>
@@ -355,103 +358,132 @@ export default function CoherenceMatrixPage() {
         return acc;
     }, {} as Record<string, ComplianceRequirement[]>);
     const topLevelItems = sortedItems.filter(item => !item.parentRegulationCode);
-    const sectionTitle = orgId === 'internal' ? 'Internal Coherence Matrix' : organizations?.find((o) => o.id === orgId)?.name;
 
     return (
-        <Card className="min-h-[500px] flex flex-col shadow-none border">
-            <CardHeader className="bg-muted/10 border-b flex flex-col xl:flex-row items-start xl:items-center justify-end gap-3 p-4">
-                <div className="flex flex-wrap items-center gap-4 md:gap-8 w-full xl:w-auto justify-start xl:justify-end">
-                    <div className="flex flex-col gap-1 xl:items-end">
-                        <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Regulatory Assets</p>
-                        <div className="flex gap-2">
+        <div className="flex flex-col h-full overflow-hidden">
+            <div className="sticky top-0 z-30 bg-card">
+                <MainPageHeader 
+                    title="Regulatory Coherence Matrix"
+                    description="Map organizational procedures against specific regulatory requirements and standards."
+                    actions={
+                        <div className="flex items-center gap-3">
                             <UploadRegulationsDialog tenantId={tenantId!} organizationId={contextOrgId} />
-                            <Button variant="outline" size="sm" className="h-8 text-xs font-bold gap-2" onClick={() => handleSeedData(contextOrgId)}>
-                                <BookOpen className="h-3.5 w-3.5" /> Seed Part 141
+                            <Button variant="outline" size="sm" className="h-9 px-4 text-xs font-black uppercase border-slate-300 gap-2 shadow-sm" onClick={() => handleSeedData(contextOrgId)}>
+                                <BookOpen className="h-3.5 w-3.5" /> Seed
+                            </Button>
+                            <Button size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2" onClick={() => handleOpenForm()}>
+                                <PlusCircle className="h-4 w-4" /> Add Item
                             </Button>
                         </div>
-                    </div>
-                    <Separator orientation="vertical" className="h-10 hidden xl:block" />
-                    <div className="flex flex-col gap-1 xl:items-end">
-                        <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Compliance Management</p>
-                        <Button size="sm" className="h-8 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm gap-2" onClick={() => handleOpenForm()}>
-                            <PlusCircle className="h-4 w-4" /> Add Item
-                        </Button>
-                    </div>
-                </div>
-            </CardHeader>
-            {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
-            <CardContent className="p-6">
-                <div className="space-y-4">
-                    {topLevelItems.map(parentItem => (
-                        <Collapsible key={parentItem.id} className="border rounded-lg" defaultOpen>
-                            <div className="flex items-center p-4 bg-muted/30 rounded-t-lg">
-                                <CollapsibleTrigger className="flex flex-1 items-center text-left">
-                                    <span className="font-mono text-sm font-semibold w-28 flex-shrink-0">{parentItem.regulationCode}</span>
-                                    <p className="font-medium flex-1 mx-4">{parentItem.regulationStatement}</p>
-                                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
-                                </CollapsibleTrigger>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteSection(parentItem)}><Trash2 className="h-4 w-4" /></Button>
-                            </div>
-                            <CollapsibleContent className="p-4">
-                                {(groupedItems[parentItem.regulationCode] || []).map(item => (
-                                    <Collapsible key={item.id} className="border rounded-lg mb-2 last:mb-0">
-                                        <div className="flex justify-between items-center p-4">
-                                            <CollapsibleTrigger className="flex w-full items-center text-left">
-                                                <span className="font-mono text-sm font-semibold w-24 flex-shrink-0">{item.regulationCode}</span>
-                                                <p className="font-medium truncate flex-1 mx-4">{item.regulationStatement}</p>
-                                                <ChevronDown className="h-4 w-4" />
-                                            </CollapsibleTrigger>
-                                            <div className="flex items-center gap-2 pl-4">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenForm(item)}><Edit className="h-4 w-4" /></Button>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteItem(item.id)}><Trash2 className="h-4 w-4" /></Button>
-                                            </div>
+                    }
+                />
+                {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
+            </div>
+
+            <div className="flex-1 p-0 overflow-hidden bg-background">
+                <ScrollArea className="h-full no-scrollbar">
+                    <div className="p-4 sm:p-6 space-y-6 pb-20">
+                        {topLevelItems.map(parentItem => (
+                            <div key={parentItem.id} className="border rounded-xl bg-muted/5 overflow-hidden relative">
+                                <div className="p-4 border-b bg-muted/10 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="h-8 w-24 bg-emerald-800 text-white rounded-lg flex items-center justify-center text-[10px] font-black uppercase tracking-tighter shrink-0">
+                                            {parentItem.regulationCode}
                                         </div>
-                                        <CollapsibleContent className="space-y-4 px-4 pb-4 border-t">
-                                            <p className="text-muted-foreground whitespace-pre-wrap">{item.technicalStandard}</p>
-                                        </CollapsibleContent>
-                                    </Collapsible>
-                                ))}
-                            </CollapsibleContent>
-                        </Collapsible>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 shrink-0" onClick={() => handleDeleteSection(parentItem)}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    <p className="font-bold text-sm text-foreground leading-snug whitespace-normal pr-8">
+                                        {parentItem.regulationStatement}
+                                    </p>
+                                </div>
+                                <div className="p-3 sm:p-4 space-y-3 bg-background overflow-hidden">
+                                    {(groupedItems[parentItem.regulationCode] || []).map(item => (
+                                        <Collapsible key={item.id} className="border rounded-lg overflow-hidden last:mb-0 transition-all hover:border-primary/30">
+                                            <div className="p-3 sm:p-4 space-y-3">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <span className="font-mono text-[10px] font-black text-muted-foreground w-20 flex-shrink-0 bg-muted/30 py-1 px-2 rounded border border-slate-200 text-center">
+                                                        {item.regulationCode}
+                                                    </span>
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleOpenForm(item)}>
+                                                            <Edit className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteItem(item.id)}>
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                                <CollapsibleTrigger className="flex w-full items-start text-left gap-3 group min-w-0">
+                                                    <p className="font-medium text-sm whitespace-normal flex-1">
+                                                        {item.regulationStatement}
+                                                    </p>
+                                                    <ChevronDown className="h-4 w-4 text-muted-foreground group-data-[state=open]:rotate-180 transition-transform shrink-0 mt-0.5" />
+                                                </CollapsibleTrigger>
+                                            </div>
+                                            <CollapsibleContent className="space-y-4 px-4 sm:px-6 pb-6 pt-2 border-t bg-muted/5">
+                                                <div className="space-y-2 overflow-hidden">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">Technical Standard & Acceptable Means of Compliance</p>
+                                                    <p className="text-sm font-medium text-muted-foreground leading-relaxed whitespace-pre-wrap italic break-words">&quot;{item.technicalStandard}&quot;</p>
+                                                </div>
+                                            </CollapsibleContent>
+                                        </Collapsible>
+                                    ))}
+                                    {(groupedItems[parentItem.regulationCode] || []).length === 0 && (
+                                        <p className="text-center py-6 text-xs font-medium text-muted-foreground italic">No detailed requirements defined for this section.</p>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                        {topLevelItems.length === 0 && (
+                            <div className="flex flex-col items-center justify-center py-24 text-center opacity-30">
+                                <Layers className="h-16 w-16 mb-4" />
+                                <p className="text-sm font-black uppercase tracking-widest">Coherence Matrix Empty</p>
+                                <p className="text-xs font-medium max-w-xs mt-2">Populate your matrix using the AI upload tool or by seeding standard Part 141 regulations.</p>
+                            </div>
+                        )}
+                    </div>
+                </ScrollArea>
+            </div>
+        </div>
     );
   };
 
   if (isLoading) {
     return (
-        <div className="max-w-[1200px] mx-auto w-full space-y-6">
-            <Skeleton className="h-10 w-[400px] rounded-full" />
-            <Skeleton className="h-[500px] w-full" />
+        <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-[600px] w-full" />
         </div>
     );
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
-        {!shouldShowOrganizationTabs ? (
-            renderOrgContext(scopedOrganizationId)
-        ) : (
-            <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
-                <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
-                    <TabsContent value="internal" className="m-0 p-0">
-                        {renderOrgContext('internal')}
-                    </TabsContent>
-                    {(organizations || []).map((org) => (
-                        <TabsContent key={org.id} value={org.id} className="m-0 p-0">
-                            {renderOrgContext(org.id)}
+    <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
+        <div className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl bg-card">
+            {!shouldShowOrganizationTabs ? (
+                renderOrgContext(scopedOrganizationId)
+            ) : (
+                <Tabs defaultValue="internal" className="w-full flex-1 flex flex-col overflow-hidden">
+                    <div className="flex-1 min-h-0 overflow-hidden">
+                        <TabsContent value="internal" className="m-0 p-0 h-full">
+                            {renderOrgContext('internal')}
                         </TabsContent>
-                    ))}
-                </div>
-            </Tabs>
-        )}
+                        {(organizations || []).map((org) => (
+                            <TabsContent key={org.id} value={org.id} className="m-0 p-0 h-full">
+                                {renderOrgContext(org.id)}
+                            </TabsContent>
+                        ))}
+                    </div>
+                </Tabs>
+            )}
+        </div>
 
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-                <DialogTitle>{editingItem ? 'Edit' : 'Add'} Compliance Requirement</DialogTitle>
+                <DialogTitle className="font-black uppercase tracking-tight">Compliance Requirement</DialogTitle>
             </DialogHeader>
             <ComplianceItemForm 
                 personnel={personnel || []}

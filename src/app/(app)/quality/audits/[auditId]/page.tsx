@@ -83,7 +83,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 max-w-[1200px] mx-auto w-full">
+      <div className="space-y-6 max-w-[1400px] mx-auto w-full pt-4 px-1">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-[600px] w-full" />
       </div>
@@ -92,8 +92,8 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
 
   if (auditError || !audit || !enrichedAudit) {
     return (
-      <div className="max-w-[1200px] mx-auto w-full text-center py-10">
-        <p className="text-destructive mb-4">{auditError ? `Error: ${auditError.message}` : "Audit record not found."}</p>
+      <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
+        <p className="text-muted-foreground mb-4">{auditError ? `Error: ${auditError.message}` : "Audit record not found."}</p>
         <Button asChild variant="outline">
           <Link href="/quality/audits">
             <ArrowLeft className="mr-2 h-4 w-4" /> Return to list
@@ -110,31 +110,22 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
     : "bg-red-500";
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 pb-8">
-       <div className="shrink-0 no-print px-1">
-          <Button asChild variant="ghost" size="sm" className="mb-2">
-            <Link href="/quality/audits">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to All Audits
-            </Link>
-          </Button>
-       </div>
-
-      <Card className="flex flex-col h-full overflow-hidden shadow-none border">
+    <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
+      <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-primary" />
-              <CardTitle>Audit {audit.auditNumber}: {audit.title}</CardTitle>
+              <CardTitle className="text-2xl font-black uppercase truncate">Audit {audit.auditNumber}: {audit.title}</CardTitle>
             </div>
-            <CardDescription>
-              Performed on {format(new Date(audit.auditDate), 'PPP')} • Status: <Badge variant="outline" className="text-[10px] h-5 py-0 uppercase font-black">{audit.status}</Badge>
+            <CardDescription className="text-sm font-medium">
+              Performed on {format(new Date(audit.auditDate), 'PPP')} • Status: <Badge variant="outline" className="text-[10px] h-5 py-0 uppercase font-black border-primary/20 bg-primary/5 text-primary">{audit.status}</Badge>
             </CardDescription>
           </div>
 
           {typeof audit.complianceScore === 'number' && (
             <div className="text-left md:text-right min-w-[200px]">
-              <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest mb-1">Compliance Score</p>
+              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Compliance Score</p>
               <div className="flex items-center gap-3 justify-start md:justify-end">
                 <span className="text-3xl font-black text-primary">{audit.complianceScore}%</span>
                 <Progress value={audit.complianceScore} className="w-24 h-2" indicatorClassName={scoreColor} />

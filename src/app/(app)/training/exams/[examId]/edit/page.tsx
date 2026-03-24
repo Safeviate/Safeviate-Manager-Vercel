@@ -6,11 +6,12 @@ import { doc } from 'firebase/firestore';
 import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { ExamForm, type ExamFormValues } from '../../exam-form';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ExamTemplate } from '@/types/training';
+import { MainPageHeader } from '@/components/page-header';
 
 interface EditExamPageProps {
   params: Promise<{ examId: string }>;
@@ -48,37 +49,35 @@ export default function EditExamPage({ params }: EditExamPageProps) {
   };
 
   if (isLoading) {
-    return <div className="p-8 space-y-6"><Skeleton className="h-10 w-48" /><Skeleton className="h-[600px] w-full" /></div>;
+    return <div className="p-8 space-y-6 max-w-[1400px] mx-auto w-full"><Skeleton className="h-20 w-full" /><Skeleton className="h-[600px] w-full" /></div>;
   }
 
   if (error || !exam) {
     return (
-      <div className="max-w-5xl mx-auto w-full text-center py-20">
-        <p className="text-destructive mb-4">Error: {error?.message || 'Exam template not found.'}</p>
+      <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
+        <p className="text-destructive font-black uppercase tracking-tight mb-4">Error: {error?.message || 'Exam template not found.'}</p>
         <Button onClick={() => router.push('/training/exams')}>Return to Exams</Button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
-      <div className="shrink-0 px-1">
-        <Button variant="ghost" size="sm" onClick={() => router.back()} className="mb-2">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to All Exams
-        </Button>
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight font-headline">Edit Exam: {exam.title}</h1>
-          <p className="text-muted-foreground">Modify questions, subject matter, or passing criteria.</p>
+    <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-2 px-1">
+      <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
+        <div className="sticky top-0 z-30 bg-card">
+            <MainPageHeader 
+                title={`Edit Exam: ${exam.title}`}
+                description="Modify questions, subject matter, or passing criteria."
+            />
         </div>
-      </div>
-
-      <Card className="flex-1 flex flex-col overflow-hidden shadow-none border mt-4">
-        <ExamForm 
-          initialValues={exam}
-          onSubmit={handleUpdate}
-          onCancel={() => router.push('/training/exams')}
-          isSubmitting={isSubmitting}
-        />
+        <div className="flex-1 overflow-hidden">
+            <ExamForm 
+                initialValues={exam}
+                onSubmit={handleUpdate}
+                onCancel={() => router.push('/training/exams')}
+                isSubmitting={isSubmitting}
+            />
+        </div>
       </Card>
     </div>
   );
