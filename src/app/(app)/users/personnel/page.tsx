@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { PersonnelForm } from './personnel-form';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import type { Role } from '../../admin/roles/page';
 import type { Department } from '../../admin/department/page';
 import { PersonnelTable } from './personnel-table';
@@ -12,6 +12,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Users } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MainPageHeader } from '@/components/page-header';
 
 export type UserAccessOverrides = {
   hiddenMenus?: string[];
@@ -147,36 +148,29 @@ export default function PersonnelPage() {
 
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
-      <div className="px-1 shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Personnel</h1>
-            <p className="text-muted-foreground text-sm">Manage all non-flying staff in your organization.</p>
-        </div>
-        <div className="flex flex-col gap-1.5 sm:items-end w-full sm:w-auto">
-            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Account Controls</p>
-            <div className="flex gap-2">
-                <PersonnelForm 
-                    tenantId={tenantId} 
-                    roles={roles || []} 
-                    departments={departments || []}
-                    trigger={
-                        <Button disabled={!canCreateUsers} className="bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2 h-9 px-6 text-xs font-black uppercase">
-                            <PlusCircle className="h-4 w-4" />
-                            Add User
-                        </Button>
-                    }
-                />
-            </div>
-        </div>
-      </div>
-
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex items-center justify-between py-4">
-            <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Staff Directory</CardTitle>
-            </div>
-        </CardHeader>
+        <MainPageHeader 
+          title="Personnel Directory"
+          description="Manage all non-flying staff in your organization."
+          actions={
+            <div className="flex flex-col gap-1.5 sm:items-end w-full sm:w-auto">
+              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest hidden sm:block">Account Controls</p>
+              <div className="flex gap-2 w-full sm:w-auto">
+                  <PersonnelForm 
+                      tenantId={tenantId} 
+                      roles={roles || []} 
+                      departments={departments || []}
+                      trigger={
+                          <Button disabled={!canCreateUsers} className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2 h-9 px-6 text-xs font-black uppercase">
+                              <PlusCircle className="h-4 w-4" />
+                              Add User
+                          </Button>
+                      }
+                  />
+              </div>
+          </div>
+          }
+        />
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
           {isLoading ? (
             <div className="p-8 space-y-4">

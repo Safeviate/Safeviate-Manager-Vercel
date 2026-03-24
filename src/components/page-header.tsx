@@ -1,17 +1,48 @@
-import type { FC } from 'react';
+import type { FC, ReactNode } from 'react';
+import { CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
-interface PageHeaderProps {
+interface MainPageHeaderProps {
   title: string;
   description?: string;
+  actions?: ReactNode; // For action buttons like "New Report" or "Add User"
+  className?: string;
 }
 
-const PageHeader: FC<PageHeaderProps> = ({ title, description }) => {
+/**
+ * A standardized header component for main page cards across the application.
+ * Ensures consistent typography, spacing, and responsive layout for page titles.
+ */
+export const MainPageHeader: FC<MainPageHeaderProps> = ({ 
+  title, 
+  description, 
+  actions,
+  className 
+}) => {
   return (
-    <div>
-      <h1 className="text-3xl font-bold tracking-tight font-headline text-foreground">{title}</h1>
-      {description && <p className="text-muted-foreground">{description}</p>}
-    </div>
+    <CardHeader 
+      className={cn(
+        "flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 md:p-6 border-b bg-muted/5", 
+        className
+      )}
+    >
+      <div className="flex flex-col gap-1.5">
+        <CardTitle className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-headline">
+          {title}
+        </CardTitle>
+        {description && (
+          <CardDescription className="text-sm text-muted-foreground max-w-2xl">
+            {description}
+          </CardDescription>
+        )}
+      </div>
+      {actions && (
+        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto w-full sm:w-auto">
+          {actions}
+        </div>
+      )}
+    </CardHeader>
   );
 };
 
-export default PageHeader;
+export default MainPageHeader;
