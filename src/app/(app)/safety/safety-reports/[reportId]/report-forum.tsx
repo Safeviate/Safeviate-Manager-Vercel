@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -50,7 +49,6 @@ export function ReportForum({ report, tenantId }: ReportForumProps) {
     setIsSubmitting(true);
     const reportRef = doc(firestore, `tenants/${tenantId}/safety-reports`, report.id);
     
-    // Construct the message item carefully to avoid 'undefined' properties which Firestore rejects
     const messageItem: ReportDiscussionItem = {
       id: uuidv4(),
       userId: userProfile.id,
@@ -82,18 +80,13 @@ export function ReportForum({ report, tenantId }: ReportForumProps) {
   );
 
   return (
-    <Card className="flex flex-col h-[calc(100vh-300px)] overflow-hidden shadow-none border">
-      <CardHeader className="shrink-0 border-b bg-muted/5">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5 text-primary" />
-          <div>
-            <CardTitle>Report Discussion</CardTitle>
-            <CardDescription>Collaborative forum for investigators and staff to discuss findings and outcomes.</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="shrink-0 border-b bg-muted/5 p-4 flex items-center gap-3">
+        <MessageSquare className="h-5 w-5 text-primary" />
+        <h3 className="text-lg font-black uppercase tracking-tight">Report Discussion</h3>
+      </div>
       
-      <CardContent className="flex-1 min-h-0 p-0 overflow-hidden bg-muted/5">
+      <div className="flex-1 min-h-0 p-0 overflow-hidden bg-muted/5">
         <ScrollArea className="h-full">
           <div className="p-6 space-y-6">
             {sortedMessages.length > 0 ? (
@@ -101,93 +94,89 @@ export function ReportForum({ report, tenantId }: ReportForumProps) {
                 const isMe = msg.userId === userProfile?.id;
                 return (
                   <div key={msg.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
-                    <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarImage src={`https://picsum.photos/seed/${msg.userName}/100/100`} />
+                    <Avatar className="h-8 w-8 shrink-0 border">
+                      <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${msg.userName}`} />
                       <AvatarFallback>{msg.userName.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className={`flex flex-col max-w-[80%] ${isMe ? 'items-end' : ''}`}>
                       <div className={`flex items-baseline gap-2 mb-1 ${isMe ? 'flex-row-reverse' : ''}`}>
-                        <span className="text-xs font-bold">{msg.userName}</span>
-                        <span className="text-[10px] text-muted-foreground">{format(new Date(msg.timestamp), 'dd MMM HH:mm')}</span>
+                        <span className="text-xs font-black uppercase tracking-tight">{msg.userName}</span>
+                        <span className="text-[9px] font-bold text-muted-foreground uppercase">{format(new Date(msg.timestamp), 'dd MMM HH:mm')}</span>
                       </div>
-                      <div className={`p-3 rounded-2xl text-sm shadow-sm border space-y-2 ${
-                        isMe ? 'bg-primary text-primary-foreground rounded-tr-none border-primary/20' : 'bg-background rounded-tl-none border-border'
+                      <div className={`p-4 rounded-2xl text-sm shadow-sm border space-y-2 ${
+                        isMe ? 'bg-primary text-primary-foreground rounded-tr-none border-primary/20 font-medium' : 'bg-background rounded-tl-none border-slate-200 font-medium'
                       }`}>
                         {msg.assignedToName && (
-                            <Badge variant="secondary" className="flex items-center gap-1 w-fit text-[10px] bg-background/50 border-none">
+                            <Badge variant="secondary" className="flex items-center gap-1 w-fit text-[10px] font-black uppercase bg-background/50 border-none">
                                 <UserPlus className="h-3 w-3" />
-                                Assigned to: {msg.assignedToName}
+                                Assigned: {msg.assignedToName}
                             </Badge>
                         )}
-                        <p className="whitespace-pre-wrap">{msg.message}</p>
+                        <p className="leading-relaxed">{msg.message}</p>
                       </div>
                     </div>
                   </div>
-                );
+                )
               })
             ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
+              <div className="flex flex-col items-center justify-center py-20 text-center opacity-30">
                 <MessageSquare className="h-12 w-12 mb-4" />
-                <p className="text-sm font-medium">No discussion started yet.</p>
-                <p className="text-xs">Be the first to share a thought on this report.</p>
+                <p className="text-sm font-black uppercase tracking-widest">No Discussion Yet</p>
+                <p className="text-xs font-medium">Start a conversation or assign a task to a team member.</p>
               </div>
             )}
           </div>
         </ScrollArea>
-      </CardContent>
+      </div>
 
-      <CardFooter className="shrink-0 border-t p-4 bg-background flex flex-col gap-3">
+      <div className="shrink-0 border-t p-6 bg-background flex flex-col gap-4">
         {assignedUserId && (
-            <div className="flex items-center gap-2 w-full">
-                <Badge variant="secondary" className="pl-2 pr-1 py-1 gap-2 border-primary/20">
-                    <UserPlus className="h-3.5 w-3.5 text-primary" />
-                    <span>Assigning to: <span className="font-bold">{assignedUser ? `${assignedUser.firstName} ${assignedUser.lastName}` : '...'}</span></span>
-                    <Button variant="ghost" size="icon" className="h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setAssignedUserId(null)}>
-                        <X className="h-3 w-3" />
-                    </Button>
-                </Badge>
-            </div>
+          <div className="flex items-center justify-between bg-primary/5 border border-primary/20 px-3 py-1.5 rounded-lg">
+            <span className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
+              <UserPlus className="h-3 w-3" />
+              Assigning task to: {assignedUser?.firstName} {assignedUser?.lastName}
+            </span>
+            <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-primary/10" onClick={() => setAssignedUserId(null)}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
         )}
-        <div className="flex w-full gap-3 items-end">
-          <div className="flex-1 flex flex-col gap-2">
+        
+        <div className="flex gap-3 items-start">
+          <div className="flex-1 space-y-2">
             <Textarea 
-                placeholder="Type your comment here..." 
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                className="min-h-[80px] resize-none"
-                onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                }
-                }}
+              placeholder="Write a comment or investigation note..." 
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              className="min-h-[80px] bg-muted/5 border-slate-300 font-medium text-sm focus-visible:ring-primary"
             />
-            <div className="flex items-center gap-2">
-                <Select onValueChange={setAssignedUserId} value={assignedUserId || ''}>
-                    <SelectTrigger className="h-8 w-[200px] text-xs">
-                        <UserPlus className="h-3.5 w-3.5 mr-2" />
-                        <SelectValue placeholder="Assign user..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {(personnel || []).map(p => (
-                            <SelectItem key={p.id} value={p.id} className="text-xs">
-                                {p.firstName} {p.lastName}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest whitespace-nowrap">Assign To:</span>
+                <Select onValueChange={setAssignedUserId} value={assignedUserId || 'none'}>
+                  <SelectTrigger className="h-8 w-[180px] text-[10px] font-black uppercase bg-background border-slate-300">
+                    <SelectValue placeholder="Team Member..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none" className="text-[10px] font-black uppercase">Unassigned</SelectItem>
+                    {personnel?.map(p => (
+                      <SelectItem key={p.id} value={p.id} className="text-[10px] font-black uppercase">{p.firstName} {p.lastName}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
+              </div>
             </div>
           </div>
           <Button 
-            onClick={handleSendMessage} 
-            disabled={!newMessage.trim() || isSubmitting}
-            className="shrink-0 mb-1 h-8"
+            disabled={!newMessage.trim() || isSubmitting} 
+            onClick={handleSendMessage}
+            className="h-20 w-20 rounded-xl bg-emerald-700 hover:bg-emerald-800 shadow-md flex flex-col gap-1 shrink-0"
           >
-            <Send className="h-4 w-4 mr-2" />
-            Send
+            <Send className="h-5 w-5" />
+            <span className="text-[10px] font-black uppercase">Post</span>
           </Button>
         </div>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 }

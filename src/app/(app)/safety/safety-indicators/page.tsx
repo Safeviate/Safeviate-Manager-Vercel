@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { EditSpiForm } from './edit-spi-form';
 import { useCollection, useFirestore, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
@@ -18,20 +18,23 @@ import type { ExternalOrganization, TabVisibilitySettings } from '@/types/qualit
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { MainPageHeader } from '@/components/page-header';
 
 function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
     return (
-        <div className="border-y border-card-border bg-card px-6 py-4">
-            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex min-w-max">
-                <TabsTrigger value="internal" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs shrink-0">
+        <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
+            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
+                <TabsTrigger 
+                    value="internal" 
+                    className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
+                >
                     Internal
                 </TabsTrigger>
                 {organizations.map((organization) => (
                     <TabsTrigger
                         key={organization.id}
                         value={organization.id}
-                        className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs shrink-0"
+                        className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
                     >
                         {organization.name}
                     </TabsTrigger>
@@ -197,30 +200,35 @@ export default function SafetyIndicatorsPage() {
   const renderOrgCard = (orgId: string | 'internal') => {
     const contextOrgId = orgId === 'internal' ? null : orgId;
     return (
-        <Card className="shrink-0 border shadow-sm max-w-[1200px] mx-auto w-full">
-            <CardHeader className="py-3 px-4">
-                <div className="flex justify-end items-center">
-                    <Button onClick={() => {
-                        setSelectedSpi({
-                            id: 'new-spi',
-                            name: '',
-                            comparison: 'lower-is-better',
-                            unit: 'Count',
-                            periodLabel: 'Month',
-                            description: '',
-                            target: 0,
-                            levels: { acceptable: 0, monitor: 1, actionRequired: 2, urgentAction: 3 },
-                            monthlyData: Array(12).fill(0),
-                        });
-                        setIsEditDialogOpen(true);
-                    }}>
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add New SPI
-                    </Button>
-                </div>
-            </CardHeader>
-            {showTabs && <CompanyTabsRow organizations={organizations || []} />}
-            <CardContent className="p-6">
-                <div className="grid grid-cols-1 gap-6 pb-4 max-w-[1200px] mx-auto w-full">
+        <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl h-full">
+            <div className="sticky top-0 z-30 bg-card">
+                <MainPageHeader 
+                    title="Safety Performance Indicators"
+                    description="Track and monitor key safety metrics against organizational targets."
+                    actions={
+                        <Button size="sm" className="w-full sm:w-auto h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2" onClick={() => {
+                            setSelectedSpi({
+                                id: 'new-spi',
+                                name: '',
+                                comparison: 'lower-is-better',
+                                unit: 'Count',
+                                periodLabel: 'Month',
+                                description: '',
+                                target: 0,
+                                levels: { acceptable: 0, monitor: 1, actionRequired: 2, urgentAction: 3 },
+                                monthlyData: Array(12).fill(0),
+                            });
+                            setIsEditDialogOpen(true);
+                        }}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add New SPI
+                        </Button>
+                    }
+                />
+                {showTabs && <CompanyTabsRow organizations={organizations || []} />}
+            </div>
+            
+            <CardContent className="flex-1 p-6 overflow-y-auto bg-background min-h-0">
+                <div className="grid grid-cols-1 gap-6 pb-20 max-w-[1400px] mx-auto w-full">
                     {spiConfig.map(spi => (
                         <SPICard 
                             key={spi.id} 
@@ -245,38 +253,35 @@ export default function SafetyIndicatorsPage() {
   };
 
   if (isLoadingReports || isLoadingBookings || isLoadingOrgs || isLoadingSpiDocument || isLoadingVisibility) {
-    return <div className="space-y-6 max-w-[1200px] mx-auto w-full"><Skeleton className="h-10 w-[400px] rounded-full" /><Skeleton className="h-[200px] w-full" /></div>;
+    return (
+        <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1 h-full overflow-hidden">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="flex-1 w-full" />
+        </div>
+    );
   }
 
   const showTabs = shouldShowOrganizationTabs;
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
-      <Tabs defaultValue="internal" className="w-full flex-1 flex flex-col min-h-0">
-        <div className="flex-1 min-h-0 overflow-hidden mt-4">
-            {!showTabs ? (
-                <ScrollArea className="h-full custom-scrollbar pr-4">
-                    {renderOrgCard(scopedOrganizationId)}
-                </ScrollArea>
-            ) : (
-                <>
-                    <TabsContent value="internal" className="m-0 h-full">
-                        <ScrollArea className="h-full custom-scrollbar pr-4">
-                            {renderOrgCard('internal')}
-                        </ScrollArea>
+    <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
+        {!showTabs ? (
+            renderOrgCard(scopedOrganizationId)
+        ) : (
+            <Tabs defaultValue="internal" className="w-full flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+                    <TabsContent value="internal" className="mt-0 h-full flex flex-col flex-1 overflow-hidden">
+                        {renderOrgCard('internal')}
                     </TabsContent>
                     
                     {(organizations || []).map(org => (
-                        <TabsContent key={org.id} value={org.id} className="m-0 h-full">
-                            <ScrollArea className="h-full custom-scrollbar pr-4">
-                                {renderOrgCard(org.id)}
-                            </ScrollArea>
+                        <TabsContent key={org.id} value={org.id} className="mt-0 h-full flex flex-col flex-1 overflow-hidden">
+                            {renderOrgCard(org.id)}
                         </TabsContent>
                     ))}
-                </>
-            )}
-        </div>
-      </Tabs>
+                </div>
+            </Tabs>
+        )}
       
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="sm:max-w-xl">

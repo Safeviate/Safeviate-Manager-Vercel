@@ -4,13 +4,6 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import {
   Form
 } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
@@ -19,7 +12,7 @@ import type { SafetyReport, ReportHazard } from '@/types/safety-report';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { PlusCircle, Trash2, Signature, Save } from 'lucide-react';
+import { PlusCircle, Trash2, Signature, Save, ShieldCheck } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -28,12 +21,19 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 
 // --- Helper Functions ---
+const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => {
+    if (score <= 4) return 'Low';
+    if (score <= 9) return 'Medium';
+    if (score <= 16) return 'High';
+    return 'Critical';
+}
+
 const getRiskScoreColor = (
     likelihood: number,
     severity: number,
     colors?: Record<string, string>
   ): { backgroundColor: string; color: string } => {
-    const severityToLetter: { [key: number]: string } = { 5: 'A', 4: 'B', 3: 'C', 2: 'D', 1: 'E' };
+    const severityToLetter: Record<number, string> = { 5: 'A', 4: 'B', 3: 'C', 2: 'D', 1: 'E' };
     const severityLetter = severityToLetter[severity] || 'E';
     const cellId = `${likelihood}${severityLetter}`;
     
@@ -47,37 +47,25 @@ const getRiskScoreColor = (
         return { backgroundColor: colors[cellId], color: textColor };
     }
     
-    const score = likelihood * severity;
-    if (score > 9) return { backgroundColor: '#ef4444', color: 'white' };
-    if (score > 4) return { backgroundColor: '#f59e0b', color: 'black' };
     return { backgroundColor: '#10b981', color: 'white' };
 };
 
-const riskAssessmentSchema = z.object({
-    severity: z.number().min(1).max(5),
-    likelihood: z.number().min(1).max(5),
-    riskScore: z.number(),
-    riskLevel: z.enum(["Low", "Medium", "High", "Critical"]),
-});
-
-const reportHazardSchema = z.object({
+// --- Form Schemas ---
+const hazardReviewSchema = z.object({
     id: z.string(),
-    description: z.string().min(1, "Hazard description is required."),
-    riskAssessment: riskAssessmentSchema.optional(),
+    description: z.string(),
+    residualRiskLikelihood: z.number(),
+    residualRiskSeverity: z.number(),
+    residualRiskScore: z.number(),
+    residualRiskLevel: z.enum(["Low", "Medium", "High", "Critical"]),
 });
 
-const finalReviewSchema = z.object({
-  mitigatedHazards: z.array(reportHazardSchema),
-  signatures: z.array(z.object({
-    userId: z.string(),
-    userName: z.string(),
-    role: z.string(),
-    signatureUrl: z.string(),
-    signedAt: z.string(),
-  })),
+const reportReviewSchema = z.object({
+  hazards: z.array(hazardReviewSchema),
+  signatures: z.array(z.any()).optional(),
 });
 
-type FormValues = z.infer<typeof finalReviewSchema>;
+type FormValues = z.infer<typeof reportReviewSchema>;
 
 interface FinalReviewProps {
   report: SafetyReport;
@@ -92,31 +80,35 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(finalReviewSchema),
+    resolver: zodResolver(reportReviewSchema),
     defaultValues: {
-      mitigatedHazards: report.mitigatedHazards || [],
+      hazards: report.initialHazards?.map(h => ({
+          id: h.id,
+          description: h.description,
+          residualRiskLikelihood: h.risks?.[0]?.riskAssessment.likelihood || 1,
+          residualRiskSeverity: h.risks?.[0]?.riskAssessment.severity || 1,
+          residualRiskScore: h.risks?.[0]?.riskAssessment.riskScore || 1,
+          residualRiskLevel: h.risks?.[0]?.riskAssessment.riskLevel || 'Low',
+      })) || [],
       signatures: report.signatures || [],
     },
   });
-  
+
   const { fields: hazardFields, append: appendHazard, remove: removeHazard } = useFieldArray({
-      control: form.control,
-      name: "mitigatedHazards"
+    control: form.control,
+    name: "hazards",
   });
 
   const onSubmit = (values: FormValues) => {
     if (!firestore) return;
     const reportRef = doc(firestore, 'tenants', tenantId, 'safety-reports', report.id);
-    updateDocumentNonBlocking(reportRef, values);
-    toast({ title: 'Final Review Updated' });
+    updateDocumentNonBlocking(reportRef, { hazards: values.hazards });
+    toast({ title: 'Final Review Saved' });
   };
-  
+
   const handleSignReport = () => {
-    const currentUser = personnel[0]; 
-    if (!currentUser) {
-        toast({variant: "destructive", title: "Cannot Sign", description: "No user available to sign."});
-        return;
-    }
+    const currentUser = personnel[0]; // Logic for current user auth needed here
+    if (!currentUser) return;
 
     const newSignature = {
         userId: currentUser.id,
@@ -136,12 +128,11 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
   };
 
   return (
-    <Card className={cn("flex flex-col shadow-none border", !isStacked && "h-[calc(100vh-300px)] overflow-hidden")}>
-      <CardHeader className="shrink-0 border-b bg-muted/5">
-        <CardTitle>Final Review & Closure</CardTitle>
-        <CardDescription>Review the final state of hazards and provide sign-off to close the report.</CardDescription>
-      </CardHeader>
-      <div className={cn("flex-1 p-0 overflow-hidden", isStacked && "overflow-visible")}>
+    <div className={cn("flex flex-col h-full", !isStacked && "overflow-hidden")}>
+      <div className="shrink-0 border-b bg-muted/5 p-4">
+        <h3 className="text-lg font-black uppercase tracking-tight">Final Review & Closure</h3>
+      </div>
+      <div className={cn("flex-1 p-0 overflow-hidden flex flex-col", isStacked && "overflow-visible h-auto")}>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
             {isStacked ? (
@@ -155,81 +146,82 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
                 </div>
               </ScrollArea>
             )}
-            <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
-              <Button type="submit">
-                <Save className="mr-2 h-4 w-4" /> Save Final Review
-              </Button>
-            </div>
+            {!isStacked && (
+                <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
+                    <Button type="submit" className="bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-xs h-10 px-8 shadow-md">
+                        <Save className="mr-2 h-4 w-4" /> Save Final Review
+                    </Button>
+                </div>
+            )}
           </form>
         </Form>
       </div>
-    </Card>
+    </div>
   );
 }
 
-function ReviewFields({ form, hazardFields, removeHazard, appendHazard, riskMatrixColors, handleSignReport }: any) {
+function ReviewFields({ form, hazardFields, riskMatrixColors, handleSignReport }: any) {
   return (
     <>
-      <div>
-          <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">Mitigated Hazards</h3>
-              <Button type="button" variant="outline" size="sm" onClick={() => appendHazard({ id: uuidv4(), description: '', riskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' } })} className="no-print">
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add Hazard
-              </Button>
-          </div>
-          <p className="text-sm text-muted-foreground mb-4">Re-assess hazards after corrective actions have been implemented.</p>
-          <div className='space-y-4'>
-              {hazardFields.map((field: any, index: number) => {
-                  const likelihood = field.riskAssessment?.likelihood || 1;
-                  const severity = field.riskAssessment?.severity || 1;
-                  const { backgroundColor, color } = getRiskScoreColor(likelihood, severity, riskMatrixColors);
-                  const severityLetters: Record<number, string> = { 5: 'A', 4: 'B', 3: 'C', 2: 'D', 1: 'E' };
-                  const displayValue = `${likelihood}${severityLetters[severity] || 'E'}`;
+      <section>
+        <div className="flex items-center gap-2 mb-6">
+            <div className="p-1.5 rounded-md bg-primary/10 text-primary"><ShieldCheck className="h-4 w-4" /></div>
+            <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Hazard Residual Risk Review</h3>
+        </div>
+        <div className="space-y-4">
+          {hazardFields.map((field: any, index: number) => (
+            <div key={field.id} className="p-4 border rounded-xl bg-muted/5">
+              <div className="flex justify-between items-start gap-4 mb-4">
+                <div className="flex-1">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Hazard {index + 1}</p>
+                  <p className="text-sm font-bold text-foreground">{field.description}</p>
+                </div>
+                <div className="flex items-center gap-3 bg-background border px-3 py-1.5 rounded-full shadow-sm">
+                   <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Residual Risk:</span>
+                   <span className="font-mono font-black text-xs">{(field.residualRiskLikelihood * field.residualRiskSeverity)}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
-                  return (
-                      <div key={field.id} className="flex items-center gap-4 p-4 border rounded-lg bg-muted/10">
-                          <p className="flex-1 text-sm font-semibold">{field.description || "New Hazard"}</p>
-                          <div 
-                              className="h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm"
-                              style={{ backgroundColor, color }}
-                          >
-                              {displayValue}
-                          </div>
-                          <Button type="button" variant="ghost" size="icon" onClick={() => removeHazard(index)} className="text-destructive no-print"><Trash2 className="h-4 w-4" /></Button>
-                      </div>
-                  );
-              })}
-              {hazardFields.length === 0 && <p className="text-sm text-muted-foreground italic text-center py-4">No mitigated hazards recorded.</p>}
-          </div>
-      </div>
+      <Separator className="bg-slate-200/60" />
 
-      <Separator />
-      
-      <div>
-          <h3 className="text-lg font-medium mb-4">Signatures</h3>
-          <div className="space-y-4">
-              {(form.watch('signatures') || []).map((sig: any, index: number) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg bg-muted/10">
-                      <div>
-                          <p className="font-semibold">{sig.userName}</p>
-                          <p className="text-sm text-muted-foreground">{sig.role}</p>
-                      </div>
-                      <div className="text-right">
-                          <Image src={sig.signatureUrl} alt="Signature" width={100} height={50} className="bg-white border rounded p-1 ml-auto" />
-                          <p className="text-[10px] text-muted-foreground mt-1">{new Date(sig.signedAt).toLocaleString()}</p>
-                      </div>
-                  </div>
-              ))}
-              {form.watch('signatures')?.length === 0 && (
-                  <p className="text-center text-muted-foreground py-4">No signatures yet.</p>
-              )}
-          </div>
-          <div className="mt-4 flex justify-end no-print">
-              <Button type="button" onClick={handleSignReport} variant="outline">
-                  <Signature className="mr-2 h-4 w-4" /> Sign and Close Report
-              </Button>
-          </div>
-      </div>
+      <section>
+        <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-md bg-primary/10 text-primary"><Signature className="h-4 w-4" /></div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Authorization & Sign-off</h3>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={handleSignReport} className="h-9 px-6 text-xs font-black uppercase border-slate-300 shadow-sm no-print">
+              Sign Report
+            </Button>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {form.watch('signatures')?.map((sig: any, idx: number) => (
+            <div key={idx} className="p-4 border rounded-xl bg-background shadow-sm flex flex-col gap-4">
+              <div className="flex justify-between items-start border-b pb-3">
+                <div>
+                  <p className="text-sm font-black uppercase tracking-tight text-foreground">{sig.userName}</p>
+                  <p className="text-[10px] font-bold text-primary uppercase tracking-widest">{sig.role}</p>
+                </div>
+                <p className="text-[10px] font-medium text-muted-foreground">{format(new Date(sig.signedAt), 'PPP')}</p>
+              </div>
+              <div className="bg-muted/10 rounded-lg p-4 flex items-center justify-center border-2 border-dashed h-24">
+                <img src={sig.signatureUrl} alt="Signature" className="max-h-16 grayscale opacity-80" />
+              </div>
+            </div>
+          ))}
+          {(!form.watch('signatures') || form.watch('signatures').length === 0) && (
+              <div className="md:col-span-2 py-10 flex flex-col items-center justify-center border-2 border-dashed rounded-xl opacity-40">
+                  <Signature className="h-10 w-10 mb-2" />
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Awaiting Sign-off</p>
+              </div>
+          )}
+        </div>
+      </section>
     </>
   );
 }

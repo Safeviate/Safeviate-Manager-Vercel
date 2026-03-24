@@ -4,13 +4,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import {
   Form,
   FormControl,
   FormField,
@@ -33,11 +26,11 @@ import { doc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 const reportStatuses = ['Open', 'Under Review', 'Awaiting Action', 'Closed'];
 const eventClassifications = ['Hazard', 'Incident', 'Accident'];
 
-// ICAO Occurrence Categories (CICTT Taxonomy)
 const ICAO_CATEGORIES = [
   { code: 'ADRM', description: 'Aerodrome' },
   { code: 'AMAN', description: 'Abrupt Maneuver' },
@@ -99,54 +92,58 @@ export function TriageForm({ report, tenantId, isStacked = false }: TriageFormPr
 
   const onSubmit = (values: TriageFormValues) => {
     if (!firestore) return;
-
-    const reportRef = doc(
-      firestore,
-      'tenants',
-      tenantId,
-      'safety-reports',
-      report.id
-    );
+    const reportRef = doc(firestore, 'tenants', tenantId, 'safety-reports', report.id);
     updateDocumentNonBlocking(reportRef, values);
-
-    toast({
-      title: 'Triage Details Saved',
-      description: 'The report classification has been updated.',
-    });
+    toast({ title: 'Triage Details Saved' });
   };
 
   return (
-    <Card className={cn("flex flex-col shadow-none border", !isStacked && "h-[calc(100vh-300px)] overflow-hidden")}>
-      <CardHeader className="shrink-0 border-b bg-muted/5">
-        <CardTitle>Report Classification & Triage</CardTitle>
-        <CardDescription>
-          Assign, classify, and manage the report status.
-        </CardDescription>
-      </CardHeader>
-      <div className={cn("flex-1 p-0 overflow-hidden", isStacked && "overflow-visible")}>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
-            {isStacked ? (
-              <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-                <TriageFields form={form} />
-              </div>
-            ) : (
-              <ScrollArea className="flex-1 p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <TriageFields form={form} />
-                </div>
-              </ScrollArea>
-            )}
-            <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
-              <Button type="submit">
-                <Save className="mr-2 h-4 w-4" /> Save Triage Details
-              </Button>
-            </div>
-          </form>
-        </Form>
+    <div className={cn("flex flex-col h-full", !isStacked && "overflow-hidden")}>
+      <div className="shrink-0 border-b bg-muted/5 p-4">
+        <h3 className="text-lg font-black uppercase tracking-tight">Occurrence Details & Triage</h3>
       </div>
-    </Card>
+      
+      <div className={cn("flex-1 p-0 overflow-hidden flex flex-col", isStacked && "overflow-visible h-auto")}>
+        <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-8">
+            {/* --- INTEGRATED REPORT SUMMARY --- */}
+            <section className="space-y-3">
+                <div className="flex flex-col gap-0.5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-primary opacity-80">Initial Narrative</p>
+                    <p className="text-[11px] text-muted-foreground font-medium italic">Filed {format(new Date(report.submittedAt), 'PPP')} by {report.submittedByName}</p>
+                </div>
+                <div className="p-5 rounded-xl bg-primary/5 border border-primary/10 shadow-inner">
+                    <p className="text-sm text-foreground font-medium leading-relaxed whitespace-pre-wrap italic opacity-90">&quot;{report.description}&quot;</p>
+                </div>
+            </section>
+
+            <Separator />
+
+            {/* --- TRIAGE CONTROLS --- */}
+            <section className="space-y-6">
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary border-b pb-2">Classification & Management</p>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <TriageFields form={form} />
+                        </div>
+                        {!isStacked && (
+                            <div className="flex justify-end pt-4">
+                                <Button type="submit" className="bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-xs h-10 px-8 shadow-md">
+                                    <Save className="mr-2 h-4 w-4" /> Save Triage Details
+                                </Button>
+                            </div>
+                        )}
+                    </form>
+                </Form>
+            </section>
+        </div>
+      </div>
+    </div>
   );
+}
+
+function Separator() {
+    return <div className="h-px w-full bg-slate-200/60" />;
 }
 
 function TriageFields({ form }: { form: any }) {
@@ -157,23 +154,10 @@ function TriageFields({ form }: { form: any }) {
         name="status"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Report Status</FormLabel>
-            <Select
-              onValueChange={field.onChange}
-              defaultValue={field.value}
-            >
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Set status" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {reportStatuses.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+            <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Report Status</FormLabel>
+            <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FormControl><SelectTrigger className="h-10 bg-background font-bold text-xs"><SelectValue placeholder="Set status" /></SelectTrigger></FormControl>
+              <SelectContent>{reportStatuses.map((status) => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent>
             </Select>
             <FormMessage />
           </FormItem>
@@ -184,23 +168,10 @@ function TriageFields({ form }: { form: any }) {
         name="eventClassification"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Event Classification</FormLabel>
-            <Select
-              onValueChange={field.onChange}
-              defaultValue={field.value}
-            >
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Classify event" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {eventClassifications.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+            <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Event Classification</FormLabel>
+            <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FormControl><SelectTrigger className="h-10 bg-background font-bold text-xs"><SelectValue placeholder="Classify event" /></SelectTrigger></FormControl>
+              <SelectContent>{eventClassifications.map((c) => (<SelectItem key={c} value={c}>{c}</SelectItem>))}</SelectContent>
             </Select>
             <FormMessage />
           </FormItem>
@@ -211,25 +182,10 @@ function TriageFields({ form }: { form: any }) {
         name="occurrenceCategory"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Occurrence Category (ICAO)</FormLabel>
-            <Select
-              onValueChange={field.onChange}
-              defaultValue={field.value}
-            >
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <ScrollArea className="h-[300px]">
-                  {ICAO_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.code} value={cat.code}>
-                      {cat.code} - {cat.description}
-                    </SelectItem>
-                  ))}
-                </ScrollArea>
-              </SelectContent>
+            <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Occurrence Category (ICAO)</FormLabel>
+            <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FormControl><SelectTrigger className="h-10 bg-background font-bold text-xs"><SelectValue placeholder="Select category" /></SelectTrigger></FormControl>
+              <SelectContent><ScrollArea className="h-[300px]">{ICAO_CATEGORIES.map((cat) => (<SelectItem key={cat.code} value={cat.code}>{cat.code} - {cat.description}</SelectItem>))}</ScrollArea></SelectContent>
             </Select>
             <FormMessage />
           </FormItem>

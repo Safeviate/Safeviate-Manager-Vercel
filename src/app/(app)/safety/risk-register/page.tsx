@@ -1,16 +1,15 @@
-
 'use client';
 
 import * as React from 'react';
 import { collection, query, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlusCircle, Edit, ShieldAlert, Settings2, Trash2, Plus } from 'lucide-react';
+import { PlusCircle, Edit, ShieldAlert, Settings2, Trash2, Plus, ShieldCheck } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Risk, Mitigation, RiskRegisterSettings } from '@/types/risk';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
@@ -26,19 +25,23 @@ import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import type { TabVisibilitySettings } from '../../admin/external/page';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { MainPageHeader } from '@/components/page-header';
 
 function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
     return (
-        <div className="border-y border-card-border bg-card px-6 py-4">
-            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex min-w-max">
-                <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
+        <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
+            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
+                <TabsTrigger 
+                    value="internal" 
+                    className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
+                >
                     Internal
                 </TabsTrigger>
                 {organizations.map((organization) => (
                     <TabsTrigger
                         key={organization.id}
                         value={organization.id}
-                        className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0"
+                        className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
                     >
                         {organization.name}
                     </TabsTrigger>
@@ -93,8 +96,8 @@ function ManageAreasDialog({ tenantId, settings }: { tenantId: string, settings:
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 gap-2">
-                    <Settings2 className="h-3.5 w-3.5" />
+                <Button variant="outline" size="sm" className="h-9 px-4 gap-2 rounded-md border-slate-300 text-xs font-black uppercase shadow-sm">
+                    <Settings2 className="h-4 w-4" />
                     Manage Areas
                 </Button>
             </DialogTrigger>
@@ -111,7 +114,7 @@ function ManageAreasDialog({ tenantId, settings }: { tenantId: string, settings:
                             onChange={(e) => setNewArea(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
                         />
-                        <Button size="icon" onClick={handleAdd} disabled={!newArea.trim()}>
+                        <Button size="icon" onClick={handleAdd} disabled={!newArea.trim()} className="bg-emerald-700">
                             <Plus className="h-4 w-4" />
                         </Button>
                     </div>
@@ -200,56 +203,63 @@ export default function RiskRegisterPage() {
 
     const uncategorizedRisks = orgRisks.filter(r => !hazardAreas.includes(r.hazardArea) && r.status === 'Open');
     const displayAreas = uncategorizedRisks.length > 0 ? [...hazardAreas, 'Uncategorized'] : hazardAreas;
-    const sectionTitle = orgId === 'internal' ? 'Internal Risk Register' : organizations?.find((o) => o.id === orgId)?.name;
 
     return (
-        <Card className="min-h-[500px] flex flex-col shadow-none border">
-            <CardHeader className="bg-muted/10 border-b p-4">
-                <div className="flex justify-end items-center">
-                    <div className="flex items-center gap-2">
-                        {canManageAreas && <ManageAreasDialog tenantId={tenantId!} settings={registerSettings} />}
-                        <Button asChild size="sm">
-                            <Link href={`/safety/risk-register/new?orgId=${orgId}`}>
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Add Hazard
-                            </Link>
-                        </Button>
+        <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
+            <div className="sticky top-0 z-30 bg-card">
+                <MainPageHeader 
+                    title="Risk Register"
+                    description="Central log for identifying, assessing, and mitigating operational hazards."
+                    actions={
+                        <div className="flex items-center gap-3">
+                            {canManageAreas && <ManageAreasDialog tenantId={tenantId!} settings={registerSettings} />}
+                            <Button asChild size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
+                                <Link href={`/safety/risk-register/new?orgId=${orgId}`}>
+                                    <PlusCircle className="h-4 w-4" />
+                                    Add Hazard
+                                </Link>
+                            </Button>
+                        </div>
+                    }
+                />
+                {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
+            </div>
+
+            <CardContent className="flex-1 p-0 overflow-hidden bg-background">
+                <Tabs defaultValue={displayAreas[0]} className="h-full flex flex-col">
+                    <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
+                        <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
+                            {displayAreas.map(area => (
+                                <TabsTrigger 
+                                    key={area} 
+                                    value={area} 
+                                    className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
+                                >
+                                    {area}
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
                     </div>
-                </div>
-            </CardHeader>
-            {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
-            <CardContent className="p-6">
-                <Tabs defaultValue={displayAreas[0]}>
-                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
-                        {displayAreas.map(area => (
-                            <TabsTrigger 
-                                key={area} 
-                                value={area} 
-                                className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-xs shrink-0"
-                            >
-                                {area}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
-                    {displayAreas.map(area => {
-                        const areaRisks = area === 'Uncategorized' 
-                            ? uncategorizedRisks 
-                            : orgRisks.filter(r => r.hazardArea === area && r.status === 'Open');
-                            
-                        return (
-                            <TabsContent key={area} value={area} className="mt-0">
-                                <div className="rounded-md border overflow-hidden">
+                    
+                    <div className="flex-1 overflow-auto">
+                        {displayAreas.map(area => {
+                            const areaRisks = area === 'Uncategorized' 
+                                ? uncategorizedRisks 
+                                : orgRisks.filter(r => r.hazardArea === area && r.status === 'Open');
+                                
+                            return (
+                                <TabsContent key={area} value={area} className="mt-0 h-full">
                                     <Table>
-                                        <TableHeader className="bg-muted/30">
+                                        <TableHeader className="bg-muted/30 sticky top-0 z-10">
                                             <TableRow>
-                                                <TableHead className="w-[15%] text-[10px] uppercase font-bold">Hazard</TableHead>
-                                                <TableHead className="w-[15%] text-[10px] uppercase font-bold">Risk</TableHead>
-                                                <TableHead className="text-[10px] uppercase font-bold">Initial</TableHead>
-                                                <TableHead className="w-[20%] text-[10px] uppercase font-bold">Mitigation</TableHead>
-                                                <TableHead className="text-[10px] uppercase font-bold">Residual</TableHead>
-                                                <TableHead className="text-[10px] uppercase font-bold">Responsible</TableHead>
-                                                <TableHead className="text-[10px] uppercase font-bold">Review</TableHead>
-                                                <TableHead className="text-right text-[10px] uppercase font-bold">Actions</TableHead>
+                                                <TableHead className="w-[15%] text-[10px] uppercase font-bold tracking-wider">Hazard</TableHead>
+                                                <TableHead className="w-[15%] text-[10px] uppercase font-bold tracking-wider">Risk</TableHead>
+                                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Initial</TableHead>
+                                                <TableHead className="w-[20%] text-[10px] uppercase font-bold tracking-wider">Mitigation</TableHead>
+                                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Residual</TableHead>
+                                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Responsible</TableHead>
+                                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Review</TableHead>
+                                                <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         {areaRisks.length > 0 ? (
@@ -261,17 +271,17 @@ export default function RiskRegisterPage() {
                                         ) : (
                                             <tbody>
                                                 <TableRow>
-                                                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground italic text-sm">
+                                                    <TableCell colSpan={8} className="h-48 text-center text-muted-foreground italic text-sm">
                                                         No open risks in this area.
                                                     </TableCell>
                                                 </TableRow>
                                             </tbody>
                                         )}
                                     </Table>
-                                </div>
-                            </TabsContent>
-                        );
-                    })}
+                                </TabsContent>
+                            );
+                        })}
+                    </div>
                 </Tabs>
             </CardContent>
         </Card>
@@ -280,8 +290,8 @@ export default function RiskRegisterPage() {
 
   if (isLoading) {
     return (
-        <div className="max-w-[1200px] mx-auto w-full space-y-6">
-            <Skeleton className="h-10 w-[400px] rounded-full" />
+        <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
+            <Skeleton className="h-20 w-full" />
             <Skeleton className="h-[500px] w-full" />
         </div>
     );
@@ -291,20 +301,22 @@ export default function RiskRegisterPage() {
   const showTabs = isTabEnabled && shouldShowOrganizationTabs;
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
+    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-2 px-1">
       {!showTabs ? (
           renderOrgCard(scopedOrganizationId)
       ) : (
-          <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
-              <TabsContent value="internal" className="mt-0">
-                  {renderOrgCard('internal')}
-              </TabsContent>
-              
-              {(organizations || []).map(org => (
-                  <TabsContent key={org.id} value={org.id} className="mt-0">
-                      {renderOrgCard(org.id)}
-                  </TabsContent>
-              ))}
+          <Tabs defaultValue="internal" className="w-full flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <TabsContent value="internal" className="mt-0 h-full">
+                    {renderOrgCard('internal')}
+                </TabsContent>
+                
+                {(organizations || []).map(org => (
+                    <TabsContent key={org.id} value={org.id} className="mt-0 h-full">
+                        {renderOrgCard(org.id)}
+                    </TabsContent>
+                ))}
+              </div>
           </Tabs>
       )}
 
@@ -337,10 +349,10 @@ function RiskGroup({ hazard, personnelMap, onEditClick }: { hazard: Risk; person
   if (hazardRisks.length === 0) {
     return (
       <TableRow>
-        <TableCell className="font-medium whitespace-normal align-top text-xs">{hazard.hazard}</TableCell>
+        <TableCell className="font-bold text-sm text-primary whitespace-normal align-top">{hazard.hazard}</TableCell>
         <TableCell colSpan={6} className="text-center text-muted-foreground text-xs italic">No risks defined.</TableCell>
         <TableCell className="text-right align-top">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditClick(hazard)}>
+          <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={() => onEditClick(hazard)}>
             <Edit className="h-3.5 w-3.5" />
           </Button>
         </TableCell>
@@ -362,10 +374,10 @@ function RiskGroup({ hazard, personnelMap, onEditClick }: { hazard: Risk; person
       
       return (
         <TableRow key={`${hazard.id}-${risk.id}-${mitigation.id || mitigationIndex}`} className="border-0">
-          {showHazardCell && <TableCell rowSpan={totalRowsForHazard} className="font-medium whitespace-normal align-top text-xs">{hazard.hazard}</TableCell>}
-          {isFirstRowOfRisk && <TableCell rowSpan={riskRowSpan} className={cn("whitespace-normal align-top text-xs", isLastRowOfRisk ? "" : "border-b")}>{risk.description}</TableCell>}
+          {showHazardCell && <TableCell rowSpan={totalRowsForHazard} className="font-bold text-sm text-primary whitespace-normal align-top pt-4">{hazard.hazard}</TableCell>}
+          {isFirstRowOfRisk && <TableCell rowSpan={riskRowSpan} className={cn("whitespace-normal align-top text-sm font-medium pt-4", isLastRowOfRisk ? "" : "border-b")}>{risk.description}</TableCell>}
           {isFirstRowOfRisk && (
-            <TableCell rowSpan={riskRowSpan} className={cn("align-top", isLastRowOfRisk ? "" : "border-b")}>
+            <TableCell rowSpan={riskRowSpan} className={cn("align-top pt-4", isLastRowOfRisk ? "" : "border-b")}>
               {risk.initialRiskAssessment?.likelihood !== undefined && risk.initialRiskAssessment?.severity !== undefined && (
                 <Badge className="text-[10px] h-5 font-black" style={getRiskScoreStyle(risk.initialRiskAssessment.riskScore)}>
                   {getAlphanumericRisk(risk.initialRiskAssessment.likelihood, risk.initialRiskAssessment.severity)}
@@ -373,19 +385,19 @@ function RiskGroup({ hazard, personnelMap, onEditClick }: { hazard: Risk; person
               )}
             </TableCell>
           )}
-          <TableCell className="text-xs">{mitigation.description}</TableCell>
-          <TableCell>
+          <TableCell className="text-xs font-medium py-4">{mitigation.description}</TableCell>
+          <TableCell className="py-4">
             {mitigation.residualRiskAssessment?.likelihood !== undefined && mitigation.residualRiskAssessment?.severity !== undefined ? (
               <Badge className="text-[10px] h-5 font-black" style={getRiskScoreStyle(mitigation.residualRiskAssessment.riskScore)}>
                 {getAlphanumericRisk(mitigation.residualRiskAssessment.likelihood, mitigation.residualRiskAssessment.severity)}
               </Badge>
             ) : <Badge variant="outline" className="text-[10px] h-5 opacity-50 font-black">N/A</Badge>}
           </TableCell>
-          <TableCell className="text-xs whitespace-nowrap">{personnelMap.get(mitigation.responsiblePersonId) || 'N/A'}</TableCell>
-          <TableCell className="text-xs whitespace-nowrap">{mitigation.reviewDate ? format(new Date(mitigation.reviewDate), 'dd MMM yy') : 'N/A'}</TableCell>
+          <TableCell className="text-xs font-bold whitespace-nowrap py-4">{personnelMap.get(mitigation.responsiblePersonId) || 'N/A'}</TableCell>
+          <TableCell className="text-xs font-bold whitespace-nowrap py-4">{mitigation.reviewDate ? format(new Date(mitigation.reviewDate), 'dd MMM yy') : 'N/A'}</TableCell>
           {showHazardCell && (
-            <TableCell rowSpan={totalRowsForHazard} className="text-right align-top">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditClick(hazard)}>
+            <TableCell rowSpan={totalRowsForHazard} className="text-right align-top pt-4">
+              <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={() => onEditClick(hazard)}>
                 <Edit className="h-3.5 w-3.5" />
               </Button>
             </TableCell>

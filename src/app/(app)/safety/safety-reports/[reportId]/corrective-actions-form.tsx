@@ -4,13 +4,6 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import {
   Form,
   FormControl,
   FormField,
@@ -32,7 +25,7 @@ import type { SafetyReport } from '@/types/safety-report';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { PlusCircle, Trash2, CalendarIcon, Save } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarIcon, Save, CheckCircle2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
@@ -40,10 +33,11 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+// --- Form Schemas ---
 const correctiveActionSchema = z.object({
     id: z.string(),
     description: z.string().min(1, "Action description is required."),
-    responsiblePersonId: z.string().min(1, "Responsible person is required."),
+    responsiblePersonId: z.string().min(1, "Assignee is required."),
     deadline: z.date(),
     status: z.enum(["Open", "In Progress", "Closed", "Cancelled"]),
 });
@@ -89,26 +83,18 @@ export function CorrectiveActionsForm({ report, tenantId, personnel, isStacked =
     };
     
     updateDocumentNonBlocking(reportRef, dataToSave);
-    toast({
-      title: 'Corrective Actions Saved',
-      description: 'The Corrective Action Plan has been updated.',
-    });
+    toast({ title: 'Corrective Actions Saved' });
   };
 
   return (
-    <Card className={cn("flex flex-col shadow-none border", !isStacked && "h-[calc(100vh-300px)] overflow-hidden")}>
-      <CardHeader className="shrink-0 border-b bg-muted/5">
-        <div className="flex justify-between items-center">
-            <div>
-                <CardTitle>Corrective Action Plan (CAP)</CardTitle>
-                <CardDescription>Define and track actions to mitigate risks and prevent recurrence.</CardDescription>
-            </div>
-             <Button type="button" variant="outline" size="sm" onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', deadline: new Date(), status: 'Open' })} className="no-print">
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Action
-            </Button>
-        </div>
-      </CardHeader>
-      <div className={cn("flex-1 p-0 overflow-hidden", isStacked && "overflow-visible")}>
+    <div className={cn("flex flex-col h-full", !isStacked && "overflow-hidden")}>
+      <div className="shrink-0 border-b bg-muted/5 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h3 className="text-lg font-black uppercase tracking-tight">Corrective Action Plan (CAP)</h3>
+        <Button type="button" size="sm" onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', deadline: new Date(), status: 'Open' })} className="bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-xs h-9 px-6 shadow-md no-print">
+            <PlusCircle className="mr-2 h-4 w-4" /> Add Action
+        </Button>
+      </div>
+      <div className={cn("flex-1 p-0 overflow-hidden flex flex-col", isStacked && "overflow-visible h-auto")}>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
             {isStacked ? (
@@ -122,15 +108,17 @@ export function CorrectiveActionsForm({ report, tenantId, personnel, isStacked =
                 </div>
               </ScrollArea>
             )}
-            <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
-              <Button type="submit">
-                <Save className="mr-2 h-4 w-4" /> Save Corrective Actions
-              </Button>
-            </div>
+            {!isStacked && (
+                <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
+                    <Button type="submit" className="bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-xs h-10 px-8 shadow-md">
+                        <Save className="mr-2 h-4 w-4" /> Save Corrective Actions
+                    </Button>
+                </div>
+            )}
           </form>
         </Form>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -139,15 +127,46 @@ function CapFields({ fields, form, personnel, remove }: any) {
     <>
       {fields.map((field: any, index: number) => (
           <div key={field.id} className="grid grid-cols-1 md:grid-cols-4 items-end gap-4 p-4 border rounded-lg bg-muted/10">
-              <FormField control={form.control} name={`correctiveActions.${index}.description`} render={({ field }) => (<FormItem className='md:col-span-4'><FormLabel>Action</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name={`correctiveActions.${index}.responsiblePersonId`} render={({ field }) => ( <FormItem><FormLabel>Assignee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-8 text-xs bg-background"><SelectValue placeholder="Assign to..." /></SelectTrigger></FormControl><SelectContent>{personnel.map((p: any) => (<SelectItem key={p.id} value={p.id} className="text-xs">{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select></FormItem> )} />
-              <FormField control={form.control} name={`correctiveActions.${index}.deadline`} render={({ field }) => (<FormItem className='flex flex-col'><FormLabel>Deadline</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("h-8 pl-3 text-left font-normal bg-background text-xs", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "dd MMM") : <span>Date</span>}<CalendarIcon className="ml-auto h-3 w-3 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover></FormItem>)}/>
-              <FormField control={form.control} name={`correctiveActions.${index}.status`} render={({ field }) => (<FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-8 text-xs bg-background"><SelectValue /></SelectTrigger></FormControl><SelectContent>{['Open', 'In Progress', 'Closed', 'Cancelled'].map(s => (<SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>))}</SelectContent></Select></FormItem>)} />
-              <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="h-8 w-8 no-print"><Trash2 className="h-4 w-4" /></Button>
+              <FormField control={form.control} name={`correctiveActions.${index}.description`} render={({ field }) => (
+                  <FormItem className='md:col-span-4'>
+                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Mitigation Action</FormLabel>
+                      <FormControl><Input {...field} className="h-9 text-xs bg-background font-bold border-slate-300" /></FormControl>
+                      <FormMessage />
+                  </FormItem>
+              )} />
+              <FormField control={form.control} name={`correctiveActions.${index}.responsiblePersonId`} render={({ field }) => ( 
+                  <FormItem>
+                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Assignee</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl><SelectTrigger className="h-9 text-xs bg-background font-bold border-slate-300"><SelectValue placeholder="Assign to..." /></SelectTrigger></FormControl>
+                          <SelectContent>{personnel.map((p: any) => (<SelectItem key={p.id} value={p.id} className="text-xs">{p.firstName} {p.lastName}</SelectItem>))}</SelectContent>
+                      </Select>
+                  </FormItem> 
+              )} />
+              <FormField control={form.control} name={`correctiveActions.${index}.deadline`} render={({ field }) => (
+                  <FormItem className='flex flex-col'>
+                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Deadline</FormLabel>
+                      <Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("h-9 pl-3 text-left font-bold bg-background text-xs border-slate-300", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "dd MMM yyyy") : <span>Date</span>}<CalendarIcon className="ml-auto h-3 w-3 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover>
+                  </FormItem>
+              )}/>
+              <FormField control={form.control} name={`correctiveActions.${index}.status`} render={({ field }) => (
+                  <FormItem>
+                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl><SelectTrigger className="h-9 text-xs bg-background font-bold border-slate-300"><SelectValue /></SelectTrigger></FormControl>
+                          <SelectContent>{['Open', 'In Progress', 'Closed', 'Cancelled'].map(s => (<SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>))}</SelectContent>
+                      </Select>
+                  </FormItem>
+              )} />
+              <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="h-9 w-9 text-destructive no-print hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
           </div>
       ))}
       {fields.length === 0 && (
-          <p className='text-center text-muted-foreground py-8'>No corrective actions defined.</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
+              <CheckCircle2 className="h-12 w-12 mb-4" />
+              <p className="text-sm font-black uppercase tracking-widest">No corrective actions defined.</p>
+              <p className="text-xs font-medium">Add actions to mitigate identified risks and prevent recurrence.</p>
+          </div>
       )}
     </>
   );

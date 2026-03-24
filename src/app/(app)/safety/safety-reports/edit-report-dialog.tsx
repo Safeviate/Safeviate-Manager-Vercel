@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -32,9 +32,10 @@ type FormValues = z.infer<typeof formSchema>;
 interface EditReportDialogProps {
   report: SafetyReport;
   tenantId: string;
+  trigger?: ReactNode;
 }
 
-export function EditReportDialog({ report, tenantId }: EditReportDialogProps) {
+export function EditReportDialog({ report, tenantId, trigger }: EditReportDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -79,10 +80,12 @@ export function EditReportDialog({ report, tenantId }: EditReportDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="icon" className="h-8 w-8">
-          <Pencil className="h-4 w-4" />
-          <span className="sr-only">Edit Report</span>
-        </Button>
+        {trigger || (
+          <Button variant="outline" size="icon" className="h-8 w-8">
+            <Pencil className="h-4 w-4" />
+            <span className="sr-only">Edit Report</span>
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>

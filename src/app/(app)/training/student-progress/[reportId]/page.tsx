@@ -4,7 +4,6 @@ import { use } from 'react';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -31,9 +30,8 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full gap-6">
+      <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full gap-6 pt-4">
         <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-24 w-full" />
         <Skeleton className="flex-1 w-full" />
       </div>
     );
@@ -48,26 +46,7 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
-      <div className="shrink-0 px-1">
-        <Button asChild variant="outline">
-            <Link href="/training/student-progress">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to All Students
-            </Link>
-        </Button>
-      </div>
-
-      <div className="shrink-0 px-1">
-        <Card className='shadow-none border bg-muted/5'>
-            <CardHeader className="py-4">
-            <CardTitle className="text-2xl">{student.firstName} {student.lastName}</CardTitle>
-            <CardDescription>
-                Training path and progress summary.
-            </CardDescription>
-            </CardHeader>
-        </Card>
-      </div>
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 pt-4">
       
       <div className="flex-1 min-h-0 overflow-hidden px-1">
         <TrainingRecords studentId={studentId} tenantId={tenantId} />

@@ -101,10 +101,16 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
         [firestore, tenantId]
     );
 
+    const studentRef = useMemoFirebase(
+        () => (firestore ? doc(firestore, 'tenants', tenantId, 'students', studentId) : null),
+        [firestore, tenantId, studentId]
+    );
+
     const { data: reports, isLoading: isLoadingReports } = useCollection<StudentProgressReport>(progressReportsQuery);
     const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
     const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
     const { data: milestoneSettings } = useDoc<StudentMilestoneSettings>(milestoneSettingsRef);
+    const { data: student } = useDoc<PilotProfile>(studentRef);
 
     const isLoading = isLoadingReports || isLoadingInstructors || isLoadingBookings;
 
@@ -149,7 +155,7 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
     return (
         <Card className="flex flex-col h-full overflow-hidden shadow-none border">
             <CardHeader className="shrink-0 border-b bg-muted/5">
-                <CardTitle>Training Progress & History</CardTitle>
+                <CardTitle>{student ? `${student.firstName} ${student.lastName} - ` : ''}Training Progress & History</CardTitle>
                 <CardDescription>Comprehensive overview of flight hour milestones and instructor debriefs.</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 p-0 overflow-hidden">
