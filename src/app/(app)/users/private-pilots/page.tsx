@@ -10,6 +10,7 @@ import { PersonnelForm } from '../personnel/personnel-form';
 import type { Role } from '../../admin/roles/page';
 import type { Department } from '../../admin/department/page';
 import { usePermissions } from '@/hooks/use-permissions';
+import { MainPageHeader } from '@/components/page-header';
 
 export default function PrivatePilotsPage() {
   const firestore = useFirestore();
@@ -51,21 +52,27 @@ export default function PrivatePilotsPage() {
   const error = pilotsError || rolesError || deptsError;
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
-       <div className="flex justify-between items-center">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Private Pilots</h1>
-                <p className="text-muted-foreground">Manage all private pilots in your organization.</p>
-            </div>
-            {canCreateUsers && <PersonnelForm tenantId={tenantId} roles={roles || []} departments={departments || []} />}
-        </div>
-      <Card>
-        <CardContent className="p-0">
+    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
+      <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
+        <MainPageHeader 
+          title="Private Pilots"
+          description="Manage all private pilots in your organization."
+          actions={
+            canCreateUsers && (
+              <PersonnelForm 
+                tenantId={tenantId} 
+                roles={roles || []} 
+                departments={departments || []} 
+              />
+            )
+          }
+        />
+        <CardContent className="flex-1 p-0 overflow-hidden bg-background">
            {isLoading && (
-              <div className="text-center p-4">Loading private pilots...</div>
+              <div className="text-center p-8 text-muted-foreground">Loading private pilots...</div>
             )}
             {!isLoading && error && (
-              <div className="text-center p-4 text-destructive">Error: {error.message}</div>
+              <div className="text-center p-8 text-destructive font-semibold">Error: {error.message}</div>
             )}
             {!isLoading && !error && privatePilots && (
               <PrivatePilotsTable data={privatePilots} tenantId={tenantId} />

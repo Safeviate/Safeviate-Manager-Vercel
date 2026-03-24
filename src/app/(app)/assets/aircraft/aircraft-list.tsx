@@ -34,11 +34,11 @@ export function AircraftList({ data, tenantId }: AircraftListProps) {
 
   return (
     <ScrollArea className="h-full">
-      <div className="p-4 md:p-6">
+      <div>
         {/* --- DESKTOP TABLE VIEW --- */}
-        <div className="hidden md:block rounded-md border bg-card overflow-hidden">
+        <div className="hidden md:block overflow-hidden">
           <Table>
-            <TableHeader className="bg-muted/50">
+            <TableHeader className="bg-muted/30 sticky top-0 z-10">
               <TableRow>
                 <TableHead className="text-[10px] uppercase font-bold tracking-wider">Tail Number</TableHead>
                 <TableHead className="text-[10px] uppercase font-bold tracking-wider">Model</TableHead>

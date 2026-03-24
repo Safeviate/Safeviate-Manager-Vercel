@@ -61,8 +61,8 @@ export function AddAircraftDialog({ tenantId }: { tenantId: string }) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" /> Add Aircraft
+        <Button className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2 h-9 px-6 text-xs font-black uppercase">
+          <PlusCircle className="h-4 w-4" /> Add Aircraft
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">

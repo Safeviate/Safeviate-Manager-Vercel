@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import type { PilotProfile, Personnel } from '../personnel/page';
 import { ExternalUsersTable } from './external-users-table';
 import { PersonnelForm } from '../personnel/personnel-form';
@@ -12,6 +12,7 @@ import type { Department } from '../../admin/department/page';
 import type { ExternalOrganization } from '@/types/quality';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MainPageHeader } from '@/components/page-header';
 
 export default function ExternalUsersPage() {
   const firestore = useFirestore();
@@ -61,23 +62,22 @@ export default function ExternalUsersPage() {
   }, [roles]);
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">External Users</h1>
-          <p className="text-muted-foreground">Manage accounts for personnel belonging to third-party organizations.</p>
-        </div>
-        {canCreateUsers && (
-          <PersonnelForm 
-            tenantId={tenantId} 
-            roles={roles || []} 
-            departments={departments || []} 
-          />
-        )}
-      </div>
-
-      <Card>
-        <CardContent className="p-0">
+    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
+      <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
+        <MainPageHeader 
+          title="External Users"
+          description="Manage accounts for personnel belonging to third-party organizations."
+          actions={
+            canCreateUsers && (
+              <PersonnelForm 
+                tenantId={tenantId} 
+                roles={roles || []} 
+                departments={departments || []} 
+              />
+            )
+          }
+        />
+        <CardContent className="flex-1 p-0 overflow-hidden bg-background">
           {isLoading ? (
             <div className="p-8 space-y-4">
               <Skeleton className="h-10 w-full" />

@@ -12,6 +12,7 @@ import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Role } from '../../admin/roles/page';
 import Link from 'next/link';
+import { MainPageHeader } from '@/components/page-header';
 
 export default function AccessOverviewPage() {
   const firestore = useFirestore();
@@ -32,8 +33,8 @@ export default function AccessOverviewPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 max-w-[1200px] mx-auto w-full px-1">
-        <Skeleton className="h-10 w-48" />
+      <div className="space-y-6 max-w-[1400px] mx-auto w-full px-1">
+        <Skeleton className="h-20 w-full" />
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 h-[500px]">
           <Skeleton className="h-full w-full" />
           <Skeleton className="h-full w-full" />
@@ -43,11 +44,12 @@ export default function AccessOverviewPage() {
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
-      <div className="px-1">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Access Overview</h1>
-        <p className="text-muted-foreground text-sm">Verify module availability and role-based permissions at a glance.</p>
-      </div>
+    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
+      <MainPageHeader 
+        title="Access Overview"
+        description="Verify module availability and role-based permissions at a glance."
+        className="rounded-xl border shadow-sm bg-card"
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 flex-1 min-h-0">
         <Card className="flex flex-col h-full overflow-hidden shadow-none border">
@@ -105,7 +107,7 @@ export default function AccessOverviewPage() {
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
+        <div className="space-y-6 overflow-y-auto no-scrollbar pb-4">
           <Card className="shadow-none border">
             <CardHeader className="bg-muted/10 p-4">
               <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
