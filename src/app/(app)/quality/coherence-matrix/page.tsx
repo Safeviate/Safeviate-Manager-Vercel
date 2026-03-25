@@ -4,6 +4,10 @@ import { useState, useMemo, useCallback } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, writeBatch, doc, deleteDoc } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
+<<<<<<< HEAD
+=======
+import { MainPageHeader } from "@/components/page-header";
+>>>>>>> temp-save-work
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste, BookOpen, Layers } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -153,7 +157,11 @@ function UploadRegulationsDialog({ tenantId, organizationId }: { tenantId: strin
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
+<<<<<<< HEAD
                 <Button variant="outline" size="sm" className="h-9 px-4 text-xs font-black uppercase border-slate-300 gap-2">
+=======
+                <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase gap-2 border-slate-300">
+>>>>>>> temp-save-work
                     <WandSparkles className="h-3.5 w-3.5 text-primary" /> 
                     AI Populate
                 </Button>
@@ -240,6 +248,7 @@ function UploadRegulationsDialog({ tenantId, organizationId }: { tenantId: strin
 
 function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
     return (
+<<<<<<< HEAD
         <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
             <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
                 <TabsTrigger 
@@ -255,9 +264,25 @@ function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization
                         className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
                     >
                         {organization.name}
+=======
+        <div className="border-b bg-muted/5 px-6 py-3 overflow-x-auto no-scrollbar">
+            <div className="flex w-max gap-2 pr-6 flex-nowrap">
+                <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
+                    <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase">
+                        Internal
+>>>>>>> temp-save-work
                     </TabsTrigger>
-                ))}
-            </TabsList>
+                    {organizations.map((organization) => (
+                        <TabsTrigger
+                            key={organization.id}
+                            value={organization.id}
+                            className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase"
+                        >
+                            {organization.name}
+                        </TabsTrigger>
+                    ))}
+                </TabsList>
+            </div>
         </div>
     );
 }
@@ -360,6 +385,7 @@ export default function CoherenceMatrixPage() {
     const topLevelItems = sortedItems.filter(item => !item.parentRegulationCode);
 
     return (
+<<<<<<< HEAD
         <div className="flex flex-col h-full overflow-hidden">
             <div className="sticky top-0 z-30 bg-card">
                 <MainPageHeader 
@@ -389,6 +415,51 @@ export default function CoherenceMatrixPage() {
                                     <div className="flex items-center justify-between">
                                         <div className="h-8 w-24 bg-emerald-800 text-white rounded-lg flex items-center justify-center text-[10px] font-black uppercase tracking-tighter shrink-0">
                                             {parentItem.regulationCode}
+=======
+        <Card className="min-h-[500px] flex flex-col shadow-none border">
+            <MainPageHeader 
+                title="Coherence Matrix"
+                actions={
+                    <div className="flex flex-wrap items-center gap-2">
+                        <UploadRegulationsDialog tenantId={tenantId!} organizationId={contextOrgId} />
+                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase gap-2 border-slate-300" onClick={() => handleSeedData(contextOrgId)}>
+                            <BookOpen className="h-3.5 w-3.5" /> Seed Part 141
+                        </Button>
+                        <Button size="sm" className="h-8 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm gap-2" onClick={() => handleOpenForm()}>
+                            <PlusCircle className="h-4 w-4" /> Add Item
+                        </Button>
+                    </div>
+                }
+            />
+            
+            {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
+            
+            <CardContent className="p-6">
+                <div className="space-y-4">
+                    {topLevelItems.map(parentItem => (
+                        <Collapsible key={parentItem.id} className="border rounded-lg" defaultOpen>
+                            <div className="flex items-center p-4 bg-muted/30 rounded-t-lg">
+                                <CollapsibleTrigger className="flex flex-1 items-center text-left">
+                                    <span className="font-mono text-sm font-semibold w-28 flex-shrink-0">{parentItem.regulationCode}</span>
+                                    <p className="font-medium flex-1 mx-4">{parentItem.regulationStatement}</p>
+                                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+                                </CollapsibleTrigger>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteSection(parentItem)}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                            <CollapsibleContent className="p-4">
+                                {(groupedItems[parentItem.regulationCode] || []).map(item => (
+                                    <Collapsible key={item.id} className="border rounded-lg mb-2 last:mb-0">
+                                        <div className="flex justify-between items-center p-4">
+                                            <CollapsibleTrigger className="flex w-full items-center text-left">
+                                                <span className="font-mono text-sm font-semibold w-24 flex-shrink-0">{item.regulationCode}</span>
+                                                <p className="font-medium truncate flex-1 mx-4">{item.regulationStatement}</p>
+                                                <ChevronDown className="h-4 w-4" />
+                                            </CollapsibleTrigger>
+                                            <div className="flex items-center gap-2 pl-4">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenForm(item)}><Edit className="h-4 w-4" /></Button>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteItem(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                                            </div>
+>>>>>>> temp-save-work
                                         </div>
                                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 shrink-0" onClick={() => handleDeleteSection(parentItem)}>
                                             <Trash2 className="h-4 w-4" />

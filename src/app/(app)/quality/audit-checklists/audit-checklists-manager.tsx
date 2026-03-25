@@ -7,7 +7,12 @@ import { NewChecklistDialog } from './new-checklist-dialog';
 import { ChecklistTemplateCard } from './checklist-template-card';
 import { Accordion } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
+<<<<<<< HEAD
 import { Card, CardContent } from '@/components/ui/card';
+=======
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
+>>>>>>> temp-save-work
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { QualityAuditChecklistTemplate } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
@@ -60,6 +65,7 @@ export default function AuditChecklistsManager() {
   }
 
   return (
+<<<<<<< HEAD
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-2 px-1">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
         <div className="sticky top-0 z-30 bg-card">
@@ -77,6 +83,22 @@ export default function AuditChecklistsManager() {
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
           <ScrollArea className="h-full custom-scrollbar pr-4">
             <div className="p-6 pb-20 space-y-6">
+=======
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
+      <Card className="flex flex-col h-full overflow-hidden shadow-none border">
+        <MainPageHeader 
+          title="Audit Checklists"
+          actions={
+            <NewChecklistDialog
+                tenantId={tenantId}
+                departments={departments || []}
+            />
+          }
+        />
+        <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5">
+          <ScrollArea className="h-full">
+            <div className="p-6 pb-20">
+>>>>>>> temp-save-work
               {Object.keys(groupedTemplates).length > 0 ? (
                   <Accordion type="multiple" defaultValue={Object.keys(groupedTemplates)} className="w-full space-y-6">
                   {Object.entries(groupedTemplates).map(([deptName, templates]) => (

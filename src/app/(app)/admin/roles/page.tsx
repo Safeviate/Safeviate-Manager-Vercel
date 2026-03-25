@@ -1,11 +1,11 @@
-
 'use client';
 
 import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { RoleForm } from './role-form';
 import { RoleActions } from './role-actions';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
 import {
   Table,
   TableBody,
@@ -42,50 +42,47 @@ export default function RolesPage() {
   const { data: roles, isLoading } = useCollection<Role>(rolesQuery);
 
   return (
-    <div className="flex flex-col gap-6 h-full min-h-0">
+    <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
       <Card className="flex flex-col flex-1 min-h-0 overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 p-4">
-          {canManage && (
-            <div className="flex flex-col gap-1 sm:items-end w-full sm:w-auto">
-              <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Role Control</p>
-              <RoleForm tenantId={tenantId} />
-            </div>
-          )}
-        </CardHeader>
+        <MainPageHeader 
+          title="Roles"
+          actions={canManage && <RoleForm tenantId={tenantId} />}
+        />
+
         <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
           <ScrollArea className="h-full">
-            <div className="p-6">
+            <div className="p-0">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead>Role Name</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Permissions</TableHead>
-                    <TableHead className='text-right'>Actions</TableHead>
+                    <TableHead className="text-[10px] uppercase font-bold tracking-wider px-6">Role Name</TableHead>
+                    <TableHead className="text-[10px] uppercase font-bold tracking-wider">Category</TableHead>
+                    <TableHead className="text-[10px] uppercase font-bold tracking-wider">Permissions</TableHead>
+                    <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider px-6">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center p-8">Loading roles...</TableCell>
+                      <TableCell colSpan={4} className="text-center p-8 uppercase font-bold text-[10px] tracking-widest text-muted-foreground italic bg-muted/5">Loading roles...</TableCell>
                     </TableRow>
                   ) : (roles || []).map((role) => (
-                    <TableRow key={role.id}>
-                      <TableCell className="font-medium">{role.name}</TableCell>
+                    <TableRow key={role.id} className="hover:bg-muted/5 transition-colors">
+                      <TableCell className="font-bold text-sm text-foreground px-6 py-4">{role.name}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{role.category || 'N/A'}</Badge>
+                        <Badge variant="outline" className="text-[10px] font-black uppercase py-0.5 px-3 border-slate-300">{role.category || 'N/A'}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary">{role.permissions?.length || 0} assigned</Badge>
+                        <Badge variant="secondary" className="text-[10px] font-black uppercase py-0.5 px-3">{role.permissions?.length || 0} PERMISSIONS</Badge>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right px-6">
                          <RoleActions tenantId={tenantId} role={role} />
                       </TableCell>
                     </TableRow>
                   ))}
                   {!isLoading && (!roles || roles.length === 0) && (
                      <TableRow>
-                        <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
+                        <TableCell colSpan={4} className="text-center h-48 text-muted-foreground italic uppercase font-bold text-[10px] tracking-widest bg-muted/5">
                             No roles defined yet.
                         </TableCell>
                      </TableRow>

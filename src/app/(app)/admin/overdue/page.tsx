@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { MainPageHeader } from '@/components/page-header';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
@@ -74,8 +75,8 @@ export default function OverdueSettingsPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6 px-1">
       <Card className="shadow-none border border-amber-900/20">
-        <CardHeader className="pb-4 p-4" />
-        <CardContent className="space-y-8 pt-2">
+        <MainPageHeader title="Overdue Settings" />
+        <CardContent className="space-y-8 pt-6">
           <div className="flex items-center justify-between space-x-4 rounded-xl border border-primary/10 p-5 bg-primary/5">
             <div className="space-y-1">
               <Label htmlFor="monitor-toggle" className="text-sm font-bold text-foreground">Enable Safety Monitor</Label>

@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -290,6 +291,7 @@ export default function AuditSchedulePage() {
   }
 
   return (
+<<<<<<< HEAD
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-2 px-1">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
         <div className="sticky top-0 z-30 bg-card">
@@ -310,6 +312,25 @@ export default function AuditSchedulePage() {
                 isMobile
                     ? "min-h-0 flex-1 overflow-y-auto touch-pan-x touch-pan-y"
                     : "overflow-y-auto"
+=======
+    <div className="flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden">
+        <Card className={cn(
+            "w-full overflow-hidden border shadow-none",
+            isMobile ? "flex min-h-0 flex-1 flex-col" : "self-start"
+        )}>
+            <MainPageHeader 
+                title="Annual Audit Schedule"
+                actions={
+                    <Button size="sm" onClick={() => setIsAddAreaOpen(true)} className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Area
+                    </Button>
+                }
+            />
+            <CardContent className={cn(
+                "p-0",
+                isMobile ? "flex min-h-0 flex-1 flex-col" : ""
+>>>>>>> temp-save-work
             )}>
                 <div className="relative flex h-fit min-w-full w-fit items-start pb-20">
                     

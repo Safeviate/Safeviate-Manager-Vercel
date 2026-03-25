@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -235,7 +236,8 @@ export default function DocumentDatesPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-6 h-full">
+      <div className="flex flex-col gap-6 h-full px-1">
+        <Skeleton className="h-14 w-full" />
         <Skeleton className="h-[600px] w-full" />
       </div>
     );
@@ -246,9 +248,9 @@ export default function DocumentDatesPage() {
   }
   
   return (
-    <div className="flex flex-col h-full overflow-hidden gap-4">
+    <div className="flex flex-col h-full overflow-hidden gap-4 px-1">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 p-4" />
+        <MainPageHeader title="Threshold & Expiry" />
 
         <CardContent className="flex-1 p-0 overflow-hidden">
           <ScrollArea className="h-full">

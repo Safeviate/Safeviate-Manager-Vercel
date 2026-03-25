@@ -1,12 +1,11 @@
-
 'use client';
 
-import { useMemo } from 'react';
 import { collection, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { DepartmentForm } from './department-form';
 import { DepartmentActions } from './department-actions';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
 import {
   Table,
   TableBody,
@@ -44,46 +43,43 @@ export default function DepartmentPage() {
   } = useCollection<Department>(departmentsQuery);
 
   return (
-    <div className="flex flex-col gap-6 h-full min-h-0">
+    <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
       <Card className="flex flex-col flex-1 min-h-0 overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 p-4">
-          {canManage && (
-            <div className="flex flex-col gap-1 sm:items-end w-full sm:w-auto">
-              <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Department Control</p>
-              <DepartmentForm tenantId={tenantId} />
-            </div>
-          )}
-        </CardHeader>
+        <MainPageHeader 
+          title="Departments"
+          actions={canManage && <DepartmentForm tenantId={tenantId} />}
+        />
+
         <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
           <ScrollArea className="h-full">
-            <div className="p-6">
+            <div className="p-0">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead className='text-right'>Actions</TableHead>
+                    <TableHead className="text-[10px] uppercase font-bold tracking-wider px-6">Department Name</TableHead>
+                    <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider px-6">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading && (
                     <TableRow>
-                      <TableCell colSpan={2} className="text-center">
+                      <TableCell colSpan={2} className="text-center p-8 uppercase font-bold text-[10px] tracking-widest text-muted-foreground italic bg-muted/5">
                         Loading departments...
                       </TableCell>
                     </TableRow>
                   )}
                   {!isLoading && error && (
                     <TableRow>
-                      <TableCell colSpan={2} className="text-center text-destructive">
+                      <TableCell colSpan={2} className="text-center p-8 text-destructive text-xs font-bold uppercase">
                         Error: {error.message}
                       </TableCell>
                     </TableRow>
                   )}
                   {!isLoading && !error && departments && departments.length > 0 && (
                     departments.map((dept) => (
-                      <TableRow key={dept.id}>
-                        <TableCell className="font-medium">{dept.name}</TableCell>
-                        <TableCell className="text-right">
+                      <TableRow key={dept.id} className="hover:bg-muted/5 transition-colors">
+                        <TableCell className="font-bold text-sm text-foreground px-6 py-4">{dept.name}</TableCell>
+                        <TableCell className="text-right px-6">
                            <DepartmentActions tenantId={tenantId} department={dept} />
                         </TableCell>
                       </TableRow>
@@ -91,7 +87,7 @@ export default function DepartmentPage() {
                   )}
                   {!isLoading && !error && (!departments || departments.length === 0) && (
                      <TableRow>
-                        <TableCell colSpan={2} className="text-center h-24">
+                        <TableCell colSpan={2} className="text-center h-48 text-muted-foreground italic uppercase font-bold text-[10px] tracking-widest bg-muted/5">
                             No departments found.
                         </TableCell>
                      </TableRow>
