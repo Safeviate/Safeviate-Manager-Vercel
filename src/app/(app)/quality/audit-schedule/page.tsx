@@ -49,7 +49,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { AuditScheduleItem, AuditScheduleStatus } from '@/types/quality';
-import { MainPageHeader } from '@/components/page-header';
 
 const INITIAL_AUDIT_AREAS = [
   'Personnel & Training',
@@ -282,38 +281,11 @@ export default function AuditSchedulePage() {
   const scheduleRowHeights = 'grid-rows-[40px_repeat(12,44px)]';
 
   if (isLoading) {
-    return (
-      <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-[600px] w-full" />
-      </div>
-    );
+    return <Skeleton className="h-full w-full" />;
   }
 
   return (
-<<<<<<< HEAD
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-2 px-1">
-      <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
-        <div className="sticky top-0 z-30 bg-card">
-          <MainPageHeader 
-            title="Annual Audit Schedule"
-            description={`Planning and tracking oversight activities for ${currentYear}.`}
-            actions={
-              <Button size="sm" onClick={() => setIsAddAreaOpen(true)} className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2 h-9 px-6 text-xs font-black uppercase">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Area
-              </Button>
-            }
-          />
-        </div>
-        <CardContent className="flex-1 p-0 overflow-hidden bg-background">
-            <div className={cn(
-                "h-full overflow-x-auto overscroll-contain bg-card custom-scrollbar",
-                isMobile
-                    ? "min-h-0 flex-1 overflow-y-auto touch-pan-x touch-pan-y"
-                    : "overflow-y-auto"
-=======
-    <div className="flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden">
+    <div className="flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden px-1">
         <Card className={cn(
             "w-full overflow-hidden border shadow-none",
             isMobile ? "flex min-h-0 flex-1 flex-col" : "self-start"
@@ -321,7 +293,7 @@ export default function AuditSchedulePage() {
             <MainPageHeader 
                 title="Annual Audit Schedule"
                 actions={
-                    <Button size="sm" onClick={() => setIsAddAreaOpen(true)} className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
+                    <Button size="sm" onClick={() => setIsAddAreaOpen(true)} className="h-9 px-6 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Add Area
                     </Button>
@@ -330,99 +302,104 @@ export default function AuditSchedulePage() {
             <CardContent className={cn(
                 "p-0",
                 isMobile ? "flex min-h-0 flex-1 flex-col" : ""
->>>>>>> temp-save-work
             )}>
-                <div className="relative flex h-fit min-w-full w-fit items-start pb-20">
-                    
-                    {/* Sticky Month Column */}
-                    <div className={cn("sticky left-0 z-40 grid h-fit w-20 flex-shrink-0 self-start border-r bg-swimlane-header shadow-[2px_0_5px_rgba(0,0,0,0.05)] content-start", scheduleRowHeights)}>
-                        <div className="sticky top-0 left-0 z-50 bg-swimlane-header border-b border-white/10 flex h-10 items-center justify-center font-bold text-[10px] text-white uppercase tracking-wider">
-                            MONTH
+                <div className={cn(
+                    "overflow-x-auto overscroll-contain bg-card custom-scrollbar",
+                    isMobile
+                        ? "min-h-0 flex-1 overflow-y-auto touch-pan-x touch-pan-y"
+                        : "overflow-y-visible"
+                )}>
+                    <div className="relative flex h-fit min-w-full w-fit items-start">
+                        
+                        {/* Sticky Month Column */}
+                        <div className={cn("sticky left-0 z-40 grid h-fit w-20 flex-shrink-0 self-start border-r bg-swimlane-header shadow-[2px_0_5px_rgba(0,0,0,0.05)] content-start", scheduleRowHeights)}>
+                            <div className="sticky top-0 left-0 z-50 bg-swimlane-header border-b border-white/10 flex h-10 items-center justify-center font-bold text-[10px] text-white uppercase tracking-wider">
+                                MONTH
+                            </div>
+                            {MONTHS.map((month, idx) => {
+                                const isCurrentMonth = idx === currentMonthIdx;
+                                return (
+                                    <div 
+                                        key={month} 
+                                        className={cn(
+                                            "flex h-11 flex-col items-center justify-center border-b px-1 text-[10px] font-mono font-bold uppercase tracking-wider leading-none",
+                                            isCurrentMonth ? "bg-white/10 text-white" : "text-white/60"
+                                        )}
+                                    >
+                                        <span>{month}</span>
+                                        {isCurrentMonth && (
+                                            <Badge variant="outline" className="mt-1 h-3 min-h-0 border-white/40 px-1 py-0 text-[7px] font-bold text-white">
+                                                ACT
+                                            </Badge>
+                                        )}
+                                    </div>
+                                )
+                            })}
                         </div>
-                        {MONTHS.map((month, idx) => {
-                            const isCurrentMonth = idx === currentMonthIdx;
-                            return (
-                                <div 
-                                    key={month} 
-                                    className={cn(
-                                        "flex h-11 flex-col items-center justify-center border-b px-1 text-[10px] font-mono font-bold uppercase tracking-wider leading-none",
-                                        isCurrentMonth ? "bg-white/10 text-white" : "text-white/60"
-                                    )}
-                                >
-                                    <span>{month}</span>
-                                    {isCurrentMonth && (
-                                        <Badge variant="outline" className="mt-1 h-3 min-h-0 border-white/40 px-1 py-0 text-[7px] font-bold text-white">
-                                            ACT
-                                        </Badge>
-                                    )}
-                                </div>
-                            )
-                        })}
-                    </div>
 
-                    <div className="relative flex flex-1 items-start">
-                        {auditAreas.map((area) => (
-                            <div key={area} className={cn("relative grid h-fit min-w-[160px] flex-1 self-start border-r content-start", scheduleRowHeights)}>
-                                <div className="sticky top-0 z-30 bg-swimlane-header text-white border-b border-white/10 flex items-center justify-between gap-1 px-3 text-center shrink-0 h-10">
-                                    <span className="text-[9px] font-bold uppercase tracking-wider truncate">{area}</span>
-                                    <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
-                                </div>
-                                {MONTHS.map((month, idx) => {
-                                    const status = getScheduleItem(area, month);
-                                    const popoverId = `${area}-${month}`;
-                                    const isCurrentMonth = idx === currentMonthIdx;
+                        <div className="relative flex flex-1 items-start">
+                            {auditAreas.map((area) => (
+                                <div key={area} className={cn("relative grid h-fit min-w-[160px] flex-1 self-start border-r content-start", scheduleRowHeights)}>
+                                    <div className="sticky top-0 z-30 bg-swimlane-header text-white border-b border-white/10 flex items-center justify-between gap-1 px-3 text-center shrink-0 h-10">
+                                        <span className="text-[9px] font-bold uppercase tracking-wider truncate">{area}</span>
+                                        <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
+                                    </div>
+                                    {MONTHS.map((month, idx) => {
+                                        const status = getScheduleItem(area, month);
+                                        const popoverId = `${area}-${month}`;
+                                        const isCurrentMonth = idx === currentMonthIdx;
 
-                                    return (
-                                        <div 
-                                            key={month} 
-                                            className={cn(
-                                                "relative flex h-11 items-center justify-center border-b p-1 group transition-colors",
-                                                isCurrentMonth ? "bg-muted/30" : "hover:bg-muted/10"
-                                            )}
-                                        >
-                                            <Popover 
-                                                open={openPopoverId === popoverId} 
-                                                onOpenChange={(isOpen) => setOpenPopoverId(isOpen ? popoverId : null)}
+                                        return (
+                                            <div 
+                                                key={month} 
+                                                className={cn(
+                                                    "relative flex h-11 items-center justify-center border-b p-1 group transition-colors",
+                                                    isCurrentMonth ? "bg-muted/30" : "hover:bg-muted/10"
+                                                )}
                                             >
-                                                <PopoverTrigger asChild>
-                                                    <div className="w-full h-full cursor-pointer flex items-center justify-center">
-                                                        <Badge
-                                                            className={cn(
-                                                                "py-0.5 px-1 w-full justify-center text-[7px] uppercase font-bold shadow-sm transition-transform group-hover:scale-[1.02] border leading-tight h-6 text-center",
-                                                                getStatusBadgeClass(status)
-                                                            )}
-                                                        >
-                                                            {status === 'Not Scheduled' ? '' : status}
-                                                        </Badge>
-                                                    </div>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-48 p-0" align="center">
-                                                    <StatusSelector
-                                                        onSelect={(newStatus) => handleStatusChange(area, month, newStatus)}
-                                                    />
-                                                </PopoverContent>
-                                            </Popover>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ))}
+                                                <Popover 
+                                                    open={openPopoverId === popoverId} 
+                                                    onOpenChange={(isOpen) => setOpenPopoverId(isOpen ? popoverId : null)}
+                                                >
+                                                    <PopoverTrigger asChild>
+                                                        <div className="w-full h-full cursor-pointer flex items-center justify-center">
+                                                            <Badge
+                                                                className={cn(
+                                                                    "py-0.5 px-1 w-full justify-center text-[7px] uppercase font-bold shadow-sm transition-transform group-hover:scale-[1.02] border leading-tight h-6 text-center",
+                                                                    getStatusBadgeClass(status)
+                                                                )}
+                                                            >
+                                                                {status === 'Not Scheduled' ? '' : status}
+                                                            </Badge>
+                                                        </div>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-48 p-0" align="center">
+                                                        <StatusSelector
+                                                            onSelect={(newStatus) => handleStatusChange(area, month, newStatus)}
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ))}
 
-                        {extraLanes.map((_, laneIdx) => (
-                            <div key={`extra-${laneIdx}`} className={cn("grid h-fit min-w-[160px] flex-1 self-start border-r bg-muted/5 opacity-50 content-start", scheduleRowHeights)}>
-                                <div className="sticky top-0 z-30 bg-swimlane-header border-b border-white/10 h-10" />
-                                {MONTHS.map((month) => (
-                                    <div key={month} className="h-11 border-b" />
-                                ))}
-                            </div>
-                        ))}
+                            {extraLanes.map((_, laneIdx) => (
+                                <div key={`extra-${laneIdx}`} className={cn("grid h-fit min-w-[160px] flex-1 self-start border-r bg-muted/5 opacity-50 content-start", scheduleRowHeights)}>
+                                    <div className="sticky top-0 z-30 bg-swimlane-header border-b border-white/10 h-10" />
+                                    {MONTHS.map((month) => (
+                                        <div key={month} className="h-11 border-b" />
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
-            </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+        </Card>
 
-      <Dialog open={isAddAreaOpen} onOpenChange={setIsAddAreaOpen}>
+        <Dialog open={isAddAreaOpen} onOpenChange={setIsAddAreaOpen}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Add New Audit Area</DialogTitle>
@@ -434,7 +411,7 @@ export default function AuditSchedulePage() {
                 </div>
                 <DialogFooter>
                     <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                    <Button onClick={handleAddArea} disabled={!newAreaName.trim()} className="bg-emerald-700">Add Area</Button>
+                    <Button onClick={handleAddArea} disabled={!newAreaName.trim()}>Add Area</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

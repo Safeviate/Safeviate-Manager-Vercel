@@ -1,10 +1,10 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
 import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,9 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, Settings2, Target } from 'lucide-react';
 import { useDebounce } from '@/hooks/use-debounce';
 import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 
 export type FeatureSettings = {
   id: string;
@@ -146,142 +147,164 @@ export default function FeaturesPage() {
   
   const isLoading = isLoadingFeatures || isLoadingFindingLevels;
 
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Feature Management</CardTitle>
-          <CardDescription>
-            Enable or disable specific application features and workflows for your organization.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {isLoadingFeatures ? (
-            <Skeleton className="h-24 w-full" />
-          ) : (
-            <>
-              <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
-                <div className='space-y-0.5'>
-                  <Label htmlFor="checklist-required" className="text-base">
-                    Enforce Checklist Completion
-                  </Label>
-                  <p className='text-sm text-muted-foreground'>
-                    If enabled, a pre-flight check must be completed before the next booking for an aircraft can be actioned.
-                  </p>
-                </div>
-                <Switch
-                  id="checklist-required"
-                  checked={featureSettings?.preFlightChecklistRequired ?? true}
-                  onCheckedChange={(value) => handleToggleChange('preFlightChecklistRequired', value)}
-                />
-              </div>
+  if (isLoading) {
+      return (
+          <div className="max-w-[1200px] mx-auto w-full px-1 space-y-6">
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-64 w-full" />
+          </div>
+      )
+  }
 
-              <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
-                <div className='space-y-0.5'>
-                  <Label htmlFor="org-tabs" className="text-base">
-                    Enable Multi-Company Scoping
-                  </Label>
-                  <p className='text-sm text-muted-foreground'>
-                    If enabled, administrators will see tabs to toggle views between internal and external organizations in key modules.
-                  </p>
-                </div>
-                <Switch
-                  id="org-tabs"
-                  checked={featureSettings?.enableExternalCompanyTabs ?? true}
-                  onCheckedChange={(value) => handleToggleChange('enableExternalCompanyTabs', value)}
-                />
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Audit Finding Levels</CardTitle>
-          <CardDescription>
-            Define the names and colors for audit finding classifications.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-           {isLoadingFindingLevels ? (
-              <Skeleton className="h-32 w-full" />
-           ) : (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="new-level-name">New Finding Level</Label>
-                <div className="flex gap-2">
-                    <Input
-                        id="new-level-name"
-                        value={newLevelName}
-                        onChange={(e) => setNewLevelName(e.target.value)}
-                        placeholder="e.g., Observation, Level 1"
-                        onKeyDown={(e) => e.key === 'Enter' && handleAddLevel()}
-                    />
-                    <div className="flex items-center gap-1 border rounded-md px-2">
-                      <Label htmlFor="new-level-color" className="text-xs">BG</Label>
-                      <Input id="new-level-color" type="color" value={newLevelColor} onChange={(e) => setNewLevelColor(e.target.value)} className="p-0 h-8 w-8 border-none"/>
+  return (
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full px-1 overflow-hidden pb-10">
+      <Card className="flex flex-col shadow-none border overflow-hidden">
+        <MainPageHeader title="Feature Management" />
+        <CardContent className="p-4 lg:p-6 space-y-8 bg-muted/5">
+          
+          <section className="space-y-4">
+            <div className="space-y-1">
+                <h3 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                    <Settings2 className="h-4 w-4" />
+                    Global Features
+                </h3>
+                <p className="text-xs text-muted-foreground italic font-medium">Enable or disable specific application workflows for your organization.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col justify-between space-y-4 rounded-xl border p-5 bg-background shadow-sm">
+                    <div className='space-y-1.5'>
+                        <Label htmlFor="checklist-required" className="text-sm font-black uppercase tracking-tight">
+                            Enforce Checklist Completion
+                        </Label>
+                        <p className='text-xs text-muted-foreground leading-relaxed font-medium'>
+                            If enabled, a pre-flight check must be completed before the next booking for an aircraft can be actioned.
+                        </p>
                     </div>
-                     <div className="flex items-center gap-1 border rounded-md px-2">
-                      <Label htmlFor="new-level-fg-color" className="text-xs">FG</Label>
-                      <Input id="new-level-fg-color" type="color" value={newLevelForegroundColor} onChange={(e) => setNewLevelForegroundColor(e.target.value)} className="p-0 h-8 w-8 border-none"/>
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t">
+                        <span className="text-[10px] font-black uppercase text-muted-foreground">Status</span>
+                        <Switch
+                            id="checklist-required"
+                            checked={featureSettings?.preFlightChecklistRequired ?? true}
+                            onCheckedChange={(value) => handleToggleChange('preFlightChecklistRequired', value)}
+                        />
                     </div>
-                    <Button onClick={handleAddLevel}>
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add
-                    </Button>
                 </div>
-              </div>
-              
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">
-                    Current Levels
-                </h4>
-                <div className="flex flex-col gap-2 p-4 border rounded-lg min-h-16">
-                    {(findingLevelsSettings?.levels || defaultFindingLevels).length > 0 ? (
-                        (findingLevelsSettings?.levels || defaultFindingLevels).map((level) => (
-                            <div key={level.id} className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
-                                <Badge style={{ 
-                                    backgroundColor: levelColors[level.id]?.bg || level.color, 
-                                    color: levelColors[level.id]?.fg || level.foregroundColor 
-                                  }} className="text-base py-1">
-                                    {level.name}
-                                </Badge>
-                                <div className="flex items-center gap-2">
-                                     <div className="relative h-8 w-8 rounded-full border cursor-pointer" style={{ backgroundColor: levelColors[level.id]?.bg || level.color }}>
-                                        <Input
-                                            type="color"
-                                            value={levelColors[level.id]?.bg || level.color}
-                                            onChange={(e) => handleLevelColorChange(level.id, 'bg', e.target.value)}
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0"
-                                        />
+
+                <div className="flex flex-col justify-between space-y-4 rounded-xl border p-5 bg-background shadow-sm">
+                    <div className='space-y-1.5'>
+                        <Label htmlFor="org-tabs" className="text-sm font-black uppercase tracking-tight">
+                            Enable Multi-Company Scoping
+                        </Label>
+                        <p className='text-xs text-muted-foreground leading-relaxed font-medium'>
+                            If enabled, administrators will see tabs to toggle views between internal and external organizations in key modules.
+                        </p>
+                    </div>
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t">
+                        <span className="text-[10px] font-black uppercase text-muted-foreground">Status</span>
+                        <Switch
+                            id="org-tabs"
+                            checked={featureSettings?.enableExternalCompanyTabs ?? true}
+                            onCheckedChange={(value) => handleToggleChange('enableExternalCompanyTabs', value)}
+                        />
+                    </div>
+                </div>
+            </div>
+          </section>
+
+          <Separator />
+          
+          <section className="space-y-4">
+            <div className="space-y-1">
+                <h3 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                    <Target className="h-4 w-4" />
+                    Audit Finding Levels
+                </h3>
+                <p className="text-xs text-muted-foreground italic font-medium">Define the names and colors for audit finding classifications.</p>
+            </div>
+
+            <div className="rounded-xl border bg-background overflow-hidden">
+                <div className="p-4 border-b bg-muted/10 space-y-3">
+                    <Label htmlFor="new-level-name" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">New Finding Level</Label>
+                    <div className="flex flex-wrap sm:flex-nowrap gap-2 items-center">
+                        <Input
+                            id="new-level-name"
+                            value={newLevelName}
+                            onChange={(e) => setNewLevelName(e.target.value)}
+                            placeholder="e.g., Observation, Level 1"
+                            onKeyDown={(e) => e.key === 'Enter' && handleAddLevel()}
+                            className="h-10 font-bold uppercase tracking-tight flex-1 min-w-[200px]"
+                        />
+                        <div className="flex items-center gap-2 border rounded-lg p-1 px-2 h-10 bg-background shrink-0 shadow-sm">
+                            <Label htmlFor="new-level-color" className="text-[9px] font-black uppercase">BG</Label>
+                            <Input id="new-level-color" type="color" value={newLevelColor} onChange={(e) => setNewLevelColor(e.target.value)} className="p-0 h-6 w-6 border-none cursor-pointer rounded-sm"/>
+                            <Separator orientation="vertical" className="h-4 mx-1" />
+                            <Label htmlFor="new-level-fg-color" className="text-[9px] font-black uppercase">FG</Label>
+                            <Input id="new-level-fg-color" type="color" value={newLevelForegroundColor} onChange={(e) => setNewLevelForegroundColor(e.target.value)} className="p-0 h-6 w-6 border-none cursor-pointer rounded-sm"/>
+                        </div>
+                        <Button onClick={handleAddLevel} className="h-10 px-6 text-[10px] font-black uppercase tracking-tight shrink-0 shadow-md">
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add
+                        </Button>
+                    </div>
+                </div>
+                
+                <div className="p-4 space-y-3">
+                    <h4 className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                        Current Levels
+                    </h4>
+                    <div className="flex flex-col gap-2 p-2 border rounded-xl min-h-[100px] bg-muted/5">
+                        {(findingLevelsSettings?.levels || defaultFindingLevels).length > 0 ? (
+                            (findingLevelsSettings?.levels || defaultFindingLevels).map((level) => (
+                                <div key={level.id} className="flex items-center justify-between p-3 rounded-lg border bg-background shadow-sm hover:border-slate-300 transition-colors">
+                                    <Badge style={{ 
+                                        backgroundColor: levelColors[level.id]?.bg || level.color, 
+                                        color: levelColors[level.id]?.fg || level.foregroundColor 
+                                      }} className="text-xs font-black uppercase tracking-widest py-1 px-4 border-none shadow-sm">
+                                        {level.name}
+                                    </Badge>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-1.5 border rounded-md p-1 bg-muted/20">
+                                            <Label className="text-[8px] font-black uppercase px-1">BG</Label>
+                                            <div className="relative h-6 w-6 rounded border shadow-sm cursor-pointer" style={{ backgroundColor: levelColors[level.id]?.bg || level.color }}>
+                                                <Input
+                                                    type="color"
+                                                    value={levelColors[level.id]?.bg || level.color}
+                                                    onChange={(e) => handleLevelColorChange(level.id, 'bg', e.target.value)}
+                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0"
+                                                />
+                                            </div>
+                                            <Separator orientation="vertical" className="h-4 mx-0.5" />
+                                            <Label className="text-[8px] font-black uppercase px-1">FG</Label>
+                                            <div className="relative h-6 w-6 rounded border shadow-sm cursor-pointer" style={{ backgroundColor: levelColors[level.id]?.fg || level.foregroundColor }}>
+                                                <Input
+                                                    type="color"
+                                                    value={levelColors[level.id]?.fg || level.foregroundColor}
+                                                    onChange={(e) => handleLevelColorChange(level.id, 'fg', e.target.value)}
+                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0"
+                                                />
+                                            </div>
+                                        </div>
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-8 w-8 rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                                            onClick={() => handleRemoveLevel(level.id)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                            <span className="sr-only">Remove {level.name}</span>
+                                        </Button>
                                     </div>
-                                    <div className="relative h-8 w-8 rounded-full border cursor-pointer" style={{ backgroundColor: levelColors[level.id]?.fg || level.foregroundColor }}>
-                                        <Input
-                                            type="color"
-                                            value={levelColors[level.id]?.fg || level.foregroundColor}
-                                            onChange={(e) => handleLevelColorChange(level.id, 'fg', e.target.value)}
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0"
-                                        />
-                                    </div>
-                                    <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-8 w-8 rounded-full hover:bg-destructive/20"
-                                        onClick={() => handleRemoveLevel(level.id)}
-                                    >
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                        <span className="sr-only">Remove {level.name}</span>
-                                    </Button>
                                 </div>
+                            ))
+                        ) : (
+                            <div className="flex items-center justify-center h-24">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">No finding levels configured.</p>
                             </div>
-                        ))
-                    ) : (
-                        <p className="text-sm text-muted-foreground w-full text-center">No finding levels configured.</p>
-                    )}
+                        )}
+                    </div>
                 </div>
-              </div>
-            </>
-           )}
+            </div>
+          </section>
         </CardContent>
       </Card>
     </div>
