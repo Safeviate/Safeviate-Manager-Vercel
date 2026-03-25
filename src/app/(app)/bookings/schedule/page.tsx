@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import { collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { format, startOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, parse } from 'date-fns';
@@ -229,41 +230,35 @@ export default function SchedulePage() {
 
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full px-1 overflow-hidden">
-        <div className="flex justify-between items-center px-1 shrink-0">
-            <div className="flex items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Daily Schedule</h1>
-                    <p className="text-muted-foreground">
-                        Fleet timeline for {format(selectedDate, 'PPP')}.
-                    </p>
-                </div>
-                {!canManageSchedule && (
-                    <Badge variant="outline" className="h-6 gap-1.5 text-muted-foreground bg-muted/20 border-border">
-                        <Lock className="h-3 w-3" /> Read Only
-                    </Badge>
-                )}
-            </div>
-            <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>Previous Day</Button>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm">
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {format(selectedDate, 'PPP')}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                        <CustomCalendar 
-                            selectedDate={selectedDate}
-                            onDateSelect={(date) => date && setSelectedDate(startOfDay(date))}
-                        />
-                    </PopoverContent>
-                </Popover>
-                <Button variant="outline" size="sm" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>Next Day</Button>
-            </div>
-        </div>
-
         <Card className="overflow-hidden flex-grow flex flex-col shadow-none border">
+            <MainPageHeader 
+                title="Daily Schedule"
+                actions={
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>Previous Day</Button>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {format(selectedDate, 'PPP')}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <CustomCalendar 
+                                    selectedDate={selectedDate}
+                                    onDateSelect={(date) => date && setSelectedDate(startOfDay(date))}
+                                />
+                            </PopoverContent>
+                        </Popover>
+                        <Button variant="outline" size="sm" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>Next Day</Button>
+                        {!canManageSchedule && (
+                            <Badge variant="outline" className="h-9 gap-1.5 text-muted-foreground bg-muted/20 border-border px-3 uppercase text-[10px] font-bold">
+                                <Lock className="h-3.5 w-3.5" /> Read Only
+                            </Badge>
+                        )}
+                    </div>
+                }
+            />
             <CardContent className="p-0 flex-grow flex flex-col overflow-hidden">
                 <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 220px)' }}>
                     <div className="min-w-full w-fit">

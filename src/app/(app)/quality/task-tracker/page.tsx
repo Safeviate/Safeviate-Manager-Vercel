@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import { collection, query, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,21 +37,23 @@ type UnifiedTask = {
 
 function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
   return (
-    <div className="border-y border-card-border bg-card px-6 py-4">
-      <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex min-w-max">
-        <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
-          Internal
-        </TabsTrigger>
-        {organizations.map((organization) => (
-          <TabsTrigger
-            key={organization.id}
-            value={organization.id}
-            className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0"
-          >
-            {organization.name}
+    <div className="border-b bg-muted/5 px-6 py-3 overflow-x-auto no-scrollbar">
+      <div className="flex w-max gap-2 pr-6 flex-nowrap">
+        <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
+          <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase">
+            Internal
           </TabsTrigger>
-        ))}
-      </TabsList>
+          {organizations.map((organization) => (
+            <TabsTrigger
+              key={organization.id}
+              value={organization.id}
+              className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase"
+            >
+              {organization.name}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </div>
     </div>
   );
 }
@@ -174,29 +177,29 @@ export default function TaskTrackerPage() {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[40%] text-xs uppercase font-bold">Task</TableHead>
-          <TableHead className="text-xs uppercase font-bold">Source</TableHead>
-          <TableHead className="text-xs uppercase font-bold">Assignee</TableHead>
-          <TableHead className="text-xs uppercase font-bold">Due Date</TableHead>
-          <TableHead className="text-xs uppercase font-bold">Status</TableHead>
-          <TableHead className="text-right text-xs uppercase font-bold">Actions</TableHead>
+          <TableHead className="w-[40%] text-[10px] uppercase font-bold tracking-wider">Task</TableHead>
+          <TableHead className="text-[10px] uppercase font-bold tracking-wider">Source</TableHead>
+          <TableHead className="text-[10px] uppercase font-bold tracking-wider">Assignee</TableHead>
+          <TableHead className="text-[10px] uppercase font-bold tracking-wider">Due Date</TableHead>
+          <TableHead className="text-[10px] uppercase font-bold tracking-wider">Status</TableHead>
+          <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {tasks.length > 0 ? (
           tasks.map(task => (
             <TableRow key={task.id}>
-              <TableCell className="font-medium text-xs">{task.description}</TableCell>
+              <TableCell className="font-bold text-sm text-foreground">{task.description}</TableCell>
               <TableCell>
-                <Badge variant="outline" className="text-[10px]">{task.sourceIdentifier}</Badge>
+                <span className="text-sm font-black uppercase text-foreground tracking-tight">{task.sourceIdentifier}</span>
               </TableCell>
-              <TableCell className="text-xs">{task.assigneeName}</TableCell>
-              <TableCell className="text-xs whitespace-nowrap">{format(new Date(task.dueDate), 'dd MMM yy')}</TableCell>
+              <TableCell className="text-sm font-bold text-foreground">{task.assigneeName}</TableCell>
+              <TableCell className="text-sm font-medium text-foreground whitespace-nowrap">{format(new Date(task.dueDate), 'dd MMM yy')}</TableCell>
               <TableCell>
-                <Badge variant={getStatusBadgeVariant(task.status)} className="text-[10px] py-0">{task.status}</Badge>
+                <Badge variant={getStatusBadgeVariant(task.status)} className="text-[10px] font-black uppercase py-0.5 px-3">{task.status}</Badge>
               </TableCell>
               <TableCell className="text-right">
-                  <Button asChild variant="outline" size="sm" className="h-8 gap-2">
+                  <Button asChild variant="outline" size="sm" className="h-9 gap-2 text-[10px] font-black uppercase border-slate-300">
                       <Link href={task.link}>
                         <Eye className="h-4 w-4" />
                         View
@@ -207,7 +210,7 @@ export default function TaskTrackerPage() {
           ))
         ) : (
           <TableRow>
-            <TableCell colSpan={6} className="h-24 text-center text-muted-foreground italic text-sm">
+            <TableCell colSpan={6} className="h-24 text-center text-muted-foreground italic text-sm uppercase font-bold tracking-widest bg-muted/5">
               No outstanding tasks for this organization.
             </TableCell>
           </TableRow>
@@ -220,13 +223,12 @@ export default function TaskTrackerPage() {
     const filteredTasks = allTasks.filter(task => 
         orgId === 'internal' ? !task.organizationId : task.organizationId === orgId
     );
-    const sectionTitle = orgId === 'internal' ? 'Internal Quality Tasks' : organizations?.find((o) => o.id === orgId)?.name;
 
     return (
       <Card className="min-h-[400px] flex flex-col shadow-none border">
-        <CardHeader className="bg-muted/10 border-b p-4" />
+        <MainPageHeader title="Task Tracker" />
         {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-auto">
           {renderTasksTable(filteredTasks)}
         </CardContent>
       </Card>
@@ -235,8 +237,8 @@ export default function TaskTrackerPage() {
 
   if (isLoading) {
     return (
-        <div className="max-w-[1200px] mx-auto w-full space-y-6">
-            <Skeleton className="h-10 w-[400px] rounded-full" />
+        <div className="max-w-[1200px] mx-auto w-full space-y-6 px-1">
+            <Skeleton className="h-14 w-full" />
             <Skeleton className="h-[400px] w-full" />
         </div>
     );
@@ -245,7 +247,7 @@ export default function TaskTrackerPage() {
   const showTabs = shouldShowOrganizationTabs;
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full px-1">
         {!showTabs ? (
             renderOrgCard(scopedOrganizationId)
         ) : (

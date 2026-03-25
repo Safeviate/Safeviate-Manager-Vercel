@@ -3,8 +3,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Search, PlusCircle, Pencil, Trash2, GraduationCap, ClipboardCheck, PlayCircle, ShieldCheck, Microscope, Library, ChevronRight, Database } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
+import { Search, PlusCircle, Pencil, Trash2, ClipboardCheck, PlayCircle, ShieldCheck, Microscope, Database } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -134,59 +135,57 @@ export default function ExamsPage() {
   };
 
   return (
-    <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
-      <div className="px-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-red-600 font-headline">Examinations</h1>
-          <p className="text-muted-foreground">Manage official assessments and zero-persistence student practice runs.</p>
-        </div>
-        {canManage && (
-          <Button asChild className="gap-2 shadow-md">
-            <Link href="/training/exams/new">
-              <PlusCircle className="h-4 w-4" /> Create Exam Template
-            </Link>
-          </Button>
-        )}
-      </div>
+    <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
+      <Card className="flex-1 flex flex-col shadow-none border overflow-hidden">
+        <Tabs defaultValue="internal" className="flex-1 flex flex-col overflow-hidden">
+          <MainPageHeader 
+            title="Examinations"
+            actions={
+              <>
+                <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex min-w-max flex-nowrap">
+                  <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2 text-[10px] font-black uppercase">
+                    <ShieldCheck className="h-4 w-4" /> Internal Exams (Official)
+                  </TabsTrigger>
+                  <TabsTrigger value="mock" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2 text-[10px] font-black uppercase">
+                    <Microscope className="h-4 w-4" /> Mock Exams (Practice)
+                  </TabsTrigger>
+                </TabsList>
+                {canManage && (
+                  <Button asChild size="sm" className="h-9 px-6 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2 shrink-0">
+                    <Link href="/training/exams/new">
+                      <PlusCircle className="h-4 w-4" /> Create Exam Template
+                    </Link>
+                  </Button>
+                )}
+              </>
+            }
+          />
 
-      <Tabs defaultValue="internal" className="flex-1 flex flex-col overflow-hidden">
-        <div className="px-1 shrink-0">
-          <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
-            <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2">
-              <ShieldCheck className="h-4 w-4" /> Internal Exams (Official)
-            </TabsTrigger>
-            <TabsTrigger value="mock" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2">
-              <Microscope className="h-4 w-4" /> Mock Exams (Practice)
-            </TabsTrigger>
-          </TabsList>
-        </div>
-
-        <TabsContent value="internal" className="flex-1 min-h-0 overflow-hidden">
-          <Card className="h-full flex flex-col overflow-hidden shadow-none border">
+          <TabsContent value="internal" className="flex-1 min-h-0 overflow-hidden m-0">
             <ScrollArea className="h-full">
               <div className="flex flex-col gap-8 p-4 pb-16 sm:gap-10 sm:p-6 sm:pb-20">
                 
                 <section className="space-y-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
-                      <h3 className="text-lg font-bold flex items-center gap-2 font-headline">
-                        <ClipboardCheck className="h-5 w-5 text-primary" />
+                      <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <ClipboardCheck className="h-4 w-4" />
                         Available Exam Templates
                       </h3>
-                      <p className="text-xs text-muted-foreground">Conduct a certified examination. Results are permanently recorded.</p>
+                      <p className="text-xs text-muted-foreground italic">Conduct a certified examination. Results are permanently recorded.</p>
                     </div>
                     <div className="relative w-full sm:w-72">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                       <Input 
                         placeholder="Search templates..." 
-                        className="pl-9 h-8 text-xs bg-background" 
+                        className="pl-9 h-9 text-xs bg-background" 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                       />
                     </div>
                   </div>
 
-                  <div className="rounded-md border bg-card overflow-hidden">
+                  <div className="rounded-xl border overflow-hidden">
                     {isLoadingTemplates ? (
                       <div className="p-8 space-y-4">
                         {[1, 2, 3].map(i => <div key={i} className="h-10 w-full bg-muted animate-pulse rounded-md" />)}
@@ -201,7 +200,7 @@ export default function ExamsPage() {
                                 <p className="text-xs text-muted-foreground">{template.subject}</p>
                               </div>
                               <div className="mt-3 flex items-center justify-between">
-                                <Badge variant="outline" className="text-[10px] font-black text-primary">
+                                <Badge variant="outline" className="text-[10px] font-black text-primary uppercase">
                                   PASS {template.passingScore}%
                                 </Badge>
                                 <div className="flex items-center gap-1">
@@ -232,57 +231,55 @@ export default function ExamsPage() {
                           ))}
                         </div>
 
-                        <div className="hidden overflow-x-auto touch-pan-x [scrollbar-gutter:stable] custom-scrollbar pb-2 sm:block" style={{ WebkitOverflowScrolling: 'touch' }}>
-                          <div className="min-w-[820px]">
-                            <table className="w-full caption-bottom text-sm">
-                              <thead className="bg-muted/30 [&_tr]:border-b">
-                                <tr className="border-b transition-colors">
-                                  <th className="h-12 px-4 text-left align-middle text-[10px] font-bold uppercase text-muted-foreground">Exam Title</th>
-                                  <th className="h-12 px-4 text-left align-middle text-[10px] font-bold uppercase text-muted-foreground">Subject</th>
-                                  <th className="h-12 px-4 text-center align-middle text-[10px] font-bold uppercase text-muted-foreground">Pass Mark</th>
-                                  <th className="h-12 px-4 text-right align-middle text-[10px] font-bold uppercase text-muted-foreground">Actions</th>
+                        <div className="hidden overflow-x-auto sm:block">
+                          <Table>
+                            <TableHeader className="bg-muted/30">
+                              <TableRow>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Exam Title</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Subject</TableHead>
+                                <TableHead className="text-center text-[10px] uppercase font-bold tracking-wider">Pass Mark</TableHead>
+                                <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredTemplates.map((template) => (
+                                <tr key={template.id} className="group border-b transition-colors hover:bg-muted/50">
+                                  <td className="p-4 align-middle text-sm font-bold text-foreground whitespace-nowrap">{template.title}</td>
+                                  <td className="p-4 align-middle text-sm font-medium text-foreground whitespace-nowrap">{template.subject}</td>
+                                  <td className="p-4 align-middle text-center text-sm font-black text-primary whitespace-nowrap">{template.passingScore}%</td>
+                                  <td className="p-4 align-middle text-right whitespace-nowrap">
+                                    <div className="flex justify-end gap-2">
+                                      <Button 
+                                        variant="default" 
+                                        size="sm" 
+                                        className="h-8 text-[10px] gap-1.5 font-black uppercase"
+                                        onClick={() => setTakingExam({ template, isMock: false })}
+                                      >
+                                        <PlayCircle className="h-3.5 w-3.5" /> Start Official Exam
+                                      </Button>
+                                      {canManage && (
+                                        <>
+                                          <Button asChild variant="ghost" size="icon" className="h-8 w-8">
+                                            <Link href={`/training/exams/${template.id}/edit`}>
+                                              <Pencil className="h-3.5 w-3.5" />
+                                            </Link>
+                                          </Button>
+                                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(template.id)}>
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </td>
                                 </tr>
-                              </thead>
-                              <tbody>
-                                {filteredTemplates.map((template) => (
-                                  <tr key={template.id} className="group border-b transition-colors hover:bg-muted/50">
-                                    <td className="p-4 align-middle text-sm font-bold whitespace-nowrap">{template.title}</td>
-                                    <td className="p-4 align-middle text-xs whitespace-nowrap">{template.subject}</td>
-                                    <td className="p-4 align-middle text-center text-xs font-bold text-primary whitespace-nowrap">{template.passingScore}%</td>
-                                    <td className="p-4 align-middle text-right whitespace-nowrap">
-                                      <div className="flex justify-end gap-2">
-                                        <Button 
-                                          variant="default" 
-                                          size="sm" 
-                                          className="h-7 text-[10px] gap-1.5 font-black uppercase tracking-tighter"
-                                          onClick={() => setTakingExam({ template, isMock: false })}
-                                        >
-                                          <PlayCircle className="h-3.5 w-3.5" /> Start Official Exam
-                                        </Button>
-                                        {canManage && (
-                                          <>
-                                            <Button asChild variant="ghost" size="icon" className="h-7 w-7">
-                                              <Link href={`/training/exams/${template.id}/edit`}>
-                                                <Pencil className="h-3.5 w-3.5" />
-                                              </Link>
-                                            </Button>
-                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(template.id)}>
-                                              <Trash2 className="h-3.5 w-3.5" />
-                                            </Button>
-                                          </>
-                                        )}
-                                      </div>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                              ))}
+                            </TableBody>
+                          </Table>
                         </div>
                       </>
                     ) : (
-                      <div className="text-center py-12 opacity-40">
-                        <p className="text-sm font-medium italic">No templates available.</p>
+                      <div className="text-center py-12 bg-muted/5">
+                        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground opacity-40">No templates available.</p>
                       </div>
                     )}
                   </div>
@@ -292,14 +289,14 @@ export default function ExamsPage() {
 
                 <section className="space-y-4">
                   <div className="space-y-1">
-                    <h3 className="text-lg font-bold flex items-center gap-2 font-headline">
-                      <ShieldCheck className="h-5 w-5 text-green-600" />
+                    <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-green-600" />
                       Official Records
                     </h3>
-                    <p className="text-xs text-muted-foreground">Certified results for non-mock examinations.</p>
+                    <p className="text-xs text-muted-foreground italic">Certified results for non-mock examinations.</p>
                   </div>
 
-                  <div className="rounded-md border bg-card overflow-hidden">
+                  <div className="rounded-xl border overflow-hidden">
                     {isLoadingResults ? (
                       <div className="p-8 space-y-4">
                         {[1, 2, 3].map(i => <div key={i} className="h-10 w-full bg-muted animate-pulse rounded-md" />)}
@@ -315,197 +312,182 @@ export default function ExamsPage() {
                                   <p className="text-xs text-muted-foreground">{res.studentName}</p>
                                   <p className="text-[10px] font-mono text-muted-foreground">{format(new Date(res.date), 'dd MMM yy HH:mm')}</p>
                                 </div>
-                                <Badge variant={res.passed ? "default" : "destructive"} className="h-5 text-[9px] gap-1 font-black shrink-0">
+                                <Badge variant={res.passed ? "default" : "destructive"} className="h-5 text-[9px] font-black uppercase">
                                   {res.passed ? 'PASSED' : 'FAILED'}
                                 </Badge>
                               </div>
                               <div className="mt-3 flex items-center justify-between">
-                                <span className="text-[10px] font-bold uppercase text-muted-foreground">Score</span>
+                                <span className="text-[10px] font-black uppercase text-muted-foreground">Score</span>
                                 <span className="text-sm font-black">{res.score}%</span>
                               </div>
                             </div>
                           ))}
                         </div>
 
-                        <div className="hidden overflow-x-auto touch-pan-x [scrollbar-gutter:stable] custom-scrollbar pb-2 sm:block" style={{ WebkitOverflowScrolling: 'touch' }}>
-                          <div className="min-w-[720px]">
-                            <Table>
-                              <TableHeader className="bg-muted/30">
-                                <TableRow>
-                                  <TableHead className="text-[10px] uppercase font-bold">Date</TableHead>
-                                  <TableHead className="text-[10px] uppercase font-bold">Student</TableHead>
-                                  <TableHead className="text-[10px] uppercase font-bold">Exam</TableHead>
-                                  <TableHead className="text-center text-[10px] uppercase font-bold">Score</TableHead>
-                                  <TableHead className="text-center text-[10px] uppercase font-bold">Status</TableHead>
+                        <div className="hidden overflow-x-auto sm:block">
+                          <Table>
+                            <TableHeader className="bg-muted/30">
+                              <TableRow>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Date</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Student</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Exam</TableHead>
+                                <TableHead className="text-center text-[10px] uppercase font-bold tracking-wider">Score</TableHead>
+                                <TableHead className="text-center text-[10px] uppercase font-bold tracking-wider">Status</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {results.filter(r => !r.isMock).map(res => (
+                                <TableRow key={res.id}>
+                                  <TableCell className="text-[10px] font-mono font-bold text-muted-foreground whitespace-nowrap">{format(new Date(res.date), 'dd MMM yy HH:mm')}</TableCell>
+                                  <TableCell className="font-bold text-sm text-foreground whitespace-nowrap">{res.studentName}</TableCell>
+                                  <TableCell className="text-sm font-medium text-foreground max-w-[240px] truncate">{res.templateTitle}</TableCell>
+                                  <TableCell className="text-center font-black text-sm text-foreground whitespace-nowrap">{res.score}%</TableCell>
+                                  <TableCell className="text-center whitespace-nowrap">
+                                    <Badge variant={res.passed ? "default" : "destructive"} className="text-[10px] font-black uppercase py-0.5 px-3">
+                                      {res.passed ? 'PASSED' : 'FAILED'}
+                                    </Badge>
+                                  </TableCell>
                                 </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {results.filter(r => !r.isMock).map(res => (
-                                  <TableRow key={res.id}>
-                                    <TableCell className="text-[10px] font-mono whitespace-nowrap">{format(new Date(res.date), 'dd MMM yy HH:mm')}</TableCell>
-                                    <TableCell className="font-semibold text-xs whitespace-nowrap">{res.studentName}</TableCell>
-                                    <TableCell className="text-xs max-w-[240px] truncate">{res.templateTitle}</TableCell>
-                                    <TableCell className="text-center font-bold text-xs whitespace-nowrap">{res.score}%</TableCell>
-                                    <TableCell className="text-center whitespace-nowrap">
-                                      <Badge variant={res.passed ? "default" : "destructive"} className="h-5 text-[9px] gap-1 font-black">
-                                        {res.passed ? 'PASSED' : 'FAILED'}
-                                      </Badge>
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
+                              ))}
+                            </TableBody>
+                          </Table>
                         </div>
                       </>
                     ) : (
-                      <div className="text-center py-12 opacity-40">
-                        <p className="text-sm font-medium italic">No official records found.</p>
+                      <div className="text-center py-12 bg-muted/5">
+                        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground opacity-40">No official records found.</p>
                       </div>
                     )}
                   </div>
                 </section>
               </div>
             </ScrollArea>
-          </Card>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="mock" className="flex-1 min-h-0 overflow-hidden">
-          <Card className="h-full flex flex-col overflow-hidden shadow-none border">
-            <CardHeader className="shrink-0 border-b bg-muted/5">
-                <CardTitle>Mock Practice Area</CardTitle>
-                <CardDescription>
-                    Conduct practice runs without affecting official student records. Results in this tab are <strong>not saved</strong>.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5">
-                <ScrollArea className="h-full">
-                    <div className="p-4 space-y-8 sm:p-6">
-                        {/* --- TOPIC SELECTOR --- */}
-                        <div className="mx-auto w-full max-w-2xl space-y-6 rounded-2xl border bg-card p-5 shadow-sm sm:p-8">
-                            <div className="space-y-2 text-center">
-                                <h3 className="text-lg font-black uppercase tracking-tight text-primary">Dynamic Practice Run</h3>
-                                <p className="text-xs text-muted-foreground">Select a topic to generate a randomized mock exam from the database.</p>
+          <TabsContent value="mock" className="flex-1 min-h-0 overflow-hidden m-0">
+            <ScrollArea className="h-full">
+                <div className="p-4 space-y-8 sm:p-6 pb-20">
+                    <div className="mx-auto w-full max-w-2xl space-y-6 rounded-2xl border bg-card p-5 shadow-sm sm:p-8">
+                        <div className="space-y-2 text-center">
+                            <h3 className="text-lg font-black uppercase tracking-tight text-primary">Dynamic Practice Run</h3>
+                            <p className="text-xs text-muted-foreground italic">Select a topic to generate a randomized mock exam from the database.</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                            <div className="space-y-2">
+                                <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Aviation Topic</Label>
+                                <Select onValueChange={setSelectedTopic} value={selectedTopic}>
+                                    <SelectTrigger className="h-12 font-bold">
+                                        <Database className="h-4 w-4 mr-2 text-primary" />
+                                        <SelectValue placeholder="Select Topic..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {(topicsData?.topics || []).map(t => <SelectItem key={t} value={t} className="font-medium">{t}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
                             </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">Aviation Topic</Label>
-                                    <Select onValueChange={setSelectedTopic} value={selectedTopic}>
-                                        <SelectTrigger className="h-12">
-                                            <Database className="h-4 w-4 mr-2 text-primary" />
-                                            <SelectValue placeholder="Select Topic..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {(topicsData?.topics || []).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">Quantity</Label>
-                                    <Select onValueChange={setQuestionCount} value={questionCount}>
-                                        <SelectTrigger className="h-12">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="5">5 Questions</SelectItem>
-                                            <SelectItem value="10">10 Questions</SelectItem>
-                                            <SelectItem value="20">20 Questions</SelectItem>
-                                            <SelectItem value="50">50 Questions</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                            <div className="space-y-2">
+                                <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Quantity</Label>
+                                <Select onValueChange={setQuestionCount} value={questionCount}>
+                                    <SelectTrigger className="h-12 font-bold">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="5" className="font-medium">5 Questions</SelectItem>
+                                        <SelectItem value="10" className="font-medium">10 Questions</SelectItem>
+                                        <SelectItem value="20" className="font-medium">20 Questions</SelectItem>
+                                        <SelectItem value="50" className="font-medium">50 Questions</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
-
-                            <Button 
-                                onClick={handleStartTopicExam} 
-                                disabled={!selectedTopic}
-                                className="w-full h-14 text-lg font-black shadow-lg gap-3"
-                            >
-                                <PlayCircle className="h-6 w-6" /> START RANDOMIZED MOCK
-                            </Button>
                         </div>
 
-                        <Separator />
+                        <Button 
+                            onClick={handleStartTopicExam} 
+                            disabled={!selectedTopic}
+                            className="w-full h-14 text-lg font-black shadow-lg gap-3 uppercase tracking-tighter"
+                        >
+                            <PlayCircle className="h-6 w-6" /> START RANDOMIZED MOCK
+                        </Button>
+                    </div>
 
-                        <div className="space-y-4">
-                            <h3 className="text-sm font-bold flex items-center gap-2">
-                                <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
-                                Fixed Exam Templates (Practice)
-                            </h3>
-                            <div className="rounded-md border bg-card overflow-hidden">
-                                <>
-                                  <div className="grid gap-3 p-3 sm:hidden">
+                    <Separator />
+
+                    <div className="space-y-4">
+                        <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                            <ClipboardCheck className="h-4 w-4" />
+                            Fixed Exam Templates (Practice)
+                        </h3>
+                        <div className="rounded-xl border overflow-hidden bg-card">
+                            <>
+                              <div className="grid gap-3 p-3 sm:hidden">
+                                {templates?.map((template) => (
+                                  <div key={template.id} className="rounded-lg border bg-background p-3 shadow-sm">
+                                    <div className="space-y-1">
+                                      <p className="text-sm font-bold leading-tight">{template.title}</p>
+                                      <p className="text-xs text-muted-foreground">{template.subject}</p>
+                                    </div>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="mt-3 h-9 w-full text-[10px] gap-1.5 bg-primary/5 hover:bg-primary/10 border-primary/20 font-black uppercase"
+                                      onClick={() => setTakingExam({ template, isMock: true })}
+                                    >
+                                      <PlayCircle className="h-3.5 w-3.5" /> Start Practice Run
+                                    </Button>
+                                  </div>
+                                ))}
+                                {(!templates || templates.length === 0) && (
+                                  <div className="py-8 text-center bg-muted/5 italic uppercase font-bold tracking-widest text-[10px] text-muted-foreground">
+                                    No fixed templates available for practice.
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="hidden overflow-x-auto sm:block">
+                                <Table>
+                                    <TableHeader className="bg-muted/30">
+                                    <TableRow>
+                                        <TableHead className="text-[10px] uppercase font-bold tracking-wider">Exam Title</TableHead>
+                                        <TableHead className="text-[10px] uppercase font-bold tracking-wider">Subject</TableHead>
+                                        <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
+                                    </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
                                     {templates?.map((template) => (
-                                      <div key={template.id} className="rounded-lg border bg-background p-3 shadow-sm">
-                                        <div className="space-y-1">
-                                          <p className="text-sm font-bold leading-tight">{template.title}</p>
-                                          <p className="text-xs text-muted-foreground">{template.subject}</p>
-                                        </div>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          className="mt-3 h-8 w-full text-[10px] gap-1.5 bg-primary/5 hover:bg-primary/10 border-primary/20 font-bold"
-                                          onClick={() => setTakingExam({ template, isMock: true })}
-                                        >
-                                          <PlayCircle className="h-3.5 w-3.5" /> Start Practice Run
-                                        </Button>
-                                      </div>
+                                        <TableRow key={template.id} className="group">
+                                        <TableCell className="font-bold text-sm text-foreground whitespace-nowrap">{template.title}</TableCell>
+                                        <TableCell className="text-sm font-medium text-foreground whitespace-nowrap">{template.subject}</TableCell>
+                                        <TableCell className="text-right whitespace-nowrap">
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="h-8 text-[10px] gap-1.5 bg-primary/5 hover:bg-primary/10 border-primary/20 font-black uppercase"
+                                                onClick={() => setTakingExam({ template, isMock: true })}
+                                            >
+                                                <PlayCircle className="h-3.5 w-3.5" /> Start Practice Run
+                                            </Button>
+                                        </TableCell>
+                                        </TableRow>
                                     ))}
                                     {(!templates || templates.length === 0) && (
-                                      <div className="py-8 text-center text-muted-foreground italic">
-                                        No fixed templates available for practice.
-                                      </div>
+                                        <TableRow>
+                                            <TableCell colSpan={3} className="h-32 text-center bg-muted/5 italic uppercase font-bold tracking-widest text-[10px] text-muted-foreground">
+                                                No fixed templates available for practice.
+                                            </TableCell>
+                                        </TableRow>
                                     )}
-                                  </div>
-
-                                  <div className="hidden overflow-x-auto touch-pan-x [scrollbar-gutter:stable] custom-scrollbar pb-2 sm:block" style={{ WebkitOverflowScrolling: 'touch' }}>
-                                    <div className="min-w-[620px]">
-                                      <Table>
-                                          <TableHeader className="bg-muted/30">
-                                          <TableRow>
-                                              <TableHead className="text-[10px] uppercase font-bold">Exam Title</TableHead>
-                                              <TableHead className="text-[10px] uppercase font-bold">Subject</TableHead>
-                                              <TableHead className="text-right text-[10px] uppercase font-bold">Actions</TableHead>
-                                          </TableRow>
-                                          </TableHeader>
-                                          <TableBody>
-                                          {templates?.map((template) => (
-                                              <TableRow key={template.id} className="group">
-                                              <TableCell className="font-bold text-sm whitespace-nowrap">{template.title}</TableCell>
-                                              <TableCell className="text-xs whitespace-nowrap">{template.subject}</TableCell>
-                                              <TableCell className="text-right whitespace-nowrap">
-                                                  <Button 
-                                                      variant="outline" 
-                                                      size="sm" 
-                                                      className="h-7 text-[10px] gap-1.5 bg-primary/5 hover:bg-primary/10 border-primary/20 font-bold"
-                                                      onClick={() => setTakingExam({ template, isMock: true })}
-                                                  >
-                                                      <PlayCircle className="h-3.5 w-3.5" /> Start Practice Run
-                                                  </Button>
-                                              </TableCell>
-                                              </TableRow>
-                                          ))}
-                                          {(!templates || templates.length === 0) && (
-                                              <TableRow>
-                                                  <TableCell colSpan={3} className="h-32 text-center text-muted-foreground italic">
-                                                      No fixed templates available for practice.
-                                                  </TableCell>
-                                              </TableRow>
-                                          )}
-                                          </TableBody>
-                                      </Table>
-                                    </div>
-                                  </div>
-                                </>
-                            </div>
+                                    </TableBody>
+                                </Table>
+                              </div>
+                            </>
                         </div>
                     </div>
-                </ScrollArea>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                </div>
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
+      </Card>
 
       {takingExam && (
           <TakeExamDialog

@@ -1,7 +1,8 @@
 'use client';
 
 import { useDashboardData } from '@/hooks/use-dashboard-data';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -22,31 +23,38 @@ export default function TasksPage() {
     return (
         <div className="max-w-[1200px] mx-auto w-full space-y-6">
             <Card className="shadow-none border">
-                <CardHeader>
-                    <CardTitle>My Outstanding Tasks</CardTitle>
-                    <CardDescription>A list of all tasks assigned to you across all modules.</CardDescription>
-                </CardHeader>
+                <MainPageHeader 
+                    title="My Outstanding Tasks" 
+                />
                 <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[40%] text-xs uppercase font-bold">Task</TableHead>
-                                <TableHead className="text-xs uppercase font-bold">Source</TableHead>
-                                <TableHead className="text-xs uppercase font-bold">Due Date</TableHead>
-                                <TableHead className="text-xs uppercase font-bold">Status</TableHead>
-                                <TableHead className="text-right text-xs uppercase font-bold">Actions</TableHead>
+                                <TableHead className="w-[40%] text-[10px] uppercase font-bold tracking-wider">Task</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Source</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Due Date</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Status</TableHead>
+                                <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {myTasks.length > 0 ? (
                                 myTasks.map(task => (
                                     <TableRow key={task.id}>
-                                        <TableCell className="font-medium text-xs">{task.description}</TableCell>
-                                        <TableCell><Badge variant="outline" className="text-[10px]">{task.sourceIdentifier}</Badge></TableCell>
-                                        <TableCell className="text-xs">{format(new Date(task.dueDate), 'PPP')}</TableCell>
-                                        <TableCell><Badge variant="secondary" className="text-[10px] py-0">{task.status}</Badge></TableCell>
+                                        <TableCell className="font-bold text-sm text-foreground">{task.description}</TableCell>
+                                        <TableCell>
+                                            <span className="text-sm font-black uppercase text-foreground tracking-tight">
+                                                {task.sourceIdentifier}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="text-sm font-medium text-foreground">{format(new Date(task.dueDate), 'PPP')}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="secondary" className="text-[10px] font-black uppercase py-1 px-3">
+                                                {task.status}
+                                            </Badge>
+                                        </TableCell>
                                         <TableCell className="text-right">
-                                            <Button asChild variant="outline" size="sm" className="h-8 gap-2">
+                                            <Button asChild variant="outline" size="sm" className="h-9 gap-2 text-[10px] font-black uppercase border-slate-300">
                                                 <Link href={task.link}>
                                                     <Eye className="h-4 w-4" />
                                                     View

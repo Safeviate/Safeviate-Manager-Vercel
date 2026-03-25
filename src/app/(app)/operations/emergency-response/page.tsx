@@ -6,6 +6,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Phone, AlertCircle, Megaphone, ScrollText, HelpCircle, FileSearch, Calculator } from 'lucide-react';
+import { MainPageHeader } from "@/components/page-header";
 import { ContactsTab } from './contacts-tab';
 import { TriggersTab } from './triggers-tab';
 import { MediaTab } from './media-tab';
@@ -16,6 +17,7 @@ import { EstimatorTab } from './estimator-tab';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import type { ExternalOrganization } from '@/types/quality';
+import { cn } from '@/lib/utils';
 
 export default function EmergencyResponsePage() {
   const firestore = useFirestore();
@@ -33,58 +35,64 @@ export default function EmergencyResponsePage() {
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-2 sm:px-4">
       <Card className="w-full flex-1 flex flex-col min-h-0 overflow-hidden shadow-none border">
         <Tabs defaultValue="diary" className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
+          <MainPageHeader 
+            title="Emergency Response Plan"
+          />
+          
           {shouldShowOrganizationTabs && (
-            <div className="border-b border-card-border bg-card px-6 py-2">
-              <div className="overflow-x-auto no-scrollbar">
-                <div className="flex min-w-max gap-2">
+            <div className="border-b bg-muted/5 px-4 py-3 overflow-x-auto no-scrollbar">
+              <div className="flex w-max gap-2 pr-4 flex-nowrap">
+                <button
+                  type="button"
+                  onClick={() => setActiveCompanyTab('internal')}
+                  className={cn(
+                    "rounded-full border px-4 py-1.5 text-[10px] font-bold uppercase shrink-0 transition-colors",
+                    activeCompanyTab === 'internal' ? "bg-button-primary text-button-primary-foreground border-button-primary" : "bg-transparent hover:bg-muted/50 text-muted-foreground"
+                  )}
+                >
+                  Internal
+                </button>
+                {(organizations || []).map((organization) => (
                   <button
+                    key={organization.id}
                     type="button"
-                    onClick={() => setActiveCompanyTab('internal')}
-                    className={`rounded-full border px-6 py-2 text-sm font-medium shrink-0 ${activeCompanyTab === 'internal' ? 'bg-button-primary text-button-primary-foreground' : 'bg-transparent'}`}
+                    onClick={() => setActiveCompanyTab(organization.id)}
+                    className={cn(
+                      "rounded-full border px-4 py-1.5 text-[10px] font-bold uppercase shrink-0 transition-colors",
+                      activeCompanyTab === organization.id ? "bg-button-primary text-button-primary-foreground border-button-primary" : "bg-transparent hover:bg-muted/50 text-muted-foreground"
+                    )}
                   >
-                    Internal
+                    {organization.name}
                   </button>
-                  {(organizations || []).map((organization) => (
-                    <button
-                      key={organization.id}
-                      type="button"
-                      onClick={() => setActiveCompanyTab(organization.id)}
-                      className={`rounded-full border px-6 py-2 text-sm font-medium shrink-0 ${activeCompanyTab === organization.id ? 'bg-button-primary text-button-primary-foreground' : 'bg-transparent'}`}
-                    >
-                      {organization.name}
-                    </button>
-                  ))}
-                </div>
+                ))}
               </div>
             </div>
           )}
 
-          <div className="border-b border-card-border px-6 py-4">
-            <div className="overflow-x-auto no-scrollbar">
-              <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start w-full flex min-w-max">
-                <TabsTrigger value="diary" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2">
-                  <ScrollText className="h-4 w-4" /> Live Diary
-                </TabsTrigger>
-                <TabsTrigger value="estimator" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2">
-                  <Calculator className="h-4 w-4" /> Safety Estimator
-                </TabsTrigger>
-                <TabsTrigger value="documents" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2">
-                  <FileSearch className="h-4 w-4" /> Evidence & Docs
-                </TabsTrigger>
-                <TabsTrigger value="contacts" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2">
-                  <Phone className="h-4 w-4" /> Emergency Contacts
-                </TabsTrigger>
-                <TabsTrigger value="triggers" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2">
-                  <AlertCircle className="h-4 w-4" /> Response Triggers
-                </TabsTrigger>
-                <TabsTrigger value="media" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2">
-                  <Megaphone className="h-4 w-4" /> Media Release
-                </TabsTrigger>
-                <TabsTrigger value="phases" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2">
-                  <HelpCircle className="h-4 w-4" /> Emergency Phases Guide
-                </TabsTrigger>
-              </TabsList>
-            </div>
+          <div className="border-b bg-muted/5 px-4 py-3 overflow-x-auto no-scrollbar">
+            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-4 flex-nowrap">
+              <TabsTrigger value="diary" className="rounded-full px-5 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2 text-[10px] font-bold uppercase">
+                <ScrollText className="h-3.5 w-3.5" /> Live Diary
+              </TabsTrigger>
+              <TabsTrigger value="estimator" className="rounded-full px-5 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2 text-[10px] font-bold uppercase">
+                <Calculator className="h-3.5 w-3.5" /> Safety Estimator
+              </TabsTrigger>
+              <TabsTrigger value="documents" className="rounded-full px-5 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2 text-[10px] font-bold uppercase">
+                <FileSearch className="h-3.5 w-3.5" /> Evidence & Docs
+              </TabsTrigger>
+              <TabsTrigger value="contacts" className="rounded-full px-5 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2 text-[10px] font-bold uppercase">
+                <Phone className="h-3.5 w-3.5" /> Emergency Contacts
+              </TabsTrigger>
+              <TabsTrigger value="triggers" className="rounded-full px-5 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2 text-[10px] font-bold uppercase">
+                <AlertCircle className="h-3.5 w-3.5" /> Response Triggers
+              </TabsTrigger>
+              <TabsTrigger value="media" className="rounded-full px-5 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2 text-[10px] font-bold uppercase">
+                <Megaphone className="h-3.5 w-3.5" /> Media Release
+              </TabsTrigger>
+              <TabsTrigger value="phases" className="rounded-full px-5 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2 text-[10px] font-bold uppercase">
+                <HelpCircle className="h-3.5 w-3.5" /> Phases Guide
+              </TabsTrigger>
+            </TabsList>
           </div>
 
           <CardContent className="flex-1 min-h-0 overflow-hidden p-0">

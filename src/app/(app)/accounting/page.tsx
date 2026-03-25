@@ -3,7 +3,8 @@
 import { useState, useMemo } from 'react';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -24,8 +25,8 @@ export default function AccountingPage() {
   const bookingsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/bookings`) : null), [firestore, tenantId]);
   const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
   const personnelQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
 
   const { data: bookings, isLoading: loadingB } = useCollection<Booking>(bookingsQuery);
   const { data: aircrafts, isLoading: loadingA } = useCollection<Aircraft>(aircraftQuery);
@@ -131,82 +132,92 @@ export default function AccountingPage() {
     }, 0);
   }, [enrichedData.unbilled, aircrafts]);
 
-  if (loadingB || loadingA) return <div className="p-8 space-y-6"><Skeleton className="h-10 w-48" /><Skeleton className="h-[400px] w-full" /></div>;
+  if (loadingB || loadingA) return <div className="p-8 space-y-6 px-1"><Skeleton className="h-14 w-full" /><Skeleton className="h-[400px] w-full" /></div>;
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full pb-10">
-      <div className="px-1 shrink-0">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Flight Billing</h1>
-        <p className="text-muted-foreground">Manage revenue from completed flights and export to Sage Accounting.</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-1">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Billing</CardTitle>
-            <Calculator className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalBillable.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-            <p className="text-xs text-muted-foreground mt-1">{enrichedData.unbilled.length} flights waiting for export</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Export History</CardTitle>
-            <Receipt className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{enrichedData.exported.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Flights successfully synced</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-primary/5 border-primary/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Batch Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              className="w-full gap-2" 
-              onClick={handleSageExport} 
-              disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
-            >
-              <FileSpreadsheet className="h-4 w-4" /> Export to Sage ({selectedIds.size})
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="unbilled" onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0">
-        <div className="px-1 shrink-0">
-          <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex">
-            <TabsTrigger value="unbilled" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Unbilled Flights ({enrichedData.unbilled.length})</TabsTrigger>
-            <TabsTrigger value="exported" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Export History ({enrichedData.exported.length})</TabsTrigger>
-          </TabsList>
-        </div>
-
-        <TabsContent value="unbilled" className="mt-0 flex-1 min-h-0 overflow-hidden">
-          <BillingTable 
-            bookings={enrichedData.unbilled} 
-            aircrafts={aircrafts || []} 
-            personnel={allUsers}
-            selectedIds={selectedIds}
-            onToggleSelection={toggleSelection}
-            onToggleAll={toggleAll}
+    <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full px-1 overflow-hidden">
+      <Card className="flex-grow flex flex-col shadow-none border overflow-hidden">
+        <Tabs defaultValue="unbilled" onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
+          <MainPageHeader 
+            title="Flight Billing"
+            actions={
+              <Button 
+                size="sm"
+                className="h-9 px-6 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2 shrink-0" 
+                onClick={handleSageExport} 
+                disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
+              >
+                <FileSpreadsheet className="h-4 w-4" /> Export to Sage ({selectedIds.size})
+              </Button>
+            }
           />
-        </TabsContent>
 
-        <TabsContent value="exported" className="mt-0 flex-1 min-h-0 overflow-hidden">
-          <BillingTable 
-            bookings={enrichedData.exported} 
-            aircrafts={aircrafts || []} 
-            personnel={allUsers}
-            selectedIds={new Set()}
-            onToggleSelection={() => {}}
-            onToggleAll={() => {}}
-          />
-        </TabsContent>
-      </Tabs>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 lg:p-6 border-b bg-muted/5 shrink-0">
+            <div className="flex items-center gap-4 bg-background p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Calculator className="h-5 w-5 text-primary" />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Pending Billing</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-foreground">${totalBillable.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase">{enrichedData.unbilled.length} FLIGHTS</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 bg-background p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
+                <Receipt className="h-5 w-5 text-green-600" />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Sync History</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-foreground">{enrichedData.exported.length}</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase">SUCCESSFUL</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-b bg-muted/5 px-6 py-3 overflow-x-auto no-scrollbar shrink-0">
+            <div className="flex w-max gap-2 pr-6 flex-nowrap">
+              <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
+                <TabsTrigger value="unbilled" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all">
+                  Unbilled Flights ({enrichedData.unbilled.length})
+                </TabsTrigger>
+                <TabsTrigger value="exported" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all">
+                  Export History ({enrichedData.exported.length})
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
+
+          <CardContent className="flex-1 p-0 overflow-hidden">
+            <TabsContent value="unbilled" className="m-0 h-full overflow-auto">
+              <BillingTable 
+                bookings={enrichedData.unbilled} 
+                aircrafts={aircrafts || []} 
+                personnel={allUsers}
+                selectedIds={selectedIds}
+                onToggleSelection={toggleSelection}
+                onToggleAll={toggleAll}
+              />
+            </TabsContent>
+
+            <TabsContent value="exported" className="m-0 h-full overflow-auto">
+              <BillingTable 
+                bookings={enrichedData.exported} 
+                aircrafts={aircrafts || []} 
+                personnel={allUsers}
+                selectedIds={new Set()}
+                onToggleSelection={() => {}}
+                onToggleAll={() => {}}
+              />
+            </TabsContent>
+          </CardContent>
+        </Tabs>
+      </Card>
     </div>
   );
 }

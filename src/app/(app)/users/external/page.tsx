@@ -62,11 +62,10 @@ export default function ExternalUsersPage() {
   }, [roles]);
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
+    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <MainPageHeader 
           title="External Users"
-          description="Manage accounts for personnel belonging to third-party organizations."
           actions={
             canCreateUsers && (
               <PersonnelForm 

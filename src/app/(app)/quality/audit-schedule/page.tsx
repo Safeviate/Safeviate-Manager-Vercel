@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -285,25 +286,19 @@ export default function AuditSchedulePage() {
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden">
-        <div className="flex shrink-0 flex-col gap-3 px-1 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-                <h1 className="text-2xl font-bold tracking-tight">Annual Audit Schedule</h1>
-                <p className="text-xs text-muted-foreground">
-                    Planning and tracking oversight activities for {currentYear}.
-                </p>
-            </div>
-            <div className="flex items-center gap-2">
-                <Button size="sm" onClick={() => setIsAddAreaOpen(true)} className="self-start sm:self-auto">
-                    <PlusCircle className="mr-2 h-3 w-3" />
-                    Add Area
-                </Button>
-            </div>
-        </div>
-
         <Card className={cn(
             "w-full overflow-hidden border shadow-none",
             isMobile ? "flex min-h-0 flex-1 flex-col" : "self-start"
         )}>
+            <MainPageHeader 
+                title="Annual Audit Schedule"
+                actions={
+                    <Button size="sm" onClick={() => setIsAddAreaOpen(true)} className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Area
+                    </Button>
+                }
+            />
             <CardContent className={cn(
                 "p-0",
                 isMobile ? "flex min-h-0 flex-1 flex-col" : ""

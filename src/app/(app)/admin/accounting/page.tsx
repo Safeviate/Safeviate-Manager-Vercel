@@ -1,15 +1,17 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { query } from "firebase/firestore";
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileSpreadsheet, Eye, Printer, X } from 'lucide-react';
+import { FileSpreadsheet, Eye, Printer, X, Calculator, Receipt } from 'lucide-react';
 import { BillingTable } from './billing-table';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -28,8 +30,8 @@ export default function AccountingPage() {
   const bookingsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/bookings`) : null), [firestore, tenantId]);
   const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
   const personnelQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
 
   const { data: bookings, isLoading: loadingB } = useCollection<Booking>(bookingsQuery);
   const { data: aircrafts, isLoading: loadingA } = useCollection<Aircraft>(aircraftQuery);
@@ -155,91 +157,99 @@ export default function AccountingPage() {
     }, 0);
   }, [enrichedData.unbilled, aircrafts]);
 
-  if (loadingB || loadingA) return <div className="p-8 space-y-6"><Skeleton className="h-10 w-48" /><Skeleton className="h-[400px] w-full" /></div>;
+  if (loadingB || loadingA) return <div className="p-8 space-y-6 px-1"><Skeleton className="h-14 w-full" /><Skeleton className="h-[400px] w-full" /></div>;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden gap-4">
-      <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex items-center justify-end p-4">
-          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-fit">
-              <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider whitespace-nowrap">Pending Revenue</p>
-              <div className="flex items-center gap-2">
-                <span className="text-lg md:text-xl font-black text-primary leading-none">
-                  ${totalBillable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-                <Badge variant="outline" className="h-5 text-[9px] font-bold">
-                  {enrichedData.unbilled.length} FLIGHTS
-                </Badge>
+    <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full px-1 overflow-hidden">
+      <Card className="flex-grow flex flex-col shadow-none border overflow-hidden">
+        <Tabs defaultValue="unbilled" onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
+          <MainPageHeader 
+            title="Flight Billing (Admin)"
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 lg:p-6 border-b bg-muted/5 shrink-0">
+            <div className="flex items-center gap-4 bg-background p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Calculator className="h-5 w-5 text-primary" />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Pending Revenue</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-foreground">${totalBillable.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase">{enrichedData.unbilled.length} FLIGHTS</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 bg-background p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
+                <Receipt className="h-5 w-5 text-green-600" />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Sync History</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-foreground">{enrichedData.exported.length}</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase">SUCCESSFUL</span>
+                </div>
               </div>
             </div>
           </div>
-        </CardHeader>
 
-        <CardContent className="flex-1 p-0 overflow-hidden flex flex-col bg-muted/5">
-          <Tabs defaultValue="unbilled" onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0">
-            <div className="px-4 md:px-6 py-4 border-b bg-background/50">
-              <div className="flex items-center justify-between gap-3 overflow-x-auto no-scrollbar">
-                <div className="shrink-0">
-                  <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex min-w-max">
-                    <TabsTrigger value="unbilled" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-xs font-bold uppercase tracking-tight">
-                      Unbilled Flights ({enrichedData.unbilled.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="exported" className="rounded-full px-6 py-1.5 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-xs font-bold uppercase tracking-tight">
-                      Export History ({enrichedData.exported.length})
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
+          <div className="border-b bg-muted/5 px-6 py-3 overflow-x-auto no-scrollbar shrink-0">
+            <div className="flex w-max gap-2 pr-6 flex-nowrap items-center justify-between w-full">
+              <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex min-w-max">
+                <TabsTrigger value="unbilled" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all">
+                  Unbilled Flights ({enrichedData.unbilled.length})
+                </TabsTrigger>
+                <TabsTrigger value="exported" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all">
+                  Export History ({enrichedData.exported.length})
+                </TabsTrigger>
+              </TabsList>
 
-                <div className="flex shrink-0 items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                   <Button 
                       variant="outline"
-                      className="gap-2 font-bold h-9 px-4 text-xs shrink-0" 
+                      className="gap-2 font-black h-9 px-4 text-[10px] uppercase shrink-0 border-slate-300" 
                       onClick={() => setIsPreviewOpen(true)} 
                       disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
                   >
-                      <Eye className="h-3.5 w-3.5" /> Preview ({selectedIds.size})
+                      <Eye className="h-3.5 w-3.5 text-primary" /> Preview ({selectedIds.size})
                   </Button>
                   <Button 
-                      className="gap-2 font-black shadow-md h-9 px-4 text-xs uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shrink-0" 
+                      className="gap-2 font-black shadow-md h-9 px-6 text-[10px] uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shrink-0" 
                       onClick={handleSageExport} 
                       disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
                   >
                       <FileSpreadsheet className="h-4 w-4" /> Export to Sage
                   </Button>
                 </div>
-              </div>
             </div>
+          </div>
 
-            <div className="flex-1 min-h-0 overflow-hidden relative">
-              <ScrollArea className="h-full">
-                <div className="p-4 md:p-6 pb-20">
-                  <TabsContent value="unbilled" className="mt-0">
-                    <BillingTable 
-                      bookings={enrichedData.unbilled} 
-                      aircrafts={aircrafts || []} 
-                      personnel={allUsers}
-                      selectedIds={selectedIds}
-                      onToggleSelection={toggleSelection}
-                      onToggleAll={toggleAll}
-                    />
-                  </TabsContent>
+          <CardContent className="flex-1 p-0 overflow-hidden">
+            <TabsContent value="unbilled" className="m-0 h-full overflow-auto">
+              <BillingTable 
+                bookings={enrichedData.unbilled} 
+                aircrafts={aircrafts || []} 
+                personnel={allUsers}
+                selectedIds={selectedIds}
+                onToggleSelection={toggleSelection}
+                onToggleAll={toggleAll}
+              />
+            </TabsContent>
 
-                  <TabsContent value="exported" className="mt-0">
-                    <BillingTable 
-                      bookings={enrichedData.exported} 
-                      aircrafts={aircrafts || []} 
-                      personnel={allUsers}
-                      selectedIds={new Set()}
-                      onToggleSelection={() => {}}
-                      onToggleAll={() => {}}
-                    />
-                  </TabsContent>
-                </div>
-              </ScrollArea>
-            </div>
-          </Tabs>
-        </CardContent>
+            <TabsContent value="exported" className="m-0 h-full overflow-auto">
+              <BillingTable 
+                bookings={enrichedData.exported} 
+                aircrafts={aircrafts || []} 
+                personnel={allUsers}
+                selectedIds={new Set()}
+                onToggleSelection={() => {}}
+                onToggleAll={() => {}}
+              />
+            </TabsContent>
+          </CardContent>
+        </Tabs>
       </Card>
 
       {/* --- Sage Export Preview Dialog --- */}
@@ -247,17 +257,17 @@ export default function AccountingPage() {
         <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0 md:p-6 overflow-hidden">
             <DialogHeader className="shrink-0 flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-4 px-6 pt-6 md:px-0 md:pt-0">
                 <div className="space-y-1">
-                    <DialogTitle className="text-lg md:text-xl flex items-center gap-2">
+                    <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
                         <FileSpreadsheet className="h-5 w-5 text-primary" />
                         Sage Export Preview
                     </DialogTitle>
-                    <DialogDescription className="text-xs">Review the raw data structure generated for Sage Accounting.</DialogDescription>
+                    <DialogDescription className="text-[10px] font-bold uppercase text-muted-foreground italic">Review the raw data structure generated for Sage Accounting.</DialogDescription>
                 </div>
                 <div className="flex items-center gap-2 no-print mt-4 md:mt-0">
-                    <Button variant="outline" size="sm" onClick={() => window.print()} className="text-xs">
+                    <Button variant="outline" size="sm" onClick={() => window.print()} className="h-8 text-[10px] font-black uppercase px-4 border-slate-300">
                         <Printer className="mr-2 h-4 w-4" /> Print Preview
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setIsPreviewOpen(false)} className="hidden md:flex">
+                    <Button variant="ghost" size="icon" onClick={() => setIsPreviewOpen(false)} className="hidden md:flex h-8 w-8">
                         <X className="h-4 w-4" />
                     </Button>
                 </div>
@@ -266,31 +276,31 @@ export default function AccountingPage() {
             <ScrollArea className="flex-1">
                 <div className="p-4 md:p-1 overflow-x-auto">
                     <Table className="min-w-[800px]">
-                        <TableHeader className="bg-muted/50">
+                        <TableHeader className="bg-muted/30">
                             <TableRow>
-                                <TableHead className="text-[10px] uppercase font-black">Reference</TableHead>
-                                <TableHead className="text-[10px] uppercase font-black">Date</TableHead>
-                                <TableHead className="text-[10px] uppercase font-black">Cust ID</TableHead>
-                                <TableHead className="text-[10px] uppercase font-black">Customer Name</TableHead>
-                                <TableHead className="text-[10px] uppercase font-black">Description</TableHead>
-                                <TableHead className="text-[10px] uppercase font-black text-right">Hrs</TableHead>
-                                <TableHead className="text-[10px] uppercase font-black text-right">Rate</TableHead>
-                                <TableHead className="text-[10px] uppercase font-black text-right">Total</TableHead>
-                                <TableHead className="text-[10px] uppercase font-black text-center">Nominal</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Reference</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Date</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Cust ID</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Customer Name</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Description</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider text-right">Hrs</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider text-right">Rate</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider text-right">Total</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider text-center">Nominal</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {previewData.map((row, idx) => (
-                                <TableRow key={idx}>
-                                    <TableCell className="font-mono text-[11px]">{row.reference}</TableCell>
-                                    <TableCell className="text-[11px] whitespace-nowrap">{row.date}</TableCell>
-                                    <TableCell className="font-bold text-[11px] text-primary">{row.customerId}</TableCell>
-                                    <TableCell className="text-[11px] truncate max-w-[120px]">{row.customerName}</TableCell>
-                                    <TableCell className="text-[11px] truncate max-w-[200px]">{row.description}</TableCell>
-                                    <TableCell className="text-right font-mono text-[11px]">{row.duration}</TableCell>
-                                    <TableCell className="text-right font-mono text-[11px]">{row.rate}</TableCell>
-                                    <TableCell className="text-right font-mono text-[11px] font-bold">${row.total}</TableCell>
-                                    <TableCell className="text-center font-mono text-[11px] text-muted-foreground">{row.nominalCode}</TableCell>
+                                <TableRow key={idx} className="hover:bg-muted/5 transition-colors">
+                                    <TableCell className="font-mono text-[11px] font-black text-primary uppercase">{row.reference}</TableCell>
+                                    <TableCell className="text-sm font-medium text-foreground whitespace-nowrap">{row.date}</TableCell>
+                                    <TableCell className="font-black text-sm text-foreground uppercase">{row.customerId}</TableCell>
+                                    <TableCell className="text-sm font-bold text-foreground truncate max-w-[120px]">{row.customerName}</TableCell>
+                                    <TableCell className="text-sm font-medium text-muted-foreground truncate max-w-[200px]">{row.description}</TableCell>
+                                    <TableCell className="text-right font-black text-sm text-foreground">{row.duration}</TableCell>
+                                    <TableCell className="text-right text-sm font-medium text-muted-foreground">${row.rate}</TableCell>
+                                    <TableCell className="text-right font-black text-sm text-primary">${row.total}</TableCell>
+                                    <TableCell className="text-center font-mono text-[11px] text-muted-foreground uppercase">{row.nominalCode}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -299,8 +309,8 @@ export default function AccountingPage() {
             </ScrollArea>
 
             <DialogFooter className="shrink-0 border-t p-4 md:p-0 md:pt-4 no-print flex flex-col md:flex-row gap-2">
-                <DialogClose asChild><Button variant="outline" className="w-full md:w-auto">Close</Button></DialogClose>
-                <Button onClick={handleSageExport} className="gap-2 w-full md:w-auto bg-emerald-700 hover:bg-emerald-800 text-white">
+                <DialogClose asChild><Button variant="outline" className="w-full md:w-auto h-10 text-[10px] font-black uppercase border-slate-300">Close</Button></DialogClose>
+                <Button onClick={handleSageExport} className="gap-2 w-full md:w-auto h-10 text-[10px] font-black uppercase bg-emerald-700 hover:bg-emerald-800 text-white shadow-md">
                     <FileSpreadsheet className="h-4 w-4" /> Download CSV & Update Status
                 </Button>
             </DialogFooter>

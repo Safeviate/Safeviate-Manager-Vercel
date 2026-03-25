@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,7 +34,6 @@ import type { QuestionBankItem } from '@/types/training';
 import type { ExamTopicsSettings } from '../../admin/exam-topics/page';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { AiExamGenerator } from '../exams/ai-exam-generator';
-import { Separator } from '@/components/ui/separator';
 
 export default function QuestionBankPage() {
   const firestore = useFirestore();
@@ -98,53 +98,49 @@ export default function QuestionBankPage() {
   if (isLoadingTopics || (isLoading && !poolItems)) {
     return (
       <div className="p-8 space-y-6">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-[400px] w-full" />
+        <Skeleton className="h-14 w-full px-1" />
+        <Skeleton className="h-[400px] w-full px-1" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
-      <div className="px-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground font-headline">Question Bank Manager</h1>
-          <p className="text-muted-foreground text-sm">Central database of aviation questions by topic.</p>
-        </div>
-        <div className="flex flex-col gap-1.5 md:items-end">
-            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Database Actions</p>
-            <div className="flex gap-2">
+    <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
+      <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
+        <MainPageHeader 
+          title="Question Bank Manager"
+          actions={
+            <div className="flex gap-2 w-full sm:w-auto">
                 <AiExamGenerator onGenerated={handleAiGenerated} />
-                <Button size="sm" className="h-9 px-6 text-[11px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2" onClick={() => setIsAddOpen(true)} disabled={!selectedTopic}>
+                <Button size="sm" className="h-9 px-6 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2" onClick={() => setIsAddOpen(true)} disabled={!selectedTopic}>
                     <PlusCircle className="h-4 w-4" /> Add Question
                 </Button>
             </div>
-        </div>
-      </div>
+          }
+        />
 
-      <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_120px] gap-8 items-start">
+        <div className="shrink-0 border-b bg-muted/5 p-4 md:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_120px] gap-6 items-start">
             <div className="space-y-2">
-                <Label className="text-[11px] font-black uppercase text-primary tracking-widest">Active Database</Label>
+                <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Active Database</Label>
                 <Select onValueChange={setSelectedTopic} value={selectedTopic}>
                     <SelectTrigger className="h-11 bg-background border-primary/30 font-bold">
                         <Database className="h-4 w-4 mr-2 text-primary" />
                         <SelectValue placeholder="Select Topic Bank..." />
                     </SelectTrigger>
                     <SelectContent>
-                        {(topicsData?.topics || []).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        {(topicsData?.topics || []).map(t => <SelectItem key={t} value={t} className="font-medium">{t}</SelectItem>)}
                     </SelectContent>
                 </Select>
             </div>
             
             <div className="space-y-2">
-                <Label className="text-[11px] font-black uppercase text-muted-foreground tracking-widest">Search {selectedTopic || 'Database'}</Label>
+                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Search {selectedTopic || 'Database'}</Label>
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                         placeholder="Keywords..." 
-                        className="pl-9 bg-background h-11" 
+                        className="pl-9 bg-background h-11 text-xs font-medium" 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -152,15 +148,15 @@ export default function QuestionBankPage() {
             </div>
 
             <div className="space-y-2">
-                <Label className="text-[11px] font-black uppercase text-muted-foreground tracking-widest">Database Size</Label>
+                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest text-center">Items</Label>
                 <div className="h-11 flex items-center justify-center">
-                    <Badge variant="outline" className="font-black text-sm h-8 px-4 rounded-full border-primary/30 bg-background shadow-sm">
+                    <Badge variant="outline" className="font-black text-sm h-9 px-5 rounded-full border-primary/30 bg-background shadow-sm">
                         {filteredItems.length}
                     </Badge>
                 </div>
             </div>
           </div>
-        </CardHeader>
+        </div>
         
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
           <ScrollArea className="h-full">
@@ -170,23 +166,23 @@ export default function QuestionBankPage() {
                     <Table>
                         <TableHeader className="bg-muted/30">
                             <TableRow>
-                            <TableHead className="text-[10px] uppercase font-bold px-6 py-3">Question Text</TableHead>
-                            <TableHead className="w-24 text-center text-[10px] uppercase font-bold">Options</TableHead>
-                            <TableHead className="w-24 text-right text-[10px] uppercase font-bold px-6">Actions</TableHead>
+                            <TableHead className="text-[10px] uppercase font-bold px-6 py-3 tracking-wider">Question Text</TableHead>
+                            <TableHead className="w-24 text-center text-[10px] uppercase font-bold tracking-wider">Options</TableHead>
+                            <TableHead className="w-24 text-right text-[10px] uppercase font-bold px-6 tracking-wider">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filteredItems.map((item) => (
-                            <TableRow key={item.id} className="hover:bg-muted/10 transition-colors">
-                                <TableCell className="font-medium text-sm py-4 px-6">
-                                    <p className="line-clamp-2 leading-relaxed">{item.text}</p>
+                            <TableRow key={item.id} className="hover:bg-muted/5 transition-colors">
+                                <TableCell className="font-bold text-sm text-foreground py-4 px-6">
+                                    <p className="line-clamp-2 leading-relaxed">&quot;{item.text}&quot;</p>
                                 </TableCell>
-                                <TableCell className="text-center font-mono text-xs opacity-50">
-                                    {item.options.length}
+                                <TableCell className="text-center font-black text-[10px] text-muted-foreground opacity-50 uppercase tracking-tighter">
+                                    {item.options.length} OPTS
                                 </TableCell>
                                 <TableCell className="text-right px-6">
                                     <div className="flex justify-end gap-2">
-                                        <Button variant="outline" size="icon" className="h-8 w-8 text-primary border-primary/20 hover:bg-primary/5" onClick={() => setEditingItem(item)}>
+                                        <Button variant="outline" size="sm" className="h-8 w-8 text-primary border-slate-300" onClick={() => setEditingItem(item)}>
                                             <Pencil className="h-3.5 w-3.5" />
                                         </Button>
                                         <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} />
@@ -202,15 +198,15 @@ export default function QuestionBankPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden p-4">
                     {filteredItems.map((item) => (
                         <Card key={item.id} className="shadow-none border-slate-200 overflow-hidden">
-                            <CardHeader className="p-4 pb-2 border-b bg-muted/5 flex flex-row items-center justify-between space-y-0">
+                            <div className="p-4 pb-2 border-b bg-muted/5 flex flex-row items-center justify-between space-y-0">
                                 <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{selectedTopic}</span>
-                                <Badge variant="outline" className="text-[9px] font-mono">{item.options.length} OPTIONS</Badge>
-                            </CardHeader>
+                                <Badge variant="outline" className="text-[9px] font-black uppercase">{item.options.length} OPTIONS</Badge>
+                            </div>
                             <CardContent className="p-4 py-3">
-                                <p className="text-sm font-semibold line-clamp-3 leading-relaxed">&quot;{item.text}&quot;</p>
+                                <p className="text-sm font-bold text-foreground line-clamp-3 leading-relaxed">&quot;{item.text}&quot;</p>
                             </CardContent>
                             <CardFooter className="p-2 border-t bg-muted/5 flex gap-2">
-                                <Button variant="outline" size="sm" className="flex-1 text-xs h-8" onClick={() => setEditingItem(item)}>
+                                <Button variant="outline" size="sm" className="flex-1 text-[10px] font-black uppercase h-8 border-slate-300" onClick={() => setEditingItem(item)}>
                                     <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
                                 </Button>
                                 <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} />
@@ -223,8 +219,8 @@ export default function QuestionBankPage() {
                     <div className="h-64 text-center text-muted-foreground italic flex flex-col items-center justify-center gap-4 opacity-20">
                         <Library className="h-16 w-16" />
                         <div className="space-y-1">
-                            <p className="text-lg font-bold uppercase tracking-tighter">Empty Topic Database</p>
-                            <p className="text-sm">No questions found in {selectedTopic || 'this topic'}.</p>
+                            <p className="text-lg font-black uppercase tracking-tighter">Empty Topic Database</p>
+                            <p className="text-sm font-medium">No questions found in {selectedTopic || 'this topic'}.</p>
                         </div>
                     </div>
                 )}
@@ -277,17 +273,17 @@ function DeleteQuestionButton({ item, tenantId, selectedTopic }: { item: Questio
             </AlertDialogTrigger>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Question?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This will permanently remove this question from the <strong>{selectedTopic}</strong> database. This action cannot be undone.
+                    <AlertDialogTitle className="text-lg font-black uppercase tracking-tight">Delete Question?</AlertDialogTitle>
+                    <AlertDialogDescription className="text-sm font-medium">
+                        This will permanently remove this question from the <strong className="text-foreground">{selectedTopic}</strong> database. This action cannot be undone.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel className="text-[10px] font-black uppercase">Cancel</AlertDialogCancel>
                     <AlertDialogAction 
                         onClick={handleDelete}
                         disabled={isDeleting}
-                        className="bg-destructive hover:bg-destructive/90"
+                        className="bg-destructive hover:bg-destructive/90 text-[10px] font-black uppercase"
                     >
                         {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete Permanently'}
                     </AlertDialogAction>
@@ -378,8 +374,8 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>{editingItem ? 'Edit Question' : 'Add Question'}</DialogTitle>
-                    <DialogDescription>
+                    <DialogTitle className="text-xl font-black uppercase tracking-tight">{editingItem ? 'Edit Question' : 'Add Question'}</DialogTitle>
+                    <DialogDescription className="text-sm font-medium">
                         Adding to the <span className="font-bold text-primary">{topic}</span> database.
                     </DialogDescription>
                 </DialogHeader>
@@ -391,14 +387,14 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
                                 value={text} 
                                 onChange={(e) => setText(e.target.value)} 
                                 placeholder="Enter the technical question..." 
-                                className="min-h-[120px] bg-muted/5 font-medium" 
+                                className="min-h-[120px] bg-muted/5 font-medium text-sm leading-relaxed" 
                             />
                         </div>
                         
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
                                 <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Options (Select One Correct Answer)</Label>
-                                {!correctId && <Badge variant="destructive" className="h-5 text-[8px] animate-pulse">SELECTION REQUIRED</Badge>}
+                                {!correctId && <Badge variant="destructive" className="h-5 text-[8px] font-black uppercase animate-pulse">SELECTION REQUIRED</Badge>}
                             </div>
                             
                             <div className="space-y-3">
@@ -423,7 +419,7 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
                                                     Option {idx + 1}
                                                 </Label>
                                                 {correctId === opt.id && (
-                                                    <Badge className="h-4 text-[8px] bg-green-600 text-white border-none gap-1">
+                                                    <Badge className="h-4 text-[8px] font-black uppercase bg-green-600 text-white border-none gap-1">
                                                         <CheckCircle2 className="h-2 w-2" /> CORRECT ANSWER
                                                     </Badge>
                                                 )}
@@ -436,7 +432,7 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
                                                     setOptions(next);
                                                 }}
                                                 placeholder={`Option ${idx + 1} text...`}
-                                                className="border-none bg-transparent shadow-none focus-visible:ring-0 h-8 p-0 text-sm font-medium"
+                                                className="border-none bg-transparent shadow-none focus-visible:ring-0 h-8 p-0 text-sm font-bold text-foreground"
                                             />
                                         </div>
                                         <Button 
@@ -459,7 +455,7 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
                                 variant="outline" 
                                 size="sm" 
                                 onClick={() => setOptions([...options, { id: uuidv4(), text: '' }])} 
-                                className="w-full h-10 border-dashed border-2 hover:bg-muted/10 text-xs font-bold"
+                                className="w-full h-10 border-dashed border-2 hover:bg-muted/10 text-[10px] font-black uppercase border-slate-300"
                             >
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Another Option
                             </Button>
@@ -469,10 +465,10 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
                 <DialogFooter className="border-t pt-4 bg-muted/5 -mx-6 px-6">
                     <div className="flex items-center gap-2 mr-auto text-muted-foreground">
                         <AlertCircle className="h-4 w-4" />
-                        <span className="text-[10px] font-medium italic">All technical questions require at least two options and one correct answer.</span>
+                        <span className="text-[10px] font-bold uppercase tracking-tight">At least two options and one correct answer required.</span>
                     </div>
-                    <DialogClose asChild><Button variant="outline" disabled={isSaving}>Cancel</Button></DialogClose>
-                    <Button onClick={handleSave} disabled={isSaving}>
+                    <DialogClose asChild><Button variant="outline" disabled={isSaving} className="text-[10px] font-black uppercase border-slate-300">Cancel</Button></DialogClose>
+                    <Button onClick={handleSave} disabled={isSaving} className="text-[10px] font-black uppercase">
                         {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : (editingItem ? 'Update Question' : 'Save to Database')}
                     </Button>
                 </DialogFooter>

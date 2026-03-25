@@ -3,7 +3,8 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, writeBatch, doc, deleteDoc } from 'firebase/firestore';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste, BookOpen } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -153,7 +154,7 @@ function UploadRegulationsDialog({ tenantId, organizationId }: { tenantId: strin
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 text-xs font-bold gap-2">
+                <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase gap-2 border-slate-300">
                     <WandSparkles className="h-3.5 w-3.5 text-primary" /> 
                     AI Populate
                 </Button>
@@ -240,21 +241,23 @@ function UploadRegulationsDialog({ tenantId, organizationId }: { tenantId: strin
 
 function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
     return (
-        <div className="border-y border-card-border bg-card px-6 py-4">
-            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex min-w-max">
-                <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
-                    Internal
-                </TabsTrigger>
-                {organizations.map((organization) => (
-                    <TabsTrigger
-                        key={organization.id}
-                        value={organization.id}
-                        className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0"
-                    >
-                        {organization.name}
+        <div className="border-b bg-muted/5 px-6 py-3 overflow-x-auto no-scrollbar">
+            <div className="flex w-max gap-2 pr-6 flex-nowrap">
+                <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
+                    <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase">
+                        Internal
                     </TabsTrigger>
-                ))}
-            </TabsList>
+                    {organizations.map((organization) => (
+                        <TabsTrigger
+                            key={organization.id}
+                            value={organization.id}
+                            className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase"
+                        >
+                            {organization.name}
+                        </TabsTrigger>
+                    ))}
+                </TabsList>
+            </div>
         </div>
     );
 }
@@ -359,27 +362,23 @@ export default function CoherenceMatrixPage() {
 
     return (
         <Card className="min-h-[500px] flex flex-col shadow-none border">
-            <CardHeader className="bg-muted/10 border-b flex flex-col xl:flex-row items-start xl:items-center justify-end gap-3 p-4">
-                <div className="flex flex-wrap items-center gap-4 md:gap-8 w-full xl:w-auto justify-start xl:justify-end">
-                    <div className="flex flex-col gap-1 xl:items-end">
-                        <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Regulatory Assets</p>
-                        <div className="flex gap-2">
-                            <UploadRegulationsDialog tenantId={tenantId!} organizationId={contextOrgId} />
-                            <Button variant="outline" size="sm" className="h-8 text-xs font-bold gap-2" onClick={() => handleSeedData(contextOrgId)}>
-                                <BookOpen className="h-3.5 w-3.5" /> Seed Part 141
-                            </Button>
-                        </div>
-                    </div>
-                    <Separator orientation="vertical" className="h-10 hidden xl:block" />
-                    <div className="flex flex-col gap-1 xl:items-end">
-                        <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Compliance Management</p>
-                        <Button size="sm" className="h-8 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm gap-2" onClick={() => handleOpenForm()}>
+            <MainPageHeader 
+                title="Coherence Matrix"
+                actions={
+                    <div className="flex flex-wrap items-center gap-2">
+                        <UploadRegulationsDialog tenantId={tenantId!} organizationId={contextOrgId} />
+                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase gap-2 border-slate-300" onClick={() => handleSeedData(contextOrgId)}>
+                            <BookOpen className="h-3.5 w-3.5" /> Seed Part 141
+                        </Button>
+                        <Button size="sm" className="h-8 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm gap-2" onClick={() => handleOpenForm()}>
                             <PlusCircle className="h-4 w-4" /> Add Item
                         </Button>
                     </div>
-                </div>
-            </CardHeader>
+                }
+            />
+            
             {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
+            
             <CardContent className="p-6">
                 <div className="space-y-4">
                     {topLevelItems.map(parentItem => (

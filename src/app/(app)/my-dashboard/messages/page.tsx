@@ -1,7 +1,8 @@
 'use client';
 
 import { useDashboardData } from '@/hooks/use-dashboard-data';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -20,10 +21,9 @@ export default function MessagesPage() {
     return (
         <div className="max-w-[1200px] mx-auto w-full space-y-6">
             <Card className="shadow-none border">
-                <CardHeader>
-                    <CardTitle>Messages</CardTitle>
-                    <CardDescription>Recent assignments and mentions directed to you.</CardDescription>
-                </CardHeader>
+                <MainPageHeader 
+                    title="Messages" 
+                />
                 <CardContent>
                     <div className="space-y-4">
                         {myMessages.length > 0 ? (

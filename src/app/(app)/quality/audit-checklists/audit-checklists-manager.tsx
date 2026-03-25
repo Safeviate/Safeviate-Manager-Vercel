@@ -7,7 +7,8 @@ import { NewChecklistDialog } from './new-checklist-dialog';
 import { ChecklistTemplateCard } from './checklist-template-card';
 import { Accordion } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { QualityAuditChecklistTemplate } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
@@ -61,15 +62,15 @@ export default function AuditChecklistsManager() {
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 p-4">
-          <div className="flex flex-col gap-1 sm:items-end w-full sm:w-auto">
-            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Template Control</p>
+        <MainPageHeader 
+          title="Audit Checklists"
+          actions={
             <NewChecklistDialog
                 tenantId={tenantId}
                 departments={departments || []}
             />
-          </div>
-        </CardHeader>
+          }
+        />
         <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5">
           <ScrollArea className="h-full">
             <div className="p-6 pb-20">

@@ -3,7 +3,8 @@
 import { useMemo } from 'react';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, parse } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -111,7 +112,7 @@ function DeleteBookingButton({ booking }: { booking: EnrichedBooking }) {
 const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
     if (bookings.length === 0) {
         return (
-            <div className="h-24 text-center flex items-center justify-center text-muted-foreground">
+            <div className="h-24 text-center flex items-center justify-center text-muted-foreground text-xs uppercase font-bold tracking-widest bg-muted/5">
               No bookings found for this category.
             </div>
         );
@@ -122,13 +123,13 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
             <Table className="min-w-[760px]">
                 <TableHeader>
                   <TableRow>
-                      <TableHead>#</TableHead>
-                      <TableHead>Aircraft</TableHead>
-                      <TableHead>Creator</TableHead>
-                      <TableHead>Start Time</TableHead>
-                      <TableHead className="text-right">Flight Time</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className='text-right'>Actions</TableHead>
+                      <TableHead className="text-[10px] uppercase font-bold tracking-wider">#</TableHead>
+                      <TableHead className="text-[10px] uppercase font-bold tracking-wider">Aircraft</TableHead>
+                      <TableHead className="text-[10px] uppercase font-bold tracking-wider">Creator</TableHead>
+                      <TableHead className="text-[10px] uppercase font-bold tracking-wider">Start Time</TableHead>
+                      <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Flight Time</TableHead>
+                      <TableHead className="text-[10px] uppercase font-bold tracking-wider">Status</TableHead>
+                      <TableHead className='text-right text-[10px] uppercase font-bold tracking-wider'>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -139,24 +140,24 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
 
                         return (
                             <TableRow key={b.id} className={cn((b.status === 'Cancelled' || b.status === 'Cancelled with Reason' || b.status === 'Completed') && 'text-muted-foreground')}>
-                                <TableCell className="font-medium whitespace-nowrap">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
-                                <TableCell>{b.aircraftTailNumber}</TableCell>
-                                <TableCell>{b.creatorName}</TableCell>
-                                <TableCell>{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
-                                <TableCell className="text-right font-mono font-bold whitespace-nowrap">
+                                <TableCell className="font-bold text-sm text-foreground whitespace-nowrap">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
+                                <TableCell className="font-black text-sm uppercase text-foreground">{b.aircraftTailNumber}</TableCell>
+                                <TableCell className="font-bold text-sm text-foreground">{b.creatorName}</TableCell>
+                                <TableCell className="font-medium text-sm text-foreground">{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
+                                <TableCell className="text-right font-black text-sm text-foreground whitespace-nowrap">
                                     {flightHours !== null ? (
-                                        <div className="flex items-center justify-end gap-1 text-primary">
+                                        <div className="flex items-center justify-end gap-1">
                                             <Clock className="h-3 w-3" />
                                             {flightHours}h
                                         </div>
                                     ) : '-'}
                                 </TableCell>
                                 <TableCell className="whitespace-nowrap">
-                                    <Badge variant={getStatusBadgeVariant(b.status)}>{b.status}</Badge>
+                                    <Badge variant={getStatusBadgeVariant(b.status)} className="text-[10px] font-black uppercase py-0.5">{b.status}</Badge>
                                 </TableCell>
                                 <TableCell className='text-right whitespace-nowrap'>
                                     <div className="flex justify-end gap-2">
-                                        <Button asChild variant="outline" size="sm" className="h-8 gap-2">
+                                        <Button asChild variant="outline" size="sm" className="h-8 gap-2 text-[10px] font-black uppercase">
                                             <Link href={`/bookings/history/${b.id}`}>
                                                 <Eye className="h-4 w-4" />
                                                 View
@@ -234,19 +235,18 @@ export default function BookingsHistoryPage() {
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full min-h-0">
       <Card className="flex-grow flex flex-col shadow-none border overflow-hidden">
         <Tabs defaultValue="all" className="flex h-full min-h-0 flex-col">
-          <CardHeader className="shrink-0 border-b bg-card">
-            <div className="space-y-1">
-              <CardTitle>Bookings History</CardTitle>
-              <CardDescription>A complete log of all past and present bookings.</CardDescription>
-            </div>
-            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 overflow-x-auto no-scrollbar justify-start w-full flex">
-              <TabsTrigger value="all" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">All</TabsTrigger>
-              <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Training</TabsTrigger>
-              <TabsTrigger value="private" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Private</TabsTrigger>
-              <TabsTrigger value="maintenance" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Maintenance</TabsTrigger>
-              <TabsTrigger value="cancelled" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Cancelled</TabsTrigger>
-            </TabsList>
-          </CardHeader>
+          <MainPageHeader 
+            title="Bookings History"
+            actions={
+              <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 overflow-x-auto no-scrollbar justify-start w-full flex">
+                <TabsTrigger value="all" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-bold uppercase">All</TabsTrigger>
+                <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-bold uppercase">Training</TabsTrigger>
+                <TabsTrigger value="private" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-bold uppercase">Private</TabsTrigger>
+                <TabsTrigger value="maintenance" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-bold uppercase">Maintenance</TabsTrigger>
+                <TabsTrigger value="cancelled" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-bold uppercase">Cancelled</TabsTrigger>
+              </TabsList>
+            }
+          />
           <CardContent className='p-0 flex-1 min-h-0'>
                 <div className={cn("overflow-auto", isMobile ? "h-full min-h-0" : "h-[calc(100vh-21rem)]")}>
                     <TabsContent value="all" className='m-0'><BookingsTable bookings={enrichedBookings} /></TabsContent>

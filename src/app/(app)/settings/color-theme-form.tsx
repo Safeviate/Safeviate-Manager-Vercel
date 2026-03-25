@@ -17,7 +17,11 @@ import type { Tenant } from '@/types/quality';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 
-export function ColorThemeForm() {
+interface ColorThemeFormProps {
+  showHeader?: boolean;
+}
+
+export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { tenantId } = useUserProfile();
@@ -177,6 +181,196 @@ export function ColorThemeForm() {
     return clean.replace(/-/g, ' ');
   };
 
+  const content = (
+    <div className="p-6 space-y-8 pb-24">
+        <div>
+            <h3 className="text-sm font-black uppercase tracking-tight mb-1 text-foreground">UI Scaling</h3>
+            <p className='text-[10px] text-muted-foreground font-bold uppercase italic mb-4'>Adjust the overall size of the application interface.</p>
+            <div className='flex items-center gap-6 bg-muted/5 p-4 border rounded-xl'>
+                <Slider value={[scale]} onValueChange={(value) => setScale(value[0])} min={50} max={150} step={5} className="flex-1" />
+                <span className='text-sm font-black text-primary w-12 text-right'>{scale}%</span>
+            </div>
+        </div>
+        
+        <Separator />
+
+        {canManageOrganization && (
+            <>
+                <div className="bg-primary/5 p-5 rounded-2xl border border-primary/20 space-y-4">
+                    <div className="space-y-1">
+                        <h3 className="text-sm font-black uppercase tracking-tight flex items-center gap-2 text-foreground">
+                            <Globe className="h-4 w-4 text-primary" />
+                            Organization Branding
+                        </h3>
+                        <p className='text-[10px] text-muted-foreground font-bold uppercase italic'>
+                            Set the default branding for all members of your organization.
+                        </p>
+                    </div>
+                    <Button onClick={handleSaveToOrganization} className="w-full sm:w-auto text-[10px] font-black uppercase h-9 px-6">
+                        <Save className="mr-2 h-4 w-4" /> Save as Organization Default
+                    </Button>
+                </div>
+                <Separator />
+            </>
+        )}
+
+        <div>
+            <h3 className="text-sm font-black uppercase tracking-tight mb-1 text-foreground">Set Theme from Tenant</h3>
+            <p className='text-[10px] text-muted-foreground font-bold uppercase italic mb-4'>Override the current theme with a saved tenant configuration.</p>
+            <Select onValueChange={handleApplyTenantTheme} disabled={isLoadingTenants}>
+                <SelectTrigger className="w-full sm:w-[320px] h-11 font-bold">
+                    <SelectValue placeholder={isLoadingTenants ? "Loading themes..." : "Select a tenant theme"} />
+                </SelectTrigger>
+                <SelectContent>
+                    {(tenants || []).map(tenant => (
+                        <SelectItem key={tenant.id} value={tenant.id} disabled={!tenant.theme} className="font-medium">
+                            {tenant.name}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+
+        <Separator />
+      
+        <div className="space-y-4">
+            <h3 className="text-sm font-black uppercase tracking-tight text-foreground">Main Theme Colors</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4 p-5 border rounded-2xl bg-muted/5">
+                    <h4 className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Primary Palette</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="primary" className="text-[9px] font-black uppercase">Primary</Label>
+                            <Input id="primary" type="color" value={theme.primary} onChange={(e) => setThemeValue('primary', e.target.value)} className="p-1 h-12 w-full rounded-lg cursor-pointer" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="primary-foreground" className="text-[9px] font-black uppercase">Foreground</Label>
+                            <Input id="primary-foreground" type="color" value={theme['primary-foreground']} onChange={(e) => setThemeValue('primary-foreground', e.target.value)} className="p-1 h-12 w-full rounded-lg cursor-pointer" />
+                        </div>
+                    </div>
+                </div>
+                <div className="space-y-4 p-5 border rounded-2xl bg-muted/5">
+                    <h4 className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Base &amp; Accent</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="background" className="text-[9px] font-black uppercase">Background</Label>
+                            <Input id="background" type="color" value={theme.background} onChange={(e) => setThemeValue('background', e.target.value)} className="p-1 h-12 w-full rounded-lg cursor-pointer" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="accent" className="text-[9px] font-black uppercase">Accent</Label>
+                            <Input id="accent" type="color" value={theme.accent} onChange={(e) => setThemeValue('accent', e.target.value)} className="p-1 h-12 w-full rounded-lg cursor-pointer" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <Separator />
+
+        <div>
+            <h3 className="text-sm font-black uppercase tracking-tight mb-4 text-foreground">Advanced Component Theming</h3>
+            <div className="space-y-10">
+                <section className="space-y-4">
+                    <h4 className="text-[10px] font-black uppercase text-primary tracking-widest border-b pb-2">Primary Buttons</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {Object.entries(buttonTheme).map(([name, value]) => (
+                        <div key={name} className="space-y-1.5">
+                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-muted-foreground">{formatLabel(name)}</Label>
+                            <Input id={name} type="color" value={value} onChange={(e) => setButtonThemeValue(name as keyof typeof buttonTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer" />
+                        </div>
+                        ))}
+                    </div>
+                </section>
+
+                <section className="space-y-4">
+                    <h4 className="text-[10px] font-black uppercase text-primary tracking-widest border-b pb-2">Headers</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {Object.entries(headerTheme).map(([name, value]) => (
+                        <div key={name} className="space-y-1.5">
+                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-muted-foreground">{formatLabel(name)}</Label>
+                            <Input id={name} type="color" value={value} onChange={(e) => setHeaderThemeValue(name as keyof typeof headerTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer" />
+                        </div>
+                        ))}
+                    </div>
+                </section>
+
+                <section className="space-y-4">
+                    <h4 className="text-[10px] font-black uppercase text-primary tracking-widest border-b pb-2">Swimlanes</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                        {Object.entries(swimlaneTheme).map(([name, value]) => (
+                        <div key={name} className="space-y-1.5">
+                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-muted-foreground">{formatLabel(name)}</Label>
+                            <Input id={name} type="color" value={value} onChange={(e) => setSwimlaneThemeValue(name as keyof typeof swimlaneTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer" />
+                        </div>
+                        ))}
+                    </div>
+                </section>
+
+                <section className="space-y-4">
+                    <h4 className="text-[10px] font-black uppercase text-primary tracking-widest border-b pb-2">Cards</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {Object.entries(cardTheme).map(([name, value]) => (
+                        <div key={name} className="space-y-1.5">
+                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-muted-foreground">{formatLabel(name)}</Label>
+                            <Input id={name} type="color" value={value} onChange={(e) => setCardThemeValue(name as keyof typeof cardTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer" />
+                        </div>
+                        ))}
+                    </div>
+                </section>
+
+                <section className="space-y-4">
+                    <h4 className="text-[10px] font-black uppercase text-primary tracking-widest border-b pb-2">Popovers &amp; Sidebar</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {[...Object.entries(popoverTheme), ...Object.entries(sidebarTheme)].map(([name, value]) => (
+                        <div key={name} className="space-y-1.5">
+                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-muted-foreground">{formatLabel(name)}</Label>
+                            <Input id={name} type="color" value={value} onChange={(e) => (popoverTheme as any)[name] !== undefined ? setPopoverThemeValue(name as any, e.target.value) : setSidebarThemeValue(name as any, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer" />
+                        </div>
+                        ))}
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <Separator />
+        
+        <div>
+            <h3 className="text-sm font-black uppercase tracking-tight mb-4 text-foreground">Theme Storage</h3>
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+                <Input placeholder="Theme name..." value={themeName} onChange={(e) => setThemeName(e.target.value)} className="h-11 font-bold" />
+                <Button onClick={handleSaveTheme} className="w-full sm:w-auto h-11 px-8 text-[10px] font-black uppercase">Save Personal Theme</Button>
+            </div>
+        </div>
+
+        {isMounted && savedThemes.length > 0 && (
+            <div className="space-y-4">
+                <h3 className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Saved Personal Themes</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {savedThemes.map((theme) => (
+                        <div key={theme.name} className="flex items-center justify-between p-3 border rounded-xl bg-background shadow-sm group">
+                            <span className="font-bold text-xs uppercase">{theme.name}</span>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="outline" size="sm" onClick={() => handleApplyTheme(theme)} className="h-7 text-[9px] font-black uppercase">Apply</Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleDeleteTheme(theme.name)} className="h-7 w-7 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )}
+
+        <Separator />
+
+        <div className="flex justify-start">
+            <Button onClick={handleReset} variant="outline" className="text-[10px] font-black uppercase h-10 px-8 border-slate-300">Reset System Defaults</Button>
+        </div>
+    </div>
+  );
+
+  if (!showHeader) {
+      return content;
+  }
+
   return (
     <Card className="flex flex-col h-full overflow-hidden shadow-none border">
       <CardHeader className="shrink-0 border-b bg-muted/10">
@@ -185,212 +379,7 @@ export function ColorThemeForm() {
       </CardHeader>
       <CardContent className="flex-1 min-h-0 p-0">
         <ScrollArea className="h-full">
-          <div className="p-6 space-y-8 pb-24">
-            <div>
-                <h3 className="text-lg font-medium mb-2">UI Scaling</h3>
-                <p className='text-sm text-muted-foreground mb-4'>Adjust the overall size of the application interface. Supports scaling down to 50% for high-density mobile views.</p>
-                <div className='flex items-center gap-4'>
-                    <Slider value={[scale]} onValueChange={(value) => setScale(value[0])} min={50} max={150} step={5} />
-                    <span className='text-sm font-medium text-muted-foreground w-16 text-center'>{scale}%</span>
-                </div>
-            </div>
-            
-            <Separator />
-
-            {canManageOrganization && (
-                <>
-                    <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
-                        <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
-                            <Globe className="h-5 w-5 text-primary" />
-                            Organization Branding
-                        </h3>
-                        <p className='text-sm text-muted-foreground mb-4'>
-                            As an administrator, you can set the default branding for all members of your organization.
-                        </p>
-                        <Button onClick={handleSaveToOrganization} className="w-full sm:w-auto">
-                            <Save className="mr-2 h-4 w-4" /> Save as Organization Default
-                        </Button>
-                    </div>
-                    <Separator />
-                </>
-            )}
-
-            <div>
-                <h3 className="text-lg font-medium mb-2">Set Theme from Tenant</h3>
-                <p className='text-sm text-muted-foreground mb-4'>Override the current theme with a saved tenant configuration.</p>
-                <Select onValueChange={handleApplyTenantTheme} disabled={isLoadingTenants}>
-                    <SelectTrigger className="w-[280px]">
-                        <SelectValue placeholder={isLoadingTenants ? "Loading themes..." : "Select a tenant theme"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {(tenants || []).map(tenant => (
-                            <SelectItem key={tenant.id} value={tenant.id} disabled={!tenant.theme}>
-                                {tenant.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-
-            <Separator />
-          
-            <div>
-                <h3 className="text-lg font-medium mb-2">Main Theme</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4 p-4 border rounded-lg">
-                        <h4 className="font-semibold">Primary Colors</h4>
-                        <div className="space-y-2">
-                            <Label htmlFor="primary">Primary</Label>
-                            <Input id="primary" type="color" value={theme.primary} onChange={(e) => setThemeValue('primary', e.target.value)} className="p-1 h-10" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="primary-foreground">Primary Foreground</Label>
-                            <Input id="primary-foreground" type="color" value={theme['primary-foreground']} onChange={(e) => setThemeValue('primary-foreground', e.target.value)} className="p-1 h-10" />
-                        </div>
-                    </div>
-                    <div className="space-y-4 p-4 border rounded-lg">
-                        <h4 className="font-semibold">Accent &amp; Background</h4>
-                        <div className="space-y-2">
-                            <Label htmlFor="background">Background</Label>
-                            <Input id="background" type="color" value={theme.background} onChange={(e) => setThemeValue('background', e.target.value)} className="p-1 h-10" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="accent">Accent</Label>
-                            <Input id="accent" type="color" value={theme.accent} onChange={(e) => setThemeValue('accent', e.target.value)} className="p-1 h-10" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <Separator />
-
-            <div>
-                <h3 className="text-lg font-medium mb-4">Primary Button Theme</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {Object.entries(buttonTheme).map(([name, value]) => (
-                    <div key={name} className="space-y-2">
-                        <Label htmlFor={name} className="capitalize">{formatLabel(name)}</Label>
-                        <div className='relative'>
-                        <Input id={name} type="color" value={value} onChange={(e) => setButtonThemeValue(name as keyof typeof buttonTheme, e.target.value)} className="p-1 h-10" />
-                        </div>
-                    </div>
-                    ))}
-                </div>
-            </div>
-
-            <Separator />
-
-            <div>
-              <h3 className="text-lg font-medium mb-4">Header Theme</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {Object.entries(headerTheme).map(([name, value]) => (
-                  <div key={name} className="space-y-2">
-                    <Label htmlFor={name} className="capitalize">{formatLabel(name)}</Label>
-                    <div className='relative'>
-                      <Input id={name} type="color" value={value} onChange={(e) => setHeaderThemeValue(name as keyof typeof headerTheme, e.target.value)} className="p-1 h-10" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <Separator />
-            
-            <div>
-              <h3 className="text-lg font-medium mb-4">Swimlane Header Theme</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(swimlaneTheme).map(([name, value]) => (
-                  <div key={name} className="space-y-2">
-                    <Label htmlFor={name} className="capitalize">{formatLabel(name)}</Label>
-                    <div className='relative'>
-                      <Input id={name} type="color" value={value} onChange={(e) => setSwimlaneThemeValue(name as keyof typeof swimlaneTheme, e.target.value)} className="p-1 h-10" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <Separator />
-
-            <div>
-              <h3 className="text-lg font-medium mb-4">Card Theme</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(cardTheme).map(([name, value]) => (
-                  <div key={name} className="space-y-2">
-                    <Label htmlFor={name} className="capitalize">{formatLabel(name)}</Label>
-                    <div className='relative'>
-                      <Input id={name} type="color" value={value} onChange={(e) => setCardThemeValue(name as keyof typeof cardTheme, e.target.value)} className="p-1 h-10" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <Separator />
-            
-            <div>
-              <h3 className="text-lg font-medium mb-4">Popover &amp; Dropdown Theme</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(popoverTheme).map(([name, value]) => (
-                  <div key={name} className="space-y-2">
-                    <Label htmlFor={name} className="capitalize">{formatLabel(name)}</Label>
-                    <div className='relative'>
-                      <Input id={name} type="color" value={value} onChange={(e) => setPopoverThemeValue(name as keyof typeof popoverTheme, e.target.value)} className="p-1 h-10" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <Separator />
-
-            <div>
-              <h3 className="text-lg font-medium mb-4">Sidebar Theme</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(sidebarTheme).map(([name, value]) => (
-                  <div key={name} className="space-y-2">
-                    <Label htmlFor={name} className="capitalize">{formatLabel(name)}</Label>
-                    <div className='relative'>
-                      <Input id={name} type="color" value={value} onChange={(e) => setSidebarThemeValue(name as keyof typeof sidebarTheme, e.target.value)} className="p-1 h-10" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <Separator />
-            
-            <div>
-                <h3 className="text-lg font-medium mb-4">Save Current Theme (Personal)</h3>
-                <div className="flex items-center gap-2">
-                    <Input placeholder="Enter theme name" value={themeName} onChange={(e) => setThemeName(e.target.value)} />
-                    <Button onClick={handleSaveTheme}>Save Personal Theme</Button>
-                </div>
-            </div>
-
-            {isMounted && savedThemes.length > 0 && <Separator />}
-
-            {isMounted && savedThemes.length > 0 && (
-                <div>
-                    <h3 className="text-lg font-medium mb-4">Saved Personal Themes</h3>
-                    <div className="space-y-2">
-                        {savedThemes.map((theme) => (
-                            <div key={theme.name} className="flex items-center justify-between p-2 border rounded-lg">
-                                <span className="font-medium">{theme.name}</span>
-                                <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" onClick={() => handleApplyTheme(theme)}>Apply</Button>
-                                    <Button variant="destructive" size="icon" onClick={() => handleDeleteTheme(theme.name)}><Trash2 className="h-4 w-4" /></Button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            <Separator />
-
-            <Button onClick={handleReset} variant="outline">Reset to Defaults</Button>
-          </div>
+          {content}
         </ScrollArea>
       </CardContent>
     </Card>

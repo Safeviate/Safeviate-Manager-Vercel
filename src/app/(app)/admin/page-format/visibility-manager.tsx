@@ -62,48 +62,50 @@ export function VisibilityManager() {
 
   return (
     <div className="space-y-10">
-      <section className="space-y-6">
-        <div className="flex items-center justify-between">
+      <section className="space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <h3 className="text-xl font-bold flex items-center gap-2">
-              <LayoutGrid className="h-5 w-5 text-primary" />
+            <h3 className="text-sm font-black uppercase tracking-tight flex items-center gap-2 text-foreground">
+              <LayoutGrid className="h-4 w-4 text-primary" />
               Module Access Control
             </h3>
-            <p className="text-sm text-muted-foreground">Select which functional modules are enabled for the organization sidebar. Includes Admin and Development menus.</p>
+            <p className="text-xs text-muted-foreground italic">Select functional modules enabled for the organization sidebar.</p>
           </div>
-          <Button onClick={handleSaveModules}>Apply Module Changes</Button>
+          <Button onClick={handleSaveModules} className="text-[10px] font-black uppercase h-9 px-6 bg-emerald-700 hover:bg-emerald-800 text-white shadow-md">Apply Changes</Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {menuConfig.map((menu) => {
             const subHrefs = menu.subItems?.map(s => s.href) || [];
             const isEnabled = enabledHrefs.has(menu.href);
             
             return (
-              <div key={menu.href} className="p-4 border rounded-xl bg-muted/10 space-y-3">
-                <div className="flex items-center space-x-2">
+              <div key={menu.href} className="p-5 border rounded-2xl bg-muted/5 space-y-4 shadow-sm border-slate-200">
+                <div className="flex items-center space-x-3">
                   <Checkbox 
                     id={`mod-${menu.href}`} 
                     checked={isEnabled}
                     onCheckedChange={() => toggleMenu(menu.href, subHrefs)}
+                    className="h-5 w-5"
                   />
-                  <Label htmlFor={`mod-${menu.href}`} className="font-bold flex items-center gap-2 cursor-pointer">
-                    <menu.icon className="h-4 w-4 text-primary" />
+                  <Label htmlFor={`mod-${menu.href}`} className="text-xs font-black uppercase tracking-tight flex items-center gap-2 cursor-pointer text-foreground">
+                    <menu.icon className="h-4 w-4 text-primary opacity-70" />
                     {menu.label}
                   </Label>
                 </div>
                 {menu.subItems && (
-                  <div className="pl-6 space-y-2 border-l ml-2">
+                  <div className="pl-8 space-y-2.5 border-l-2 ml-2.5 border-primary/10">
                     {menu.subItems.map((sub) => {
                       const isSubEnabled = enabledHrefs.has(sub.href);
                       return (
-                        <div key={sub.href} className="flex items-center space-x-2">
+                        <div key={sub.href} className="flex items-center space-x-3">
                           <Checkbox 
                             id={`submod-${sub.href}`} 
                             checked={isSubEnabled}
                             onCheckedChange={() => toggleSubMenu(menu.href, sub.href)}
+                            className="h-4 w-4"
                           />
-                          <Label htmlFor={`submod-${sub.href}`} className="text-xs text-muted-foreground cursor-pointer">
+                          <Label htmlFor={`submod-${sub.href}`} className="text-[11px] font-bold text-muted-foreground cursor-pointer hover:text-foreground transition-colors uppercase">
                             {sub.label}
                           </Label>
                         </div>
