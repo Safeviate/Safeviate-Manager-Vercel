@@ -5,10 +5,9 @@ import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Booking } from '@/types/booking';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { ViewBookingDetails } from './view-booking-details';
+import { BackNavButton } from '@/components/back-nav-button';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 interface BookingDetailPageProps {
     params: Promise<{ id: string }>;
@@ -17,10 +16,10 @@ interface BookingDetailPageProps {
 export default function BookingDetailPage({ params }: BookingDetailPageProps) {
     const resolvedParams = use(params);
     const firestore = useFirestore();
-    const tenantId = 'safeviate';
+    const { tenantId } = useUserProfile();
 
     const bookingRef = useMemoFirebase(
-        () => firestore ? doc(firestore, `tenants/${tenantId}/bookings`, resolvedParams.id) : null,
+        () => firestore && tenantId ? doc(firestore, `tenants/${tenantId}/bookings`, resolvedParams.id) : null,
         [firestore, tenantId, resolvedParams.id]
     );
 
@@ -41,24 +40,14 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                 <p className="text-destructive mb-4">
                     {error ? `Error: ${error.message}` : "Booking not found."}
                 </p>
-                <Button asChild variant="outline">
-                    <Link href="/operations/bookings">
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Bookings
-                    </Link>
-                </Button>
+                <BackNavButton href="/bookings/schedule" text="Back to Daily Schedule" className="border-slate-300 bg-background text-foreground hover:bg-muted" />
             </div>
         )
     }
 
     return (
         <div className="max-w-[1200px] mx-auto w-full space-y-6">
-            <Button asChild variant="outline">
-                <Link href="/operations/bookings">
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Schedule
-                </Link>
-            </Button>
+            <BackNavButton href="/bookings/schedule" text="Back to Daily Schedule" className="border-slate-300 bg-background text-foreground hover:bg-muted" />
             <ViewBookingDetails
                 booking={booking}
             />

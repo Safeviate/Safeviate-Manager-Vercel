@@ -30,7 +30,7 @@ export const MainPageHeader: FC<MainPageHeaderProps> = ({
 
       {actions && (
         <div className="w-full overflow-x-auto no-scrollbar border-b bg-muted/5">
-          <div className="flex flex-row flex-nowrap items-center gap-2 w-max px-4 md:px-6 py-3">
+          <div className="flex w-full flex-wrap items-center gap-2 px-4 md:px-6 py-3">
             {actions}
           </div>
         </div>

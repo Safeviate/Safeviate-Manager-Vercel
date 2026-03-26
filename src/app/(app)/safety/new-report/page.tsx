@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Department } from '../../admin/department/page';
 import type { SafetyReport } from '@/types/safety-report';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 const getReportTypePrefix = (type: NewSafetyReportValues['reportType']): string => {
     switch (type) {
@@ -28,10 +29,10 @@ export default function NewSafetyReportPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const tenantId = 'safeviate'; // Hardcoded for now
+  const { tenantId } = useUserProfile();
 
   const handleNewReport = async (values: NewSafetyReportValues) => {
-    if (!firestore || !user) {
+    if (!firestore || !user || !tenantId) {
       toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to file a report.' });
       return;
     }

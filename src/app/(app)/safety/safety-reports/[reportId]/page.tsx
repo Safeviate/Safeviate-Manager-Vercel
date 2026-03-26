@@ -22,9 +22,11 @@ import type { Personnel } from '@/app/(app)/users/personnel/page';
 import type { RiskMatrixSettings } from '@/types/risk';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Badge } from '@/components/ui/badge';
 import { EditReportDialog } from '../edit-report-dialog';
 import { cn } from '@/lib/utils';
+import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 
 interface SafetyReportDetailPageProps {
   params: Promise<{ reportId: string }>;
@@ -34,16 +36,17 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
   const resolvedParams = use(params);
   const firestore = useFirestore();
   const { toast } = useToast();
-  const { userProfile } = useUserProfile();
-  const tenantId = 'safeviate';
+  const { userProfile, tenantId } = useUserProfile();
+  const isMobile = useIsMobile();
   const reportId = resolvedParams.reportId;
+  const [activeTab, setActiveTab] = useState('triage');
 
   const reportRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'tenants', tenantId, 'safety-reports', reportId) : null),
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'safety-reports', reportId) : null),
     [firestore, tenantId, reportId]
   );
   const personnelQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null),
+    () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/personnel`) : null),
     [firestore, tenantId]
   );
   const riskMatrixSettingsRef = useMemoFirebase(
@@ -88,7 +91,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
 
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
-      <Tabs defaultValue="triage" className="w-full flex-1 flex flex-col overflow-hidden">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col overflow-hidden">
         
         {/* --- MAIN CONTENT CARD --- */}
         <div className="flex-1 overflow-hidden pb-10 no-print pt-0">
@@ -124,17 +127,35 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
 
               {/* --- TAB BAR INSIDE CARD WITH HORIZONTAL SCROLL --- */}
               <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
-                <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center w-full">
-                  <TabsTrigger value="full" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Full Report</TabsTrigger>
-                  <TabsTrigger value="triage" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Report & Triage</TabsTrigger>
-                  <TabsTrigger value="hazards" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Hazard & Risk ID</TabsTrigger>
-                  <TabsTrigger value="investigation" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Investigation</TabsTrigger>
-                  <TabsTrigger value="cap" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Corrective Actions</TabsTrigger>
-                  <TabsTrigger value="review" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Final Review</TabsTrigger>
-                  <TabsTrigger value="discussion" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">
-                    Discussion {myMentionsCount > 0 && <Badge className="ml-2 h-4 px-1.5 min-w-4 flex items-center justify-center text-[10px]">{myMentionsCount}</Badge>}
-                  </TabsTrigger>
-                </TabsList>
+                {isMobile ? (
+                  <ResponsiveTabRow
+                    value={activeTab}
+                    onValueChange={setActiveTab}
+                    placeholder="Select Section"
+                    className="shrink-0"
+                    options={[
+                      { value: 'full', label: 'Full Report' },
+                      { value: 'triage', label: 'Report & Triage' },
+                      { value: 'hazards', label: 'Hazard & Risk ID' },
+                      { value: 'investigation', label: 'Investigation' },
+                      { value: 'cap', label: 'Corrective Actions' },
+                      { value: 'review', label: 'Final Review' },
+                      { value: 'discussion', label: myMentionsCount > 0 ? `Discussion (${myMentionsCount})` : 'Discussion' },
+                    ]}
+                  />
+                ) : (
+                  <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center w-full">
+                    <TabsTrigger value="full" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Full Report</TabsTrigger>
+                    <TabsTrigger value="triage" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Report & Triage</TabsTrigger>
+                    <TabsTrigger value="hazards" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Hazard & Risk ID</TabsTrigger>
+                    <TabsTrigger value="investigation" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Investigation</TabsTrigger>
+                    <TabsTrigger value="cap" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Corrective Actions</TabsTrigger>
+                    <TabsTrigger value="review" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Final Review</TabsTrigger>
+                    <TabsTrigger value="discussion" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">
+                      Discussion {myMentionsCount > 0 && <Badge className="ml-2 h-4 px-1.5 min-w-4 flex items-center justify-center text-[10px]">{myMentionsCount}</Badge>}
+                    </TabsTrigger>
+                  </TabsList>
+                )}
               </div>
             </div>
 

@@ -10,9 +10,11 @@ import type { Department } from '../../admin/department/page';
 import { PersonnelTable } from './personnel-table';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Users } from 'lucide-react';
+import { ChevronDown, PlusCircle, Users } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MainPageHeader } from '@/components/page-header';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 export type UserAccessOverrides = {
   hiddenMenus?: string[];
@@ -100,32 +102,36 @@ export type Personnel = {
 
 export default function PersonnelPage() {
   const firestore = useFirestore();
+  const isMobile = useIsMobile();
   const { hasPermission } = usePermissions();
-  const tenantId = 'safeviate'; // Hardcoded for now
+  const { tenantId } = useUserProfile();
   const canCreateUsers = hasPermission('users-create');
 
   const personnelQuery = useMemoFirebase(
     () =>
       firestore
+        && tenantId
         ? query(collection(firestore, 'tenants', tenantId, 'personnel'))
         : null,
-    [firestore]
+    [firestore, tenantId]
   );
   
   const rolesQuery = useMemoFirebase(
     () =>
       firestore
+        && tenantId
         ? query(collection(firestore, 'tenants', tenantId, 'roles'))
         : null,
-    [firestore]
+    [firestore, tenantId]
   );
 
   const departmentsQuery = useMemoFirebase(
     () =>
       firestore
+        && tenantId
         ? query(collection(firestore, 'tenants', tenantId, 'departments'))
         : null,
-    [firestore]
+    [firestore, tenantId]
   );
   
 
@@ -158,9 +164,17 @@ export default function PersonnelPage() {
                 roles={roles || []} 
                 departments={departments || []}
                 trigger={
-                    <Button disabled={!canCreateUsers} className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2 h-9 px-6 text-xs font-black uppercase">
-                        <PlusCircle className="h-4 w-4" />
-                        Add User
+                    <Button
+                        disabled={!canCreateUsers}
+                        variant={isMobile ? 'outline' : 'default'}
+                        size={isMobile ? 'sm' : 'default'}
+                        className={isMobile ? 'h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100' : 'w-full gap-2 bg-emerald-700 px-6 text-xs font-black uppercase text-white shadow-md hover:bg-emerald-800 sm:w-auto'}
+                    >
+                        <span className="flex items-center gap-2">
+                            <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+                            Add User
+                        </span>
+                        {isMobile ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
                     </Button>
                 }
              />
@@ -178,7 +192,7 @@ export default function PersonnelPage() {
               data={personnel || []} 
               rolesMap={rolesMap} 
               departmentsMap={departmentsMap} 
-              tenantId={tenantId} 
+              tenantId={tenantId || ''} 
             />
           )}
         </CardContent>

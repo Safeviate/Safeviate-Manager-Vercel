@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Search, Trash2, Library, Pencil, Database, CheckCircle2, AlertCircle, Loader2, MoreHorizontal, WandSparkles } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Library, Pencil, Database, CheckCircle2, AlertCircle, Loader2, MoreHorizontal, WandSparkles, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -121,12 +121,19 @@ export default function QuestionBankPage() {
             isMobile ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="compact" variant="outline" className="gap-2">
-                    <MoreHorizontal className="h-4 w-4" />
-                    Actions
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                  >
+                    <span className="flex items-center gap-2">
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                      Actions
+                    </span>
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
                   <AiExamGenerator 
                     onGenerated={handleAiGenerated} 
                     trigger={

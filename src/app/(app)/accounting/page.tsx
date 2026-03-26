@@ -8,34 +8,29 @@ import { MainPageHeader } from "@/components/page-header";
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileSpreadsheet, Calculator, Receipt, ListFilter } from 'lucide-react';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { FileSpreadsheet, Calculator, Receipt, ListFilter, ChevronsUpDown } from 'lucide-react';
 import { BillingTable } from './billing-table';
 import { format } from 'date-fns';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/types/aircraft';
 import type { Personnel, PilotProfile } from '../users/personnel/page';
 import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ResponsiveTabRow } from '@/components/responsive-tab-row';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function AccountingPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
   const isMobile = useIsMobile();
 
   // --- Data Fetching ---
-  const bookingsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/bookings`) : null), [firestore, tenantId]);
-  const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
-  const personnelQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
+  const bookingsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/bookings`) : null), [firestore, tenantId]);
+  const aircraftQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
+  const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
 
   const { data: bookings, isLoading: loadingB } = useCollection<Booking>(bookingsQuery);
   const { data: aircrafts, isLoading: loadingA } = useCollection<Aircraft>(aircraftQuery);
@@ -79,7 +74,7 @@ export default function AccountingPage() {
   };
 
   const handleSageExport = async () => {
-    if (selectedIds.size === 0 || !firestore) return;
+    if (selectedIds.size === 0 || !firestore || !tenantId) return;
 
     try {
       const selectedBookings = enrichedData.unbilled.filter(b => selectedIds.has(b.id));
@@ -147,11 +142,16 @@ export default function AccountingPage() {
             actions={
               <Button 
                 size="sm"
-                className="h-9 px-6 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2 shrink-0" 
+                variant={isMobile ? "outline" : "default"}
+                className={isMobile ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" : "h-9 px-6 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2 shrink-0"} 
                 onClick={handleSageExport} 
                 disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
               >
-                <FileSpreadsheet className="h-4 w-4" /> {isMobile ? `Export (${selectedIds.size})` : `Export to Sage (${selectedIds.size})`}
+                <span className="flex items-center gap-2">
+                  <FileSpreadsheet className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                  {isMobile ? `Export (${selectedIds.size})` : `Export to Sage (${selectedIds.size})`}
+                </span>
+                {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
               </Button>
             }
           />
@@ -184,40 +184,16 @@ export default function AccountingPage() {
             </div>
           </div>
 
-          <div className="border-b bg-muted/5 px-6 py-3 shrink-0">
-            {isMobile ? (
-              <Select value={activeTab} onValueChange={setActiveTab}>
-                <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
-                  <SelectValue placeholder="Filter View" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unbilled" className="text-[10px] font-bold uppercase">
-                    <div className="flex items-center gap-2">
-                      <ListFilter className="h-3.5 w-3.5" />
-                      Unbilled Flights ({enrichedData.unbilled.length})
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="exported" className="text-[10px] font-bold uppercase">
-                    <div className="flex items-center gap-2">
-                      <ListFilter className="h-3.5 w-3.5" />
-                      Export History ({enrichedData.exported.length})
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <div className="flex w-max gap-2 pr-6 flex-nowrap">
-                <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
-                  <TabsTrigger value="unbilled" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all">
-                    Unbilled Flights ({enrichedData.unbilled.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="exported" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all">
-                    Export History ({enrichedData.exported.length})
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-            )}
-          </div>
+          <ResponsiveTabRow
+            value={activeTab}
+            onValueChange={setActiveTab}
+            placeholder="Filter View"
+            className="border-b bg-muted/5 px-6 py-3 shrink-0"
+            options={[
+              { value: 'unbilled', label: `Unbilled Flights (${enrichedData.unbilled.length})`, icon: ListFilter },
+              { value: 'exported', label: `Export History (${enrichedData.exported.length})`, icon: ListFilter },
+            ]}
+          />
 
           <CardContent className="flex-1 p-0 overflow-hidden">
             <TabsContent value="unbilled" className="m-0 h-full overflow-auto">

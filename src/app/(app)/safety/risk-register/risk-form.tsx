@@ -26,6 +26,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 const DEFAULT_HAZARD_AREAS = [
     'Flight Operations', 
@@ -272,12 +273,12 @@ export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false
   const router = useRouter();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
 
-  const riskMatrixRef = useMemoFirebase(() => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-matrix-config') : null), [firestore, tenantId]);
+  const riskMatrixRef = useMemoFirebase(() => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-matrix-config') : null), [firestore, tenantId]);
   const { data: riskMatrixSettings } = useDoc<RiskMatrixSettings>(riskMatrixRef);
   
-  const riskRegisterSettingsRef = useMemoFirebase(() => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-register-config') : null), [firestore, tenantId]);
+  const riskRegisterSettingsRef = useMemoFirebase(() => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-register-config') : null), [firestore, tenantId]);
   const { data: registerSettings } = useDoc<RiskRegisterSettings>(riskRegisterSettingsRef);
 
   const hazardAreas = React.useMemo(() => {
@@ -290,7 +291,7 @@ export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false
   });
 
   const onSubmit = async (data: RiskFormValues) => {
-    if (!firestore) return;
+    if (!firestore || !tenantId) return;
     setIsSubmitting(true);
     
     // Convert dates back to ISO strings before saving

@@ -7,7 +7,7 @@ import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid, ChevronsUpDown } from 'lucide-react';
+import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid, ChevronsUpDown, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -28,9 +28,12 @@ import { permissionsConfig } from '@/lib/permissions-config';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { menuConfig } from '@/lib/menu-config';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ResponsiveTabRow } from '@/components/responsive-tab-row';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -38,6 +41,8 @@ interface ViewPersonnelDetailsProps {
   user: UserProfile;
   role: Role | null;
   department: Department | null;
+  canEditUsers?: boolean;
+  onEdit?: () => void;
 }
 
 type Document = NonNullable<UserProfile['documents']>[0];
@@ -62,18 +67,20 @@ const isPilotProfile = (user: UserProfile): user is PilotProfile => {
     return user.userType === 'Student' || user.userType === 'Private Pilot' || user.userType === 'Instructor';
 }
 
-export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDetailsProps) {
+export function ViewPersonnelDetails({ user, role, department, canEditUsers = false, onEdit }: ViewPersonnelDetailsProps) {
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const firestore = useFirestore();
   const { hasPermission } = usePermissions();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
 
   const canEdit = hasPermission('users-edit');
 
   const expirySettingsRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
     [firestore, tenantId]
   );
   const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
@@ -203,45 +210,78 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
 
   const isStudent = isPilotProfile(user) && user.userType === 'Student';
   const isAnyPilot = isPilotProfile(user);
+  const detailTitle = `${user.firstName} ${user.lastName}`.trim();
+  const tabOptions = [
+    { value: 'overview', label: 'Overview' },
+    { value: 'documents', label: 'Documents' },
+    { value: 'access', label: 'Module Access' },
+    { value: 'permissions', label: 'Granular Permissions' },
+    ...(isStudent ? [{ value: 'training', label: 'Training Records' }] : []),
+    ...(isAnyPilot ? [{ value: 'logbook', label: 'Logbook' }] : []),
+  ];
 
   return (
-    <Tabs defaultValue="overview" className="w-full flex flex-col h-full overflow-hidden">
-        <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 shrink-0 border-b-0 overflow-x-auto no-scrollbar justify-start">
-            <TabsTrigger value="overview" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Overview</TabsTrigger>
-            <TabsTrigger value="documents" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Documents</TabsTrigger>
-            <TabsTrigger value="access" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Module Access</TabsTrigger>
-            <TabsTrigger value="permissions" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Granular Permissions</TabsTrigger>
-            {isStudent && <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Training Records</TabsTrigger>}
-            {isAnyPilot && <TabsTrigger value="logbook" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Logbook</TabsTrigger>}
-        </TabsList>
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col h-full overflow-hidden gap-4">
+        <Card className="shrink-0 overflow-hidden shadow-none border">
+            <CardHeader className="flex flex-row items-center justify-between gap-3 border-b bg-muted/5 p-4 md:p-6">
+                <div className="flex flex-wrap items-center gap-2">
+                    <CardTitle className="text-[12px] uppercase font-black tracking-wider text-muted-foreground">
+                        {detailTitle}
+                    </CardTitle>
+                </div>
+            </CardHeader>
+            {canEditUsers && onEdit ? (
+                <div className="w-full overflow-x-auto border-b bg-muted/5 no-scrollbar">
+                    <div className="flex w-full flex-wrap items-center gap-2 px-4 py-3 md:px-6">
+                        <Button
+                            onClick={onEdit}
+                            size={isMobile ? 'sm' : 'default'}
+                            variant={isMobile ? 'outline' : 'default'}
+                            className={isMobile ? 'h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100' : 'gap-2'}
+                        >
+                            <span className="flex items-center gap-2">
+                                <Pencil className={isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+                                Edit Profile
+                            </span>
+                            {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
+                        </Button>
+                    </div>
+                </div>
+            ) : null}
+            <div className="px-4 py-3 md:px-6">
+                <ResponsiveTabRow
+                    options={tabOptions}
+                    value={activeTab}
+                    onValueChange={setActiveTab}
+                    className="shrink-0"
+                    ariaLabel="Profile sections"
+                />
+            </div>
+        </Card>
         
         <TabsContent value="overview" className="mt-0 flex-1 min-h-0 overflow-hidden">
             <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-                <CardHeader className="shrink-0 border-b bg-muted/5">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <CardTitle>Personnel Overview</CardTitle>
-                            <CardDescription>Primary identification and organizational details.</CardDescription>
-                        </div>
-                        <div className="flex flex-col gap-2 items-end">
-                          {user.isErpIncerfaContact && (
-                              <Badge className="bg-red-600 text-white gap-1.5 h-7 px-3">
-                                  <ShieldAlert className="h-3.5 w-3.5" />
-                                  Designated INCERFA Contact
-                              </Badge>
-                          )}
-                          {user.isErpAlerfaContact && (
-                              <Badge className="bg-amber-600 text-white gap-1.5 h-7 px-3">
-                                  <ShieldAlert className="h-3.5 w-3.5" />
-                                  Designated ALERFA Contact
-                              </Badge>
-                          )}
-                        </div>
-                    </div>
-                </CardHeader>
                 <CardContent className="flex-1 p-0 overflow-hidden">
                     <ScrollArea className="h-full">
                         <div className="p-6 space-y-10">
+                            {(user.isErpIncerfaContact || user.isErpAlerfaContact) && (
+                                <section>
+                                    <div className="flex flex-wrap justify-center gap-2">
+                                        {user.isErpIncerfaContact && (
+                                            <Badge className="h-7 gap-1.5 rounded-full bg-red-600 px-3 text-white">
+                                                <ShieldAlert className="h-3.5 w-3.5" />
+                                                Designated INCERFA Contact
+                                            </Badge>
+                                        )}
+                                        {user.isErpAlerfaContact && (
+                                            <Badge className="h-7 gap-1.5 rounded-full bg-amber-600 px-3 text-white">
+                                                <ShieldAlert className="h-3.5 w-3.5" />
+                                                Designated ALERFA Contact
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </section>
+                            )}
                             <section>
                                 <SectionHeader title="Contact & Role" icon={Contact} />
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -288,20 +328,31 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
 
         <TabsContent value="documents" className="mt-0 flex-1 min-h-0 overflow-hidden">
             <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-                <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-row items-center justify-between space-y-0">
+                <CardHeader className="shrink-0 border-b bg-muted/5">
                     <div>
                         <CardTitle>Documents</CardTitle>
                         <CardDescription>Required and uploaded compliance documentation.</CardDescription>
                     </div>
+                </CardHeader>
+                <div className="shrink-0 border-b px-4 py-3 md:px-6">
                     <DocumentUploader
                         onDocumentUploaded={onDocumentUploaded}
                         trigger={(openDialog) => (
-                            <Button size="sm" variant="outline" onClick={() => openDialog()}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Document
+                            <Button
+                                size={isMobile ? "sm" : "default"}
+                                variant={isMobile ? "outline" : "default"}
+                                onClick={() => openDialog()}
+                                className={isMobile ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" : "gap-2"}
+                            >
+                                <span className="flex items-center gap-2">
+                                    <PlusCircle className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                                    Add Document
+                                </span>
+                                {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
                             </Button>
                         )}
                     />
-                </CardHeader>
+                </div>
                 <CardContent className="flex-1 p-0 overflow-hidden">
                     <ScrollArea className="h-full">
                         <div className="p-6">

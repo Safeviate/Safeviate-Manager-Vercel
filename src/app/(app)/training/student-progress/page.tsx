@@ -9,13 +9,14 @@ import type { PilotProfile } from '../../users/personnel/page';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { GraduationCap } from 'lucide-react';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function StudentProgressPage() {
   const firestore = useFirestore();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
 
   const studentsQuery = useMemoFirebase(
-    () => firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null,
+    () => firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/students`)) : null,
     [firestore, tenantId]
   );
   

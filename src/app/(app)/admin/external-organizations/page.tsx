@@ -10,21 +10,26 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ChevronsUpDown } from 'lucide-react';
 import type { ExternalOrganization } from '@/types/quality';
+import { DeleteActionButton, EditActionButton } from '@/components/record-action-buttons';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function ExternalOrganizationsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
-  const tenantId = 'safeviate';
+  const isMobile = useIsMobile();
+  const { tenantId } = useUserProfile();
   
   const canManage = hasPermission('admin-external-orgs-manage');
 
   const orgsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/external-organizations`)) : null),
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/external-organizations`)) : null),
     [firestore, tenantId]
   );
   
@@ -50,7 +55,7 @@ export default function ExternalOrganizationsPage() {
       return;
     }
 
-    if (!firestore) return;
+    if (!firestore || !tenantId) return;
 
     const data = { name, contactEmail: email, address };
 
@@ -68,7 +73,7 @@ export default function ExternalOrganizationsPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (!firestore) return;
+    if (!firestore || !tenantId) return;
     const orgRef = doc(firestore, `tenants/${tenantId}/external-organizations`, id);
     deleteDocumentNonBlocking(orgRef);
     toast({ title: 'Organization Deleted' });
@@ -82,8 +87,16 @@ export default function ExternalOrganizationsPage() {
           <p className="text-muted-foreground">Manage external companies involved in quality audits.</p>
         </div>
         {canManage && (
-          <Button onClick={() => handleOpenForm()}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Organization
+          <Button
+            onClick={() => handleOpenForm()}
+            variant={isMobile ? "outline" : "default"}
+            size={isMobile ? "sm" : "default"}
+            className={isMobile ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" : undefined}
+          >
+            <span className="flex items-center gap-2">
+              <PlusCircle className={isMobile ? "h-3.5 w-3.5" : "mr-2 h-4 w-4"} /> Add Organization
+            </span>
+            {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
           </Button>
         )}
       </div>
@@ -109,8 +122,12 @@ export default function ExternalOrganizationsPage() {
                   <TableCell className="max-w-[200px] truncate">{org.address || 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenForm(org)}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(org.id)}><Trash2 className="h-4 w-4" /></Button>
+                      <EditActionButton onClick={() => handleOpenForm(org)} label="Edit organization" />
+                      <DeleteActionButton
+                        description={`This will permanently delete external organization "${org.name}".`}
+                        onDelete={() => handleDelete(org.id)}
+                        srLabel="Delete organization"
+                      />
                     </div>
                   </TableCell>
                 </TableRow>

@@ -9,23 +9,28 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Pencil, Trash2, Building2 } from 'lucide-react';
+import { PlusCircle, Building2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { ExternalOrganization } from '@/types/quality';
+import { ChevronsUpDown } from 'lucide-react';
+import { DeleteActionButton, EditActionButton } from '@/components/record-action-buttons';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function ExternalCompaniesPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
-  const tenantId = 'safeviate';
+  const isMobile = useIsMobile();
+  const { tenantId } = useUserProfile();
   
   const canManage = hasPermission('admin-external-orgs-manage');
 
   const orgsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/external-organizations`)) : null),
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/external-organizations`)) : null),
     [firestore, tenantId]
   );
   
@@ -51,7 +56,7 @@ export default function ExternalCompaniesPage() {
       return;
     }
 
-    if (!firestore) return;
+    if (!firestore || !tenantId) return;
 
     const data = { name, contactEmail: email, address };
 
@@ -69,7 +74,7 @@ export default function ExternalCompaniesPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (!firestore) return;
+    if (!firestore || !tenantId) return;
     const orgRef = doc(firestore, `tenants/${tenantId}/external-organizations`, id);
     deleteDocumentNonBlocking(orgRef);
     toast({ title: 'Organization Deleted' });
@@ -83,8 +88,17 @@ export default function ExternalCompaniesPage() {
           {canManage && (
             <div className="flex flex-col gap-1 sm:items-end w-full sm:w-auto">
               <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Company Control</p>
-              <Button onClick={() => handleOpenForm()}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Company
+              <Button
+                onClick={() => handleOpenForm()}
+                variant={isMobile ? 'outline' : 'default'}
+                size={isMobile ? 'sm' : 'default'}
+                className={isMobile ? 'h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100' : undefined}
+              >
+                <span className="flex items-center gap-2">
+                  <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'mr-2 h-4 w-4'} />
+                  Add Company
+                </span>
+                {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
               </Button>
             </div>
           )}
@@ -111,8 +125,12 @@ export default function ExternalCompaniesPage() {
                       <TableCell className="max-w-[200px] truncate">{org.address || 'N/A'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenForm(org)}><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(org.id)}><Trash2 className="h-4 w-4" /></Button>
+                          <EditActionButton onClick={() => handleOpenForm(org)} label="Edit company" />
+                          <DeleteActionButton
+                            description={`This will permanently delete external company "${org.name}".`}
+                            onDelete={() => handleDelete(org.id)}
+                            srLabel="Delete company"
+                          />
                         </div>
                       </TableCell>
                     </TableRow>

@@ -10,6 +10,7 @@ import { NewMocForm, type NewMocFormValues } from './new-moc-form';
 import type { ManagementOfChange } from '@/types/moc';
 import type { Department } from '@/app/(app)/admin/department/page';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 const getMocPrefix = (): string => 'MOC';
 
@@ -20,17 +21,17 @@ function NewMocContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
 
   const orgId = searchParams.get('orgId');
 
   // Fetch departments and personnel for the form dropdowns
   const departmentsQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'tenants', tenantId, 'departments') : null),
+    () => (firestore && tenantId ? collection(firestore, 'tenants', tenantId, 'departments') : null),
     [firestore, tenantId]
   );
   const personnelQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'tenants', tenantId, 'personnel') : null),
+    () => (firestore && tenantId ? collection(firestore, 'tenants', tenantId, 'personnel') : null),
     [firestore, tenantId]
   );
 
@@ -38,7 +39,7 @@ function NewMocContent() {
   const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
 
   const handleNewMoc = async (values: NewMocFormValues) => {
-    if (!firestore || !user) {
+    if (!firestore || !user || !tenantId) {
       toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to propose a change.' });
       return;
     }

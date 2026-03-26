@@ -5,7 +5,7 @@ import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
-import { Search, PlusCircle, Pencil, Trash2, ClipboardCheck, PlayCircle, ShieldCheck, Microscope, Database, MoreHorizontal } from 'lucide-react';
+import { Search, PlusCircle, Pencil, Trash2, ClipboardCheck, PlayCircle, ShieldCheck, Microscope, Database, MoreHorizontal, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Link from 'next/link';
 import type { ExamTopicsSettings } from '../../admin/exam-topics/page';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,12 +32,13 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { DeleteActionButton } from '@/components/record-action-buttons';
 
 export default function ExamsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
   const isMobile = useIsMobile();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,31 +51,31 @@ export default function ExamsPage() {
   const canManage = hasPermission('training-exams-manage');
 
   const templatesQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/exam-templates`), orderBy('title', 'asc')) : null),
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/exam-templates`), orderBy('title', 'asc')) : null),
     [firestore, tenantId]
   );
 
   const resultsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/student-exam-results`), orderBy('date', 'desc')) : null),
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/student-exam-results`), orderBy('date', 'desc')) : null),
     [firestore, tenantId]
   );
 
   const poolQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/question-pool`)) : null),
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/question-pool`)) : null),
     [firestore, tenantId]
   );
 
   const topicsRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, `tenants/${tenantId}/settings`, 'exam-topics') : null),
+    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'exam-topics') : null),
     [firestore, tenantId]
   );
 
   const personnelQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
     [firestore, tenantId]
   );
-  const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
 
   const { data: templates, isLoading: isLoadingTemplates } = useCollection<ExamTemplate>(templatesQuery);
   const { data: results, isLoading: isLoadingResults } = useCollection<ExamResult>(resultsQuery);
@@ -104,7 +106,7 @@ export default function ExamsPage() {
   }, [templates, searchQuery]);
 
   const handleDelete = async (id: string) => {
-    if (!firestore || !window.confirm('Are you sure you want to delete this exam template?')) return;
+    if (!firestore || !tenantId) return;
     try {
       await deleteDoc(doc(firestore, `tenants/${tenantId}/exam-templates`, id));
       toast({ title: 'Exam Deleted' });
@@ -157,12 +159,19 @@ export default function ExamsPage() {
               isMobile ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="compact" variant="outline" className="gap-2">
-                      <MoreHorizontal className="h-4 w-4" />
-                      Actions
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                    >
+                      <span className="flex items-center gap-2">
+                        <MoreHorizontal className="h-3.5 w-3.5" />
+                        Actions
+                      </span>
+                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
                     <DropdownMenuItem onClick={() => setActiveTab('internal')}>
                       <ShieldCheck className="mr-2 h-4 w-4" /> View Internal
                     </DropdownMenuItem>
@@ -261,16 +270,18 @@ export default function ExamsPage() {
                                           <Pencil className="h-3.5 w-3.5" />
                                         </Link>
                                       </Button>
-                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(template.id)}>
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </Button>
+                                      <DeleteActionButton
+                                        description={`This will permanently delete the exam template "${template.title}".`}
+                                        onDelete={() => handleDelete(template.id)}
+                                        srLabel="Delete exam template"
+                                      />
                                     </>
                                   )}
                                 </div>
                               </div>
                             </div>
-                          ))}
-                        </div>
+                        ))}
+                      </div>
 
                         <div className="hidden overflow-x-auto sm:block">
                           <Table>
@@ -304,9 +315,13 @@ export default function ExamsPage() {
                                               <Pencil className="h-3.5 w-3.5" />
                                             </Link>
                                           </Button>
-                                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(template.id)}>
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                          </Button>
+                                          <div className="opacity-0 transition-opacity group-hover:opacity-100">
+                                            <DeleteActionButton
+                                              description={`This will permanently delete the exam template "${template.title}".`}
+                                              onDelete={() => handleDelete(template.id)}
+                                              srLabel="Delete exam template"
+                                            />
+                                          </div>
                                         </>
                                       )}
                                     </div>

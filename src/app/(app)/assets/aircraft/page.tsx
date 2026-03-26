@@ -9,17 +9,17 @@ import type { Aircraft } from '@/types/aircraft';
 import { MainPageHeader } from '@/components/page-header';
 import { AddAircraftDialog } from './add-aircraft-dialog';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function AircraftFleetPage() {
   const firestore = useFirestore();
   const { hasPermission } = usePermissions();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
 
-  // Check if the user has permission to manage assets (to show the Add Aircraft button)
-  const canManageAssets = hasPermission('assets-view'); // Reusing assets-view or create a new one like 'assets-manage'
+  const canManageAssets = hasPermission('assets-create') || hasPermission('assets-edit');
 
   const aircraftQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
     [firestore, tenantId]
   );
 
@@ -42,12 +42,12 @@ export default function AircraftFleetPage() {
           description="Manage all aircraft in your organization's inventory."
           actions={
             canManageAssets && (
-              <AddAircraftDialog tenantId={tenantId} />
+              <AddAircraftDialog tenantId={tenantId || ''} />
             )
           }
         />
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
-          <AircraftList data={aircrafts || []} tenantId={tenantId} />
+          <AircraftList data={aircrafts || []} tenantId={tenantId || ''} />
         </CardContent>
       </Card>
     </div>

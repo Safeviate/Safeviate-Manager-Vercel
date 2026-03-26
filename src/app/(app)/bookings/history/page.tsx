@@ -31,13 +31,8 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ResponsiveTabRow } from '@/components/responsive-tab-row';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 type EnrichedBooking = Booking & {
   aircraftTailNumber?: string;
@@ -66,12 +61,10 @@ const getStatusBadgeVariant = (status: Booking['status']): "default" | "secondar
     }
 }
 
-function DeleteBookingButton({ booking }: { booking: EnrichedBooking }) {
+function DeleteBookingButton({ booking, tenantId }: { booking: EnrichedBooking, tenantId: string }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const { hasPermission } = usePermissions();
-    const tenantId = 'safeviate';
-
     const isCompleted = booking.status === 'Completed';
     const canDelete = hasPermission('bookings-delete') && (!isCompleted || hasPermission('admin-database-manage'));
 
@@ -116,7 +109,7 @@ function DeleteBookingButton({ booking }: { booking: EnrichedBooking }) {
     );
 }
 
-const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
+const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], tenantId: string }) => {
     if (bookings.length === 0) {
         return (
             <div className="h-24 text-center flex items-center justify-center text-muted-foreground text-xs uppercase font-bold tracking-widest bg-muted/5">
@@ -178,7 +171,7 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                                                 </Link>
                                             </Button>
                                         )}
-                                        <DeleteBookingButton booking={b} />
+                                        <DeleteBookingButton booking={b} tenantId={tenantId} />
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -192,19 +185,19 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
 
 export default function BookingsHistoryPage() {
   const firestore = useFirestore();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('all');
 
   const bookingsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'bookings'), orderBy('bookingNumber', 'desc')) : null),
+    () => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'bookings'), orderBy('bookingNumber', 'desc')) : null),
     [firestore, tenantId]
   );
-  const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'aircrafts') : null), [firestore, tenantId]);
-  const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'personnel')) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'instructors')) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'students')) : null), [firestore, tenantId]);
-  const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'private-pilots')) : null), [firestore, tenantId]);
+  const aircraftQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, 'tenants', tenantId, 'aircrafts') : null), [firestore, tenantId]);
+  const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'personnel')) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'instructors')) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'students')) : null), [firestore, tenantId]);
+  const privatePilotsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'private-pilots')) : null), [firestore, tenantId]);
 
   const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
   const { data: aircraft } = useCollection<Aircraft>(aircraftQuery);
@@ -251,43 +244,25 @@ export default function BookingsHistoryPage() {
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full min-h-0">
       <Card className="flex-grow flex flex-col shadow-none border overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-col">
-          <MainPageHeader 
-            title="Bookings History"
-            actions={
-              isMobile ? (
-                <Select value={activeTab} onValueChange={setActiveTab}>
-                  <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
-                    <SelectValue placeholder="Filter by Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tabs.map((tab) => (
-                      <SelectItem key={tab.value} value={tab.value} className="text-[10px] font-bold uppercase">
-                        <div className="flex items-center gap-2">
-                          <ListFilter className="h-3.5 w-3.5" />
-                          {tab.label}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 overflow-x-auto no-scrollbar justify-start w-full flex">
-                  {tabs.map((tab) => (
-                    <TabsTrigger key={tab.value} value={tab.value} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-bold uppercase">
-                      {tab.label}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              )
-            }
+          <MainPageHeader title="Bookings History" />
+          <ResponsiveTabRow
+            value={activeTab}
+            onValueChange={setActiveTab}
+            placeholder="Filter by Type"
+            className="border-b bg-muted/5 px-4 py-3 shrink-0"
+            options={tabs.map((tab) => ({
+              value: tab.value,
+              label: tab.label,
+              icon: ListFilter,
+            }))}
           />
           <CardContent className='p-0 flex-1 min-h-0'>
                 <div className={cn("overflow-auto", isMobile ? "h-full min-h-0" : "h-[calc(100vh-21rem)]")}>
-                    <TabsContent value="all" className='m-0'><BookingsTable bookings={enrichedBookings} /></TabsContent>
-                    <TabsContent value="training" className='m-0'><BookingsTable bookings={trainingBookings} /></TabsContent>
-                    <TabsContent value="private" className='m-0'><BookingsTable bookings={privateBookings} /></TabsContent>
-                    <TabsContent value="maintenance" className='m-0'><BookingsTable bookings={maintenanceBookings} /></TabsContent>
-                    <TabsContent value="cancelled" className='m-0'><BookingsTable bookings={cancelledBookings} /></TabsContent>
+                    <TabsContent value="all" className='m-0'><BookingsTable bookings={enrichedBookings} tenantId={tenantId || ''} /></TabsContent>
+                    <TabsContent value="training" className='m-0'><BookingsTable bookings={trainingBookings} tenantId={tenantId || ''} /></TabsContent>
+                    <TabsContent value="private" className='m-0'><BookingsTable bookings={privateBookings} tenantId={tenantId || ''} /></TabsContent>
+                    <TabsContent value="maintenance" className='m-0'><BookingsTable bookings={maintenanceBookings} tenantId={tenantId || ''} /></TabsContent>
+                    <TabsContent value="cancelled" className='m-0'><BookingsTable bookings={cancelledBookings} tenantId={tenantId || ''} /></TabsContent>
                 </div>
             </CardContent>
         </Tabs>

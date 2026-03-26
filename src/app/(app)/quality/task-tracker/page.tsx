@@ -1,33 +1,26 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, query, doc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Eye, ListTodo, Building } from 'lucide-react';
-import Link from 'next/link';
+import { ListTodo } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
+import { OrganizationTabsRow } from '@/components/responsive-tab-row';
+import { ViewActionButton } from '@/components/record-action-buttons';
 import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { cn } from '@/lib/utils';
 
 import type { ManagementOfChange } from '@/types/moc';
 import type { SafetyReport } from '@/types/safety-report';
-import type { CorrectiveActionPlan, QualityAudit, ExternalOrganization, TabVisibilitySettings } from '@/types/quality';
+import type { CorrectiveActionPlan, QualityAudit, ExternalOrganization } from '@/types/quality';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 
 type UnifiedTask = {
@@ -43,67 +36,12 @@ type UnifiedTask = {
   organizationId?: string | null;
 };
 
-function CompanyTabsRow({ organizations, activeTab, onTabChange }: { organizations: ExternalOrganization[], activeTab: string, onTabChange: (value: string) => void }) {
-  const isMobile = useIsMobile();
-
-  if (isMobile) {
-    return (
-      <div className="border-b bg-muted/5 px-4 py-3">
-        <Select value={activeTab} onValueChange={onTabChange}>
-          <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
-            <SelectValue placeholder="Select Organization" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="internal" className="text-[10px] font-bold uppercase">
-              <div className="flex items-center gap-2">
-                <Building className="h-3.5 w-3.5" />
-                Internal
-              </div>
-            </SelectItem>
-            {organizations.map((organization) => (
-              <SelectItem key={organization.id} value={organization.id} className="text-[10px] font-bold uppercase">
-                <div className="flex items-center gap-2">
-                  <Building className="h-3.5 w-3.5" />
-                  {organization.name}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    );
-  }
-
-  return (
-    <div className="border-b bg-muted/5 px-6 py-3 overflow-x-auto no-scrollbar">
-      <div className="flex w-max gap-2 pr-6 flex-nowrap">
-        <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
-          <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase">
-            Internal
-          </TabsTrigger>
-          {organizations.map((organization) => (
-            <TabsTrigger
-              key={organization.id}
-              value={organization.id}
-              className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase"
-            >
-              {organization.name}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </div>
-    </div>
-  );
-}
-
 export default function TaskTrackerPage() {
   const firestore = useFirestore();
   const { tenantId } = useUserProfile();
-  const { hasPermission } = usePermissions();
   const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'quality-tasks-view' });
+  const isMobile = useIsMobile();
   const [activeOrgTab, setActiveOrgTab] = useState('internal');
-
-  const canViewAll = hasPermission('quality-tasks-view');
 
   const mocsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/management-of-change`)) : null), [firestore, tenantId]);
   const safetyReportsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/safety-reports`)) : null), [firestore, tenantId]);
@@ -238,12 +176,7 @@ export default function TaskTrackerPage() {
                 <Badge variant={getStatusBadgeVariant(task.status)} className="text-[10px] font-black uppercase py-0.5 px-3">{task.status}</Badge>
               </TableCell>
               <TableCell className="text-right">
-                  <Button asChild variant="outline" size="sm" className="h-9 gap-2 text-[10px] font-black uppercase border-slate-300">
-                      <Link href={task.link}>
-                        <Eye className="h-4 w-4" />
-                        View
-                      </Link>
-                  </Button>
+                  <ViewActionButton href={task.link} />
               </TableCell>
             </TableRow>
           ))
@@ -266,8 +199,8 @@ export default function TaskTrackerPage() {
     return (
       <Card className="min-h-[400px] flex flex-col shadow-none border">
         <MainPageHeader title="Task Tracker" description="Centralized oversight of all corrective actions and mitigation tasks across the organization." />
-        {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
-        <CardContent className="p-0 overflow-auto">
+        {shouldShowOrganizationTabs && <OrganizationTabsRow organizations={organizations || []} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
+        <CardContent className={cn("p-0", isMobile ? "overflow-y-auto" : "overflow-auto")}>
           {renderTasksTable(filteredTasks)}
         </CardContent>
       </Card>
@@ -286,18 +219,18 @@ export default function TaskTrackerPage() {
   const showTabs = shouldShowOrganizationTabs;
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full px-1">
+    <div className={cn("max-w-[1200px] mx-auto w-full flex flex-col gap-6 px-1", isMobile ? "min-h-0 overflow-y-auto" : "h-full")}>
         {!showTabs ? (
             renderOrgCard(scopedOrganizationId)
         ) : (
-            <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className="w-full flex-1 flex flex-col overflow-hidden">
-                <div className="flex-1 min-h-0 overflow-hidden">
-                    <TabsContent value="internal" className="m-0 p-0 h-full">
+            <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className={cn("w-full flex-1 flex flex-col", isMobile ? "overflow-visible" : "overflow-hidden")}>
+                <div className={cn("flex-1 min-h-0", isMobile ? "overflow-visible" : "overflow-hidden")}>
+                    <TabsContent value="internal" className={cn("m-0 p-0", isMobile ? "min-h-0" : "h-full")}>
                         {renderOrgCard('internal')}
                     </TabsContent>
                     
                     {(organizations || []).map(org => (
-                        <TabsContent key={org.id} value={org.id} className="m-0 p-0 h-full">
+                        <TabsContent key={org.id} value={org.id} className={cn("m-0 p-0", isMobile ? "min-h-0" : "h-full")}>
                             {renderOrgCard(org.id)}
                         </TabsContent>
                     ))}

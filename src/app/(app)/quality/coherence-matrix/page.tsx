@@ -6,7 +6,7 @@ import { collection, query, writeBatch, doc, deleteDoc } from 'firebase/firestor
 import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste, BookOpen, Layers, Building, ListFilter, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste, BookOpen, Layers, ListFilter, MoreHorizontal } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -29,14 +29,9 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { OrganizationTabsRow } from '@/components/responsive-tab-row';
+import { cn } from '@/lib/utils';
 
 
 function UploadRegulationsDialog({ tenantId, organizationId, trigger }: { tenantId: string, organizationId: string | null, trigger?: React.ReactNode }) {
@@ -253,60 +248,6 @@ function UploadRegulationsDialog({ tenantId, organizationId, trigger }: { tenant
     )
 }
 
-function CompanyTabsRow({ organizations, activeTab, onTabChange }: { organizations: ExternalOrganization[], activeTab: string, onTabChange: (value: string) => void }) {
-    const isMobile = useIsMobile();
-
-    if (isMobile) {
-        return (
-            <div className="border-b bg-muted/5 px-4 py-3">
-                <Select value={activeTab} onValueChange={onTabChange}>
-                    <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
-                        <SelectValue placeholder="Select Organization" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="internal" className="text-[10px] font-bold uppercase">
-                            <div className="flex items-center gap-2">
-                                <Building className="h-3.5 w-3.5" />
-                                Internal
-                            </div>
-                        </SelectItem>
-                        {organizations.map((organization) => (
-                            <SelectItem key={organization.id} value={organization.id} className="text-[10px] font-bold uppercase">
-                                <div className="flex items-center gap-2">
-                                    <Building className="h-3.5 w-3.5" />
-                                    {organization.name}
-                                </div>
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-        );
-    }
-
-    return (
-        <div className="border-b bg-muted/5 px-6 py-3 overflow-x-auto no-scrollbar">
-            <div className="flex w-max gap-2 pr-6 flex-nowrap">
-                <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
-                    <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase">
-                        Internal
-                    </TabsTrigger>
-                    {organizations.map((organization) => (
-                        <TabsTrigger
-                            key={organization.id}
-                            value={organization.id}
-                            className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase"
-                        >
-                            {organization.name}
-                        </TabsTrigger>
-                    ))}
-                </TabsList>
-            </div>
-        </div>
-    );
-}
-
-
 export default function CoherenceMatrixPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -406,19 +347,26 @@ export default function CoherenceMatrixPage() {
     const topLevelItems = sortedItems.filter(item => !item.parentRegulationCode);
 
     return (
-        <Card className="min-h-[500px] flex flex-col shadow-none border">
+        <Card className="h-full min-h-0 flex flex-col overflow-hidden shadow-none border">
             <MainPageHeader 
                 title="Coherence Matrix"
                 actions={
                     isMobile ? (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button size="compact" variant="outline" className="gap-2">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                    Actions
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                                >
+                                    <span className="flex items-center gap-2">
+                                        <MoreHorizontal className="h-3.5 w-3.5" />
+                                        Actions
+                                    </span>
+                                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
                                 <UploadRegulationsDialog 
                                     tenantId={tenantId!} 
                                     organizationId={contextOrgId} 
@@ -460,32 +408,67 @@ export default function CoherenceMatrixPage() {
                 }
             />
             
-            {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
+            {shouldShowOrganizationTabs && (
+                <OrganizationTabsRow
+                    organizations={organizations || []}
+                    activeTab={activeOrgTab}
+                    onTabChange={setActiveOrgTab}
+                    className="px-4 py-3 border-b bg-muted/5 shrink-0 md:px-6"
+                />
+            )}
             
-            <CardContent className="p-6">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-6">
                 <div className="space-y-4">
                     {topLevelItems.map(parentItem => (
                         <Collapsible key={parentItem.id} className="border rounded-lg" defaultOpen>
-                            <div className="flex items-center p-4 bg-muted/30 rounded-t-lg">
-                                <CollapsibleTrigger className="flex flex-1 items-center text-left">
-                                    <span className="font-mono text-sm font-semibold w-28 flex-shrink-0">{parentItem.regulationCode}</span>
-                                    <p className="font-medium flex-1 mx-4">{parentItem.regulationStatement}</p>
-                                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
-                                </CollapsibleTrigger>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteSection(parentItem)}><Trash2 className="h-4 w-4" /></Button>
+                            <div className="border-b bg-muted/30 p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                    <CollapsibleTrigger className="flex min-w-0 flex-1 items-start gap-3 text-left">
+                                        <div className="min-w-0 flex-1">
+                                            <p className="font-mono text-[11px] font-black tracking-wide text-foreground/80">
+                                                {parentItem.regulationCode}
+                                            </p>
+                                            <p className="mt-1 text-sm font-semibold leading-5 text-foreground">
+                                                {parentItem.regulationStatement}
+                                            </p>
+                                        </div>
+                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-background text-muted-foreground">
+                                            <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+                                        </div>
+                                    </CollapsibleTrigger>
+                                    <div className="flex shrink-0 items-center gap-2 pt-0.5">
+                                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDeleteSection(parentItem)}>
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
                             <CollapsibleContent className="p-4">
                                 {(groupedItems[parentItem.regulationCode] || []).map(item => (
                                     <Collapsible key={item.id} className="border rounded-lg mb-2 last:mb-0">
-                                        <div className="flex justify-between items-center p-4">
-                                            <CollapsibleTrigger className="flex w-full items-center text-left">
-                                                <span className="font-mono text-sm font-semibold w-24 flex-shrink-0">{item.regulationCode}</span>
-                                                <p className="font-medium truncate flex-1 mx-4">{item.regulationStatement}</p>
-                                                <ChevronDown className="h-4 w-4" />
-                                            </CollapsibleTrigger>
-                                            <div className="flex items-center gap-2 pl-4">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenForm(item)}><Edit className="h-4 w-4" /></Button>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteItem(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                                        <div className="p-4">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <CollapsibleTrigger className="flex min-w-0 flex-1 items-start gap-3 text-left">
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="font-mono text-[11px] font-black tracking-wide text-foreground/80">
+                                                            {item.regulationCode}
+                                                        </p>
+                                                        <p className="mt-1 line-clamp-2 text-sm font-medium leading-5 text-foreground">
+                                                            {item.regulationStatement}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-background text-muted-foreground">
+                                                        <ChevronDown className="h-4 w-4" />
+                                                    </div>
+                                                </CollapsibleTrigger>
+                                                <div className="flex shrink-0 items-center gap-2 pt-0.5">
+                                                    <Button variant="outline" size="icon" className="h-8 w-8 border-slate-300" onClick={() => handleOpenForm(item)}>
+                                                        <Edit className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                    <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDeleteItem(item.id)}>
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </div>
                                         <CollapsibleContent className="space-y-4 px-10 pb-6 pt-2 border-t bg-muted/5">
@@ -525,12 +508,12 @@ export default function CoherenceMatrixPage() {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
-        <div className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl bg-card">
+    <div className={cn("max-w-[1400px] mx-auto w-full flex flex-col pt-0 px-1", isMobile ? "min-h-0 overflow-y-auto" : "h-full overflow-hidden")}>
+        <div className="flex-1 min-h-0 flex flex-col shadow-none border rounded-xl bg-card overflow-hidden">
             {!shouldShowOrganizationTabs ? (
                 renderOrgContext(scopedOrganizationId)
             ) : (
-                <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className="w-full flex-1 flex flex-col overflow-hidden">
+                <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className="w-full flex-1 min-h-0 flex flex-col overflow-hidden">
                     <div className="flex-1 min-h-0 overflow-hidden">
                         <TabsContent value="internal" className="m-0 p-0 h-full">
                             {renderOrgContext('internal')}

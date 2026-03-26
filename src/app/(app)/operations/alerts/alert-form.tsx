@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle } from 'lucide-react';
+import { ChevronsUpDown, PlusCircle } from 'lucide-react';
 import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { AlertType } from '@/types/alert';
@@ -81,11 +81,18 @@ export function AlertForm({ tenantId }: AlertFormProps) {
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
                 <Button 
-                    size={isMobile ? "compact" : "default"} // Standardized
-                    className="shadow-sm"
+                    variant={isMobile ? "outline" : "default"}
+                    size={isMobile ? "sm" : "default"}
+                    className={cn(
+                        "shadow-sm",
+                        isMobile && "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                    )}
                 >
-                    <PlusCircle className="h-4 w-4" />
-                    {isMobile ? "Create" : "Create Alert"}
+                    <span className="flex items-center gap-2">
+                        <PlusCircle className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                        {isMobile ? "Create" : "Create Alert"}
+                    </span>
+                    {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
                 </Button>
             </DialogTrigger>
             <DialogContent className={isMobile ? "max-w-[95vw] w-full p-4" : "sm:max-w-md"}>

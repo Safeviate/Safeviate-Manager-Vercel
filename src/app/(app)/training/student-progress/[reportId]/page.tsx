@@ -9,6 +9,7 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import type { PilotProfile } from '@/app/(app)/users/personnel/page';
 import { TrainingRecords } from '@/app/(app)/users/personnel/[id]/training-records';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 interface StudentDetailPageProps {
   params: Promise<{ reportId: string }>;
@@ -18,11 +19,11 @@ interface StudentDetailPageProps {
 export default function StudentDetailPage({ params }: StudentDetailPageProps) {
   const resolvedParams = use(params);
   const firestore = useFirestore();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
   const studentId = resolvedParams.reportId;
 
   const studentRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, `tenants/${tenantId}/students`, studentId) : null),
+    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/students`, studentId) : null),
     [firestore, tenantId, studentId]
   );
   
@@ -49,7 +50,7 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
     <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 pt-4">
       
       <div className="flex-1 min-h-0 overflow-hidden px-1">
-        <TrainingRecords studentId={studentId} tenantId={tenantId} />
+        <TrainingRecords studentId={studentId} tenantId={tenantId || ''} />
       </div>
     </div>
   );

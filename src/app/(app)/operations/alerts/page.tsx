@@ -10,21 +10,14 @@ import type { Alert } from '@/types/alert';
 import { AlertForm } from './alert-form';
 import { AlertCard } from './alert-card';
 import { usePermissions } from '@/hooks/use-permissions';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { ListFilter } from 'lucide-react';
+import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 
 export default function AlertsPage() {
   const firestore = useFirestore();
-  const tenantId = 'safeviate';
-  const isMobile = useIsMobile();
+  const { tenantId } = useUserProfile();
   const [activeTab, setActiveTab] = useState('red-tags');
 
   const { hasPermission } = usePermissions();
@@ -32,7 +25,7 @@ export default function AlertsPage() {
   const canEditAlerts = hasPermission('operations-alerts-edit');
 
   const alertsQuery = useMemoFirebase(
-    () => (firestore ? query(
+    () => (firestore && tenantId ? query(
       collection(firestore, `tenants/${tenantId}/alerts`),
       where('status', '==', 'Active')
     ) : null),
@@ -66,48 +59,26 @@ export default function AlertsPage() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
             <MainPageHeader 
               title="Operations Alerts"
-              actions={canCreateAlerts && <AlertForm tenantId={tenantId} />}
+              actions={canCreateAlerts && <AlertForm tenantId={tenantId || ''} />}
             />
             
-            <div className="border-b bg-muted/5 px-6 py-3 shrink-0">
-                {isMobile ? (
-                    <Select value={activeTab} onValueChange={setActiveTab}>
-                        <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
-                            <SelectValue placeholder="Select Filter" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {tabs.map((tab) => (
-                                <SelectItem key={tab.value} value={tab.value} className="text-[10px] font-bold uppercase">
-                                    <div className="flex items-center gap-2">
-                                        <ListFilter className="h-3.5 w-3.5" />
-                                        {tab.label} ({tab.count})
-                                    </div>
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                ) : (
-                    <div className="flex w-max gap-2 pr-6 flex-nowrap">
-                        <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
-                            {tabs.map((tab) => (
-                                <TabsTrigger 
-                                    key={tab.value} 
-                                    value={tab.value} 
-                                    className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all"
-                                >
-                                    {tab.label} ({tab.count})
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-                    </div>
-                )}
-            </div>
+            <ResponsiveTabRow
+              value={activeTab}
+              onValueChange={setActiveTab}
+              placeholder="Select Filter"
+              className="border-b bg-muted/5 px-6 py-3 shrink-0"
+              options={tabs.map((tab) => ({
+                value: tab.value,
+                label: `${tab.label} (${tab.count})`,
+                icon: ListFilter,
+              }))}
+            />
 
             <CardContent className="flex-1 min-h-0 overflow-hidden p-0 bg-muted/5">
               <TabsContent value="red-tags" className="mt-0 h-full min-h-0 overflow-y-auto no-scrollbar">
                 <div className="space-y-4 px-4 py-4 sm:px-6 sm:pb-20">
                   {redTags.length > 0 ? (
-                    redTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
+                    redTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId || ''} canManage={canEditAlerts} />)
                   ) : (
                     <Card className="flex h-64 items-center justify-center shadow-none border bg-background">
                       <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest italic opacity-40">No active red tags.</p>
@@ -118,7 +89,7 @@ export default function AlertsPage() {
               <TabsContent value="yellow-tags" className="mt-0 h-full min-h-0 overflow-y-auto no-scrollbar">
                 <div className="space-y-4 px-4 py-4 sm:px-6 sm:pb-20">
                   {yellowTags.length > 0 ? (
-                    yellowTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
+                    yellowTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId || ''} canManage={canEditAlerts} />)
                   ) : (
                     <Card className="flex h-64 items-center justify-center shadow-none border bg-background">
                       <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest italic opacity-40">No active yellow tags.</p>
@@ -129,7 +100,7 @@ export default function AlertsPage() {
               <TabsContent value="company-notices" className="mt-0 h-full min-h-0 overflow-y-auto no-scrollbar">
                 <div className="space-y-4 px-4 py-4 sm:px-6 sm:pb-20">
                   {companyNotices.length > 0 ? (
-                    companyNotices.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={canEditAlerts} />)
+                    companyNotices.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId || ''} canManage={canEditAlerts} />)
                   ) : (
                     <Card className="flex h-64 items-center justify-center shadow-none border bg-background">
                       <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest italic opacity-40">No active company notices.</p>

@@ -19,9 +19,8 @@ export default function NewBookingPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
-  const { userProfile } = useUserProfile();
+  const { userProfile, tenantId } = useUserProfile();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const tenantId = 'safeviate';
 
   const canManageSchedule = hasPermission('bookings-schedule-manage');
 
@@ -32,9 +31,9 @@ export default function NewBookingPage() {
     }
   }, [canManageSchedule, user, router, toast]);
 
-  const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
+  const aircraftQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
   
   const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftQuery);
   const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
@@ -43,7 +42,7 @@ export default function NewBookingPage() {
   const isLoading = isLoadingAircrafts || isLoadingInstructors || isLoadingStudents;
 
   const handleNewBooking = async (values: NewBookingFormValues) => {
-    if (!firestore || !canManageSchedule) return;
+    if (!firestore || !tenantId || !canManageSchedule) return;
     
     setIsSubmitting(true);
 

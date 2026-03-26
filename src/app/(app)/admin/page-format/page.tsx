@@ -1,17 +1,20 @@
 'use client';
 
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Palette, Layers } from 'lucide-react';
 import { ColorThemeForm } from '../../settings/color-theme-form';
 import { VisibilityManager } from './visibility-manager';
 import { usePermissions } from '@/hooks/use-permissions';
 import { MainPageHeader } from '@/components/page-header';
+import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 
 export default function PageFormatPage() {
   const { hasPermission } = usePermissions();
   const canManage = hasPermission('admin-settings-manage');
+  const [activeTab, setActiveTab] = useState('branding');
 
   if (!canManage) {
     return (
@@ -24,27 +27,19 @@ export default function PageFormatPage() {
   return (
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
-        <Tabs defaultValue="branding" className="flex-1 flex flex-col overflow-hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
           <MainPageHeader title="Page Formatting" />
 
-          <div className="border-b bg-muted/5 px-6 py-3 overflow-x-auto no-scrollbar">
-            <div className="flex w-max gap-2 pr-6 flex-nowrap">
-              <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
-                <TabsTrigger 
-                  value="branding" 
-                  className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground gap-2 text-[10px] font-black uppercase shrink-0 transition-all"
-                >
-                  <Palette className="h-3.5 w-3.5" /> Branding & Colors
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="visibility" 
-                  className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground gap-2 text-[10px] font-black uppercase shrink-0 transition-all"
-                >
-                  <Layers className="h-3.5 w-3.5" /> Access & Visibility
-                </TabsTrigger>
-              </TabsList>
-            </div>
-          </div>
+          <ResponsiveTabRow
+            value={activeTab}
+            onValueChange={setActiveTab}
+            placeholder="Select Section"
+            className="border-b bg-muted/5 px-6 py-3 shrink-0"
+            options={[
+              { value: 'branding', label: 'Branding & Colors', icon: Palette },
+              { value: 'visibility', label: 'Access & Visibility', icon: Layers },
+            ]}
+          />
 
           <CardContent className="flex-1 p-0 overflow-hidden bg-background">
             <TabsContent value="branding" className="m-0 h-full">

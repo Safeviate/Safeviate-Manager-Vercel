@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { doc } from 'firebase/firestore';
-import { Button } from '@/components/ui/button';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -13,10 +12,10 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Pencil, Trash2 } from 'lucide-react';
 import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
+import { DeleteActionButton, EditActionButton } from '@/components/record-action-buttons';
 import { RoleForm } from './role-form';
 
 interface Role {
@@ -57,22 +56,16 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
             tenantId={tenantId} 
             existingRole={role} 
             trigger={
-                <Button variant="outline" size="sm">
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit
-                </Button>
+                <EditActionButton label="Edit role" />
             } 
         />
         
         {canManage && (
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setIsDeleteDialogOpen(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </Button>
+          <DeleteActionButton
+            description={`This will permanently delete the "${role.name}" role. Users assigned to this role may lose access to critical features.`}
+            onDelete={() => setIsDeleteDialogOpen(true)}
+            srLabel="Delete role"
+          />
         )}
       </div>
 

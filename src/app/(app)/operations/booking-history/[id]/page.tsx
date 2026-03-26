@@ -5,11 +5,10 @@ import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Booking } from '@/types/booking';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { ViewBookingDetails } from './view-booking-details';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { BackNavButton } from '@/components/back-nav-button';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 interface BookingDetailPageProps {
     params: Promise<{ id: string }>;
@@ -18,11 +17,11 @@ interface BookingDetailPageProps {
 export default function BookingHistoryDetailPage({ params }: BookingDetailPageProps) {
     const resolvedParams = use(params);
     const firestore = useFirestore();
-    const tenantId = 'safeviate';
+    const { tenantId } = useUserProfile();
     const isMobile = useIsMobile();
 
     const bookingRef = useMemoFirebase(
-        () => firestore ? doc(firestore, `tenants/${tenantId}/bookings`, resolvedParams.id) : null,
+        () => firestore && tenantId ? doc(firestore, `tenants/${tenantId}/bookings`, resolvedParams.id) : null,
         [firestore, tenantId, resolvedParams.id]
     );
 
@@ -43,12 +42,7 @@ export default function BookingHistoryDetailPage({ params }: BookingDetailPagePr
                 <p className="text-destructive mb-4">
                     {error ? `Error: ${error.message}` : "Booking not found."}
                 </p>
-                <Button asChild variant="outline">
-                    <Link href="/operations/booking-history">
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Booking History
-                    </Link>
-                </Button>
+                <BackNavButton href="/operations/booking-history" text="Back to Booking History" className="border-slate-300 bg-background text-foreground hover:bg-muted" />
             </div>
         )
     }
@@ -56,12 +50,7 @@ export default function BookingHistoryDetailPage({ params }: BookingDetailPagePr
     return (
         <div className="mx-auto flex h-full w-full max-w-[1200px] min-h-0 flex-col gap-4 sm:gap-6">
             <div className="shrink-0">
-            <Button asChild variant="outline">
-                <Link href="/operations/booking-history">
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Booking History
-                </Link>
-            </Button>
+            <BackNavButton href="/operations/booking-history" text="Back to Booking History" className="border-slate-300 bg-background text-foreground hover:bg-muted" />
             </div>
             <div className={isMobile ? "min-h-0 flex-1 overflow-hidden" : ""}>
             <ViewBookingDetails

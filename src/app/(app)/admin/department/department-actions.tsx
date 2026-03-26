@@ -24,10 +24,10 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, Pencil, Trash2 } from 'lucide-react';
 import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
+import { DeleteActionButton, EditActionButton, ViewActionButton } from '@/components/record-action-buttons';
 
 interface Department {
     id: string;
@@ -111,22 +111,17 @@ export function DepartmentActions({ tenantId, department }: DepartmentActionsPro
   }
 
   return (
-    <div className="flex items-center justify-end gap-2">
+    <div className="flex max-w-full items-center justify-end gap-2">
       {/* Action Buttons */}
-      <Button variant="outline" size="sm" className="h-8 gap-2" onClick={() => setIsViewOpen(true)}>
-        <Eye className="h-4 w-4" />
-        View
-      </Button>
+      <ViewActionButton onClick={() => setIsViewOpen(true)} label="View" />
 
-      <Button variant="outline" size="sm" onClick={() => setIsEditOpen(true)}>
-        <Pencil className="mr-2 h-4 w-4" />
-        Edit
-      </Button>
+      <EditActionButton onClick={() => setIsEditOpen(true)} label="Edit department" />
 
-      <Button variant="destructive" size="sm" onClick={() => setIsDeleteOpen(true)}>
-        <Trash2 className="mr-2 h-4 w-4" />
-        Delete
-      </Button>
+      <DeleteActionButton
+        description={`This will permanently delete the "${department.name}" department.`}
+        onDelete={() => setIsDeleteOpen(true)}
+        srLabel="Delete department"
+      />
 
       {/* View Dialog */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>

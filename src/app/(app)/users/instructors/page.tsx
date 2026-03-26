@@ -11,35 +11,39 @@ import type { Role } from '../../admin/roles/page';
 import type { Department } from '../../admin/department/page';
 import { usePermissions } from '@/hooks/use-permissions';
 import { MainPageHeader } from '@/components/page-header';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function InstructorsPage() {
   const firestore = useFirestore();
   const { hasPermission } = usePermissions();
-  const tenantId = 'safeviate'; // Hardcoded for now
+  const { tenantId } = useUserProfile();
   const canCreateUsers = hasPermission('users-create');
 
   const instructorsQuery = useMemoFirebase(
     () =>
       firestore
+        && tenantId
         ? query(collection(firestore, 'tenants', tenantId, 'instructors'))
         : null,
-    [firestore]
+    [firestore, tenantId]
   );
   
   const rolesQuery = useMemoFirebase(
     () =>
       firestore
+        && tenantId
         ? query(collection(firestore, 'tenants', tenantId, 'roles'))
         : null,
-    [firestore]
+    [firestore, tenantId]
   );
 
   const departmentsQuery = useMemoFirebase(
     () =>
       firestore
+        && tenantId
         ? query(collection(firestore, 'tenants', tenantId, 'departments'))
         : null,
-    [firestore]
+    [firestore, tenantId]
   );
   
 
@@ -60,7 +64,7 @@ export default function InstructorsPage() {
           actions={
             canCreateUsers && (
               <PersonnelForm 
-                tenantId={tenantId} 
+                tenantId={tenantId || ''} 
                 roles={roles || []} 
                 departments={departments || []} 
               />
@@ -75,7 +79,7 @@ export default function InstructorsPage() {
               <div className="text-center p-8 text-destructive font-semibold">Error: {error.message}</div>
             )}
             {!isLoading && !error && instructors && (
-              <InstructorsTable data={instructors} tenantId={tenantId} />
+              <InstructorsTable data={instructors} tenantId={tenantId || ''} />
             )}
         </CardContent>
       </Card>

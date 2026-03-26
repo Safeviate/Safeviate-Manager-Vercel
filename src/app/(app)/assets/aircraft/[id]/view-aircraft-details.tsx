@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { DocumentUploader } from '../document-uploader';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 
 const DetailItem = ({ label, value, children }: { label: string; value?: string | null, children?: React.ReactNode }) => (
@@ -40,17 +41,17 @@ export function ViewAircraftDetails({ aircraft, onEdit, onManageComponents, onMa
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
   const firestore = useFirestore();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
   const { toast } = useToast();
 
   const expirySettingsRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
     [firestore, tenantId]
   );
   const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
   
   const inspectionSettingsRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'inspection-warnings') : null),
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'inspection-warnings') : null),
     [firestore, tenantId]
   );
   const { data: inspectionSettings } = useDoc<any>(inspectionSettingsRef);

@@ -9,24 +9,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Eye, Settings2, Trash2 } from 'lucide-react';
-import Link from 'next/link';
+import { Settings2 } from 'lucide-react';
 import type { Aircraft } from '@/types/aircraft';
 import { doc } from 'firebase/firestore';
 import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
 
 interface AircraftTableProps {
   aircraft: Aircraft[];
@@ -70,28 +58,13 @@ export function AircraftTable({ aircraft, tenantId }: AircraftTableProps) {
             <TableCell><Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px]">Airworthy</Badge></TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-2">
-                <Button asChild variant="default" size="sm" className="h-8 px-3 text-xs">
-                  <Link href={`/assets/aircraft/${ac.id}`}>
-                    <Eye className="mr-1.5 h-3.5 w-3.5" /> View
-                  </Link>
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="icon" className="h-8 w-8">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Aircraft?</AlertDialogTitle>
-                      <AlertDialogDescription>This will permanently remove {ac.tailNumber} and all its technical records.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleDelete(ac.id, ac.tailNumber)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <ViewActionButton href={`/assets/aircraft/${ac.id}`} />
+                <DeleteActionButton
+                  title="Delete Aircraft?"
+                  description={`This will permanently remove ${ac.tailNumber} and all its technical records.`}
+                  onDelete={() => handleDelete(ac.id, ac.tailNumber)}
+                  srLabel="Delete aircraft"
+                />
               </div>
             </TableCell>
           </TableRow>

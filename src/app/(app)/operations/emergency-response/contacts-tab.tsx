@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
+import { DeleteActionButton } from '@/components/record-action-buttons';
 
 interface ContactsTabProps {
   tenantId: string;
@@ -74,7 +75,6 @@ export function ContactsTab({ tenantId }: ContactsTabProps) {
 
   const handleDelete = async (id: string) => {
     if (!firestore || !canAdmin) return;
-    if (!window.confirm("Are you sure you want to delete this contact?")) return;
     await deleteDoc(doc(firestore, `tenants/${tenantId}/erp-contacts`, id));
     toast({ title: 'Contact Deleted' });
   };
@@ -187,9 +187,11 @@ export function ContactsTab({ tenantId }: ContactsTabProps) {
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(contact)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(contact.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <DeleteActionButton
+                          description={`This will permanently delete the ERP contact "${contact.name}".`}
+                          onDelete={() => handleDelete(contact.id)}
+                          srLabel="Delete contact"
+                        />
                       </div>
                     </TableCell>
                   )}

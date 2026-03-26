@@ -32,19 +32,18 @@ export type UnifiedMessage = {
 
 export function useDashboardData() {
     const firestore = useFirestore();
-    const tenantId = 'safeviate';
-    const { userProfile, isLoading: isProfileLoading } = useUserProfile();
+    const { userProfile, tenantId, isLoading: isProfileLoading } = useUserProfile();
     const { tenant, isLoading: isLoadingTenant } = useTenantConfig();
     
-    const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
-    const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
-    const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
-    const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
+    const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
+    const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
+    const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
+    const privatePilotsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
     
-    const mocsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `tenants/${tenantId}/management-of-change`)) : null, [firestore, tenantId]);
-    const auditsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `tenants/${tenantId}/quality-audits`)) : null, [firestore, tenantId]);
-    const reportsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `tenants/${tenantId}/safety-reports`)) : null, [firestore, tenantId]);
-    const capsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`)) : null, [firestore, tenantId]);
+    const mocsQuery = useMemoFirebase(() => firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/management-of-change`)) : null, [firestore, tenantId]);
+    const auditsQuery = useMemoFirebase(() => firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/quality-audits`)) : null, [firestore, tenantId]);
+    const reportsQuery = useMemoFirebase(() => firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/safety-reports`)) : null, [firestore, tenantId]);
+    const capsQuery = useMemoFirebase(() => firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`)) : null, [firestore, tenantId]);
 
     const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<any>(personnelQuery);
     const { data: instructors, isLoading: isLoadingInstructors } = useCollection<any>(instructorsQuery);

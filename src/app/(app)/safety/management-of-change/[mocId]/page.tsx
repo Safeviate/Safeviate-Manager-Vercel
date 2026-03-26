@@ -19,6 +19,7 @@ import type { Department } from '@/app/(app)/admin/department/page';
 import type { RiskMatrixSettings } from '@/types/risk';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 interface MocDetailPageProps {
   params: Promise<{ mocId: string }>;
@@ -34,26 +35,26 @@ const DetailItem = ({ label, value }: { label: string; value?: string | null }) 
 export default function MocDetailPage({ params }: MocDetailPageProps) {
   const resolvedParams = use(params);
   const firestore = useFirestore();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
   const mocId = resolvedParams.mocId;
 
   const mocRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'tenants', tenantId, 'management-of-change', mocId) : null),
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'management-of-change', mocId) : null),
     [firestore, tenantId, mocId]
   );
   
   const personnelQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null),
+    () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/personnel`) : null),
     [firestore, tenantId]
   );
 
   const departmentsQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, `tenants/${tenantId}/departments`) : null),
+    () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/departments`) : null),
     [firestore, tenantId]
   );
   
   const riskMatrixSettingsRef = useMemoFirebase(() => (
-    firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-matrix-config') : null
+    firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-matrix-config') : null
   ), [firestore, tenantId]);
 
   const { data: moc, isLoading: isLoadingMoc, error } = useDoc<ManagementOfChange>(mocRef);
@@ -158,7 +159,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                         <ImplementationForm
                             key={moc.id}
                             moc={moc}
-                            tenantId={tenantId}
+                            tenantId={tenantId || ''}
                             personnel={personnel || []}
                         />
                     </div>
@@ -166,7 +167,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
               </TabsContent>
               <TabsContent value="approval" className="m-0 h-full outline-none overflow-y-auto no-scrollbar">
                   <div className="p-8 pt-6">
-                    <ApprovalForm moc={moc} tenantId={tenantId} personnel={personnel || []} />
+                    <ApprovalForm moc={moc} tenantId={tenantId || ''} personnel={personnel || []} />
                   </div>
               </TabsContent>
             </div>
@@ -191,8 +192,8 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
             </div>
         </div>
         <Separator />
-        <ImplementationForm moc={moc} tenantId={tenantId} personnel={personnel || []} />
-        <ApprovalForm moc={moc} tenantId={tenantId} personnel={personnel || []} />
+        <ImplementationForm moc={moc} tenantId={tenantId || ''} personnel={personnel || []} />
+        <ApprovalForm moc={moc} tenantId={tenantId || ''} personnel={personnel || []} />
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { getBackConfig } from '@/lib/back-navigation';
 
 const findCurrentItem = (
   items: (MenuItem | SubMenuItem)[],
@@ -66,16 +67,7 @@ export function AppHeader() {
   const segments = pathname.split('/').filter(Boolean);
   const isDetailPage = segments.length >= 3;
 
-  // Logic to determine back text and navigation target
-  const getBackConfig = () => {
-    if (pathname.includes('/safety/safety-reports/')) return { text: 'Back to All Reports', href: '/safety/safety-reports' };
-    if (pathname.includes('/assets/aircraft/')) return { text: 'Back to All Aircraft', href: '/assets/aircraft' };
-    if (pathname.includes('/training/student-progress/')) return { text: 'Back to All Students', href: '/training/student-progress' };
-    if (pathname.includes('/quality/audits/')) return { text: 'Back to All Audits', href: '/quality/audits' };
-    return { text: 'Back', href: null }; // Default behavior is router.back()
-  };
-
-  const backConfig = getBackConfig();
+  const backConfig = getBackConfig(pathname);
 
   const handleBack = () => {
     if (backConfig.href) {
@@ -93,7 +85,7 @@ export function AppHeader() {
             variant="outline" 
             size="sm" 
             onClick={handleBack}
-            className="h-9 px-4 border-white/40 bg-white/10 hover:bg-white/20 text-sm font-black uppercase tracking-tight text-white rounded-md transition-all shadow-md shrink-0 whitespace-nowrap"
+            className="h-9 rounded-md border-white/40 bg-white/10 px-4 text-[10px] font-black uppercase tracking-tight text-white shadow-md transition-all hover:bg-white/20 shrink-0 whitespace-nowrap"
           >
             {backConfig.text}
           </Button>

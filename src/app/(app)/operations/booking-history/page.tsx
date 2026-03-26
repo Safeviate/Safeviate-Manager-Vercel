@@ -8,36 +8,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format, parse } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-  } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import type { Booking } from '@/types/booking';
 import { Button } from '@/components/ui/button';
-import { Eye, Trash2, FilePlus, Clock, User, Plane, ArrowRight, ListFilter } from 'lucide-react';
+import { FilePlus, Clock, User, Plane, ArrowRight, ListFilter } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/hooks/use-permissions';
-import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ResponsiveTabRow } from '@/components/responsive-tab-row';
+import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 // A consolidated type for display
 type EnrichedBooking = Booking & {
@@ -70,7 +54,7 @@ function DeleteBookingButton({ bookingId, bookingNumber }: { bookingId: string, 
     const firestore = useFirestore();
     const { toast } = useToast();
     const { hasPermission } = usePermissions();
-    const tenantId = 'safeviate';
+    const { tenantId } = useUserProfile();
 
     const canDelete = hasPermission('bookings-delete');
 
@@ -87,26 +71,11 @@ function DeleteBookingButton({ bookingId, bookingNumber }: { bookingId: string, 
     };
 
     return (
-        <AlertDialog>
-            <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="icon" className="h-8 w-8 shadow-sm">
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Delete Booking</span>
-                </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This will permanently delete booking #{bookingNumber}. This action cannot be undone.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+        <DeleteActionButton
+            description={`This will permanently delete booking #${bookingNumber}. This action cannot be undone.`}
+            onDelete={handleDelete}
+            srLabel="Delete booking"
+        />
     );
 }
 
@@ -160,12 +129,7 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
                                     </TableCell>
                                     <TableCell className='text-right'>
                                         <div className="flex justify-end gap-2">
-                                            <Button asChild variant="outline" size="sm" className="h-8 gap-2">
-                                                <Link href={`/operations/booking-history/${b.id}`}>
-                                                    <Eye className="h-4 w-4" />
-                                                    View
-                                                </Link>
-                                            </Button>
+                                            <ViewActionButton href={`/operations/booking-history/${b.id}`} />
                                             {b.type === 'Training Flight' && b.status === 'Completed' && (
                                                 <Button asChild variant="secondary" size="icon" className="h-8 w-8">
                                                     <Link href={`/training/student-debriefs/new?bookingId=${b.id}`}>
@@ -249,19 +213,18 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
 
 export default function BookingsHistoryPage() {
   const firestore = useFirestore();
-  const tenantId = 'safeviate';
-  const isMobile = useIsMobile();
+  const { tenantId } = useUserProfile();
   const [activeTab, setActiveTab] = useState('all');
 
   const bookingsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'bookings'), orderBy('bookingNumber', 'desc')) : null),
+    () => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'bookings'), orderBy('bookingNumber', 'desc')) : null),
     [firestore, tenantId]
   );
-  const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tenants', tenantId, 'aircrafts') : null), [firestore, tenantId]);
-  const personnelQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'personnel')) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'instructors')) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'students')) : null), [firestore, tenantId]);
-  const privatePilotsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'tenants', tenantId, 'private-pilots')) : null), [firestore, tenantId]);
+  const aircraftQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, 'tenants', tenantId, 'aircrafts') : null), [firestore, tenantId]);
+  const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'personnel')) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'instructors')) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'students')) : null), [firestore, tenantId]);
+  const privatePilotsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'private-pilots')) : null), [firestore, tenantId]);
 
   const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
   const { data: aircraft } = useCollection<Aircraft>(aircraftQuery);
@@ -316,47 +279,25 @@ export default function BookingsHistoryPage() {
         </div>
       <Card className="flex-grow flex flex-col shadow-none border overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full overflow-hidden">
-            <div className='px-6 pt-4 shrink-0'>
-                {isMobile ? (
-                    <div className="mb-4">
-                        <Select value={activeTab} onValueChange={setActiveTab}>
-                            <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
-                                <SelectValue placeholder="Filter by Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {tabs.map((tab) => (
-                                    <SelectItem key={tab.value} value={tab.value} className="text-[10px] font-bold uppercase">
-                                        <div className="flex items-center gap-2">
-                                            <ListFilter className="h-3.5 w-3.5" />
-                                            {tab.label}
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                ) : (
-                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 overflow-x-auto no-scrollbar justify-start w-full flex">
-                        {tabs.map((tab) => (
-                            <TabsTrigger 
-                                key={tab.value} 
-                                value={tab.value} 
-                                className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-bold uppercase"
-                            >
-                                {tab.label}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
-                )}
-            </div>
+            <ResponsiveTabRow
+                value={activeTab}
+                onValueChange={setActiveTab}
+                placeholder="Filter by Type"
+                className="px-6 pt-4 pb-4 shrink-0"
+                options={tabs.map((tab) => ({
+                    value: tab.value,
+                    label: tab.label,
+                    icon: ListFilter,
+                }))}
+            />
             <CardContent className='p-0 flex-1 overflow-hidden'>
                 <ScrollArea className="h-full">
                     <div className="p-6 pt-0">
-                        <TabsContent value="all" className='m-0'><BookingsTable bookings={enrichedBookings} tenantId={tenantId} /></TabsContent>
-                        <TabsContent value="training" className='m-0'><BookingsTable bookings={trainingBookings} tenantId={tenantId} /></TabsContent>
-                        <TabsContent value="private" className='m-0'><BookingsTable bookings={privateBookings} tenantId={tenantId} /></TabsContent>
-                        <TabsContent value="maintenance" className='m-0'><BookingsTable bookings={maintenanceBookings} tenantId={tenantId} /></TabsContent>
-                        <TabsContent value="cancelled" className='m-0'><BookingsTable bookings={cancelledBookings} tenantId={tenantId} /></TabsContent>
+                        <TabsContent value="all" className='m-0'><BookingsTable bookings={enrichedBookings} tenantId={tenantId || ''} /></TabsContent>
+                        <TabsContent value="training" className='m-0'><BookingsTable bookings={trainingBookings} tenantId={tenantId || ''} /></TabsContent>
+                        <TabsContent value="private" className='m-0'><BookingsTable bookings={privateBookings} tenantId={tenantId || ''} /></TabsContent>
+                        <TabsContent value="maintenance" className='m-0'><BookingsTable bookings={maintenanceBookings} tenantId={tenantId || ''} /></TabsContent>
+                        <TabsContent value="cancelled" className='m-0'><BookingsTable bookings={cancelledBookings} tenantId={tenantId || ''} /></TabsContent>
                     </div>
                 </ScrollArea>
             </CardContent>

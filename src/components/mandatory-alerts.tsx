@@ -18,13 +18,12 @@ interface MandatoryAlertsProps {
 
 export function MandatoryAlerts({ alerts, onAcknowledged }: MandatoryAlertsProps) {
   const firestore = useFirestore();
-  const { userProfile } = useUserProfile();
+  const { userProfile, tenantId } = useUserProfile();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const tenantId = 'safeviate';
 
   const handleAcknowledge = async () => {
-    if (!firestore || !userProfile || alerts.length === 0) return;
+    if (!firestore || !userProfile || !tenantId || alerts.length === 0) return;
     
     setIsSubmitting(true);
     

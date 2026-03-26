@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle } from 'lucide-react';
+import { ChevronDown, PlusCircle } from 'lucide-react';
 import { useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { Personnel, PilotProfile } from './page';
 import type { ExternalOrganization } from '@/types/quality';
 import { Switch } from '@/components/ui/switch';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type UserProfile = Personnel | PilotProfile;
 type UserType = UserProfile['userType'];
@@ -51,6 +52,7 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
   const firestore = useFirestore();
   const auth = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
 
   const orgsQuery = useMemoFirebase(
@@ -161,7 +163,17 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
         <DialogTrigger asChild>{trigger}</DialogTrigger>
       ) : (
         <DialogTrigger asChild>
-          <Button><PlusCircle className="mr-2 h-4 w-4" /> Add User</Button>
+          <Button
+            variant={isMobile ? 'outline' : 'default'}
+            size={isMobile ? 'sm' : 'default'}
+            className={isMobile ? 'h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100' : undefined}
+          >
+            <span className="flex items-center gap-2">
+              <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'mr-2 h-4 w-4'} />
+              Add User
+            </span>
+            {isMobile ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
+          </Button>
         </DialogTrigger>
       )}
       <DialogContent className="sm:max-w-lg">

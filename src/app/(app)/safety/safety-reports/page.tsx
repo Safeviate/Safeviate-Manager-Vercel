@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Eye, Trash2, ShieldAlert, Clock, MapPin, User, ArrowRight, Loader2, WandSparkles, FileWarning, Building } from 'lucide-react';
+import { PlusCircle, Eye, Trash2, ShieldAlert, Clock, MapPin, User, ArrowRight, Loader2, WandSparkles, FileWarning, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,23 +17,10 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { useToast } from '@/hooks/use-toast';
 import { callAiFlow } from '@/lib/ai-client';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import type { SafetyReport } from '@/types/safety-report';
-import type { ExternalOrganization, TabVisibilitySettings } from '@/types/quality';
+import type { ExternalOrganization } from '@/types/quality';
 import { EditReportDialog } from './edit-report-dialog';
 import { cn } from '@/lib/utils';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import {
     Dialog,
     DialogContent,
@@ -46,67 +33,8 @@ import {
 import type { GenerateSafetyProtocolRecommendationsOutput } from '@/ai/flows/generate-safety-protocol-recommendations';
 import { MainPageHeader } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-function CompanyTabsRow({ organizations, activeTab, onTabChange }: { organizations: ExternalOrganization[], activeTab: string, onTabChange: (value: string) => void }) {
-    const isMobile = useIsMobile();
-
-    if (isMobile) {
-        return (
-            <div className="border-b bg-muted/5 px-4 py-3">
-                <Select value={activeTab} onValueChange={onTabChange}>
-                    <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
-                        <SelectValue placeholder="Select Organization" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="internal" className="text-[10px] font-bold uppercase">
-                            <div className="flex items-center gap-2">
-                                <Building className="h-3.5 w-3.5" />
-                                Internal
-                            </div>
-                        </SelectItem>
-                        {organizations.map((organization) => (
-                            <SelectItem key={organization.id} value={organization.id} className="text-[10px] font-bold uppercase">
-                                <div className="flex items-center gap-2">
-                                    <Building className="h-3.5 w-3.5" />
-                                    {organization.name}
-                                </div>
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-        );
-    }
-
-    return (
-        <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
-            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
-                <TabsTrigger 
-                    value="internal" 
-                    className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
-                >
-                    Internal
-                </TabsTrigger>
-                {organizations.map((organization) => (
-                    <TabsTrigger
-                        key={organization.id}
-                        value={organization.id}
-                        className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
-                    >
-                        {organization.name}
-                    </TabsTrigger>
-                ))}
-            </TabsList>
-        </div>
-    );
-}
+import { OrganizationTabsRow } from '@/components/responsive-tab-row';
+import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
 
 const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
@@ -137,26 +65,11 @@ function DeleteReportButton({ reportId, reportNumber, tenantId }: { reportId: st
     };
 
     return (
-        <AlertDialog>
-            <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="icon" className="h-8 w-8 shadow-sm">
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Delete Report</span>
-                </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This will permanently delete safety report #{reportNumber}. This action cannot be undone.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+        <DeleteActionButton
+            description={`This will permanently delete safety report #${reportNumber}. This action cannot be undone.`}
+            onDelete={handleDelete}
+            srLabel="Delete report"
+        />
     );
 }
 
@@ -196,12 +109,7 @@ function ReportsTable({ reports, tenantId, canManage }: ReportsTableProps) {
                                 <TableCell><Badge variant={getStatusBadgeVariant(report.status)} className="text-[10px] font-bold uppercase">{report.status}</Badge></TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex justify-end gap-2">
-                                        <Button asChild variant="outline" size="sm" className="h-8 gap-2 border-slate-300">
-                                            <Link href={`/safety/safety-reports/${report.id}`}>
-                                                <Eye className="h-4 w-4" />
-                                                View
-                                            </Link>
-                                        </Button>
+                                        <ViewActionButton href={`/safety/safety-reports/${report.id}`} />
                                         {canManage && <EditReportDialog report={report} tenantId={tenantId} />}
                                         <DeleteReportButton reportId={report.id} reportNumber={report.reportNumber} tenantId={tenantId} />
                                     </div>
@@ -382,19 +290,32 @@ export default function SafetyReportsPage() {
                 title="Safety Occurrences"
                 description="Monitor and manage all internal and external safety reports."
                 actions={
-                    <div className="flex items-center gap-3">
-                        <Button asChild size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
+                    <div className="flex w-full items-center gap-3 sm:w-auto">
+                        <Button
+                            asChild
+                            variant={isMobile ? 'outline' : 'default'}
+                            size="sm"
+                            className={cn(
+                              'h-9 text-xs font-black uppercase tracking-tight gap-2',
+                              isMobile
+                                ? 'w-full justify-between bg-white px-3 text-slate-900 shadow-sm border-slate-200 hover:bg-slate-50 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100 sm:w-auto'
+                                : 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-md'
+                            )}
+                        >
                             <Link href={`/safety/new-report?orgId=${orgId}`}>
-                                <PlusCircle className="h-4 w-4" />
-                                {isMobile ? "File" : "File New Report"}
+                                <span className="flex items-center gap-2">
+                                    <PlusCircle className="h-4 w-4" />
+                                    {isMobile ? "File" : "File New Report"}
+                                </span>
+                                {isMobile ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
                             </Link>
                         </Button>
                     </div>
                 }
             />
-            {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
-            <CardContent className="flex-1 p-0 overflow-hidden bg-background">
-                <ReportsTable reports={filteredReports} tenantId={tenantId || 'safeviate'} canManage={canManageAll} />
+            {shouldShowOrganizationTabs && <OrganizationTabsRow organizations={organizations || []} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
+            <CardContent className="flex-1 p-0 bg-background overflow-y-auto">
+                <ReportsTable reports={filteredReports} tenantId={tenantId || ''} canManage={canManageAll} />
             </CardContent>
         </Card>
     );
@@ -411,8 +332,8 @@ export default function SafetyReportsPage() {
 
   const showTabs = shouldShowOrganizationTabs;
 
-  return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-2 px-1">
+    return (
+        <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 pt-2 px-1 h-full overflow-hidden">
         {!showTabs ? (
             renderOrgCard(scopedOrganizationId)
         ) : (
