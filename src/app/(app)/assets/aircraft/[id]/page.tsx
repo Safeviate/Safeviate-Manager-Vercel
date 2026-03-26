@@ -52,6 +52,9 @@ import type { MaintenanceLog } from '@/types/maintenance';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/page';
+import type { AircraftInspectionWarningSettings } from '@/types/inspection';
+import { getDocumentExpiryBadgeStyle, getInspectionWarningStyle } from '@/lib/document-expiry';
 
 interface AircraftDetailPageProps {
   params: Promise<{ id: string }>;
@@ -74,9 +77,14 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
     () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`), orderBy('date', 'desc')) : null),
     [firestore, tenantId, aircraftId]
   );
+  const inspectionSettingsRef = useMemoFirebase(
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'inspection-warnings') : null),
+    [firestore, tenantId]
+  );
 
   const { data: aircraft, isLoading: isLoadingAircraft } = useDoc<Aircraft>(aircraftRef);
   const { data: logs, isLoading: isLoadingLogs } = useCollection<MaintenanceLog>(logsQuery);
+  const { data: inspectionSettings } = useDoc<AircraftInspectionWarningSettings>(inspectionSettingsRef);
 
   if (isLoadingAircraft) {
     return (
@@ -203,11 +211,23 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                       <DetailItem label="Next 100h Tacho" value={(aircraft.tachoAtNext100Inspection || 0).toFixed(1)} />
                       <div className="pt-2">
                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">To 50h</p>
-                        <Badge variant={timeTo50 < 5 ? "destructive" : "outline"} className="font-mono font-black text-xs h-8 px-4">{timeTo50.toFixed(1)}h</Badge>
+                        <Badge
+                          variant="outline"
+                          style={getInspectionWarningStyle(timeTo50, '50', inspectionSettings) || undefined}
+                          className="font-mono font-black text-xs h-8 px-4"
+                        >
+                          {timeTo50.toFixed(1)}h
+                        </Badge>
                       </div>
                       <div className="pt-2">
                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">To 100h</p>
-                        <Badge variant={timeTo100 < 10 ? "destructive" : "outline"} className="font-mono font-black text-xs h-8 px-4">{timeTo100.toFixed(1)}h</Badge>
+                        <Badge
+                          variant="outline"
+                          style={getInspectionWarningStyle(timeTo100, '100', inspectionSettings) || undefined}
+                          className="font-mono font-black text-xs h-8 px-4"
+                        >
+                          {timeTo100.toFixed(1)}h
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -350,6 +370,11 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
   const firestore = useFirestore();
   const { toast } = useToast();
   const [viewingDoc, setViewingDoc] = useState<{ name: string; url: string } | null>(null);
+  const expirySettingsRef = useMemoFirebase(
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
+    [firestore, tenantId]
+  );
+  const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
 
   const handleDocUpload = (newDoc: any) => {
     const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
@@ -394,13 +419,15 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
           </TableHeader>
           <TableBody>
             {aircraft.documents && aircraft.documents.length > 0 ? (
-              aircraft.documents.map((doc) => (
+              aircraft.documents.map((doc) => {
+                const expiryStyle = getDocumentExpiryBadgeStyle(doc.expirationDate, expirySettings);
+                return (
                 <TableRow key={doc.name}>
                   <TableCell className="font-bold text-sm">{doc.name}</TableCell>
                   <TableCell className="text-xs font-medium">{format(new Date(doc.uploadDate), 'dd MMM yyyy')}</TableCell>
                   <TableCell className="text-xs">
                     {doc.expirationDate ? (
-                      <Badge variant="outline" className={cn("font-bold", new Date(doc.expirationDate) < new Date() ? "text-destructive border-destructive bg-destructive/5" : "text-emerald-700 border-emerald-200 bg-emerald-50")}>
+                      <Badge variant="outline" className="font-bold" style={expiryStyle || undefined}>
                         {format(new Date(doc.expirationDate), 'dd MMM yyyy')}
                       </Badge>
                     ) : (
@@ -418,7 +445,7 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
                     </div>
                   </TableCell>
                 </TableRow>
-              ))
+              )})
             ) : (
               <TableRow>
                 <TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic">

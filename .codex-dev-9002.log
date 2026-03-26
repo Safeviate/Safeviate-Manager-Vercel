@@ -593,3 +593,43 @@
  GET /training/student-progress 200 in 140ms
  GET /admin/page-format 200 in 144ms
  GET /quality/audit-checklists 200 in 126ms
+ GET /bookings/history 200 in 85ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 965ms
+ ✓ Compiled in 194ms
+ ✓ Compiled in 178ms
+ ✓ Compiled in 93ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1619ms
+ GET /favicon.ico?favicon.7ed73651.ico 200 in 550ms
+ ✓ Compiled in 278ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1438ms
+ GET /favicon.ico?favicon.7ed73651.ico 200 in 641ms
+ ✓ Compiled in 173ms
+ ✓ Compiled in 107ms
+ GET /bookings/history 200 in 157ms
+ GET /operations/alerts 200 in 99ms
+ GET /operations/company-documents 200 in 215ms
+ ✓ Compiled in 93ms
+ GET /bookings/history 200 in 156ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1125ms
+ GET /bookings/history 200 in 141ms
+ ○ Compiling /training/student-debriefs/new ...
+ ✓ Compiled /training/student-debriefs/new in 665ms
+ GET /training/student-debriefs/new?bookingId=E9GAOlAog6fMJTaHc79e 200 in 790ms
+ GET /bookings/history 200 in 148ms
+ GET /training/student-debriefs/new?bookingId=E9GAOlAog6fMJTaHc79e 200 in 148ms
+ GET /bookings/history 200 in 164ms
+ GET /bookings/history/E9GAOlAog6fMJTaHc79e 200 in 1013ms
+ GET /bookings/history 200 in 96ms
+ GET /admin/page-format 200 in 134ms
+ GET /admin/document-dates 200 in 172ms
+ ✓ Compiled in 90ms
+ GET /assets/aircraft 200 in 165ms
+ GET /assets/aircraft/OQ3wKNqfkZ8Chjr6N26R 200 in 1004ms
+ GET /assets/aircraft 200 in 142ms
+ ✓ Compiled in 29ms
+ GET /assets/aircraft/OQ3wKNqfkZ8Chjr6N26R 200 in 1004ms
+ GET /assets/aircraft 200 in 153ms
+ GET /users/personnel 200 in 306ms
+ GET /users/personnel/ZBvYrIngnOcjyBRgljHhTwiSuJU2?type=Personnel 200 in 1167ms
+ ✓ Compiled in 89ms
+ ✓ Compiled in 229ms

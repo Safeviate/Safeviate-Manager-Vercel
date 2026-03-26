@@ -7,7 +7,7 @@ import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid, ChevronsUpDown, Pencil } from 'lucide-react';
+import { CalendarIcon, Upload, PlusCircle, Contact, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid, ChevronsUpDown, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -15,7 +15,7 @@ import Image from 'next/image';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { format, differenceInDays } from 'date-fns';
+import { format } from 'date-fns';
 import { DocumentUploader } from '@/components/document-uploader';
 import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -34,6 +34,8 @@ import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { getDocumentExpiryColor } from '@/lib/document-expiry';
+import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -84,27 +86,6 @@ export function ViewPersonnelDetails({ user, role, department, canEditUsers = fa
     [firestore, tenantId]
   );
   const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
-
-  const getStatusColor = (expirationDate: string | null | undefined): string | null => {
-    if (!expirationDate || !expirySettings) return null;
-
-    const today = new Date();
-    const expiry = new Date(expirationDate);
-    const daysUntilExpiry = differenceInDays(expiry, today);
-
-    if (daysUntilExpiry < 0) {
-      return expirySettings.expiredColor || '#ef4444'; 
-    }
-
-    const sortedPeriods = (expirySettings.warningPeriods || []).sort((a, b) => a.period - b.period);
-    for (const warning of sortedPeriods) {
-      if (daysUntilExpiry <= warning.period) {
-        return warning.color;
-      }
-    }
-
-    return expirySettings.defaultColor || null; 
-  };
 
   const handleViewImage = (url: string) => {
     setViewingImageUrl(url);
@@ -364,12 +345,12 @@ export function ViewPersonnelDetails({ user, role, department, canEditUsers = fa
                                                 <TableHead className="text-[10px] uppercase font-bold">Document Name</TableHead>
                                                 <TableHead className="text-[10px] uppercase font-bold">Expiry</TableHead>
                                                 <TableHead className='text-center text-[10px] uppercase font-bold'>Set Expiry</TableHead>
-                                                <TableHead className="text-right text-[10px] uppercase font-bold">Actions</TableHead>
+                                                <TableHead className="w-[96px] text-right text-[10px] uppercase font-bold">Actions</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {combinedDocuments.map((doc) => {
-                                                const statusColor = getStatusColor(doc.expirationDate);
+                                                const statusColor = getDocumentExpiryColor(doc.expirationDate, expirySettings);
                                                 return (
                                                     <TableRow key={doc.name}>
                                                         <TableCell className="font-semibold text-sm">{doc.name}</TableCell>
@@ -387,14 +368,26 @@ export function ViewPersonnelDetails({ user, role, department, canEditUsers = fa
                                                                 <PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined} onDateSelect={(date) => date && handleExpirationDateChange(doc.name, date)} /></PopoverContent>
                                                             </Popover>
                                                         </TableCell>
-                                                        <TableCell className="text-right">
+                                                        <TableCell className="w-[96px] text-right">
                                                             {doc.isUploaded ? (
                                                                 <div className="flex gap-2 justify-end">
-                                                                <Button variant="outline" size="sm" className="h-8 gap-2" onClick={() => handleViewImage(doc.url!)}><Eye className="h-4 w-4" /> View</Button>
-                                                                <Button variant="destructive" size="icon" onClick={() => handleDocumentDelete(doc.name)}><Trash2 className="h-4 w-4" /></Button>
+                                                                    <ViewActionButton onClick={() => handleViewImage(doc.url!)} />
+                                                                    <DeleteActionButton
+                                                                      description={`This will permanently delete "${doc.name}".`}
+                                                                      onDelete={() => handleDocumentDelete(doc.name)}
+                                                                      srLabel="Delete document"
+                                                                    />
                                                                 </div>
                                                             ) : (
-                                                                <DocumentUploader defaultFileName={doc.name} onDocumentUploaded={onDocumentUploaded} trigger={(openDialog) => (<Button size="sm" onClick={() => openDialog()} variant="secondary"><Upload className="mr-2 h-4 w-4" /> Upload</Button>)} />
+                                                                <DocumentUploader
+                                                                  defaultFileName={doc.name}
+                                                                  onDocumentUploaded={onDocumentUploaded}
+                                                                  trigger={(openDialog) => (
+                                                                    <Button size="sm" onClick={() => openDialog()} variant="secondary">
+                                                                      <Upload className="mr-2 h-4 w-4" /> Upload
+                                                                    </Button>
+                                                                  )}
+                                                                />
                                                             )}
                                                         </TableCell>
                                                     </TableRow>

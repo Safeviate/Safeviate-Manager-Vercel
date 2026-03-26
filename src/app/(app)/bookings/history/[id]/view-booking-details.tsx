@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { collection, doc, arrayUnion, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { useForm } from 'react-hook-form';
 import type { Booking, OverrideLog } from "@/types/booking";
@@ -12,7 +12,7 @@ import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot, Cell, Label } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Clock, CheckCircle2, ClipboardCheck, FileClock, History, PencilLine, ShieldAlert, Lock, Edit2, ShieldCheck, UserCheck, Map as NavIcon, FileText } from 'lucide-react';
+import { Save, AlertTriangle, CheckCircle2, ClipboardCheck, FileClock, History, PencilLine, ShieldAlert, Lock, Edit2, ShieldCheck, UserCheck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,10 +25,11 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { NavlogBuilder } from '../../navlog-builder';
 import { calculateFuelGallonsFromWeight, calculateFuelWeight, gallonsToLitres, getFuelPreset, poundsToKilograms, type FuelType } from '@/lib/fuel';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { BookingDetailHeader } from '@/components/booking-detail-header';
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 
@@ -98,6 +99,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const { hasPermission } = usePermissions();
     const { tenantId, userProfile } = useUserProfile();
 
+    const [activeTab, setActiveTab] = useState('flight-details');
     const [activeEditView, setActiveEditView] = useState<'none' | 'pre-flight' | 'post-flight'>('none');
 
     const aircraftQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
@@ -220,25 +222,18 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
     return (
         <div className="flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-            <Tabs defaultValue="flight-details" className="flex w-full min-h-0 flex-1 flex-col">
-                <div className="shrink-0 px-1">
-                    <TabsList className="mb-4 h-auto flex-wrap justify-start gap-2 border-b-0 bg-transparent p-0">
-                        <TabsTrigger value="flight-details" className="gap-2 rounded-full border px-4 py-2 text-xs font-bold data-[state=active]:bg-button-primary sm:px-6"><FileText className="h-4 w-4" /> Flight Details</TabsTrigger>
-                        <TabsTrigger value="navlog" className="gap-2 rounded-full border px-4 py-2 text-xs font-bold data-[state=active]:bg-button-primary sm:px-6"><NavIcon className="h-4 w-4" /> Navlog</TabsTrigger>
-                    </TabsList>
-                </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex w-full min-h-0 flex-1 flex-col">
+                <BookingDetailHeader
+                    title={booking.type}
+                    subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId}`}
+                    status={booking.status}
+                    flightHours={flightHours}
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
+                />
                 <div className="flex min-h-0 flex-1 flex-col">
                     <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
                         <Card className={cn("flex h-full min-h-0 flex-1 flex-col overflow-hidden border shadow-none", isMobile && "min-h-[calc(100dvh-13rem)]")}>
-                            <CardHeader className="border-b bg-muted/20 shrink-0">
-                                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                                    <div className="space-y-1">
-                                        <CardTitle className="flex flex-wrap items-center gap-2">{booking.type}<Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'}>{booking.status}</Badge></CardTitle>
-                                        <CardDescription>{booking.bookingNumber} • {aircraft ? aircraft.tailNumber : booking.aircraftId}</CardDescription>
-                                    </div>
-                                    {flightHours !== null && <div className="text-right"><p className="text-[10px] font-black uppercase">Flight Time</p><p className="text-3xl font-black text-primary flex items-center justify-end gap-2"><Clock className="h-6 w-6" />{flightHours}h</p></div>}
-                                </div>
-                            </CardHeader>
                             <ScrollArea className="min-h-0 flex-1">
                                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
                                     <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
@@ -373,7 +368,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             </ScrollArea>
                         </Card>
                     </TabsContent>
-                    <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col"><NavlogBuilder booking={booking} tenantId={tenantId!} /></TabsContent>
+                    <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col">
+                        <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden border shadow-none">
+                            <div className="min-h-0 flex-1 overflow-hidden">
+                                <NavlogBuilder booking={booking} tenantId={tenantId!} />
+                            </div>
+                        </Card>
+                    </TabsContent>
                 </div>
             </Tabs>
         </div>
@@ -431,3 +432,4 @@ function PostFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }:
         </form>
     );
 }
+
