@@ -3,10 +3,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, writeBatch, doc, deleteDoc } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Combined Card imports
-import { MainPageHeader } from "@/components/page-header"; // Keep MainPageHeader import
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MainPageHeader } from "@/components/page-header";
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste, BookOpen, Layers, MoreHorizontal, AlertTriangle } from 'lucide-react'; // Consolidated Lucide imports
+import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste, BookOpen, Layers, MoreHorizontal, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -18,10 +18,9 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'; // Consolidated AlertDialog imports
-
-import { ChecklistTemplate } from '@/types/checklist'; // Assuming this is needed for Matrix generation
-import { useAIChat } from '@/lib/ai-client'; // Assuming this is for AI features
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { useAIChat } from '@/lib/ai-client';
 
 interface MatrixItem {
     id: string;
@@ -69,23 +68,8 @@ const NewMatrixItemDialog = ({ isOpen, setIsOpen, onSave, parentId, type, initia
     const generateAIContent = useCallback(async () => {
         setAiLoading(true);
         try {
-            const matrixDocRef = doc(firestore, 'coherenceMatrices', matrixId);
-            const matrixDoc = await useDoc(matrixDocRef);
-            const matrixData = matrixDoc.data() as CoherenceMatrix;
-
-            if (!matrixData) {
-                toast({
-                    title: 'Error',
-                    description: 'Could not fetch matrix data for AI generation.',
-                    variant: 'destructive',
-                });
-                setAiLoading(false);
-                return;
-            }
-
-            const prompt = `Generate a detailed description for a ${type} named "${name}" within the coherence matrix "${matrixData.name}" (Description: ${matrixData.description || 'N/A'}). If this is an objective, it is linked to source ID: ${parentId}.`;
-
-            const response = await chat(prompt); // Assuming chat returns string
+            const prompt = `Generate a detailed description for a ${type} named "${name}" within a coherence matrix. If this is an objective, it is linked to a source.`;
+            const response = await chat(prompt);
             setDescription(response);
             toast({
                 title: 'AI Generated',
@@ -101,13 +85,12 @@ const NewMatrixItemDialog = ({ isOpen, setIsOpen, onSave, parentId, type, initia
         } finally {
             setAiLoading(false);
         }
-    }, [name, description, chat, firestore, type, matrixId, parentId]);
+    }, [name, chat, type]);
 
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                {/* Resolved: Keeping temp-save-work's Button styling as it seems like a UI improvement */}
                 <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase gap-2 border-slate-300">
                     <PlusCircle className="h-4 w-4" /> Add {type === 'source' ? 'Source' : 'Objective'}
                 </Button>
@@ -293,7 +276,7 @@ const DeleteConfirmationDialog = ({ isOpen, setIsOpen, onDelete }: {
                             'Delete'
                         )}
                     </Button>
-                </DialogFooter>
+                </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
     );
@@ -308,9 +291,9 @@ const LinkObjectivesDialog = ({ isOpen, setIsOpen, sourceId, matrixId, currentLi
     onUpdateLinks: (sourceId: string, newLinks: string[]) => Promise<void>;
 }) => {
     const firestore = useFirestore();
-    const objectivesCollectionRef = collection(firestore, 'coherenceMatrices', matrixId, 'items');
-    const objectivesQuery = query(objectivesCollectionRef);
-    const { data: allItems, isLoading } = useCollection<MatrixItem>(objectivesQuery);
+    const itemsCollectionRef = collection(firestore, 'coherenceMatrices', matrixId, 'items');
+    const itemsQuery = query(itemsCollectionRef);
+    const { data: allItems, isLoading } = useCollection<MatrixItem>(itemsQuery);
     const [selectedObjectives, setSelectedObjectives] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -388,8 +371,6 @@ const LinkObjectivesDialog = ({ isOpen, setIsOpen, sourceId, matrixId, currentLi
     );
 };
 
-
-// Main Page Component
 export default function CoherenceMatrixPage() {
     const firestore = useFirestore();
 
@@ -403,7 +384,7 @@ export default function CoherenceMatrixPage() {
 
     const itemsCollectionRef = selectedMatrixId ? collection(firestore, 'coherenceMatrices', selectedMatrixId, 'items') : null;
     const itemsQuery = itemsCollectionRef ? query(itemsCollectionRef) : null;
-    const { data: allItems, isLoading: isLoadingItems, error: itemsError } = useCollection<MatrixItem>(itemsQuery);
+    const { data: allItems, isLoading: isLoadingItems } = useCollection<MatrixItem>(itemsQuery);
 
     const sources = useMemo(() => {
         return allItems?.filter(item => item.type === 'source') || [];
@@ -437,7 +418,6 @@ export default function CoherenceMatrixPage() {
     const handleCreateUpdateMatrix = async (matrixData: Partial<CoherenceMatrix>) => {
         try {
             if (matrixData.id) {
-                // Update existing
                 await writeBatch(firestore)
                     .update(doc(matricesCollectionRef, matrixData.id), {
                         name: matrixData.name,
@@ -450,7 +430,6 @@ export default function CoherenceMatrixPage() {
                     description: `Coherence matrix "${matrixData.name}" has been updated.`,
                 });
             } else {
-                // Create new
                 const newDocRef = doc(matricesCollectionRef);
                 await writeBatch(firestore)
                     .set(newDocRef, {
@@ -459,7 +438,7 @@ export default function CoherenceMatrixPage() {
                         description: matrixData.description,
                         createdAt: new Date(),
                         updatedAt: new Date(),
-                        items: [], // Initialize with empty items array
+                        items: [],
                     })
                     .commit();
                 toast({
@@ -485,7 +464,7 @@ export default function CoherenceMatrixPage() {
                 title: 'Matrix Deleted',
                 description: 'The coherence matrix and all its items have been deleted.',
             });
-            setSelectedMatrixId(null); // Deselect after deletion
+            setSelectedMatrixId(null);
         } catch (error) {
             console.error('Error deleting matrix:', error);
             toast({
@@ -501,7 +480,6 @@ export default function CoherenceMatrixPage() {
         try {
             const itemsRef = collection(firestore, 'coherenceMatrices', selectedMatrixId, 'items');
             if (itemData.id) {
-                // Update existing item
                 await writeBatch(firestore)
                     .update(doc(itemsRef, itemData.id), {
                         name: itemData.name,
@@ -515,7 +493,6 @@ export default function CoherenceMatrixPage() {
                     description: `${itemData.type === 'source' ? 'Source' : 'Objective'} "${itemData.name}" has been updated.`,
                 });
             } else {
-                // Create new item
                 const newDocRef = doc(itemsRef);
                 await writeBatch(firestore)
                     .set(newDocRef, {
@@ -524,7 +501,7 @@ export default function CoherenceMatrixPage() {
                         description: itemData.description,
                         type: itemData.type,
                         parentId: itemData.parentId || null,
-                        linkedObjectives: itemData.type === 'source' ? [] : undefined, // Only sources have linkedObjectives
+                        linkedObjectives: itemData.type === 'source' ? [] : undefined,
                     })
                     .commit();
                 toast({
@@ -601,7 +578,6 @@ export default function CoherenceMatrixPage() {
 
     return (
         <div className="flex flex-col space-y-6 p-6">
-            {/* Resolved: Using MainPageHeader component */}
             <MainPageHeader
                 title="Coherence Matrix"
                 description="Manage your safety coherence matrix, linking sources to objectives."
@@ -683,11 +659,9 @@ export default function CoherenceMatrixPage() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Sources Column */}
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Sources (Documents & Standards)</CardTitle>
-                            {/* NewMatrixItemDialog is already handling the button inside DialogTrigger */}
                             <NewMatrixItemDialog
                                 isOpen={isNewItemDialogOpen && newItemType === 'source'}
                                 setIsOpen={setIsNewItemDialogOpen}
@@ -766,11 +740,9 @@ export default function CoherenceMatrixPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Objectives Column */}
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Objectives</CardTitle>
-                             {/* NewMatrixItemDialog is already handling the button inside DialogTrigger */}
                             <NewMatrixItemDialog
                                 isOpen={isNewItemDialogOpen && newItemType === 'objective'}
                                 setIsOpen={setIsNewItemDialogOpen}
