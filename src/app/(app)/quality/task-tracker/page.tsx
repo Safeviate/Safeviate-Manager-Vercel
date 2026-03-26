@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { collection, query, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { Card, CardContent } from '@/components/ui/card';
-import { MainPageHeader } from "@/components/page-header"; // Keep MainPageHeader import
+import { MainPageHeader } from "@/components/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -166,7 +166,7 @@ export default function TaskTrackerPage() {
              return 'default';
         case 'In Progress':
             return 'secondary';
-        case 'Cancelled': // Added cancelled for specific styling
+        case 'Cancelled':
             return 'destructive';
         default:
             return 'outline';

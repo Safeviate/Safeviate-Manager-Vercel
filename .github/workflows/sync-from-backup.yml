@@ -1,0 +1,34 @@
+name: Auto Sync from Backup
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Grant write permission for pushing changes
+
+    steps:
+      - name: Checkout Backup Repository
+        uses: actions/checkout@v4
+        with:
+          repository: Safeviate/Backup
+          ref: main
+          token: ${{ secrets.SYNC_TOKEN }}
+
+      - name: Sync to safeviate-manager
+        run: |
+          git config --global user.email 'sync@github.com'
+          git config --global user.name 'Sync Bot'
+          git clone --depth 1 https://${{ secrets.SYNC_TOKEN }}@github.com/Safeviate/safeviate-manager.git manager-repo
+          cp -rT --preserve=all . manager-repo/ # Use -T for safety, and --preserve=all for permissions/timestamps
+          cd manager-repo
+          git add -A
+          git commit -m "Auto-sync from Safeviate/Backup [skip ci]" || exit 0 # || exit 0 allows job to succeed if no changes
+          git push https://${{ secrets.SYNC_TOKEN }}@github.com/Safeviate/safeviate-manager.git main

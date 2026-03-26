@@ -13,21 +13,21 @@ interface MainPageHeaderProps {
  * Ensures consistent typography, spacing, and responsive layout for page titles.
  * Automatically handles action buttons in a separate bordered, scrollable row.
  */
-export const MainPageHeader: FC<MainPageHeaderProps> = ({ 
-  title, 
+export const MainPageHeader: FC<MainPageHeaderProps> = ({
+  title,
   actions,
-  className 
+  className
 }) => {
   return (
     <div className={cn("flex flex-col w-full shrink-0", className)}>
-      <CardHeader 
+      <CardHeader
         className="flex flex-row items-center justify-between p-4 md:p-6 border-b bg-muted/5"
       >
-        <CardTitle className="text-[13px] uppercase font-black tracking-wider text-muted-foreground whitespace-nowrap">
+        <CardTitle className="text-[12px] uppercase font-black tracking-wider text-muted-foreground whitespace-nowrap">
           {title}
         </CardTitle>
       </CardHeader>
-      
+
       {actions && (
         <div className="w-full overflow-x-auto no-scrollbar border-b bg-muted/5">
           <div className="flex flex-row flex-nowrap items-center gap-2 w-max px-4 md:px-6 py-3">

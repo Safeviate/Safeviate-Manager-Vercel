@@ -1,569 +1,856 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, writeBatch, doc, deleteDoc } from 'firebase/firestore';
-import { Card, CardContent } from '@/components/ui/card';
-<<<<<<< HEAD
-=======
-import { MainPageHeader } from "@/components/page-header";
->>>>>>> temp-save-work
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Combined Card imports
+import { MainPageHeader } from "@/components/page-header"; // Keep MainPageHeader import
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste, BookOpen, Layers } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste, BookOpen, Layers, MoreHorizontal, AlertTriangle } from 'lucide-react'; // Consolidated Lucide imports
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useToast } from '@/hooks/use-toast';
-import { seedComplianceData } from '@/lib/seed-data/part-141';
-import { callAiFlow } from '@/lib/ai-client';
-
-import type { ComplianceRequirement, ExternalOrganization, TabVisibilitySettings } from '@/types/quality';
-import type { Personnel } from '../../users/personnel/page';
-import { ComplianceItemForm } from './item-form';
-import type { SummarizeDocumentInput, SummarizeDocumentOutput } from '@/ai/flows/summarize-document-flow';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import Image from 'next/image';
-import { Switch } from '@/components/ui/switch';
-import { useUserProfile } from '@/hooks/use-user-profile';
-import { usePermissions } from '@/hooks/use-permissions';
-import { useOrganizationScope } from '@/hooks/use-organization-scope';
-import { MainPageHeader } from '@/components/page-header';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { toast } from '@/hooks/use-toast';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'; // Consolidated AlertDialog imports
 
+import { ChecklistTemplate } from '@/types/checklist'; // Assuming this is needed for Matrix generation
+import { useAIChat } from '@/lib/ai-client'; // Assuming this is for AI features
 
-function UploadRegulationsDialog({ tenantId, organizationId }: { tenantId: string, organizationId: string | null }) {
-    const { toast } = useToast();
-    const [isOpen, setIsOpen] = useState(false);
-    const [isProcessing, setIsProcessing] = useState(false);
-    
-    const [file, setFile] = useState<File | null>(null);
-    const [pastedText, setPastedText] = useState('');
-    const [stagedImages, setStagedImages] = useState<string[]>([]);
-    const [isMultiImageMode, setIsMultiImageMode] = useState(false);
-    
+interface MatrixItem {
+    id: string;
+    type: 'source' | 'objective';
+    name: string;
+    description: string;
+    parentId?: string; // For objectives to link to sources
+    linkedObjectives?: string[]; // For sources to list linked objectives
+}
+
+interface CoherenceMatrix {
+    id: string;
+    name: string;
+    description: string;
+    items: MatrixItem[];
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+const NewMatrixItemDialog = ({ isOpen, setIsOpen, onSave, parentId, type, initialData, matrixId }: {
+    isOpen: boolean;
+    setIsOpen: (open: boolean) => void;
+    onSave: (item: Partial<MatrixItem>) => Promise<void>;
+    parentId?: string;
+    type: 'source' | 'objective';
+    initialData?: MatrixItem;
+    matrixId: string;
+}) => {
+    const [name, setName] = useState(initialData?.name || '');
+    const [description, setDescription] = useState(initialData?.description || '');
+    const [loading, setLoading] = useState(false);
+    const [aiLoading, setAiLoading] = useState(false);
     const firestore = useFirestore();
+    const chat = useAIChat();
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (event.target.files) {
-            setFile(event.target.files[0]);
-        }
-    };
-    
-    const handlePaste = useCallback(async (event: React.ClipboardEvent) => {
-        const items = event.clipboardData.items;
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf('image') !== -1) {
-                const blob = items[i].getAsFile();
-                if (blob) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const newImage = e.target?.result as string;
-                        setStagedImages(prev => [...prev, newImage]);
-                        toast({ title: 'Image Added', description: 'The image has been staged for processing.' });
-                    };
-                    reader.readAsDataURL(blob);
-                }
-                return;
-            }
-            if (items[i].type.startsWith('text/plain')) {
-                event.preventDefault();
-                items[i].getAsString((text) => {
-                    setPastedText(text);
-                     toast({ title: 'Text Pasted', description: 'The text has been loaded and is ready to be processed.' });
-                });
-                return; 
-            }
-        }
-    }, [toast]);
-
-    const removeStagedImage = (index: number) => {
-        setStagedImages(prev => prev.filter((_, i) => i !== index));
+    const handleSave = async () => {
+        setLoading(true);
+        await onSave({ ...initialData, name, description, parentId, type });
+        setLoading(false);
+        setIsOpen(false);
+        setName('');
+        setDescription('');
     };
 
-    const processAndSave = async (input: SummarizeDocumentInput) => {
-        if (!firestore) {
-            toast({ variant: 'destructive', title: 'Database not available' });
-            return;
-        }
-
-        setIsProcessing(true);
+    const generateAIContent = useCallback(async () => {
+        setAiLoading(true);
         try {
-            const { requirements } = await callAiFlow<
-                SummarizeDocumentInput,
-                SummarizeDocumentOutput
-            >('summarizeDocument', input);
+            const matrixDocRef = doc(firestore, 'coherenceMatrices', matrixId);
+            const matrixDoc = await useDoc(matrixDocRef);
+            const matrixData = matrixDoc.data() as CoherenceMatrix;
 
-            if (!requirements || requirements.length === 0) {
-                toast({ variant: 'destructive', title: 'No Regulations Found', description: 'The AI could not identify any regulations in the provided content.' });
+            if (!matrixData) {
+                toast({
+                    title: 'Error',
+                    description: 'Could not fetch matrix data for AI generation.',
+                    variant: 'destructive',
+                });
+                setAiLoading(false);
                 return;
             }
 
-            const batch = writeBatch(firestore);
-            const collectionRef = collection(firestore, `tenants/${tenantId}/compliance-matrix`);
-            
-            requirements.forEach(req => {
-                const docRef = doc(collectionRef);
-                batch.set(docRef, {
-                    ...req,
-                    organizationId: organizationId,
-                });
-            });
+            const prompt = `Generate a detailed description for a ${type} named "${name}" within the coherence matrix "${matrixData.name}" (Description: ${matrixData.description || 'N/A'}). If this is an objective, it is linked to source ID: ${parentId}.`;
 
-            await batch.commit();
-
+            const response = await chat(prompt); // Assuming chat returns string
+            setDescription(response);
             toast({
-                title: 'Matrix Populated',
-                description: `${requirements.length} compliance requirements have been added to the matrix.`,
+                title: 'AI Generated',
+                description: `Description for "${name}" generated by AI.`,
             });
-
-        } catch (error: any) {
-            console.error('Error processing document:', error);
-            toast({ variant: 'destructive', title: 'Processing Failed', description: error.message || 'An unknown error occurred.' });
+        } catch (error) {
+            console.error('AI generation error:', error);
+            toast({
+                title: 'Error',
+                description: 'Failed to generate AI content. Please try again.',
+                variant: 'destructive',
+            });
         } finally {
-            setIsProcessing(false);
-            setFile(null);
-            setPastedText('');
-            setStagedImages([]);
-            setIsMultiImageMode(false);
-            setIsOpen(false);
+            setAiLoading(false);
         }
-    };
+    }, [name, description, chat, firestore, type, matrixId, parentId]);
 
-    const handleProcess = async () => {
-        let input: SummarizeDocumentInput = { document: {} };
-        
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                input.document.text = e.target?.result as string;
-                await processAndSave(input);
-            };
-            reader.readAsText(file);
-        } else if (pastedText) {
-            input.document.text = pastedText;
-            await processAndSave(input);
-        } else if (stagedImages.length > 0) {
-            input.document.images = stagedImages;
-            input.isMultiPage = isMultiImageMode;
-            await processAndSave(input);
-        }
-    };
-
-    const canProcess = file || pastedText.trim() || stagedImages.length > 0;
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-<<<<<<< HEAD
-                <Button variant="outline" size="sm" className="h-9 px-4 text-xs font-black uppercase border-slate-300 gap-2">
-=======
+                {/* Resolved: Keeping temp-save-work's Button styling as it seems like a UI improvement */}
                 <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase gap-2 border-slate-300">
->>>>>>> temp-save-work
-                    <WandSparkles className="h-3.5 w-3.5 text-primary" /> 
-                    AI Populate
+                    <PlusCircle className="h-4 w-4" /> Add {type === 'source' ? 'Source' : 'Objective'}
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Populate Matrix with AI</DialogTitle>
+                    <DialogTitle>{initialData ? 'Edit' : 'Add New'} {type === 'source' ? 'Source' : 'Objective'}</DialogTitle>
                     <DialogDescription>
-                        Upload a file, paste text, or paste one or more images of regulations. The AI will parse them and add the requirements to the matrix.
+                        {initialData ? 'Edit the details of this item.' : `Add a new ${type === 'source' ? 'source document or standard' : 'objective'} to your coherence matrix.`}
                     </DialogDescription>
                 </DialogHeader>
-                <Tabs defaultValue="image">
-                    <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="image">Paste Images</TabsTrigger>
-                        <TabsTrigger value="text">Paste Text</TabsTrigger>
-                        <TabsTrigger value="file">Upload File</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="image" className="pt-4">
-                         <div
-                            onPaste={handlePaste}
-                            className="h-48 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground mb-4"
-                        >
-                            <div className="text-center">
-                                <ClipboardPaste className="mx-auto h-8 w-8" />
-                                <p>Click here and paste image(s) (Ctrl+V)</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center space-x-2 my-4">
-                            <Switch id="multi-image-mode" checked={isMultiImageMode} onCheckedChange={setIsMultiImageMode} />
-                            <Label htmlFor="multi-image-mode">Treat images as a single document</Label>
-                        </div>
-                        {isMultiImageMode && (
-                           <p className="text-xs text-muted-foreground p-2 bg-muted rounded-md">
-                               Instruction to AI: &quot;You will be given a sequence of images. Treat them as pages of a single document, in the order they are provided. Text may flow from one image to the next.&quot;
-                           </p>
-                        )}
-                        <ScrollArea className="h-48 mt-4">
-                           <div className="grid grid-cols-3 gap-4">
-                                {stagedImages.map((imageSrc, index) => (
-                                    <div key={index} className="relative group">
-                                        <Image src={imageSrc} alt={`Staged image ${index + 1}`} width={150} height={150} className="rounded-md object-cover aspect-square" />
-                                        <Button
-                                            variant="destructive"
-                                            size="icon"
-                                            className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100"
-                                            onClick={() => removeStagedImage(index)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                ))}
-                            </div>
-                        </ScrollArea>
-                    </TabsContent>
-                    <TabsContent value="text" className="pt-4">
-                        <ScrollArea className="h-96 rounded-md border">
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="name" className="text-right">
+                            Name
+                        </Label>
+                        <Input
+                            id="name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="col-span-3"
+                            disabled={loading}
+                        />
+                    </div>
+                    <div className="grid grid-cols-4 items-start gap-4">
+                        <Label htmlFor="description" className="text-right">
+                            Description
+                        </Label>
+                        <div className="col-span-3">
                             <Textarea
-                                placeholder="Paste the raw text of the regulations here..."
-                                className="h-full min-h-[24rem] border-none focus-visible:ring-0"
-                                value={pastedText}
-                                onChange={(e) => setPastedText(e.target.value)}
-                                onPaste={handlePaste}
+                                id="description"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                className="min-h-[100px]"
+                                disabled={loading}
                             />
-                        </ScrollArea>
-                    </TabsContent>
-                    <TabsContent value="file" className="pt-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="reg-file">Regulation File (.txt)</Label>
-                            <Input id="reg-file" type="file" onChange={handleFileChange} accept=".txt" />
-                             {file && <p className="text-sm text-muted-foreground">Selected: {file.name}</p>}
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="mt-2 text-xs gap-1"
+                                onClick={generateAIContent}
+                                disabled={aiLoading || loading || !name}
+                            >
+                                {aiLoading ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                        Generating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <WandSparkles className="h-3 w-3" /> Generate with AI
+                                    </>
+                                )}
+                            </Button>
                         </div>
-                    </TabsContent>
-                </Tabs>
+                    </div>
+                </div>
                 <DialogFooter>
-                    <DialogClose asChild><Button variant="outline" disabled={isProcessing}>Cancel</Button></DialogClose>
-                    <Button onClick={handleProcess} disabled={isProcessing || !canProcess} className="bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-xs">
-                        {isProcessing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : 'Upload and Process'}
+                    <Button variant="outline" onClick={() => setIsOpen(false)} disabled={loading}>
+                        Cancel
+                    </Button>
+                    <Button type="submit" onClick={handleSave} disabled={loading || !name}>
+                        {loading ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                            </>
+                        ) : (
+                            'Save Changes'
+                        )}
                     </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-    )
-}
-
-function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
-    return (
-<<<<<<< HEAD
-        <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
-            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
-                <TabsTrigger 
-                    value="internal" 
-                    className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
-                >
-                    Internal
-                </TabsTrigger>
-                {organizations.map((organization) => (
-                    <TabsTrigger
-                        key={organization.id}
-                        value={organization.id}
-                        className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
-                    >
-                        {organization.name}
-=======
-        <div className="border-b bg-muted/5 px-6 py-3 overflow-x-auto no-scrollbar">
-            <div className="flex w-max gap-2 pr-6 flex-nowrap">
-                <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
-                    <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase">
-                        Internal
->>>>>>> temp-save-work
-                    </TabsTrigger>
-                    {organizations.map((organization) => (
-                        <TabsTrigger
-                            key={organization.id}
-                            value={organization.id}
-                            className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase"
-                        >
-                            {organization.name}
-                        </TabsTrigger>
-                    ))}
-                </TabsList>
-            </div>
-        </div>
     );
-}
+};
 
+const NewMatrixDialog = ({ isOpen, setIsOpen, onSave, initialData }: {
+    isOpen: boolean;
+    setIsOpen: (open: boolean) => void;
+    onSave: (matrix: Partial<CoherenceMatrix>) => Promise<void>;
+    initialData?: CoherenceMatrix;
+}) => {
+    const [name, setName] = useState(initialData?.name || '');
+    const [description, setDescription] = useState(initialData?.description || '');
+    const [loading, setLoading] = useState(false);
 
-export default function CoherenceMatrixPage() {
-  const firestore = useFirestore();
-  const { toast } = useToast();
-  const { tenantId } = useUserProfile();
-  const { hasPermission } = usePermissions();
-  const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'quality-matrix-manage' });
-
-  const canManageAll = hasPermission('quality-matrix-manage');
-
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<ComplianceRequirement | null>(null);
-
-  const complianceQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/compliance-matrix`)) : null), [firestore, tenantId]);
-  const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
-  const orgsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null), [firestore, tenantId]);
-
-  const { data: complianceItems, isLoading: isLoadingItems } = useCollection<ComplianceRequirement>(complianceQuery);
-  const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
-  const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
-
-  const isLoading = isLoadingItems || isLoadingPersonnel || isLoadingOrgs;
-
-  const naturalSort = (a: string, b: string) => {
-    const re = /(\d+)/g;
-    const aParts = a.split(re);
-    const bParts = b.split(re);
-    const len = Math.min(aParts.length, bParts.length);
-
-    for (let i = 0; i < len; i++) {
-        const aPart = aParts[i];
-        const bPart = bParts[i];
-
-        if (i % 2 === 1) {
-            const aNum = parseInt(aPart, 10);
-            const bNum = parseInt(bPart, 10);
-            if (aNum !== bNum) return aNum - bNum;
-        } else {
-            if (aPart !== bPart) return aPart.localeCompare(bPart);
-        }
-    }
-    return a.length - b.length;
-  };
-
-  const handleSeedData = async (orgId: string | null) => {
-    if (!firestore || !tenantId) return;
-    const batch = writeBatch(firestore);
-    const collectionRef = collection(firestore, `tenants/${tenantId}/compliance-matrix`);
-    seedComplianceData.forEach(item => {
-        const docRef = doc(collectionRef);
-        batch.set(docRef, { ...item, organizationId: orgId });
-    });
-    await batch.commit();
-    toast({ title: "Success", description: "Part 141 regulations have been seeded." });
-  };
-  
-  const handleOpenForm = (item: ComplianceRequirement | null = null) => {
-    setEditingItem(item);
-    setIsFormOpen(true);
-  };
-
-  const handleDeleteItem = async (itemId: string) => {
-    if (!firestore || !tenantId) return;
-    await deleteDoc(doc(firestore, `tenants/${tenantId}/compliance-matrix`, itemId));
-    toast({ title: "Success", description: "Compliance item has been deleted." });
-  };
-  
-  const handleDeleteSection = async (parentItem: ComplianceRequirement) => {
-      if (!firestore || !tenantId || !complianceItems) return;
-      const batch = writeBatch(firestore);
-      const parentRef = doc(firestore, `tenants/${tenantId}/compliance-matrix`, parentItem.id);
-      batch.delete(parentRef);
-      const childrenToDelete = complianceItems.filter(item => item.parentRegulationCode === parentItem.regulationCode);
-      childrenToDelete.forEach(child => {
-          const childRef = doc(firestore, `tenants/${tenantId}/compliance-matrix`, child.id);
-          batch.delete(childRef);
-      });
-      await batch.commit();
-      toast({ title: "Section Deleted" });
-  }
-
-  const renderOrgContext = (orgId: string | 'internal') => {
-    const contextOrgId = orgId === 'internal' ? null : orgId;
-    const filteredItems = (complianceItems || []).filter(item => 
-        orgId === 'internal' ? !item.organizationId : item.organizationId === orgId
-    );
-    const sortedItems = [...filteredItems].sort((a, b) => naturalSort(a.regulationCode, b.regulationCode));
-    const groupedItems = sortedItems.reduce((acc, item) => {
-        const parentCode = item.parentRegulationCode;
-        if (parentCode) {
-            if (!acc[parentCode]) acc[parentCode] = [];
-            acc[parentCode].push(item);
-        }
-        return acc;
-    }, {} as Record<string, ComplianceRequirement[]>);
-    const topLevelItems = sortedItems.filter(item => !item.parentRegulationCode);
+    const handleSave = async () => {
+        setLoading(true);
+        await onSave({ ...initialData, name, description });
+        setLoading(false);
+        setIsOpen(false);
+        setName('');
+        setDescription('');
+    };
 
     return (
-<<<<<<< HEAD
-        <div className="flex flex-col h-full overflow-hidden">
-            <div className="sticky top-0 z-30 bg-card">
-                <MainPageHeader 
-                    title="Regulatory Coherence Matrix"
-                    description="Map organizational procedures against specific regulatory requirements and standards."
-                    actions={
-                        <div className="flex items-center gap-3">
-                            <UploadRegulationsDialog tenantId={tenantId!} organizationId={contextOrgId} />
-                            <Button variant="outline" size="sm" className="h-9 px-4 text-xs font-black uppercase border-slate-300 gap-2 shadow-sm" onClick={() => handleSeedData(contextOrgId)}>
-                                <BookOpen className="h-3.5 w-3.5" /> Seed
-                            </Button>
-                            <Button size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2" onClick={() => handleOpenForm()}>
-                                <PlusCircle className="h-4 w-4" /> Add Item
-                            </Button>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>{initialData ? 'Edit' : 'Create New'} Coherence Matrix</DialogTitle>
+                    <DialogDescription>
+                        {initialData ? 'Edit the details of this matrix.' : 'Create a new coherence matrix to define your safety structure.'}
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="matrix-name" className="text-right">
+                            Name
+                        </Label>
+                        <Input
+                            id="matrix-name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="col-span-3"
+                            disabled={loading}
+                        />
+                    </div>
+                    <div className="grid grid-cols-4 items-start gap-4">
+                        <Label htmlFor="matrix-description" className="text-right">
+                            Description
+                        </Label>
+                        <Textarea
+                            id="matrix-description"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            className="col-span-3 min-h-[100px]"
+                            disabled={loading}
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsOpen(false)} disabled={loading}>
+                        Cancel
+                    </Button>
+                    <Button type="submit" onClick={handleSave} disabled={loading || !name}>
+                        {loading ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                            </>
+                        ) : (
+                            'Save Matrix'
+                        )}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+const DeleteConfirmationDialog = ({ isOpen, setIsOpen, onDelete }: {
+    isOpen: boolean;
+    setIsOpen: (open: boolean) => void;
+    onDelete: () => Promise<void>;
+}) => {
+    const [loading, setLoading] = useState(false);
+
+    const handleDelete = async () => {
+        setLoading(true);
+        await onDelete();
+        setLoading(false);
+        setIsOpen(false);
+    };
+
+    return (
+        <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete your selected item and all its associated objectives.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <Button variant="outline" onClick={() => setIsOpen(false)} disabled={loading}>
+                        Cancel
+                    </Button>
+                    <Button variant="destructive" onClick={handleDelete} disabled={loading}>
+                        {loading ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...
+                            </>
+                        ) : (
+                            'Delete'
+                        )}
+                    </Button>
+                </DialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+};
+
+const LinkObjectivesDialog = ({ isOpen, setIsOpen, sourceId, matrixId, currentLinkedObjectives, onUpdateLinks }: {
+    isOpen: boolean;
+    setIsOpen: (open: boolean) => void;
+    sourceId: string;
+    matrixId: string;
+    currentLinkedObjectives: string[];
+    onUpdateLinks: (sourceId: string, newLinks: string[]) => Promise<void>;
+}) => {
+    const firestore = useFirestore();
+    const objectivesCollectionRef = collection(firestore, 'coherenceMatrices', matrixId, 'items');
+    const objectivesQuery = query(objectivesCollectionRef);
+    const { data: allItems, isLoading } = useCollection<MatrixItem>(objectivesQuery);
+    const [selectedObjectives, setSelectedObjectives] = useState<string[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        setSelectedObjectives(currentLinkedObjectives);
+    }, [currentLinkedObjectives, isOpen]);
+
+    const availableObjectives = useMemo(() => {
+        return allItems?.filter(item => item.type === 'objective') || [];
+    }, [allItems]);
+
+    const handleToggleObjective = (objectiveId: string) => {
+        setSelectedObjectives(prev =>
+            prev.includes(objectiveId)
+                ? prev.filter(id => id !== objectiveId)
+                : [...prev, objectiveId]
+        );
+    };
+
+    const handleSaveLinks = async () => {
+        setLoading(true);
+        await onUpdateLinks(sourceId, selectedObjectives);
+        setLoading(false);
+        setIsOpen(false);
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogContent className="sm:max-w-[480px]">
+                <DialogHeader>
+                    <DialogTitle>Link Objectives to Source</DialogTitle>
+                    <DialogDescription>
+                        Select the objectives that this source document or standard covers.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4 max-h-[400px] overflow-y-auto">
+                    {isLoading ? (
+                        <Skeleton className="h-40 w-full" />
+                    ) : availableObjectives.length === 0 ? (
+                        <p className="text-sm text-gray-500">No objectives available to link. Add some objectives first!</p>
+                    ) : (
+                        <div className="grid gap-2">
+                            {availableObjectives.map(objective => (
+                                <div key={objective.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`objective-${objective.id}`}
+                                        checked={selectedObjectives.includes(objective.id)}
+                                        onCheckedChange={() => handleToggleObjective(objective.id)}
+                                        disabled={loading}
+                                    />
+                                    <Label htmlFor={`objective-${objective.id}`} className="font-normal">
+                                        {objective.name}
+                                    </Label>
+                                </div>
+                            ))}
                         </div>
-                    }
-                />
-                {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
-            </div>
+                    )}
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsOpen(false)} disabled={loading}>
+                        Cancel
+                    </Button>
+                    <Button type="submit" onClick={handleSaveLinks} disabled={loading}>
+                        {loading ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                            </>
+                        ) : (
+                            'Save Links'
+                        )}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
 
-            <div className="flex-1 p-0 overflow-hidden bg-background">
-                <ScrollArea className="h-full no-scrollbar">
-                    <div className="p-4 sm:p-6 space-y-6 pb-20">
-                        {topLevelItems.map(parentItem => (
-                            <div key={parentItem.id} className="border rounded-xl bg-muted/5 overflow-hidden relative">
-                                <div className="p-4 border-b bg-muted/10 space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className="h-8 w-24 bg-emerald-800 text-white rounded-lg flex items-center justify-center text-[10px] font-black uppercase tracking-tighter shrink-0">
-                                            {parentItem.regulationCode}
-=======
-        <Card className="min-h-[500px] flex flex-col shadow-none border">
-            <MainPageHeader 
+
+// Main Page Component
+export default function CoherenceMatrixPage() {
+    const firestore = useFirestore();
+
+    const matricesCollectionRef = collection(firestore, 'coherenceMatrices');
+    const { data: matrices, isLoading: isLoadingMatrices, error: matricesError } = useCollection<CoherenceMatrix>(matricesCollectionRef);
+    const [selectedMatrixId, setSelectedMatrixId] = useState<string | null>(null);
+
+    const selectedMatrix = useMemo(() => {
+        return matrices?.find(m => m.id === selectedMatrixId);
+    }, [matrices, selectedMatrixId]);
+
+    const itemsCollectionRef = selectedMatrixId ? collection(firestore, 'coherenceMatrices', selectedMatrixId, 'items') : null;
+    const itemsQuery = itemsCollectionRef ? query(itemsCollectionRef) : null;
+    const { data: allItems, isLoading: isLoadingItems, error: itemsError } = useCollection<MatrixItem>(itemsQuery);
+
+    const sources = useMemo(() => {
+        return allItems?.filter(item => item.type === 'source') || [];
+    }, [allItems]);
+
+    const objectives = useMemo(() => {
+        return allItems?.filter(item => item.type === 'objective') || [];
+    }, [allItems]);
+
+    const [isNewMatrixDialogOpen, setIsNewMatrixDialogOpen] = useState(false);
+    const [editingMatrix, setEditingMatrix] = useState<CoherenceMatrix | null>(null);
+
+    const [isNewItemDialogOpen, setIsNewItemDialogOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<MatrixItem | null>(null);
+    const [newItemType, setNewItemType] = useState<'source' | 'objective'>('source');
+    const [newItemParentId, setNewItemParentId] = useState<string | undefined>(undefined);
+
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<{ id: string; type: 'matrix' | 'item' } | null>(null);
+
+    const [isLinkObjectivesDialogOpen, setIsLinkObjectivesDialogOpen] = useState(false);
+    const [linkingSourceId, setLinkingSourceId] = useState<string | null>(null);
+    const [currentLinkedObjectives, setCurrentLinkedObjectives] = useState<string[]>([]);
+
+    useEffect(() => {
+        if (!selectedMatrixId && matrices && matrices.length > 0) {
+            setSelectedMatrixId(matrices[0].id);
+        }
+    }, [matrices, selectedMatrixId]);
+
+    const handleCreateUpdateMatrix = async (matrixData: Partial<CoherenceMatrix>) => {
+        try {
+            if (matrixData.id) {
+                // Update existing
+                await writeBatch(firestore)
+                    .update(doc(matricesCollectionRef, matrixData.id), {
+                        name: matrixData.name,
+                        description: matrixData.description,
+                        updatedAt: new Date(),
+                    })
+                    .commit();
+                toast({
+                    title: 'Matrix Updated',
+                    description: `Coherence matrix "${matrixData.name}" has been updated.`,
+                });
+            } else {
+                // Create new
+                const newDocRef = doc(matricesCollectionRef);
+                await writeBatch(firestore)
+                    .set(newDocRef, {
+                        id: newDocRef.id,
+                        name: matrixData.name,
+                        description: matrixData.description,
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                        items: [], // Initialize with empty items array
+                    })
+                    .commit();
+                toast({
+                    title: 'Matrix Created',
+                    description: `New coherence matrix "${matrixData.name}" has been created.`,
+                });
+            }
+        } catch (error) {
+            console.error('Error creating/updating matrix:', error);
+            toast({
+                title: 'Error',
+                description: `Failed to ${matrixData.id ? 'update' : 'create'} matrix.`,
+                variant: 'destructive',
+            });
+        }
+    };
+
+    const handleDeleteMatrix = async () => {
+        if (!itemToDelete || itemToDelete.type !== 'matrix' || !selectedMatrixId) return;
+        try {
+            await deleteDoc(doc(matricesCollectionRef, itemToDelete.id));
+            toast({
+                title: 'Matrix Deleted',
+                description: 'The coherence matrix and all its items have been deleted.',
+            });
+            setSelectedMatrixId(null); // Deselect after deletion
+        } catch (error) {
+            console.error('Error deleting matrix:', error);
+            toast({
+                title: 'Error',
+                description: 'Failed to delete matrix.',
+                variant: 'destructive',
+            });
+        }
+    };
+
+    const handleCreateUpdateItem = async (itemData: Partial<MatrixItem>) => {
+        if (!selectedMatrixId) return;
+        try {
+            const itemsRef = collection(firestore, 'coherenceMatrices', selectedMatrixId, 'items');
+            if (itemData.id) {
+                // Update existing item
+                await writeBatch(firestore)
+                    .update(doc(itemsRef, itemData.id), {
+                        name: itemData.name,
+                        description: itemData.description,
+                        parentId: itemData.parentId,
+                        type: itemData.type,
+                    })
+                    .commit();
+                toast({
+                    title: 'Item Updated',
+                    description: `${itemData.type === 'source' ? 'Source' : 'Objective'} "${itemData.name}" has been updated.`,
+                });
+            } else {
+                // Create new item
+                const newDocRef = doc(itemsRef);
+                await writeBatch(firestore)
+                    .set(newDocRef, {
+                        id: newDocRef.id,
+                        name: itemData.name,
+                        description: itemData.description,
+                        type: itemData.type,
+                        parentId: itemData.parentId || null,
+                        linkedObjectives: itemData.type === 'source' ? [] : undefined, // Only sources have linkedObjectives
+                    })
+                    .commit();
+                toast({
+                    title: 'Item Created',
+                    description: `New ${itemData.type === 'source' ? 'source' : 'objective'} "${itemData.name}" has been created.`,
+                });
+            }
+        } catch (error) {
+            console.error('Error creating/updating item:', error);
+            toast({
+                title: 'Error',
+                description: `Failed to ${itemData.id ? 'update' : 'create'} item.`,
+                variant: 'destructive',
+            });
+        }
+    };
+
+    const handleDeleteItem = async () => {
+        if (!itemToDelete || itemToDelete.type !== 'item' || !selectedMatrixId) return;
+        try {
+            const itemsRef = collection(firestore, 'coherenceMatrices', selectedMatrixId, 'items');
+            await deleteDoc(doc(itemsRef, itemToDelete.id));
+            toast({
+                title: 'Item Deleted',
+                description: 'The selected item has been deleted.',
+            });
+        } catch (error) {
+            console.error('Error deleting item:', error);
+            toast({
+                title: 'Error',
+                description: 'Failed to delete item.',
+                variant: 'destructive',
+            });
+        }
+    };
+
+    const handleUpdateSourceLinks = async (sourceId: string, newLinks: string[]) => {
+        if (!selectedMatrixId) return;
+        try {
+            const sourceDocRef = doc(firestore, 'coherenceMatrices', selectedMatrixId, 'items', sourceId);
+            await writeBatch(firestore)
+                .update(sourceDocRef, { linkedObjectives: newLinks })
+                .commit();
+            toast({
+                title: 'Links Updated',
+                description: 'Source document links have been updated.',
+            });
+        } catch (error) {
+            console.error('Error updating source links:', error);
+            toast({
+                title: 'Error',
+                description: 'Failed to update source links.',
+                variant: 'destructive',
+            });
+        }
+    };
+
+    if (isLoadingMatrices) {
+        return (
+            <div className="flex flex-col gap-6 p-6">
+                <Skeleton className="h-10 w-64" />
+                <Skeleton className="h-80 w-full" />
+            </div>
+        );
+    }
+
+    if (matricesError) {
+        return <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>Error loading matrices: {matricesError.message}</AlertDescription>
+        </Alert>;
+    }
+
+    return (
+        <div className="flex flex-col space-y-6 p-6">
+            {/* Resolved: Using MainPageHeader component */}
+            <MainPageHeader
                 title="Coherence Matrix"
+                description="Manage your safety coherence matrix, linking sources to objectives."
                 actions={
-                    <div className="flex flex-wrap items-center gap-2">
-                        <UploadRegulationsDialog tenantId={tenantId!} organizationId={contextOrgId} />
-                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase gap-2 border-slate-300" onClick={() => handleSeedData(contextOrgId)}>
-                            <BookOpen className="h-3.5 w-3.5" /> Seed Part 141
-                        </Button>
-                        <Button size="sm" className="h-8 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm gap-2" onClick={() => handleOpenForm()}>
-                            <PlusCircle className="h-4 w-4" /> Add Item
+                    <div className="flex gap-2">
+                        <NewMatrixDialog
+                            isOpen={isNewMatrixDialogOpen}
+                            setIsOpen={setIsNewMatrixDialogOpen}
+                            onSave={handleCreateUpdateMatrix}
+                            initialData={editingMatrix || undefined}
+                        />
+                        <Button
+                            onClick={() => {
+                                setEditingMatrix(null);
+                                setIsNewMatrixDialogOpen(true);
+                            }}
+                        >
+                            <PlusCircle className="mr-2 h-4 w-4" /> Create Matrix
                         </Button>
                     </div>
                 }
             />
-            
-            {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
-            
-            <CardContent className="p-6">
-                <div className="space-y-4">
-                    {topLevelItems.map(parentItem => (
-                        <Collapsible key={parentItem.id} className="border rounded-lg" defaultOpen>
-                            <div className="flex items-center p-4 bg-muted/30 rounded-t-lg">
-                                <CollapsibleTrigger className="flex flex-1 items-center text-left">
-                                    <span className="font-mono text-sm font-semibold w-28 flex-shrink-0">{parentItem.regulationCode}</span>
-                                    <p className="font-medium flex-1 mx-4">{parentItem.regulationStatement}</p>
-                                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
-                                </CollapsibleTrigger>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteSection(parentItem)}><Trash2 className="h-4 w-4" /></Button>
-                            </div>
-                            <CollapsibleContent className="p-4">
-                                {(groupedItems[parentItem.regulationCode] || []).map(item => (
-                                    <Collapsible key={item.id} className="border rounded-lg mb-2 last:mb-0">
-                                        <div className="flex justify-between items-center p-4">
-                                            <CollapsibleTrigger className="flex w-full items-center text-left">
-                                                <span className="font-mono text-sm font-semibold w-24 flex-shrink-0">{item.regulationCode}</span>
-                                                <p className="font-medium truncate flex-1 mx-4">{item.regulationStatement}</p>
-                                                <ChevronDown className="h-4 w-4" />
-                                            </CollapsibleTrigger>
-                                            <div className="flex items-center gap-2 pl-4">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenForm(item)}><Edit className="h-4 w-4" /></Button>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteItem(item.id)}><Trash2 className="h-4 w-4" /></Button>
+
+            {matrices && matrices.length > 0 && (
+                <div className="flex items-center gap-4">
+                    <Label htmlFor="select-matrix" className="shrink-0">Select Matrix:</Label>
+                    <Select value={selectedMatrixId || ''} onValueChange={setSelectedMatrixId}>
+                        <SelectTrigger id="select-matrix" className="w-[300px]">
+                            <SelectValue placeholder="Select a Coherence Matrix" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {matrices.map(matrix => (
+                                <SelectItem key={matrix.id} value={matrix.id}>{matrix.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    {selectedMatrix && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="gap-2">
+                                    <Edit className="h-4 w-4" /> Manage Matrix <ChevronDown className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem onClick={() => { setEditingMatrix(selectedMatrix); setIsNewMatrixDialogOpen(true); }}>
+                                    <Edit className="mr-2 h-4 w-4" /> Edit Matrix
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                    className="text-red-600"
+                                    onClick={() => {
+                                        setItemToDelete({ id: selectedMatrix.id, type: 'matrix' });
+                                        setIsDeleteDialogOpen(true);
+                                    }}
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete Matrix
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
+                </div>
+            )}
+
+            {!selectedMatrixId ? (
+                <div className="flex flex-col items-center justify-center p-10 border rounded-lg bg-white dark:bg-gray-800">
+                    <p className="text-lg text-gray-600 dark:text-gray-400">
+                        {matrices && matrices.length === 0
+                            ? "No coherence matrices found. Create one to get started!"
+                            : "Please select a coherence matrix to view its items."}
+                    </p>
+                    {matrices && matrices.length === 0 && (
+                        <Button className="mt-4" onClick={() => {
+                            setEditingMatrix(null);
+                            setIsNewMatrixDialogOpen(true);
+                        }}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Create First Matrix
+                        </Button>
+                    )}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Sources Column */}
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Sources (Documents & Standards)</CardTitle>
+                            {/* NewMatrixItemDialog is already handling the button inside DialogTrigger */}
+                            <NewMatrixItemDialog
+                                isOpen={isNewItemDialogOpen && newItemType === 'source'}
+                                setIsOpen={setIsNewItemDialogOpen}
+                                onSave={handleCreateUpdateItem}
+                                type="source"
+                                initialData={editingItem || undefined}
+                                matrixId={selectedMatrixId}
+                            />
+                        </CardHeader>
+                        <CardContent>
+                            {isLoadingItems ? (
+                                <Skeleton className="h-40 w-full" />
+                            ) : sources.length === 0 ? (
+                                <p className="text-sm text-gray-500">No sources added yet.</p>
+                            ) : (
+                                <div className="space-y-4">
+                                    {sources.map(source => (
+                                        <div key={source.id} className="border p-4 rounded-md shadow-sm bg-white dark:bg-gray-700">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h3 className="font-bold text-lg">{source.name}</h3>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                            <span className="sr-only">Open menu</span>
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => {
+                                                            setEditingItem(source);
+                                                            setNewItemType('source');
+                                                            setIsNewItemDialogOpen(true);
+                                                        }}>
+                                                            <Edit className="mr-2 h-4 w-4" /> Edit
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => {
+                                                            setLinkingSourceId(source.id);
+                                                            setCurrentLinkedObjectives(source.linkedObjectives || []);
+                                                            setIsLinkObjectivesDialogOpen(true);
+                                                        }}>
+                                                            <Layers className="mr-2 h-4 w-4" /> Link Objectives
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            className="text-red-600"
+                                                            onClick={() => {
+                                                                setItemToDelete({ id: source.id, type: 'item' });
+                                                                setIsDeleteDialogOpen(true);
+                                                            }}
+                                                        >
+                                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </div>
->>>>>>> temp-save-work
-                                        </div>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 shrink-0" onClick={() => handleDeleteSection(parentItem)}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                    <p className="font-bold text-sm text-foreground leading-snug whitespace-normal pr-8">
-                                        {parentItem.regulationStatement}
-                                    </p>
-                                </div>
-                                <div className="p-3 sm:p-4 space-y-3 bg-background overflow-hidden">
-                                    {(groupedItems[parentItem.regulationCode] || []).map(item => (
-                                        <Collapsible key={item.id} className="border rounded-lg overflow-hidden last:mb-0 transition-all hover:border-primary/30">
-                                            <div className="p-3 sm:p-4 space-y-3">
-                                                <div className="flex items-center justify-between gap-3">
-                                                    <span className="font-mono text-[10px] font-black text-muted-foreground w-20 flex-shrink-0 bg-muted/30 py-1 px-2 rounded border border-slate-200 text-center">
-                                                        {item.regulationCode}
-                                                    </span>
-                                                    <div className="flex items-center gap-1 shrink-0">
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleOpenForm(item)}>
-                                                            <Edit className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteItem(item.id)}>
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
+                                            <p className="text-sm text-gray-600 dark:text-gray-300">{source.description}</p>
+                                            {source.linkedObjectives && source.linkedObjectives.length > 0 && (
+                                                <div className="mt-3">
+                                                    <h4 className="text-sm font-semibold mb-1">Linked Objectives:</h4>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {source.linkedObjectives.map(objId => {
+                                                            const linkedObj = objectives.find(obj => obj.id === objId);
+                                                            return linkedObj ? (
+                                                                <Badge key={objId} variant="secondary" className="px-2 py-1 text-xs">
+                                                                    {linkedObj.name}
+                                                                </Badge>
+                                                            ) : null;
+                                                        })}
                                                     </div>
                                                 </div>
-                                                <CollapsibleTrigger className="flex w-full items-start text-left gap-3 group min-w-0">
-                                                    <p className="font-medium text-sm whitespace-normal flex-1">
-                                                        {item.regulationStatement}
-                                                    </p>
-                                                    <ChevronDown className="h-4 w-4 text-muted-foreground group-data-[state=open]:rotate-180 transition-transform shrink-0 mt-0.5" />
-                                                </CollapsibleTrigger>
-                                            </div>
-                                            <CollapsibleContent className="space-y-4 px-4 sm:px-6 pb-6 pt-2 border-t bg-muted/5">
-                                                <div className="space-y-2 overflow-hidden">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">Technical Standard & Acceptable Means of Compliance</p>
-                                                    <p className="text-sm font-medium text-muted-foreground leading-relaxed whitespace-pre-wrap italic break-words">&quot;{item.technicalStandard}&quot;</p>
-                                                </div>
-                                            </CollapsibleContent>
-                                        </Collapsible>
+                                            )}
+                                        </div>
                                     ))}
-                                    {(groupedItems[parentItem.regulationCode] || []).length === 0 && (
-                                        <p className="text-center py-6 text-xs font-medium text-muted-foreground italic">No detailed requirements defined for this section.</p>
-                                    )}
                                 </div>
-                            </div>
-                        ))}
-                        {topLevelItems.length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-24 text-center opacity-30">
-                                <Layers className="h-16 w-16 mb-4" />
-                                <p className="text-sm font-black uppercase tracking-widest">Coherence Matrix Empty</p>
-                                <p className="text-xs font-medium max-w-xs mt-2">Populate your matrix using the AI upload tool or by seeding standard Part 141 regulations.</p>
-                            </div>
-                        )}
-                    </div>
-                </ScrollArea>
-            </div>
-        </div>
-    );
-  };
+                            )}
+                        </CardContent>
+                    </Card>
 
-  if (isLoading) {
-    return (
-        <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
-            <Skeleton className="h-20 w-full" />
-            <Skeleton className="h-[600px] w-full" />
-        </div>
-    );
-  }
+                    {/* Objectives Column */}
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Objectives</CardTitle>
+                             {/* NewMatrixItemDialog is already handling the button inside DialogTrigger */}
+                            <NewMatrixItemDialog
+                                isOpen={isNewItemDialogOpen && newItemType === 'objective'}
+                                setIsOpen={setIsNewItemDialogOpen}
+                                onSave={handleCreateUpdateItem}
+                                type="objective"
+                                initialData={editingItem || undefined}
+                                parentId={newItemParentId}
+                                matrixId={selectedMatrixId}
+                            />
+                        </CardHeader>
+                        <CardContent>
+                            {isLoadingItems ? (
+                                <Skeleton className="h-40 w-full" />
+                            ) : objectives.length === 0 ? (
+                                <p className="text-sm text-gray-500">No objectives added yet.</p>
+                            ) : (
+                                <div className="space-y-4">
+                                    {objectives.map(objective => (
+                                        <div key={objective.id} className="border p-4 rounded-md shadow-sm bg-white dark:bg-gray-700">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h3 className="font-bold text-lg">{objective.name}</h3>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                            <span className="sr-only">Open menu</span>
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => {
+                                                            setEditingItem(objective);
+                                                            setNewItemType('objective');
+                                                            setIsNewItemDialogOpen(true);
+                                                        }}>
+                                                            <Edit className="mr-2 h-4 w-4" /> Edit
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            className="text-red-600"
+                                                            onClick={() => {
+                                                                setItemToDelete({ id: objective.id, type: 'item' });
+                                                                setIsDeleteDialogOpen(true);
+                                                            }}
+                                                        >
+                                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                            <p className="text-sm text-gray-600 dark:text-gray-300">{objective.description}</p>
+                                            {objective.parentId && (
+                                                <p className="text-xs text-gray-500 mt-2">
+                                                    Linked to Source: {sources.find(s => s.id === objective.parentId)?.name || 'N/A'}
+                                                </p>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
 
-  return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
-        <div className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl bg-card">
-            {!shouldShowOrganizationTabs ? (
-                renderOrgContext(scopedOrganizationId)
-            ) : (
-                <Tabs defaultValue="internal" className="w-full flex-1 flex flex-col overflow-hidden">
-                    <div className="flex-1 min-h-0 overflow-hidden">
-                        <TabsContent value="internal" className="m-0 p-0 h-full">
-                            {renderOrgContext('internal')}
-                        </TabsContent>
-                        {(organizations || []).map((org) => (
-                            <TabsContent key={org.id} value={org.id} className="m-0 p-0 h-full">
-                                {renderOrgContext(org.id)}
-                            </TabsContent>
-                        ))}
-                    </div>
-                </Tabs>
+            <DeleteConfirmationDialog
+                isOpen={isDeleteDialogOpen}
+                setIsOpen={setIsDeleteDialogOpen}
+                onDelete={itemToDelete?.type === 'matrix' ? handleDeleteMatrix : handleDeleteItem}
+            />
+
+            {linkingSourceId && (
+                <LinkObjectivesDialog
+                    isOpen={isLinkObjectivesDialogOpen}
+                    setIsOpen={setIsLinkObjectivesDialogOpen}
+                    sourceId={linkingSourceId}
+                    matrixId={selectedMatrixId!}
+                    currentLinkedObjectives={currentLinkedObjectives}
+                    onUpdateLinks={handleUpdateSourceLinks}
+                />
             )}
         </div>
-
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-                <DialogTitle className="font-black uppercase tracking-tight">Compliance Requirement</DialogTitle>
-            </DialogHeader>
-            <ComplianceItemForm 
-                personnel={personnel || []}
-                existingItem={editingItem}
-                onFormSubmit={() => setIsFormOpen(false)}
-                tenantId={tenantId!}
-            />
-            </DialogContent>
-        </Dialog>
-    </div>
-  );
+    );
 }
