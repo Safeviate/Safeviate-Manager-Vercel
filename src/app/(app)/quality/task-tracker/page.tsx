@@ -4,10 +4,7 @@ import { useMemo, useState } from 'react';
 import { collection, query, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { Card, CardContent } from '@/components/ui/card';
-<<<<<<< HEAD
-=======
-import { MainPageHeader } from "@/components/page-header";
->>>>>>> temp-save-work
+import { MainPageHeader } from "@/components/page-header"; // Keep MainPageHeader import
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,7 +21,6 @@ import type { ManagementOfChange } from '@/types/moc';
 import type { SafetyReport } from '@/types/safety-report';
 import type { CorrectiveActionPlan, QualityAudit, ExternalOrganization, TabVisibilitySettings } from '@/types/quality';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { MainPageHeader } from '@/components/page-header';
 
 type UnifiedTask = {
   id: string;
@@ -40,29 +36,6 @@ type UnifiedTask = {
 };
 
 function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
-<<<<<<< HEAD
-    return (
-        <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
-            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
-                <TabsTrigger 
-                    value="internal" 
-                    className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
-                >
-                    Internal
-                </TabsTrigger>
-                {organizations.map((organization) => (
-                    <TabsTrigger
-                        key={organization.id}
-                        value={organization.id}
-                        className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
-                    >
-                        {organization.name}
-                    </TabsTrigger>
-                ))}
-            </TabsList>
-        </div>
-    );
-=======
   return (
     <div className="border-b bg-muted/5 px-6 py-3 overflow-x-auto no-scrollbar">
       <div className="flex w-max gap-2 pr-6 flex-nowrap">
@@ -83,7 +56,6 @@ function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization
       </div>
     </div>
   );
->>>>>>> temp-save-work
 }
 
 export default function TaskTrackerPage() {
@@ -194,6 +166,8 @@ export default function TaskTrackerPage() {
              return 'default';
         case 'In Progress':
             return 'secondary';
+        case 'Cancelled': // Added cancelled for specific styling
+            return 'destructive';
         default:
             return 'outline';
     }
@@ -203,11 +177,7 @@ export default function TaskTrackerPage() {
     <Table>
       <TableHeader className="bg-muted/30 sticky top-0 z-10">
         <TableRow>
-<<<<<<< HEAD
-          <TableHead className="w-[40%] text-[10px] uppercase font-bold tracking-wider">Task Description</TableHead>
-=======
           <TableHead className="w-[40%] text-[10px] uppercase font-bold tracking-wider">Task</TableHead>
->>>>>>> temp-save-work
           <TableHead className="text-[10px] uppercase font-bold tracking-wider">Source</TableHead>
           <TableHead className="text-[10px] uppercase font-bold tracking-wider">Assignee</TableHead>
           <TableHead className="text-[10px] uppercase font-bold tracking-wider">Due Date</TableHead>
@@ -219,19 +189,6 @@ export default function TaskTrackerPage() {
         {tasks.length > 0 ? (
           tasks.map(task => (
             <TableRow key={task.id}>
-<<<<<<< HEAD
-              <TableCell className="font-bold text-sm leading-snug">{task.description}</TableCell>
-              <TableCell>
-                <Badge variant="outline" className="text-[10px] font-mono border-primary/20 bg-primary/5 text-primary uppercase font-black">{task.sourceIdentifier}</Badge>
-              </TableCell>
-              <TableCell className="text-sm font-medium">{task.assigneeName}</TableCell>
-              <TableCell className="text-sm font-medium whitespace-nowrap">{format(new Date(task.dueDate), 'dd MMM yy')}</TableCell>
-              <TableCell>
-                <Badge variant="outline" className="text-[10px] font-bold uppercase border-slate-300">{task.status}</Badge>
-              </TableCell>
-              <TableCell className="text-right">
-                  <Button asChild variant="outline" size="sm" className="h-8 gap-2 border-slate-300">
-=======
               <TableCell className="font-bold text-sm text-foreground">{task.description}</TableCell>
               <TableCell>
                 <span className="text-sm font-black uppercase text-foreground tracking-tight">{task.sourceIdentifier}</span>
@@ -243,7 +200,6 @@ export default function TaskTrackerPage() {
               </TableCell>
               <TableCell className="text-right">
                   <Button asChild variant="outline" size="sm" className="h-9 gap-2 text-[10px] font-black uppercase border-slate-300">
->>>>>>> temp-save-work
                       <Link href={task.link}>
                         <Eye className="h-4 w-4" />
                         View
@@ -254,11 +210,7 @@ export default function TaskTrackerPage() {
           ))
         ) : (
           <TableRow>
-<<<<<<< HEAD
-            <TableCell colSpan={6} className="h-48 text-center text-muted-foreground italic text-sm">
-=======
             <TableCell colSpan={6} className="h-24 text-center text-muted-foreground italic text-sm uppercase font-bold tracking-widest bg-muted/5">
->>>>>>> temp-save-work
               No outstanding tasks for this organization.
             </TableCell>
           </TableRow>
@@ -273,43 +225,21 @@ export default function TaskTrackerPage() {
     );
 
     return (
-<<<<<<< HEAD
-        <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
-            <div className="sticky top-0 z-30 bg-card">
-                <MainPageHeader 
-                    title="Task Tracker"
-                    description="Centralized oversight of all corrective actions and mitigation tasks across the organization."
-                />
-                {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
-            </div>
-            
-            <CardContent className="flex-1 p-0 overflow-auto bg-background">
-                {renderTasksTable(filteredTasks)}
-            </CardContent>
-        </Card>
-=======
       <Card className="min-h-[400px] flex flex-col shadow-none border">
-        <MainPageHeader title="Task Tracker" />
+        <MainPageHeader title="Task Tracker" description="Centralized oversight of all corrective actions and mitigation tasks across the organization." />
         {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
         <CardContent className="p-0 overflow-auto">
           {renderTasksTable(filteredTasks)}
         </CardContent>
       </Card>
->>>>>>> temp-save-work
     );
   };
 
   if (isLoading) {
     return (
-<<<<<<< HEAD
-        <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
-            <Skeleton className="h-20 w-full" />
-            <Skeleton className="h-[500px] w-full" />
-=======
         <div className="max-w-[1200px] mx-auto w-full space-y-6 px-1">
             <Skeleton className="h-14 w-full" />
             <Skeleton className="h-[400px] w-full" />
->>>>>>> temp-save-work
         </div>
     );
   }
@@ -317,11 +247,7 @@ export default function TaskTrackerPage() {
   const showTabs = shouldShowOrganizationTabs;
 
   return (
-<<<<<<< HEAD
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-2 px-1">
-=======
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full px-1">
->>>>>>> temp-save-work
         {!showTabs ? (
             renderOrgCard(scopedOrganizationId)
         ) : (
